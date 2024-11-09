@@ -1,0 +1,12 @@
+[package]
+name = "oku_dylib"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+oku_core = { path = "../oku_core", default-features = false }
