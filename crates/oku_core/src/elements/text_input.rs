@@ -2,7 +2,7 @@ use cosmic_text::{Action, Motion};
 use cosmic_text::{Edit, SwashCache, SyntaxEditor, SyntaxSystem};
 use crate::engine::renderer::renderer::{Rectangle};
 use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementState};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey};
 use crate::style::{
     AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight,
@@ -154,13 +154,13 @@ impl TextInput {
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a mut HashMap<ComponentId, Box<GenericUserState>>) -> &'a TextInputState {
+    fn get_state<'a>(&self, element_state: &'a mut HashMap<ComponentId, Box<ElementState>>) -> &'a TextInputState {
         element_state.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
 
     /*fn get_state_mut<'a>(
         &self,
-        element_state: &'a mut HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &'a mut HashMap<ComponentId, Box<ElementState>>,
     ) -> &'a mut TextInputState {
         element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
     }*/
@@ -189,6 +189,8 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
+        transform: glam::Mat4,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         let bounding_rectangle = Rectangle::new(
             self.common_element_data.computed_x + self.common_element_data.computed_padding[3],
@@ -196,12 +198,13 @@ impl Element for TextInput {
             self.common_element_data.computed_width,
             self.common_element_data.computed_height,
         );
-        renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background);
+        renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background, transform);
 
         renderer.draw_text(
             self.common_element_data.component_id,
             bounding_rectangle,
             self.common_element_data.style.color,
+            transform
         );
     }
 
@@ -244,7 +247,7 @@ impl Element for TextInput {
         x: f32,
         y: f32,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
@@ -277,7 +280,7 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>) {
         let text_context: &mut TextInputState = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
     
         match event {

@@ -1,3 +1,4 @@
+use crate::elements::element::ElementState;
 use crate::engine::events::Message::OkuMessage;
 use crate::engine::events::{Message, OkuEvent};
 use crate::components::component::{
@@ -8,6 +9,8 @@ use crate::reactive::element_id::create_unique_element_id;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use crate::elements::Container;
+use crate::elements::container::ContainerState;
 
 #[derive(Clone)]
 pub struct ComponentTreeNode {
@@ -70,7 +73,7 @@ pub(crate) fn create_trees_from_render_specification(
     mut root_element: Box<dyn Element>,
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
-    element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
 ) -> (ComponentTreeNode, Box<dyn Element>) {
     //println!("-----------------------------------------");
     unsafe {
@@ -84,6 +87,11 @@ pub(crate) fn create_trees_from_render_specification(
             id: 0,
             parent_id: None,
         };
+        
+        // Make sure to set a default state for the root.
+        element_state.insert(0, Box::new(ContainerState {
+            scroll_delta_y: 0.0,
+        }));
 
         let mut old_component_tree_as_ptr = old_component_tree.map(|old_root| old_root as *const ComponentTreeNode);
 
@@ -138,7 +146,19 @@ pub(crate) fn create_trees_from_render_specification(
                     };
 
                     element.set_component_id(id);
-
+                    
+                    if let Some(container) = element.as_any().downcast_ref::<Container>() {
+                        if !element_state.contains_key(&id) {
+                            element_state.insert(id, Box::new(ContainerState {
+                                scroll_delta_y: 0.0,
+                            }));
+                        }
+                    } else {
+                        if !element_state.contains_key(&id) {
+                            element_state.insert(id, Box::new(()));
+                        }
+                    }
+                    
                     // Move the new element into it's parent and set the parent element to be the new element.
                     tree_node.parent_element_ptr.as_mut().unwrap().children_mut().push(element);
                     parent_element_ptr =
@@ -154,9 +174,6 @@ pub(crate) fn create_trees_from_render_specification(
                         id,
                         parent_id: Some((*parent_component_ptr).id),
                     };
-                    if !element_state.contains_key(&id) {
-                        element_state.insert(id, Box::new(()));
-                    }
 
                     // Add the new component node to the tree and get a pointer to it.
                     parent_component_ptr.as_mut().unwrap().children.push(new_component_node);

@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
+use crate::elements::element::ElementState;
 use crate::platform::resource_manager::resource::Resource;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
@@ -148,21 +149,21 @@ impl Renderer for SoftwareRenderer {
         self.surface_clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, Color::RED));
+    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color, transform));
+        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, Color::RED, transform));
     }
 
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
+    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
+        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, transform));
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, transform));
     }
 
-    fn draw_image(&mut self, _rectangle: Rectangle, resource: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawImage(_rectangle, resource));
+    fn draw_image(&mut self, _rectangle: Rectangle, resource: ResourceIdentifier, transform: glam::Mat4) {
+        self.render_commands.push(RenderCommand::DrawImage(_rectangle, resource, transform));
         info!("Image added");
     }
 
@@ -170,7 +171,7 @@ impl Renderer for SoftwareRenderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         self.framebuffer.fill(tiny_skia::Color::from_rgba8(
             self.surface_clear_color.r_u8(),
@@ -181,13 +182,13 @@ impl Renderer for SoftwareRenderer {
 
         for command in self.render_commands.drain(..) {
             match command {
-                RenderCommand::DrawRect(rectangle, fill_color) => {
+                RenderCommand::DrawRect(rectangle, fill_color, transform) => {
                     draw_rect(&mut self.framebuffer, rectangle, fill_color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
+                RenderCommand::DrawRectOutline(rectangle, outline_color, transform) => {
                     draw_rect_outline(&mut self.framebuffer, rectangle, outline_color);
                 }
-                RenderCommand::DrawImage(rectangle, resource_identifier) => {
+                RenderCommand::DrawImage(rectangle, resource_identifier, transform) => {
                     info!("Drawing image");
                     let resource = resource_manager.resources.get(&resource_identifier);
 
@@ -198,7 +199,7 @@ impl Renderer for SoftwareRenderer {
                         self.framebuffer.draw_pixmap(rectangle.x as i32, rectangle.y as i32, pixmap, &pixmap_paint, Transform::identity(), None);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id, fill_color) => {
+                RenderCommand::DrawText(rect, component_id, fill_color, transform) => {
                     let buffer = if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
                         match text_context.editor.buffer_ref() {
                             BufferRef::Owned(buffer) => buffer,

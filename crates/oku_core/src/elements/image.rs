@@ -2,7 +2,7 @@ use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::platform::resource_manager::ResourceIdentifier;
 use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementState};
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
 use crate::RendererBox;
@@ -51,6 +51,8 @@ impl Element for Image {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
+        transform: glam::Mat4,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         info!("trying to draw image: {:?}", self.common_element_data.computed_height);
         renderer.draw_image(
@@ -61,6 +63,7 @@ impl Element for Image {
                 self.common_element_data.computed_height,
             ),
             self.resource_identifier.clone(),
+            transform
         );
     }
 
@@ -84,7 +87,7 @@ impl Element for Image {
         x: f32,
         y: f32,
         _font_system: &mut FontSystem,
-        _element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
@@ -102,7 +105,7 @@ impl Element for Image {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>) {
     }
 }
 

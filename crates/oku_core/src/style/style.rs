@@ -124,6 +124,60 @@ impl Default for FontStyle {
     }
 }
 
+/// How children overflowing their container should affect layout
+///
+/// In CSS the primary effect of this property is to control whether contents of a parent container that overflow that container should
+/// be displayed anyway, be clipped, or trigger the container to become a scroll container. However it also has secondary effects on layout,
+/// the main ones being:
+///
+///   - The automatic minimum size Flexbox/CSS Grid items with non-`Visible` overflow is `0` rather than being content based
+///   - `Overflow::Scroll` nodes have space in the layout reserved for a scrollbar (width controlled by the `scrollbar_width` property)
+///
+/// In Taffy, we only implement the layout related secondary effects as we are not concerned with drawing/painting. The amount of space reserved for
+/// a scrollbar is controlled by the `scrollbar_width` property. If this is `0` then `Scroll` behaves identically to `Hidden`.
+///
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/overflow>
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Overflow {
+    /// The automatic minimum size of this node as a flexbox/grid item should be based on the size of its content.
+    /// Content that overflows this node *should* contribute to the scroll region of its parent.
+    #[default]
+    Visible,
+    /// The automatic minimum size of this node as a flexbox/grid item should be based on the size of its content.
+    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
+    Clip,
+    /// The automatic minimum size of this node as a flexbox/grid item should be `0`.
+    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
+    Hidden,
+    /// The automatic minimum size of this node as a flexbox/grid item should be `0`. Additionally, space should be reserved
+    /// for a scrollbar. The amount of space reserved is controlled by the `scrollbar_width` property.
+    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
+    Scroll,
+}
+
+impl Overflow {
+    /// Returns true for overflow modes that contain their contents (`Overflow::Hidden`, `Overflow::Scroll`, `Overflow::Auto`)
+    /// or else false for overflow modes that allow their contains to spill (`Overflow::Visible`).
+    #[inline(always)]
+    pub(crate) fn is_scroll_container(self) -> bool {
+        match self {
+            Self::Visible | Self::Clip => false,
+            Self::Hidden | Self::Scroll => true,
+        }
+    }
+
+    /// Returns `Some(0.0)` if the overflow mode would cause the automatic minimum size of a Flexbox or CSS Grid item
+    /// to be `0`. Else returns None.
+    #[inline(always)]
+    pub(crate) fn maybe_into_automatic_min_size(self) -> Option<f32> {
+        match self.is_scroll_container() {
+            true => Some(0.0),
+            false => None,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
     pub margin: [f32; 4],
@@ -148,6 +202,7 @@ pub struct Style {
     pub font_size: f32,
     pub font_weight: Weight,
     pub font_style: FontStyle,
+    pub overflow: [Overflow; 2],
 }
 
 fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
@@ -182,6 +237,7 @@ impl Default for Style {
             font_size: 16.0,
             font_weight: Default::default(),
             font_style: Default::default(),
+            overflow: [Overflow::default(), Overflow::default()],
         }
     }
 }
@@ -263,6 +319,18 @@ impl From<Style> for taffy::Style {
             Unit::Auto => taffy::Dimension::Auto
         };
         
+        fn overflow_to_taffy_overflow(overflow: Overflow) -> taffy::Overflow {
+            match overflow {
+                Overflow::Visible => {taffy::Overflow::Visible}
+                Overflow::Clip => {taffy::Overflow::Clip}
+                Overflow::Hidden => {taffy::Overflow::Hidden}
+                Overflow::Scroll => {taffy::Overflow::Scroll}
+            }
+        }
+        
+        let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
+        let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
+        
         taffy::Style {
             size,
             max_size,
@@ -276,6 +344,10 @@ impl From<Style> for taffy::Style {
             flex_grow,
             flex_shrink,
             flex_basis,
+            overflow: taffy::Point {
+                x: overflow_x,
+                y: overflow_y,
+            },
             ..Default::default()
         }
     }

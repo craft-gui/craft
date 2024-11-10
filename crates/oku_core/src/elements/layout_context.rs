@@ -1,3 +1,4 @@
+use crate::elements::element::ElementState;
 use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::components::component::{ComponentId, GenericUserState};
@@ -105,7 +106,7 @@ pub enum LayoutContext<'a> {
 }
 
 pub fn measure_content(
-    element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,

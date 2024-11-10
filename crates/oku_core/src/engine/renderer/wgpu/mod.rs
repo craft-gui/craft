@@ -5,6 +5,7 @@ mod texture;
 mod uniform;
 mod vertex;
 
+use crate::elements::element::ElementState;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, Renderer};
 use crate::engine::renderer::wgpu::camera::Camera;
@@ -113,28 +114,28 @@ impl Renderer for WgpuRenderer<'_> {
         self.context.surface_clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.pipeline2d.draw_rect(rectangle, fill_color);
+    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+        self.pipeline2d.draw_rect(rectangle, fill_color, transform);
         // self.pipeline2d.draw_rect_outline(rectangle, Color::RED);
     }
 
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
-        self.pipeline2d.draw_rect_outline(rectangle, outline_color);
+    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
+        self.pipeline2d.draw_rect_outline(rectangle, outline_color, transform);
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.pipeline2d.draw_text(element_id, rectangle, fill_color);
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+        self.pipeline2d.draw_text(element_id, rectangle, fill_color, transform);
     }
 
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.pipeline2d.draw_image(rectangle, resource_identifier)
+    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, transform: glam::Mat4) {
+        self.pipeline2d.draw_image(rectangle, resource_identifier, transform)
     }
 
     fn submit(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         self.pipeline2d.submit(&mut self.context, resource_manager, font_system, element_state);
     }

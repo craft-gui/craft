@@ -17,7 +17,7 @@ use futures::StreamExt;
 use winit::window::WindowAttributes;
 use crate::engine::app_message::AppMessage;
 use crate::engine::events::internal::InternalMessage;
-use crate::engine::events::{KeyboardInput, PointerButton, PointerMoved};
+use crate::engine::events::{KeyboardInput, PointerButton, PointerMoved, MouseWheel};
 use crate::engine::renderer::renderer::Renderer;
 use crate::engine::renderer::softbuffer::SoftwareRenderer;
 use crate::engine::renderer::wgpu::WgpuRenderer;
@@ -145,6 +145,12 @@ impl ApplicationHandler for OkuWinitState {
                 primary
             } => {
                 self.send_message(InternalMessage::PointerMoved(PointerMoved::new(device_id, position, source, primary)), true);
+            }
+            WindowEvent::MouseWheel {
+                device_id, delta, phase
+            } => {
+                let event = MouseWheel::new(device_id, delta, phase);
+                self.send_message(InternalMessage::MouseWheel(event), true);
             }
             WindowEvent::SurfaceResized(new_size) => {
                 self.send_message(InternalMessage::Resize(new_size), true);

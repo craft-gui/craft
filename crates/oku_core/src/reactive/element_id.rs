@@ -10,7 +10,7 @@ pub fn get_current_element_id_counter() -> u64 {
 }
 
 pub fn create_unique_element_id(
-    user_state: &mut HashMap<u64, Box<dyn Any + Send>>,
+    user_state: &mut HashMap<u64, Box<GenericUserState>>,
     default: Box<GenericUserState>,
 ) -> u64 {
     ATOMIC_ELEMENT_ID.fetch_add(1, Ordering::SeqCst);

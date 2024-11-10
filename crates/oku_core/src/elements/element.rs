@@ -18,6 +18,8 @@ pub struct CommonElementData {
     pub computed_y: f32,
     pub computed_width: f32,
     pub computed_height: f32,
+    pub computed_scrollbar_width: f32,
+    pub computed_scrollbar_height: f32,
     pub computed_padding: [f32; 4],
     /// A user-defined id for the element.
     pub id: Option<String>,
@@ -80,6 +82,8 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
+        transform: glam::Mat4,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     );
 
     fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem) -> NodeId;
@@ -95,7 +99,7 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,);
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>,);
 }
 
 impl<T: Element> From<T> for Box<dyn Element> {

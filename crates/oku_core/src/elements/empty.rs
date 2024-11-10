@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentId, GenericUserState};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementState};
 use crate::elements::layout_context::LayoutContext;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
@@ -40,6 +40,8 @@ impl Element for Empty {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
+        transform: glam::Mat4,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
     }
 
@@ -63,7 +65,7 @@ impl Element for Empty {
         _x: f32,
         _y: f32,
         _font_system: &mut FontSystem,
-        _element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {
     }
 
@@ -71,7 +73,7 @@ impl Element for Empty {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>) {
         
     }
 }

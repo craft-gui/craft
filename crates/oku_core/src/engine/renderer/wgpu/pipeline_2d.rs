@@ -1,3 +1,4 @@
+use crate::elements::element::ElementState;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::engine::renderer::wgpu::camera::Camera;
@@ -47,6 +48,7 @@ pub struct TextRenderInfo {
     element_id: ComponentId,
     rectangle: Rectangle,
     fill_color: Color,
+    transform: glam::Mat4
 }
 
 pub struct Pipeline2D {
@@ -194,16 +196,16 @@ impl Pipeline2D {
         }
     }
 
-    pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
+    pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
         let x = rectangle.x;
         let y = rectangle.y;
         let width = rectangle.width;
         let height = rectangle.height;
 
-        let top_left = [x, y, 0.0];
-        let bottom_left = [x, y + height, 0.0];
-        let top_right = [x + width, y, 0.0];
-        let bottom_right = [x + width, y + height, 0.0];
+        let top_left = transform.mul_vec4(glam::vec4(x, y, 0.0, 1.0));
+        let bottom_left = transform.mul_vec4(glam::vec4(x, y + height, 0.0, 1.0));
+        let top_right = transform.mul_vec4(glam::vec4(x + width, y, 0.0, 1.0));
+        let bottom_right = transform.mul_vec4(glam::vec4(x + width, y + height, 0.0, 1.0));
 
         let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
 
@@ -222,22 +224,22 @@ impl Pipeline2D {
 
         current_batch.rectangle_vertices.append(&mut vec![
             Vertex {
-                position: top_left,
+                position: [top_left.x, top_left.y, top_left.z],
                 color,
                 tex_coords: [0.0, 0.0],
             },
             Vertex {
-                position: bottom_left,
+                position: [bottom_left.x, bottom_left.y, bottom_left.z],
                 color,
                 tex_coords: [0.0, 1.0],
             },
             Vertex {
-                position: top_right,
+                position: [top_right.x, top_right.y, top_right.z],
                 color,
                 tex_coords: [1.0, 0.0],
             },
             Vertex {
-                position: bottom_right,
+                position: [bottom_right.x, bottom_right.y, bottom_right.z],
                 color,
                 tex_coords: [1.0, 1.0],
             },
@@ -254,7 +256,7 @@ impl Pipeline2D {
         ]);
     }
 
-    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
+    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
         // vertical left, vertical right, top horizontal, bottom horizontal
 
         let thickness: f32 = 2.0;
@@ -272,30 +274,31 @@ impl Pipeline2D {
 
         let horizontal_bottom = Rectangle::new(rectangle.x, rectangle.y + rectangle.height, rectangle.width, thickness);
 
-        self.draw_rect(vertical_left, outline_color);
-        self.draw_rect(vertical_right, outline_color);
-        self.draw_rect(horizontal_top, outline_color);
-        self.draw_rect(horizontal_bottom, outline_color);
+        self.draw_rect(vertical_left, outline_color, transform);
+        self.draw_rect(vertical_right, outline_color, transform);
+        self.draw_rect(horizontal_top, outline_color, transform);
+        self.draw_rect(horizontal_bottom, outline_color, transform);
     }
 
-    pub(crate) fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
+    pub(crate) fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
         self.text_areas.push(TextRenderInfo {
             element_id,
             rectangle,
             fill_color,
+            transform
         });
     }
 
-    pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
+    pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, transform: glam::Mat4) {
         let x = rectangle.x;
         let y = rectangle.y;
         let width = rectangle.width;
         let height = rectangle.height;
 
-        let top_left = [x, y, 0.0];
-        let bottom_left = [x, y + height, 0.0];
-        let top_right = [x + width, y, 0.0];
-        let bottom_right = [x + width, y + height, 0.0];
+        let top_left = transform.mul_vec4(glam::vec4(x, y, 0.0, 1.0));
+        let bottom_left = transform.mul_vec4(glam::vec4(x, y + height, 0.0, 1.0));
+        let top_right = transform.mul_vec4(glam::vec4(x + width, y, 0.0, 1.0));
+        let bottom_right = transform.mul_vec4(glam::vec4(x + width, y + height, 0.0, 1.0));
 
         let color = [255.0, 255.0, 255.0, 255.0];
 
@@ -311,22 +314,22 @@ impl Pipeline2D {
 
         current_batch.rectangle_vertices.append(&mut vec![
             Vertex {
-                position: top_left,
+                position: [top_left.x, top_left.y, top_left.z],
                 color,
                 tex_coords: [0.0, 0.0],
             },
             Vertex {
-                position: bottom_left,
+                position: [bottom_left.x, bottom_left.y, bottom_left.z],
                 color,
                 tex_coords: [0.0, 1.0],
             },
             Vertex {
-                position: top_right,
+                position: [top_right.x, top_right.y, top_right.z],
                 color,
                 tex_coords: [1.0, 0.0],
             },
             Vertex {
-                position: bottom_right,
+                position: [bottom_right.x, bottom_right.y, bottom_right.z],
                 color,
                 tex_coords: [1.0, 1.0],
             },
@@ -348,7 +351,7 @@ impl Pipeline2D {
         context: &mut Context<'_>,
         resource_manager: RwLockReadGuard<'_, ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
@@ -436,17 +439,19 @@ impl Pipeline2D {
                         BufferRef::Borrowed(_) => panic!("Editor must own buffer."),
                         BufferRef::Arc(_) =>  panic!("Editor must own buffer.")
                     };
+                    
+                    let text_area_position = text_area.transform.mul_vec4(glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0));
 
                     text_areas.push(TextArea {
                         buffer: text_buffer,
-                        left: text_area.rectangle.x,
-                        top: text_area.rectangle.y,
+                        left: text_area_position.x,
+                        top: text_area_position.y,
                         scale: 1.0,
                         bounds: TextBounds {
-                            left: text_area.rectangle.x as i32,
-                            top: text_area.rectangle.y as i32,
-                            right: (text_area.rectangle.x + text_area.rectangle.width) as i32,
-                            bottom: (text_area.rectangle.y + text_area.rectangle.height) as i32,
+                            left: text_area_position.x as i32,
+                            top: text_area_position.y as i32,
+                            right: (text_area_position.x + text_area.rectangle.width) as i32,
+                            bottom: (text_area_position.y + text_area.rectangle.height) as i32,
                         },
                         default_color: glyphon::Color::rgba(
                             text_area.fill_color.r_u8(),
@@ -459,17 +464,18 @@ impl Pipeline2D {
                 } else if let Some(text_context) = element_state.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
 
                     let text_buffer = &text_context.buffer;
+                    let text_area_position = text_area.transform.mul_vec4(glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0));
 
                     text_areas.push(TextArea {
                         buffer: text_buffer,
-                        left: text_area.rectangle.x,
-                        top: text_area.rectangle.y,
+                        left: text_area_position.x,
+                        top: text_area_position.y,
                         scale: 1.0,
                         bounds: TextBounds {
-                            left: text_area.rectangle.x as i32,
-                            top: text_area.rectangle.y as i32,
-                            right: (text_area.rectangle.x + text_area.rectangle.width) as i32,
-                            bottom: (text_area.rectangle.y + text_area.rectangle.height) as i32,
+                            left: text_area_position.x as i32,
+                            top: text_area_position.y as i32,
+                            right: (text_area_position.x + text_area.rectangle.width) as i32,
+                            bottom: (text_area_position.y + text_area.rectangle.height) as i32,
                         },
                         default_color: glyphon::Color::rgba(
                             text_area.fill_color.r_u8(),

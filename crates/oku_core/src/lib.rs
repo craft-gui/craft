@@ -11,6 +11,7 @@ pub mod elements;
 pub mod reactive;
 pub mod style;
 
+use crate::elements::element::ElementState;
 pub use oku_runtime::OkuRuntime;
 
 use crate::engine::events::update_queue_entry::UpdateQueueEntry;
@@ -71,7 +72,7 @@ const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
 use crate::engine::app_message::AppMessage;
 use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{KeyboardInput, PointerButton, PointerMoved};
+use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 pub use crate::options::RendererType;
 use crate::platform::resource_manager::ResourceManager;
 use elements::image::Image;
@@ -92,7 +93,7 @@ struct App {
     mouse_position: (f32, f32),
     update_queue: VecDeque<UpdateQueueEntry>,
     user_state: HashMap<ComponentId, Box<GenericUserState>>,
-    element_state: HashMap<ComponentId, Box<GenericUserState>>,
+    element_state: HashMap<ComponentId, Box<ElementState>>,
     resource_manager: Arc<RwLock<ResourceManager>>,
     winit_sender: Sender<AppMessage>,
 }
@@ -227,6 +228,10 @@ async fn async_main(
                     on_resize(&mut app, new_size).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
+                InternalMessage::MouseWheel(mouse_wheel) => {
+                    on_mouse_wheel(&mut app, mouse_wheel).await;
+                    send_response(dummy_message, &mut app.winit_sender).await;
+                }
                 InternalMessage::PointerButton(pointer_button) => {
                     on_pointer_button(&mut app, pointer_button).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
@@ -303,6 +308,40 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
+}
+
+async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
+    {
+        let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
+            current_element_tree
+        } else {
+            return;
+        };
+
+        let fiber: FiberNode = FiberNode {
+            element: Some(current_element_tree.as_ref()),
+            component: Some(app.component_tree.as_ref().unwrap()),
+        };
+
+        let mut target_component_id: Option<u64> = None;
+        let mut target_element_id: Option<String> = None;
+        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+            if let Some(element) = fiber_node.element {
+                let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
+                
+                if in_bounds && element.style().overflow[1].is_scroll_container() {
+                    element.on_event(OkuEvent::MouseWheelEvent(mouse_wheel), &mut app.element_state);
+                    break;
+                }
+
+                target_component_id = Some(element.component_id());
+                target_element_id = element.get_id().clone();
+                
+            }
+        }
+    }
+
+    app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
@@ -548,7 +587,7 @@ async fn on_request_redraw(app: &mut App) {
 
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
-        root.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root);
+        root.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, glam::Mat4::IDENTITY, &element_state);
         app.element_tree = Some(root);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
@@ -562,7 +601,7 @@ async fn on_request_redraw(app: &mut App) {
 }
 
 fn layout<'a>(
-    element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     _window_width: f32,
     _window_height: f32,
     font_system: &mut FontSystem,
