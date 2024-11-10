@@ -47,8 +47,7 @@ pub struct RectangleBatch {
 pub struct TextRenderInfo {
     element_id: ComponentId,
     rectangle: Rectangle,
-    fill_color: Color,
-    transform: glam::Mat4
+    fill_color: Color
 }
 
 pub struct Pipeline2D {
@@ -196,16 +195,16 @@ impl Pipeline2D {
         }
     }
 
-    pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+    pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         let x = rectangle.x;
         let y = rectangle.y;
         let width = rectangle.width;
         let height = rectangle.height;
 
-        let top_left = transform.mul_vec4(glam::vec4(x, y, 0.0, 1.0));
-        let bottom_left = transform.mul_vec4(glam::vec4(x, y + height, 0.0, 1.0));
-        let top_right = transform.mul_vec4(glam::vec4(x + width, y, 0.0, 1.0));
-        let bottom_right = transform.mul_vec4(glam::vec4(x + width, y + height, 0.0, 1.0));
+        let top_left = glam::vec4(x, y, 0.0, 1.0);
+        let bottom_left = glam::vec4(x, y + height, 0.0, 1.0);
+        let top_right = glam::vec4(x + width, y, 0.0, 1.0);
+        let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
         let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
 
@@ -256,7 +255,7 @@ impl Pipeline2D {
         ]);
     }
 
-    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
+    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
         // vertical left, vertical right, top horizontal, bottom horizontal
 
         let thickness: f32 = 2.0;
@@ -274,31 +273,30 @@ impl Pipeline2D {
 
         let horizontal_bottom = Rectangle::new(rectangle.x, rectangle.y + rectangle.height, rectangle.width, thickness);
 
-        self.draw_rect(vertical_left, outline_color, transform);
-        self.draw_rect(vertical_right, outline_color, transform);
-        self.draw_rect(horizontal_top, outline_color, transform);
-        self.draw_rect(horizontal_bottom, outline_color, transform);
+        self.draw_rect(vertical_left, outline_color);
+        self.draw_rect(vertical_right, outline_color);
+        self.draw_rect(horizontal_top, outline_color);
+        self.draw_rect(horizontal_bottom, outline_color);
     }
 
-    pub(crate) fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
+    pub(crate) fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         self.text_areas.push(TextRenderInfo {
             element_id,
             rectangle,
-            fill_color,
-            transform
+            fill_color
         });
     }
 
-    pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, transform: glam::Mat4) {
+    pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         let x = rectangle.x;
         let y = rectangle.y;
         let width = rectangle.width;
         let height = rectangle.height;
 
-        let top_left = transform.mul_vec4(glam::vec4(x, y, 0.0, 1.0));
-        let bottom_left = transform.mul_vec4(glam::vec4(x, y + height, 0.0, 1.0));
-        let top_right = transform.mul_vec4(glam::vec4(x + width, y, 0.0, 1.0));
-        let bottom_right = transform.mul_vec4(glam::vec4(x + width, y + height, 0.0, 1.0));
+        let top_left = glam::vec4(x, y, 0.0, 1.0);
+        let bottom_left = glam::vec4(x, y + height, 0.0, 1.0);
+        let top_right = glam::vec4(x + width, y, 0.0, 1.0);
+        let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
         let color = [255.0, 255.0, 255.0, 255.0];
 
@@ -440,7 +438,7 @@ impl Pipeline2D {
                         BufferRef::Arc(_) =>  panic!("Editor must own buffer.")
                     };
                     
-                    let text_area_position = text_area.transform.mul_vec4(glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0));
+                    let text_area_position = glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0);
 
                     text_areas.push(TextArea {
                         buffer: text_buffer,
@@ -464,7 +462,7 @@ impl Pipeline2D {
                 } else if let Some(text_context) = element_state.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
 
                     let text_buffer = &text_context.buffer;
-                    let text_area_position = text_area.transform.mul_vec4(glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0));
+                    let text_area_position = glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0);
 
                     text_areas.push(TextArea {
                         buffer: text_buffer,

@@ -25,10 +25,10 @@ impl Rectangle {
 }
 
 pub enum RenderCommand {
-    DrawRect(Rectangle, Color, glam::Mat4),
-    DrawRectOutline(Rectangle, Color, glam::Mat4),
-    DrawImage(Rectangle, ResourceIdentifier, glam::Mat4),
-    DrawText(Rectangle, ComponentId, Color, glam::Mat4),
+    DrawRect(Rectangle, Color),
+    DrawRectOutline(Rectangle, Color),
+    DrawImage(Rectangle, ResourceIdentifier),
+    DrawText(Rectangle, ComponentId, Color),
 }
 
 pub trait Surface {
@@ -46,11 +46,11 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4);
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4);
+    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
+    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4);
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, transform: glam::Mat4);
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
+    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
     fn submit(
         &mut self,

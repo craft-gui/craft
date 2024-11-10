@@ -14,6 +14,11 @@ pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<Box<dyn Element>>,
+    // The computed values after transforms are applied.
+    pub computed_x_transformed: f32,
+    pub computed_y_transformed: f32,
+    
+    // The computed values without any transforms applied to them.
     pub computed_x: f32,
     pub computed_y: f32,
     pub computed_width: f32,
@@ -51,10 +56,10 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn in_bounds(&self, x: f32, y: f32) -> bool {
         let common_element_data = self.common_element_data();
-        x >= common_element_data.computed_x
-            && x <= common_element_data.computed_x + common_element_data.computed_width
-            && y >= common_element_data.computed_y
-            && y <= common_element_data.computed_y + common_element_data.computed_height
+        x >= common_element_data.computed_x_transformed
+            && x <= common_element_data.computed_x_transformed + common_element_data.computed_width
+            && y >= common_element_data.computed_y_transformed
+            && y <= common_element_data.computed_y_transformed + common_element_data.computed_height
     }
 
     fn get_id(&self) -> &Option<String> {
@@ -82,7 +87,6 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        transform: glam::Mat4,
         element_state: &HashMap<ComponentId, Box<ElementState>>,
     );
 
@@ -93,6 +97,7 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
         root_node: NodeId,
         x: f32,
         y: f32,
+        transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     );

@@ -638,7 +638,6 @@ async fn on_request_redraw(app: &mut App) {
             app.font_system.as_mut().unwrap(),
             &mut taffy_tree,
             taffy_root,
-            glam::Mat4::IDENTITY,
             &element_state,
         );
         app.element_tree = Some(root);
@@ -687,7 +686,9 @@ fn layout<'a>(
         )
         .unwrap();
 
-    root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, font_system, element_state);
+    let mut transform = glam::Mat4::IDENTITY;
+    
+    root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, transform, font_system, element_state);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);
