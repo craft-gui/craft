@@ -42,59 +42,21 @@ impl Element for Container {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        transform: glam::Mat4,
         element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
         renderer.draw_rect(
             Rectangle::new(
-                self.common_element_data.computed_x,
-                self.common_element_data.computed_y,
+                self.common_element_data.computed_x_transformed,
+                self.common_element_data.computed_y_transformed,
                 self.common_element_data.computed_width,
                 self.common_element_data.computed_height,
             ),
-            self.common_element_data.style.background,
-            transform
+            self.common_element_data.style.background
         );
-
-        let scrollbar_dy = if let Some(container_state) = element_state.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>(){
-            container_state.scroll_delta_y
-        } else {
-            0.0
-        } * 100.0;
-
-        if self.style().overflow[1].is_scroll_container() {
-            // Vertical scrollbar:
-            renderer.draw_rect(
-                Rectangle::new(
-                    self.common_element_data.computed_x + self.common_element_data.computed_width,
-                    self.common_element_data.computed_y,
-                    // Scrollbar width.
-                    16.0,
-                    self.common_element_data.computed_scrollbar_height,
-                ),
-                Color::new_from_rgba_u8(150, 150, 150, 150),
-                transform,
-            );
-
-            // Vertical scrollbar button:
-            renderer.draw_rect(
-                Rectangle::new(
-                    self.common_element_data.computed_x + self.common_element_data.computed_width + 3.0,
-                    self.common_element_data.computed_y,
-                    // Scrollbar button width.
-                    10.0,
-                    f32::min(self.common_element_data.computed_scrollbar_height / 10.0,  renderer.surface_height() / 6.0),
-                ),
-                Color::new_from_rgba_u8(150, 150, 150, 255),
-                transform,
-            );
-        }
-
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, scrollbar_dy, 0.0));
-
+        
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.draw(renderer, font_system, taffy_tree, child2, transform * child_transform, element_state);
+            child.draw(renderer, font_system, taffy_tree, child2, element_state);
         }
     }
 
@@ -117,6 +79,7 @@ impl Element for Container {
         root_node: NodeId,
         x: f32,
         y: f32,
+        transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {
@@ -124,15 +87,24 @@ impl Element for Container {
 
         self.common_element_data.computed_x = x + result.location.x;
         self.common_element_data.computed_y = y + result.location.y;
-
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
-
         self.common_element_data.computed_scrollbar_width = result.scroll_width();
         self.common_element_data.computed_scrollbar_height = result.scroll_height();
+        self.common_element_data.computed_padding = [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        
+        let transformed_xy =  transform.mul_vec4(glam::vec4(self.common_element_data.computed_x, self.common_element_data.computed_y, 0.0, 1.0));
+        self.common_element_data.computed_x_transformed = transformed_xy.x;
+        self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        self.common_element_data.computed_padding =
-            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        let scrollbar_dy = if let Some(container_state) = element_state.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>(){
+            container_state.scroll_delta_y
+        } else {
+            0.0
+        } * 100.0;
+
+
+        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, scrollbar_dy, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
@@ -141,6 +113,7 @@ impl Element for Container {
                 child2,
                 self.common_element_data.computed_x,
                 self.common_element_data.computed_y,
+                child_transform * transform,
                 font_system,
                 element_state,
             );

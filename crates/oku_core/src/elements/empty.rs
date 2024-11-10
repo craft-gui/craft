@@ -41,7 +41,6 @@ impl Element for Empty {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        transform: glam::Mat4,
         element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
     }
@@ -65,6 +64,7 @@ impl Element for Empty {
         _root_node: NodeId,
         _x: f32,
         _y: f32,
+        transform: glam::Mat4,
         _font_system: &mut FontSystem,
         _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {

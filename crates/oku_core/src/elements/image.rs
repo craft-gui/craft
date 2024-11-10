@@ -52,19 +52,16 @@ impl Element for Image {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        transform: glam::Mat4,
         element_state: &HashMap<ComponentId, Box<ElementState>>,
     ) {
-        info!("trying to draw image: {:?}", self.common_element_data.computed_height);
         renderer.draw_image(
             Rectangle::new(
-                self.common_element_data.computed_x,
-                self.common_element_data.computed_y,
+                self.common_element_data.computed_x_transformed,
+                self.common_element_data.computed_y_transformed,
                 self.common_element_data.computed_width,
                 self.common_element_data.computed_height,
             ),
             self.resource_identifier.clone(),
-            transform
         );
     }
 
@@ -87,6 +84,7 @@ impl Element for Image {
         root_node: NodeId,
         x: f32,
         y: f32,
+        transform: glam::Mat4,
         _font_system: &mut FontSystem,
         _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
     ) {
@@ -94,12 +92,13 @@ impl Element for Image {
 
         self.common_element_data.computed_x = x + result.location.x;
         self.common_element_data.computed_y = y + result.location.y;
-
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
+        self.common_element_data.computed_padding = [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
 
-        self.common_element_data.computed_padding =
-            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        let transformed_xy =  transform.mul_vec4(glam::vec4(self.common_element_data.computed_x, self.common_element_data.computed_y, 0.0, 1.0));
+        self.common_element_data.computed_x_transformed = transformed_xy.x;
+        self.common_element_data.computed_y_transformed = transformed_xy.y;
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -201,10 +200,10 @@ impl Image {
     }
 
     pub fn in_bounds(&self, x: f32, y: f32) -> bool {
-        x >= self.common_element_data.computed_x
-            && x <= self.common_element_data.computed_x + self.common_element_data.computed_width
-            && y >= self.common_element_data.computed_y
-            && y <= self.common_element_data.computed_y + self.common_element_data.computed_height
+        x >= self.common_element_data.computed_x_transformed
+            && x <= self.common_element_data.computed_x_transformed + self.common_element_data.computed_width
+            && y >= self.common_element_data.computed_y_transformed
+            && y <= self.common_element_data.computed_y_transformed + self.common_element_data.computed_height
     }
 
     pub fn id(mut self, id: &str) -> Self {

@@ -149,21 +149,21 @@ impl Renderer for SoftwareRenderer {
         self.surface_clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color, transform));
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, Color::RED, transform));
+    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
+        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
+        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, Color::RED));
     }
 
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, transform));
+    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
+        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, transform));
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
 
-    fn draw_image(&mut self, _rectangle: Rectangle, resource: ResourceIdentifier, transform: glam::Mat4) {
-        self.render_commands.push(RenderCommand::DrawImage(_rectangle, resource, transform));
+    fn draw_image(&mut self, _rectangle: Rectangle, resource: ResourceIdentifier) {
+        self.render_commands.push(RenderCommand::DrawImage(_rectangle, resource));
         info!("Image added");
     }
 
@@ -182,14 +182,13 @@ impl Renderer for SoftwareRenderer {
 
         for command in self.render_commands.drain(..) {
             match command {
-                RenderCommand::DrawRect(rectangle, fill_color, transform) => {
+                RenderCommand::DrawRect(rectangle, fill_color) => {
                     draw_rect(&mut self.framebuffer, rectangle, fill_color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color, transform) => {
+                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
                     draw_rect_outline(&mut self.framebuffer, rectangle, outline_color);
                 }
-                RenderCommand::DrawImage(rectangle, resource_identifier, transform) => {
-                    info!("Drawing image");
+                RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
 
                     if let Some(Resource::Image(resource)) = resource {
@@ -199,7 +198,7 @@ impl Renderer for SoftwareRenderer {
                         self.framebuffer.draw_pixmap(rectangle.x as i32, rectangle.y as i32, pixmap, &pixmap_paint, Transform::identity(), None);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id, fill_color, transform) => {
+                RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let buffer = if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
                         match text_context.editor.buffer_ref() {
                             BufferRef::Owned(buffer) => buffer,

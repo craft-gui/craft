@@ -114,21 +114,21 @@ impl Renderer for WgpuRenderer<'_> {
         self.context.surface_clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
-        self.pipeline2d.draw_rect(rectangle, fill_color, transform);
+    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
+        self.pipeline2d.draw_rect(rectangle, fill_color);
         // self.pipeline2d.draw_rect_outline(rectangle, Color::RED);
     }
 
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, transform: glam::Mat4) {
-        self.pipeline2d.draw_rect_outline(rectangle, outline_color, transform);
+    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
+        self.pipeline2d.draw_rect_outline(rectangle, outline_color);
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, transform: glam::Mat4) {
-        self.pipeline2d.draw_text(element_id, rectangle, fill_color, transform);
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
+        self.pipeline2d.draw_text(element_id, rectangle, fill_color);
     }
 
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, transform: glam::Mat4) {
-        self.pipeline2d.draw_image(rectangle, resource_identifier, transform)
+    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
+        self.pipeline2d.draw_image(rectangle, resource_identifier)
     }
 
     fn submit(
