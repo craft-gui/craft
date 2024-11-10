@@ -208,7 +208,7 @@ impl Element for Text {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _font_system: &mut FontSystem) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
@@ -276,7 +276,7 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) {
         
     }
 }

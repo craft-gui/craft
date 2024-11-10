@@ -366,7 +366,7 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
                     target_component_id = Some(element.component_id());
                     target_element_id = element.get_id().clone();
 
-                    element.on_event(OkuEvent::KeyboardInputEvent(keyboard_input), &mut app.element_state);
+                    element.on_event(OkuEvent::KeyboardInputEvent(keyboard_input), &mut app.element_state, app.font_system.as_mut().unwrap());
 
                     break;
                 }
@@ -609,7 +609,7 @@ fn layout<'a>(
     resource_manager: &RwLockReadGuard<ResourceManager>,
 ) -> (TaffyTree<LayoutContext<'a>>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, font_system);
+    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state);
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),

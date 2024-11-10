@@ -1,6 +1,8 @@
 [package]
 name = "oku"
 edition = "2021"
+publish = true
+version = "0.1.0"
 
 [features]
 # Force dynamic linking, which improves iterative compile times
@@ -9,8 +11,8 @@ android = ["oku_core/android"]
 web = ["oku_core/web"]
 
 [dependencies]
-oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = true  }
-oku_core = { path = "crates/oku_core", default-features = false }
+oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = true, version = "0.1.0"  }
+oku_core = { path = "crates/oku_core", default-features = false, version = "0.1.0" }
 rand = "0.9.0-alpha.1"
 wasm-bindgen = "0.2.95"
 web-sys = "0.3.72"

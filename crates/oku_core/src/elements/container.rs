@@ -60,7 +60,7 @@ impl Element for Container {
         } else {
             0.0
         } * 100.0;
-        
+
         if self.style().overflow[1].is_scroll_container() {
             // Vertical scrollbar:
             renderer.draw_rect(
@@ -86,22 +86,22 @@ impl Element for Container {
                 ),
                 Color::new_from_rgba_u8(150, 150, 150, 255),
                 transform,
-            );   
+            );
         }
-        
+
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, scrollbar_dy, 0.0));
-        
+
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.draw(renderer, font_system, taffy_tree, child2, transform * child_transform, element_state);
         }
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.compute_layout(taffy_tree, font_system);
+            let child_node = child.compute_layout(taffy_tree, font_system, element_state);
             child_nodes.push(child_node);
         }
 
@@ -129,7 +129,7 @@ impl Element for Container {
 
         self.common_element_data.computed_scrollbar_width = result.scroll_width();
         self.common_element_data.computed_scrollbar_height = result.scroll_height();
-        
+
         self.common_element_data.computed_padding =
             [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
 
@@ -150,7 +150,7 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>, font_system: &mut FontSystem) {
         let container_state = self.get_state_mut(element_state);
 
         match event {
@@ -179,7 +179,7 @@ impl Container {
     ) -> &'a &ContainerState {
         element_state.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
-    
+
     fn get_state_mut<'a>(
         &self,
         element_state: &'a mut HashMap<ComponentId, Box<ElementState>>,
