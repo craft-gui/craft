@@ -58,6 +58,7 @@ impl UpdateResult {
 /// A Component's update function.
 pub type UpdateFn = fn(
     state: &mut GenericUserState,
+    props: Option<Props>,
     id: ComponentId,
     message: Message,
     source_element_id: Option<String>,
@@ -149,8 +150,8 @@ where
 
     fn view(
         state: &Self,
-        _props: Option<&Self::Props>,
-        _children: Vec<ComponentSpecification>,
+        props: Option<&Self::Props>,
+        children: Vec<ComponentSpecification>,
         id: ComponentId,
     ) -> ComponentSpecification;
 
@@ -170,17 +171,19 @@ where
         Box::<Self>::default()
     }
 
-    fn update(state: &mut Self, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult;
+    fn update(state: &mut Self, props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult;
 
     fn generic_update(
         state: &mut GenericUserState,
+        props: Option<Props>,
         id: ComponentId,
         message: Message,
         source_element: Option<String>,
     ) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
+        let props: Option<&Self::Props> = props.as_ref().map(|props| props.data.deref().downcast_ref().unwrap());
 
-        Self::update(casted_state, id, message, source_element)
+        Self::update(casted_state, props, id, message, source_element)
     }
 
     fn component() -> ComponentSpecification {

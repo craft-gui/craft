@@ -6,6 +6,7 @@ use std::any::Any;
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
+use crate::components::props::Props;
 
 pub enum InternalMessage {
     RequestRedraw,
@@ -18,6 +19,6 @@ pub enum InternalMessage {
     MouseWheel(MouseWheel),
     KeyboardInput(KeyboardInput),
     ProcessUserEvents,
-    GotUserMessage((UpdateFn, u64, Option<String>, Box<dyn Any + Send>)),
+    GotUserMessage((UpdateFn, u64, Option<String>, Box<dyn Any + Send>, Option<Props>)),
     ResourceEvent(ResourceEvent),
 }

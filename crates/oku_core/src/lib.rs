@@ -247,9 +247,11 @@ async fn async_main(
                     let update_fn = message.0;
                     let source_component = message.1;
                     let source_element = message.2;
+                    let props = message.4;
                     let message = message.3;
+
                     let state = app.user_state.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, source_component, Message::UserMessage(message), source_element);
+                    update_fn(state, props, source_component, Message::UserMessage(message), source_element);
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -289,6 +291,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
                         event.source_component,
                         event.source_element,
                         res,
+                        event.props
                     )),
                 ))
                 .await
@@ -486,10 +489,10 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
             //println!("Target component id: {:?}", node.id);
 
             let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
-            let res = (node.update)(state, node.id, Message::OkuMessage(event.clone()), target_element_id.clone());
+            let res = (node.update)(state, node.props.clone(), node.id, Message::OkuMessage(event.clone()), target_element_id.clone());
             let propagate_result = res.propagate;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(node.id, target_element_id.clone(), node.update, res));
+                app.update_queue.push_back(UpdateQueueEntry::new(node.id, target_element_id.clone(), node.update, res, node.props.clone()));
             }
             if !propagate_result {
                 propagate = false;

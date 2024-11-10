@@ -9,6 +9,7 @@ use crate::reactive::element_id::create_unique_element_id;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use crate::components::props::Props;
 use crate::elements::Container;
 use crate::elements::container::ContainerState;
 
@@ -22,6 +23,7 @@ pub struct ComponentTreeNode {
     pub children_keys: HashMap<String, ComponentId>,
     pub id: ComponentId,
     pub(crate) parent_id: Option<ComponentId>,
+    pub props: Option<Props>,
 }
 
 #[derive(Clone)]
@@ -56,6 +58,7 @@ impl ComponentTreeNode {
 }
 fn dummy_update(
     _state: &mut GenericUserState,
+    _props: Option<Props>,
     _id: ComponentId,
     _message: Message,
     _source_element_id: Option<String>,
@@ -83,6 +86,7 @@ pub(crate) fn create_trees_from_render_specification(
             children_keys: HashMap::new(),
             id: 0,
             parent_id: None,
+            props: None,
         };
         
         // Make sure to set a default state for the root.
@@ -170,6 +174,7 @@ pub(crate) fn create_trees_from_render_specification(
                         children_keys: HashMap::new(),
                         id,
                         parent_id: Some((*parent_component_ptr).id),
+                        props: None,
                     };
 
                     // Add the new component node to the tree and get a pointer to it.
@@ -242,13 +247,13 @@ pub(crate) fn create_trees_from_render_specification(
                         let state_mut = user_state.get_mut(&id).unwrap().as_mut();
 
                         if initialized {
-                            (component_data.update_fn)(state_mut, id, OkuMessage(OkuEvent::Initialized), None);
+                            (component_data.update_fn)(state_mut, props.clone(), id, OkuMessage(OkuEvent::Initialized), None);
                         }
                     }
 
                     let state = user_state.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, props, children, id);
+                    let new_component = (component_data.view_fn)(state, props.clone(), children, id);
 
                     let new_component_node = ComponentTreeNode {
                         is_element: false,
@@ -259,6 +264,7 @@ pub(crate) fn create_trees_from_render_specification(
                         children_keys: HashMap::new(),
                         id,
                         parent_id: Some((*parent_component_ptr).id),
+                        props,
                     };
 
                     // Add the current child id to the children_keys hashmap in the parent.
