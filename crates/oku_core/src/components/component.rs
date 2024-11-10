@@ -14,7 +14,6 @@ pub type ViewFn = fn(
 ) -> ComponentSpecification;
 
 /// The result of an update.
-#[derive(Default)]
 pub struct UpdateResult {
     /// Propagate oku_events to the next element. True by default.
     pub propagate: bool,
@@ -25,13 +24,19 @@ pub struct UpdateResult {
     pub prevent_defaults: bool,
 }
 
-impl UpdateResult {
-    pub fn new() -> UpdateResult {
+impl Default for UpdateResult {
+    fn default() -> Self {
         UpdateResult {
             propagate: true,
             future: None,
             prevent_defaults: false
         }
+    }
+}
+
+impl UpdateResult {
+    pub fn new() -> UpdateResult {
+        UpdateResult::default()
     }
 
     pub fn future(mut self, future: PinnedFutureAny) -> Self {
