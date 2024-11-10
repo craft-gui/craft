@@ -39,13 +39,11 @@ impl Component for Request {
                     .max_width(Unit::Percentage(100.0))
                     .display(Display::Block)
                     .component()
-                    .key("counter text"),
             )
             .push(
                 Image::new(ResourceIdentifier::Url(TREE.to_string()))
                     .max_width(Unit::Percentage(100.0))
-                    .component()
-                    .key("counter text"),
+                    .component(),
             )
     }
 
@@ -73,7 +71,7 @@ impl Component for Request {
                 };
         */
 
-        UpdateResult::new(false, None)
+        UpdateResult::new().prevent_propagate()
     }
 }
 

@@ -43,7 +43,7 @@ impl Component for Counter {
             }
         };
 
-        UpdateResult::new(true, None)
+        UpdateResult::new().prevent_propagate()
     }
 }
 

@@ -60,10 +60,7 @@ fn dummy_update(
     _message: Message,
     _source_element_id: Option<String>,
 ) -> UpdateResult {
-    UpdateResult {
-        propagate: true,
-        result: None,
-    }
+    UpdateResult::new()
 }
 
 /// Creates a new Component tree and Element tree from a ComponentSpecification.

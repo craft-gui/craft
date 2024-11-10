@@ -52,7 +52,7 @@ impl Component for Counter {
         println!("Update: {:?}", source_element);
 
         if source_element.as_deref() == Some("blue") {
-            return UpdateResult::new(false, None);
+            return UpdateResult::new().prevent_propagate();
         }
 
         if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message {
@@ -63,7 +63,7 @@ impl Component for Counter {
             }
         };
 
-        UpdateResult::new(true, None)
+        UpdateResult::new()
     }
 }
 

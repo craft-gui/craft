@@ -52,7 +52,7 @@ impl Component for Accordion {
             }
         }
 
-        UpdateResult::new(true, None)
+        UpdateResult::new()
     }
 }
 

@@ -30,7 +30,7 @@ impl Component for TextState {
     }
 
     fn update(state: &mut Self, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
-        UpdateResult::new(true, None)
+        UpdateResult::new()
     }
 }
 

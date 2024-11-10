@@ -279,7 +279,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
         let mut app_sender_copy = app_sender.clone();
         let window_clone = app.window.clone().unwrap();
         let f = async move {
-            let update_result = event.update_result.result.unwrap();
+            let update_result = event.update_result.future.unwrap();
             let res = update_result.await;
             app_sender_copy
                 .send(AppMessage::new(
@@ -488,7 +488,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
             let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(state, node.id, Message::OkuMessage(event.clone()), target_element_id.clone());
             let propagate_result = res.propagate;
-            if res.result.is_some() {
+            if res.future.is_some() {
                 app.update_queue.push_back(UpdateQueueEntry::new(node.id, target_element_id.clone(), node.update, res));
             }
             if !propagate_result {

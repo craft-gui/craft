@@ -16,16 +16,37 @@ pub type ViewFn = fn(
 /// The result of an update.
 #[derive(Default)]
 pub struct UpdateResult {
+    /// Propagate oku_events to the next element. True by default.
     pub propagate: bool,
-    pub result: Option<PinnedFutureAny>,
+    /// A future that will produce a message when complete. The message will be sent to the origin component.
+    pub future: Option<PinnedFutureAny>,
+    /// Prevent default event handlers from running when an oku_event is not explicitly handled.
+    /// False by default.
+    pub prevent_defaults: bool,
 }
 
 impl UpdateResult {
-    pub fn new(propagate: bool, future: Option<PinnedFutureAny>) -> UpdateResult {
+    pub fn new() -> UpdateResult {
         UpdateResult {
-            propagate,
-            result: future,
+            propagate: true,
+            future: None,
+            prevent_defaults: false
         }
+    }
+
+    pub fn future(mut self, future: PinnedFutureAny) -> Self {
+        self.future = Some(future);
+        self
+    }
+
+    pub fn prevent_defaults(mut self) -> Self {
+        self.prevent_defaults = true;
+        self
+    }
+
+    pub fn prevent_propagate(mut self) -> Self {
+        self.propagate = false;
+        self
     }
 }
 

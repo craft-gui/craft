@@ -17,11 +17,6 @@ pub use mouse_wheel::MouseWheel;
 pub use winit::event::MouseButton;
 use std::any::Any;
 
-pub enum EventResult {
-    Stop,
-    Continue,
-}
-
 #[derive(Clone, Debug)]
 pub enum OkuEvent {
     Initialized,
