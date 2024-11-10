@@ -83,8 +83,8 @@ impl ComponentSpecification {
         self
     }
 
-    pub fn props(mut self, props: Option<Props>) -> Self {
-        self.props = props;
+    pub fn props(mut self, props: Props) -> Self {
+        self.props = Some(props);
         self
     }
 
