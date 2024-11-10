@@ -26,7 +26,7 @@ impl Component for Counter {
             .flex_direction(FlexDirection::Column)
             .component()
             .push(Text::new(format!("Counter: {}", state.count).as_str()).component())
-            .push(Container::new().id("increment").component())
+            .push(Container::new().component())
             .push(Text::new("increment").id("increment").component())
     }
 
