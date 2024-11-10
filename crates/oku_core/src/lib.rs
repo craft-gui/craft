@@ -330,7 +330,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
                 let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
                 
                 if in_bounds && element.style().overflow[1].is_scroll_container() {
-                    element.on_event(OkuEvent::MouseWheelEvent(mouse_wheel), &mut app.element_state);
+                    element.on_event(OkuEvent::MouseWheelEvent(mouse_wheel), &mut app.element_state, app.font_system.as_mut().unwrap());
                     break;
                 }
 
