@@ -33,8 +33,8 @@ pub struct TextInputState<'a> {
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
     pub metrics: Metrics,
-    pub font_system: FontSystem,
     pub editor: Editor<'a>,
+    pub text: String,
 }
 
 impl<'a> TextInputState<'a> {
@@ -42,9 +42,9 @@ impl<'a> TextInputState<'a> {
         id: ComponentId,
         metrics: Metrics,
         text_hash: u64,
-        font_system: FontSystem,
         editor: Editor<'a>,
         color: Option<cosmic_text::Color>,
+        text: String,
     ) -> Self {
         Self {
             id,
@@ -62,8 +62,8 @@ impl<'a> TextInputState<'a> {
                 },
             },
             metrics,
-            font_system,
             editor,
+            text
         }
     }
 
@@ -112,9 +112,12 @@ impl<'a> TextInputState<'a> {
         self.text_hash = text_hash;
 
         if cached_text_layout_value.is_none() {
-            // self.buffer.set_metrics(font_system, self.metrics);
-            // self.buffer.set_size(font_system, width_constraint, height_constraint);
-            // self.buffer.shape_until_scroll(font_system, true);
+            self.editor.with_buffer_mut(|buffer| {
+                buffer.set_metrics(font_system, self.metrics);
+                buffer.set_size(font_system, width_constraint, height_constraint);
+            });
+            self.editor.shape_as_needed(font_system, true);
+
 
             // Determine measured size of text
             let cached_text_layout_value = self.editor.with_buffer(|buffer| {
@@ -205,7 +208,16 @@ impl Element for TextInput {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _font_system: &mut FontSystem) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
+        let (text_hash, text) = if let Some(state) = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut::<TextInputState>() {
+            (state.text_hash, state.text.clone())
+        } else {
+            let mut text_hasher = FxHasher::default();
+            text_hasher.write(self.text.as_ref());
+            (text_hasher.finish(), self.text.clone())
+        };
+
+
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
@@ -218,10 +230,6 @@ impl Element for TextInput {
 
         attributes.weight = cosmic_text::Weight(self.common_element_data.style.font_weight.0);
         let style: taffy::Style = self.common_element_data.style.into();
-
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
 
         taffy_tree
             .new_leaf_with_context(
@@ -277,7 +285,7 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) {
         let text_context: &mut TextInputState = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
     
         match event {
@@ -289,56 +297,45 @@ impl Element for TextInput {
                 if state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::Left))
+                            text_context.editor.action(font_system, Action::Motion(Motion::Left))
                         }
                         Key::Named(NamedKey::ArrowRight) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::Right))
+                            text_context.editor.action(font_system, Action::Motion(Motion::Right))
                         }
                         Key::Named(NamedKey::ArrowUp) => {
-                            text_context.editor.action(&mut text_context.font_system,Action::Motion(Motion::Up))
+                            text_context.editor.action(font_system,Action::Motion(Motion::Up))
                         }
                         Key::Named(NamedKey::ArrowDown) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::Down))
+                            text_context.editor.action(font_system, Action::Motion(Motion::Down))
                         }
                         Key::Named(NamedKey::Home) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::Home))
+                            text_context.editor.action(font_system, Action::Motion(Motion::Home))
                         }
                         Key::Named(NamedKey::End) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::End))
+                            text_context.editor.action(font_system, Action::Motion(Motion::End))
                         }
                         Key::Named(NamedKey::PageUp) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::PageUp))
+                            text_context.editor.action(font_system, Action::Motion(Motion::PageUp))
                         }
                         Key::Named(NamedKey::PageDown) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Motion(Motion::PageDown))
+                            text_context.editor.action(font_system, Action::Motion(Motion::PageDown))
                         }
-                        Key::Named(NamedKey::Escape) => text_context.editor.action(&mut text_context.font_system, Action::Escape),
-                        Key::Named(NamedKey::Enter) => text_context.editor.action(&mut text_context.font_system, Action::Enter),
+                        Key::Named(NamedKey::Escape) => text_context.editor.action(font_system, Action::Escape),
+                        Key::Named(NamedKey::Enter) => text_context.editor.action(font_system, Action::Enter),
                         Key::Named(NamedKey::Backspace) => {
-                            text_context.editor.action(&mut text_context.font_system, Action::Backspace)
+                            text_context.editor.action(font_system, Action::Backspace)
                         }
-                        Key::Named(NamedKey::Delete) => text_context.editor.action(&mut text_context.font_system, Action::Delete),
+                        Key::Named(NamedKey::Delete) => text_context.editor.action(font_system, Action::Delete),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
-                                println!("{}", text);
-                                for c in text.chars() {
-                                    text_context.editor.action(&mut text_context.font_system, Action::Insert(c));
+                                for char in text.chars() {
+                                    text_context.editor.action(font_system, Action::Insert(char));
                                 }
-                                println!("{}", text_context.editor.with_buffer(|buffer| {
-                                    
-                                    let mut output: String = String::new();
-                                    for line in &buffer.lines {
-                                        output += line.text().clone();
-                                    }
-                                    
-                                    output
-                                    
-                                }))
                             }
                         }
                         Key::Character(text) => {
                             for c in text.chars() {
-                                text_context.editor.action(&mut text_context.font_system, Action::Insert(c));
+                                text_context.editor.action(font_system, Action::Insert(c));
                             }
                         }
                         _ => {}
@@ -350,20 +347,19 @@ impl Element for TextInput {
 
         text_context.editor.with_buffer(|buffer| {
 
-            let mut buffer_string: Vec<u8> = Vec::new();
+            let mut buffer_string: String = String::new();
             let last_line = buffer.lines.len() - 1;
-            for (line_number, line) in (&buffer.lines).iter().enumerate() {
-                buffer_string.extend(line.text().as_bytes());
-            /*    if line_number != last_line {
-                    buffer_string.extend("\n".as_bytes());
-                }*/
+            for line in buffer.lines.iter() {
+                buffer_string.push_str(line.text());
+                buffer_string.push_str(line.ending().as_str());
             }
 
             let mut text_hasher = FxHasher::default();
-            text_hasher.write(&buffer_string);
+            text_hasher.write(buffer_string.as_bytes());
             let text_hash = text_hasher.finish();
 
-            //text_context.text_hash = text_hash;
+            text_context.text_hash = text_hash;
+            text_context.text = buffer_string;
 
         });
     }
@@ -442,7 +438,7 @@ impl TextInput {
         self.common_element_data.id = Some(id.to_string());
         self
     }
-    
+
     pub fn component(self) -> ComponentSpecification {
         ComponentSpecification::new(self.into())
     }

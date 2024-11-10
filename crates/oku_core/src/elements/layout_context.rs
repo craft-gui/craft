@@ -177,7 +177,7 @@ pub fn measure_content(
                 {
                     cosmic_text_content.text_hash = taffy_text_input_context.text_hash;
                     cosmic_text_content.metrics = taffy_text_input_context.metrics;
-                    
+
                     cosmic_text_content.editor.with_buffer_mut(|buffer| {
                         buffer.set_metrics(font_system, cosmic_text_content.metrics);
                         buffer.set_text(
@@ -185,33 +185,31 @@ pub fn measure_content(
                             &taffy_text_input_context.text,
                             taffy_text_input_context.attributes,
                             Shaping::Advanced,
-                        );   
+                        );
                     });
                 }
                 cosmic_text_content
             } else {
 
-                let mut font_system = FontSystem::new();
-                
                 let buffer = Buffer::new(
-                    &mut font_system,
+                    font_system,
                     taffy_text_input_context.metrics,
                 );
                 let mut editor = Editor::new(buffer);
-                editor.borrow_with(&mut font_system);
-                
+                editor.borrow_with(font_system);
+
                 editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(&mut font_system, &taffy_text_input_context.text, taffy_text_input_context.attributes, Shaping::Advanced)
+                    buffer.set_text(font_system, &taffy_text_input_context.text, taffy_text_input_context.attributes, Shaping::Advanced)
                 });
-                editor.action(&mut font_system, Action::Motion(Motion::End));
+                editor.action(font_system, Action::Motion(Motion::End));
 
                 let cosmic_text_content = TextInputState::new(
                     taffy_text_input_context.id,
                     taffy_text_input_context.metrics,
                     taffy_text_input_context.text_hash,
-                    font_system,
                     editor,
-                    taffy_text_input_context.attributes.color_opt
+                    taffy_text_input_context.attributes.color_opt,
+                    taffy_text_input_context.text.clone()
                 );
 
                 element_state.insert(taffy_text_input_context.id, Box::new(cosmic_text_content));
