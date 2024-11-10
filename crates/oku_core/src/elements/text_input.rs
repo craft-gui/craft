@@ -1,14 +1,17 @@
-use cosmic_text::{Action, Motion};
-use cosmic_text::{Edit, SwashCache, SyntaxEditor, SyntaxSystem};
-use crate::engine::renderer::renderer::{Rectangle};
 use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
 use crate::elements::element::{CommonElementData, Element};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey};
-use crate::style::{
-    AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight,
+use crate::elements::layout_context::{
+    AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
+use crate::elements::text::TextHashValue;
+use crate::engine::events::OkuEvent;
+use crate::engine::renderer::color::Color;
+use crate::engine::renderer::renderer::Rectangle;
+use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight};
 use crate::RendererBox;
+use cosmic_text::{Action, Motion};
 use cosmic_text::{Attrs, Buffer, Editor, FontSystem, Metrics};
+use cosmic_text::{Edit, SwashCache, SyntaxEditor, SyntaxSystem};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -16,9 +19,6 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::engine::events::OkuEvent;
-use crate::engine::renderer::color::Color;
-use crate::elements::text::TextHashValue;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -63,7 +63,7 @@ impl<'a> TextInputState<'a> {
             },
             metrics,
             editor,
-            text
+            text,
         }
     }
 
@@ -118,7 +118,6 @@ impl<'a> TextInputState<'a> {
             });
             self.editor.shape_as_needed(font_system, true);
 
-
             // Determine measured size of text
             let cached_text_layout_value = self.editor.with_buffer(|buffer| {
                 let (width, total_lines) = buffer
@@ -145,7 +144,6 @@ impl<'a> TextInputState<'a> {
             }
         }
     }
-
 }
 
 impl TextInput {
@@ -208,15 +206,24 @@ impl Element for TextInput {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
-        let (text_hash, text) = if let Some(state) = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut::<TextInputState>() {
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        font_system: &mut FontSystem,
+        element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+    ) -> NodeId {
+        let (text_hash, text) = if let Some(state) = element_state
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .as_mut()
+            .downcast_mut::<TextInputState>()
+        {
             (state.text_hash, state.text.clone())
         } else {
             let mut text_hasher = FxHasher::default();
             text_hasher.write(self.text.as_ref());
             (text_hasher.finish(), self.text.clone())
         };
-
 
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
@@ -257,7 +264,8 @@ impl Element for TextInput {
         let result = taffy_tree.layout(root_node).unwrap();
 
         //let text_context = self.get_state_mut(element_state);
-        let mut text_context: &mut TextInputState = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+        let mut text_context: &mut TextInputState =
+            element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
 
         text_context.editor.with_buffer_mut(|buffer| {
             buffer.set_metrics(font_system, text_context.metrics);
@@ -269,7 +277,6 @@ impl Element for TextInput {
             );
             buffer.shape_until_scroll(font_system, true);
         });
-
 
         self.common_element_data.computed_x = x + result.location.x;
         self.common_element_data.computed_y = y + result.location.y;
@@ -285,9 +292,15 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) {
-        let text_context: &mut TextInputState = element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
-    
+    fn on_event(
+        &self,
+        event: OkuEvent,
+        element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        font_system: &mut FontSystem,
+    ) {
+        let text_context: &mut TextInputState =
+            element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+
         match event {
             OkuEvent::KeyboardInputEvent(keyboard_input) => {
                 let KeyEvent {
@@ -303,7 +316,7 @@ impl Element for TextInput {
                             text_context.editor.action(font_system, Action::Motion(Motion::Right))
                         }
                         Key::Named(NamedKey::ArrowUp) => {
-                            text_context.editor.action(font_system,Action::Motion(Motion::Up))
+                            text_context.editor.action(font_system, Action::Motion(Motion::Up))
                         }
                         Key::Named(NamedKey::ArrowDown) => {
                             text_context.editor.action(font_system, Action::Motion(Motion::Down))
@@ -322,9 +335,7 @@ impl Element for TextInput {
                         }
                         Key::Named(NamedKey::Escape) => text_context.editor.action(font_system, Action::Escape),
                         Key::Named(NamedKey::Enter) => text_context.editor.action(font_system, Action::Enter),
-                        Key::Named(NamedKey::Backspace) => {
-                            text_context.editor.action(font_system, Action::Backspace)
-                        }
+                        Key::Named(NamedKey::Backspace) => text_context.editor.action(font_system, Action::Backspace),
                         Key::Named(NamedKey::Delete) => text_context.editor.action(font_system, Action::Delete),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
@@ -345,13 +356,16 @@ impl Element for TextInput {
             _ => {}
         }
 
-        text_context.editor.with_buffer(|buffer| {
+        text_context.editor.shape_as_needed(font_system, true);
 
+        text_context.editor.with_buffer(|buffer| {
             let mut buffer_string: String = String::new();
             let last_line = buffer.lines.len() - 1;
-            for line in buffer.lines.iter() {
+            for (line_number, line) in buffer.lines.iter().enumerate() {
                 buffer_string.push_str(line.text());
-                buffer_string.push_str(line.ending().as_str());
+                if line_number != last_line {
+                    buffer_string.push_str("\n");
+                }
             }
 
             let mut text_hasher = FxHasher::default();
@@ -360,7 +374,6 @@ impl Element for TextInput {
 
             text_context.text_hash = text_hash;
             text_context.text = buffer_string;
-
         });
     }
 }
