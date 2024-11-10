@@ -15,6 +15,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
+use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
 
 // A stateful element that shows text.
@@ -276,9 +277,6 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) {
-        
-    }
 }
 
 impl Text {

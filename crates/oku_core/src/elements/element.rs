@@ -7,6 +7,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
+use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
 
 #[derive(Clone, Debug, Default)]
@@ -99,7 +100,9 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem);
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) -> UpdateResult {
+        UpdateResult::default()
+    }
 }
 
 impl<T: Element> From<T> for Box<dyn Element> {

@@ -291,7 +291,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
                         event.source_component,
                         event.source_element,
                         res,
-                        event.props
+                        event.props,
                     )),
                 ))
                 .await
@@ -453,13 +453,14 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let target = targets[0].clone();
 
     let mut propagate = true;
-    while let Some(target) = targets.pop_front() {
+    let mut prevent_defaults = false;
+    for target in targets.iter() {
         if !propagate {
             break;
         }
 
         //println!("Dispatching to: {:?}", target);
-        let (target_component_id, target_element_id) = target;
+        let (target_component_id, target_element_id) = target.clone();
 
         // Get the element's component tree ndoe.
         let target_component =
@@ -489,13 +490,54 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
             //println!("Target component id: {:?}", node.id);
 
             let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
-            let res = (node.update)(state, node.props.clone(), node.id, Message::OkuMessage(event.clone()), target_element_id.clone());
-            let propagate_result = res.propagate;
+            let res = (node.update)(
+                state,
+                node.props.clone(),
+                node.id,
+                Message::OkuMessage(event.clone()),
+                target_element_id.clone(),
+            );
+            propagate = propagate && res.propagate;
+            prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(node.id, target_element_id.clone(), node.update, res, node.props.clone()));
+                app.update_queue.push_back(UpdateQueueEntry::new(
+                    node.id,
+                    target_element_id.clone(),
+                    node.update,
+                    res,
+                    node.props.clone(),
+                ));
             }
-            if !propagate_result {
-                propagate = false;
+        }
+    }
+
+    // Handle element events if prevent defaults was not set to true.
+    if !prevent_defaults {
+        for target in targets.iter() {
+            let (target_component_id, target_element_id) = target.clone();
+            let fiber: FiberNode = FiberNode {
+                element: app.element_tree.as_ref().map(|f| f.as_ref()),
+                component: Some(app.component_tree.as_ref().unwrap()),
+            };
+
+            let mut propagate = true;
+            let mut prevent_defaults = false;
+
+            let resource_manager = &mut app.resource_manager;
+            for fiber_node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+                if !propagate {
+                    break;
+                }
+
+                if let Some(element) = fiber_node.element {
+                    if element.component_id() == target_component_id {
+                        let res =
+                            element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+
+                        propagate = propagate && res.propagate;
+                        prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    }
+                }
             }
         }
     }

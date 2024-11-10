@@ -10,6 +10,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
 use winit::event::MouseScrollDelta;
+use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
 
 /// A stateless element that stores other elements.
@@ -150,21 +151,20 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<ElementState>>, font_system: &mut FontSystem) {
+    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
         match event {
-            OkuEvent::Initialized => {}
-            OkuEvent::PointerButtonEvent(_) => {}
-            OkuEvent::KeyboardInputEvent(_) => {}
-            OkuEvent::PointerMovedEvent(_) => {}
             OkuEvent::MouseWheelEvent(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
                     MouseScrollDelta::LineDelta(x, y) => {y}
                     MouseScrollDelta::PixelDelta(y) => {y.y as f32}
                 };
-
                 container_state.scroll_delta_y += 1.0 * delta;
+                UpdateResult::new().prevent_propagate().prevent_defaults()
+            }
+            _ => {
+                UpdateResult::new()
             }
         }
 

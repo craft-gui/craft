@@ -19,6 +19,7 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
+use crate::components::UpdateResult;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -300,11 +301,11 @@ impl Element for TextInput {
         event: OkuEvent,
         element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
         font_system: &mut FontSystem,
-    ) {
+    ) -> UpdateResult {
         let text_context: &mut TextInputState =
             element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
 
-        match event {
+        let res = match event {
             OkuEvent::KeyboardInputEvent(keyboard_input) => {
                 let KeyEvent {
                     logical_key, state, ..
@@ -355,9 +356,12 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
+                UpdateResult::new().prevent_defaults().prevent_propagate()
             }
-            _ => {}
-        }
+            _ => {
+                UpdateResult::new()
+            }
+        };
 
         text_context.editor.shape_as_needed(font_system, true);
 
@@ -378,6 +382,8 @@ impl Element for TextInput {
             text_context.text_hash = text_hash;
             text_context.text = buffer_string;
         });
+
+        res
     }
 }
 

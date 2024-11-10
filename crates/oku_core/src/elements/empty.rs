@@ -6,6 +6,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
+use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
 
 #[derive(Clone, Default, Debug)]
@@ -71,9 +72,5 @@ impl Element for Empty {
 
     fn as_any(&self) -> &dyn Any {
         self
-    }
-
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) {
-        
     }
 }
