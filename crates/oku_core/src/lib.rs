@@ -1,28 +1,28 @@
+pub mod accessibility;
+pub mod components;
+pub mod elements;
 pub mod engine;
 pub mod oku_runtime;
 mod oku_winit_state;
 mod options;
 pub mod platform;
-#[cfg(test)]
-mod tests;
-pub mod accessibility;
-pub mod components;
-pub mod elements;
 pub mod reactive;
 pub mod style;
+#[cfg(test)]
+mod tests;
 
 use crate::elements::element::ElementState;
 pub use oku_runtime::OkuRuntime;
 
 use crate::engine::events::update_queue_entry::UpdateQueueEntry;
+use crate::style::{Display, Unit, Wrap};
 use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
-use crate::style::{Display, Unit, Wrap};
-use reactive::tree::{create_trees_from_render_specification, ComponentTreeNode};
 use engine::events::{Message, OkuEvent};
 use engine::renderer::color::Color;
 use engine::renderer::renderer::Renderer;
+use reactive::tree::{create_trees_from_render_specification, ComponentTreeNode};
 
 use futures::channel::mpsc::channel;
 use futures::channel::mpsc::Receiver;
@@ -46,8 +46,8 @@ type RendererBox = dyn Renderer;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-use components::component::{ComponentId, ComponentSpecification, GenericUserState};
 use cfg_if::cfg_if;
+use components::component::{ComponentId, ComponentSpecification, GenericUserState};
 use cosmic_text::FontSystem;
 use futures::task::SpawnExt;
 use futures::{SinkExt, StreamExt};
@@ -260,7 +260,7 @@ async fn async_main(
                         ResourceEvent::Loaded(_) => {}
                         ResourceEvent::UnLoaded(_) => {}
                     }
-                },
+                }
                 InternalMessage::KeyboardInput(keyboard_input) => {
                     on_keyboard_input(&mut app, keyboard_input).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
@@ -328,15 +328,18 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
         for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
             if let Some(element) = fiber_node.element {
                 let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-                
+
                 if in_bounds && element.style().overflow[1].is_scroll_container() {
-                    element.on_event(OkuEvent::MouseWheelEvent(mouse_wheel), &mut app.element_state, app.font_system.as_mut().unwrap());
+                    element.on_event(
+                        OkuEvent::MouseWheelEvent(mouse_wheel),
+                        &mut app.element_state,
+                        app.font_system.as_mut().unwrap(),
+                    );
                     break;
                 }
 
                 target_component_id = Some(element.component_id());
                 target_element_id = element.get_id().clone();
-                
             }
         }
     }
@@ -366,7 +369,11 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
                     target_component_id = Some(element.component_id());
                     target_element_id = element.get_id().clone();
 
-                    element.on_event(OkuEvent::KeyboardInputEvent(keyboard_input), &mut app.element_state, app.font_system.as_mut().unwrap());
+                    element.on_event(
+                        OkuEvent::KeyboardInputEvent(keyboard_input),
+                        &mut app.element_state,
+                        app.font_system.as_mut().unwrap(),
+                    );
 
                     break;
                 }
@@ -390,59 +397,80 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 }
 
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
-    {
-        let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
-            current_element_tree
-        } else {
-            return;
-        };
+    let event = OkuEvent::PointerButtonEvent(pointer_button);
 
-        let fiber: FiberNode = FiberNode {
-            element: Some(current_element_tree.as_ref()),
-            component: Some(app.component_tree.as_ref().unwrap()),
-        };
+    let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
+        current_element_tree
+    } else {
+        return;
+    };
 
-        let mut target_component_id: Option<u64> = None;
-        let mut target_element_id: Option<String> = None;
-        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-            if let Some(element) = fiber_node.element {
-                let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-                if in_bounds {
-                    target_component_id = Some(element.component_id());
-                    target_element_id = element.get_id().clone();
-                    break;
-                }
+    let fiber: FiberNode = FiberNode {
+        element: Some(current_element_tree.as_ref()),
+        component: Some(app.component_tree.as_ref().unwrap()),
+    };
+
+    let mut targets: VecDeque<(ComponentId, Option<String>)> = VecDeque::new();
+
+    /////////////////////////////////////////
+    // A,0                                 //
+    //   /////////////////////////         //
+    //   // B,1                 //         //
+    //   //   ///////////       //         //
+    //   //   //       //       //         //
+    //   //   //  C,2  //       //         //
+    //   //   //       //       //         //
+    //   //   ///////////       //         //
+    //   //                     //         //
+    //   /////////////////////////         //
+    //                                     //
+    /////////////////////////////////////////
+
+    // Collect all possible target elements in reverse order.
+    // Nodes added last are usually on top, so this elements in visual order.
+    for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+        if let Some(element) = fiber_node.element {
+            let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
+            if in_bounds {
+                targets.push_back((element.component_id(), element.get_id().clone()))
             }
         }
-        if let Some(target_component_id) = target_component_id {
-            // Do a pre-order traversal of the component tree to find the target component
-            let target_component = app
-                .component_tree
-                .as_ref()
-                .unwrap()
-                .pre_order_iter()
-                .find(|node| node.id == target_component_id)
-                .unwrap();
-            let mut to_visit = Some(target_component);
+    }
 
-            while let Some(node) = to_visit {
-                let event = OkuEvent::PointerButtonEvent(pointer_button);
+    //println!("Targets: {:?}", targets);
 
-                let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
-                let res = (node.update)(state, node.id, Message::OkuMessage(event), target_element_id.clone());
-                let propagate = res.propagate;
-                if res.result.is_some() {
-                    app.update_queue.push_back(UpdateQueueEntry::new(
-                        node.id,
-                        target_element_id.clone(),
-                        node.update,
-                        res,
-                    ));
-                }
-                if !propagate {
-                    break;
-                }
+    // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
 
+    if targets.is_empty() {
+        return;
+    }
+
+    // The target is always the first node (2, Some(c)).
+
+    let target = targets[0].clone();
+
+    let mut propagate = true;
+    while let Some(target) = targets.pop_front() {
+        if !propagate {
+            break;
+        }
+
+        //println!("Dispatching to: {:?}", target);
+        let (target_component_id, target_element_id) = target;
+
+        // Get the element's component tree ndoe.
+        let target_component =
+            app.component_tree.as_ref().unwrap().pre_order_iter().find(|node| node.id == target_component_id).unwrap();
+
+        // Search for the closest non-element ancestor.
+        let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
+
+        let mut to_visit = Some(target_component);
+        while let Some(node) = to_visit {
+            if !to_visit.unwrap().is_element {
+                closest_ancestor_component = Some(node);
+                to_visit = None;
+            } else {
                 if node.parent_id.is_none() {
                     to_visit = None;
                 } else {
@@ -450,6 +478,21 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
                     to_visit =
                         app.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
                 }
+            }
+        }
+
+        // Dispatch the event to the element's component.
+        if let Some(node) = closest_ancestor_component {
+            //println!("Target component id: {:?}", node.id);
+
+            let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
+            let res = (node.update)(state, node.id, Message::OkuMessage(event.clone()), target_element_id.clone());
+            let propagate_result = res.propagate;
+            if res.result.is_some() {
+                app.update_queue.push_back(UpdateQueueEntry::new(node.id, target_element_id.clone(), node.update, res));
+            }
+            if !propagate_result {
+                propagate = false;
             }
         }
     }
@@ -485,7 +528,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     }
     if renderer.is_some() {
         app.renderer = renderer;
-        
+
         // We can't guarantee the order of events on wasm.
         // This ensures a resize is not missed if the renderer was not finished creating when resize is called.
         #[cfg(target_arch = "wasm32")]
@@ -587,7 +630,14 @@ async fn on_request_redraw(app: &mut App) {
 
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
-        root.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, glam::Mat4::IDENTITY, &element_state);
+        root.draw(
+            renderer,
+            app.font_system.as_mut().unwrap(),
+            &mut taffy_tree,
+            taffy_root,
+            glam::Mat4::IDENTITY,
+            &element_state,
+        );
         app.element_tree = Some(root);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);

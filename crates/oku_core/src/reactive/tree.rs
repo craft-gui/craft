@@ -45,7 +45,7 @@ impl ComponentTreeNode {
             } else {
                 prefix.push_str("├─");
             }
-            println!("{} , Tag: {}, Id: {}, Key: {:?}", prefix, element.tag, element.id, element.key);
+            println!("{} , Tag: {}, Id: {}, Key: {:?}, Parent: {:?}", prefix, element.tag, element.id, element.key, element.parent_id);
             let children = &element.children;
             for (i, child) in children.iter().enumerate().rev() {
                 let is_last = i == children.len() - 1;

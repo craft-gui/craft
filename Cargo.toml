@@ -46,3 +46,7 @@ path = "examples/request/request.rs"
 [[example]]
 name = "text"
 path = "examples/text/text.rs"
+
+[[example]]
+name = "events"
+path = "examples/events/events.rs"
