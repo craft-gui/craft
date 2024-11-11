@@ -4,7 +4,7 @@ use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
 use crate::elements::text::TextHashValue;
-use crate::engine::events::OkuEvent;
+use crate::engine::events::{Message, OkuEvent};
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight};
@@ -356,32 +356,34 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
-                UpdateResult::new().prevent_defaults().prevent_propagate()
+                text_context.editor.shape_as_needed(font_system, true);
+
+                text_context.editor.with_buffer(|buffer| {
+                    let mut buffer_string: String = String::new();
+                    let last_line = buffer.lines.len() - 1;
+                    for (line_number, line) in buffer.lines.iter().enumerate() {
+                        buffer_string.push_str(line.text());
+                        if line_number != last_line {
+                            buffer_string.push_str("\n");
+                        }
+                    }
+
+                    let mut text_hasher = FxHasher::default();
+                    text_hasher.write(buffer_string.as_bytes());
+                    let text_hash = text_hasher.finish();
+
+                    text_context.text_hash = text_hash;
+                    text_context.text = buffer_string.clone();
+
+                    UpdateResult::new().prevent_defaults()
+                        .prevent_propagate()
+                        .result_message(OkuEvent::TextInputChanged(buffer_string))
+                })
             }
             _ => {
                 UpdateResult::new()
             }
         };
-
-        text_context.editor.shape_as_needed(font_system, true);
-
-        text_context.editor.with_buffer(|buffer| {
-            let mut buffer_string: String = String::new();
-            let last_line = buffer.lines.len() - 1;
-            for (line_number, line) in buffer.lines.iter().enumerate() {
-                buffer_string.push_str(line.text());
-                if line_number != last_line {
-                    buffer_string.push_str("\n");
-                }
-            }
-
-            let mut text_hasher = FxHasher::default();
-            text_hasher.write(buffer_string.as_bytes());
-            let text_hash = text_hasher.finish();
-
-            text_context.text_hash = text_hash;
-            text_context.text = buffer_string;
-        });
 
         res
     }

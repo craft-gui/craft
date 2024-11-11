@@ -1,35 +1,41 @@
 use oku::RendererType::Wgpu;
 
-use oku::engine::events::{Message};
-use oku_core::components::ComponentSpecification;
-use oku::oku_main_with_options;
 use oku::components::{Component, ComponentId, UpdateResult};
-use oku::style::{FlexDirection};
-use oku::OkuOptions;
 use oku::elements::text_input::TextInput;
+use oku::engine::events::Message;
+use oku::oku_main_with_options;
+use oku::style::FlexDirection;
+use oku::OkuOptions;
+use oku_core::components::ComponentSpecification;
+use oku_core::engine::events::OkuEvent;
 
 #[derive(Default, Copy, Clone)]
-pub struct TextState {
-}
+pub struct TextState {}
 
 impl Component for TextState {
     type Props = ();
 
     fn view(
-        state: &Self,
+        _state: &Self,
         _props: Option<&Self::Props>,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
     ) -> ComponentSpecification {
-        ComponentSpecification {
-            component: TextInput::new("Test").flex_direction(FlexDirection::Column).into(),
-            key: None,
-            props: None,
-            children: Vec::new(),
-        }
+        TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input").component()
     }
 
-    fn update(state: &mut Self, props: Option<&Self::Props>, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        _props: Option<&Self::Props>,
+        _id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
+        println!("Source: {:?}", source_element);
+        if let Message::OkuMessage(OkuEvent::TextInputChanged(new_val)) = message {
+            println!("new text: {}", new_val);
+        }
+
         UpdateResult::new()
     }
 }

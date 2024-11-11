@@ -1,5 +1,5 @@
 use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{PointerButton, PointerMoved, KeyboardInput, MouseWheel};
+use crate::engine::events::{PointerButton, PointerMoved, KeyboardInput, MouseWheel, OkuEvent};
 use crate::engine::renderer::renderer::Renderer;
 use crate::components::component::UpdateFn;
 use std::any::Any;
@@ -21,4 +21,5 @@ pub enum InternalMessage {
     ProcessUserEvents,
     GotUserMessage((UpdateFn, u64, Option<String>, Box<dyn Any + Send>, Option<Props>)),
     ResourceEvent(ResourceEvent),
+    ElementEvent(OkuEvent)
 }

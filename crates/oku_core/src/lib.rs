@@ -267,6 +267,9 @@ async fn async_main(
                     on_keyboard_input(&mut app, keyboard_input).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
+                InternalMessage::ElementEvent(element_event) => {
+                    dispatch_event(&mut app, element_event).await;
+                }
             }
         }
     }
@@ -354,6 +357,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
     };
 
     let mut targets: VecDeque<(ComponentId, Option<String>)> = VecDeque::new();
+    let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
 
     /////////////////////////////////////////
     // A,0                                 //
@@ -428,6 +432,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
         // Dispatch the event to the element's component.
         if let Some(node) = closest_ancestor_component {
             //println!("Target component id: {:?}", node.id);
+            target_components.push_back(node);
 
             let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
@@ -450,6 +455,8 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
             }
         }
     }
+
+    let mut element_events: VecDeque<(OkuEvent, Option<String>)> = VecDeque::new();
 
     // Handle element events if prevent defaults was not set to true.
     if !prevent_defaults {
@@ -474,10 +481,44 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
                         let res =
                             element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
 
+                        if let Some(result_message) = res.result_message {
+                            element_events.push_back((result_message, element.get_id().clone()));
+                        }
+
                         propagate = propagate && res.propagate;
                         prevent_defaults = prevent_defaults || res.prevent_defaults;
                     }
                 }
+            }
+        }
+    }
+
+    for (event, target_element_id) in element_events.iter() {
+        let mut propagate = true;
+        let mut prevent_defaults = false;
+        for node in target_components.iter() {
+            if !propagate {
+                break;
+            }
+
+            let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
+            let res = (node.update)(
+                state,
+                node.props.clone(),
+                node.id,
+                Message::OkuMessage(event.clone()),
+                target_element_id.clone(),
+            );
+            propagate = propagate && res.propagate;
+            prevent_defaults = prevent_defaults || res.prevent_defaults;
+            if res.future.is_some() {
+                app.update_queue.push_back(UpdateQueueEntry::new(
+                    node.id,
+                    target_element_id.clone(),
+                    node.update,
+                    res,
+                    node.props.clone(),
+                ));
             }
         }
     }

@@ -24,6 +24,7 @@ pub enum OkuEvent {
     KeyboardInputEvent(KeyboardInput),
     PointerMovedEvent(PointerMoved),
     MouseWheelEvent(MouseWheel),
+    TextInputChanged(String),
 }
 
 pub enum Message {

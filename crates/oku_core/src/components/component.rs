@@ -1,4 +1,4 @@
-use crate::engine::events::Message;
+use crate::engine::events::{Message, OkuEvent};
 use crate::components::props::Props;
 use crate::elements::element::Element;
 use crate::PinnedFutureAny;
@@ -22,6 +22,7 @@ pub struct UpdateResult {
     /// Prevent default event handlers from running when an oku_event is not explicitly handled.
     /// False by default.
     pub prevent_defaults: bool,
+    pub(crate) result_message: Option<OkuEvent>
 }
 
 impl Default for UpdateResult {
@@ -29,7 +30,8 @@ impl Default for UpdateResult {
         UpdateResult {
             propagate: true,
             future: None,
-            prevent_defaults: false
+            prevent_defaults: false,
+            result_message: None
         }
     }
 }
@@ -51,6 +53,11 @@ impl UpdateResult {
 
     pub fn prevent_propagate(mut self) -> Self {
         self.propagate = false;
+        self
+    }
+
+    pub(crate) fn result_message(mut self, message: OkuEvent) -> Self {
+        self.result_message = Some(message);
         self
     }
 }
