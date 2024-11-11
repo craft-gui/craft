@@ -223,9 +223,7 @@ impl Renderer for SoftwareRenderer {
                             fill_color.a_u8(),
                         ),
                         |x, y, w, h, color| {
-                            // Note: due to softbuffer and tiny_skia having incompatible internal color representations we swap
-                            // the red and blue channels here
-                            paint.set_color_rgba8(color.b(), color.g(), color.r(), color.a());
+                            paint.set_color_rgba8(color.r(), color.g(), color.b(), color.a());
                             self.framebuffer.fill_rect(
                                 Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
                                 &paint,
