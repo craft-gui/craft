@@ -34,6 +34,7 @@ impl Component for Request {
         Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
+            .overflow_y(Overflow::Scroll)
             .component()
             .push(
                 Image::new(ResourceIdentifier::Url(RED_PANDA.to_string()))

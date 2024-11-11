@@ -314,75 +314,17 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 }
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
-    {
-        let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
-            current_element_tree
-        } else {
-            return;
-        };
+    let event = OkuEvent::MouseWheelEvent(mouse_wheel);
 
-        let fiber: FiberNode = FiberNode {
-            element: Some(current_element_tree.as_ref()),
-            component: Some(app.component_tree.as_ref().unwrap()),
-        };
-
-        let mut target_component_id: Option<u64> = None;
-        let mut target_element_id: Option<String> = None;
-        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-            if let Some(element) = fiber_node.element {
-                let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-
-                if in_bounds && element.style().overflow[1].is_scroll_container() {
-                    element.on_event(
-                        OkuEvent::MouseWheelEvent(mouse_wheel),
-                        &mut app.element_state,
-                        app.font_system.as_mut().unwrap(),
-                    );
-                    break;
-                }
-
-                target_component_id = Some(element.component_id());
-                target_element_id = element.get_id().clone();
-            }
-        }
-    }
+    dispatch_event(app, event).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
-    {
-        let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
-            current_element_tree
-        } else {
-            return;
-        };
+    let event = OkuEvent::KeyboardInputEvent(keyboard_input);
 
-        let fiber: FiberNode = FiberNode {
-            element: Some(current_element_tree.as_ref()),
-            component: Some(app.component_tree.as_ref().unwrap()),
-        };
-
-        let mut target_component_id: Option<u64> = None;
-        let mut target_element_id: Option<String> = None;
-        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-            if let Some(element) = fiber_node.element {
-                let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-                if in_bounds {
-                    target_component_id = Some(element.component_id());
-                    target_element_id = element.get_id().clone();
-
-                    element.on_event(
-                        OkuEvent::KeyboardInputEvent(keyboard_input),
-                        &mut app.element_state,
-                        app.font_system.as_mut().unwrap(),
-                    );
-
-                    break;
-                }
-            }
-        }
-    }
+    dispatch_event(app, event).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -399,9 +341,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
-    let event = OkuEvent::PointerButtonEvent(pointer_button);
-
+async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
     let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -541,6 +481,12 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
             }
         }
     }
+}
+
+async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
+    let event = OkuEvent::PointerButtonEvent(pointer_button);
+
+    dispatch_event(app, event).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
