@@ -127,18 +127,22 @@ impl Element for Container {
     fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
-        match event {
-            OkuEvent::MouseWheelEvent(mouse_wheel) => {
-                let delta = match mouse_wheel.delta {
-                    MouseScrollDelta::LineDelta(x, y) => {y}
-                    MouseScrollDelta::PixelDelta(y) => {y.y as f32}
-                };
-                container_state.scroll_delta_y += 1.0 * delta;
-                UpdateResult::new().prevent_propagate().prevent_defaults()
+        if self.style().overflow[1].is_scroll_container() {
+            match event {
+                OkuEvent::MouseWheelEvent(mouse_wheel) => {
+                    let delta = match mouse_wheel.delta {
+                        MouseScrollDelta::LineDelta(x, y) => { y }
+                        MouseScrollDelta::PixelDelta(y) => { y.y as f32 }
+                    };
+                    container_state.scroll_delta_y += 1.0 * delta;
+                    UpdateResult::new().prevent_propagate().prevent_defaults()
+                }
+                _ => {
+                    UpdateResult::new()
+                }
             }
-            _ => {
-                UpdateResult::new()
-            }
+        } else {
+            UpdateResult::new()
         }
 
     }
