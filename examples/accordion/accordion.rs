@@ -39,7 +39,7 @@ impl Component for Accordion {
             .push(accordion_content)
     }
 
-    fn update(state: &mut Self, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(state: &mut Self, _props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
         if source_element.as_deref() != Some("accordion_header") {
             return UpdateResult::default();
         }

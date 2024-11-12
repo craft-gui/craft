@@ -48,7 +48,7 @@ impl Component for Counter {
             )
     }
 
-    fn update(state: &mut Self, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(state: &mut Self, props: Option<&Self::Props>, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
         println!("Update: {:?}", source_element);
 
         if source_element.as_deref() == Some("blue") {
