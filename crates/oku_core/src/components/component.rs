@@ -178,7 +178,9 @@ where
         Box::<Self>::default()
     }
 
-    fn update(state: &mut Self, props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult;
+    fn update(state: &mut Self, props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+        UpdateResult::new()
+    }
 
     fn generic_update(
         state: &mut GenericUserState,
