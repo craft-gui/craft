@@ -199,39 +199,52 @@ impl Renderer for SoftwareRenderer {
                     }
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
-                    let buffer = if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
-                        match text_context.editor.buffer_ref() {
-                            BufferRef::Owned(buffer) => buffer,
-                            BufferRef::Borrowed(_) => panic!("Editor must own buffer."),
-                            BufferRef::Arc(_) =>  panic!("Editor must own buffer.")
-                        }
+                    let mut paint = Paint::default();
+                    paint.colorspace = ColorSpace::Linear;
+                    if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
+                        let editor = &text_context.editor;
+                        editor.draw(
+                            font_system,
+                            &mut self.cache,
+                            cosmic_text::Color::rgba(0, 0, 0, 255),
+                            cosmic_text::Color::rgba(0, 0, 0, 100),
+                            cosmic_text::Color::rgba(0, 0, 200, 255),
+                            cosmic_text::Color::rgba(255, 255, 255, 255),
+                            |x, y, w, h, colora: cosmic_text::Color| {
+                                paint.set_color_rgba8(colora.r(), colora.g(), colora.b(), colora.a());
+                                self.framebuffer.fill_rect(
+                                    Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
+                                    &paint,
+                                    Transform::identity(),
+                                    None,
+                                );
+                            },
+                        );
                     } else if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextState>() {
-                        &text_context.buffer
+                        let buffer = &text_context.buffer;
+
+                        buffer.draw(
+                            font_system,
+                            &mut self.cache,
+                            cosmic_text::Color::rgba(
+                                fill_color.r_u8(),
+                                fill_color.g_u8(),
+                                fill_color.b_u8(),
+                                fill_color.a_u8(),
+                            ),
+                            |x, y, w, h, color| {
+                                paint.set_color_rgba8(color.r(), color.g(), color.b(), color.a());
+                                self.framebuffer.fill_rect(
+                                    Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
+                                    &paint,
+                                    Transform::identity(),
+                                    None,
+                                );
+                            },
+                        );
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
-
-                    let mut paint = Paint::default();
-                    paint.colorspace = ColorSpace::Linear;
-                    buffer.draw(
-                        font_system,
-                        &mut self.cache,
-                        cosmic_text::Color::rgba(
-                            fill_color.r_u8(),
-                            fill_color.g_u8(),
-                            fill_color.b_u8(),
-                            fill_color.a_u8(),
-                        ),
-                        |x, y, w, h, color| {
-                            paint.set_color_rgba8(color.r(), color.g(), color.b(), color.a());
-                            self.framebuffer.fill_rect(
-                                Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
-                                &paint,
-                                Transform::identity(),
-                                None,
-                            );
-                        },
-                    );
                 }
             }
         }
