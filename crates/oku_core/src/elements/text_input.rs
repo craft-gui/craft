@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
@@ -171,7 +171,7 @@ impl Element for TextInput {
         &mut self.common_element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<Box<dyn Element>> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
         &mut self.common_element_data.children
     }
 
@@ -384,9 +384,6 @@ impl Element for TextInput {
 }
 
 impl TextInput {
-    pub fn add_child(self, _widget: Box<dyn Element>) -> Self {
-        panic!("Text can't have children.");
-    }
 
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {

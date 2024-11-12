@@ -17,14 +17,14 @@ use std::pin::Pin;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
-pub(crate) struct ResourceManager {
-    pub resource_jobs: VecDeque<ResourceFuture>,
-    pub resources: HashMap<ResourceIdentifier, Resource>,
-    app_sender: Sender<AppMessage>,
+pub struct ResourceManager {
+    pub(crate) resource_jobs: VecDeque<ResourceFuture>,
+    pub(crate) resources: HashMap<ResourceIdentifier, Resource>,
+    pub(crate) app_sender: Sender<AppMessage>,
 }
 
 impl ResourceManager {
-    pub fn new(app_sender: Sender<AppMessage>) -> Self {
+    pub(crate) fn new(app_sender: Sender<AppMessage>) -> Self {
         Self {
             resource_jobs: VecDeque::new(),
             resources: HashMap::new(),

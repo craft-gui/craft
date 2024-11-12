@@ -1,7 +1,7 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle};
 use crate::components::component::{ComponentId, ComponentSpecification};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey,
 };
@@ -177,7 +177,7 @@ impl Element for Text {
         &mut self.common_element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<Box<dyn Element>> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
         &mut self.common_element_data.children
     }
 
@@ -281,15 +281,13 @@ impl Element for Text {
 }
 
 impl Text {
-    pub fn add_child(self, _widget: Box<dyn Element>) -> Self {
-        panic!("Text can't have children.");
-    }
 
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Text {
         self.common_element_data.style.margin = [top, right, bottom, left];
         self
     }
+
     pub const fn padding(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
         self.common_element_data.style.padding = [top, right, bottom, left];
         self

@@ -604,7 +604,7 @@ async fn on_request_redraw(app: &mut App) {
         &mut app.element_state,
     );
 
-    scan_view_for_resources(new_tree.1.as_ref(), &new_tree.0, app).await;
+    scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 
     app.component_tree = Some(new_tree.0);
     let mut root = new_tree.1;
@@ -622,24 +622,24 @@ async fn on_request_redraw(app: &mut App) {
         surface_height = renderer.surface_height();
     }
 
-    root.style_mut().width = Unit::Px(surface_width);
-    root.style_mut().wrap = Wrap::Wrap;
-    root.style_mut().display = Display::Block;
+    root.internal.style_mut().width = Unit::Px(surface_width);
+    root.internal.style_mut().wrap = Wrap::Wrap;
+    root.internal.style_mut().display = Display::Block;
 
     let is_user_root_height_auto = {
-        let root_children = root.children_mut();
-        root_children[0].children()[0].style().height.is_auto()
+        let root_children = root.internal.children_mut();
+        root_children[0].internal.children()[0].style().height.is_auto()
     };
 
-    root.children_mut()[0].style_mut().width = Unit::Px(surface_width);
-    root.children_mut()[0].style_mut().wrap = Wrap::Wrap;
-    root.children_mut()[0].style_mut().display = Display::Block;
+    root.internal.children_mut()[0].internal.style_mut().width = Unit::Px(surface_width);
+    root.internal.children_mut()[0].internal.style_mut().wrap = Wrap::Wrap;
+    root.internal.children_mut()[0].internal.style_mut().display = Display::Block;
 
     if is_user_root_height_auto {
-        root.style_mut().height = Unit::Auto;
+        root.internal.style_mut().height = Unit::Auto;
     } else {
-        root.style_mut().height = Unit::Px(surface_height);
-        root.children_mut()[0].style_mut().height = Unit::Px(surface_height);
+        root.internal.style_mut().height = Unit::Px(surface_height);
+        root.internal.children_mut()[0].internal.style_mut().height = Unit::Px(surface_height);
     }
 
     //let layout_start = Instant::now(); // Start measuring time
@@ -654,7 +654,7 @@ async fn on_request_redraw(app: &mut App) {
         surface_width,
         surface_height,
         app.font_system.as_mut().unwrap(),
-        root.as_mut(),
+        root.internal.as_mut(),
         &resource_manager,
     );
     //let duration = layout_start.elapsed(); // Get the elapsed time
@@ -662,14 +662,14 @@ async fn on_request_redraw(app: &mut App) {
 
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
-        root.draw(
+        root.internal.draw(
             renderer,
             app.font_system.as_mut().unwrap(),
             &mut taffy_tree,
             taffy_root,
             &element_state,
         );
-        app.element_tree = Some(root);
+        app.element_tree = Some(root.internal);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
         //let renderer_duration = renderer_submit_start.elapsed();

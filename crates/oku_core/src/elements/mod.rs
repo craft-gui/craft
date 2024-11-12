@@ -12,4 +12,3 @@ pub use crate::elements::image::Image;
 pub use crate::elements::text_input::TextInput;
 pub use crate::elements::text::Text;
 pub use crate::elements::container::Container;
-pub use crate::elements::element::Element;

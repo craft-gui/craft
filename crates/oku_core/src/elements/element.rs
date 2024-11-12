@@ -15,7 +15,7 @@ use crate::reactive::state_store::StateStore;
 pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
-    pub(crate) children: Vec<Box<dyn Element>>,
+    pub(crate) children: Vec<ElementBox>,
     // The computed values after transforms are applied.
     pub computed_x_transformed: f32,
     pub computed_y_transformed: f32,
@@ -34,15 +34,20 @@ pub struct CommonElementData {
     pub component_id: ComponentId,
 }
 
-pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
+#[derive(Clone, Debug)]
+pub struct ElementBox {
+    pub(crate) internal: Box<dyn Element>
+}
+
+pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn common_element_data(&self) -> &CommonElementData;
     fn common_element_data_mut(&mut self) -> &mut CommonElementData;
 
     fn children(&self) -> Vec<&dyn Element> {
-        self.common_element_data().children.iter().map(|x| x.as_ref()).collect()
+        self.common_element_data().children.iter().map(|x| x.internal.as_ref()).collect()
     }
 
-    fn children_mut(&mut self) -> &mut Vec<Box<dyn Element>> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
         &mut self.common_element_data_mut().children
     }
 
@@ -109,27 +114,29 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 }
 
-impl<T: Element> From<T> for Box<dyn Element> {
+impl<T: Element> From<T> for ElementBox {
     fn from(element: T) -> Self {
-        Box::new(element)
+        ElementBox {
+            internal: Box::new(element)
+        }
     }
 }
 
 impl<T: Element> From<T> for ComponentOrElement {
     fn from(element: T) -> Self {
-        ComponentOrElement::Element(Box::new(element))
+        ComponentOrElement::Element(element.into())
     }
 }
 
-impl From<Box<dyn Element>> for ComponentOrElement {
-    fn from(element: Box<dyn Element>) -> Self {
+impl From<ElementBox> for ComponentOrElement {
+    fn from(element: ElementBox) -> Self {
         ComponentOrElement::Element(element)
     }
 }
 
 
-impl From<Box<dyn Element>> for ComponentSpecification {
-    fn from(element: Box<dyn Element>) -> Self {
+impl From<ElementBox> for ComponentSpecification {
+    fn from(element: ElementBox) -> Self {
         ComponentSpecification {
             component: ComponentOrElement::Element(element),
             key: None,
@@ -153,7 +160,7 @@ impl From<ComponentOrElement> for ComponentSpecification {
 impl<T: Element> From<T> for ComponentSpecification {
     fn from(element: T) -> Self {
         ComponentSpecification {
-            component: ComponentOrElement::Element(Box::new(element)),
+            component: ComponentOrElement::Element(element.into()),
             key: None,
             props: None,
             children: vec![],

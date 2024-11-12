@@ -3,7 +3,7 @@ use crate::engine::events::{Message, OkuEvent};
 use crate::components::component::{
     ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult,
 };
-use crate::elements::element::Element;
+use crate::elements::element::{Element, ElementBox};
 use crate::reactive::element_id::create_unique_element_id;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -70,11 +70,11 @@ fn dummy_update(
 /// The ids of the Component tree are stable across renders.
 pub(crate) fn create_trees_from_render_specification(
     component_specification: ComponentSpecification,
-    mut root_element: Box<dyn Element>,
+    mut root_element: ElementBox,
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut StateStore,
     element_state: &mut StateStore,
-) -> (ComponentTreeNode, Box<dyn Element>) {
+) -> (ComponentTreeNode, ElementBox) {
     //println!("-----------------------------------------");
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -113,7 +113,7 @@ pub(crate) fn create_trees_from_render_specification(
 
         let mut to_visit: Vec<TreeVisitorNode> = vec![TreeVisitorNode {
             component_specification: Rc::new(RefCell::new(root_spec)),
-            parent_element_ptr: root_element.as_mut() as *mut dyn Element,
+            parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
             parent_component_node: component_root,
             old_component_node: old_component_tree_as_ptr,
         }];
@@ -133,7 +133,7 @@ pub(crate) fn create_trees_from_render_specification(
                     let mut element = element.clone();
 
                     // Store the new tag, i.e. the element's name.
-                    let new_tag = element.name().to_string();
+                    let new_tag = element.internal.name().to_string();
 
                     let default: Box<StateStoreItem> = Box::new(());
                     let id = if let Some(old_tag) = old_tag {
@@ -146,9 +146,9 @@ pub(crate) fn create_trees_from_render_specification(
                         create_unique_element_id(user_state, default)
                     };
 
-                    element.set_component_id(id);
+                    element.internal.set_component_id(id);
                     
-                    if let Some(container) = element.as_any().downcast_ref::<Container>() {
+                    if let Some(container) = element.internal.as_any().downcast_ref::<Container>() {
                         if !element_state.storage.contains_key(&id) {
                             element_state.storage.insert(id, Box::new(ContainerState {
                                 scroll_delta_y: 0.0,
@@ -163,7 +163,7 @@ pub(crate) fn create_trees_from_render_specification(
                     // Move the new element into it's parent and set the parent element to be the new element.
                     tree_node.parent_element_ptr.as_mut().unwrap().children_mut().push(element);
                     parent_element_ptr =
-                        tree_node.parent_element_ptr.as_mut().unwrap().children_mut().last_mut().unwrap().as_mut();
+                        tree_node.parent_element_ptr.as_mut().unwrap().children_mut().last_mut().unwrap().internal.as_mut();
 
                     let new_component_node = ComponentTreeNode {
                         is_element: true,

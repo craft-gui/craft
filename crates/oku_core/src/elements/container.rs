@@ -1,7 +1,7 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::components::component::{ComponentId, ComponentSpecification};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::LayoutContext;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Wrap};
 use crate::RendererBox;
@@ -57,7 +57,7 @@ impl Element for Container {
         
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.draw(renderer, font_system, taffy_tree, child2, element_state);
+            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
         }
     }
 
@@ -65,7 +65,7 @@ impl Element for Container {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.compute_layout(taffy_tree, font_system, element_state);
+            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state);
             child_nodes.push(child_node);
         }
 
@@ -109,7 +109,7 @@ impl Element for Container {
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.finalize_layout(
+            child.internal.finalize_layout(
                 taffy_tree,
                 child2,
                 self.common_element_data.computed_x,
@@ -169,11 +169,6 @@ impl Container {
         Container {
             common_element_data: Default::default(),
         }
-    }
-    
-    pub fn add_child(mut self, widget: Box<dyn Element>) -> Self {
-        self.common_element_data.children.push(widget);
-        self
     }
     
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {

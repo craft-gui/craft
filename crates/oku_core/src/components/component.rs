@@ -1,6 +1,6 @@
 use crate::engine::events::{Message, OkuEvent};
 use crate::components::props::Props;
-use crate::elements::element::Element;
+use crate::elements::element::{Element, ElementBox};
 use crate::PinnedFutureAny;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
@@ -88,7 +88,7 @@ pub struct ComponentData {
 #[derive(Clone)]
 pub enum ComponentOrElement {
     ComponentSpec(ComponentData),
-    Element(Box<dyn Element>),
+    Element(ElementBox),
 }
 
 /// A specification for components and elements.

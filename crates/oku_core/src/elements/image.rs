@@ -108,9 +108,6 @@ impl Element for Image {
 }
 
 impl Image {
-    pub fn add_child(self, _widget: Box<dyn Element>) -> Image {
-        panic!("Text can't have children.");
-    }
 
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Image {

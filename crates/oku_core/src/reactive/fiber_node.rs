@@ -3,12 +3,12 @@ use crate::reactive::tree::ComponentTreeNode;
 use std::collections::VecDeque;
 
 #[derive(Clone)]
-pub struct FiberNode<'a> {
-    pub element: Option<&'a dyn Element>,
-    pub component: Option<&'a ComponentTreeNode>,
+pub(crate) struct FiberNode<'a> {
+    pub(crate) element: Option<&'a dyn Element>,
+    pub(crate) component: Option<&'a ComponentTreeNode>,
 }
 
-pub struct FiberNodePreOrderIterator<'a> {
+pub(crate) struct FiberNodePreOrderIterator<'a> {
     component_stack: Vec<&'a ComponentTreeNode>,
     element_stack: Vec<&'a dyn Element>,
 }
@@ -95,7 +95,7 @@ impl<'a> FiberNode<'a> {
     }
 }
 
-pub struct FiberNodeLevelOrderIterator<'a> {
+pub(crate) struct FiberNodeLevelOrderIterator<'a> {
     component_stack: VecDeque<&'a ComponentTreeNode>,
     element_stack: VecDeque<&'a dyn Element>,
 }

@@ -50,7 +50,7 @@ impl Element for Empty {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.compute_layout(taffy_tree, font_system, element_state);
+            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state);
             child_nodes.push(child_node);
         }
 
