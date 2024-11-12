@@ -1,14 +1,14 @@
-use crate::components::component::{ComponentId};
+use crate::components::component::ComponentId;
+use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
+use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
-use crate::components::UpdateResult;
-use crate::engine::events::OkuEvent;
-use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -46,7 +46,12 @@ impl Element for Empty {
     ) {
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        font_system: &mut FontSystem,
+        element_state: &mut StateStore,
+    ) -> NodeId {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {

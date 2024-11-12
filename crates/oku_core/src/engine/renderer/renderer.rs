@@ -1,10 +1,10 @@
+use crate::components::component::ComponentId;
 use crate::engine::renderer::color::Color;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId};
+use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use std::collections::HashMap;
 use tokio::sync::RwLockReadGuard;
-use crate::reactive::state_store::StateStore;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {

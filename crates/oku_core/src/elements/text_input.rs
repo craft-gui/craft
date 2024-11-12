@@ -1,4 +1,5 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
@@ -7,6 +8,7 @@ use crate::elements::text::TextHashValue;
 use crate::engine::events::{Message, OkuEvent};
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
+use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight};
 use crate::RendererBox;
 use cosmic_text::{Action, Motion};
@@ -19,8 +21,6 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::components::UpdateResult;
-use crate::reactive::state_store::StateStore;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -208,7 +208,8 @@ impl Element for TextInput {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) -> NodeId {
-        let (text_hash, text) = if let Some(state) = element_state.storage
+        let (text_hash, text) = if let Some(state) = element_state
+            .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
             .as_mut()
@@ -261,8 +262,13 @@ impl Element for TextInput {
         let result = taffy_tree.layout(root_node).unwrap();
 
         //let text_context = self.get_state_mut(element_state);
-        let mut text_context: &mut TextInputState =
-            element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+        let mut text_context: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
 
         text_context.editor.with_buffer_mut(|buffer| {
             buffer.set_metrics(font_system, text_context.metrics);
@@ -279,9 +285,15 @@ impl Element for TextInput {
         self.common_element_data.computed_y = y + result.location.y;
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
-        self.common_element_data.computed_padding = [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        self.common_element_data.computed_padding =
+            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
 
-        let transformed_xy =  transform.mul_vec4(glam::vec4(self.common_element_data.computed_x, self.common_element_data.computed_y, 0.0, 1.0));
+        let transformed_xy = transform.mul_vec4(glam::vec4(
+            self.common_element_data.computed_x,
+            self.common_element_data.computed_y,
+            0.0,
+            1.0,
+        ));
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
     }
@@ -290,14 +302,14 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(
-        &self,
-        event: OkuEvent,
-        element_state: &mut StateStore,
-        font_system: &mut FontSystem,
-    ) -> UpdateResult {
-        let text_context: &mut TextInputState =
-            element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+        let text_context: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
 
         let res = match event {
             OkuEvent::KeyboardInputEvent(keyboard_input) => {
@@ -369,14 +381,13 @@ impl Element for TextInput {
                     text_context.text_hash = text_hash;
                     text_context.text = buffer_string.clone();
 
-                    UpdateResult::new().prevent_defaults()
+                    UpdateResult::new()
+                        .prevent_defaults()
                         .prevent_propagate()
                         .result_message(OkuEvent::TextInputChanged(buffer_string))
                 })
             }
-            _ => {
-                UpdateResult::new()
-            }
+            _ => UpdateResult::new(),
         };
 
         res
@@ -384,7 +395,6 @@ impl Element for TextInput {
 }
 
 impl TextInput {
-
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
         self.common_element_data.style.margin = [top, right, bottom, left];

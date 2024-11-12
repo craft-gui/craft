@@ -1,13 +1,13 @@
-use crate::platform::resource_manager::resource::Resource;
-use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId};
+use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
-use cosmic_text::{Attrs, Buffer, Edit, FontSystem, Metrics, Shaping, Editor, Cursor, Action, Motion};
+use crate::platform::resource_manager::resource::Resource;
+use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::reactive::state_store::StateStore;
+use cosmic_text::{Action, Attrs, Buffer, Cursor, Edit, Editor, FontSystem, Metrics, Motion, Shaping};
 use std::collections::HashMap;
 use taffy::Size;
 use tokio::sync::RwLockReadGuard;
-use crate::reactive::state_store::StateStore;
 
 pub struct TaffyTextContext<'a> {
     pub id: ComponentId,
@@ -150,7 +150,7 @@ pub fn measure_content(
                     taffy_text_context.metrics,
                     taffy_text_context.text_hash,
                     buffer,
-                    taffy_text_context.attributes.color_opt
+                    taffy_text_context.attributes.color_opt,
                 );
 
                 element_state.storage.insert(taffy_text_context.id, Box::new(cosmic_text_content));
@@ -166,7 +166,7 @@ pub fn measure_content(
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
-        },
+        }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let cosmic_text_content: &mut TextInputState = if let Some(cosmic_text_content) =
                 element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut()
@@ -191,16 +191,17 @@ pub fn measure_content(
                 }
                 cosmic_text_content
             } else {
-
-                let buffer = Buffer::new(
-                    font_system,
-                    taffy_text_input_context.metrics,
-                );
+                let buffer = Buffer::new(font_system, taffy_text_input_context.metrics);
                 let mut editor = Editor::new(buffer);
                 editor.borrow_with(font_system);
 
                 editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(font_system, &taffy_text_input_context.text, taffy_text_input_context.attributes, Shaping::Advanced)
+                    buffer.set_text(
+                        font_system,
+                        &taffy_text_input_context.text,
+                        taffy_text_input_context.attributes,
+                        Shaping::Advanced,
+                    )
                 });
                 editor.action(font_system, Action::Motion(Motion::End));
 
@@ -210,7 +211,7 @@ pub fn measure_content(
                     taffy_text_input_context.text_hash,
                     editor,
                     taffy_text_input_context.attributes.color_opt,
-                    taffy_text_input_context.text.clone()
+                    taffy_text_input_context.text.clone(),
                 );
 
                 element_state.storage.insert(taffy_text_input_context.id, Box::new(cosmic_text_content));
@@ -227,7 +228,6 @@ pub fn measure_content(
         }
     }
 }
-
 
 //////////////////////////////////////////////////////////////////////////////
 

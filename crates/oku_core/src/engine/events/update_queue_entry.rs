@@ -6,7 +6,7 @@ pub struct UpdateQueueEntry {
     pub source_element: Option<String>,
     pub update_function: UpdateFn,
     pub update_result: UpdateResult,
-    pub props: Option<Props>
+    pub props: Option<Props>,
 }
 
 impl UpdateQueueEntry {
@@ -15,7 +15,7 @@ impl UpdateQueueEntry {
         source_element: Option<String>,
         update_function: UpdateFn,
         update_result: UpdateResult,
-        props: Option<Props>
+        props: Option<Props>,
     ) -> Self {
         UpdateQueueEntry {
             source_component,

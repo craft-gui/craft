@@ -4,7 +4,7 @@ use winit::event::{DeviceId, KeyEvent};
 pub struct KeyboardInput {
     pub device_id: Option<DeviceId>,
     pub event: KeyEvent,
-    
+
     /// If `true`, the event was generated synthetically by winit
     /// in one of the following circumstances:
     ///

@@ -1,13 +1,12 @@
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::{Rectangle};
 use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element, ElementBox};
-use crate::elements::layout_context::{
-    AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey,
-};
-use crate::style::{
-    AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight,
-};
+use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
+use crate::engine::events::OkuEvent;
+use crate::engine::renderer::color::Color;
+use crate::engine::renderer::renderer::Rectangle;
+use crate::reactive::state_store::StateStore;
+use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight};
 use crate::RendererBox;
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics};
 use rustc_hash::FxHasher;
@@ -15,9 +14,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
-use crate::components::UpdateResult;
-use crate::engine::events::OkuEvent;
-use crate::reactive::state_store::StateStore;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -160,10 +156,7 @@ impl Text {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(
-        &self,
-        element_state: &'a mut StateStore,
-    ) -> &'a mut TextState {
+    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut TextState {
         element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
     }
 }
@@ -204,11 +197,16 @@ impl Element for Text {
         renderer.draw_text(
             self.common_element_data.component_id,
             bounding_rectangle,
-            self.common_element_data.style.color
+            self.common_element_data.style.color,
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        font_system: &mut FontSystem,
+        element_state: &mut StateStore,
+    ) -> NodeId {
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
@@ -267,9 +265,15 @@ impl Element for Text {
         self.common_element_data.computed_y = y + result.location.y;
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
-        self.common_element_data.computed_padding = [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
-        
-        let transformed_xy =  transform.mul_vec4(glam::vec4(self.common_element_data.computed_x, self.common_element_data.computed_y, 0.0, 1.0));
+        self.common_element_data.computed_padding =
+            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+
+        let transformed_xy = transform.mul_vec4(glam::vec4(
+            self.common_element_data.computed_x,
+            self.common_element_data.computed_y,
+            0.0,
+            1.0,
+        ));
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
     }
@@ -277,11 +281,9 @@ impl Element for Text {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
 }
 
 impl Text {
-
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Text {
         self.common_element_data.style.margin = [top, right, bottom, left];
@@ -351,7 +353,7 @@ impl Text {
         self.common_element_data.id = Some(id.to_string());
         self
     }
-    
+
     pub fn component(self) -> ComponentSpecification {
         ComponentSpecification::new(self.into())
     }

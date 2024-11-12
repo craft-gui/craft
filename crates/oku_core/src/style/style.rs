@@ -196,7 +196,7 @@ pub struct Style {
     pub flex_grow: f32,
     pub flex_shrink: f32,
     pub flex_basis: Unit,
-    
+
     pub color: Color,
     pub background: Color,
     pub font_size: f32,
@@ -315,22 +315,22 @@ impl From<Style> for taffy::Style {
         let flex_shrink = style.flex_shrink;
         let flex_basis: taffy::Dimension = match style.flex_basis {
             Unit::Px(px) => taffy::Dimension::Length(px),
-            Unit::Percentage(percentage) => {taffy::Dimension::Percent(percentage / 100.0)}
-            Unit::Auto => taffy::Dimension::Auto
+            Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
+            Unit::Auto => taffy::Dimension::Auto,
         };
-        
+
         fn overflow_to_taffy_overflow(overflow: Overflow) -> taffy::Overflow {
             match overflow {
-                Overflow::Visible => {taffy::Overflow::Visible}
-                Overflow::Clip => {taffy::Overflow::Clip}
-                Overflow::Hidden => {taffy::Overflow::Hidden}
-                Overflow::Scroll => {taffy::Overflow::Scroll}
+                Overflow::Visible => taffy::Overflow::Visible,
+                Overflow::Clip => taffy::Overflow::Clip,
+                Overflow::Hidden => taffy::Overflow::Hidden,
+                Overflow::Scroll => taffy::Overflow::Scroll,
             }
         }
-        
+
         let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
         let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
-        
+
         taffy::Style {
             size,
             max_size,

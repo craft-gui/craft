@@ -21,11 +21,16 @@ pub struct PointerMoved {
     pub position: PhysicalPosition<f64>,
 
     pub source: PointerSource,
-    pub primary: bool
+    pub primary: bool,
 }
 
 impl PointerMoved {
-    pub fn new(device_id: Option<DeviceId>, position: PhysicalPosition<f64>, source: PointerSource, primary: bool) -> Self {
+    pub fn new(
+        device_id: Option<DeviceId>,
+        position: PhysicalPosition<f64>,
+        source: PointerSource,
+        primary: bool,
+    ) -> Self {
         Self {
             device_id,
             position,

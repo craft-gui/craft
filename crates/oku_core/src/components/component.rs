@@ -1,10 +1,10 @@
-use crate::engine::events::{Message, OkuEvent};
 use crate::components::props::Props;
 use crate::elements::element::{Element, ElementBox};
+use crate::engine::events::{Message, OkuEvent};
+use crate::reactive::state_store::StateStoreItem;
 use crate::PinnedFutureAny;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
-use crate::reactive::state_store::StateStoreItem;
 
 /// A Component's view function.
 pub type ViewFn = fn(
@@ -23,7 +23,7 @@ pub struct UpdateResult {
     /// Prevent default event handlers from running when an oku_event is not explicitly handled.
     /// False by default.
     pub prevent_defaults: bool,
-    pub(crate) result_message: Option<OkuEvent>
+    pub(crate) result_message: Option<OkuEvent>,
 }
 
 impl Default for UpdateResult {
@@ -32,7 +32,7 @@ impl Default for UpdateResult {
             propagate: true,
             future: None,
             prevent_defaults: false,
-            result_message: None
+            result_message: None,
         }
     }
 }
@@ -111,7 +111,7 @@ impl ComponentSpecification {
     }
 
     pub fn key(mut self, key: &str) -> Self {
-        if let ComponentOrElement::Element(_) = self.component { 
+        if let ComponentOrElement::Element(_) = self.component {
             panic!("Component cannot have a key.")
         }
         self.key = Some(key.to_owned());
@@ -177,7 +177,13 @@ where
         Box::<Self>::default()
     }
 
-    fn update(state: &mut Self, props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        props: Option<&Self::Props>,
+        id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
         UpdateResult::new()
     }
 

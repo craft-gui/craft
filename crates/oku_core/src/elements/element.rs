@@ -1,5 +1,8 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
+use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
+use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 use crate::style::Style;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
@@ -7,9 +10,6 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::components::UpdateResult;
-use crate::engine::events::OkuEvent;
-use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -19,7 +19,7 @@ pub struct CommonElementData {
     // The computed values after transforms are applied.
     pub computed_x_transformed: f32,
     pub computed_y_transformed: f32,
-    
+
     // The computed values without any transforms applied to them.
     pub computed_x: f32,
     pub computed_y: f32,
@@ -36,7 +36,7 @@ pub struct CommonElementData {
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
-    pub(crate) internal: Box<dyn Element>
+    pub(crate) internal: Box<dyn Element>,
 }
 
 pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
@@ -95,7 +95,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_state: &StateStore,
     );
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId;
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        font_system: &mut FontSystem,
+        element_state: &mut StateStore,
+    ) -> NodeId;
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -117,7 +122,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 impl<T: Element> From<T> for ElementBox {
     fn from(element: T) -> Self {
         ElementBox {
-            internal: Box::new(element)
+            internal: Box::new(element),
         }
     }
 }
@@ -133,7 +138,6 @@ impl From<ElementBox> for ComponentOrElement {
         ComponentOrElement::Element(element)
     }
 }
-
 
 impl From<ElementBox> for ComponentSpecification {
     fn from(element: ElementBox) -> Self {

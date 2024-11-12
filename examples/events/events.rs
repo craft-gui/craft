@@ -43,12 +43,18 @@ impl Component for Counter {
                             .width(Unit::Px(100.0))
                             .height(Unit::Px(100.0))
                             .id("green")
-                            .component()
-                    )
+                            .component(),
+                    ),
             )
     }
 
-    fn update(state: &mut Self, props: Option<&Self::Props>, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        props: Option<&Self::Props>,
+        _id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
         println!("Update: {:?}", source_element);
 
         if source_element.as_deref() == Some("blue") {

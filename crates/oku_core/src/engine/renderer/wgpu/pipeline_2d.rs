@@ -1,21 +1,21 @@
-
-use crate::engine::renderer::color::Color;use crate::engine::renderer::renderer::Rectangle;
+use crate::components::component::ComponentId;
+use crate::elements::text::TextState;
+use crate::elements::text_input::TextInputState;
+use crate::engine::renderer::color::Color;
+use crate::engine::renderer::renderer::Rectangle;
 use crate::engine::renderer::wgpu::camera::Camera;
 use crate::engine::renderer::wgpu::context::Context;
 use crate::engine::renderer::wgpu::texture::Texture;
 use crate::engine::renderer::wgpu::uniform::GlobalUniform;
 use crate::engine::renderer::wgpu::vertex::Vertex;
+use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId};
-use crate::elements::text::TextState;
+use crate::reactive::state_store::StateStore;
 use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
 use glyphon::{TextArea, TextBounds};
 use std::collections::HashMap;
 use tokio::sync::RwLockReadGuard;
 use wgpu::util::DeviceExt;
-use crate::platform::resource_manager::resource::Resource;
-use crate::elements::text_input::TextInputState;
-use crate::reactive::state_store::StateStore;
 
 fn bind_group_from_2d_texture(
     device: &wgpu::Device,
@@ -47,7 +47,7 @@ pub struct RectangleBatch {
 pub struct TextRenderInfo {
     element_id: ComponentId,
     rectangle: Rectangle,
-    fill_color: Color
+    fill_color: Color,
 }
 
 pub struct Pipeline2D {
@@ -60,7 +60,7 @@ pub struct Pipeline2D {
     pub(crate) rectangle_batch: Vec<RectangleBatch>,
     pub(crate) text_areas: Vec<TextRenderInfo>,
     pub(crate) textures: HashMap<ResourceIdentifier, Texture>,
-    pub(crate) swash_cache: SwashCache
+    pub(crate) swash_cache: SwashCache,
 }
 
 impl Pipeline2D {
@@ -283,7 +283,7 @@ impl Pipeline2D {
         self.text_areas.push(TextRenderInfo {
             element_id,
             rectangle,
-            fill_color
+            fill_color,
         });
     }
 
@@ -380,7 +380,12 @@ impl Pipeline2D {
 
                         if let Some(Resource::Image(resource)) = resource {
                             let label = resource.common_data.resource_identifier.to_string();
-                            let texture = Texture::from_image(&context.device, &context.queue, &resource.image, Some(label.as_str()));
+                            let texture = Texture::from_image(
+                                &context.device,
+                                &context.queue,
+                                &resource.image,
+                                Some(label.as_str()),
+                            );
                             if let Some(texture) = texture {
                                 self.textures.insert(texture_path.clone(), texture);
                                 rectangle_texture = self.textures.get(&texture_path.clone()).unwrap();
@@ -429,15 +434,15 @@ impl Pipeline2D {
             let mut text_areas: Vec<TextArea> = Vec::new();
 
             for text_area in self.text_areas.iter() {
-
-                if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {
-
+                if let Some(text_context) =
+                    element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>()
+                {
                     let text_buffer = match text_context.editor.buffer_ref() {
                         BufferRef::Owned(buffer) => buffer,
                         BufferRef::Borrowed(_) => panic!("Editor must own buffer."),
-                        BufferRef::Arc(_) =>  panic!("Editor must own buffer.")
+                        BufferRef::Arc(_) => panic!("Editor must own buffer."),
                     };
-                    
+
                     let text_area_position = glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0);
 
                     text_areas.push(TextArea {
@@ -459,8 +464,9 @@ impl Pipeline2D {
                         ),
                         custom_glyphs: &[],
                     });
-                } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
-
+                } else if let Some(text_context) =
+                    element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextState>()
+                {
                     let text_buffer = &text_context.buffer;
                     let text_area_position = glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0);
 

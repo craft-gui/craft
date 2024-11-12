@@ -13,23 +13,23 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowAttributesExtWeb;
 
-use futures::StreamExt;
-use winit::window::WindowAttributes;
 use crate::engine::app_message::AppMessage;
 use crate::engine::events::internal::InternalMessage;
-use crate::engine::events::{KeyboardInput, PointerButton, PointerMoved, MouseWheel};
+use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::engine::renderer::renderer::Renderer;
 use crate::engine::renderer::softbuffer::SoftwareRenderer;
 use crate::engine::renderer::wgpu::WgpuRenderer;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 use futures::channel::mpsc::{Receiver, Sender};
-use futures::{SinkExt};
+use futures::SinkExt;
+use futures::StreamExt;
 use log::info;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::keyboard::{Key, NamedKey};
+use winit::window::WindowAttributes;
 use winit::window::{Window, WindowId};
 
 #[cfg(target_arch = "wasm32")]
@@ -64,9 +64,7 @@ impl ApplicationHandler for OkuWinitState {
     }
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
-        let window_attributes = WindowAttributes::default()
-            .with_title(self.oku_options.window_title.as_str());
-
+        let window_attributes = WindowAttributes::default().with_title(self.oku_options.window_title.as_str());
 
         #[cfg(target_arch = "wasm32")]
         let window_attributes = {
@@ -133,7 +131,7 @@ impl ApplicationHandler for OkuWinitState {
                 state,
                 position,
                 button,
-                primary
+                primary,
             } => {
                 let event = PointerButton::new(device_id, state, position, button, primary);
                 self.send_message(InternalMessage::PointerButton(event), false);
@@ -142,12 +140,17 @@ impl ApplicationHandler for OkuWinitState {
                 device_id,
                 position,
                 source,
-                primary
+                primary,
             } => {
-                self.send_message(InternalMessage::PointerMoved(PointerMoved::new(device_id, position, source, primary)), true);
+                self.send_message(
+                    InternalMessage::PointerMoved(PointerMoved::new(device_id, position, source, primary)),
+                    true,
+                );
             }
             WindowEvent::MouseWheel {
-                device_id, delta, phase
+                device_id,
+                delta,
+                phase,
             } => {
                 let event = MouseWheel::new(device_id, delta, phase);
                 self.send_message(InternalMessage::MouseWheel(event), true);
@@ -160,7 +163,10 @@ impl ApplicationHandler for OkuWinitState {
                 event,
                 is_synthetic,
             } => {
-                self.send_message(InternalMessage::KeyboardInput(KeyboardInput::new(device_id, event, is_synthetic)), true);
+                self.send_message(
+                    InternalMessage::KeyboardInput(KeyboardInput::new(device_id, event, is_synthetic)),
+                    true,
+                );
             }
             WindowEvent::RedrawRequested => {
                 self.send_message(InternalMessage::RequestRedraw, true);

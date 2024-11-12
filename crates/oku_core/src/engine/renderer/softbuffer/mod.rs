@@ -1,7 +1,11 @@
+use crate::components::component::ComponentId;
+use crate::elements::text::TextState;
+use crate::elements::text_input::TextInputState;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, RenderCommand, Renderer};
+use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId};
+use crate::reactive::state_store::StateStore;
 use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
 use image::EncodableLayout;
 use log::info;
@@ -13,10 +17,6 @@ use std::sync::Arc;
 use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
-use crate::platform::resource_manager::resource::Resource;
-use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
-use crate::reactive::state_store::StateStore;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -33,7 +33,7 @@ impl Surface {
 }
 
 // Implement Deref to expose all methods from the inner Surface
-impl Deref for Surface{
+impl Deref for Surface {
     type Target = softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>;
 
     fn deref(&self) -> &Self::Target {
@@ -63,17 +63,16 @@ pub struct SoftwareRenderer {
     cache: SwashCache,
 }
 
-
 impl SoftwareRenderer {
     pub(crate) fn new(window: Arc<dyn Window>) -> Self {
         let width = window.surface_size().width.max(1) as f32;
         let height = window.surface_size().height.max(1) as f32;
-        
+
         let mut surface = Surface::new(window.clone());
         surface
             .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
             .expect("TODO: panic message");
-        
+
         let framebuffer = Pixmap::new(width as u32, height as u32).unwrap();
 
         Self {
@@ -195,13 +194,22 @@ impl Renderer for SoftwareRenderer {
                         let image = &resource.image;
                         let pixmap = PixmapRef::from_bytes(image.as_bytes(), image.width(), image.height()).unwrap();
                         let pixmap_paint = PixmapPaint::default();
-                        self.framebuffer.draw_pixmap(rectangle.x as i32, rectangle.y as i32, pixmap, &pixmap_paint, Transform::identity(), None);
+                        self.framebuffer.draw_pixmap(
+                            rectangle.x as i32,
+                            rectangle.y as i32,
+                            pixmap,
+                            &pixmap_paint,
+                            Transform::identity(),
+                            None,
+                        );
                     }
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let mut paint = Paint::default();
                     paint.colorspace = ColorSpace::Linear;
-                    if let Some(text_context) = element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
+                    if let Some(text_context) =
+                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
+                    {
                         let editor = &text_context.editor;
                         editor.draw(
                             font_system,
@@ -220,7 +228,9 @@ impl Renderer for SoftwareRenderer {
                                 );
                             },
                         );
-                    } else if let Some(text_context) = element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>() {
+                    } else if let Some(text_context) =
+                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>()
+                    {
                         let buffer = &text_context.buffer;
 
                         buffer.draw(

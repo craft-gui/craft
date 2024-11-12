@@ -2,16 +2,16 @@ use oku::components::ComponentSpecification;
 use oku::engine::events::Message;
 
 use bytes::Bytes;
-use oku::platform::resource_manager::ResourceIdentifier;
-use oku::RendererType::Wgpu;
-use oku::{oku_main_with_options, OkuOptions};
-use oku::engine::events::OkuEvent;
 use oku::components::{Component, ComponentId, UpdateResult};
-use oku::elements::{Image, Container};
+use oku::elements::{Container, Image};
+use oku::engine::events::OkuEvent;
+use oku::platform::resource_manager::ResourceIdentifier;
+use oku::style::Overflow;
 use oku::style::{Display, Unit, Wrap};
 use oku::PinnedFutureAny;
+use oku::RendererType::Wgpu;
+use oku::{oku_main_with_options, OkuOptions};
 use std::any::Any;
-use oku::style::Overflow;
 
 #[derive(Default, Clone)]
 pub struct Request {
@@ -40,16 +40,18 @@ impl Component for Request {
                 Image::new(ResourceIdentifier::Url(RED_PANDA.to_string()))
                     .max_width(Unit::Percentage(100.0))
                     .display(Display::Block)
-                    .component()
-            )
-            .push(
-                Image::new(ResourceIdentifier::Url(TREE.to_string()))
-                    .max_width(Unit::Percentage(100.0))
                     .component(),
             )
+            .push(Image::new(ResourceIdentifier::Url(TREE.to_string())).max_width(Unit::Percentage(100.0)).component())
     }
 
-    fn update(state: &mut Self, props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        props: Option<&Self::Props>,
+        id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
         if source_element.as_deref() != Some("increment") {
             return UpdateResult::default();
         }

@@ -36,7 +36,7 @@ pub fn wasm_main() {
             info!("message gotten");
         }
     });
-    
+
     event_loop
         .run_app(WasmApp {
             app_sender: tx.clone(),

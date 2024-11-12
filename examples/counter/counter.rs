@@ -30,7 +30,13 @@ impl Component for Counter {
             .push(Text::new("increment").id("increment").component())
     }
 
-    fn update(state: &mut Self, _props: Option<&Self::Props>, _id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        _props: Option<&Self::Props>,
+        _id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
         if source_element.as_deref() != Some("increment") {
             return UpdateResult::default();
         }

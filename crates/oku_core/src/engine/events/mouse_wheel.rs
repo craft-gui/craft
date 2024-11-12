@@ -4,19 +4,15 @@ use winit::event::{DeviceId, MouseScrollDelta, TouchPhase};
 pub struct MouseWheel {
     pub device_id: Option<DeviceId>,
     pub delta: MouseScrollDelta,
-    pub phase: TouchPhase
+    pub phase: TouchPhase,
 }
 
 impl MouseWheel {
-    pub fn new(
-        device_id: Option<DeviceId>,
-        delta: MouseScrollDelta,
-        phase: TouchPhase
-    ) -> Self {
+    pub fn new(device_id: Option<DeviceId>, delta: MouseScrollDelta, phase: TouchPhase) -> Self {
         Self {
             device_id,
             delta,
-            phase
+            phase,
         }
     }
 }

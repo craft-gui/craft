@@ -1,5 +1,5 @@
-use image::RgbaImage;
 use crate::platform::resource_manager::resource_data::ResourceData;
+use image::RgbaImage;
 
 pub struct ImageResource {
     pub common_data: ResourceData,
@@ -13,7 +13,7 @@ impl ImageResource {
         let image = image::load_from_memory(data.data.as_ref().unwrap()).unwrap();
         let image = image.to_rgba8();
         data.data = None;
-        
+
         ImageResource {
             common_data: data,
             image,

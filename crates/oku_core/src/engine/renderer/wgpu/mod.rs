@@ -5,6 +5,7 @@ mod texture;
 mod uniform;
 mod vertex;
 
+use crate::components::component::ComponentId;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, Renderer};
 use crate::engine::renderer::wgpu::camera::Camera;
@@ -14,7 +15,7 @@ use crate::engine::renderer::wgpu::context::{
 use crate::engine::renderer::wgpu::pipeline_2d::Pipeline2D;
 use crate::engine::renderer::wgpu::texture::Texture;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId};
+use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use glyphon::{Cache, TextAtlas, TextRenderer, Viewport};
 use std::collections::HashMap;
@@ -22,7 +23,6 @@ use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use wgpu::MultisampleState;
 use winit::window::Window;
-use crate::reactive::state_store::StateStore;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
@@ -30,9 +30,7 @@ pub struct WgpuRenderer<'a> {
 }
 
 impl<'a> WgpuRenderer<'a> {
-    pub(crate) async fn new(
-        window: Arc<dyn Window>
-    ) -> WgpuRenderer<'a> {
+    pub(crate) async fn new(window: Arc<dyn Window>) -> WgpuRenderer<'a> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()

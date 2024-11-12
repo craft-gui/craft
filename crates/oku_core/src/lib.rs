@@ -117,8 +117,8 @@ pub fn oku_wasm_init() {
     console_log::init().expect("could not initialize logger");
 }
 
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
-use crate::reactive::state_store::{StateStoreItem, StateStore};
 
 #[cfg(not(target_os = "android"))]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
@@ -662,13 +662,7 @@ async fn on_request_redraw(app: &mut App) {
 
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
-        root.internal.draw(
-            renderer,
-            app.font_system.as_mut().unwrap(),
-            &mut taffy_tree,
-            taffy_root,
-            &element_state,
-        );
+        root.internal.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, &element_state);
         app.element_tree = Some(root.internal);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
@@ -716,7 +710,7 @@ fn layout<'a>(
         .unwrap();
 
     let mut transform = glam::Mat4::IDENTITY;
-    
+
     root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, transform, font_system, element_state);
 
     // root_element.print_tree();

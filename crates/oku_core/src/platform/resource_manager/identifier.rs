@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use crate::platform::resource_manager::image::ImageResource;
 use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::resource_data::ResourceData;
-use crate::platform::resource_manager::ResourceIdentifier::{Url};
+use crate::platform::resource_manager::ResourceIdentifier::Url;
 use image::ImageReader;
 use log::{info, warn};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::io::Cursor;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

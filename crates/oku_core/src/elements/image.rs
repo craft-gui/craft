@@ -1,9 +1,12 @@
+use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::UpdateResult;
+use crate::elements::element::{CommonElementData, Element};
+use crate::elements::layout_context::{ImageContext, LayoutContext};
+use crate::engine::events::OkuEvent;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::platform::resource_manager::ResourceIdentifier;
-use crate::components::component::{ComponentId, ComponentSpecification};
-use crate::elements::element::{CommonElementData, Element};
-use crate::elements::layout_context::{ImageContext, LayoutContext};
+use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
 use crate::RendererBox;
 use cosmic_text::FontSystem;
@@ -11,9 +14,6 @@ use log::info;
 use std::any::Any;
 use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
-use crate::components::UpdateResult;
-use crate::engine::events::OkuEvent;
-use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Debug)]
 pub struct Image {
@@ -66,9 +66,14 @@ impl Element for Image {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        font_system: &mut FontSystem,
+        element_state: &mut StateStore,
+    ) -> NodeId {
         let style: taffy::Style = self.common_element_data.style.into();
-        
+
         taffy_tree
             .new_leaf_with_context(
                 style,
@@ -95,9 +100,15 @@ impl Element for Image {
         self.common_element_data.computed_y = y + result.location.y;
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
-        self.common_element_data.computed_padding = [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        self.common_element_data.computed_padding =
+            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
 
-        let transformed_xy =  transform.mul_vec4(glam::vec4(self.common_element_data.computed_x, self.common_element_data.computed_y, 0.0, 1.0));
+        let transformed_xy = transform.mul_vec4(glam::vec4(
+            self.common_element_data.computed_x,
+            self.common_element_data.computed_y,
+            0.0,
+            1.0,
+        ));
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
     }
@@ -108,7 +119,6 @@ impl Element for Image {
 }
 
 impl Image {
-
     // Styles
     pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Image {
         self.common_element_data.style.margin = [top, right, bottom, left];

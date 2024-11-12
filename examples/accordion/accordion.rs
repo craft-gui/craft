@@ -4,9 +4,9 @@ use oku::elements::{Container, Text};
 use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
 
+use oku::components::{Component, ComponentId, UpdateResult};
 use oku::engine::events::OkuEvent::PointerButtonEvent;
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
-use oku::components::{Component, ComponentId, UpdateResult};
 use oku::style::FlexDirection;
 
 #[derive(Default, Copy, Clone)]
@@ -39,7 +39,13 @@ impl Component for Accordion {
             .push(accordion_content)
     }
 
-    fn update(state: &mut Self, _props: Option<&Self::Props>, id: ComponentId, message: Message, source_element: Option<String>) -> UpdateResult {
+    fn update(
+        state: &mut Self,
+        _props: Option<&Self::Props>,
+        id: ComponentId,
+        message: Message,
+        source_element: Option<String>,
+    ) -> UpdateResult {
         if source_element.as_deref() != Some("accordion_header") {
             return UpdateResult::default();
         }

@@ -1,17 +1,15 @@
+use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult};
+use crate::components::props::Props;
+use crate::elements::container::ContainerState;
+use crate::elements::element::{Element, ElementBox};
+use crate::elements::Container;
 use crate::engine::events::Message::OkuMessage;
 use crate::engine::events::{Message, OkuEvent};
-use crate::components::component::{
-    ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult,
-};
-use crate::elements::element::{Element, ElementBox};
 use crate::reactive::element_id::create_unique_element_id;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use crate::components::props::Props;
-use crate::elements::Container;
-use crate::elements::container::ContainerState;
-use crate::reactive::state_store::{StateStoreItem, StateStore};
 
 #[derive(Clone)]
 pub struct ComponentTreeNode {
@@ -47,7 +45,10 @@ impl ComponentTreeNode {
             } else {
                 prefix.push_str("├─");
             }
-            println!("{} , Tag: {}, Id: {}, Key: {:?}, Parent: {:?}", prefix, element.tag, element.id, element.key, element.parent_id);
+            println!(
+                "{} , Tag: {}, Id: {}, Key: {:?}, Parent: {:?}",
+                prefix, element.tag, element.id, element.key, element.parent_id
+            );
             let children = &element.children;
             for (i, child) in children.iter().enumerate().rev() {
                 let is_last = i == children.len() - 1;
@@ -88,11 +89,14 @@ pub(crate) fn create_trees_from_render_specification(
             parent_id: None,
             props: None,
         };
-        
+
         // Make sure to set a default state for the root.
-        element_state.storage.insert(0, Box::new(ContainerState {
-            scroll_delta_y: 0.0,
-        }));
+        element_state.storage.insert(
+            0,
+            Box::new(ContainerState {
+                scroll_delta_y: 0.0,
+            }),
+        );
 
         let mut old_component_tree_as_ptr = old_component_tree.map(|old_root| old_root as *const ComponentTreeNode);
 
@@ -147,23 +151,33 @@ pub(crate) fn create_trees_from_render_specification(
                     };
 
                     element.internal.set_component_id(id);
-                    
+
                     if let Some(container) = element.internal.as_any().downcast_ref::<Container>() {
                         if !element_state.storage.contains_key(&id) {
-                            element_state.storage.insert(id, Box::new(ContainerState {
-                                scroll_delta_y: 0.0,
-                            }));
+                            element_state.storage.insert(
+                                id,
+                                Box::new(ContainerState {
+                                    scroll_delta_y: 0.0,
+                                }),
+                            );
                         }
                     } else {
                         if !element_state.storage.contains_key(&id) {
                             element_state.storage.insert(id, Box::new(()));
                         }
                     }
-                    
+
                     // Move the new element into it's parent and set the parent element to be the new element.
                     tree_node.parent_element_ptr.as_mut().unwrap().children_mut().push(element);
-                    parent_element_ptr =
-                        tree_node.parent_element_ptr.as_mut().unwrap().children_mut().last_mut().unwrap().internal.as_mut();
+                    parent_element_ptr = tree_node
+                        .parent_element_ptr
+                        .as_mut()
+                        .unwrap()
+                        .children_mut()
+                        .last_mut()
+                        .unwrap()
+                        .internal
+                        .as_mut();
 
                     let new_component_node = ComponentTreeNode {
                         is_element: true,
@@ -247,7 +261,13 @@ pub(crate) fn create_trees_from_render_specification(
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
 
                         if initialized {
-                            (component_data.update_fn)(state_mut, props.clone(), id, OkuMessage(OkuEvent::Initialized), None);
+                            (component_data.update_fn)(
+                                state_mut,
+                                props.clone(),
+                                id,
+                                OkuMessage(OkuEvent::Initialized),
+                                None,
+                            );
                         }
                     }
 
