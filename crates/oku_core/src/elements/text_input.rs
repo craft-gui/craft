@@ -1,5 +1,5 @@
-use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element, ElementState};
+use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
@@ -20,6 +20,7 @@ use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
 use crate::components::UpdateResult;
+use crate::reactive::state_store::StateStore;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -156,16 +157,9 @@ impl TextInput {
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a mut HashMap<ComponentId, Box<ElementState>>) -> &'a TextInputState {
-        element_state.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a TextInputState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
-
-    /*fn get_state_mut<'a>(
-        &self,
-        element_state: &'a mut HashMap<ComponentId, Box<ElementState>>,
-    ) -> &'a mut TextInputState {
-        element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
-    }*/
 }
 
 impl Element for TextInput {
@@ -191,7 +185,7 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &StateStore,
     ) {
         let bounding_rectangle = Rectangle::new(
             self.common_element_data.computed_x_transformed + self.common_element_data.computed_padding[3],
@@ -212,9 +206,9 @@ impl Element for TextInput {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &mut StateStore,
     ) -> NodeId {
-        let (text_hash, text) = if let Some(state) = element_state
+        let (text_hash, text) = if let Some(state) = element_state.storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
             .as_mut()
@@ -262,13 +256,13 @@ impl Element for TextInput {
         y: f32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
         //let text_context = self.get_state_mut(element_state);
         let mut text_context: &mut TextInputState =
-            element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+            element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
 
         text_context.editor.with_buffer_mut(|buffer| {
             buffer.set_metrics(font_system, text_context.metrics);
@@ -299,11 +293,11 @@ impl Element for TextInput {
     fn on_event(
         &self,
         event: OkuEvent,
-        element_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &mut StateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
         let text_context: &mut TextInputState =
-            element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+            element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
 
         let res = match event {
             OkuEvent::KeyboardInputEvent(keyboard_input) => {

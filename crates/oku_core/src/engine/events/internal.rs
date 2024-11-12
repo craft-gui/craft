@@ -8,7 +8,7 @@ use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use crate::components::props::Props;
 
-pub enum InternalMessage {
+pub(crate) enum InternalMessage {
     RequestRedraw,
     Close,
     Confirmation,

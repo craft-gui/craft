@@ -1,8 +1,7 @@
-use crate::elements::element::ElementState;
 use crate::engine::events::Message::OkuMessage;
 use crate::engine::events::{Message, OkuEvent};
 use crate::components::component::{
-    ComponentId, ComponentOrElement, ComponentSpecification, GenericUserState, UpdateFn, UpdateResult,
+    ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult,
 };
 use crate::elements::element::Element;
 use crate::reactive::element_id::create_unique_element_id;
@@ -12,6 +11,7 @@ use std::rc::Rc;
 use crate::components::props::Props;
 use crate::elements::Container;
 use crate::elements::container::ContainerState;
+use crate::reactive::state_store::{StateStoreItem, StateStore};
 
 #[derive(Clone)]
 pub struct ComponentTreeNode {
@@ -57,7 +57,7 @@ impl ComponentTreeNode {
     }
 }
 fn dummy_update(
-    _state: &mut GenericUserState,
+    _state: &mut StateStoreItem,
     _props: Option<Props>,
     _id: ComponentId,
     _message: Message,
@@ -72,8 +72,8 @@ pub(crate) fn create_trees_from_render_specification(
     component_specification: ComponentSpecification,
     mut root_element: Box<dyn Element>,
     old_component_tree: Option<&ComponentTreeNode>,
-    user_state: &mut HashMap<ComponentId, Box<GenericUserState>>,
-    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+    user_state: &mut StateStore,
+    element_state: &mut StateStore,
 ) -> (ComponentTreeNode, Box<dyn Element>) {
     //println!("-----------------------------------------");
     unsafe {
@@ -90,7 +90,7 @@ pub(crate) fn create_trees_from_render_specification(
         };
         
         // Make sure to set a default state for the root.
-        element_state.insert(0, Box::new(ContainerState {
+        element_state.storage.insert(0, Box::new(ContainerState {
             scroll_delta_y: 0.0,
         }));
 
@@ -135,7 +135,7 @@ pub(crate) fn create_trees_from_render_specification(
                     // Store the new tag, i.e. the element's name.
                     let new_tag = element.name().to_string();
 
-                    let default: Box<GenericUserState> = Box::new(());
+                    let default: Box<StateStoreItem> = Box::new(());
                     let id = if let Some(old_tag) = old_tag {
                         if new_tag == old_tag {
                             (*tree_node.old_component_node.unwrap()).id
@@ -149,14 +149,14 @@ pub(crate) fn create_trees_from_render_specification(
                     element.set_component_id(id);
                     
                     if let Some(container) = element.as_any().downcast_ref::<Container>() {
-                        if !element_state.contains_key(&id) {
-                            element_state.insert(id, Box::new(ContainerState {
+                        if !element_state.storage.contains_key(&id) {
+                            element_state.storage.insert(id, Box::new(ContainerState {
                                 scroll_delta_y: 0.0,
                             }));
                         }
                     } else {
-                        if !element_state.contains_key(&id) {
-                            element_state.insert(id, Box::new(()));
+                        if !element_state.storage.contains_key(&id) {
+                            element_state.storage.insert(id, Box::new(()));
                         }
                     }
                     
@@ -244,14 +244,14 @@ pub(crate) fn create_trees_from_render_specification(
                     };
 
                     {
-                        let state_mut = user_state.get_mut(&id).unwrap().as_mut();
+                        let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
 
                         if initialized {
                             (component_data.update_fn)(state_mut, props.clone(), id, OkuMessage(OkuEvent::Initialized), None);
                         }
                     }
 
-                    let state = user_state.get(&id);
+                    let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
                     let new_component = (component_data.view_fn)(state, props.clone(), children, id);
 

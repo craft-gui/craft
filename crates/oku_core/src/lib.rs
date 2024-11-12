@@ -11,7 +11,6 @@ pub mod style;
 #[cfg(test)]
 mod tests;
 
-use crate::elements::element::ElementState;
 pub use oku_runtime::OkuRuntime;
 
 use crate::engine::events::update_queue_entry::UpdateQueueEntry;
@@ -47,7 +46,7 @@ type RendererBox = dyn Renderer;
 use std::time;
 
 use cfg_if::cfg_if;
-use components::component::{ComponentId, ComponentSpecification, GenericUserState};
+use components::component::{ComponentId, ComponentSpecification};
 use cosmic_text::FontSystem;
 use futures::task::SpawnExt;
 use futures::{SinkExt, StreamExt};
@@ -92,8 +91,8 @@ struct App {
     component_tree: Option<ComponentTreeNode>,
     mouse_position: (f32, f32),
     update_queue: VecDeque<UpdateQueueEntry>,
-    user_state: HashMap<ComponentId, Box<GenericUserState>>,
-    element_state: HashMap<ComponentId, Box<ElementState>>,
+    user_state: StateStore,
+    element_state: StateStore,
     resource_manager: Arc<RwLock<ResourceManager>>,
     winit_sender: Sender<AppMessage>,
 }
@@ -119,6 +118,7 @@ pub fn oku_wasm_init() {
 }
 
 use oku_winit_state::OkuWinitState;
+use crate::reactive::state_store::{StateStoreItem, StateStore};
 
 #[cfg(not(target_os = "android"))]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
@@ -183,10 +183,10 @@ async fn async_main(
     mut app_sender: Sender<AppMessage>,
     resource_manager: Arc<RwLock<ResourceManager>>,
 ) {
-    let mut user_state = HashMap::new();
+    let mut user_state = StateStore::default();
 
-    let dummy_root_value: Box<GenericUserState> = Box::new(());
-    user_state.insert(0, dummy_root_value);
+    let dummy_root_value: Box<StateStoreItem> = Box::new(());
+    user_state.storage.insert(0, dummy_root_value);
 
     let mut app = Box::new(App {
         app: application,
@@ -250,7 +250,7 @@ async fn async_main(
                     let props = message.4;
                     let message = message.3;
 
-                    let state = app.user_state.get_mut(&source_component).unwrap().as_mut();
+                    let state = app.user_state.storage.get_mut(&source_component).unwrap().as_mut();
                     update_fn(state, props, source_component, Message::UserMessage(message), source_element);
                     app.window.as_ref().unwrap().request_redraw();
                 }
@@ -434,7 +434,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
             //println!("Target component id: {:?}", node.id);
             target_components.push_back(node);
 
-            let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
+            let state = app.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -501,7 +501,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
                 break;
             }
 
-            let state = app.user_state.get_mut(&node.id).unwrap().as_mut();
+            let state = app.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -682,7 +682,7 @@ async fn on_request_redraw(app: &mut App) {
 }
 
 fn layout<'a>(
-    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+    element_state: &mut StateStore,
     _window_width: f32,
     _window_height: f32,
     font_system: &mut FontSystem,

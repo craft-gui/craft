@@ -1,7 +1,7 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
-use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element, ElementState};
+use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Wrap};
 use crate::RendererBox;
@@ -12,6 +12,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::event::MouseScrollDelta;
 use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::{StateStoreItem, StateStore};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -42,7 +43,7 @@ impl Element for Container {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        element_state: &StateStore,
     ) {
         renderer.draw_rect(
             Rectangle::new(
@@ -60,7 +61,7 @@ impl Element for Container {
         }
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
@@ -81,7 +82,7 @@ impl Element for Container {
         y: f32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
@@ -97,7 +98,7 @@ impl Element for Container {
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        let scrollbar_dy = if let Some(container_state) = element_state.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>(){
+        let scrollbar_dy = if let Some(container_state) = element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>(){
             container_state.scroll_delta_y
         } else {
             0.0
@@ -124,7 +125,7 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
         if self.style().overflow[1].is_scroll_container() {
@@ -152,16 +153,16 @@ impl Container {
 
     fn get_state<'a>(
         &self,
-        element_state: &'a HashMap<ComponentId, Box<ElementState>>,
+        element_state: &'a StateStore,
     ) -> &'a &ContainerState {
-        element_state.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
 
     fn get_state_mut<'a>(
         &self,
-        element_state: &'a mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &'a mut StateStore,
     ) -> &'a mut ContainerState {
-        element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> Container {

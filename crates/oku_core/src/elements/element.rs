@@ -1,4 +1,4 @@
-use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, GenericUserState};
+use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
 use crate::elements::layout_context::LayoutContext;
 use crate::style::Style;
 use crate::RendererBox;
@@ -9,6 +9,7 @@ use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
 use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -32,8 +33,6 @@ pub struct CommonElementData {
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
 }
-
-pub type ElementState = dyn Any + Send;
 
 pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn common_element_data(&self) -> &CommonElementData;
@@ -88,10 +87,10 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        element_state: &StateStore,
     );
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId;
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId;
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -100,12 +99,12 @@ pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
         y: f32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &mut StateStore,
     );
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>, font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 }

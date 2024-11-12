@@ -1,8 +1,8 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::platform::resource_manager::ResourceIdentifier;
-use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element, ElementState};
+use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
 use crate::RendererBox;
@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
 use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Debug)]
 pub struct Image {
@@ -52,7 +53,7 @@ impl Element for Image {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &StateStore,
     ) {
         renderer.draw_image(
             Rectangle::new(
@@ -65,7 +66,7 @@ impl Element for Image {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
         let style: taffy::Style = self.common_element_data.style.into();
         
         taffy_tree
@@ -86,7 +87,7 @@ impl Element for Image {
         y: f32,
         transform: glam::Mat4,
         _font_system: &mut FontSystem,
-        _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 

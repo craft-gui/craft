@@ -1,6 +1,6 @@
 use crate::engine::events::internal::InternalMessage;
 
-pub struct AppMessage {
+pub(crate) struct AppMessage {
     pub(crate) id: u64,
     pub(crate) blocking: bool,
     pub(crate) data: InternalMessage,

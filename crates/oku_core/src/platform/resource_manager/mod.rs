@@ -17,7 +17,7 @@ use std::pin::Pin;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
-pub struct ResourceManager {
+pub(crate) struct ResourceManager {
     pub resource_jobs: VecDeque<ResourceFuture>,
     pub resources: HashMap<ResourceIdentifier, Resource>,
     app_sender: Sender<AppMessage>,

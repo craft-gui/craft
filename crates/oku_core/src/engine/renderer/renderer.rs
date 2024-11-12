@@ -1,9 +1,10 @@
 use crate::engine::renderer::color::Color;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId, GenericUserState};
+use crate::components::component::{ComponentId};
 use cosmic_text::FontSystem;
 use std::collections::HashMap;
 use tokio::sync::RwLockReadGuard;
+use crate::reactive::state_store::StateStore;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
@@ -56,6 +57,6 @@ pub trait Renderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<GenericUserState>>,
+        element_state: &StateStore,
     );
 }

@@ -1,13 +1,12 @@
-use crate::elements::element::ElementState;
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::Rectangle;
+
+use crate::engine::renderer::color::Color;use crate::engine::renderer::renderer::Rectangle;
 use crate::engine::renderer::wgpu::camera::Camera;
 use crate::engine::renderer::wgpu::context::Context;
 use crate::engine::renderer::wgpu::texture::Texture;
 use crate::engine::renderer::wgpu::uniform::GlobalUniform;
 use crate::engine::renderer::wgpu::vertex::Vertex;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId, GenericUserState};
+use crate::components::component::{ComponentId};
 use crate::elements::text::TextState;
 use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
 use glyphon::{TextArea, TextBounds};
@@ -16,6 +15,7 @@ use tokio::sync::RwLockReadGuard;
 use wgpu::util::DeviceExt;
 use crate::platform::resource_manager::resource::Resource;
 use crate::elements::text_input::TextInputState;
+use crate::reactive::state_store::StateStore;
 
 fn bind_group_from_2d_texture(
     device: &wgpu::Device,
@@ -349,7 +349,7 @@ impl Pipeline2D {
         context: &mut Context<'_>,
         resource_manager: RwLockReadGuard<'_, ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        element_state: &StateStore,
     ) {
         let mut encoder = context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
@@ -430,7 +430,7 @@ impl Pipeline2D {
 
             for text_area in self.text_areas.iter() {
 
-                if let Some(text_context) = element_state.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {
+                if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {
 
                     let text_buffer = match text_context.editor.buffer_ref() {
                         BufferRef::Owned(buffer) => buffer,
@@ -459,7 +459,7 @@ impl Pipeline2D {
                         ),
                         custom_glyphs: &[],
                     });
-                } else if let Some(text_context) = element_state.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
+                } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
 
                     let text_buffer = &text_context.buffer;
                     let text_area_position = glam::vec4(text_area.rectangle.x, text_area.rectangle.y, 0.0, 1.0);

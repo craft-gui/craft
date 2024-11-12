@@ -1,7 +1,7 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle};
-use crate::components::component::{ComponentId, ComponentSpecification, GenericUserState};
-use crate::elements::element::{CommonElementData, Element, ElementState};
+use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey,
 };
@@ -17,6 +17,7 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -155,15 +156,15 @@ impl Text {
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a mut HashMap<ComponentId, Box<ElementState>>) -> &'a TextState {
-        element_state.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a TextState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
 
     fn get_state_mut<'a>(
         &self,
-        element_state: &'a mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &'a mut StateStore,
     ) -> &'a mut TextState {
-        element_state.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
     }
 }
 
@@ -190,7 +191,7 @@ impl Element for Text {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &StateStore,
     ) {
         let bounding_rectangle = Rectangle::new(
             self.common_element_data.computed_x_transformed + self.common_element_data.computed_padding[3],
@@ -207,7 +208,7 @@ impl Element for Text {
         );
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
@@ -247,7 +248,7 @@ impl Element for Text {
         y: f32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 

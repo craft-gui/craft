@@ -4,10 +4,11 @@ use crate::elements::element::Element;
 use crate::PinnedFutureAny;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
+use crate::reactive::state_store::StateStoreItem;
 
 /// A Component's view function.
 pub type ViewFn = fn(
-    data: &GenericUserState,
+    data: &StateStoreItem,
     props: Option<Props>,
     children: Vec<ComponentSpecification>,
     id: ComponentId,
@@ -64,7 +65,7 @@ impl UpdateResult {
 
 /// A Component's update function.
 pub type UpdateFn = fn(
-    state: &mut GenericUserState,
+    state: &mut StateStoreItem,
     props: Option<Props>,
     id: ComponentId,
     message: Message,
@@ -74,7 +75,7 @@ pub type ComponentId = u64;
 
 #[derive(Clone)]
 pub struct ComponentData {
-    pub default_state: fn() -> Box<GenericUserState>,
+    pub default_state: fn() -> Box<StateStoreItem>,
     pub view_fn: ViewFn,
     pub update_fn: UpdateFn,
     /// A unique identifier for view_fn.
@@ -147,8 +148,6 @@ macro_rules! component {
     };
 }
 
-pub type GenericUserState = dyn Any + Send;
-
 pub trait Component
 where
     Self: 'static + Default + Send,
@@ -163,7 +162,7 @@ where
     ) -> ComponentSpecification;
 
     fn generic_view(
-        state: &GenericUserState,
+        state: &StateStoreItem,
         props: Option<Props>,
         children: Vec<ComponentSpecification>,
         id: ComponentId,
@@ -174,7 +173,7 @@ where
         Self::view(casted_state, props, children, id)
     }
 
-    fn default_state() -> Box<GenericUserState> {
+    fn default_state() -> Box<StateStoreItem> {
         Box::<Self>::default()
     }
 
@@ -183,7 +182,7 @@ where
     }
 
     fn generic_update(
-        state: &mut GenericUserState,
+        state: &mut StateStoreItem,
         props: Option<Props>,
         id: ComponentId,
         message: Message,

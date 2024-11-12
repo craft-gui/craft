@@ -1,5 +1,5 @@
-use crate::components::component::{ComponentId, GenericUserState};
-use crate::elements::element::{CommonElementData, Element, ElementState};
+use crate::components::component::{ComponentId};
+use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
 use crate::components::UpdateResult;
 use crate::engine::events::OkuEvent;
+use crate::reactive::state_store::StateStore;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -41,11 +42,11 @@ impl Element for Empty {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &StateStore,
     ) {
     }
 
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut HashMap<ComponentId, Box<GenericUserState>>) -> NodeId {
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, font_system: &mut FontSystem, element_state: &mut StateStore) -> NodeId {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
@@ -66,7 +67,7 @@ impl Element for Empty {
         _y: f32,
         transform: glam::Mat4,
         _font_system: &mut FontSystem,
-        _element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+        _element_state: &mut StateStore,
     ) {
     }
 

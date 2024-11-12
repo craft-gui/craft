@@ -5,7 +5,6 @@ mod texture;
 mod uniform;
 mod vertex;
 
-use crate::elements::element::ElementState;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, Renderer};
 use crate::engine::renderer::wgpu::camera::Camera;
@@ -15,7 +14,7 @@ use crate::engine::renderer::wgpu::context::{
 use crate::engine::renderer::wgpu::pipeline_2d::Pipeline2D;
 use crate::engine::renderer::wgpu::texture::Texture;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId, GenericUserState};
+use crate::components::component::{ComponentId};
 use cosmic_text::FontSystem;
 use glyphon::{Cache, TextAtlas, TextRenderer, Viewport};
 use std::collections::HashMap;
@@ -23,6 +22,7 @@ use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use wgpu::MultisampleState;
 use winit::window::Window;
+use crate::reactive::state_store::StateStore;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
@@ -135,7 +135,7 @@ impl Renderer for WgpuRenderer<'_> {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        element_state: &StateStore,
     ) {
         self.pipeline2d.submit(&mut self.context, resource_manager, font_system, element_state);
     }

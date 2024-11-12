@@ -1,13 +1,13 @@
-use crate::elements::element::ElementState;
 use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId, GenericUserState};
+use crate::components::component::{ComponentId};
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use cosmic_text::{Attrs, Buffer, Edit, FontSystem, Metrics, Shaping, Editor, Cursor, Action, Motion};
 use std::collections::HashMap;
 use taffy::Size;
 use tokio::sync::RwLockReadGuard;
+use crate::reactive::state_store::StateStore;
 
 pub struct TaffyTextContext<'a> {
     pub id: ComponentId,
@@ -57,7 +57,7 @@ pub enum AvailableSpace {
     MaxContent,
 }
 
-pub struct ImageContext {
+pub(crate) struct ImageContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }
 
@@ -99,14 +99,14 @@ impl ImageContext {
     }
 }
 
-pub enum LayoutContext<'a> {
+pub(crate) enum LayoutContext<'a> {
     Text(TaffyTextContext<'a>),
     TextInput(TaffyTextInputContext<'a>),
     Image(ImageContext),
 }
 
 pub fn measure_content(
-    element_state: &mut HashMap<ComponentId, Box<ElementState>>,
+    element_state: &mut StateStore,
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
@@ -118,7 +118,7 @@ pub fn measure_content(
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
             let cosmic_text_content: &mut TextState = if let Some(cosmic_text_content) =
-                element_state.get_mut(&taffy_text_context.id).unwrap().downcast_mut()
+                element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut()
             {
                 let cosmic_text_content: &mut TextState = cosmic_text_content;
 
@@ -153,8 +153,8 @@ pub fn measure_content(
                     taffy_text_context.attributes.color_opt
                 );
 
-                element_state.insert(taffy_text_context.id, Box::new(cosmic_text_content));
-                element_state.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap()
+                element_state.storage.insert(taffy_text_context.id, Box::new(cosmic_text_content));
+                element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap()
             };
             cosmic_text_content.measure(
                 known_dimensions,
@@ -169,7 +169,7 @@ pub fn measure_content(
         },
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let cosmic_text_content: &mut TextInputState = if let Some(cosmic_text_content) =
-                element_state.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut()
+                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut()
             {
                 let cosmic_text_content: &mut TextInputState = cosmic_text_content;
 
@@ -213,8 +213,8 @@ pub fn measure_content(
                     taffy_text_input_context.text.clone()
                 );
 
-                element_state.insert(taffy_text_input_context.id, Box::new(cosmic_text_content));
-                element_state.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap()
+                element_state.storage.insert(taffy_text_input_context.id, Box::new(cosmic_text_content));
+                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap()
             };
 
             cosmic_text_content.measure(

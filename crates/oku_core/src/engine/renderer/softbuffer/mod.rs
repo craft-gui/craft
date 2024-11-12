@@ -1,7 +1,7 @@
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, RenderCommand, Renderer};
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::components::component::{ComponentId, GenericUserState};
+use crate::components::component::{ComponentId};
 use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
 use image::EncodableLayout;
 use log::info;
@@ -13,10 +13,10 @@ use std::sync::Arc;
 use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
-use crate::elements::element::ElementState;
 use crate::platform::resource_manager::resource::Resource;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
+use crate::reactive::state_store::StateStore;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -171,7 +171,7 @@ impl Renderer for SoftwareRenderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &HashMap<ComponentId, Box<ElementState>>,
+        element_state: &StateStore,
     ) {
         self.framebuffer.fill(tiny_skia::Color::from_rgba8(
             self.surface_clear_color.r_u8(),
@@ -201,7 +201,7 @@ impl Renderer for SoftwareRenderer {
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let mut paint = Paint::default();
                     paint.colorspace = ColorSpace::Linear;
-                    if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
+                    if let Some(text_context) = element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>() {
                         let editor = &text_context.editor;
                         editor.draw(
                             font_system,
@@ -220,7 +220,7 @@ impl Renderer for SoftwareRenderer {
                                 );
                             },
                         );
-                    } else if let Some(text_context) = element_state.get(&component_id).unwrap().downcast_ref::<TextState>() {
+                    } else if let Some(text_context) = element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>() {
                         let buffer = &text_context.buffer;
 
                         buffer.draw(
