@@ -51,29 +51,46 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config curl unzip
+
       - name: Install Android NDK
         run: |
           mkdir -p $HOME/android-ndk
           curl -sSL https://dl.google.com/android/repository/android-ndk-r27c-linux.zip -o android-ndk.zip
           unzip android-ndk.zip -d $HOME/android-ndk
+
+      - name: Set ANDROID_NDK_ROOT
+        run: echo "ANDROID_NDK_ROOT=$HOME/android-ndk/android-ndk-r27c" >> $GITHUB_ENV
+
+      - name: Add ndk bins to Path
+        run: echo "$HOME/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
+
       - name: Configure Android Toolchain
-        env:
-          ANDROID_NDK_ROOT: $HOME/android-ndk/android-ndk-r27c
         run: |
-          export PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
-          # Copy the required clang binaries for compatibility
-          cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang \
-             $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang
-          cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++ \
-             $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang++
+          # Copy Clang binary dynamically if it exists
+          if [ -f "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang" ]; then
+            cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang \
+               $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang
+            cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++ \
+               $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang++
+          elif [ -f "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang" ]; then
+            echo "Clang binary already named correctly, skipping copy."
+          else
+            echo "Error: Expected Clang binary not found!" >&2
+            exit 1
+          fi
+
       - name: Install Android Toolchain in Rust
         run: rustup target add aarch64-linux-android
+
       - name: Install cargo APK
         run: cargo install cargo-apk
+
       - name: Build Counter Example for Android
         run: cargo build --target aarch64-linux-android --example counter
 
