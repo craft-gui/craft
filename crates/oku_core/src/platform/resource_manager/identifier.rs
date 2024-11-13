@@ -5,7 +5,7 @@ use crate::platform::resource_manager::ResourceIdentifier::Url;
 use image::ImageReader;
 use log::{info, warn};
 use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::io::Cursor;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

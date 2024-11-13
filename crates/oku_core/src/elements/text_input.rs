@@ -5,7 +5,7 @@ use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
 use crate::elements::text::TextHashValue;
-use crate::engine::events::{Message, OkuEvent};
+use crate::engine::events::OkuEvent;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
@@ -262,7 +262,7 @@ impl Element for TextInput {
         let result = taffy_tree.layout(root_node).unwrap();
 
         //let text_context = self.get_state_mut(element_state);
-        let mut text_context: &mut TextInputState = element_state
+        let text_context: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()

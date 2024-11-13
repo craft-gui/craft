@@ -26,9 +26,8 @@ use futures::StreamExt;
 use log::info;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
-use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
+use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
-use winit::keyboard::{Key, NamedKey};
 use winit::window::WindowAttributes;
 use winit::window::{Window, WindowId};
 

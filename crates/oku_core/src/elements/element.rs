@@ -7,7 +7,6 @@ use crate::style::Style;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
-use std::collections::HashMap;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
 

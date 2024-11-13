@@ -48,10 +48,9 @@ use std::time;
 use cfg_if::cfg_if;
 use components::component::{ComponentId, ComponentSpecification};
 use cosmic_text::FontSystem;
-use futures::task::SpawnExt;
 use futures::{SinkExt, StreamExt};
 use std::any::Any;
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -709,7 +708,7 @@ fn layout<'a>(
         )
         .unwrap();
 
-    let mut transform = glam::Mat4::IDENTITY;
+    let transform = glam::Mat4::IDENTITY;
 
     root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, transform, font_system, element_state);
 

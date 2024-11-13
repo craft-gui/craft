@@ -4,8 +4,7 @@ use crate::elements::text_input::TextInputState;
 use crate::platform::resource_manager::resource::Resource;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
-use cosmic_text::{Action, Attrs, Buffer, Cursor, Edit, Editor, FontSystem, Metrics, Motion, Shaping};
-use std::collections::HashMap;
+use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, FontSystem, Metrics, Motion, Shaping};
 use taffy::Size;
 use tokio::sync::RwLockReadGuard;
 
