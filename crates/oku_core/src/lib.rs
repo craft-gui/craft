@@ -77,7 +77,10 @@ use elements::image::Image;
 use engine::events::internal::InternalMessage;
 
 #[cfg(target_os = "android")]
-use winit::platform::android::EventLoopBuilderExtAndroid;
+use {
+    winit::platform::android::EventLoopBuilderExtAndroid,
+    winit::event_loop::EventLoopBuilder
+};
 
 pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any + Send>> + Send>>;
 

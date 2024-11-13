@@ -17,6 +17,7 @@ use crate::engine::app_message::AppMessage;
 use crate::engine::events::internal::InternalMessage;
 use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::engine::renderer::renderer::Renderer;
+#[cfg(not(target_os = "android"))]
 use crate::engine::renderer::softbuffer::SoftwareRenderer;
 use crate::engine::renderer::wgpu::WgpuRenderer;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};

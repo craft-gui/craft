@@ -21,7 +21,7 @@ rustc-hash = { version = "2.0", default-features = false }
 # SSE2 is enabled by default on x86_64 targets.
 glam = { version = "0.29.2" }
 bytemuck = { version = "1.19.0", features = ["derive"] }
-image = { version = "0.25.5", default-features = false, features = ["default-formats"] }
+image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
 
 cfg-if = "1.0.0"
 chrono = "0.4.38"

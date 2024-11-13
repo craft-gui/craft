@@ -1,51 +1,17 @@
 name: CI
 
-#on:
-#  push:
-#    branches:
-#      - main
-#  pull_request:
-#    branches:
-#      - main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Build Oku
-        run: cargo build --verbose
-      - name: Build Counter Example
-        run: cargo build --example counter
-      - name: Build Request Example
-        run: cargo build --example request
-      - name: Build Text Example
-        run: cargo build --example text
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Build Oku
-        run: cargo build --verbose
-      - name: Build Counter Example
-        run: cargo build --example counter
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Build Oku
-        run: cargo build --verbose
-      - name: Build Counter Example
-        run: cargo build --example counter
-
   build-android:
     runs-on: ubuntu-latest
     steps:
@@ -85,6 +51,17 @@ jobs:
             exit 1
           fi
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'Android 11.0 ("R")'
+
       - name: Install Android Toolchain in Rust
         run: rustup target add aarch64-linux-android
 
@@ -93,23 +70,3 @@ jobs:
 
       - name: Build Counter Example for Android
         run: cargo apk build --example counter --features oku_core/android
-
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Install iOS Toolchain
-        run: rustup target add aarch64-apple-ios
-      - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --example counter
-
-  unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Build Unit Tests
-        run: cargo test --workspace --no-run
-      - name: Run Unit Tests
-        run: cargo test --workspace --no-fail-fast --verbose
