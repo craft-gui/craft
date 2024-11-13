@@ -1,4 +1,3 @@
-use oku::RendererType::Wgpu;
 
 use oku::components::{Component, ComponentId, UpdateResult};
 use oku::elements::text_input::TextInput;

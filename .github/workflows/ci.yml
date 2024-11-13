@@ -24,6 +24,16 @@ jobs:
       - name: Build Text Example
         run: cargo build --example text
 
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install wasm toolchain
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build Counter Example
+        run: cargo build --target wasm32-unknown-unknown --example counter
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:

@@ -1,11 +1,10 @@
 use oku::RendererType::Wgpu;
 
 use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::{Container, Text};
+use oku::elements::Container;
 use oku::engine::events::OkuEvent::PointerButtonEvent;
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::oku_main_with_options;
-use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku_core::engine::renderer::color::Color;
 use oku_core::style::Unit;
