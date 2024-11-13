@@ -69,7 +69,7 @@ fn dummy_update(
 
 /// Creates a new Component tree and Element tree from a ComponentSpecification.
 /// The ids of the Component tree are stable across renders.
-pub(crate) fn create_trees_from_render_specification(
+pub(crate) fn diff_trees(
     component_specification: ComponentSpecification,
     mut root_element: ElementBox,
     old_component_tree: Option<&ComponentTreeNode>,

@@ -21,7 +21,7 @@ use elements::layout_context::{measure_content, LayoutContext};
 use engine::events::{Message, OkuEvent};
 use engine::renderer::color::Color;
 use engine::renderer::renderer::Renderer;
-use reactive::tree::{create_trees_from_render_specification, ComponentTreeNode};
+use reactive::tree::{diff_trees, ComponentTreeNode};
 
 use futures::channel::mpsc::channel;
 use futures::channel::mpsc::Receiver;
@@ -596,7 +596,7 @@ async fn on_request_redraw(app: &mut App) {
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();
 
-    let new_tree = create_trees_from_render_specification(
+    let new_tree = diff_trees(
         app.app.clone(),
         window_element,
         old_component_tree,

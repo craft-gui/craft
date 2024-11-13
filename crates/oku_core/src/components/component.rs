@@ -111,9 +111,6 @@ impl ComponentSpecification {
     }
 
     pub fn key(mut self, key: &str) -> Self {
-        if let ComponentOrElement::Element(_) = self.component {
-            panic!("Component cannot have a key.")
-        }
         self.key = Some(key.to_owned());
         self
     }
