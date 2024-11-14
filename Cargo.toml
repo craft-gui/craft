@@ -40,6 +40,11 @@ name = "counter"
 path = "examples/counter/counter.rs"
 
 [[example]]
+name = "counter-lib"
+path = "examples/counter/counter.rs"
+crate-type = ["cdylib"]
+
+[[example]]
 name = "accordion"
 path = "examples/accordion/accordion.rs"
 

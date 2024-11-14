@@ -8,6 +8,9 @@ use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 
+#[cfg(target_os = "android")]
+use oku::{AndroidApp};
+
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
     count: u64,
@@ -53,6 +56,7 @@ impl Component for Counter {
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
@@ -63,5 +67,24 @@ fn main() {
             renderer: Wgpu,
             window_title: "counter".to_string(),
         }),
+    );
+}
+
+
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[no_mangle]
+fn android_main(app: AndroidApp) {
+    #[cfg(not(target_arch = "wasm32"))]
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+
+    oku_main_with_options(
+        Counter::component(),
+        Some(OkuOptions {
+            renderer: Wgpu,
+            window_title: "counter".to_string(),
+        }),
+        app
     );
 }

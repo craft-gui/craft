@@ -1,12 +1,12 @@
 name: CI
 
-#on:
-#  push:
-#    branches:
-#      - main
-#  pull_request:
-#    branches:
-#      - main
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
@@ -57,33 +57,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libssl-dev pkg-config curl unzip
 
-      - name: Install Android NDK
-        run: |
-          mkdir -p $HOME/android-ndk
-          curl -sSL https://dl.google.com/android/repository/android-ndk-r27c-linux.zip -o android-ndk.zip
-          unzip android-ndk.zip -d $HOME/android-ndk
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Set ANDROID_NDK_ROOT
-        run: echo "ANDROID_NDK_ROOT=$HOME/android-ndk/android-ndk-r27c" >> "$GITHUB_ENV"
-
-      - name: Add ndk bins to Path
-        run: echo "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
-
-
-      - name: Configure Android Toolchain
-        run: |
-          # Copy Clang binary dynamically if it exists
-          if [ -f "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang" ]; then
-            cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang \
-               $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang
-            cp $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android35-clang++ \
-               $ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang++
-          elif [ -f "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-clang" ]; then
-            echo "Clang binary already named correctly, skipping copy."
-          else
-            echo "Error: Expected Clang binary not found!" >&2
-            exit 1
-          fi
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-30 ndk;27.2.12479018'
 
       - name: Install Android Toolchain in Rust
         run: rustup target add aarch64-linux-android
@@ -92,7 +75,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --example counter --features oku_core/android
+        run: cargo apk build --example counter-lib --features oku_core/android
 
   build-ios:
     runs-on: macos-latest
