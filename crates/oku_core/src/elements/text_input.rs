@@ -45,7 +45,7 @@ impl<'a> TextInputState<'a> {
         metrics: Metrics,
         text_hash: u64,
         editor: Editor<'a>,
-        color: Option<cosmic_text::Color>,
+        _color: Option<cosmic_text::Color>,
         text: String,
     ) -> Self {
         Self {

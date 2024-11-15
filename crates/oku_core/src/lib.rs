@@ -391,7 +391,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     // The target is always the first node (2, Some(c)).
 
-    let target = targets[0].clone();
+    let _target = targets[0].clone();
 
     let mut propagate = true;
     let mut prevent_defaults = false;

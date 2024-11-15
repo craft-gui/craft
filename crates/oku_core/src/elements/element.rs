@@ -70,6 +70,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self.common_element_data().id
     }
 
+    #[allow(dead_code)]
     fn id(&mut self, id: Option<&str>) -> Box<dyn Element> {
         self.common_element_data_mut().id = id.map(String::from);
         self.clone_box()
@@ -113,7 +114,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn update(&self, _message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn update(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 }

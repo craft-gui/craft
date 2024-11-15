@@ -149,7 +149,7 @@ pub(crate) fn diff_trees(
 
                     element.internal.set_component_id(id);
 
-                    if let Some(container) = element.internal.as_any().downcast_ref::<Container>() {
+                    if let Some(_container) = element.internal.as_any().downcast_ref::<Container>() {
                         if !element_state.storage.contains_key(&id) {
                             element_state.storage.insert(
                                 id,

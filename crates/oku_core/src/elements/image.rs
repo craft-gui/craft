@@ -65,8 +65,8 @@ impl Element for Image {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        _font_system: &mut FontSystem,
+        _element_state: &mut StateStore,
     ) -> NodeId {
         let style: taffy::Style = self.common_element_data.style.into();
 

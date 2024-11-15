@@ -15,6 +15,7 @@ impl AppMessage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn new_blocking(id: u64, content: InternalMessage) -> Self {
         AppMessage {
             id,

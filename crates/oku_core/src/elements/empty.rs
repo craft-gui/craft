@@ -12,6 +12,7 @@ pub struct Empty {
 }
 
 impl Empty {
+    #[allow(dead_code)]
     pub fn new() -> Empty {
         Empty {
             common_element_data: Default::default(),
