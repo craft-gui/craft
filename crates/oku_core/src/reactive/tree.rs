@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Clone)]
-pub struct ComponentTreeNode {
+pub(crate) struct ComponentTreeNode {
     pub is_element: bool,
     pub key: Option<String>,
     pub tag: String,

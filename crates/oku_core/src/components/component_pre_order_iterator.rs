@@ -1,6 +1,6 @@
 use crate::reactive::tree::ComponentTreeNode;
 
-pub struct ComponentTreePreOrderIterator<'a> {
+pub(crate) struct ComponentTreePreOrderIterator<'a> {
     stack: Vec<&'a ComponentTreeNode>,
 }
 
