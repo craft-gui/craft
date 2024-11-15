@@ -20,7 +20,7 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::engine::events::{Event, OkuMessage};
+use crate::engine::events::{OkuMessage};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -320,7 +320,7 @@ impl Element for TextInput {
         self
     }
 
-    fn update(&self, message: OkuMessage, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
         let text_context: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)

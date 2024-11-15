@@ -8,7 +8,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::engine::events::{Event, OkuMessage};
+use crate::engine::events::{OkuMessage};
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -114,7 +114,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn update(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 }

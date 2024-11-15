@@ -12,7 +12,6 @@ pub struct UpdateQueueEntry {
 impl UpdateQueueEntry {
     pub fn new(
         source_component: u64,
-        source_element: Option<String>,
         update_function: UpdateFn,
         update_result: UpdateResult,
         props: Props,

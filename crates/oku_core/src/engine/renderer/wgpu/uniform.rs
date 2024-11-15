@@ -17,7 +17,7 @@ impl GlobalUniform {
             _padding: [0, 0, 0],
         }
     }
-
+    
     pub(crate) fn set_is_srgb_format(&mut self, is_srgb_format: bool) {
         self.is_srgb_format = is_srgb_format as u32;
     }

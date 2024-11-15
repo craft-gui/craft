@@ -442,7 +442,6 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             if res.future.is_some() {
                 app.update_queue.push_back(UpdateQueueEntry::new(
                     node.id,
-                    target_element_id.clone(),
                     node.update,
                     res,
                     node.props.clone(),
@@ -474,7 +473,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 if let Some(element) = fiber_node.element {
                     if element.component_id() == target_component_id {
                         let res =
-                            element.update(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+                            element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
 
                         if let Some(result_message) = res.result_message {
                             element_events.push_back((result_message, element.get_id().clone()));
@@ -507,7 +506,6 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             if res.future.is_some() {
                 app.update_queue.push_back(UpdateQueueEntry::new(
                     node.id,
-                    target_element_id.clone(),
                     node.update,
                     res,
                     node.props.clone(),

@@ -11,7 +11,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 use winit::event::MouseScrollDelta;
-use crate::engine::events::{Event, OkuMessage};
+use crate::engine::events::{OkuMessage};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]

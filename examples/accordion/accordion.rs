@@ -18,11 +18,7 @@ pub struct Accordion {
 impl Component for Accordion {
     type Props = ();
 
-    fn view(
-        state: &Self,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-    ) -> ComponentSpecification {
+    fn view(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let accordion_content =
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
 
@@ -39,11 +35,8 @@ impl Component for Accordion {
             .push(accordion_content)
     }
 
-    fn update(
-        state: &mut Self,
-        _props: &Self::Props,
-        event: Event,
-    ) -> UpdateResult {
+    fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+        println!("target: {:?}", event.target);
         if event.target.as_deref() != Some("accordion_header") {
             return UpdateResult::default();
         }
@@ -56,13 +49,13 @@ impl Component for Accordion {
             }
         }
 
-        UpdateResult::new()
+        UpdateResult::new().prevent_propagate()
     }
 }
 
 fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE) // Set the maximum log level you want to capture
+        .with_max_level(tracing::Level::INFO) // Set the maximum log level you want to capture
         .init();
 
     oku_main_with_options(

@@ -1,7 +1,7 @@
 use crate::components::component::UpdateFn;
 use crate::components::props::Props;
 use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
+use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::engine::renderer::renderer::Renderer;
 use std::any::Any;
 use std::sync::Arc;
