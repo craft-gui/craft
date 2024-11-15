@@ -1,6 +1,6 @@
 use crate::components::props::Props;
 use crate::elements::element::{Element, ElementBox};
-use crate::engine::events::{Message, OkuEvent};
+use crate::engine::events::{Event, Message, OkuMessage};
 use crate::reactive::state_store::StateStoreItem;
 use crate::PinnedFutureAny;
 use std::any::{Any, TypeId};
@@ -9,9 +9,8 @@ use std::ops::Deref;
 /// A Component's view function.
 pub type ViewFn = fn(
     data: &StateStoreItem,
-    props: Option<Props>,
+    props: Props,
     children: Vec<ComponentSpecification>,
-    id: ComponentId,
 ) -> ComponentSpecification;
 
 /// The result of an update.
@@ -23,7 +22,7 @@ pub struct UpdateResult {
     /// Prevent default event handlers from running when an oku_event is not explicitly handled.
     /// False by default.
     pub prevent_defaults: bool,
-    pub(crate) result_message: Option<OkuEvent>,
+    pub(crate) result_message: Option<OkuMessage>,
 }
 
 impl Default for UpdateResult {
@@ -57,7 +56,7 @@ impl UpdateResult {
         self
     }
 
-    pub(crate) fn result_message(mut self, message: OkuEvent) -> Self {
+    pub(crate) fn result_message(mut self, message: OkuMessage) -> Self {
         self.result_message = Some(message);
         self
     }
@@ -66,16 +65,15 @@ impl UpdateResult {
 /// A Component's update function.
 pub type UpdateFn = fn(
     state: &mut StateStoreItem,
-    props: Option<Props>,
-    id: ComponentId,
-    message: Message,
-    source_element_id: Option<String>,
+    props: Props,
+    message: Event
 ) -> UpdateResult;
 pub type ComponentId = u64;
 
 #[derive(Clone)]
 pub struct ComponentData {
     pub default_state: fn() -> Box<StateStoreItem>,
+    pub default_props: fn() -> Props,
     pub view_fn: ViewFn,
     pub update_fn: UpdateFn,
     /// A unique identifier for view_fn.
@@ -149,57 +147,56 @@ pub trait Component
 where
     Self: 'static + Default + Send,
 {
-    type Props: Send + Sync;
+    type Props: Send + Sync + Default;
 
     fn view(
         state: &Self,
-        props: Option<&Self::Props>,
+        props: &Self::Props,
         children: Vec<ComponentSpecification>,
-        id: ComponentId,
     ) -> ComponentSpecification;
 
     fn generic_view(
         state: &StateStoreItem,
-        props: Option<Props>,
+        props: Props,
         children: Vec<ComponentSpecification>,
-        id: ComponentId,
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
-        let props: Option<&Self::Props> = props.as_ref().map(|props| props.data.deref().downcast_ref().unwrap());
+        let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        Self::view(casted_state, props, children, id)
+        Self::view(casted_state, props, children)
     }
 
     fn default_state() -> Box<StateStoreItem> {
         Box::<Self>::default()
     }
 
+    fn default_props() -> Props {
+        Props::new(Self::Props::default())
+    }
+
     fn update(
         state: &mut Self,
-        props: Option<&Self::Props>,
-        id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        props: &Self::Props,
+        message: Event,
     ) -> UpdateResult {
         UpdateResult::new()
     }
 
     fn generic_update(
         state: &mut StateStoreItem,
-        props: Option<Props>,
-        id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        props: Props,
+        message: Event,
     ) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
-        let props: Option<&Self::Props> = props.as_ref().map(|props| props.data.deref().downcast_ref().unwrap());
+        let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        Self::update(casted_state, props, id, message, source_element)
+        Self::update(casted_state, props, message)
     }
 
     fn component() -> ComponentSpecification {
         let component_data = ComponentData {
             default_state: Self::default_state,
+            default_props: Self::default_props,
             view_fn: Self::generic_view,
             update_fn: Self::generic_update,
             tag: std::any::type_name_of_val(&Self::generic_view).to_string(),

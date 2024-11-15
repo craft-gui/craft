@@ -5,7 +5,6 @@ use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
 use crate::elements::text::TextHashValue;
-use crate::engine::events::OkuEvent;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
@@ -21,6 +20,7 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
+use crate::engine::events::{Event, OkuMessage};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -320,7 +320,7 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn update(&self, message: OkuMessage, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
         let text_context: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
@@ -329,8 +329,8 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        let res = match event {
-            OkuEvent::KeyboardInputEvent(keyboard_input) => {
+        let res = match message {
+            OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let KeyEvent {
                     logical_key, state, ..
                 } = keyboard_input.event;
@@ -402,7 +402,7 @@ impl Element for TextInput {
                     UpdateResult::new()
                         .prevent_defaults()
                         .prevent_propagate()
-                        .result_message(OkuEvent::TextInputChanged(buffer_string))
+                        .result_message(OkuMessage::TextInputChanged(buffer_string))
                 })
             }
             _ => UpdateResult::new(),

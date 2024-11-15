@@ -8,6 +8,7 @@ use oku::style::Overflow;
 use oku::style::{Display, Unit, Wrap};
 use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
+use oku_core::engine::events::Event;
 
 #[derive(Default, Clone)]
 pub struct Request {
@@ -22,10 +23,9 @@ impl Component for Request {
     type Props = u64;
 
     fn view(
-        state: &Self,
-        _props: Option<&Self::Props>,
+        _state: &Self,
+        _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
-        id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -42,13 +42,11 @@ impl Component for Request {
     }
 
     fn update(
-        state: &mut Self,
-        props: Option<&Self::Props>,
-        id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        _state: &mut Self,
+        _props: &Self::Props,
+        _event: Event,
     ) -> UpdateResult {
-        if source_element.as_deref() != Some("increment") {
+        if _event.target.as_deref() != Some("increment") {
             return UpdateResult::default();
         }
         /*

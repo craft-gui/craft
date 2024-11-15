@@ -6,7 +6,7 @@ use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku_core::components::ComponentSpecification;
-use oku_core::engine::events::OkuEvent;
+use oku_core::engine::events::{Event, OkuMessage};
 use oku_core::RendererType::{Wgpu};
 
 #[derive(Default, Copy, Clone)]
@@ -17,22 +17,19 @@ impl Component for TextState {
 
     fn view(
         _state: &Self,
-        _props: Option<&Self::Props>,
+        _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
     ) -> ComponentSpecification {
         TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input").component()
     }
 
     fn update(
         state: &mut Self,
-        _props: Option<&Self::Props>,
-        _id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        _props: &Self::Props,
+        event: Event,
     ) -> UpdateResult {
-        println!("Source: {:?}", source_element);
-        if let Message::OkuMessage(OkuEvent::TextInputChanged(new_val)) = message {
+        println!("Source: {:?}", event.target);
+        if let Message::OkuMessage(OkuMessage::TextInputChanged(new_val)) = event.message {
             println!("new text: {}", new_val);
         }
 

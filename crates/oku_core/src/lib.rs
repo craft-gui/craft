@@ -18,7 +18,7 @@ use crate::style::{Display, Unit, Wrap};
 use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
-use engine::events::{Message, OkuEvent};
+use engine::events::{Message};
 use engine::renderer::color::Color;
 use engine::renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
@@ -70,7 +70,7 @@ const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
 use crate::engine::app_message::AppMessage;
 use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
+use crate::engine::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 pub use crate::options::RendererType;
 use crate::platform::resource_manager::ResourceManager;
 use elements::image::Image;
@@ -248,12 +248,11 @@ async fn async_main(
                 InternalMessage::GotUserMessage(message) => {
                     let update_fn = message.0;
                     let source_component = message.1;
-                    let source_element = message.2;
-                    let props = message.4;
-                    let message = message.3;
+                    let props = message.3;
+                    let message = message.2;
 
                     let state = app.user_state.storage.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, props, source_component, Message::UserMessage(message), source_element);
+                    update_fn(state, props, Event::new(Message::UserMessage(message)));
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -268,9 +267,6 @@ async fn async_main(
                 InternalMessage::KeyboardInput(keyboard_input) => {
                     on_keyboard_input(&mut app, keyboard_input).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
-                }
-                InternalMessage::ElementEvent(element_event) => {
-                    dispatch_event(&mut app, element_event).await;
                 }
             }
         }
@@ -294,7 +290,6 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
                     InternalMessage::GotUserMessage((
                         event.update_function,
                         event.source_component,
-                        event.source_element,
                         res,
                         event.props,
                     )),
@@ -319,7 +314,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 }
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
-    let event = OkuEvent::MouseWheelEvent(mouse_wheel);
+    let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
     dispatch_event(app, event).await;
 
@@ -327,7 +322,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 }
 
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
-    let event = OkuEvent::KeyboardInputEvent(keyboard_input);
+    let event = OkuMessage::KeyboardInputEvent(keyboard_input);
 
     dispatch_event(app, event).await;
 
@@ -346,7 +341,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
+async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -440,9 +435,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
             let res = (node.update)(
                 state,
                 node.props.clone(),
-                node.id,
-                Message::OkuMessage(event.clone()),
-                target_element_id.clone(),
+                Event::new(Message::OkuMessage(event.clone())).target(target_element_id.clone())
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
@@ -458,7 +451,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
         }
     }
 
-    let mut element_events: VecDeque<(OkuEvent, Option<String>)> = VecDeque::new();
+    let mut element_events: VecDeque<(OkuMessage, Option<String>)> = VecDeque::new();
 
     // Handle element events if prevent defaults was not set to true.
     if !prevent_defaults {
@@ -481,7 +474,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
                 if let Some(element) = fiber_node.element {
                     if element.component_id() == target_component_id {
                         let res =
-                            element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+                            element.update(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
 
                         if let Some(result_message) = res.result_message {
                             element_events.push_back((result_message, element.get_id().clone()));
@@ -507,9 +500,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
             let res = (node.update)(
                 state,
                 node.props.clone(),
-                node.id,
-                Message::OkuMessage(event.clone()),
-                target_element_id.clone(),
+                Event::new(Message::OkuMessage(event.clone())).target(target_element_id.clone())
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
@@ -527,7 +518,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuEvent) {
 }
 
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
-    let event = OkuEvent::PointerButtonEvent(pointer_button);
+    let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     dispatch_event(app, event).await;
 

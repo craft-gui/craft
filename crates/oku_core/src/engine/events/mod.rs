@@ -17,8 +17,27 @@ pub use winit::event::ElementState;
 use std::any::Any;
 pub use winit::event::MouseButton;
 
+pub struct Event {
+    pub target: Option<String>,
+    pub message: Message,
+}
+
+impl Event {
+    pub fn new(message: Message) -> Self {
+        Self {
+            target: None,
+            message,
+        }
+    }
+
+    pub fn target(mut self, target: Option<String>) -> Self {
+        self.target = target;
+        self
+    }
+}
+
 #[derive(Clone, Debug)]
-pub enum OkuEvent {
+pub enum OkuMessage {
     Initialized,
     PointerButtonEvent(PointerButton),
     KeyboardInputEvent(KeyboardInput),
@@ -28,6 +47,6 @@ pub enum OkuEvent {
 }
 
 pub enum Message {
-    OkuMessage(OkuEvent),
+    OkuMessage(OkuMessage),
     UserMessage(Box<dyn Any>),
 }

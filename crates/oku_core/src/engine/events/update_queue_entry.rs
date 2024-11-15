@@ -1,12 +1,12 @@
 use crate::components::component::{UpdateFn, UpdateResult};
+use crate::components::ComponentId;
 use crate::components::props::Props;
 
 pub struct UpdateQueueEntry {
-    pub source_component: u64,
-    pub source_element: Option<String>,
+    pub source_component: ComponentId,
     pub update_function: UpdateFn,
     pub update_result: UpdateResult,
-    pub props: Option<Props>,
+    pub props: Props,
 }
 
 impl UpdateQueueEntry {
@@ -15,11 +15,10 @@ impl UpdateQueueEntry {
         source_element: Option<String>,
         update_function: UpdateFn,
         update_result: UpdateResult,
-        props: Option<Props>,
+        props: Props,
     ) -> Self {
         UpdateQueueEntry {
             source_component,
-            source_element,
             update_function,
             update_result,
             props,

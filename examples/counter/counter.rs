@@ -2,7 +2,6 @@ use oku::RendererType::Wgpu;
 
 use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku::engine::events::OkuEvent::PointerButtonEvent;
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
@@ -10,6 +9,8 @@ use oku::OkuOptions;
 
 #[cfg(target_os = "android")]
 use oku::{AndroidApp};
+use oku_core::engine::events::Event;
+use oku_core::engine::events::OkuMessage::PointerButtonEvent;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -21,9 +22,8 @@ impl Component for Counter {
 
     fn view(
         state: &Self,
-        _props: Option<&Self::Props>,
+        _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .flex_direction(FlexDirection::Column)
@@ -35,16 +35,14 @@ impl Component for Counter {
 
     fn update(
         state: &mut Self,
-        _props: Option<&Self::Props>,
-        _id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        _props: &Self::Props,
+        message: Event,
     ) -> UpdateResult {
-        if source_element.as_deref() != Some("increment") {
+        if message.target.as_deref() != Some("increment") {
             return UpdateResult::default();
         }
 
-        if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message {
+        if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message.message {
             if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
                 && pointer_button.state == ElementState::Pressed
             {

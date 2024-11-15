@@ -1,7 +1,6 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
-use crate::engine::events::OkuEvent;
 use crate::reactive::state_store::StateStore;
 use crate::style::Style;
 use crate::RendererBox;
@@ -9,6 +8,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
+use crate::engine::events::{Event, OkuMessage};
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -113,7 +113,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn update(&self, _message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 }

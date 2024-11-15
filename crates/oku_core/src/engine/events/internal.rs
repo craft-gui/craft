@@ -1,12 +1,13 @@
 use crate::components::component::UpdateFn;
 use crate::components::props::Props;
 use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{KeyboardInput, MouseWheel, OkuEvent, PointerButton, PointerMoved};
+use crate::engine::events::{KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 use crate::engine::renderer::renderer::Renderer;
 use std::any::Any;
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
+use crate::components::ComponentId;
 
 pub(crate) enum InternalMessage {
     RequestRedraw,
@@ -19,7 +20,6 @@ pub(crate) enum InternalMessage {
     MouseWheel(MouseWheel),
     KeyboardInput(KeyboardInput),
     ProcessUserEvents,
-    GotUserMessage((UpdateFn, u64, Option<String>, Box<dyn Any + Send>, Option<Props>)),
+    GotUserMessage((UpdateFn, ComponentId, Box<dyn Any + Send>, Props)),
     ResourceEvent(ResourceEvent),
-    ElementEvent(OkuEvent),
 }

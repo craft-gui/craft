@@ -2,7 +2,6 @@ use crate::components::component::ComponentSpecification;
 use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
-use crate::engine::events::OkuEvent;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
@@ -12,6 +11,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 use winit::event::MouseScrollDelta;
+use crate::engine::events::{Event, OkuMessage};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -136,12 +136,12 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn update(&self, message: OkuMessage, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
         if self.style().overflow[1].is_scroll_container() {
-            match event {
-                OkuEvent::MouseWheelEvent(mouse_wheel) => {
+            match message {
+                OkuMessage::MouseWheelEvent(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
                         MouseScrollDelta::LineDelta(x, y) => y,
                         MouseScrollDelta::PixelDelta(y) => y.y as f32,

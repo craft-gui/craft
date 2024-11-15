@@ -3,8 +3,7 @@ use crate::components::props::Props;
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::Container;
-use crate::engine::events::Message::OkuMessage;
-use crate::engine::events::{Message, OkuEvent};
+use crate::engine::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use std::cell::RefCell;
@@ -21,7 +20,7 @@ pub struct ComponentTreeNode {
     pub children_keys: HashMap<String, ComponentId>,
     pub id: ComponentId,
     pub(crate) parent_id: Option<ComponentId>,
-    pub props: Option<Props>,
+    pub props: Props,
 }
 
 #[derive(Clone)]
@@ -59,10 +58,8 @@ impl ComponentTreeNode {
 }
 fn dummy_update(
     _state: &mut StateStoreItem,
-    _props: Option<Props>,
-    _id: ComponentId,
-    _message: Message,
-    _source_element_id: Option<String>,
+    _props: Props,
+    _message: Event,
 ) -> UpdateResult {
     UpdateResult::new()
 }
@@ -87,7 +84,7 @@ pub(crate) fn diff_trees(
             children_keys: HashMap::new(),
             id: 0,
             parent_id: None,
-            props: None,
+            props: Props::new(()),
         };
 
         // Make sure to set a default state for the root.
@@ -188,7 +185,7 @@ pub(crate) fn diff_trees(
                         children_keys: HashMap::new(),
                         id,
                         parent_id: Some((*parent_component_ptr).id),
-                        props: None,
+                        props: Props::new(()),
                     };
 
                     // Add the new component node to the tree and get a pointer to it.
@@ -236,7 +233,7 @@ pub(crate) fn diff_trees(
                 }
                 ComponentOrElement::ComponentSpec(component_data) => {
                     let children_keys = (*parent_component_ptr).children_keys.clone();
-
+                    let props = props.unwrap_or((component_data.default_props)());
                     let mut initialized = false;
 
                     let id: ComponentId = if key.is_some() && children_keys.contains_key(&key.clone().unwrap()) {
@@ -264,16 +261,14 @@ pub(crate) fn diff_trees(
                             (component_data.update_fn)(
                                 state_mut,
                                 props.clone(),
-                                id,
-                                OkuMessage(OkuEvent::Initialized),
-                                None,
+                                Event::new(Message::OkuMessage(OkuMessage::Initialized)),
                             );
                         }
                     }
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, props.clone(), children, id);
+                    let new_component = (component_data.view_fn)(state, props.clone(), children);
 
                     let new_component_node = ComponentTreeNode {
                         is_element: false,
