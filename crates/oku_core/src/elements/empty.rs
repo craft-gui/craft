@@ -66,7 +66,7 @@ impl Element for Empty {
         _root_node: NodeId,
         _x: f32,
         _y: f32,
-        transform: glam::Mat4,
+        _transform: glam::Mat4,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
     ) {

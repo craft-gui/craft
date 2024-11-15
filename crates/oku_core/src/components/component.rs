@@ -1,5 +1,5 @@
 use crate::components::props::Props;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{ElementBox};
 use crate::engine::events::{Message, OkuEvent};
 use crate::reactive::state_store::StateStoreItem;
 use crate::PinnedFutureAny;
@@ -175,11 +175,11 @@ where
     }
 
     fn update(
-        state: &mut Self,
-        props: Option<&Self::Props>,
-        id: ComponentId,
-        message: Message,
-        source_element: Option<String>,
+        _state: &mut Self,
+        _props: Option<&Self::Props>,
+        _id: ComponentId,
+        _message: Message,
+        _source_element: Option<String>,
     ) -> UpdateResult {
         UpdateResult::new()
     }

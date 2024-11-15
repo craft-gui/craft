@@ -113,7 +113,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, event: OkuEvent, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, _event: OkuEvent, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 }

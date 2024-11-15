@@ -138,7 +138,6 @@ impl Default for FontStyle {
 ///
 /// <https://developer.mozilla.org/en-US/docs/Web/CSS/overflow>
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Overflow {
     /// The automatic minimum size of this node as a flexbox/grid item should be based on the size of its content.
     /// Content that overflows this node *should* contribute to the scroll region of its parent.

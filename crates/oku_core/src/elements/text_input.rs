@@ -45,7 +45,7 @@ impl<'a> TextInputState<'a> {
         metrics: Metrics,
         text_hash: u64,
         editor: Editor<'a>,
-        color: Option<cosmic_text::Color>,
+        _color: Option<cosmic_text::Color>,
         text: String,
     ) -> Self {
         Self {
@@ -224,10 +224,10 @@ impl Element for TextInput {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        _font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) -> NodeId {
-        let (text_hash, text) = if let Some(state) = element_state
+        let (text_hash, _text) = if let Some(state) = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()

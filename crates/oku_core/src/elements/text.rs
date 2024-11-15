@@ -202,8 +202,8 @@ impl Element for Text {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        _font_system: &mut FontSystem,
+        _element_state: &mut StateStore,
     ) -> NodeId {
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
