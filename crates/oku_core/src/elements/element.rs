@@ -70,6 +70,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self.common_element_data().id
     }
 
+    #[allow(dead_code)]
     fn id(&mut self, id: Option<&str>) -> Box<dyn Element> {
         self.common_element_data_mut().id = id.map(String::from);
         self.clone_box()
@@ -172,6 +173,7 @@ impl<T: Element> From<T> for ComponentSpecification {
 }
 
 impl dyn Element {
+    #[allow(dead_code)]
     pub fn print_tree(&self) {
         let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(self, 0, true)];
         while let Some((element, indent, is_last)) = elements.pop() {

@@ -27,11 +27,13 @@ pub struct TextHashValue {
 }
 
 pub struct TextState {
+    #[allow(dead_code)]
     pub id: ComponentId,
     pub buffer: Buffer,
     pub metrics: Metrics,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
+    #[allow(dead_code)]
     pub color: cosmic_text::Color,
     pub last_key: TextHashKey,
 }

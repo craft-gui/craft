@@ -21,5 +21,6 @@ pub(crate) enum InternalMessage {
     ProcessUserEvents,
     GotUserMessage((UpdateFn, u64, Option<String>, Box<dyn Any + Send>, Option<Props>)),
     ResourceEvent(ResourceEvent),
+    #[allow(dead_code)]
     ElementEvent(OkuEvent),
 }
