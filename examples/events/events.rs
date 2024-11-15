@@ -30,17 +30,17 @@ impl Component for EventsExample {
             .component()
             .push(
                 Container::new()
-                    .background(Color::BLUE)
+                    .background(Color::GREEN)
                     .width(Unit::Px(200.0))
                     .height(Unit::Px(200.0))
-                    .id("blue")
+                    .id("green")
                     .component()
                     .push(
                         Container::new()
-                            .background(Color::GREEN)
+                            .background(Color::BLUE)
                             .width(Unit::Px(100.0))
                             .height(Unit::Px(100.0))
-                            .id("green")
+                            .id("blue")
                             .component(),
                     ),
             )
@@ -56,10 +56,6 @@ impl Component for EventsExample {
                 && pointer_button.state == ElementState::Pressed
             {
                 println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
-
-                if event.target.as_deref() == Some("blue") {
-                    return UpdateResult::new().prevent_propagate();
-                }
 
             }
         };
