@@ -185,8 +185,17 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &StateStore,
+        element_state: &StateStore,
     ) {
+        let text_input_context: &TextInputState = element_state
+            .storage
+            .get(&self.common_element_data.component_id)
+            .unwrap()
+            .as_ref()
+            .downcast_ref()
+            .unwrap();
+
+        
         let bounding_rectangle = Rectangle::new(
             self.common_element_data.computed_x_transformed + self.common_element_data.computed_padding[3],
             self.common_element_data.computed_y_transformed + self.common_element_data.computed_padding[0],
@@ -200,6 +209,16 @@ impl Element for TextInput {
             bounding_rectangle,
             self.common_element_data.style.color,
         );
+
+        if let Some((x, y)) = text_input_context.editor.cursor_position() {
+            // HACK: Draw the cursor here for now.
+            renderer.draw_rect(Rectangle::new(
+                x as f32,
+                y as f32,
+                1.5,
+                text_input_context.metrics.line_height
+            ), Color::BLACK);
+        }
     }
 
     fn compute_layout(
@@ -260,8 +279,7 @@ impl Element for TextInput {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-
-        //let text_context = self.get_state_mut(element_state);
+        
         let text_context: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)

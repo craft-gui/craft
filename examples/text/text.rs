@@ -7,7 +7,7 @@ use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku_core::components::ComponentSpecification;
 use oku_core::engine::events::OkuEvent;
-use oku_core::RendererType::Software;
+use oku_core::RendererType::{Wgpu};
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -47,7 +47,7 @@ fn main() {
     oku_main_with_options(
         TextState::component().into(),
         Some(OkuOptions {
-            renderer: Software,
+            renderer: Wgpu,
             window_title: "text".to_string(),
         }),
     );
