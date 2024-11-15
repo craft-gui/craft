@@ -213,8 +213,8 @@ impl Element for TextInput {
         if let Some((x, y)) = text_input_context.editor.cursor_position() {
             // HACK: Draw the cursor here for now.
             renderer.draw_rect(Rectangle::new(
-                x as f32,
-                y as f32,
+                bounding_rectangle.x + x as f32,
+                bounding_rectangle.y + y as f32,
                 1.5,
                 text_input_context.metrics.line_height
             ), Color::BLACK);
