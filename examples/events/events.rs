@@ -11,11 +11,10 @@ use oku_core::engine::renderer::color::Color;
 use oku_core::style::Unit;
 
 #[derive(Default, Copy, Clone)]
-pub struct Counter {
-    count: u64,
+pub struct EventsExample {
 }
 
-impl Component for Counter {
+impl Component for EventsExample {
     type Props = ();
 
     fn view(
@@ -52,17 +51,16 @@ impl Component for Counter {
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {
-        println!("Update: {:?}", event.target);
-
-        if event.target.as_deref() == Some("blue") {
-            return UpdateResult::new().prevent_propagate();
-        }
-
         if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = event.message {
             if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
                 && pointer_button.state == ElementState::Pressed
             {
-                state.count += 1
+                println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
+
+                if event.target.as_deref() == Some("blue") {
+                    return UpdateResult::new().prevent_propagate();
+                }
+
             }
         };
 
@@ -75,7 +73,7 @@ fn main() {
     tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     oku_main_with_options(
-        Counter::component(),
+        EventsExample::component(),
         Some(OkuOptions {
             renderer: Wgpu,
             window_title: "events".to_string(),

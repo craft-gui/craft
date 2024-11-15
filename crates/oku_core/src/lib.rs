@@ -391,26 +391,27 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     // The target is always the first node (2, Some(c)).
 
-    let _target = targets[0].clone();
-
+    let target = targets[0].clone();
+    let (_target_component_id, target_element_id) = target.clone();
+    
     let mut propagate = true;
     let mut prevent_defaults = false;
-    for target in targets.iter() {
+    for current_target in targets.iter() {
         if !propagate {
             break;
         }
 
         //println!("Dispatching to: {:?}", target);
-        let (target_component_id, target_element_id) = target.clone();
+        let (current_target_component_id, current_target_element_id) = current_target.clone();
 
         // Get the element's component tree ndoe.
-        let target_component =
-            app.component_tree.as_ref().unwrap().pre_order_iter().find(|node| node.id == target_component_id).unwrap();
+        let current_target_component =
+            app.component_tree.as_ref().unwrap().pre_order_iter().find(|node| node.id == current_target_component_id).unwrap();
 
         // Search for the closest non-element ancestor.
         let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
 
-        let mut to_visit = Some(target_component);
+        let mut to_visit = Some(current_target_component);
         while let Some(node) = to_visit {
             if !to_visit.unwrap().is_element {
                 closest_ancestor_component = Some(node);
@@ -428,14 +429,15 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
         // Dispatch the event to the element's component.
         if let Some(node) = closest_ancestor_component {
-            //println!("Target component id: {:?}", node.id);
             target_components.push_back(node);
 
             let state = app.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
-                Event::new(Message::OkuMessage(event.clone())).target(target_element_id.clone())
+                Event::new(Message::OkuMessage(event.clone()))
+                    .current_target(current_target_element_id.clone())
+                    .target(target_element_id.clone())
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
@@ -499,7 +501,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             let res = (node.update)(
                 state,
                 node.props.clone(),
-                Event::new(Message::OkuMessage(event.clone())).target(target_element_id.clone())
+                Event::new(Message::OkuMessage(event.clone())).current_target(target_element_id.clone())
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;

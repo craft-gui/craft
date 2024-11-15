@@ -18,20 +18,31 @@ use std::any::Any;
 pub use winit::event::MouseButton;
 
 pub struct Event {
+    /// The id of the element that triggered this event.
     pub target: Option<String>,
+    /// The id of an element who is listening to this event.
+    pub current_target: Option<String>,
     pub message: Message,
 }
 
 impl Event {
     pub fn new(message: Message) -> Self {
         Self {
+            current_target: None,
             target: None,
             message,
         }
     }
 
+    /// Set the event's target to the id of the element that triggered it.
     pub fn target(mut self, target: Option<String>) -> Self {
         self.target = target;
+        self
+    }
+    
+    /// Set the event's current target to the id of an element who is listening to this event.
+    pub fn current_target(mut self, current_target: Option<String>) -> Self {
+        self.current_target = current_target;
         self
     }
 }
