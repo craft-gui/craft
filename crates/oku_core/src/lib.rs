@@ -456,7 +456,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     // Handle element events if prevent defaults was not set to true.
     if !prevent_defaults {
         for target in targets.iter() {
-            let (target_component_id, target_element_id) = target.clone();
+            let (target_component_id, _target_element_id) = target.clone();
             let fiber: FiberNode = FiberNode {
                 element: app.element_tree.as_ref().map(|f| f.as_ref()),
                 component: Some(app.component_tree.as_ref().unwrap()),
@@ -465,7 +465,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             let mut propagate = true;
             let mut prevent_defaults = false;
 
-            let resource_manager = &mut app.resource_manager;
+            let _resource_manager = &mut app.resource_manager;
             for fiber_node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
                 if !propagate {
                     break;
