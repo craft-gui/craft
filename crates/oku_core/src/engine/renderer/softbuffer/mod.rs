@@ -79,7 +79,7 @@ impl SoftwareRenderer {
             surface,
             surface_width: width,
             surface_height: height,
-            surface_clear_color: Color::new_from_rgba_u8(255, 255, 255, 255),
+            surface_clear_color: Color::rgba(255, 255, 255, 255),
             framebuffer,
             cache: SwashCache::new(),
         }

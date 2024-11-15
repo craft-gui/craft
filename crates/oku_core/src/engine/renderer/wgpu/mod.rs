@@ -57,7 +57,7 @@ impl<'a> WgpuRenderer<'a> {
             default_texture,
             surface,
             surface_config,
-            surface_clear_color: Color::new_from_rgba_u8(255, 255, 255, 255),
+            surface_clear_color: Color::rgba(255, 255, 255, 255),
             is_srgba_format: false,
 
             glyphon_cache: cache,

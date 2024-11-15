@@ -610,7 +610,7 @@ async fn on_request_redraw(app: &mut App) {
 
     {
         let renderer = app.renderer.as_mut().unwrap();
-        renderer.surface_set_clear_color(Color::new_from_rgba_u8(255, 255, 255, 255));
+        renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
         surface_width = renderer.surface_width();
         surface_height = renderer.surface_height();
     }

@@ -7,7 +7,7 @@ pub struct Color {
 }
 
 impl Color {
-    pub const fn new_from_rgba_u8(r: u8, g: u8, b: u8, a: u8) -> Color {
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
         Color {
             r: r as f32,
             g: g as f32,
@@ -16,7 +16,7 @@ impl Color {
         }
     }
 
-    pub const fn new_from_rgba_f32(r: f32, g: f32, b: f32, a: f32) -> Color {
+    pub const fn rgba_f32(r: f32, g: f32, b: f32, a: f32) -> Color {
         Color { r, g, b, a }
     }
 
@@ -51,9 +51,9 @@ impl Color {
         self.a as u8
     }
 
-    pub const RED: Color = Color::new_from_rgba_u8(255, 0, 0, 255);
-    pub const GREEN: Color = Color::new_from_rgba_u8(0, 255, 0, 255);
-    pub const BLUE: Color = Color::new_from_rgba_u8(0, 0, 255, 255);
-    pub const WHITE: Color = Color::new_from_rgba_u8(255, 255, 255, 255);
-    pub const BLACK: Color = Color::new_from_rgba_u8(0, 0, 0, 255);
+    pub const RED: Color = Color::rgba(255, 0, 0, 255);
+    pub const GREEN: Color = Color::rgba(0, 255, 0, 255);
+    pub const BLUE: Color = Color::rgba(0, 0, 255, 255);
+    pub const WHITE: Color = Color::rgba(255, 255, 255, 255);
+    pub const BLACK: Color = Color::rgba(0, 0, 0, 255);
 }
