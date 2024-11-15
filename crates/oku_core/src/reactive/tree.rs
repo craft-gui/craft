@@ -291,11 +291,14 @@ pub(crate) fn diff_trees(
                     parent_component_ptr.as_mut().unwrap().children.push(new_component_node);
                     let new_component_pointer: *mut ComponentTreeNode =
                         (*tree_node.parent_component_node).children.last_mut().unwrap();
-
-                    // The old node should be the first child of the old component node.
+                    
+                    // Get the old component node or none.
+                    // NOTE: ComponentSpecs can only have one child.
                     let old_component_tree = tree_node
                         .old_component_node
-                        .map(|old_node| (*old_node).children.get(0).unwrap() as *const ComponentTreeNode);
+                        .and_then(|old_node| {
+                            (*old_node).children.get(0).map(|child| child as *const ComponentTreeNode)
+                        });
 
                     // Add the computed component spec to the to visit list.
                     to_visit.push(TreeVisitorNode {
