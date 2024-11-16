@@ -12,6 +12,7 @@ use oku::{AndroidApp};
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
 use oku_core::elements::ElementStyles;
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -63,7 +64,7 @@ fn main() {
     oku_main_with_options(
         Counter::component(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "counter".to_string(),
         }),
     );

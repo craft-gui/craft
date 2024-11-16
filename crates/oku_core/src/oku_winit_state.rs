@@ -13,6 +13,7 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowAttributesExtWeb;
 
+use crate::engine::renderer::vello::VelloRenderer;
 use crate::engine::app_message::AppMessage;
 use crate::engine::events::internal::InternalMessage;
 use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
@@ -112,6 +113,9 @@ impl ApplicationHandler for OkuWinitState {
                 RendererType::Software => Box::new(SoftwareRenderer::new(window.clone())),
                 RendererType::Wgpu => Box::new({
                     self.runtime.borrow_tokio_runtime().block_on(async { WgpuRenderer::new(window.clone()).await })
+                }),
+                RendererType::Vello => Box::new({
+                    self.runtime.borrow_tokio_runtime().block_on(async { VelloRenderer::new(window.clone()).await })
                 }),
             };
             info!("Created renderer");

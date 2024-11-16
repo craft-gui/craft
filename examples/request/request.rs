@@ -9,6 +9,7 @@ use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
 use oku::engine::events::Event;
 use oku_core::elements::ElementStyles;
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Clone)]
 pub struct Request {
@@ -77,7 +78,7 @@ fn main() {
     oku_main_with_options(
         Container::new().wrap(Wrap::Wrap).component().push(Request::component()),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "Request".to_string(),
         }),
     );

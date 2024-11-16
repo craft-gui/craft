@@ -9,6 +9,7 @@ use oku::components::ComponentSpecification;
 use oku::elements::ElementStyles;
 use oku::engine::events::{Event, OkuMessage};
 use oku::RendererType::{Wgpu};
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -45,7 +46,7 @@ fn main() {
     oku_main_with_options(
         TextState::component().into(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "text".to_string(),
         }),
     );

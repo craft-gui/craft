@@ -10,6 +10,7 @@ use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
 use oku::engine::renderer::color::Color;
 use oku::style::Unit;
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -72,7 +73,7 @@ fn main() {
     oku_main_with_options(
         EventsExample::component(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "events".to_string(),
         }),
     );

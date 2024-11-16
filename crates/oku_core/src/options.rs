@@ -34,8 +34,9 @@ pub enum RendererType {
 pub enum RendererType {
     #[cfg(not(target_os = "android"))]
     Software,
-    #[default]
     Wgpu,
+    #[default]
+    Vello,
 }
 
 impl Display for RendererType {
@@ -44,6 +45,7 @@ impl Display for RendererType {
             #[cfg(not(target_os = "android"))]
             RendererType::Software => write!(f, "software(tiny-skia)"),
             RendererType::Wgpu => write!(f, "wgpu"),
+            RendererType::Vello => write!(f, "vello/wgpu")
         }
     }
 }

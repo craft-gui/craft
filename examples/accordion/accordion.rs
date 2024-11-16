@@ -10,6 +10,7 @@ use oku::style::FlexDirection;
 use oku::elements::ElementStyles;
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -62,7 +63,7 @@ fn main() {
     oku_main_with_options(
         Container::new().component().children(vec![Accordion::component(), Accordion::component()]),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "accordion".to_string(),
         }),
     );
