@@ -7,8 +7,9 @@ use oku::{oku_main_with_options, OkuOptions};
 use oku::components::{Component, UpdateResult};
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::style::FlexDirection;
-use oku_core::engine::events::Event;
-use oku_core::engine::events::OkuMessage::PointerButtonEvent;
+use oku::elements::ElementStyles;
+use oku::engine::events::Event;
+use oku::engine::events::OkuMessage::PointerButtonEvent;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {

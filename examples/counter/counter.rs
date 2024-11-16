@@ -1,6 +1,6 @@
 use oku::RendererType::Wgpu;
 
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::oku_main_with_options;
@@ -9,8 +9,9 @@ use oku::OkuOptions;
 
 #[cfg(target_os = "android")]
 use oku::{AndroidApp};
-use oku_core::engine::events::Event;
-use oku_core::engine::events::OkuMessage::PointerButtonEvent;
+use oku::engine::events::Event;
+use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku_core::elements::ElementStyles;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {

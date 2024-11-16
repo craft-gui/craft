@@ -1,5 +1,4 @@
 use oku::components::ComponentSpecification;
-use oku::engine::events::Message;
 
 use oku::components::{Component, ComponentId, UpdateResult};
 use oku::elements::{Container, Image};
@@ -8,7 +7,8 @@ use oku::style::Overflow;
 use oku::style::{Display, Unit, Wrap};
 use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
-use oku_core::engine::events::Event;
+use oku::engine::events::Event;
+use oku_core::elements::ElementStyles;
 
 #[derive(Default, Clone)]
 pub struct Request {

@@ -7,8 +7,10 @@ pub(crate) mod text;
 
 mod element_pre_order_iterator;
 pub mod text_input;
+mod element_styles;
 
 pub use crate::elements::container::Container;
 pub use crate::elements::image::Image;
 pub use crate::elements::text::Text;
 pub use crate::elements::text_input::TextInput;
+pub use crate::elements::element_styles::ElementStyles;

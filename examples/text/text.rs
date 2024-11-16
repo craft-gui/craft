@@ -1,13 +1,14 @@
 
-use oku::components::{Component, ComponentId, UpdateResult};
+use oku::components::{Component, UpdateResult};
 use oku::elements::text_input::TextInput;
 use oku::engine::events::Message;
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
-use oku_core::components::ComponentSpecification;
-use oku_core::engine::events::{Event, OkuMessage};
-use oku_core::RendererType::{Wgpu};
+use oku::components::ComponentSpecification;
+use oku::elements::ElementStyles;
+use oku::engine::events::{Event, OkuMessage};
+use oku::RendererType::{Wgpu};
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -24,7 +25,7 @@ impl Component for TextState {
     }
 
     fn update(
-        state: &mut Self,
+        _state: &mut Self,
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {

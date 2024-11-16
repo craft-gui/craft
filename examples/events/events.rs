@@ -1,14 +1,15 @@
+use oku::elements::ElementStyles;
 use oku::RendererType::Wgpu;
 
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
 use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::OkuOptions;
-use oku_core::engine::events::Event;
-use oku_core::engine::events::OkuMessage::PointerButtonEvent;
-use oku_core::engine::renderer::color::Color;
-use oku_core::style::Unit;
+use oku::engine::events::Event;
+use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku::engine::renderer::color::Color;
+use oku::style::Unit;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -18,7 +19,7 @@ impl Component for EventsExample {
     type Props = ();
 
     fn view(
-        state: &Self,
+        _state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
@@ -47,7 +48,7 @@ impl Component for EventsExample {
     }
 
     fn update(
-        state: &mut Self,
+        _state: &mut Self,
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {

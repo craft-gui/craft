@@ -5,12 +5,13 @@ use crate::elements::layout_context::LayoutContext;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Wrap};
+use crate::style::{Style};
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 use winit::event::MouseScrollDelta;
+use crate::elements::element_styles::ElementStyles;
 use crate::engine::events::{OkuMessage};
 
 /// A stateless element that stores other elements.
@@ -221,100 +222,6 @@ impl Container {
         }
     }
 
-    pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
-        self.common_element_data.style.margin = [top, right, bottom, left];
-        self
-    }
-    pub const fn padding(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
-        self.common_element_data.style.padding = [top, right, bottom, left];
-        self
-    }
-
-    pub const fn border(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.common_element_data.style.border = [top, right, bottom, left];
-        self
-    }
-
-    pub const fn background(mut self, background: Color) -> Self {
-        self.common_element_data.style.background = background;
-        self
-    }
-
-    pub const fn border_color(mut self, border_color: Color) -> Self {
-        self.common_element_data.style.border_color = border_color;
-        self
-    }
-
-    pub const fn display(mut self, display: Display) -> Self {
-        self.common_element_data.style.display = display;
-        self
-    }
-
-    pub const fn wrap(mut self, wrap: Wrap) -> Self {
-        self.common_element_data.style.wrap = wrap;
-        self
-    }
-
-    pub const fn justify_content(mut self, justify_content: JustifyContent) -> Self {
-        self.common_element_data.style.justify_content = Some(justify_content);
-        self
-    }
-
-    pub const fn align_items(mut self, align_items: AlignItems) -> Self {
-        self.common_element_data.style.align_items = Some(align_items);
-        self
-    }
-
-    pub const fn flex_direction(mut self, flex_direction: FlexDirection) -> Self {
-        self.common_element_data.style.flex_direction = flex_direction;
-        self
-    }
-
-    pub const fn flex_grow(mut self, flex_grow: f32) -> Self {
-        self.common_element_data.style.flex_grow = flex_grow;
-        self
-    }
-
-    pub const fn flex_shrink(mut self, flex_shrink: f32) -> Self {
-        self.common_element_data.style.flex_shrink = flex_shrink;
-        self
-    }
-
-    pub const fn flex_basis(mut self, flex_basis: Unit) -> Self {
-        self.common_element_data.style.flex_basis = flex_basis;
-        self
-    }
-
-    pub const fn width(mut self, width: Unit) -> Self {
-        self.common_element_data.style.width = width;
-        self
-    }
-
-    pub const fn height(mut self, height: Unit) -> Self {
-        self.common_element_data.style.height = height;
-        self
-    }
-
-    pub const fn max_width(mut self, max_width: Unit) -> Self {
-        self.common_element_data.style.max_width = max_width;
-        self
-    }
-
-    pub const fn max_height(mut self, max_height: Unit) -> Self {
-        self.common_element_data.style.max_height = max_height;
-        self
-    }
-
-    pub const fn overflow_x(mut self, overflow: Overflow) -> Self {
-        self.common_element_data.style.overflow[0] = overflow;
-        self
-    }
-
-    pub const fn overflow_y(mut self, overflow: Overflow) -> Self {
-        self.common_element_data.style.overflow[1] = overflow;
-        self
-    }
-
     pub fn id(mut self, id: &str) -> Self {
         self.common_element_data.id = Some(id.to_string());
         self
@@ -322,5 +229,11 @@ impl Container {
 
     pub fn component(self) -> ComponentSpecification {
         ComponentSpecification::new(self.into())
+    }
+}
+
+impl ElementStyles for Container {
+    fn styles_mut(&mut self) -> &mut Style {
+        &mut self.common_element_data.style
     }
 }

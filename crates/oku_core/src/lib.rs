@@ -52,7 +52,6 @@ use futures::{SinkExt, StreamExt};
 use std::any::Any;
 use std::collections::VecDeque;
 use std::future::Future;
-use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
