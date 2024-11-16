@@ -104,30 +104,44 @@ impl<'a> Iterator for FiberNodeLevelOrderIterator<'a> {
     type Item = FiberNode<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Process the component stack first
         if let Some(node) = self.component_stack.pop_front() {
-            for child in node.children.iter() {
+            // Add child components to the stack
+            for child in &node.children {
                 self.component_stack.push_back(child);
             }
-            if !self.element_stack.is_empty() {
-                let first_id = self.element_stack[0].component_id();
 
-                if first_id == node.id {
-                    if let Some(element) = self.element_stack.pop_front() {
-                        for child in element.children().iter() {
-                            self.element_stack.push_back(*child);
-                        }
-                        Some(FiberNode::new(Some(node), Some(element)))
-                    } else {
-                        Some(FiberNode::new(Some(node), None))
+            // Check if the current element matches the component
+            if let Some(&element) = self.element_stack.front() {
+                if element.component_id() == node.id {
+                    self.element_stack.pop_front();
+
+                    // Add child elements to the stack
+                    for child in element.children() {
+                        self.element_stack.push_back(child);
                     }
-                } else {
-                    Some(FiberNode::new(Some(node), None))
+
+                    // Return a FiberNode with both node and element
+                    return Some(FiberNode::new(Some(node), Some(element)));
                 }
-            } else {
-                Some(FiberNode::new(Some(node), None))
             }
-        } else {
-            self.element_stack.pop_front().map(|element| FiberNode::new(None, Some(element)))
+
+            // Return a FiberNode with just the component node
+            return Some(FiberNode::new(Some(node), None));
         }
+
+        // If the component stack is empty, process the element stack
+        if let Some(element) = self.element_stack.pop_front() {
+            // Add child elements to the stack
+            for child in element.children() {
+                self.element_stack.push_back(child);
+            }
+
+            // Return a FiberNode with just the element
+            return Some(FiberNode::new(None, Some(element)));
+        }
+
+        // If both stacks are empty, traversal is complete
+        None
     }
 }

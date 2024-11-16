@@ -376,12 +376,15 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         if let Some(element) = fiber_node.element {
             let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
             if in_bounds {
+                println!("In bounds, Element: {:?}", element.get_id());
                 targets.push_back((element.component_id(), element.get_id().clone()))
+            } else {
+                println!("Not in bounds, Element: {:?}", element.get_id());
             }
         }
     }
 
-    //println!("Targets: {:?}", targets);
+    println!("Targets: {:?}", targets);
 
     // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
 
