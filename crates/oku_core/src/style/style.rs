@@ -181,6 +181,7 @@ impl Overflow {
 pub struct Style {
     pub margin: [f32; 4],
     pub padding: [f32; 4],
+    pub border: [Unit; 4],
     pub width: Unit,
     pub height: Unit,
     pub max_width: Unit,
@@ -198,6 +199,7 @@ pub struct Style {
 
     pub color: Color,
     pub background: Color,
+    pub border_color: Color,
     pub font_size: f32,
     pub font_weight: Weight,
     pub font_style: FontStyle,
@@ -212,11 +214,21 @@ fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     }
 }
 
+fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
+    match unit {
+        Unit::Px(px) => taffy::LengthPercentage::Length(px),
+        Unit::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage / 100.0),
+        Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
+    }
+}
+
+
 impl Default for Style {
     fn default() -> Self {
         Style {
             margin: [0.0; 4],
             padding: [0.0; 4],
+            border: [Unit::Px(0.0); 4],
             width: Unit::Auto,
             height: Unit::Auto,
             max_width: Unit::Auto,
@@ -233,6 +245,7 @@ impl Default for Style {
             flex_basis: Unit::Auto,
             color: Color::rgba(0, 0, 0, 255),
             background: Color::rgba(0, 0, 0, 0),
+            border_color: Color::rgba(0, 0, 0, 255),
             font_size: 16.0,
             font_weight: Default::default(),
             font_style: Default::default(),
@@ -271,6 +284,13 @@ impl From<Style> for taffy::Style {
             right: taffy::LengthPercentage::Length(style.padding[1]),
             top: taffy::LengthPercentage::Length(style.padding[0]),
             bottom: taffy::LengthPercentage::Length(style.padding[2]),
+        };
+        
+        let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
+            left: unit_to_taffy_length_percentage(style.border[3]),
+            right: unit_to_taffy_length_percentage(style.border[1]),
+            top: unit_to_taffy_length_percentage(style.border[0]),
+            bottom: unit_to_taffy_length_percentage(style.border[2]),
         };
 
         let align_items = match style.align_items {
@@ -347,6 +367,7 @@ impl From<Style> for taffy::Style {
                 x: overflow_x,
                 y: overflow_y,
             },
+            border,
             ..Default::default()
         }
     }

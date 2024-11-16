@@ -44,12 +44,54 @@ impl Element for Container {
         root_node: NodeId,
         element_state: &StateStore,
     ) {
+        let border_color: Color = self.style().border_color;
+        
         renderer.draw_rect(
             Rectangle::new(
                 self.common_element_data.computed_x_transformed,
                 self.common_element_data.computed_y_transformed,
                 self.common_element_data.computed_width,
-                self.common_element_data.computed_height,
+                self.common_element_data.computed_border[0],
+            ),
+            border_color,
+        );
+
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.computed_border[1],
+                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
+                self.common_element_data.computed_border[1],
+                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
+            ),
+            border_color,
+        );
+
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[3],
+                self.common_element_data.computed_height - (self.common_element_data.computed_border[2]),
+                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
+                self.common_element_data.computed_border[2],
+            ),
+            border_color,
+        );
+
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed,
+                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
+                self.common_element_data.computed_border[1],
+                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
+            ),
+            border_color,
+        );
+        
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[0],
+                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[3],
+                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
+                self.common_element_data.computed_height - (self.common_element_data.computed_border[0] + self.common_element_data.computed_border[2]),
             ),
             self.common_element_data.style.background,
         );
@@ -92,12 +134,18 @@ impl Element for Container {
 
         self.common_element_data.computed_x = x + result.location.x;
         self.common_element_data.computed_y = y + result.location.y;
+        
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
+        
         self.common_element_data.computed_scrollbar_width = result.scroll_width();
         self.common_element_data.computed_scrollbar_height = result.scroll_height();
+        
         self.common_element_data.computed_padding =
             [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+
+        self.common_element_data.computed_border =
+            [result.border.top, result.border.right, result.border.bottom, result.border.left];
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
             self.common_element_data.computed_x,
@@ -182,8 +230,18 @@ impl Container {
         self
     }
 
+    pub const fn border(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.common_element_data.style.border = [top, right, bottom, left];
+        self
+    }
+
     pub const fn background(mut self, background: Color) -> Self {
         self.common_element_data.style.background = background;
+        self
+    }
+
+    pub const fn border_color(mut self, border_color: Color) -> Self {
+        self.common_element_data.style.border_color = border_color;
         self
     }
 

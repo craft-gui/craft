@@ -27,6 +27,7 @@ pub struct CommonElementData {
     pub computed_scrollbar_width: f32,
     pub computed_scrollbar_height: f32,
     pub computed_padding: [f32; 4],
+    pub computed_border: [f32; 4],
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
