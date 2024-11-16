@@ -18,7 +18,7 @@ use crate::style::{Display, Unit, Wrap};
 use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
-use engine::events::{Message};
+use engine::events::Message;
 use engine::renderer::color::Color;
 use engine::renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
@@ -52,6 +52,7 @@ use futures::{SinkExt, StreamExt};
 use std::any::Any;
 use std::collections::VecDeque;
 use std::future::Future;
+use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
@@ -77,10 +78,7 @@ use elements::image::Image;
 use engine::events::internal::InternalMessage;
 
 #[cfg(target_os = "android")]
-use {
-    winit::platform::android::EventLoopBuilderExtAndroid,
-    winit::event_loop::EventLoopBuilder
-};
+use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any + Send>> + Send>>;
 
@@ -287,12 +285,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
             app_sender_copy
                 .send(AppMessage::new(
                     0,
-                    InternalMessage::GotUserMessage((
-                        event.update_function,
-                        event.source_component,
-                        res,
-                        event.props,
-                    )),
+                    InternalMessage::GotUserMessage((event.update_function, event.source_component, res, event.props)),
                 ))
                 .await
                 .expect("send failed");
@@ -376,15 +369,13 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         if let Some(element) = fiber_node.element {
             let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
             if in_bounds {
-                println!("In bounds, Element: {:?}", element.get_id());
+                //println!("In bounds, Element: {:?}", element.get_id());
                 targets.push_back((element.component_id(), element.get_id().clone()))
             } else {
-                println!("Not in bounds, Element: {:?}", element.get_id());
+                //println!("Not in bounds, Element: {:?}", element.get_id());
             }
         }
     }
-
-    println!("Targets: {:?}", targets);
 
     // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
 
@@ -396,7 +387,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     let target = targets[0].clone();
     let (_target_component_id, target_element_id) = target.clone();
-    
+
     let mut propagate = true;
     let mut prevent_defaults = false;
     for current_target in targets.iter() {
@@ -404,12 +395,16 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             break;
         }
 
-        //println!("Dispatching to: {:?}", target);
         let (current_target_component_id, current_target_element_id) = current_target.clone();
 
-        // Get the element's component tree ndoe.
-        let current_target_component =
-            app.component_tree.as_ref().unwrap().pre_order_iter().find(|node| node.id == current_target_component_id).unwrap();
+        // Get the element's component tree node.
+        let current_target_component = app
+            .component_tree
+            .as_ref()
+            .unwrap()
+            .pre_order_iter()
+            .find(|node| node.id == current_target_component_id)
+            .unwrap();
 
         // Search for the closest non-element ancestor.
         let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
@@ -440,17 +435,12 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 node.props.clone(),
                 Event::new(Message::OkuMessage(event.clone()))
                     .current_target(current_target_element_id.clone())
-                    .target(target_element_id.clone())
+                    .target(target_element_id.clone()),
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(
-                    node.id,
-                    node.update,
-                    res,
-                    node.props.clone(),
-                ));
+                app.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -470,23 +460,20 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             let mut prevent_defaults = false;
 
             let _resource_manager = &mut app.resource_manager;
-            for fiber_node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+            for element in current_element_tree.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
                 if !propagate {
                     break;
                 }
+                if element.component_id() == target_component_id {
+                    let res =
+                        element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
 
-                if let Some(element) = fiber_node.element {
-                    if element.component_id() == target_component_id {
-                        let res =
-                            element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
-
-                        if let Some(result_message) = res.result_message {
-                            element_events.push_back((result_message, element.get_id().clone()));
-                        }
-
-                        propagate = propagate && res.propagate;
-                        prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    if let Some(result_message) = res.result_message {
+                        element_events.push_back((result_message, element.get_id().clone()));
                     }
+
+                    propagate = propagate && res.propagate;
+                    prevent_defaults = prevent_defaults || res.prevent_defaults;
                 }
             }
         }
@@ -504,17 +491,12 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             let res = (node.update)(
                 state,
                 node.props.clone(),
-                Event::new(Message::OkuMessage(event.clone())).current_target(target_element_id.clone())
+                Event::new(Message::OkuMessage(event.clone())).current_target(target_element_id.clone()),
             );
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(
-                    node.id,
-                    node.update,
-                    res,
-                    node.props.clone(),
-                ));
+                app.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -592,13 +574,8 @@ async fn on_request_redraw(app: &mut App) {
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();
 
-    let new_tree = diff_trees(
-        app.app.clone(),
-        window_element,
-        old_component_tree,
-        &mut app.user_state,
-        &mut app.element_state,
-    );
+    let new_tree =
+        diff_trees(app.app.clone(), window_element, old_component_tree, &mut app.user_state, &mut app.element_state);
 
     scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 
@@ -642,8 +619,6 @@ async fn on_request_redraw(app: &mut App) {
     let resource_manager = app.resource_manager.read().await;
 
     let element_state = &mut app.element_state;
-
-    // root.print_tree();
 
     let (mut taffy_tree, taffy_root) = layout(
         element_state,

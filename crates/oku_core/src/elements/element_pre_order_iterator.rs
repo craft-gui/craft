@@ -1,22 +1,21 @@
-/*use crate::reactive::tree::ElementTreeNode;
-
-pub struct ElementTreePreOrderIterator<'a> {
-    stack: Vec<&'a ElementTreeNode>,
+use crate::elements::element::Element;
+pub(crate) struct ElementTreePreOrderIterator<'a> {
+    stack: Vec<&'a dyn Element>,
 }
 
 impl<'a> ElementTreePreOrderIterator<'a> {
-    fn new(root: &'a ElementTreeNode) -> Self {
+    fn new(root: &'a dyn Element) -> Self {
         Self { stack: vec![root] }
     }
 }
 
 impl<'a> Iterator for ElementTreePreOrderIterator<'a> {
-    type Item = &'a ElementTreeNode;
+    type Item = &'a dyn Element;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(node) = self.stack.pop() {
-            for child in node.children.iter().rev() {
-                self.stack.push(child);
+            for child in node.children().iter().rev() {
+                self.stack.push(*child);
             }
             Some(node)
         } else {
@@ -25,9 +24,9 @@ impl<'a> Iterator for ElementTreePreOrderIterator<'a> {
     }
 }
 
-impl ElementTreeNode {
+impl dyn Element {
     pub fn pre_order_iter(&self) -> ElementTreePreOrderIterator {
         ElementTreePreOrderIterator::new(self)
     }
 }
-*/
+
