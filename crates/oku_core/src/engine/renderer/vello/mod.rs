@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tiny_skia::{ColorSpace, Paint, PixmapPaint, PixmapRef, Transform};
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Circle, Ellipse, Line, Rect, RoundedRect, Stroke};
-use vello::peniko::{Blob, Fill};
+use vello::peniko::{BlendMode, Blob, Fill};
 use vello::Scene;
 use vello::util::{RenderContext, RenderSurface};
 use winit::window::Window;
@@ -215,7 +215,9 @@ impl Renderer for VelloRenderer<'_> {
                     }
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
-                    
+                    let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
+                    println!("Drawing text at {:?}", clip);
+                    self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                     if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
                     {
@@ -262,6 +264,7 @@ impl Renderer for VelloRenderer<'_> {
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
+                    self.scene.pop_layer();
                 }
             }
         }
