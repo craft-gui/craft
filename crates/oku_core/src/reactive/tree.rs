@@ -105,19 +105,24 @@ pub(crate) fn diff_trees(
         }
 
         let component_root: *mut ComponentTreeNode = &mut component_tree as *mut ComponentTreeNode;
+        
         let root_spec = ComponentSpecification {
             component: ComponentOrElement::Element(root_element.clone()),
             key: None,
             props: None,
-            children: vec![component_specification],
+            children: vec![
+                component_specification.clone()
+            ],
         };
 
-        let mut to_visit: Vec<TreeVisitorNode> = vec![TreeVisitorNode {
-            component_specification: Rc::new(RefCell::new(root_spec)),
-            parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
-            parent_component_node: component_root,
-            old_component_node: old_component_tree_as_ptr,
-        }];
+        let mut to_visit: Vec<TreeVisitorNode> = vec![
+            TreeVisitorNode {
+                component_specification: Rc::new(RefCell::new(root_spec.children[0].clone())),
+                parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
+                parent_component_node: component_root,
+                old_component_node: old_component_tree_as_ptr,
+            }
+        ];
 
         while let Some(tree_node) = to_visit.pop() {
             let key = tree_node.component_specification.borrow().key.clone();

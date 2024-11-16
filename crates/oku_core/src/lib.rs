@@ -601,18 +601,18 @@ async fn on_request_redraw(app: &mut App) {
 
     let is_user_root_height_auto = {
         let root_children = root.internal.children_mut();
-        root_children[0].internal.children()[0].style().height.is_auto()
+        root_children[0].internal.style().height.is_auto()
     };
 
-    root.internal.children_mut()[0].internal.style_mut().width = Unit::Px(surface_width);
-    root.internal.children_mut()[0].internal.style_mut().wrap = Wrap::Wrap;
-    root.internal.children_mut()[0].internal.style_mut().display = Display::Block;
+    root.internal.style_mut().width = Unit::Px(surface_width);
+    root.internal.style_mut().wrap = Wrap::Wrap;
+    root.internal.style_mut().display = Display::Block;
 
     if is_user_root_height_auto {
         root.internal.style_mut().height = Unit::Auto;
     } else {
         root.internal.style_mut().height = Unit::Px(surface_height);
-        root.internal.children_mut()[0].internal.style_mut().height = Unit::Px(surface_height);
+        root.internal.style_mut().height = Unit::Px(surface_height);
     }
 
     //let layout_start = Instant::now(); // Start measuring time

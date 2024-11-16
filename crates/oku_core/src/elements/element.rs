@@ -186,7 +186,7 @@ impl dyn Element {
             } else {
                 prefix.push_str("├─");
             }
-            println!("{}{}, Parent Component Id: {}", prefix, element.name(), element.component_id());
+            println!("{}{}, Component Id: {} Id: {:?}", prefix, element.name(), element.component_id(), element.get_id());
             let children = element.children();
             for (i, child) in children.iter().enumerate().rev() {
                 let is_last = i == children.len() - 1;
