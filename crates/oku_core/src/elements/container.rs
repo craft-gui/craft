@@ -133,8 +133,7 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
-        self.common_element_data.computed_x = x + result.location.x;
-        self.common_element_data.computed_y = y + result.location.y;
+        self.resolve_position(x, y, result);
         
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;

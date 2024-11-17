@@ -43,6 +43,8 @@ impl Component for EventsExample {
                     .push(
                         Container::new()
                             .background(Color::BLUE)
+                            .inset(Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0))
+                            .position(Position::Absolute)
                             .width(Unit::Px(100.0))
                             .height(Unit::Px(100.0))
                             .id("blue")

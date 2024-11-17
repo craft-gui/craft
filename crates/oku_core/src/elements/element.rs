@@ -118,6 +118,19 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn on_event(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
+    
+    fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
+        match self.common_element_data().style.position {
+            taffy::Position::Relative => {
+                self.common_element_data_mut().computed_x = x + result.location.x;
+                self.common_element_data_mut().computed_y = y + result.location.y;
+            }
+            taffy::Position::Absolute => {
+                self.common_element_data_mut().computed_x = result.location.x;
+                self.common_element_data_mut().computed_y = result.location.y;
+            },
+        }
+    }
 }
 
 impl<T: Element> From<T> for ElementBox {

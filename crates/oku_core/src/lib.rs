@@ -679,6 +679,8 @@ fn layout<'a>(
         )
         .unwrap();
 
+    taffy_tree.print_tree(root_node);
+
     let transform = glam::Mat4::IDENTITY;
 
     root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, transform, font_system, element_state);
