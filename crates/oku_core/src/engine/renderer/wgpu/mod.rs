@@ -128,6 +128,14 @@ impl Renderer for WgpuRenderer<'_> {
         self.pipeline2d.draw_image(rectangle, resource_identifier)
     }
 
+    fn push_layer(&mut self, rect: Rectangle) {
+        //self.pipeline2d.push_layer(rect);
+    }
+
+    fn pop_layer(&mut self) {
+        //self.pipeline2d.pop_layer();
+    }
+
     fn submit(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,

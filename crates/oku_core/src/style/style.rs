@@ -1,5 +1,5 @@
 use crate::engine::renderer::color::Color;
-use taffy::FlexWrap;
+use taffy::{FlexWrap};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -7,6 +7,8 @@ pub enum Unit {
     Percentage(f32),
     Auto,
 }
+
+pub use taffy::Position;
 
 impl Unit {
     pub fn is_auto(&self) -> bool {
@@ -179,9 +181,11 @@ impl Overflow {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
+    pub position: Position,
     pub margin: [f32; 4],
     pub padding: [f32; 4],
     pub border: [Unit; 4],
+    pub inset: [Unit; 4],
     pub width: Unit,
     pub height: Unit,
     pub max_width: Unit,
@@ -214,6 +218,14 @@ fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     }
 }
 
+fn unit_to_taffy_lengthpercentageauto(unit: Unit) -> taffy::LengthPercentageAuto {
+    match unit {
+        Unit::Px(px) => taffy::LengthPercentageAuto::Length(px),
+        Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
+        Unit::Auto => taffy::LengthPercentageAuto::Auto,
+    }
+}
+
 fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
     match unit {
         Unit::Px(px) => taffy::LengthPercentage::Length(px),
@@ -226,9 +238,11 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 impl Default for Style {
     fn default() -> Self {
         Style {
+            position: Position::Relative,
             margin: [0.0; 4],
             padding: [0.0; 4],
             border: [Unit::Px(0.0); 4],
+            inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
             height: Unit::Auto,
             max_width: Unit::Auto,
@@ -285,13 +299,21 @@ impl From<Style> for taffy::Style {
             top: taffy::LengthPercentage::Length(style.padding[0]),
             bottom: taffy::LengthPercentage::Length(style.padding[2]),
         };
-        
+
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
             left: unit_to_taffy_length_percentage(style.border[3]),
             right: unit_to_taffy_length_percentage(style.border[1]),
             top: unit_to_taffy_length_percentage(style.border[0]),
             bottom: unit_to_taffy_length_percentage(style.border[2]),
         };
+
+        let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
+            left: unit_to_taffy_lengthpercentageauto(style.inset[3]),
+            right: unit_to_taffy_lengthpercentageauto(style.inset[1]),
+            top: unit_to_taffy_lengthpercentageauto(style.inset[0]),
+            bottom: unit_to_taffy_lengthpercentageauto(style.inset[2]),
+        };
+
 
         let align_items = match style.align_items {
             None => None,
@@ -351,6 +373,8 @@ impl From<Style> for taffy::Style {
         let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
 
         taffy::Style {
+            inset: inset,
+            position: style.position,
             size,
             max_size,
             flex_direction,

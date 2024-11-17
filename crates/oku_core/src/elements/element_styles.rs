@@ -1,3 +1,4 @@
+use taffy::Position;
 use crate::engine::renderer::color::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap};
 
@@ -123,6 +124,16 @@ where
     
     fn overflow(mut self, overflow: Overflow) -> Self {
         self.styles_mut().overflow = [overflow, overflow];
+        self
+    }
+    
+    fn position(mut self, position: Position) -> Self {
+        self.styles_mut().position = position;
+        self
+    }
+    
+    fn inset(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.styles_mut().inset = [top, right, bottom, left];
         self
     }
 }

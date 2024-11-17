@@ -165,6 +165,14 @@ impl Renderer for SoftwareRenderer {
         info!("Image added");
     }
 
+    fn push_layer(&mut self, rect: Rectangle) {
+        self.render_commands.push(RenderCommand::PushLayer(rect));
+    }
+
+    fn pop_layer(&mut self) {
+        self.render_commands.push(RenderCommand::PopLayer);
+    }
+
     fn submit(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
@@ -254,6 +262,12 @@ impl Renderer for SoftwareRenderer {
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
+                }
+                RenderCommand::PushLayer(_rect) => {
+                    todo!()
+                }
+                RenderCommand::PopLayer => {
+                    todo!()
                 }
             }
         }

@@ -29,6 +29,8 @@ pub enum RenderCommand {
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawText(Rectangle, ComponentId, Color),
+    PushLayer(Rectangle),
+    PopLayer,
 }
 
 pub trait Surface {
@@ -51,6 +53,10 @@ pub trait Renderer {
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
+    
+    fn push_layer(&mut self, rect: Rectangle);
+    
+    fn pop_layer(&mut self);
 
     fn submit(
         &mut self,

@@ -11,6 +11,7 @@ use oku::engine::events::OkuMessage::PointerButtonEvent;
 use oku::engine::renderer::color::Color;
 use oku::style::Unit;
 use oku_core::RendererType::Vello;
+use oku_core::style::Position;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -33,6 +34,8 @@ impl Component for EventsExample {
             .push(
                 Container::new()
                     .background(Color::GREEN)
+                    .inset(Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0))
+                    .position(Position::Absolute)
                     .width(Unit::Px(200.0))
                     .height(Unit::Px(200.0))
                     .id("green")

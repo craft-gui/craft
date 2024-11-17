@@ -173,6 +173,14 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
+    fn push_layer(&mut self, rect: Rectangle) {
+        self.render_commands.push(RenderCommand::PushLayer(rect));
+    }
+
+    fn pop_layer(&mut self) {
+        self.render_commands.push(RenderCommand::PopLayer);
+    }
+
     fn submit(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
@@ -265,7 +273,20 @@ impl Renderer for VelloRenderer<'_> {
                         panic!("Unknown state provided to the renderer!");
                     };
                     self.scene.pop_layer();
-                }
+                },
+                /*RenderCommand::PushTransform(transform) => {
+                    self.scene.push_transform(transform);
+                },
+                RenderCommand::PopTransform => {
+                    self.scene.pop_transform();
+                },*/
+                RenderCommand::PushLayer(rect) => {
+                    let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
+                    self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                },
+                RenderCommand::PopLayer => {
+                    self.scene.pop_layer();
+                },
             }
         }
         // Get the RenderSurface (surface + config)
