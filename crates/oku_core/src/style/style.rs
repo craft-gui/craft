@@ -241,7 +241,7 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 impl Default for Style {
     fn default() -> Self {
         Style {
-            scrollbar_width: 32.0,
+            scrollbar_width: 15.0,
             position: Position::Relative,
             margin: [0.0; 4],
             padding: [0.0; 4],

@@ -45,56 +45,88 @@ impl Element for Container {
         root_node: NodeId,
         element_state: &StateStore,
     ) {
+        let scroll_y = if let Some(container_state) =
+            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
+        {
+            container_state.scroll_y
+        } else {
+            0.0
+        };
+        
         let border_color: Color = self.style().border_color;
+
+        // background
+        let computed_x_transformed = self.common_element_data.computed_x_transformed;
+        let computed_y_transformed = self.common_element_data.computed_y_transformed;
         
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed,
-                self.common_element_data.computed_y_transformed,
-                self.common_element_data.computed_width,
-                self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
+        let computed_width = self.common_element_data.computed_width;
+        let computed_height = self.common_element_data.computed_height;
+
+        let computed_content_width = self.common_element_data.computed_content_width;
+        let computed_content_height = self.common_element_data.computed_content_height;
+
+        let border_top = self.common_element_data.computed_border[0];
+        let border_right = self.common_element_data.computed_border[1];
+        let border_bottom = self.common_element_data.computed_border[2];
+        let border_left = self.common_element_data.computed_border[3];
+
+        let scrolltrack_width = self.common_element_data.scrollbar_size[0];
+        let scrolltrack_height = computed_height - border_top - border_bottom;
+
+        let max_scroll_y = computed_content_height - computed_height;
 
         renderer.draw_rect(
             Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.computed_border[1],
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_border[1],
-                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
-
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[3],
-                self.common_element_data.computed_height - (self.common_element_data.computed_border[2]),
-                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
-                self.common_element_data.computed_border[2],
-            ),
-            border_color,
-        );
-
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed,
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_border[1],
-                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
-        
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[3],
-                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
-                self.common_element_data.computed_height - (self.common_element_data.computed_border[0] + self.common_element_data.computed_border[2]),
+                computed_x_transformed,
+                computed_y_transformed,
+                computed_width,
+                computed_height,
             ),
             self.common_element_data.style.background,
+        );
+
+        // border top
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed,
+                computed_width,
+                border_top,
+            ),
+            border_color,
+        );
+
+        // border right
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + computed_width - border_right,
+                computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
+        );
+
+        // border bottom
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + border_left,
+                computed_y_transformed + computed_height - border_bottom,
+                computed_width - (border_right + border_left),
+                border_bottom,
+            ),
+            border_color,
+        );
+
+        // border left
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
         );
 
 
@@ -105,28 +137,30 @@ impl Element for Container {
 
         // scrollbar
         let scroll_track_color = Color::rgba(100, 100, 100, 255);
-        let visible_y = self.common_element_data.computed_height / self.common_element_data.computed_content_height;
-        let scrollthumb_height = self.common_element_data.scrollbar_size[1] * visible_y;
-        let remaining_height = self.common_element_data.scrollbar_size[1] - scrollthumb_height;
-
+        let visible_y = computed_height / self.common_element_data.computed_content_height;
+        let scrollthumb_height = scrolltrack_height * visible_y;
+        let remaining_height = scrolltrack_height - scrollthumb_height;
+        let scrollthumb_offset = scroll_y / max_scroll_y * remaining_height;
+        
         // track
         renderer.draw_rect(
             Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.scrollbar_size[0],
-                self.common_element_data.computed_y_transformed,
-                self.common_element_data.scrollbar_size[0],
-                self.common_element_data.computed_height,
+                computed_x_transformed + computed_width - scrolltrack_width - border_right,
+                computed_y_transformed + border_top,
+                scrolltrack_width,
+                scrolltrack_height,
             ),
             scroll_track_color,
         );
 
         let scrollthumb_color = Color::rgba(150, 150, 150, 255);
+        let scrollthumb_width = scrolltrack_width;
         // thumb
         renderer.draw_rect(
             Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.scrollbar_size[0],
-                self.common_element_data.computed_y_transformed,
-                self.common_element_data.scrollbar_size[0],
+                computed_x_transformed + computed_width - scrolltrack_width - border_right,
+                computed_y_transformed + border_top + scrollthumb_offset,
+                scrollthumb_width,
                 scrollthumb_height,
             ),
             scrollthumb_color,
@@ -163,7 +197,7 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
-        println!("_____sc: {}", result.scroll_height());
+        println!("res: {:?}", result);
 
         self.common_element_data.computed_content_width = result.content_size.width;
         self.common_element_data.computed_content_height = result.content_size.height;
@@ -176,6 +210,7 @@ impl Element for Container {
         
         self.common_element_data.computed_scrollbar_width = result.scroll_width();
         self.common_element_data.computed_scrollbar_height = result.scroll_height();
+        println!("scroll_width: {} scroll_height: {}", self.common_element_data.computed_scrollbar_width, self.common_element_data.computed_scrollbar_height);
         
         self.common_element_data.computed_padding =
             [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];

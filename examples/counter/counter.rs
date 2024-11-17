@@ -71,7 +71,9 @@ fn main() {
             .height(Unit::Px(300.0))
             .background(Color::RED)
             .overflow(Overflow::Scroll)
-            .border(Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0))
+            .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
+            .margin(5.0, 5.0, 5.0, 5.0)
+            .padding(5.0, 5.0, 5.0, 5.0)
             .component()
             .push(
                 Container::new()
@@ -90,7 +92,7 @@ fn main() {
             Container::new()
                 .width(Unit::Percentage(100.0))
                 .min_height(Unit::Px(200.0))
-                .background(Color::BLACK)
+                .background(Color::GREEN)
                 .component()
         ),
         Some(OkuOptions {
