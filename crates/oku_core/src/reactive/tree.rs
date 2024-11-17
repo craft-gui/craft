@@ -91,7 +91,7 @@ pub(crate) fn diff_trees(
         element_state.storage.insert(
             0,
             Box::new(ContainerState {
-                scroll_delta_y: 0.0,
+                scroll_y: 0.0,
             }),
         );
 
@@ -159,7 +159,7 @@ pub(crate) fn diff_trees(
                             element_state.storage.insert(
                                 id,
                                 Box::new(ContainerState {
-                                    scroll_delta_y: 0.0,
+                                    scroll_y: 0.0,
                                 }),
                             );
                         }

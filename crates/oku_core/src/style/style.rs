@@ -181,6 +181,7 @@ impl Overflow {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
+    pub scrollbar_width: f32,
     pub position: Position,
     pub margin: [f32; 4],
     pub padding: [f32; 4],
@@ -190,6 +191,8 @@ pub struct Style {
     pub height: Unit,
     pub max_width: Unit,
     pub max_height: Unit,
+    pub min_width: Unit,
+    pub min_height: Unit,
     pub x: f32,
     pub y: f32,
     pub display: Display,
@@ -238,6 +241,7 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 impl Default for Style {
     fn default() -> Self {
         Style {
+            scrollbar_width: 32.0,
             position: Position::Relative,
             margin: [0.0; 4],
             padding: [0.0; 4],
@@ -245,6 +249,8 @@ impl Default for Style {
             inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
             height: Unit::Auto,
+            min_width: Unit::Auto,
+            min_height: Unit::Auto,
             max_width: Unit::Auto,
             max_height: Unit::Auto,
             x: 0.0,
@@ -284,6 +290,11 @@ impl From<Style> for taffy::Style {
         let max_size = taffy::Size {
             width: unit_to_taffy_dimension(style.max_width),
             height: unit_to_taffy_dimension(style.max_height),
+        };
+
+        let min_size = taffy::Size {
+            width: unit_to_taffy_dimension(style.min_width),
+            height: unit_to_taffy_dimension(style.min_height),
         };
 
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
@@ -372,10 +383,14 @@ impl From<Style> for taffy::Style {
         let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
         let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
 
+        let scrollbar_width = style.scrollbar_width;
+
         taffy::Style {
-            inset: inset,
+            inset,
+            scrollbar_width,
             position: style.position,
             size,
+            min_size,
             max_size,
             flex_direction,
             margin,

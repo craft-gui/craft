@@ -26,12 +26,15 @@ pub struct CommonElementData {
     pub computed_height: f32,
     pub computed_scrollbar_width: f32,
     pub computed_scrollbar_height: f32,
+    pub computed_content_width: f32,
+    pub computed_content_height: f32,
     pub computed_padding: [f32; 4],
     pub computed_border: [f32; 4],
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
+    pub scrollbar_size: [f32; 2]
 }
 
 #[derive(Clone, Debug)]
@@ -118,7 +121,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn on_event(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
-    
+
     fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
         match self.common_element_data().style.position {
             taffy::Position::Relative => {

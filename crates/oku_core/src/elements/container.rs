@@ -21,7 +21,7 @@ pub struct Container {
 }
 
 pub struct ContainerState {
-    pub(crate) scroll_delta_y: f32,
+    pub(crate) scroll_y: f32,
 }
 
 impl Element for Container {
@@ -97,10 +97,40 @@ impl Element for Container {
             self.common_element_data.style.background,
         );
 
+
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
         }
+
+        // scrollbar
+        let scroll_track_color = Color::rgba(100, 100, 100, 255);
+        let visible_y = self.common_element_data.computed_height / self.common_element_data.computed_content_height;
+        let scrollthumb_height = self.common_element_data.scrollbar_size[1] * visible_y;
+        let remaining_height = self.common_element_data.scrollbar_size[1] - scrollthumb_height;
+
+        // track
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.scrollbar_size[0],
+                self.common_element_data.computed_y_transformed,
+                self.common_element_data.scrollbar_size[0],
+                self.common_element_data.computed_height,
+            ),
+            scroll_track_color,
+        );
+
+        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
+        // thumb
+        renderer.draw_rect(
+            Rectangle::new(
+                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.scrollbar_size[0],
+                self.common_element_data.computed_y_transformed,
+                self.common_element_data.scrollbar_size[0],
+                scrollthumb_height,
+            ),
+            scrollthumb_color,
+        );
     }
 
     fn compute_layout(
@@ -133,6 +163,12 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
+        println!("_____sc: {}", result.scroll_height());
+
+        self.common_element_data.computed_content_width = result.content_size.width;
+        self.common_element_data.computed_content_height = result.content_size.height;
+        self.common_element_data.scrollbar_size = [result.scrollbar_size.width, result.scrollbar_size.height];
+
         self.resolve_position(x, y, result);
         
         self.common_element_data.computed_width = result.size.width;
@@ -156,15 +192,15 @@ impl Element for Container {
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        let scrollbar_dy = if let Some(container_state) =
+        let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
         {
-            container_state.scroll_delta_y
+            container_state.scroll_y
         } else {
             0.0
-        } * 100.0;
+        };
 
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, scrollbar_dy, 0.0));
+        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
@@ -194,7 +230,17 @@ impl Element for Container {
                         MouseScrollDelta::LineDelta(_x, y) => y,
                         MouseScrollDelta::PixelDelta(y) => y.y as f32,
                     };
-                    container_state.scroll_delta_y += 1.0 * delta;
+                    let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
+
+                    let max_scroll_y = self.common_element_data.computed_content_height - self.common_element_data.computed_height;
+                    println!("max_scroll_y: {}", max_scroll_y);
+                    let max_scroll_y = max_scroll_y;
+
+
+                    container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
+
+                    println!("scroll_y: {}", container_state.scroll_y);
+
                     UpdateResult::new().prevent_propagate().prevent_defaults()
                 }
                 _ => UpdateResult::new(),
