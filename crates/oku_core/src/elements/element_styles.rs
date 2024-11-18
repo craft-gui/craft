@@ -152,5 +152,10 @@ where
         self
     }
     
+    fn box_sizing(mut self, box_sizing: taffy::BoxSizing) -> Self {
+        self.styles_mut().box_sizing = box_sizing;
+        self
+    }
+    
     
 }

@@ -9,6 +9,7 @@ pub enum Unit {
 }
 
 pub use taffy::Position;
+pub use taffy::BoxSizing;
 
 impl Unit {
     pub fn is_auto(&self) -> bool {
@@ -181,6 +182,7 @@ impl Overflow {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
+    pub box_sizing: BoxSizing,
     pub scrollbar_width: f32,
     pub position: Position,
     pub margin: [f32; 4],
@@ -241,6 +243,7 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 impl Default for Style {
     fn default() -> Self {
         Style {
+            box_sizing: BoxSizing::BorderBox,
             scrollbar_width: 15.0,
             position: Position::Relative,
             margin: [0.0; 4],
@@ -385,7 +388,10 @@ impl From<Style> for taffy::Style {
 
         let scrollbar_width = style.scrollbar_width;
 
+        let box_sizing = taffy::BoxSizing::BorderBox;
+
         taffy::Style {
+            box_sizing,
             inset,
             scrollbar_width,
             position: style.position,
