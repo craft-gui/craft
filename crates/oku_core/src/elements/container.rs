@@ -45,14 +45,6 @@ impl Element for Container {
         root_node: NodeId,
         element_state: &StateStore,
     ) {
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
-        {
-            container_state.scroll_y
-        } else {
-            0.0
-        };
-
         let border_color: Color = self.style().border_color;
 
         // background
@@ -61,23 +53,12 @@ impl Element for Container {
 
         let computed_width = self.common_element_data.computed_width;
         let computed_height = self.common_element_data.computed_height;
-
-        let computed_content_width = self.common_element_data.computed_content_width;
-        let computed_content_height = self.common_element_data.computed_content_height;
-
+        
         let border_top = self.common_element_data.computed_border[0];
         let border_right = self.common_element_data.computed_border[1];
         let border_bottom = self.common_element_data.computed_border[2];
         let border_left = self.common_element_data.computed_border[3];
-
-        let scrolltrack_width = self.common_element_data.scrollbar_size[0];
-        let scrolltrack_height = computed_height - border_top - border_bottom;
-
-        let client_height = computed_height - border_top - border_bottom;
-        let scroll_height = computed_content_height - border_top;
-
-        let max_scroll_y = scroll_height - client_height;
-
+        
         // Background
         renderer.draw_rect(
             Rectangle::new(
@@ -147,32 +128,18 @@ impl Element for Container {
 
         // scrollbar
         let scroll_track_color = Color::rgba(100, 100, 100, 255);
-        let visible_y = (computed_height - border_top - border_bottom) / max_scroll_y;
-        let scrollthumb_height = scrolltrack_height * visible_y;
-        let remaining_height = scrolltrack_height - scrollthumb_height;
-        let scrollthumb_offset = scroll_y / self.common_element_data.computed_scrollbar_height * remaining_height;
-
+        
         // track
         renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed + computed_width - scrolltrack_width - border_right,
-                computed_y_transformed + border_top,
-                scrolltrack_width,
-                scrolltrack_height,
-            ),
+            self.common_element_data.computed_scroll_track,
             scroll_track_color,
         );
 
         let scrollthumb_color = Color::rgba(150, 150, 150, 255);
-        let scrollthumb_width = scrolltrack_width;
+        
         // thumb
         renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed + computed_width - scrolltrack_width - border_right,
-                computed_y_transformed + border_top + scrollthumb_offset,
-                scrollthumb_width,
-                scrollthumb_height,
-            ),
+            self.common_element_data.computed_scroll_thumb,
             scrollthumb_color,
         );
     }
@@ -242,6 +209,8 @@ impl Element for Container {
             0.0
         };
 
+        self.finalize_scrollbar(scroll_y);
+
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
@@ -265,7 +234,7 @@ impl Element for Container {
     fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
-        if self.style().overflow[1].is_scroll_container() {
+        if self.style().overflow[1] == taffy::Overflow::Scroll {
             match message {
                 OkuMessage::MouseWheelEvent(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
@@ -274,12 +243,7 @@ impl Element for Container {
                     };
                     let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
 
-                    //let max_scroll_y = self.common_element_data.computed_scrollbar_height;
-
-                    let client_height = self.common_element_data.computed_height - self.common_element_data.computed_border[0] - self.common_element_data.computed_border[2];
-                    let scroll_height = self.common_element_data.computed_content_height - self.common_element_data.computed_border[0];
-
-                    let max_scroll_y = (scroll_height - client_height).max(0.0);
+                    let max_scroll_y = self.common_element_data.max_scroll_y;
 
                     container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
 

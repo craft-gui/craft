@@ -5,7 +5,7 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use tokio::sync::RwLockReadGuard;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Rectangle {
     pub(crate) x: f32,
     pub(crate) y: f32,
