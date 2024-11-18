@@ -10,9 +10,10 @@ use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use winit::event::MouseScrollDelta;
+use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
-use crate::engine::events::{OkuMessage};
+use crate::engine::events::{Message, OkuMessage};
+use crate::engine::events::OkuMessage::PointerButtonEvent;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -20,8 +21,10 @@ pub struct Container {
     pub common_element_data: CommonElementData,
 }
 
+#[derive(Clone, Copy, Default)]
 pub struct ContainerState {
     pub(crate) scroll_y: f32,
+    pub(crate) scroll_click: Option<(f32, f32)>
 }
 
 impl Element for Container {
@@ -249,7 +252,20 @@ impl Element for Container {
 
                     UpdateResult::new().prevent_propagate().prevent_defaults()
                 }
-                _ => UpdateResult::new(),
+                OkuMessage::PointerButtonEvent(pointer_button) => {
+                    if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+                        && pointer_button.state == ElementState::Pressed {
+                        if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                            UpdateResult::new().prevent_propagate().prevent_defaults()
+                        } else {
+                            UpdateResult::new()
+                        }
+                        
+                    } else {
+                        UpdateResult::new()
+                    }
+                }
+            _ => UpdateResult::new(),
             }
         } else {
             UpdateResult::new()

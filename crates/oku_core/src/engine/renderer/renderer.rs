@@ -14,6 +14,12 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
+    pub fn contains(&self, x: f32, y: f32) -> bool {
+        x >= self.x && x <= self.x + self.width && y >= self.y && y <= self.y + self.height
+    }
+}
+
+impl Rectangle {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
         Rectangle {
             x,

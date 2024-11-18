@@ -36,7 +36,7 @@ pub struct CommonElementData {
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
     pub scrollbar_size: [f32; 2],
-    
+
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
     pub(crate) max_scroll_y: f32
@@ -162,7 +162,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let computed_width = common_element_data.computed_width;
         let computed_height = common_element_data.computed_height;
-        
+
         let computed_content_height = common_element_data.computed_content_height;
 
         let border_top = common_element_data.computed_border[0];
@@ -171,7 +171,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let client_height = computed_height - border_top - border_bottom;
         let scroll_height = computed_content_height - border_top;
-        
+
         let scrolltrack_width = common_element_data.scrollbar_size[0];
         let scrolltrack_height = client_height;
 
@@ -181,7 +181,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let visible_y = client_height / scroll_height;
         let scrollthumb_height = scrolltrack_height * visible_y;
         let remaining_height = scrolltrack_height - scrollthumb_height;
-        let scrollthumb_offset = scroll_y / common_element_data.computed_scrollbar_height * remaining_height;
+        let scrollthumb_offset = scroll_y / max_scroll_y * remaining_height;
 
         common_element_data.computed_scroll_track = Rectangle::new(
             computed_x_transformed + computed_width - scrolltrack_width - border_right,
@@ -191,7 +191,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         );
 
         let scrollthumb_width = scrolltrack_width;
-        
+
         common_element_data.computed_scroll_thumb = Rectangle::new(
             computed_x_transformed + computed_width - scrolltrack_width - border_right,
             computed_y_transformed + border_top + scrollthumb_offset,
