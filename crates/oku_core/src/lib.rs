@@ -303,6 +303,8 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
+    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved)).await;
+    app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
