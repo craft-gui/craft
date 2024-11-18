@@ -279,7 +279,7 @@ impl Element for Container {
                     let client_height = self.common_element_data.computed_height - self.common_element_data.computed_border[0] - self.common_element_data.computed_border[2];
                     let scroll_height = self.common_element_data.computed_content_height - self.common_element_data.computed_border[0];
 
-                    let max_scroll_y = scroll_height - client_height;
+                    let max_scroll_y = (scroll_height - client_height).max(0.0);
 
                     container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
 
