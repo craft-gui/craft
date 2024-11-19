@@ -50,6 +50,7 @@ use components::component::{ComponentId, ComponentSpecification};
 use cosmic_text::FontSystem;
 use futures::{SinkExt, StreamExt};
 use std::any::Any;
+use std::cmp::PartialEq;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
@@ -303,14 +304,14 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
-    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved)).await;
+    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved), TargetChoice::All).await;
     app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(app, event).await;
+    dispatch_event(app, event, TargetChoice::HitTest).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -318,7 +319,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let event = OkuMessage::KeyboardInputEvent(keyboard_input);
 
-    dispatch_event(app, event).await;
+    dispatch_event(app, event, TargetChoice::HitTest).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -335,7 +336,13 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
+#[derive(Debug, PartialEq, Copy, Clone)]
+enum TargetChoice {
+    HitTest,
+    All
+}
+
+async fn dispatch_event(app: &mut Box<App>, event: OkuMessage, target_choice: TargetChoice) {
     let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -369,7 +376,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
             let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-            if in_bounds {
+            if in_bounds || target_choice == TargetChoice::All {
                 //println!("In bounds, Element: {:?}", element.get_id());
                 targets.push_back((element.component_id(), element.get_id().clone()))
             } else {
@@ -506,7 +513,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
-    dispatch_event(app, event).await;
+    dispatch_event(app, event, TargetChoice::All).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }

@@ -76,6 +76,7 @@ fn main() {
             .margin(5.0, 5.0, 5.0, 5.0)
             .padding(5.0, 5.0, 5.0, 5.0)
             .component()
+            .push(Counter::component())
             .push(
                 Container::new()
                     .min_height(Unit::Px(200.0))

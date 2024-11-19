@@ -254,20 +254,20 @@ impl Element for Container {
                 }
                 OkuMessage::PointerButtonEvent(pointer_button) => {
                     if pointer_button.button == ButtonSource::Mouse(MouseButton::Left) {
-                        if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
                             match pointer_button.state {
                                 ElementState::Pressed => {
-                                    container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                    if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                        container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                        UpdateResult::new().prevent_propagate().prevent_defaults()
+                                    } else {
+                                        UpdateResult::new()
+                                    }
                                 }
                                 ElementState::Released => {
                                     container_state.scroll_click = None;
+                                    UpdateResult::new().prevent_propagate().prevent_defaults()
                                 }
                             }
-                            UpdateResult::new().prevent_propagate().prevent_defaults()
-                        } else {
-                            UpdateResult::new()
-                        }
-                        
                     } else {
                         UpdateResult::new()
                     }
