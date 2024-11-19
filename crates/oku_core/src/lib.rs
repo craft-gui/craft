@@ -546,6 +546,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     }
     if renderer.is_some() {
         app.renderer = renderer;
+        app.renderer.as_mut().unwrap().load_font(app.font_system.as_mut().unwrap());
 
         // We can't guarantee the order of events on wasm.
         // This ensures a resize is not missed if the renderer was not finished creating when resize is called.

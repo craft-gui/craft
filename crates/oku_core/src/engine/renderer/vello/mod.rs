@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::num::NonZeroUsize;
-use vello::{kurbo, peniko, AaConfig, RendererOptions};
+use vello::{kurbo, peniko, AaConfig, Glyph, RendererOptions};
 use crate::components::component::ComponentId;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, RenderCommand, Renderer};
@@ -7,6 +8,7 @@ use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::{FontSystem, SwashCache};
 use std::sync::Arc;
+use cosmic_text::fontdb::Query;
 use tiny_skia::{ColorSpace, Paint, PixmapPaint, PixmapRef, Transform};
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Circle, Ellipse, Line, Rect, RoundedRect, Stroke};
@@ -49,6 +51,7 @@ pub struct VelloRenderer<'a> {
     scene: Scene,
     surface_clear_color: Color,
     cache: SwashCache,
+    vello_fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> vello::Renderer {
@@ -81,6 +84,7 @@ impl<'a> VelloRenderer<'a> {
             scene: Scene::new(),
             cache: SwashCache::new(),
             surface_clear_color: Color::rgba(255, 255, 255, 255),
+            vello_fonts: HashMap::new(),
         };
 
         // Create a vello Surface
@@ -181,6 +185,20 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
+    fn load_font(&mut self, font_system: &mut FontSystem) {
+        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> = font_system.db().faces().map(|face| (face.id, face.index)).collect();
+        let mut fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font> = HashMap::new();
+        for (font_id, index) in font_faces {
+            let font = font_system.get_font(font_id).unwrap();
+            let resource = Arc::new(font.data().to_vec());
+            let blob = Blob::new(resource);
+            let vello_font = peniko::Font::new(blob, index);
+            self.vello_fonts.insert(font_id, vello_font);
+        }
+        
+    }
+    
+
     fn submit(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
@@ -224,12 +242,13 @@ impl Renderer for VelloRenderer<'_> {
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
-                    
+
                     self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                     if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
+
                         editor.draw(
                             font_system,
                             &mut self.cache,
@@ -238,7 +257,7 @@ impl Renderer for VelloRenderer<'_> {
                             cosmic_text::Color::rgba(0, 0, 200, 255),
                             cosmic_text::Color::rgba(255, 255, 255, 255),
                             |x, y, w, h, colora: cosmic_text::Color| {
-                                vello_draw_rect(&mut self.scene, 
+                                vello_draw_rect(&mut self.scene,
                                                 Rectangle::new(
                                                     rect.x + x as f32, rect.y + y as f32, w as f32, h as f32
                                                 ),
@@ -251,7 +270,41 @@ impl Renderer for VelloRenderer<'_> {
                     {
                         let buffer = &text_context.buffer;
 
-                        buffer.draw(
+                        for layout_run in buffer.layout_runs() {
+                            let font_id = layout_run.glyphs[0].font_id;
+                            let glyphs: Vec<Glyph> = layout_run.glyphs.iter().map(|glyph| {
+                                let x = glyph.x;
+                                let y = glyph.y;
+
+                                Glyph {
+                                    id: glyph.glyph_id as u32,
+                                    x,
+                                    y,
+                                }
+                            }).collect();
+
+                            let transform = vello::kurbo::Affine::translate((
+                                rect.x as f64,
+                                rect.y as f64 + layout_run.line_y as f64,
+                            ));
+
+                            let key: Vec<&cosmic_text::fontdb::ID> = self.vello_fonts.keys().collect();
+                            self.scene.draw_glyphs(&self.vello_fonts[&font_id])
+                                .font_size(buffer.metrics().font_size)
+                                .brush(vello::peniko::Color::rgba(
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    1.0,
+                                ))
+                                .transform(transform)
+                                .draw(
+                                peniko::Fill::NonZero,
+                                glyphs.into_iter()
+                            );
+                        }
+
+                        /*buffer.draw(
                             font_system,
                             &mut self.cache,
                             cosmic_text::Color::rgba(
@@ -268,7 +321,7 @@ impl Renderer for VelloRenderer<'_> {
                                                 Color::rgba(color.r(), color.g(), color.b(), color.a())
                                 );
                             },
-                        );
+                        );*/
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
