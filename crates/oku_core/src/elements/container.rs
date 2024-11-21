@@ -259,6 +259,15 @@ impl Element for Container {
                                     if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
                                         container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
                                         UpdateResult::new().prevent_propagate().prevent_defaults()
+                                    } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                        let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
+
+                                        let percent = offset_y / self.common_element_data.computed_scroll_track.height;
+                                        let scroll_y = percent * self.common_element_data.max_scroll_y;
+
+                                        container_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
+
+                                        UpdateResult::new().prevent_propagate().prevent_defaults()
                                     } else {
                                         UpdateResult::new()
                                     }
@@ -276,11 +285,11 @@ impl Element for Container {
                     if let Some((click_x, click_y)) = container_state.scroll_click {
                         // Todo: Translate scroll wheel pixel to scroll position for diff.
                         let delta = pointer_motion.position.y as f32 - click_y;
-                        
+
                         let max_scroll_y = self.common_element_data.max_scroll_y;
-                        
+
                         let delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
-                        
+
                         container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
                         container_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
                         UpdateResult::new().prevent_propagate().prevent_defaults()
