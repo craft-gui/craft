@@ -187,7 +187,6 @@ impl Renderer for VelloRenderer<'_> {
 
     fn load_font(&mut self, font_system: &mut FontSystem) {
         let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> = font_system.db().faces().map(|face| (face.id, face.index)).collect();
-        let mut fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font> = HashMap::new();
         for (font_id, index) in font_faces {
             let font = font_system.get_font(font_id).unwrap();
             let resource = Arc::new(font.data().to_vec());

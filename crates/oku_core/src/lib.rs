@@ -304,7 +304,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
-    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved), TargetChoice::All).await;
+    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved), TargetChoice::HitTestAndAllElements).await;
     app.window.as_ref().unwrap().request_redraw();
 }
 
@@ -339,7 +339,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum TargetChoice {
     HitTest,
-    All
+    HitTestAndAllElements
 }
 
 async fn dispatch_event(app: &mut Box<App>, event: OkuMessage, target_choice: TargetChoice) {
@@ -353,6 +353,20 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage, target_choice: Ta
         element: Some(current_element_tree.as_ref()),
         component: Some(app.component_tree.as_ref().unwrap()),
     };
+
+    // Dispatch some events globally to elements.
+    // This is needed for things like scrolling while the mouse is not over an element.
+    if matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_)) {
+        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+            if let Some(element) = fiber_node.element {
+                let res = element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+
+                if !res.propagate {
+                    break;
+                }
+            }
+        }
+    }
 
     let mut targets: VecDeque<(ComponentId, Option<String>)> = VecDeque::new();
     let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
@@ -376,7 +390,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage, target_choice: Ta
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
             let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
-            if in_bounds || target_choice == TargetChoice::All {
+            if in_bounds || target_choice == TargetChoice::HitTestAndAllElements {
                 //println!("In bounds, Element: {:?}", element.get_id());
                 targets.push_back((element.component_id(), element.get_id().clone()))
             } else {
@@ -513,7 +527,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage, target_choice: Ta
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
-    dispatch_event(app, event, TargetChoice::All).await;
+    dispatch_event(app, event, TargetChoice::HitTest).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -689,7 +703,7 @@ fn layout<'a>(
         )
         .unwrap();
 
-    taffy_tree.print_tree(root_node);
+    //taffy_tree.print_tree(root_node);
 
     let transform = glam::Mat4::IDENTITY;
 
