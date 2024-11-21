@@ -5,12 +5,18 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use tokio::sync::RwLockReadGuard;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Rectangle {
     pub(crate) x: f32,
     pub(crate) y: f32,
     pub(crate) width: f32,
     pub(crate) height: f32,
+}
+
+impl Rectangle {
+    pub fn contains(&self, x: f32, y: f32) -> bool {
+        x >= self.x && x <= self.x + self.width && y >= self.y && y <= self.y + self.height
+    }
 }
 
 impl Rectangle {
@@ -29,6 +35,8 @@ pub enum RenderCommand {
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawText(Rectangle, ComponentId, Color),
+    PushLayer(Rectangle),
+    PopLayer,
 }
 
 pub trait Surface {
@@ -45,12 +53,20 @@ pub trait Renderer {
     fn present_surface(&mut self);
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
+    
+    fn load_font(&mut self, font_system: &mut FontSystem) {
+        
+    }
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
+    
+    fn push_layer(&mut self, rect: Rectangle);
+    
+    fn pop_layer(&mut self);
 
     fn submit(
         &mut self,

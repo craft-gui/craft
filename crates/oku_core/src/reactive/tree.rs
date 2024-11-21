@@ -90,9 +90,7 @@ pub(crate) fn diff_trees(
         // Make sure to set a default state for the root.
         element_state.storage.insert(
             0,
-            Box::new(ContainerState {
-                scroll_delta_y: 0.0,
-            }),
+            Box::new(ContainerState::default()),
         );
 
         let mut old_component_tree_as_ptr = old_component_tree.map(|old_root| old_root as *const ComponentTreeNode);
@@ -158,9 +156,7 @@ pub(crate) fn diff_trees(
                         if !element_state.storage.contains_key(&id) {
                             element_state.storage.insert(
                                 id,
-                                Box::new(ContainerState {
-                                    scroll_delta_y: 0.0,
-                                }),
+                                Box::new(ContainerState::default()),
                             );
                         }
                     } else {

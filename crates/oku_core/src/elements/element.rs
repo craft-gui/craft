@@ -1,6 +1,8 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
+use crate::engine::events::OkuMessage;
+use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::Style;
 use crate::RendererBox;
@@ -8,7 +10,6 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::engine::events::{OkuMessage};
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -26,12 +27,19 @@ pub struct CommonElementData {
     pub computed_height: f32,
     pub computed_scrollbar_width: f32,
     pub computed_scrollbar_height: f32,
+    pub computed_content_width: f32,
+    pub computed_content_height: f32,
     pub computed_padding: [f32; 4],
     pub computed_border: [f32; 4],
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
+    pub scrollbar_size: [f32; 2],
+
+    pub computed_scroll_track: Rectangle,
+    pub computed_scroll_thumb: Rectangle,
+    pub(crate) max_scroll_y: f32
 }
 
 #[derive(Clone, Debug)]
@@ -102,6 +110,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) -> NodeId;
+
+    /// Finalizes the layout of the element.
+    ///
+    /// The majority of the layout computation is done in the `compute_layout` method.
+    /// Store the computed values in the `common_element_data` struct.
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -115,8 +128,76 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, _message: OkuMessage, _element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        _message: OkuMessage,
+        _element_state: &mut StateStore,
+        _font_system: &mut FontSystem,
+    ) -> UpdateResult {
         UpdateResult::default()
+    }
+
+    fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
+        match self.common_element_data().style.position {
+            taffy::Position::Relative => {
+                self.common_element_data_mut().computed_x = x + result.location.x;
+                self.common_element_data_mut().computed_y = y + result.location.y;
+            }
+            taffy::Position::Absolute => {
+                self.common_element_data_mut().computed_x = result.location.x;
+                self.common_element_data_mut().computed_y = result.location.y;
+            }
+        }
+    }
+
+    fn finalize_scrollbar(&mut self, scroll_y: f32) {
+        let common_element_data = self.common_element_data_mut();
+
+        if common_element_data.style.overflow[0] != taffy::Overflow::Scroll {
+            return;
+        }
+
+        let computed_x_transformed = common_element_data.computed_x_transformed;
+        let computed_y_transformed = common_element_data.computed_y_transformed;
+
+        let computed_width = common_element_data.computed_width;
+        let computed_height = common_element_data.computed_height;
+
+        let computed_content_height = common_element_data.computed_content_height;
+
+        let border_top = common_element_data.computed_border[0];
+        let border_right = common_element_data.computed_border[1];
+        let border_bottom = common_element_data.computed_border[2];
+
+        let client_height = computed_height - border_top - border_bottom;
+        let scroll_height = computed_content_height - border_top;
+
+        let scrolltrack_width = common_element_data.scrollbar_size[0];
+        let scrolltrack_height = client_height;
+
+        let max_scroll_y = (scroll_height - client_height).max(0.0);
+        common_element_data.max_scroll_y = max_scroll_y;
+
+        let visible_y = client_height / scroll_height;
+        let scrollthumb_height = scrolltrack_height * visible_y;
+        let remaining_height = scrolltrack_height - scrollthumb_height;
+        let scrollthumb_offset = scroll_y / max_scroll_y * remaining_height;
+
+        common_element_data.computed_scroll_track = Rectangle::new(
+            computed_x_transformed + computed_width - scrolltrack_width - border_right,
+            computed_y_transformed + border_top,
+            scrolltrack_width,
+            scrolltrack_height,
+        );
+
+        let scrollthumb_width = scrolltrack_width;
+
+        common_element_data.computed_scroll_thumb = Rectangle::new(
+            computed_x_transformed + computed_width - scrolltrack_width - border_right,
+            computed_y_transformed + border_top + scrollthumb_offset,
+            scrollthumb_width,
+            scrollthumb_height,
+        )
     }
 }
 
@@ -186,7 +267,13 @@ impl dyn Element {
             } else {
                 prefix.push_str("├─");
             }
-            println!("{}{}, Component Id: {} Id: {:?}", prefix, element.name(), element.component_id(), element.get_id());
+            println!(
+                "{}{}, Component Id: {} Id: {:?}",
+                prefix,
+                element.name(),
+                element.component_id(),
+                element.get_id()
+            );
             let children = element.children();
             for (i, child) in children.iter().enumerate().rev() {
                 let is_last = i == children.len() - 1;

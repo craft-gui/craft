@@ -1,5 +1,5 @@
 use crate::engine::renderer::color::Color;
-use taffy::FlexWrap;
+use taffy::{FlexWrap};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -7,6 +7,10 @@ pub enum Unit {
     Percentage(f32),
     Auto,
 }
+
+pub use taffy::Position;
+pub use taffy::BoxSizing;
+pub use taffy::Overflow;
 
 impl Unit {
     pub fn is_auto(&self) -> bool {
@@ -124,68 +128,21 @@ impl Default for FontStyle {
     }
 }
 
-/// How children overflowing their container should affect layout
-///
-/// In CSS the primary effect of this property is to control whether contents of a parent container that overflow that container should
-/// be displayed anyway, be clipped, or trigger the container to become a scroll container. However it also has secondary effects on layout,
-/// the main ones being:
-///
-///   - The automatic minimum size Flexbox/CSS Grid items with non-`Visible` overflow is `0` rather than being content based
-///   - `Overflow::Scroll` nodes have space in the layout reserved for a scrollbar (width controlled by the `scrollbar_width` property)
-///
-/// In Taffy, we only implement the layout related secondary effects as we are not concerned with drawing/painting. The amount of space reserved for
-/// a scrollbar is controlled by the `scrollbar_width` property. If this is `0` then `Scroll` behaves identically to `Hidden`.
-///
-/// <https://developer.mozilla.org/en-US/docs/Web/CSS/overflow>
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-pub enum Overflow {
-    /// The automatic minimum size of this node as a flexbox/grid item should be based on the size of its content.
-    /// Content that overflows this node *should* contribute to the scroll region of its parent.
-    #[default]
-    Visible,
-    /// The automatic minimum size of this node as a flexbox/grid item should be based on the size of its content.
-    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
-    Clip,
-    /// The automatic minimum size of this node as a flexbox/grid item should be `0`.
-    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
-    Hidden,
-    /// The automatic minimum size of this node as a flexbox/grid item should be `0`. Additionally, space should be reserved
-    /// for a scrollbar. The amount of space reserved is controlled by the `scrollbar_width` property.
-    /// Content that overflows this node should *not* contribute to the scroll region of its parent.
-    Scroll,
-}
-
-impl Overflow {
-    /// Returns true for overflow modes that contain their contents (`Overflow::Hidden`, `Overflow::Scroll`, `Overflow::Auto`)
-    /// or else false for overflow modes that allow their contains to spill (`Overflow::Visible`).
-    #[inline(always)]
-    pub(crate) fn is_scroll_container(self) -> bool {
-        match self {
-            Self::Visible | Self::Clip => false,
-            Self::Hidden | Self::Scroll => true,
-        }
-    }
-
-    /// Returns `Some(0.0)` if the overflow mode would cause the automatic minimum size of a Flexbox or CSS Grid item
-    /// to be `0`. Else returns None.
-    #[inline(always)]
-    pub(crate) fn maybe_into_automatic_min_size(self) -> Option<f32> {
-        match self.is_scroll_container() {
-            true => Some(0.0),
-            false => None,
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
+    pub box_sizing: BoxSizing,
+    pub scrollbar_width: f32,
+    pub position: Position,
     pub margin: [f32; 4],
     pub padding: [f32; 4],
     pub border: [Unit; 4],
+    pub inset: [Unit; 4],
     pub width: Unit,
     pub height: Unit,
     pub max_width: Unit,
     pub max_height: Unit,
+    pub min_width: Unit,
+    pub min_height: Unit,
     pub x: f32,
     pub y: f32,
     pub display: Display,
@@ -214,6 +171,14 @@ fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     }
 }
 
+fn unit_to_taffy_lengthpercentageauto(unit: Unit) -> taffy::LengthPercentageAuto {
+    match unit {
+        Unit::Px(px) => taffy::LengthPercentageAuto::Length(px),
+        Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
+        Unit::Auto => taffy::LengthPercentageAuto::Auto,
+    }
+}
+
 fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
     match unit {
         Unit::Px(px) => taffy::LengthPercentage::Length(px),
@@ -226,11 +191,17 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 impl Default for Style {
     fn default() -> Self {
         Style {
+            box_sizing: BoxSizing::BorderBox,
+            scrollbar_width: 15.0,
+            position: Position::Relative,
             margin: [0.0; 4],
             padding: [0.0; 4],
             border: [Unit::Px(0.0); 4],
+            inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
             height: Unit::Auto,
+            min_width: Unit::Auto,
+            min_height: Unit::Auto,
             max_width: Unit::Auto,
             max_height: Unit::Auto,
             x: 0.0,
@@ -272,6 +243,11 @@ impl From<Style> for taffy::Style {
             height: unit_to_taffy_dimension(style.max_height),
         };
 
+        let min_size = taffy::Size {
+            width: unit_to_taffy_dimension(style.min_width),
+            height: unit_to_taffy_dimension(style.min_height),
+        };
+
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
             left: taffy::LengthPercentageAuto::Length(style.margin[3]),
             right: taffy::LengthPercentageAuto::Length(style.margin[1]),
@@ -285,13 +261,21 @@ impl From<Style> for taffy::Style {
             top: taffy::LengthPercentage::Length(style.padding[0]),
             bottom: taffy::LengthPercentage::Length(style.padding[2]),
         };
-        
+
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
             left: unit_to_taffy_length_percentage(style.border[3]),
             right: unit_to_taffy_length_percentage(style.border[1]),
             top: unit_to_taffy_length_percentage(style.border[0]),
             bottom: unit_to_taffy_length_percentage(style.border[2]),
         };
+
+        let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
+            left: unit_to_taffy_lengthpercentageauto(style.inset[3]),
+            right: unit_to_taffy_lengthpercentageauto(style.inset[1]),
+            top: unit_to_taffy_lengthpercentageauto(style.inset[0]),
+            bottom: unit_to_taffy_lengthpercentageauto(style.inset[2]),
+        };
+
 
         let align_items = match style.align_items {
             None => None,
@@ -350,8 +334,17 @@ impl From<Style> for taffy::Style {
         let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
         let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
 
+        let scrollbar_width = style.scrollbar_width;
+
+        let box_sizing = taffy::BoxSizing::BorderBox;
+
         taffy::Style {
+            box_sizing,
+            inset,
+            scrollbar_width,
+            position: style.position,
             size,
+            min_size,
             max_size,
             flex_direction,
             margin,

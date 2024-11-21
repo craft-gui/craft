@@ -4,7 +4,7 @@ use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDumm
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
-use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Unit, Weight};
+use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Style, Unit, Weight};
 use crate::RendererBox;
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics};
 use rustc_hash::FxHasher;
@@ -12,6 +12,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
+use crate::elements::ElementStyles;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -261,8 +262,8 @@ impl Element for Text {
         );
         text_context.buffer.shape_until_scroll(font_system, true);
 
-        self.common_element_data.computed_x = x + result.location.x;
-        self.common_element_data.computed_y = y + result.location.y;
+        self.resolve_position(x, y, result);
+        
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
         self.common_element_data.computed_padding =
@@ -284,71 +285,7 @@ impl Element for Text {
 }
 
 impl Text {
-    // Styles
-    pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Text {
-        self.common_element_data.style.margin = [top, right, bottom, left];
-        self
-    }
-
-    pub const fn padding(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
-        self.common_element_data.style.padding = [top, right, bottom, left];
-        self
-    }
-
-    pub const fn background(mut self, background: Color) -> Self {
-        self.common_element_data.style.background = background;
-        self
-    }
-
-    pub const fn color(mut self, color: Color) -> Self {
-        self.common_element_data.style.color = color;
-        self
-    }
-
-    pub const fn font_size(mut self, font_size: f32) -> Self {
-        self.common_element_data.style.font_size = font_size;
-        self
-    }
-    pub const fn font_weight(mut self, font_weight: Weight) -> Self {
-        self.common_element_data.style.font_weight = font_weight;
-        self
-    }
-
-    pub const fn font_style(mut self, font_style: FontStyle) -> Self {
-        self.common_element_data.style.font_style = font_style;
-        self
-    }
-
-    pub const fn display(mut self, display: Display) -> Self {
-        self.common_element_data.style.display = display;
-        self
-    }
-
-    pub const fn justify_content(mut self, justify_content: JustifyContent) -> Self {
-        self.common_element_data.style.justify_content = Some(justify_content);
-        self
-    }
-
-    pub const fn align_items(mut self, align_items: AlignItems) -> Self {
-        self.common_element_data.style.align_items = Some(align_items);
-        self
-    }
-
-    pub const fn flex_direction(mut self, flex_direction: FlexDirection) -> Self {
-        self.common_element_data.style.flex_direction = flex_direction;
-        self
-    }
-
-    pub const fn width(mut self, width: Unit) -> Self {
-        self.common_element_data.style.width = width;
-        self
-    }
-
-    pub const fn height(mut self, height: Unit) -> Self {
-        self.common_element_data.style.height = height;
-        self
-    }
-
+    
     pub fn id(mut self, id: &str) -> Self {
         self.common_element_data.id = Some(id.to_string());
         self
@@ -356,5 +293,11 @@ impl Text {
 
     pub fn component(self) -> ComponentSpecification {
         ComponentSpecification::new(self.into())
+    }
+}
+
+impl ElementStyles for Text {
+    fn styles_mut(&mut self) -> &mut Style {
+        &mut self.common_element_data.style
     }
 }

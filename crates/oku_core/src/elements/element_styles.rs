@@ -1,3 +1,4 @@
+use taffy::Position;
 use crate::engine::renderer::color::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap};
 
@@ -92,6 +93,16 @@ where
         self
     }
 
+    fn min_width(mut self, min_width: Unit) -> Self {
+        self.styles_mut().min_width = min_width;
+        self
+    }
+
+    fn min_height(mut self, min_height: Unit) -> Self {
+        self.styles_mut().min_height = min_height;
+        self
+    }
+
     fn overflow_x(mut self, overflow: Overflow) -> Self {
         self.styles_mut().overflow[0] = overflow;
         self
@@ -125,4 +136,26 @@ where
         self.styles_mut().overflow = [overflow, overflow];
         self
     }
+    
+    fn position(mut self, position: Position) -> Self {
+        self.styles_mut().position = position;
+        self
+    }
+    
+    fn inset(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.styles_mut().inset = [top, right, bottom, left];
+        self
+    }
+    
+    fn scrollbar_width(mut self, scrollbar_width: f32) -> Self {
+        self.styles_mut().scrollbar_width = scrollbar_width;
+        self
+    }
+    
+    fn box_sizing(mut self, box_sizing: taffy::BoxSizing) -> Self {
+        self.styles_mut().box_sizing = box_sizing;
+        self
+    }
+    
+    
 }

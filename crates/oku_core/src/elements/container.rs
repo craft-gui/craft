@@ -10,9 +10,10 @@ use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use winit::event::MouseScrollDelta;
+use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
-use crate::engine::events::{OkuMessage};
+use crate::engine::events::{Message, OkuMessage};
+use crate::engine::events::OkuMessage::PointerButtonEvent;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -20,8 +21,10 @@ pub struct Container {
     pub common_element_data: CommonElementData,
 }
 
+#[derive(Clone, Copy, Default)]
 pub struct ContainerState {
-    pub(crate) scroll_delta_y: f32,
+    pub(crate) scroll_y: f32,
+    pub(crate) scroll_click: Option<(f32, f32)>
 }
 
 impl Element for Container {
@@ -46,61 +49,102 @@ impl Element for Container {
         element_state: &StateStore,
     ) {
         let border_color: Color = self.style().border_color;
+
+        // background
+        let computed_x_transformed = self.common_element_data.computed_x_transformed;
+        let computed_y_transformed = self.common_element_data.computed_y_transformed;
+
+        let computed_width = self.common_element_data.computed_width;
+        let computed_height = self.common_element_data.computed_height;
         
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed,
-                self.common_element_data.computed_y_transformed,
-                self.common_element_data.computed_width,
-                self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
-
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_width - self.common_element_data.computed_border[1],
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_border[1],
-                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
-
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[3],
-                self.common_element_data.computed_height - (self.common_element_data.computed_border[2]),
-                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
-                self.common_element_data.computed_border[2],
-            ),
-            border_color,
-        );
-
-        renderer.draw_rect(
-            Rectangle::new(
-                self.common_element_data.computed_x_transformed,
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_border[1],
-                self.common_element_data.computed_height - self.common_element_data.computed_border[0],
-            ),
-            border_color,
-        );
+        let border_top = self.common_element_data.computed_border[0];
+        let border_right = self.common_element_data.computed_border[1];
+        let border_bottom = self.common_element_data.computed_border[2];
+        let border_left = self.common_element_data.computed_border[3];
         
+        // Background
         renderer.draw_rect(
             Rectangle::new(
-                self.common_element_data.computed_x_transformed + self.common_element_data.computed_border[0],
-                self.common_element_data.computed_y_transformed + self.common_element_data.computed_border[3],
-                self.common_element_data.computed_width - (self.common_element_data.computed_border[1] + self.common_element_data.computed_border[3]),
-                self.common_element_data.computed_height - (self.common_element_data.computed_border[0] + self.common_element_data.computed_border[2]),
+                computed_x_transformed,
+                computed_y_transformed,
+                computed_width,
+                computed_height,
             ),
             self.common_element_data.style.background,
         );
 
+        // border top
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed,
+                computed_width,
+                border_top,
+            ),
+            border_color,
+        );
+
+        // border right
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + computed_width - border_right,
+                computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
+        );
+
+        // border bottom
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + border_left,
+                computed_y_transformed + computed_height - border_bottom,
+                computed_width - (border_right + border_left),
+                border_bottom,
+            ),
+            border_color,
+        );
+
+        // border left
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
+        );
+
+        renderer.push_layer(Rectangle::new(
+            computed_x_transformed + border_left,
+            computed_y_transformed + border_top,
+            computed_width - (border_right + border_left),
+            computed_height - (border_top + border_bottom),
+        ));
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
         }
+        renderer.pop_layer();
+
+        // scrollbar
+        let scroll_track_color = Color::rgba(100, 100, 100, 255);
+        
+        // track
+        renderer.draw_rect(
+            self.common_element_data.computed_scroll_track,
+            scroll_track_color,
+        );
+
+        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
+        
+        // thumb
+        renderer.draw_rect(
+            self.common_element_data.computed_scroll_thumb,
+            scrollthumb_color,
+        );
     }
 
     fn compute_layout(
@@ -133,8 +177,11 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
-        self.common_element_data.computed_x = x + result.location.x;
-        self.common_element_data.computed_y = y + result.location.y;
+        self.common_element_data.computed_content_width = result.content_size.width;
+        self.common_element_data.computed_content_height = result.content_size.height;
+        self.common_element_data.scrollbar_size = [result.scrollbar_size.width, result.scrollbar_size.height];
+
+        self.resolve_position(x, y, result);
         
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
@@ -157,15 +204,17 @@ impl Element for Container {
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        let scrollbar_dy = if let Some(container_state) =
+        let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
         {
-            container_state.scroll_delta_y
+            container_state.scroll_y
         } else {
             0.0
-        } * 100.0;
+        };
 
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, scrollbar_dy, 0.0));
+        self.finalize_scrollbar(scroll_y);
+
+        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
@@ -188,17 +237,67 @@ impl Element for Container {
     fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
-        if self.style().overflow[1].is_scroll_container() {
+        if self.style().overflow[1] == taffy::Overflow::Scroll {
             match message {
                 OkuMessage::MouseWheelEvent(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
                         MouseScrollDelta::LineDelta(_x, y) => y,
                         MouseScrollDelta::PixelDelta(y) => y.y as f32,
                     };
-                    container_state.scroll_delta_y += 1.0 * delta;
+                    let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
+
+                    let max_scroll_y = self.common_element_data.max_scroll_y;
+
+                    container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
+
                     UpdateResult::new().prevent_propagate().prevent_defaults()
                 }
-                _ => UpdateResult::new(),
+                OkuMessage::PointerButtonEvent(pointer_button) => {
+                    if pointer_button.button == ButtonSource::Mouse(MouseButton::Left) {
+                            match pointer_button.state {
+                                ElementState::Pressed => {
+                                    if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                        container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                        UpdateResult::new().prevent_propagate().prevent_defaults()
+                                    } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                        let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
+
+                                        let percent = offset_y / self.common_element_data.computed_scroll_track.height;
+                                        let scroll_y = percent * self.common_element_data.max_scroll_y;
+
+                                        container_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
+
+                                        UpdateResult::new().prevent_propagate().prevent_defaults()
+                                    } else {
+                                        UpdateResult::new()
+                                    }
+                                }
+                                ElementState::Released => {
+                                    container_state.scroll_click = None;
+                                    UpdateResult::new().prevent_propagate().prevent_defaults()
+                                }
+                            }
+                    } else {
+                        UpdateResult::new()
+                    }
+                },
+                OkuMessage::PointerMovedEvent(pointer_motion) => {
+                    if let Some((click_x, click_y)) = container_state.scroll_click {
+                        // Todo: Translate scroll wheel pixel to scroll position for diff.
+                        let delta = pointer_motion.position.y as f32 - click_y;
+
+                        let max_scroll_y = self.common_element_data.max_scroll_y;
+
+                        let delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
+
+                        container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
+                        container_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
+                        UpdateResult::new().prevent_propagate().prevent_defaults()
+                    } else {
+                        UpdateResult::new()
+                    }
+                },
+            _ => UpdateResult::new(),
             }
         } else {
             UpdateResult::new()
