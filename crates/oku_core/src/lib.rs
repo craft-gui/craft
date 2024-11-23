@@ -630,9 +630,8 @@ async fn on_request_redraw(app: &mut App) {
 
     //let layout_start = Instant::now(); // Start measuring time
     let resource_manager = app.resource_manager.read().await;
-
+    
     let element_state = &mut app.element_state;
-
     let (mut taffy_tree, taffy_root) = layout(
         element_state,
         surface_width,
@@ -640,7 +639,9 @@ async fn on_request_redraw(app: &mut App) {
         app.font_system.as_mut().unwrap(),
         root.internal.as_mut(),
         &resource_manager,
+        app.window.as_ref().unwrap().scale_factor()
     );
+    
     //let duration = layout_start.elapsed(); // Get the elapsed time
     //println!("Layout Time Taken: {:?} ms -------------------------------------------------------------------------------------------------------------", duration.as_millis());
 
@@ -650,6 +651,7 @@ async fn on_request_redraw(app: &mut App) {
         app.element_tree = Some(root.internal);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
+        
         //let renderer_duration = renderer_submit_start.elapsed();
         //println!("Renderer Submit Time Taken: {:?} ms", renderer_duration.as_millis());
         //let total_duration = total_time_start.elapsed();
@@ -666,9 +668,10 @@ fn layout<'a>(
     font_system: &mut FontSystem,
     root_element: &mut dyn Element,
     resource_manager: &RwLockReadGuard<ResourceManager>,
+    scale_factor: f64,
 ) -> (TaffyTree<LayoutContext<'a>>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state);
+    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor);
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),
@@ -687,7 +690,7 @@ fn layout<'a>(
                     node_context,
                     font_system,
                     resource_manager,
-                    style,
+                    style
                 )
             },
         )

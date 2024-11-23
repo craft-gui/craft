@@ -11,6 +11,7 @@ pub enum Unit {
 pub use taffy::Position;
 pub use taffy::BoxSizing;
 pub use taffy::Overflow;
+use winit::dpi::{LogicalPosition, PhysicalPosition, PhysicalSize};
 
 impl Unit {
     pub fn is_auto(&self) -> bool {
@@ -133,8 +134,8 @@ pub struct Style {
     pub box_sizing: BoxSizing,
     pub scrollbar_width: f32,
     pub position: Position,
-    pub margin: [f32; 4],
-    pub padding: [f32; 4],
+    pub margin: [Unit; 4],
+    pub padding: [Unit; 4],
     pub border: [Unit; 4],
     pub inset: [Unit; 4],
     pub width: Unit,
@@ -163,25 +164,25 @@ pub struct Style {
     pub overflow: [Overflow; 2],
 }
 
-fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
+fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::Dimension {
     match unit {
-        Unit::Px(px) => taffy::Dimension::Length(px),
+        Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
         Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
         Unit::Auto => taffy::Dimension::Auto,
     }
 }
 
-fn unit_to_taffy_lengthpercentageauto(unit: Unit) -> taffy::LengthPercentageAuto {
+fn unit_to_taffy_lengthpercentageauto_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentageAuto {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentageAuto::Length(px),
+        Unit::Px(px) => taffy::LengthPercentageAuto::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
         Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
         Unit::Auto => taffy::LengthPercentageAuto::Auto,
     }
 }
 
-fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
+fn unit_to_taffy_length_percentage_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentage {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentage::Length(px),
+        Unit::Px(px) => taffy::LengthPercentage::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
         Unit::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage / 100.0),
         Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
     }
@@ -194,8 +195,8 @@ impl Default for Style {
             box_sizing: BoxSizing::BorderBox,
             scrollbar_width: 15.0,
             position: Position::Relative,
-            margin: [0.0; 4],
-            padding: [0.0; 4],
+            margin: [Unit::Px(0.0); 4],
+            padding: [Unit::Px(0.0); 4],
             border: [Unit::Px(0.0); 4],
             inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
@@ -225,8 +226,10 @@ impl Default for Style {
     }
 }
 
-impl From<Style> for taffy::Style {
-    fn from(style: Style) -> Self {
+impl Style {
+    pub fn to_taffy_style_with_scale_factor(&self, scale_factor: f64) -> taffy::Style {
+        let style = self;
+        
         let display = match style.display {
             Display::Flex => taffy::Display::Flex,
             Display::Block => taffy::Display::Block,
@@ -234,46 +237,46 @@ impl From<Style> for taffy::Style {
         };
 
         let size = taffy::Size {
-            width: unit_to_taffy_dimension(style.width),
-            height: unit_to_taffy_dimension(style.height),
+            width: unit_to_taffy_dimension_with_scale_factor(style.width, scale_factor),
+            height: unit_to_taffy_dimension_with_scale_factor(style.height, scale_factor),
         };
 
         let max_size = taffy::Size {
-            width: unit_to_taffy_dimension(style.max_width),
-            height: unit_to_taffy_dimension(style.max_height),
+            width: unit_to_taffy_dimension_with_scale_factor(style.max_width, scale_factor),
+            height: unit_to_taffy_dimension_with_scale_factor(style.max_height, scale_factor),
         };
 
         let min_size = taffy::Size {
-            width: unit_to_taffy_dimension(style.min_width),
-            height: unit_to_taffy_dimension(style.min_height),
+            width: unit_to_taffy_dimension_with_scale_factor(style.min_width, scale_factor),
+            height: unit_to_taffy_dimension_with_scale_factor(style.min_height, scale_factor),
         };
 
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: taffy::LengthPercentageAuto::Length(style.margin[3]),
-            right: taffy::LengthPercentageAuto::Length(style.margin[1]),
-            top: taffy::LengthPercentageAuto::Length(style.margin[0]),
-            bottom: taffy::LengthPercentageAuto::Length(style.margin[2]),
+            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[3], scale_factor),
+            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[1], scale_factor),
+            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[0], scale_factor),
+            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[2], scale_factor),
         };
 
         let padding: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: taffy::LengthPercentage::Length(style.padding[3]),
-            right: taffy::LengthPercentage::Length(style.padding[1]),
-            top: taffy::LengthPercentage::Length(style.padding[0]),
-            bottom: taffy::LengthPercentage::Length(style.padding[2]),
+            left: unit_to_taffy_length_percentage_with_scale_factor(style.padding[3], scale_factor),
+            right: unit_to_taffy_length_percentage_with_scale_factor(style.padding[1], scale_factor),
+            top: unit_to_taffy_length_percentage_with_scale_factor(style.padding[0], scale_factor),
+            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.padding[2], scale_factor),
         };
 
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage(style.border[3]),
-            right: unit_to_taffy_length_percentage(style.border[1]),
-            top: unit_to_taffy_length_percentage(style.border[0]),
-            bottom: unit_to_taffy_length_percentage(style.border[2]),
+            left: unit_to_taffy_length_percentage_with_scale_factor(style.border[3], scale_factor),
+            right: unit_to_taffy_length_percentage_with_scale_factor(style.border[1], scale_factor),
+            top: unit_to_taffy_length_percentage_with_scale_factor(style.border[0], scale_factor),
+            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border[2], scale_factor),
         };
 
         let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto(style.inset[3]),
-            right: unit_to_taffy_lengthpercentageauto(style.inset[1]),
-            top: unit_to_taffy_lengthpercentageauto(style.inset[0]),
-            bottom: unit_to_taffy_lengthpercentageauto(style.inset[2]),
+            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[3], scale_factor),
+            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[1], scale_factor),
+            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[0], scale_factor),
+            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[2], scale_factor),
         };
 
 
@@ -314,10 +317,10 @@ impl From<Style> for taffy::Style {
             Wrap::WrapReverse => FlexWrap::WrapReverse,
         };
 
-        let flex_grow = style.flex_grow;
-        let flex_shrink = style.flex_shrink;
+        let flex_grow = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_grow, style.flex_grow), scale_factor).x;
+        let flex_shrink = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_shrink, style.flex_shrink), scale_factor).x;
         let flex_basis: taffy::Dimension = match style.flex_basis {
-            Unit::Px(px) => taffy::Dimension::Length(px),
+            Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x),
             Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
             Unit::Auto => taffy::Dimension::Auto,
         };
@@ -333,8 +336,8 @@ impl From<Style> for taffy::Style {
 
         let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
         let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
-
-        let scrollbar_width = style.scrollbar_width;
+        
+        let scrollbar_width = PhysicalPosition::from_logical(LogicalPosition::new(style.scrollbar_width, style.scrollbar_width), scale_factor).x;
 
         let box_sizing = taffy::BoxSizing::BorderBox;
 

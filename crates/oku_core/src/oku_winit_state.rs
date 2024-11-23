@@ -126,6 +126,9 @@ impl ApplicationHandler for OkuWinitState {
 
     fn window_event(&mut self, _event_loop: &dyn ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
         match event {
+            WindowEvent::ScaleFactorChanged{..} => {
+                
+            }
             WindowEvent::CloseRequested => {
                 self.send_message(InternalMessage::Close, true);
                 self.close_requested = true;

@@ -73,8 +73,8 @@ fn main() {
             .background(Color::RED)
             .overflow(Overflow::Scroll)
             .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-            .margin(5.0, 5.0, 5.0, 5.0)
-            .padding(5.0, 5.0, 5.0, 5.0)
+            .margin(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
+            .padding(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
             .component()
             .push(Counter::component())
             .push(

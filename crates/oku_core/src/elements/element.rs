@@ -109,6 +109,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        scale_factor: f64,
     ) -> NodeId;
 
     /// Finalizes the layout of the element.

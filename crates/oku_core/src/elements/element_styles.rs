@@ -13,12 +13,12 @@ where
         self
     }
 
-    fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
+    fn margin(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.styles_mut().margin = [top, right, bottom, left];
         self
     }
 
-    fn padding(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
+    fn padding(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.styles_mut().padding = [top, right, bottom, left];
         self
     }

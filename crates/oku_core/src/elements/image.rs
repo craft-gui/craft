@@ -67,8 +67,9 @@ impl Element for Image {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
+        scale_factor: f64,
     ) -> NodeId {
-        let style: taffy::Style = self.common_element_data.style.into();
+        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         taffy_tree
             .new_leaf_with_context(
@@ -116,11 +117,11 @@ impl Element for Image {
 
 impl Image {
     // Styles
-    pub const fn margin(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Image {
+    pub const fn margin(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Image {
         self.common_element_data.style.margin = [top, right, bottom, left];
         self
     }
-    pub const fn padding(mut self, top: f32, right: f32, bottom: f32, left: f32) -> Image {
+    pub const fn padding(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Image {
         self.common_element_data.style.padding = [top, right, bottom, left];
         self
     }

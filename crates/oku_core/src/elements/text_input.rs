@@ -20,6 +20,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
+use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
 
@@ -208,6 +209,7 @@ impl Element for TextInput {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        scale_factor: f64,
     ) -> NodeId {
         let (text_hash, _text) = if let Some(state) = element_state
             .storage
@@ -223,7 +225,7 @@ impl Element for TextInput {
             (text_hasher.finish(), self.text.clone())
         };
 
-        let font_size = self.common_element_data.style.font_size;
+        let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
         let mut attributes = Attrs::new();
@@ -234,7 +236,7 @@ impl Element for TextInput {
         });
 
         attributes.weight = cosmic_text::Weight(self.common_element_data.style.font_weight.0);
-        let style: taffy::Style = self.common_element_data.style.into();
+        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         taffy_tree
             .new_leaf_with_context(

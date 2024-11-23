@@ -12,6 +12,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
+use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
 
 // A stateful element that shows text.
@@ -207,8 +208,9 @@ impl Element for Text {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
+        scale_factor: f64,
     ) -> NodeId {
-        let font_size = self.common_element_data.style.font_size;
+        let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
         let mut attributes = Attrs::new();
@@ -219,7 +221,7 @@ impl Element for Text {
         });
 
         attributes.weight = cosmic_text::Weight(self.common_element_data.style.font_weight.0);
-        let style: taffy::Style = self.common_element_data.style.into();
+        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());

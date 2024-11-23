@@ -113,6 +113,10 @@ pub fn measure_content(
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
+    if let Size { width: Some(width), height: Some(height) } = known_dimensions {
+        return Size { width, height };
+    }
+    
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
