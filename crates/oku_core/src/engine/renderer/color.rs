@@ -6,6 +6,12 @@ pub struct Color {
     pub a: f32,
 }
 
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        self.r == other.r && self.g == other.g && self.b == other.b && self.a == other.a
+    }
+}
+
 impl Color {
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
         Color {

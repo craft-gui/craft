@@ -1778,6 +1778,7 @@ dependencies = [
  "tiny-skia 0.11.4 (git+https://github.com/RazrFalcon/tiny-skia?rev=2cba78f9fd855804dbee65864929925ac88d7f08)",
  "tokio",
  "tracing",
+ "unicode-segmentation",
  "vello",
  "wasm-bindgen",
  "wasm-bindgen-futures",
