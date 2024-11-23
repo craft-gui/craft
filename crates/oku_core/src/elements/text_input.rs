@@ -12,7 +12,7 @@ use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{FontStyle, Style};
 use crate::RendererBox;
-use cosmic_text::{Action, Motion};
+use cosmic_text::{Action, Cursor, Motion, Selection};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
 use cosmic_text::Edit;
 use rustc_hash::FxHasher;
@@ -357,6 +357,8 @@ impl Element for TextInput {
                         Key::Character(text) => {
                             for c in text.chars() {
                                 text_context.editor.action(font_system, Action::Insert(c));
+
+                                //text_context.editor.set_selection(Selection::Line(Cursor::new(0, 0)));
                             }
                         }
                         _ => {}

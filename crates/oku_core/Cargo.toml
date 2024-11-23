@@ -16,6 +16,7 @@ glyphon = {version = "0.7.0"}
 accesskit = "0.17.0"
 #accesskit_winit = { version = "0.18.0" }
 rustc-hash = { version = "2.0", default-features = false }
+unicode-segmentation = "1.12.0"
 
 # https://crates.io/crates/glam
 # SSE2 is enabled by default on x86_64 targets.

@@ -11,7 +11,7 @@ use oku::OkuOptions;
 use oku::{AndroidApp};
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
-use oku_core::elements::ElementStyles;
+use oku_core::elements::{ElementStyles, TextInput};
 use oku_core::engine::renderer::color::Color;
 use oku_core::RendererType::Vello;
 use oku_core::style::{Display, JustifyContent, Overflow, Unit, Wrap};
@@ -64,39 +64,7 @@ fn main() {
     tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     oku_main_with_options(
-        Container::new()
-            .display(Display::Flex)
-            .flex_direction(FlexDirection::Column)
-            .justify_content(JustifyContent::Start)
-            .width(Unit::Px(300.0))
-            .height(Unit::Px(300.0))
-            .background(Color::RED)
-            .overflow(Overflow::Scroll)
-            .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-            .margin(5.0, 5.0, 5.0, 5.0)
-            .padding(5.0, 5.0, 5.0, 5.0)
-            .component()
-            .push(Counter::component())
-            .push(
-                Container::new()
-                    .min_height(Unit::Px(200.0))
-                    .width(Unit::Px(200.0))
-                    .background(Color::GREEN)
-                    .component()
-            )
-            .push(
-                Container::new()
-                    .width(Unit::Px(200.0))
-                    .min_height(Unit::Px(200.0))
-                    .background(Color::BLUE)
-                    .component()
-            ).push(
-            Container::new()
-                .width(Unit::Px(200.0))
-                .min_height(Unit::Px(200.0))
-                .background(Color::GREEN)
-                .component()
-        ),
+        TextInput::new("f").component(),
         Some(OkuOptions {
             renderer: Vello,
             window_title: "counter".to_string(),
