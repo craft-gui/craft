@@ -6,7 +6,7 @@ use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, RenderCommand};
 use crate::reactive::state_store::StateStore;
 use crate::style::{Style};
-use crate::RendererBox;
+use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
@@ -14,6 +14,7 @@ use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
 use crate::engine::events::{Message, OkuMessage};
 use crate::engine::events::OkuMessage::PointerButtonEvent;
+use crate::components::props::Props;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -256,10 +257,10 @@ impl Element for Canvas {
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        let scroll_y = if let Some(Canvas_state) =
+        let scroll_y = if let Some(canvas_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()
         {
-            Canvas_state.scroll_y
+            canvas_state.scroll_y
         } else {
             0.0
         };
@@ -309,9 +310,7 @@ impl Canvas {
         self
     }
 
-    pub fn component(self) -> ComponentSpecification {
-        ComponentSpecification::new(self.into())
-    }
+    generate_component_methods_no_children!();
 }
 
 impl ElementStyles for Canvas {

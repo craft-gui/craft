@@ -11,7 +11,8 @@ use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{FontStyle, Style};
-use crate::RendererBox;
+use crate::{generate_component_methods_no_children, RendererBox};
+use crate::components::props::Props;
 use cosmic_text::{Action, Cursor, Motion, Selection};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
 use cosmic_text::Edit;
@@ -405,9 +406,7 @@ impl TextInput {
         self
     }
 
-    pub fn component(self) -> ComponentSpecification {
-        ComponentSpecification::new(self.into())
-    }
+    generate_component_methods_no_children!();
 }
 
 impl ElementStyles for TextInput {

@@ -6,7 +6,8 @@ use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{Style};
-use crate::RendererBox;
+use crate::{generate_component_methods, RendererBox};
+use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
@@ -327,9 +328,7 @@ impl Container {
         self
     }
 
-    pub fn component(self) -> ComponentSpecification {
-        ComponentSpecification::new(self.into())
-    }
+    generate_component_methods!();
 }
 
 impl ElementStyles for Container {

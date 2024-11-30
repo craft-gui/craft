@@ -5,7 +5,7 @@ use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Style, Unit, Weight};
-use crate::RendererBox;
+use crate::{generate_component_methods, generate_component_methods_no_children, RendererBox};
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics};
 use rustc_hash::FxHasher;
 use std::any::Any;
@@ -14,6 +14,8 @@ use std::hash::Hasher;
 use taffy::{NodeId, Size, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
+
+use crate::components::props::Props;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -293,9 +295,7 @@ impl Text {
         self
     }
 
-    pub fn component(self) -> ComponentSpecification {
-        ComponentSpecification::new(self.into())
-    }
+    generate_component_methods_no_children!();
 }
 
 impl ElementStyles for Text {

@@ -1,5 +1,5 @@
 use crate::components::props::Props;
-use crate::elements::element::{ElementBox};
+use crate::elements::element::{Element, ElementBox};
 use crate::engine::events::{Event, OkuMessage};
 use crate::reactive::state_store::StateStoreItem;
 use crate::PinnedFutureAny;
@@ -7,11 +7,8 @@ use std::any::{Any, TypeId};
 use std::ops::Deref;
 
 /// A Component's view function.
-pub type ViewFn = fn(
-    data: &StateStoreItem,
-    props: Props,
-    children: Vec<ComponentSpecification>,
-) -> ComponentSpecification;
+pub type ViewFn =
+    fn(data: &StateStoreItem, props: Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
 
 /// The result of an update.
 pub struct UpdateResult {
@@ -63,14 +60,10 @@ impl UpdateResult {
 }
 
 /// A Component's update function.
-pub type UpdateFn = fn(
-    state: &mut StateStoreItem,
-    props: Props,
-    message: Event
-) -> UpdateResult;
+pub type UpdateFn = fn(state: &mut StateStoreItem, props: Props, message: Event) -> UpdateResult;
 pub type ComponentId = u64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ComponentData {
     pub default_state: fn() -> Box<StateStoreItem>,
     pub default_props: fn() -> Props,
@@ -83,14 +76,14 @@ pub struct ComponentData {
 }
 
 /// An enum containing either an [`Element`] or a [`ComponentData`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ComponentOrElement {
     ComponentSpec(ComponentData),
     Element(ElementBox),
 }
 
 /// A specification for components and elements.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ComponentSpecification {
     pub component: ComponentOrElement,
     pub key: Option<String>,
@@ -100,11 +93,18 @@ pub struct ComponentSpecification {
 
 impl ComponentSpecification {
     pub fn new(component: ComponentOrElement) -> Self {
-        ComponentSpecification {
-            component,
-            key: None,
-            props: None,
-            children: vec![],
+        match component {
+            ComponentOrElement::ComponentSpec(component_data) => {
+                ComponentSpecification {
+                    component: ComponentOrElement::ComponentSpec(component_data),
+                    key: None,
+                    props: None,
+                    children: vec![],
+                }
+            }
+            ComponentOrElement::Element(element) => {
+                element.into()
+            }
         }
     }
 
@@ -118,13 +118,16 @@ impl ComponentSpecification {
         self
     }
 
-    pub fn children(mut self, children: Vec<ComponentSpecification>) -> Self {
+    pub fn push_children(mut self, children: Vec<ComponentSpecification>) -> Self {
         self.children = children;
         self
     }
 
-    pub fn push(mut self, component: ComponentSpecification) -> Self {
-        self.children.push(component);
+    pub fn push<T>(mut self, component: T) -> Self
+    where
+        T: Into<ComponentSpecification>,
+    {
+        self.children.push(component.into());
         self
     }
 }
@@ -149,11 +152,7 @@ where
 {
     type Props: Send + Sync + Default;
 
-    fn view(
-        state: &Self,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
-    ) -> ComponentSpecification;
+    fn view(state: &Self, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
 
     fn generic_view(
         state: &StateStoreItem,
@@ -174,19 +173,11 @@ where
         Props::new(Self::Props::default())
     }
 
-    fn update(
-        _state: &mut Self,
-        _props: &Self::Props,
-        _message: Event,
-    ) -> UpdateResult {
+    fn update(_state: &mut Self, _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::new()
     }
 
-    fn generic_update(
-        state: &mut StateStoreItem,
-        props: Props,
-        message: Event,
-    ) -> UpdateResult {
+    fn generic_update(state: &mut StateStoreItem, props: Props, message: Event) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 

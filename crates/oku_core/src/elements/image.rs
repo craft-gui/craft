@@ -6,7 +6,8 @@ use crate::engine::renderer::renderer::Rectangle;
 use crate::platform::resource_manager::ResourceIdentifier;
 use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
-use crate::RendererBox;
+use crate::{generate_component_methods_no_children, RendererBox};
+use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
@@ -216,7 +217,5 @@ impl Image {
         self
     }
 
-    pub fn component(self) -> ComponentSpecification {
-        ComponentSpecification::new(self.into())
-    }
+    generate_component_methods_no_children!();
 }

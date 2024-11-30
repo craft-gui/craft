@@ -62,7 +62,7 @@ fn main() {
         .init();
 
     oku_main_with_options(
-        Container::new().component().children(vec![Accordion::component(), Accordion::component()]),
+        Container::new().push_children(vec![Accordion::component(), Accordion::component()]).component(),
         Some(OkuOptions {
             renderer: Vello,
             window_title: "accordion".to_string(),

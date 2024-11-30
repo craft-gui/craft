@@ -6,7 +6,7 @@ use std::sync::Arc;
 /// The `Props` struct allows for storing any type of data that implements
 /// `Any`, `Send`, and `Sync`. The data is stored in an `Arc`, making it
 /// safe for shared read-only access across multiple threads.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Props {
     pub data: Arc<dyn Any + Send + Sync>,
 }
