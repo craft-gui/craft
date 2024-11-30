@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Camera {
     pub width: f32,
     pub height: f32,

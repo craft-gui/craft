@@ -78,7 +78,7 @@ fn main() {
     oku_main_with_options(
         EventsExample::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: Wgpu,
             window_title: "events".to_string(),
         }),
     );

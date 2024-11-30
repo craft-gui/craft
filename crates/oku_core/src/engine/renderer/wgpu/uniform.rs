@@ -22,7 +22,13 @@ impl GlobalUniform {
         self.is_srgb_format = is_srgb_format as u32;
     }
 
-    pub(crate) fn set_view_proj(&mut self, camera: &Camera) {
+    pub(crate) fn set_view_proj_with_camera(&mut self, camera: &Camera) {
         self.view_proj = camera.build_view_projection_matrix().to_cols_array_2d();
     }
+
+    pub(crate) fn set_view_proj(&mut self, glam: glam::Mat4) {
+        self.view_proj = glam.to_cols_array_2d();
+    }
+
+
 }

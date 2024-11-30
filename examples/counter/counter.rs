@@ -69,7 +69,8 @@ fn main() {
             .flex_direction(FlexDirection::Column)
             .justify_content(JustifyContent::Start)
             .width(Unit::Px(300.0))
-            .height(Unit::Px(300.0))
+            //.height(Unit::Px(400.0))
+            .height(Unit::Px(780.0))
             .background(Color::RED)
             .overflow(Overflow::Scroll)
             .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
@@ -79,26 +80,39 @@ fn main() {
             .push(Counter::component())
             .push(
                 Container::new()
-                    .min_height(Unit::Px(200.0))
+                    .display(Display::Flex)
+                    .flex_direction(FlexDirection::Column)
                     .width(Unit::Px(200.0))
-                    .background(Color::GREEN)
+                    .min_height(Unit::Px(500.0))
+                    .max_height(Unit::Px(500.0))
+                    .height(Unit::Px(500.0))
+                    .background(Color::BLUE)
+                    .overflow(Overflow::Scroll)
+                    .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
+                    .margin(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
+                    .padding(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
                     .component()
+                    .push(Counter::component())
+                    .push(
+                        Container::new()
+                            .width(Unit::Px(150.0))
+                            .min_height(Unit::Px(700.0))
+                            .height(Unit::Px(700.0))
+                            .background(Color::GREEN)
+                            .component()
+                    )
             )
             .push(
                 Container::new()
+                    .min_height(Unit::Px(400.0))
                     .width(Unit::Px(200.0))
-                    .min_height(Unit::Px(200.0))
-                    .background(Color::BLUE)
+                    .margin(Unit::Px(400.0), Unit::Px(0.0), Unit::Px(2.0), Unit::Px(0.0))
+                    .background(Color::rgba(255, 255, 0, 255))
                     .component()
-            ).push(
-            Container::new()
-                .width(Unit::Px(200.0))
-                .min_height(Unit::Px(200.0))
-                .background(Color::GREEN)
-                .component()
-        ),
+            )
+           ,
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: Wgpu,
             window_title: "counter".to_string(),
         }),
     );

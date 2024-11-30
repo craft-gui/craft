@@ -12,7 +12,6 @@ winit = { git = "https://github.com/rust-windowing/winit",  rev="ae4c449670674d8
 cosmic-text = { version = "0.12.1" }
 taffy = { version = "0.6.2" }
 wgpu = { version = "23.0.0", features = ["fragile-send-sync-non-atomic-wasm"] }
-glyphon = {version = "0.7.0"}
 accesskit = "0.17.0"
 #accesskit_winit = { version = "0.18.0" }
 rustc-hash = { version = "2.0", default-features = false }

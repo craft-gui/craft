@@ -116,7 +116,7 @@ pub fn measure_content(
     if let Size { width: Some(width), height: Some(height) } = known_dimensions {
         return Size { width, height };
     }
-    
+
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {

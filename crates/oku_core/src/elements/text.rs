@@ -194,8 +194,7 @@ impl Element for Text {
             self.common_element_data.computed_width,
             self.common_element_data.computed_height,
         );
-        renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background);
-
+        renderer.draw_rect(bounding_rectangle, Color::rgba(33, 33, 33, 50));
         renderer.draw_text(
             self.common_element_data.component_id,
             bounding_rectangle,
@@ -265,7 +264,9 @@ impl Element for Text {
         text_context.buffer.shape_until_scroll(font_system, true);
 
         self.resolve_position(x, y, result);
-        
+
+        self.common_element_data.computed_content_width = result.content_size.width;
+        self.common_element_data.computed_content_height = result.content_size.height;
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
         self.common_element_data.computed_padding =

@@ -9,7 +9,7 @@ use crate::style::{Style};
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
-use taffy::{NodeId, TaffyTree};
+use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
 use crate::engine::events::{Message, OkuMessage};
@@ -73,61 +73,23 @@ impl Element for Container {
             self.common_element_data.style.background,
         );
 
-        // border top
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed,
-                computed_y_transformed,
-                computed_width,
-                border_top,
-            ),
-            border_color,
-        );
 
-        // border right
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed + computed_width - border_right,
-                computed_y_transformed + border_top,
-                border_right,
-                computed_height - border_top,
-            ),
-            border_color,
-        );
-
-        // border bottom
-        renderer.draw_rect(
-            Rectangle::new(
+        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
+            renderer.push_layer(Rectangle::new(
                 computed_x_transformed + border_left,
-                computed_y_transformed + computed_height - border_bottom,
-                computed_width - (border_right + border_left),
-                border_bottom,
-            ),
-            border_color,
-        );
-
-        // border left
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed,
                 computed_y_transformed + border_top,
-                border_right,
-                computed_height - border_top,
-            ),
-            border_color,
-        );
-
-        renderer.push_layer(Rectangle::new(
-            computed_x_transformed + border_left,
-            computed_y_transformed + border_top,
-            computed_width - (border_right + border_left),
-            computed_height - (border_top + border_bottom),
-        ));
+                computed_width - (border_right + border_left),
+                computed_height - (border_top + border_bottom),
+            ));
+        }
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
         }
-        renderer.pop_layer();
+        
+        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
+            renderer.pop_layer();
+        }
 
         // scrollbar
         let scroll_track_color = Color::rgba(100, 100, 100, 255);
