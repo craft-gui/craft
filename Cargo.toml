@@ -29,7 +29,7 @@ resolver = "2"
 
 members = [
     "crates/oku_core",
-    "crates/oku_dylib",
+    "crates/oku_dylib", "website",
 ]
 
 [[example]]

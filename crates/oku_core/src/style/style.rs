@@ -23,7 +23,7 @@ impl Unit {
 pub enum Display {
     Flex,
     Block,
-    Grid,
+    None
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -229,11 +229,11 @@ impl Default for Style {
 impl Style {
     pub fn to_taffy_style_with_scale_factor(&self, scale_factor: f64) -> taffy::Style {
         let style = self;
-        
+
         let display = match style.display {
             Display::Flex => taffy::Display::Flex,
             Display::Block => taffy::Display::Block,
-            Display::Grid => taffy::Display::Grid,
+            Display::None => taffy::Display::None,
         };
 
         let size = taffy::Size {
