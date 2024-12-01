@@ -8,7 +8,7 @@ use oku::OkuOptions;
 use oku_core::elements::ElementStyles;
 use oku_core::engine::events::OkuMessage::PointerButtonEvent;
 use oku_core::engine::renderer::color::Color;
-use oku_core::style::{Display, Unit};
+use oku_core::style::Display;
 use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
@@ -25,10 +25,10 @@ impl Component for Counter {
             .flex_direction(FlexDirection::Column)
             .justify_content(JustifyContent::Center)
             .align_items(AlignItems::Center)
-            .width(Unit::Percentage(100.0))
-            .height(Unit::Percentage(100.0))
+            .width("100%")
+            .height("100%")
             .background(Color::rgba(250, 250, 250, 255))
-            .gap(Unit::Px(20.0))
+            .gap("20px")
             .push(
                 Text::new(format!("{}", state.count).as_str())
                     .font_size(72.0)
@@ -38,7 +38,7 @@ impl Component for Counter {
                 Container::new()
                     .display(Display::Flex)
                     .flex_direction(FlexDirection::Row)
-                    .gap(Unit::Px(20.0))
+                    .gap("20px") 
                     .push(create_button("-", "decrement", Color::rgba(244, 67, 54, 255)))
                     .push(create_button("+", "increment", Color::rgba(76, 175, 80, 255))),
             )
@@ -66,7 +66,7 @@ impl Component for Counter {
 
 fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification {
     Container::new()
-        .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
+        .padding("15px", "30px", "15px", "30px")
         .background(color)
         .display(Display::Flex)
         .justify_content(JustifyContent::Center)
@@ -76,8 +76,8 @@ fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification 
                 .id(id)
                 .font_size(24.0)
                 .color(Color::WHITE)
-                .width(Unit::Percentage(100.0))
-                .height(Unit::Percentage(100.0)),
+                .width("100%")
+                .height("100%"),
         )
         .id(id)
         .component()

@@ -7,24 +7,24 @@ where
     Self: Sized,
 {
     fn styles_mut(&mut self) -> &mut Style;
-    
+
     fn background(mut self, color: Color) -> Self {
         self.styles_mut().background = color;
         self
     }
 
-    fn margin(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.styles_mut().margin = [top, right, bottom, left];
+    fn margin<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().margin = [top.into(), right.into(), bottom.into(), left.into()];
         self
     }
 
-    fn padding(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.styles_mut().padding = [top, right, bottom, left];
+    fn padding<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().padding = [top.into(), right.into(), bottom.into(), left.into()];
         self
     }
 
-    fn border(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.styles_mut().border = [top, right, bottom, left];
+    fn border<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().border = [top.into(), right.into(), bottom.into(), left.into()];
         self
     }
 
@@ -68,38 +68,38 @@ where
         self
     }
 
-    fn flex_basis(mut self, flex_basis: Unit) -> Self {
-        self.styles_mut().flex_basis = flex_basis;
+    fn flex_basis<U: Into<Unit>>(mut self, flex_basis: U) -> Self {
+        self.styles_mut().flex_basis = flex_basis.into();
         self
     }
 
-    fn width(mut self, width: Unit) -> Self {
-        self.styles_mut().width = width;
+    fn width<U: Into<Unit>>(mut self, width: U) -> Self {
+        self.styles_mut().width = width.into();
         self
     }
 
-    fn height(mut self, height: Unit) -> Self {
-        self.styles_mut().height = height;
+    fn height<U: Into<Unit>>(mut self, height: U) -> Self {
+        self.styles_mut().height = height.into();
         self
     }
 
-    fn max_width(mut self, max_width: Unit) -> Self {
-        self.styles_mut().max_width = max_width;
+    fn max_width<U: Into<Unit>>(mut self, max_width: U) -> Self {
+        self.styles_mut().max_width = max_width.into();
         self
     }
 
-    fn max_height(mut self, max_height: Unit) -> Self {
-        self.styles_mut().max_height = max_height;
+    fn max_height<U: Into<Unit>>(mut self, max_height: U) -> Self {
+        self.styles_mut().max_height = max_height.into();
         self
     }
 
-    fn min_width(mut self, min_width: Unit) -> Self {
-        self.styles_mut().min_width = min_width;
+    fn min_width<U: Into<Unit>>(mut self, min_width: U) -> Self {
+        self.styles_mut().min_width = min_width.into();
         self
     }
 
-    fn min_height(mut self, min_height: Unit) -> Self {
-        self.styles_mut().min_height = min_height;
+    fn min_height<U: Into<Unit>>(mut self, min_height: U) -> Self {
+        self.styles_mut().min_height = min_height.into();
         self
     }
 
@@ -122,6 +122,7 @@ where
         self.styles_mut().font_size = font_size;
         self
     }
+
     fn font_weight(mut self, font_weight: Weight) -> Self {
         self.styles_mut().font_weight = font_weight;
         self
@@ -131,44 +132,72 @@ where
         self.styles_mut().font_style = font_style;
         self
     }
-    
+
     fn overflow(mut self, overflow: Overflow) -> Self {
         self.styles_mut().overflow = [overflow, overflow];
         self
     }
-    
+
     fn position(mut self, position: Position) -> Self {
         self.styles_mut().position = position;
         self
     }
-    
-    fn inset(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.styles_mut().inset = [top, right, bottom, left];
+
+    fn inset<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().inset = [top.into(), right.into(), bottom.into(), left.into()];
         self
     }
-    
+
     fn scrollbar_width(mut self, scrollbar_width: f32) -> Self {
         self.styles_mut().scrollbar_width = scrollbar_width;
         self
     }
-    
+
     fn box_sizing(mut self, box_sizing: taffy::BoxSizing) -> Self {
         self.styles_mut().box_sizing = box_sizing;
         self
     }
-    
-    fn gap(mut self, gap: Unit) -> Self {
-        self.styles_mut().gap = [gap, gap];
+
+    fn gap<U: Into<Unit> + Clone>(mut self, gap: U) -> Self {
+        self.styles_mut().gap = [gap.clone().into(), gap.into()];
         self
     }
 
-    fn row_gap(mut self, row_gap: Unit) -> Self {
-        self.styles_mut().gap[0] = row_gap;
+    fn row_gap<U: Into<Unit>>(mut self, row_gap: U) -> Self {
+        self.styles_mut().gap[0] = row_gap.into();
         self
     }
 
-    fn column_gap(mut self, column_gap: Unit) -> Self {
-        self.styles_mut().gap[1] = column_gap;
+    fn column_gap<U: Into<Unit>>(mut self, column_gap: U) -> Self {
+        self.styles_mut().gap[1] = column_gap.into();
         self
+    }
+}
+
+
+
+
+
+
+
+impl From<&str> for Unit {
+    fn from(s: &str) -> Self {
+        let s = s.trim();
+        if s.eq_ignore_ascii_case("auto") {
+            return Unit::Auto;
+        }
+        if s.ends_with("px") {
+            match s[..s.len() - 2].trim().parse::<f32>() {
+                Ok(value) => Unit::Px(value),
+                Err(_) => Unit::Auto,
+            }
+        } else if s.ends_with('%') {
+            match s[..s.len() - 1].trim().parse::<f32>() {
+                Ok(value) => Unit::Percentage(value),
+                Err(_) => Unit::Auto,
+            }
+        } else {
+            panic!("Invalid unit: {}", s);
+        }
     }
 }
