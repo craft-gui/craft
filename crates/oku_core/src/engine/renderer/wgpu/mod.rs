@@ -21,6 +21,8 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
+use wgpu::RenderPass;
+use winit::event::ElementState;
 use winit::window::Window;
 use crate::engine::renderer::wgpu::rectangle::pipeline::DEFAULT_PIPELINE_CONFIG;
 use crate::engine::renderer::wgpu::rectangle::RectangleRenderer;
@@ -111,6 +113,9 @@ impl Renderer for WgpuRenderer<'_> {
         
         let rect_pipeline = self.rectangle_renderer.cached_pipelines.get_mut(&DEFAULT_PIPELINE_CONFIG).unwrap();
         rect_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
+
+        let text_pipeline = self.text_renderer.cached_pipelines.get_mut(&text::pipeline::DEFAULT_PIPELINE_CONFIG).unwrap();
+        text_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
         
         // self.context.queue.write_buffer(
         //     &self.pipeline2d.global_buffer,
@@ -121,6 +126,11 @@ impl Renderer for WgpuRenderer<'_> {
             &rect_pipeline.global_buffer,
             0,
             bytemuck::cast_slice(&[rect_pipeline.global_uniform.view_proj]),
+        );
+        self.context.queue.write_buffer(
+            &text_pipeline.global_buffer,
+            0,
+            bytemuck::cast_slice(&[text_pipeline.global_uniform.view_proj]),
         );
     }
 
@@ -221,38 +231,15 @@ impl Renderer for WgpuRenderer<'_> {
                         render_groups.push(RenderGroup {
                             clip_rectangle: constrained_clip_rectangle
                         });
-                        
-                        render_pass.set_scissor_rect(
-                            parent_clip_rectangle.x as u32,
-                            parent_clip_rectangle.y as u32,
-                            parent_clip_rectangle.width as u32,
-                            parent_clip_rectangle.height as u32,
-                        );
 
-                        let rectangle_renderer_per_frame_data = self.rectangle_renderer.prepare(&self.context);
-                        self.text_renderer.prepare(&self.context, font_system, element_state, parent_clip_rectangle);
-                       
-                        self.rectangle_renderer.draw(&mut render_pass, rectangle_renderer_per_frame_data);
-                        self.text_renderer.draw(&mut render_pass);
+                        draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, parent_clip_rectangle);
                     }
                     RenderCommand::PopLayer => {
                         if should_submit {
                             should_submit = false;
                         }
                         let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-
-                        render_pass.set_scissor_rect(
-                            current_clip_rectangle.x as u32,
-                            current_clip_rectangle.y as u32,
-                            current_clip_rectangle.width as u32,
-                            current_clip_rectangle.height as u32,
-                        );
-
-                        let rectangle_renderer_per_frame_data = self.rectangle_renderer.prepare(&self.context);
-                        self.text_renderer.prepare(&self.context, font_system, element_state, current_clip_rectangle);
-                        
-                        self.rectangle_renderer.draw(&mut render_pass, rectangle_renderer_per_frame_data);
-                        self.text_renderer.draw(&mut render_pass);
+                        draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
                     }
                     RenderCommand::DrawRect(rectangle, fill_color) => {
                         self.rectangle_renderer.build(rectangle, fill_color);
@@ -261,25 +248,12 @@ impl Renderer for WgpuRenderer<'_> {
                     RenderCommand::DrawImage(_, _) => {}
                     RenderCommand::DrawText(rectangle, component_id, color) => {
                         self.text_renderer.build(rectangle, component_id, color);
-                        println!("{:?} {:?}", rectangle, component_id);
                     }
                 }
 
                 if should_submit {
                     let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-
-                    render_pass.set_scissor_rect(
-                        current_clip_rectangle.x as u32,
-                        current_clip_rectangle.y as u32,
-                        current_clip_rectangle.width as u32,
-                        current_clip_rectangle.height as u32,
-                    );
-
-                    let rectangle_renderer_per_frame_data = self.rectangle_renderer.prepare(&self.context);
-                    self.text_renderer.prepare(&self.context, font_system, element_state, current_clip_rectangle);
-                    
-                    self.rectangle_renderer.draw(&mut render_pass, rectangle_renderer_per_frame_data);
-                    self.text_renderer.draw(&mut render_pass);
+                    draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
                 }
 
             }
@@ -288,4 +262,27 @@ impl Renderer for WgpuRenderer<'_> {
         output.present();
         
     }
+}
+
+fn draw(
+        context: &Context,
+        render_pass: &mut RenderPass,
+        font_system: &mut FontSystem,
+        element_state: &StateStore,
+        rectangle_renderer: &mut RectangleRenderer,
+        text_renderer: &mut TextRenderer,
+        clip_rectangle: ClipRectangle
+) {
+    render_pass.set_scissor_rect(
+        clip_rectangle.x as u32,
+        clip_rectangle.y as u32,
+        clip_rectangle.width as u32,
+        clip_rectangle.height as u32,
+    );
+
+    let rectangle_renderer_per_frame_data = rectangle_renderer.prepare(context);
+    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state, clip_rectangle);
+
+    rectangle_renderer.draw(render_pass, rectangle_renderer_per_frame_data);
+    text_renderer.draw(render_pass, &text_renderer_per_frame_data);
 }

@@ -16,8 +16,8 @@ pub struct RectangleRenderer {
     pub(crate) indices: Vec<u32>,
 }
 pub struct PerFrameData {
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) index_buffer: wgpu::Buffer,
 }
 
 impl RectangleRenderer {
@@ -35,7 +35,6 @@ impl RectangleRenderer {
         
         renderer
     }
-    
     pub fn build(&mut self, rectangle: Rectangle, fill_color: Color) {
         let x = rectangle.x;
         let y = rectangle.y;
@@ -107,6 +106,7 @@ impl RectangleRenderer {
             next_starting_index + 3,
         ]);
     }
+
     
     pub fn prepare(&self, context: &Context<'_>) -> PerFrameData {
         let vertex_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
