@@ -1,3 +1,5 @@
+mod text;
+
 use std::cmp;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
@@ -21,6 +23,12 @@ use winit::window::Window;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::platform::resource_manager::resource::Resource;
+
+impl From<Color> for peniko::Color {
+    fn from(color: Color) -> Self {
+        peniko::Color::rgba(color.r as f64 / 255.0, color.g as f64 / 255.0, color.b as f64 / 255.0, color.a as f64 / 255.0)
+    }
+}
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -121,248 +129,6 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
                          (rectangle.y + rectangle.height) as f64
     );
     scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(fill_color), None, &rect);
-}
-
-fn draw_editor(scene: &mut Scene, editor: &Editor, vello_fonts: &HashMap<ID, peniko::Font>, offset: Rectangle, text_color: Color) {
-
-    let selection_color = Color::rgba(0, 0, 255, 255);
-    let selected_text_color = Color::rgba(255, 255, 255, 255);
-    let cursor_color = Color::rgba(0, 0, 0, 255);
-
-    let mut buffer_glyphs = BufferGlyphs {
-        font_size: editor.with_buffer(|buffer| buffer.metrics().font_size),
-        glyphs: vec![],
-    };
-
-    let selection_bounds = editor.selection_bounds();
-    editor.with_buffer(|buffer| {
-        let mut last_font: Option<(ID, Color)> = None;
-
-
-        let mut current_glyphs: Vec<Glyph> = vec![];
-
-        for run in buffer.layout_runs() {
-            let line_i = run.line_i;
-            let line_y = run.line_y as f64;
-            let line_top = run.line_top;
-            let line_height = run.line_height;
-
-            // Highlight selection
-            if let Some((start, end)) = selection_bounds {
-                if line_i >= start.line && line_i <= end.line {
-                    let mut range_opt = None;
-                    for glyph in run.glyphs.iter() {
-                        // Guess x offset based on characters
-                        let cluster = &run.text[glyph.start..glyph.end];
-                        let total = cluster.grapheme_indices(true).count();
-                        let mut c_x = glyph.x;
-                        let c_w = glyph.w / total as f32;
-                        for (i, c) in cluster.grapheme_indices(true) {
-                            let c_start = glyph.start + i;
-                            let c_end = glyph.start + i + c.len();
-                            if (start.line != line_i || c_end > start.index)
-                                && (end.line != line_i || c_start < end.index)
-                            {
-                                range_opt = match range_opt.take() {
-                                    Some((min, max)) => Some((
-                                        cmp::min(min, c_x as i32),
-                                        cmp::max(max, (c_x + c_w) as i32),
-                                    )),
-                                    None => Some((c_x as i32, (c_x + c_w) as i32)),
-                                };
-                            } else if let Some((min, max)) = range_opt.take() {
-                                vello_draw_rect(
-                                    scene,
-                                    Rectangle {
-                                        x: min as f32 + offset.x,
-                                        y: line_top as i32 as f32 + offset.y,
-                                        width: cmp::max(0, max - min) as f32,
-                                        height: line_height,
-                                    },
-                                    selection_color
-                                );
-                            }
-                            c_x += c_w;
-                        }
-                    }
-
-                    if run.glyphs.is_empty() && end.line > line_i {
-                        // Highlight all of internal empty lines
-                        range_opt = Some((0, buffer.size().0.unwrap_or(0.0) as i32));
-                    }
-
-                    if let Some((mut min, mut max)) = range_opt.take() {
-                        if end.line > line_i {
-                            // Draw to end of line
-                            if run.rtl {
-                                min = 0;
-                            } else {
-                                max = buffer.size().0.unwrap_or(0.0) as i32;
-                            }
-                        }
-                        vello_draw_rect(
-                            scene,
-                            Rectangle {
-                                x: min as f32 + offset.x,
-                                y: line_top as i32 as f32 + offset.y,
-                                width: cmp::max(0, max - min) as f32,
-                                height: line_height,
-                            },
-                            selection_color
-                        );
-                    }
-                }
-            }
-
-            // Draw cursor
-            if let Some((x, y)) = cursor_position(&editor.cursor(), &run) {
-                vello_draw_rect(scene, Rectangle::new(x as f32 + offset.x, y as f32 + offset.y, 1.0, line_height), cursor_color);
-            }
-
-            for glyph in run.glyphs.iter() {
-                let mut glyph_color = match glyph.color_opt {
-                    Some(some) => {
-                        let color = some.as_rgba();
-                        Color::rgba(color[0], color[1], color[2], color[3])
-                    },
-                    None => text_color,
-                };
-                if text_color != selected_text_color {
-                    if let Some((start, end)) = selection_bounds {
-                        if line_i >= start.line
-                            && line_i <= end.line
-                            && (start.line != line_i || glyph.end > start.index)
-                            && (end.line != line_i || glyph.start < end.index)
-                        {
-                            glyph_color = selected_text_color;
-                        }
-                    }
-                }
-
-                if let Some((last_font, last_color)) = last_font {
-                    if last_font != glyph.font_id || last_color != glyph_color {
-                        buffer_glyphs.glyphs.push(BufferGlyphRun {
-                            font: last_font,
-                            glyphs: current_glyphs,
-                            line_y,
-                            color: last_color,
-                        });
-                        current_glyphs = vec![];
-                    }
-                }
-                last_font = Some((glyph.font_id, glyph_color));
-                current_glyphs.push(Glyph {
-                    x: glyph.x,
-                    y: glyph.y,
-                    id: glyph.glyph_id as u32,
-                });
-            }
-            if !current_glyphs.is_empty() {
-                let (last_font, last_color) = last_font.unwrap();
-                buffer_glyphs.glyphs.push(BufferGlyphRun {
-                    font: last_font,
-                    glyphs: current_glyphs,
-                    line_y,
-                    color: last_color,
-                });
-                current_glyphs = vec![];
-            }
-        }
-    });
-
-    let text_transform = Affine::translate((offset.x as f64, offset.y as f64));
-
-    // Draw the Glyphs
-    for glyph_run in buffer_glyphs.glyphs.iter() {
-        let font = vello_fonts.get(&glyph_run.font).unwrap();
-        let glyphs = glyph_run.glyphs.clone();
-        let color = glyph_run.color;
-        scene
-            .draw_glyphs(font)
-            .font_size(buffer_glyphs.font_size)
-            .brush(to_vello_rgba_f32_color(color))
-            .transform(text_transform.then_translate(Vec2::new(0.0, glyph_run.line_y)))
-            .draw(vello::peniko::Fill::NonZero, glyphs.into_iter());
-    }
-
-}
-
-struct BufferGlyphs {
-    font_size: f32,
-    glyphs: Vec<BufferGlyphRun>,
-}
-
-struct BufferGlyphRun {
-    font: ID,
-    glyphs: Vec<Glyph>,
-    line_y: f64,
-    color: Color,
-}
-
-fn cursor_glyph_opt(cursor: &Cursor, run: &LayoutRun) -> Option<(usize, f32)> {
-    if cursor.line == run.line_i {
-        for (glyph_i, glyph) in run.glyphs.iter().enumerate() {
-            if cursor.index == glyph.start {
-                return Some((glyph_i, 0.0));
-            } else if cursor.index > glyph.start && cursor.index < glyph.end {
-                // Guess x offset based on characters
-                let mut before = 0;
-                let mut total = 0;
-
-                let cluster = &run.text[glyph.start..glyph.end];
-                for (i, _) in cluster.grapheme_indices(true) {
-                    if glyph.start + i < cursor.index {
-                        before += 1;
-                    }
-                    total += 1;
-                }
-
-                let offset = glyph.w * (before as f32) / (total as f32);
-                return Some((glyph_i, offset));
-            }
-        }
-        match run.glyphs.last() {
-            Some(glyph) => {
-                if cursor.index == glyph.end {
-                    return Some((run.glyphs.len(), 0.0));
-                }
-            }
-            None => {
-                return Some((0, 0.0));
-            }
-        }
-    }
-    None
-}
-
-fn cursor_position(cursor: &Cursor, run: &LayoutRun) -> Option<(i32, i32)> {
-    let (cursor_glyph, cursor_glyph_offset) = cursor_glyph_opt(cursor, run)?;
-    let x = match run.glyphs.get(cursor_glyph) {
-        Some(glyph) => {
-            // Start of detected glyph
-            if glyph.level.is_rtl() {
-                (glyph.x + glyph.w - cursor_glyph_offset) as i32
-            } else {
-                (glyph.x + cursor_glyph_offset) as i32
-            }
-        }
-        None => match run.glyphs.last() {
-            Some(glyph) => {
-                // End of last glyph
-                if glyph.level.is_rtl() {
-                    glyph.x as i32
-                } else {
-                    (glyph.x + glyph.w) as i32
-                }
-            }
-            None => {
-                // Start of empty line
-                0
-            }
-        },
-    };
-
-    Some((x, run.line_top as i32))
 }
 
 impl Renderer for VelloRenderer<'_> {
@@ -484,6 +250,7 @@ impl Renderer for VelloRenderer<'_> {
                     }
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
+                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
 
                     self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
@@ -491,44 +258,66 @@ impl Renderer for VelloRenderer<'_> {
                         element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
-                        draw_editor(&mut self.scene, editor, &self.vello_fonts, rect, fill_color);
+                        let buffer_glyphs = text::create_glyphs_for_editor(editor,
+                                                       fill_color.into(),
+                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0),
+                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0),
+                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0)
+                        );
+
+                        // Draw the Glyphs
+                        for buffer_line in &buffer_glyphs.buffer_lines {
+                            for glyph_highlight in &buffer_line.glyph_highlights {
+                                self.scene.fill(
+                                    Fill::NonZero,
+                                    text_transform,
+                                    buffer_glyphs.glyph_highlight_color,
+                                    None,
+                                    glyph_highlight,
+                                );
+                            }
+
+                            if let Some(cursor) = &buffer_line.cursor {
+                                self.scene.fill(
+                                    Fill::NonZero,
+                                    text_transform,
+                                    buffer_glyphs.cursor_color,
+                                    None,
+                                    cursor,
+                                );
+                            }
+
+                            for glyph_run in &buffer_line.glyph_runs {
+                                let font = self.vello_fonts.get(&glyph_run.font).unwrap();
+                                let glyph_color = glyph_run.glyph_color;
+                                let glyphs = glyph_run.glyphs.clone();
+                                self.scene
+                                    .draw_glyphs(font)
+                                    .font_size(buffer_glyphs.font_size)
+                                    .brush(glyph_color)
+                                    .transform(text_transform)
+                                    .draw(Fill::NonZero, glyphs.into_iter());
+                            }
+                        }
                     } else if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>()
                     {
                         let buffer = &text_context.buffer;
+                        let buffer_glyphs = text::create_glyphs(buffer, fill_color.into(), None);
+                        // Draw the Glyphs
+                        for buffer_line in &buffer_glyphs.buffer_lines {
 
-                        for layout_run in buffer.layout_runs() {
-                            let font_id = layout_run.glyphs[0].font_id;
-                            let glyphs: Vec<Glyph> = layout_run.glyphs.iter().map(|glyph| {
-                                let x = glyph.x;
-                                let y = glyph.y;
-
-                                Glyph {
-                                    id: glyph.glyph_id as u32,
-                                    x,
-                                    y,
-                                }
-                            }).collect();
-
-                            let transform = vello::kurbo::Affine::translate((
-                                rect.x as f64,
-                                rect.y as f64 + layout_run.line_y as f64,
-                            ));
-
-                            let key: Vec<&cosmic_text::fontdb::ID> = self.vello_fonts.keys().collect();
-                            self.scene.draw_glyphs(&self.vello_fonts[&font_id])
-                                .font_size(buffer.metrics().font_size)
-                                .brush(vello::peniko::Color::rgba(
-                                    0.0,
-                                    0.0,
-                                    0.0,
-                                    1.0,
-                                ))
-                                .transform(transform)
-                                .draw(
-                                peniko::Fill::NonZero,
-                                glyphs.into_iter()
-                            );
+                            for glyph_run in &buffer_line.glyph_runs {
+                                let font = self.vello_fonts.get(&glyph_run.font).unwrap();
+                                let glyph_color = glyph_run.glyph_color;
+                                let glyphs = glyph_run.glyphs.clone();
+                                self.scene
+                                    .draw_glyphs(font)
+                                    .font_size(buffer_glyphs.font_size)
+                                    .brush(glyph_color)
+                                    .transform(text_transform)
+                                    .draw(Fill::NonZero, glyphs.into_iter());
+                            }
                         }
                     } else {
                         panic!("Unknown state provided to the renderer!");
