@@ -3,32 +3,33 @@ use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::Rectangle;
+use crate::engine::renderer::renderer::{Rectangle, RenderCommand};
 use crate::reactive::state_store::StateStore;
 use crate::style::{Style};
-use crate::{generate_component_methods, RendererBox};
-use crate::components::props::Props;
+use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
-use taffy::{NodeId, Overflow, TaffyTree};
+use taffy::{NodeId, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
 use crate::engine::events::{Message, OkuMessage};
 use crate::engine::events::OkuMessage::PointerButtonEvent;
+use crate::components::props::Props;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
-pub struct Container {
+pub struct Canvas {
     pub common_element_data: CommonElementData,
+    pub render_commands: Vec<RenderCommand>,
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct ContainerState {
+pub struct CanvasState {
     pub(crate) scroll_y: f32,
     pub(crate) scroll_click: Option<(f32, f32)>
 }
 
-impl Element for Container {
+impl Element for Canvas {
     fn common_element_data(&self) -> &CommonElementData {
         &self.common_element_data
     }
@@ -38,7 +39,7 @@ impl Element for Container {
     }
 
     fn name(&self) -> &'static str {
-        "Container"
+        "Canvas"
     }
 
     fn draw(
@@ -74,23 +75,111 @@ impl Element for Container {
             self.common_element_data.style.background,
         );
 
+        // border top
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed,
+                computed_width,
+                border_top,
+            ),
+            border_color,
+        );
 
-        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
-            renderer.push_layer(Rectangle::new(
-                computed_x_transformed + border_left,
+        // border right
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + computed_width - border_right,
                 computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
+        );
+
+        // border bottom
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed + border_left,
+                computed_y_transformed + computed_height - border_bottom,
                 computed_width - (border_right + border_left),
-                computed_height - (border_top + border_bottom),
-            ));
+                border_bottom,
+            ),
+            border_color,
+        );
+
+        // border left
+        renderer.draw_rect(
+            Rectangle::new(
+                computed_x_transformed,
+                computed_y_transformed + border_top,
+                border_right,
+                computed_height - border_top,
+            ),
+            border_color,
+        );
+
+        renderer.push_layer(Rectangle::new(
+            computed_x_transformed + border_left,
+            computed_y_transformed + border_top,
+            computed_width - (border_right + border_left),
+            computed_height - (border_top + border_bottom),
+        ));
+
+        for render_command in self.render_commands.iter() {
+            match render_command {
+                RenderCommand::DrawRect(mut rectangle, color) => {
+                    let translated_rectangle = Rectangle::new(
+                        rectangle.x + computed_x_transformed,
+                        rectangle.y + computed_y_transformed,
+                        rectangle.width,
+                        rectangle.height,
+                    );
+                    renderer.draw_rect(translated_rectangle, *color);
+                }
+                RenderCommand::DrawRectOutline(rectangle, color) => {
+                    let translated_rectangle = Rectangle::new(
+                        rectangle.x + computed_x_transformed,
+                        rectangle.y + computed_y_transformed,
+                        rectangle.width,
+                        rectangle.height,
+                    );
+                    renderer.draw_rect_outline(translated_rectangle, *color);
+                }
+                RenderCommand::DrawImage(rectangle, resource_identifier) => {
+                    let translated_rectangle = Rectangle::new(
+                        rectangle.x + computed_x_transformed,
+                        rectangle.y + computed_y_transformed,
+                        rectangle.width,
+                        rectangle.height,
+                    );
+                    renderer.draw_image(translated_rectangle, resource_identifier.clone());
+                }
+                RenderCommand::DrawText(rectangle, component_id, color) => {
+                    let translated_rectangle = Rectangle::new(
+                        rectangle.x + computed_x_transformed,
+                        rectangle.y + computed_y_transformed,
+                        rectangle.width,
+                        rectangle.height,
+                    );
+                    renderer.draw_text(*component_id, translated_rectangle, *color);
+                }
+                RenderCommand::PushLayer(rectangle) => {
+                    let translated_rectangle = Rectangle::new(
+                        rectangle.x + computed_x_transformed,
+                        rectangle.y + computed_y_transformed,
+                        rectangle.width,
+                        rectangle.height,
+                    );
+                    renderer.push_layer(translated_rectangle);
+                }
+                RenderCommand::PopLayer => {
+                    renderer.pop_layer();
+                }
+            }
         }
-        for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
-            let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
-        }
-        
-        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
-            renderer.pop_layer();
-        }
+
+        renderer.pop_layer();
 
         // scrollbar
         let scroll_track_color = Color::rgba(100, 100, 100, 255);
@@ -168,10 +257,10 @@ impl Element for Container {
         self.common_element_data.computed_x_transformed = transformed_xy.x;
         self.common_element_data.computed_y_transformed = transformed_xy.y;
 
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
+        let scroll_y = if let Some(canvas_state) =
+            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()
         {
-            container_state.scroll_y
+            canvas_state.scroll_y
         } else {
             0.0
         };
@@ -197,91 +286,22 @@ impl Element for Container {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
-    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
-        let container_state = self.get_state_mut(element_state);
-
-        if self.style().overflow[1] == taffy::Overflow::Scroll {
-            match message {
-                OkuMessage::MouseWheelEvent(mouse_wheel) => {
-                    let delta = match mouse_wheel.delta {
-                        MouseScrollDelta::LineDelta(_x, y) => y,
-                        MouseScrollDelta::PixelDelta(y) => y.y as f32,
-                    };
-                    let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
-
-                    let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                    container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-
-                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                }
-                OkuMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button == ButtonSource::Mouse(MouseButton::Left) {
-                            match pointer_button.state {
-                                ElementState::Pressed => {
-                                    if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
-                                        container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
-                                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                                    } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
-                                        let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
-
-                                        let percent = offset_y / self.common_element_data.computed_scroll_track.height;
-                                        let scroll_y = percent * self.common_element_data.max_scroll_y;
-
-                                        container_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
-
-                                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                                    } else {
-                                        UpdateResult::new()
-                                    }
-                                }
-                                ElementState::Released => {
-                                    container_state.scroll_click = None;
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                }
-                            }
-                    } else {
-                        UpdateResult::new()
-                    }
-                },
-                OkuMessage::PointerMovedEvent(pointer_motion) => {
-                    if let Some((click_x, click_y)) = container_state.scroll_click {
-                        // Todo: Translate scroll wheel pixel to scroll position for diff.
-                        let delta = pointer_motion.position.y as f32 - click_y;
-
-                        let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                        let delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
-
-                        container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-                        container_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
-                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                    } else {
-                        UpdateResult::new()
-                    }
-                },
-            _ => UpdateResult::new(),
-            }
-        } else {
-            UpdateResult::new()
-        }
-    }
 }
 
-impl Container {
+impl Canvas {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a &ContainerState {
+    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a &CanvasState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut ContainerState {
+    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut CanvasState {
         element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
     }
 
-    pub fn new() -> Container {
-        Container {
+    pub fn new() -> Canvas {
+        Canvas {
             common_element_data: Default::default(),
+            render_commands: Vec::new(),
         }
     }
 
@@ -290,10 +310,10 @@ impl Container {
         self
     }
 
-    generate_component_methods!();
+    generate_component_methods_no_children!();
 }
 
-impl ElementStyles for Container {
+impl ElementStyles for Canvas {
     fn styles_mut(&mut self) -> &mut Style {
         &mut self.common_element_data.style
     }

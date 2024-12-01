@@ -7,14 +7,14 @@ use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 
-#[cfg(target_os = "android")]
-use oku::{AndroidApp};
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
+#[cfg(target_os = "android")]
+use oku::AndroidApp;
 use oku_core::elements::ElementStyles;
 use oku_core::engine::renderer::color::Color;
-use oku_core::RendererType::Vello;
 use oku_core::style::{Display, JustifyContent, Overflow, Unit, Wrap};
+use oku_core::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -24,24 +24,16 @@ pub struct Counter {
 impl Component for Counter {
     type Props = ();
 
-    fn view(
-        state: &Self,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-    ) -> ComponentSpecification {
+    fn view(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Container::new()
             .flex_direction(FlexDirection::Column)
+            .push(Text::new(format!("Counter: {}", state.count).as_str()))
+            .push(Container::new())
+            .push(Text::new("increment").id("increment"))
             .component()
-            .push(Text::new(format!("Counter: {}", state.count).as_str()).component())
-            .push(Container::new().component())
-            .push(Text::new("increment").id("increment").component())
     }
 
-    fn update(
-        state: &mut Self,
-        _props: &Self::Props,
-        message: Event,
-    ) -> UpdateResult {
+    fn update(state: &mut Self, _props: &Self::Props, message: Event) -> UpdateResult {
         if message.target.as_deref() != Some("increment") {
             return UpdateResult::default();
         }
@@ -69,56 +61,23 @@ fn main() {
             .flex_direction(FlexDirection::Column)
             .justify_content(JustifyContent::Start)
             .width(Unit::Px(300.0))
-            //.height(Unit::Px(400.0))
-            .height(Unit::Px(780.0))
+            .height(Unit::Px(300.0))
             .background(Color::RED)
             .overflow(Overflow::Scroll)
             .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
             .margin(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
             .padding(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-            .component()
             .push(Counter::component())
-            .push(
-                Container::new()
-                    .display(Display::Flex)
-                    .flex_direction(FlexDirection::Column)
-                    .width(Unit::Px(200.0))
-                    .min_height(Unit::Px(500.0))
-                    .max_height(Unit::Px(500.0))
-                    .height(Unit::Px(500.0))
-                    .background(Color::BLUE)
-                    .overflow(Overflow::Scroll)
-                    .border(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-                    .margin(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-                    .padding(Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0), Unit::Px(5.0))
-                    .component()
-                    .push(Counter::component())
-                    .push(
-                        Container::new()
-                            .width(Unit::Px(150.0))
-                            .min_height(Unit::Px(700.0))
-                            .height(Unit::Px(700.0))
-                            .background(Color::GREEN)
-                            .component()
-                    )
-            )
-            .push(
-                Container::new()
-                    .min_height(Unit::Px(400.0))
-                    .width(Unit::Px(200.0))
-                    .margin(Unit::Px(400.0), Unit::Px(0.0), Unit::Px(2.0), Unit::Px(0.0))
-                    .background(Color::rgba(255, 255, 0, 255))
-                    .component()
-            )
-           ,
+            .push(Container::new().min_height(Unit::Px(200.0)).width(Unit::Px(200.0)).background(Color::GREEN))
+            .push(Container::new().width(Unit::Px(200.0)).min_height(Unit::Px(200.0)).background(Color::BLUE))
+            .push(Container::new().width(Unit::Px(200.0)).min_height(Unit::Px(200.0)).background(Color::GREEN))
+            .into(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "counter".to_string(),
         }),
     );
 }
-
-
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -133,6 +92,6 @@ fn android_main(app: AndroidApp) {
             renderer: Wgpu,
             window_title: "counter".to_string(),
         }),
-        app
+        app,
     );
 }

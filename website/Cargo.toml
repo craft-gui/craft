@@ -1,0 +1,12 @@
+[package]
+name = "website"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+oku = { path = "../" }
+
+# binary
+[[bin]]
+name = "website"
+path = "src/lib.rs"

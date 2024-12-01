@@ -1,4 +1,5 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
+use crate::components::props::Props;
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
 use crate::engine::events::OkuMessage;
@@ -39,7 +40,12 @@ pub struct CommonElementData {
 
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
-    pub(crate) max_scroll_y: f32
+    pub(crate) max_scroll_y: f32,
+
+    // Used for converting the element to a component specification.
+    pub(crate) child_specs: Vec<ComponentSpecification>,
+    pub(crate) key: Option<String>,
+    pub(crate) props: Option<Props>,
 }
 
 #[derive(Clone, Debug)]
@@ -224,33 +230,31 @@ impl From<ElementBox> for ComponentOrElement {
 
 impl From<ElementBox> for ComponentSpecification {
     fn from(element: ElementBox) -> Self {
+        let key = element.internal.common_element_data().key.clone();
+        let children = element.internal.common_element_data().child_specs.clone();
+        let props = element.internal.common_element_data().props.clone();
         ComponentSpecification {
             component: ComponentOrElement::Element(element),
-            key: None,
-            props: None,
-            children: vec![],
+            key,
+            props,
+            children,
         }
     }
 }
 
-impl From<ComponentOrElement> for ComponentSpecification {
-    fn from(element: ComponentOrElement) -> Self {
-        ComponentSpecification {
-            component: element,
-            key: None,
-            props: None,
-            children: vec![],
-        }
-    }
-}
-
-impl<T: Element> From<T> for ComponentSpecification {
+impl<T> From<T> for ComponentSpecification
+where
+    T: Element,
+{
     fn from(element: T) -> Self {
+        let key = element.common_element_data().key.clone();
+        let children_specs = element.common_element_data().child_specs.clone();
+        let props = element.common_element_data().props.clone();
         ComponentSpecification {
             component: ComponentOrElement::Element(element.into()),
-            key: None,
-            props: None,
-            children: vec![],
+            key,
+            props,
+            children: children_specs,
         }
     }
 }
@@ -302,4 +306,64 @@ impl Clone for Box<dyn Element> {
     fn clone(&self) -> Box<dyn Element> {
         self.clone_box()
     }
+}
+
+#[macro_export]
+macro_rules! generate_component_methods_no_children {
+    () => {
+        pub fn component(self) -> ComponentSpecification {
+            ComponentSpecification::new(self.into())
+        }
+
+        pub fn key(mut self, key: &str) -> Self {
+            self.common_element_data.key = Some(key.to_string());
+
+            self
+        }
+
+        pub fn props(mut self, props: Props) -> Self {
+            self.common_element_data.props = Some(props);
+
+            self
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! generate_component_methods {
+    () => {
+        pub fn component(self) -> ComponentSpecification {
+            ComponentSpecification::new(self.into())
+        }
+
+        pub fn key(mut self, key: &str) -> Self {
+            self.common_element_data.key = Some(key.to_string());
+
+            self
+        }
+
+        pub fn props(mut self, props: Props) -> Self {
+            self.common_element_data.props = Some(props);
+
+            self
+        }
+
+        pub fn push<T>(mut self, component_specification: T) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.push(component_specification.into());
+
+            self
+        }
+
+        pub fn push_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
+
+            self
+        }
+    };
 }

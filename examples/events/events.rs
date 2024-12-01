@@ -30,7 +30,6 @@ impl Component for EventsExample {
             .width(Unit::Px(400.0))
             .height(Unit::Px(400.0))
             .id("red")
-            .component()
             .push(
                 Container::new()
                     .background(Color::GREEN)
@@ -39,7 +38,6 @@ impl Component for EventsExample {
                     .width(Unit::Px(200.0))
                     .height(Unit::Px(200.0))
                     .id("green")
-                    .component()
                     .push(
                         Container::new()
                             .background(Color::BLUE)
@@ -47,10 +45,9 @@ impl Component for EventsExample {
                             .position(Position::Absolute)
                             .width(Unit::Px(100.0))
                             .height(Unit::Px(100.0))
-                            .id("blue")
-                            .component(),
+                            .id("blue"),
                     ),
-            )
+            ).component()
     }
 
     fn update(

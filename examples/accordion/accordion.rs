@@ -11,6 +11,7 @@ use oku::elements::ElementStyles;
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
 use oku_core::RendererType::Vello;
+use oku_core::style::Unit;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -25,7 +26,7 @@ impl Component for Accordion {
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
 
         Container::new()
-            .margin(14.0, 0.0, 0.0, 14.0)
+            .margin(Unit::Px(14.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(14.0))
             .flex_direction(FlexDirection::Column)
             .component()
             .push(
@@ -61,7 +62,7 @@ fn main() {
         .init();
 
     oku_main_with_options(
-        Container::new().component().children(vec![Accordion::component(), Accordion::component()]),
+        Container::new().push_children(vec![Accordion::component(), Accordion::component()]).component(),
         Some(OkuOptions {
             renderer: Vello,
             window_title: "accordion".to_string(),

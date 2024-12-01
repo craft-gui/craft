@@ -30,6 +30,7 @@ impl Rectangle {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
