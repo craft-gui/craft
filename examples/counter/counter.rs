@@ -29,7 +29,11 @@ impl Component for Counter {
             .height(Unit::Percentage(100.0))
             .background(Color::rgba(250, 250, 250, 255))
             .gap(Unit::Px(20.0))
-            .push(Text::new(format!("{}", state.count).as_str()).font_size(72.0).color(Color::rgba(50, 50, 50, 255)))
+            .push(
+                Text::new(format!("{}", state.count).as_str())
+                    .font_size(72.0)
+                    .color(Color::rgba(50, 50, 50, 255)),
+            )
             .push(
                 Container::new()
                     .display(Display::Flex)
@@ -58,15 +62,24 @@ impl Component for Counter {
         }
         UpdateResult::default()
     }
-
 }
 
 fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification {
     Container::new()
-        .id(id)
         .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
         .background(color)
-        .push(Text::new(label).font_size(24.0).color(Color::WHITE))
+        .display(Display::Flex)
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
+        .push(
+            Text::new(label)
+                .id(id)
+                .font_size(24.0)
+                .color(Color::WHITE)
+                .width(Unit::Percentage(100.0))
+                .height(Unit::Percentage(100.0)),
+        )
+        .id(id)
         .component()
 }
 
