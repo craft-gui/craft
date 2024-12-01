@@ -38,7 +38,7 @@ impl Component for Counter {
                 Container::new()
                     .display(Display::Flex)
                     .flex_direction(FlexDirection::Row)
-                    .gap("20px") 
+                    .gap("20px")
                     .push(create_button("-", "decrement", Color::rgba(244, 67, 54, 255)))
                     .push(create_button("+", "increment", Color::rgba(76, 175, 80, 255))),
             )
@@ -96,6 +96,9 @@ fn main() {
         }),
     );
 }
+
+#[cfg(target_os = "android")]
+use oku::AndroidApp;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
