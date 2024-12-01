@@ -253,7 +253,6 @@ impl Renderer for VelloRenderer<'_> {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
 
-                    self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                     if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
                     {
@@ -322,7 +321,6 @@ impl Renderer for VelloRenderer<'_> {
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
-                    self.scene.pop_layer();
                 },
                 /*RenderCommand::PushTransform(transform) => {
                     self.scene.push_transform(transform);
