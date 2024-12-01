@@ -1,28 +1,24 @@
 mod text;
 
-use std::cmp;
-use std::collections::HashMap;
-use std::num::NonZeroUsize;
-use vello::{kurbo, peniko, AaConfig, Glyph, RendererOptions};
 use crate::components::component::ComponentId;
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::{Rectangle, RenderCommand, Renderer};
-use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
-use cosmic_text::{Cursor, Edit, Editor, FontSystem, LayoutRun, SwashCache};
-use std::sync::Arc;
-use cosmic_text::fontdb::{Query, ID};
-use tiny_skia::{ColorSpace, Paint, PixmapPaint, PixmapRef, Transform};
-use tokio::sync::RwLockReadGuard;
-use unicode_segmentation::UnicodeSegmentation;
-use vello::kurbo::{Affine, Circle, Ellipse, Line, Rect, RoundedRect, Stroke, Vec2};
-use vello::peniko::{BlendMode, Blob, Fill};
-use vello::Scene;
-use vello::util::{RenderContext, RenderSurface};
-use winit::window::Window;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
+use crate::engine::renderer::color::Color;
+use crate::engine::renderer::renderer::{Rectangle, RenderCommand, Renderer};
 use crate::platform::resource_manager::resource::Resource;
+use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::reactive::state_store::StateStore;
+use cosmic_text::{Edit, FontSystem, SwashCache};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLockReadGuard;
+use unicode_segmentation::UnicodeSegmentation;
+use vello::kurbo::{Affine, Rect};
+use vello::peniko::{BlendMode, Blob, Fill};
+use vello::util::{RenderContext, RenderSurface};
+use vello::Scene;
+use vello::{kurbo, peniko, AaConfig, RendererOptions};
+use winit::window::Window;
 
 impl From<Color> for peniko::Color {
     fn from(color: Color) -> Self {
