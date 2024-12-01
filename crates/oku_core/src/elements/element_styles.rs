@@ -157,5 +157,18 @@ where
         self
     }
     
-    
+    fn gap(mut self, gap: Unit) -> Self {
+        self.styles_mut().gap = [gap, gap];
+        self
+    }
+
+    fn row_gap(mut self, row_gap: Unit) -> Self {
+        self.styles_mut().gap[0] = row_gap;
+        self
+    }
+
+    fn column_gap(mut self, column_gap: Unit) -> Self {
+        self.styles_mut().gap[1] = column_gap;
+        self
+    }
 }

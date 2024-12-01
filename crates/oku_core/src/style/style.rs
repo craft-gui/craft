@@ -137,6 +137,7 @@ pub struct Style {
     pub margin: [Unit; 4],
     pub padding: [Unit; 4],
     pub border: [Unit; 4],
+    pub gap: [Unit; 2],
     pub inset: [Unit; 4],
     pub width: Unit,
     pub height: Unit,
@@ -198,6 +199,7 @@ impl Default for Style {
             margin: [Unit::Px(0.0); 4],
             padding: [Unit::Px(0.0); 4],
             border: [Unit::Px(0.0); 4],
+            gap: [Unit::Px(0.0); 2],
             inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
             height: Unit::Auto,
@@ -229,6 +231,11 @@ impl Default for Style {
 impl Style {
     pub fn to_taffy_style_with_scale_factor(&self, scale_factor: f64) -> taffy::Style {
         let style = self;
+
+        let gap = taffy::Size {
+            width: unit_to_taffy_length_percentage_with_scale_factor(style.gap[0], scale_factor),
+            height: unit_to_taffy_length_percentage_with_scale_factor(style.gap[1], scale_factor),
+        };
 
         let display = match style.display {
             Display::Flex => taffy::Display::Flex,
@@ -342,6 +349,7 @@ impl Style {
         let box_sizing = taffy::BoxSizing::BorderBox;
 
         taffy::Style {
+            gap,
             box_sizing,
             inset,
             scrollbar_width,
