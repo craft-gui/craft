@@ -5,7 +5,7 @@ struct GlobalUniform {
     is_srgb_format: u32,
 };
 
-@group(0) @binding(0)
+@group(1) @binding(0)
 var<uniform> global: GlobalUniform;
 
 struct VertexInput {
@@ -32,15 +32,13 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 
 // Fragment shader
 
-// @group(0) @binding(0)
-// var texture_view: texture_2d<f32>;
-// @group(0) @binding(1)
-// var texture_sampler: sampler;
+@group(0) @binding(0)
+var texture_view: texture_2d<f32>;
+@group(0) @binding(1)
+var texture_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = in.color / 255.0;
-    // return color;
-    return vec4(0.0, 0.0, 0.0, 1.0);
-    // return textureSample(texture_view, texture_sampler, in.texture_coordinates) * color;
+    return textureSample(texture_view, texture_sampler, in.texture_coordinates) * color;
 }

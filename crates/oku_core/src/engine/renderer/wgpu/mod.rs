@@ -232,14 +232,14 @@ impl Renderer for WgpuRenderer<'_> {
                             clip_rectangle: constrained_clip_rectangle
                         });
 
-                        draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, parent_clip_rectangle);
+                        draw(&mut self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, parent_clip_rectangle);
                     }
                     RenderCommand::PopLayer => {
                         if should_submit {
                             should_submit = false;
                         }
                         let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                        draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
+                        draw(&mut self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
                     }
                     RenderCommand::DrawRect(rectangle, fill_color) => {
                         self.rectangle_renderer.build(rectangle, fill_color);
@@ -253,7 +253,7 @@ impl Renderer for WgpuRenderer<'_> {
 
                 if should_submit {
                     let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                    draw(&self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
+                    draw(&mut self.context, &mut render_pass, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, current_clip_rectangle);
                 }
 
             }
@@ -265,7 +265,7 @@ impl Renderer for WgpuRenderer<'_> {
 }
 
 fn draw(
-        context: &Context,
+        context: &mut Context,
         render_pass: &mut RenderPass,
         font_system: &mut FontSystem,
         element_state: &StateStore,
@@ -284,5 +284,5 @@ fn draw(
     let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state, clip_rectangle);
 
     rectangle_renderer.draw(render_pass, rectangle_renderer_per_frame_data);
-    text_renderer.draw(render_pass, &text_renderer_per_frame_data);
+    text_renderer.draw(context, render_pass, &text_renderer_per_frame_data);
 }

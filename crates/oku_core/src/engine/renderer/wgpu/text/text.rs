@@ -92,7 +92,7 @@ impl TextRenderer {
                         if let Some(glyph_info) = glyph_info {
                             let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
                             let rel_gylh_y = run.line_y as i32 + physical_glyph.y + (-glyph_info.swash_image_placement.top);
-                            build_glyph_rectangle(Rectangle {
+                            build_glyph_rectangle(glyph_info.clone(), Rectangle {
                                 x: text_area.rectangle.x + rel_gylh_x as f32,
                                 y: text_area.rectangle.y + rel_gylh_y as f32,
                                 width: glyph_info.width as f32,
@@ -128,22 +128,62 @@ impl TextRenderer {
         }
     }
     
-    pub(crate) fn draw(&mut self, render_pass: &mut RenderPass, per_frame_data: &PerFrameData) {
+    pub(crate) fn draw(&mut self, context: &mut Context, render_pass: &mut RenderPass, per_frame_data: &PerFrameData) {
         if self.vertices.is_empty() {
             return;
         }
         let text_pipeline = self.cached_pipelines.get(&DEFAULT_PIPELINE_CONFIG).unwrap();
+
+        let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+        
+        let texture_bind_group = context.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&self.text_atlas.texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.text_atlas.texture_sampler),
+                },
+            ],
+            label: Some("oku_bind_group"),
+        });
+        
         render_pass.set_pipeline(&text_pipeline.pipeline);
-        render_pass.set_bind_group(0, Some(&text_pipeline.global_bind_group), &[]);
+        render_pass.set_bind_group(0, Some(&texture_bind_group), &[]);
+        render_pass.set_bind_group(1, Some(&text_pipeline.global_bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));
         render_pass.set_index_buffer(per_frame_data.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
         render_pass.draw_indexed(0..(self.indices.len() as u32), 0, 0..1);
         self.vertices.clear();
         self.indices.clear();
+        self.text_areas.clear();
     }
 }
 
-pub(crate) fn build_glyph_rectangle(rectangle: Rectangle, fill_color: Color, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>) {
+pub(crate) fn build_glyph_rectangle(glyph_info: GlyphInfo, rectangle: Rectangle, fill_color: Color, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>) {
     let x = rectangle.x;
     let y = rectangle.y;
     let width = rectangle.width;
@@ -156,32 +196,38 @@ pub(crate) fn build_glyph_rectangle(rectangle: Rectangle, fill_color: Color, ver
 
     let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
 
+    let temp_atlas_width: f32 = 280.0;
+    let temp_atlas_height: f32 = 400.0;
+    
+    let left_text_corod = glyph_info.texture_coordinate_x as f32 / temp_atlas_width;
+    let top_tex_coord = glyph_info.texture_coordinate_y as f32 / temp_atlas_height;
+    
     vertices.append(&mut vec![
         Vertex {
             position: [top_left.x, top_left.y, top_left.z],
             size: [rectangle.width, rectangle.height],
-            uv: [0.0, 0.0],
+            uv: [left_text_corod, top_tex_coord],
             background_color: [color[0], color[1], color[2], color[3]]
         },
 
         Vertex {
             position: [bottom_left.x, bottom_left.y, bottom_left.z],
             size: [rectangle.width, rectangle.height],
-            uv: [0.0, 0.0],
+            uv: [left_text_corod, top_tex_coord + (rectangle.height / temp_atlas_height)],
             background_color: [color[0], color[1], color[2], color[3]]
         },
 
         Vertex {
             position: [top_right.x, top_right.y, top_right.z],
             size: [rectangle.width, rectangle.height],
-            uv: [0.0, 0.0],
+            uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord],
             background_color: [color[0], color[1], color[2], color[3]]
         },
 
         Vertex {
             position: [bottom_right.x, bottom_right.y, bottom_right.z],
             size: [rectangle.width, rectangle.height],
-            uv: [0.0, 0.0],
+            uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord + (rectangle.height / temp_atlas_height)],
             background_color: [color[0], color[1], color[2], color[3]]
         },
     ]);

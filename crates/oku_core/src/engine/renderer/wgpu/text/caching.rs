@@ -5,8 +5,8 @@ use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect,
 
 #[derive(Clone)]
 pub struct GlyphInfo {
-    texture_coordinate_x: u32,
-    texture_coordinate_y: u32,
+    pub(crate) texture_coordinate_x: u32,
+    pub(crate) texture_coordinate_y: u32,
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub swash_image_placement: Placement,
@@ -14,8 +14,8 @@ pub struct GlyphInfo {
 
 pub struct TextAtlas {
     texture: wgpu::Texture,
-    texture_view: wgpu::TextureView,
-    texture_sampler: wgpu::Sampler,
+    pub(crate) texture_view: wgpu::TextureView,
+    pub(crate) texture_sampler: wgpu::Sampler,
     texture_width: u32,
     texture_height: u32,
     glyph_cache: HashMap<CacheKey, GlyphInfo>,

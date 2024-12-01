@@ -73,7 +73,7 @@ fn main() {
             .push(Container::new().width(Unit::Px(200.0)).min_height(Unit::Px(200.0)).background(Color::GREEN))
             .into(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: Wgpu,
             window_title: "counter".to_string(),
         }),
     );
