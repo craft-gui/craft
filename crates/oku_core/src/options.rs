@@ -18,15 +18,17 @@ impl Default for OkuOptions {
 #[derive(Default, Copy, Clone, Debug)]
 pub enum RendererType {
     Software,
-    #[default]
     Wgpu,
+    #[default]
+    Vello,
 }
 
 #[cfg(target_os = "android")]
 #[derive(Default, Copy, Clone, Debug)]
 pub enum RendererType {
-    #[default]
     Wgpu,
+    #[default]
+    Vello,
 }
 
 #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
