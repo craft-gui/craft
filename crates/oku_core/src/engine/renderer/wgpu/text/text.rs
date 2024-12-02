@@ -67,16 +67,16 @@ impl TextRenderer {
                     BufferRef::Arc(_) => panic!("Editor must own buffer."),
                 };
             } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
-                // let buffer_glyphs = create_glyphs(&text_context.buffer, Color::BLACK);
-                
                 for run in text_context.buffer.layout_runs() {
                     for glyph in run.glyphs.iter() {
                         let physical_glyph = glyph.physical((0., 0.), 1.0);
 
                         let glyph_color = match glyph.color_opt {
-                            Some(some) => some,
-                            None => cosmic_text::Color::rgba(0, 0, 0, 255),
+                            Some(some) => Color::rgba(some.r(), some.g(), some.b(), some.a()),
+                            None => text_area.fill_color,
                         };
+                        
+                        println!("glyph color: {:?}", glyph_color);
 
                         // Check if the image is available in the cache
                         let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
@@ -97,7 +97,7 @@ impl TextRenderer {
                                 y: text_area.rectangle.y + rel_gylh_y as f32,
                                 width: glyph_info.width as f32,
                                 height: glyph_info.height as f32,
-                            }, Color::BLACK, &mut self.vertices, &mut self.indices);   
+                            }, glyph_color, &mut self.vertices, &mut self.indices);   
                         }
 
                     }
@@ -205,30 +205,30 @@ pub(crate) fn build_glyph_rectangle(glyph_info: GlyphInfo, rectangle: Rectangle,
     vertices.append(&mut vec![
         Vertex {
             position: [top_left.x, top_left.y, top_left.z],
-            size: [rectangle.width, rectangle.height],
             uv: [left_text_corod, top_tex_coord],
-            background_color: [color[0], color[1], color[2], color[3]]
+            background_color: [color[0], color[1], color[2], color[3]],
+            content_type: glyph_info.content_type
         },
 
         Vertex {
             position: [bottom_left.x, bottom_left.y, bottom_left.z],
-            size: [rectangle.width, rectangle.height],
             uv: [left_text_corod, top_tex_coord + (rectangle.height / temp_atlas_height)],
-            background_color: [color[0], color[1], color[2], color[3]]
+            background_color: [color[0], color[1], color[2], color[3]],
+            content_type: glyph_info.content_type
         },
 
         Vertex {
             position: [top_right.x, top_right.y, top_right.z],
-            size: [rectangle.width, rectangle.height],
             uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord],
-            background_color: [color[0], color[1], color[2], color[3]]
+            background_color: [color[0], color[1], color[2], color[3]],
+            content_type: glyph_info.content_type
         },
 
         Vertex {
             position: [bottom_right.x, bottom_right.y, bottom_right.z],
-            size: [rectangle.width, rectangle.height],
             uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord + (rectangle.height / temp_atlas_height)],
-            background_color: [color[0], color[1], color[2], color[3]]
+            background_color: [color[0], color[1], color[2], color[3]],
+            content_type: glyph_info.content_type
         },
     ]);
 

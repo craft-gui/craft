@@ -96,7 +96,7 @@ impl TextPipeline {
             ],
             label: Some("texture_bind_group_layout"),
         });
-        
+
         let shader = context.device.create_shader_module(wgpu::include_wgsl!("./text.wgsl"));
         let render_pipeline_layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Text Renderer Pipeline Layout"),

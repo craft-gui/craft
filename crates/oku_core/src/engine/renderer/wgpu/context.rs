@@ -69,7 +69,7 @@ pub fn create_surface_config(
         format: surface_format,
         width,
         height,
-        present_mode: PresentMode::Fifo,
+        present_mode: PresentMode::Immediate,
         desired_maximum_frame_latency: 0,
         alpha_mode: CompositeAlphaMode::Auto,
         view_formats: vec![],

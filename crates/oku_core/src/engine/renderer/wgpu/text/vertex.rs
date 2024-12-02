@@ -2,9 +2,9 @@
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     pub position: [f32; 3],
-    pub size: [f32; 2],
     pub uv: [f32; 2],
     pub background_color: [f32; 4],
+    pub content_type: u32,
 }
 
 // FIXME: Make a builder for this.
@@ -21,23 +21,23 @@ impl Vertex {
                     shader_location: 0,
                     format: wgpu::VertexFormat::Float32x3,
                 },
-                // size - Float32x2
+                // texture_coordinates - Float32x2
                 wgpu::VertexAttribute {
                     offset: size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x2,
                 },
-                // texture_coordinates - Float32x2
+                // background color - Float32x4
                 wgpu::VertexAttribute {
                     offset: size_of::<[f32; 5]>() as wgpu::BufferAddress,
                     shader_location: 2,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                // background color - Float32x4
-                wgpu::VertexAttribute {
-                    offset: size_of::<[f32; 7]>() as wgpu::BufferAddress,
-                    shader_location: 3,
                     format: wgpu::VertexFormat::Float32x4,
+                },
+                // content type - u32
+                wgpu::VertexAttribute {
+                    offset: size_of::<[f32; 9]>() as wgpu::BufferAddress,
+                    shader_location: 3,
+                    format: wgpu::VertexFormat::Uint32,
                 },
             ],
         }

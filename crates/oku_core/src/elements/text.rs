@@ -196,7 +196,7 @@ impl Element for Text {
             self.common_element_data.computed_width,
             self.common_element_data.computed_height,
         );
-        renderer.draw_rect(bounding_rectangle, Color::rgba(33, 33, 33, 50));
+        renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background);
         renderer.draw_text(
             self.common_element_data.component_id,
             bounding_rectangle,

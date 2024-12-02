@@ -10,15 +10,16 @@ var<uniform> global: GlobalUniform;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
-    @location(1) size: vec2<f32>,
-    @location(2) texture_coordinates: vec2<f32>,
-    @location(3) color: vec4<f32>,
+    @location(1) texture_coordinates: vec2<f32>,
+    @location(2) color: vec4<f32>,
+    @location(3) content_type: u32,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) texture_coordinates: vec2<f32>,
+    @location(2) content_type: u32,
 };
 
 @vertex
@@ -27,6 +28,7 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     out.color = model.color;
     out.texture_coordinates = model.texture_coordinates;
     out.clip_position = global.view_proj * vec4<f32>(model.position, 1.0);
+    out.content_type = model.content_type;
     return out;
 }
 
@@ -39,6 +41,22 @@ var texture_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    var color = in.color / 255.0;
-    return textureSample(texture_view, texture_sampler, in.texture_coordinates) * color;
+
+    switch (in.content_type) {
+        // Content Type: Mask
+        case 0u: {
+            var color = in.color / 255.0;
+            var sampled_color = textureSample(texture_view, texture_sampler, in.texture_coordinates);
+            return vec4(color.rgb, color.a * sampled_color.a);
+        }
+        // Content Type: Color
+        // This is for emojis.
+        case 1u: {
+            return textureSample(texture_view, texture_sampler, in.texture_coordinates);
+        }
+        default: {
+            return vec4(1.0, 1.0, 1.0, 0.0);
+        }
+    }
+
 }

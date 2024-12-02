@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
-use cosmic_text::{CacheKey, Placement, SwashImage};
+use cosmic_text::{CacheKey, Placement, SwashContent, SwashImage};
 use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat};
 
 #[derive(Clone)]
@@ -10,6 +10,7 @@ pub struct GlyphInfo {
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub swash_image_placement: Placement,
+    pub(crate) content_type: u32
 }
 
 pub struct TextAtlas {
@@ -100,30 +101,39 @@ impl TextAtlas {
         if self.y_offset + glyph_height > self.texture_height {
             panic!("Not enough space in the text atlas!"); // Handle gracefully as needed
         }
-        
+
+        // Place the glyph into the text_atlas.
+
         let mut data: Vec<u8> = vec![0; (glyph_width * glyph_height * 4) as usize];
-        let mut data_i = 0;
+        let mut content_type;
         
-        // Place the glyph into the text_atlas.
-        for y in 0..glyph_height {
-            for x in 0..glyph_width {
-                let alpha = swash_image.data[(y as usize * swash_image.placement.width as usize) + x as usize];
-                 // self.text_atlas.put_pixel(x + self.x_offset, y + self.y_offset, image::Rgba([alpha, alpha, alpha, alpha]));
-                data[data_i] = alpha;
-                data[data_i + 1] = alpha;
-                data[data_i + 2] = alpha;
-                data[data_i + 3] = alpha;
-                data_i += 4;
+        let data = match swash_image.content {
+            SwashContent::Mask => {
+                content_type = 0;
+                
+                let mut data_i = 0;
+                for y in 0..glyph_height {
+                    for x in 0..glyph_width {
+                        let alpha = swash_image.data[(y as usize * swash_image.placement.width as usize) + x as usize];
+                        // self.text_atlas.put_pixel(x + self.x_offset, y + self.y_offset, image::Rgba([alpha, alpha, alpha, alpha]));
+                        data[data_i] = 0xFF;
+                        data[data_i + 1] = 0xFF;
+                        data[data_i + 2] = 0xFF;
+                        data[data_i + 3] = alpha;
+                        data_i += 4;
+                    }
+                }
+
+                data.as_slice()
             }
-        }
-        
-        // Place the glyph into the text_atlas.
-        //for y in 0..glyph_height {
-        //    for x in 0..glyph_width {
-        //        let alpha = swash_image.data[(y as usize * swash_image.placement.width as usize) + x as usize];
-        //         // self.text_atlas.put_pixel(x + self.x_offset, y + self.y_offset, image::Rgba([alpha, alpha, alpha, alpha]));
-        //    }
-        //}
+            SwashContent::Color => {
+                content_type = 1;
+                &swash_image.data
+            }
+            SwashContent::SubpixelMask => {
+                panic!("Subpixel mask not yet implemented!");
+            }
+        };
 
         queue.write_texture(
             ImageCopyTexture {
@@ -155,6 +165,7 @@ impl TextAtlas {
             width: glyph_width,
             height: glyph_height,
             swash_image_placement: swash_image.placement,
+            content_type,
         });
         
         // Update the x_offset for the next glyph.
