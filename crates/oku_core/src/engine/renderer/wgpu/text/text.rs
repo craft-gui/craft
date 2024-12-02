@@ -75,8 +75,6 @@ impl TextRenderer {
                             Some(some) => Color::rgba(some.r(), some.g(), some.b(), some.a()),
                             None => text_area.fill_color,
                         };
-                        
-                        println!("glyph color: {:?}", glyph_color);
 
                         // Check if the image is available in the cache
                         let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
