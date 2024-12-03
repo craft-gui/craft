@@ -4,15 +4,15 @@ use wgpu::util::DeviceExt;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::Rectangle;
 use crate::engine::renderer::wgpu::context::Context;
-use crate::engine::renderer::wgpu::rectangle::pipeline::{RectanglePipeline, RectanglePipelineConfig, DEFAULT_PIPELINE_CONFIG};
-use crate::engine::renderer::wgpu::rectangle::vertex::Vertex;
+use crate::engine::renderer::wgpu::rectangle::pipeline::{RectanglePipeline, RectanglePipelineConfig, DEFAULT_RECTANGLE_PIPELINE_CONFIG};
+use crate::engine::renderer::wgpu::rectangle::vertex::RectangleVertex;
 
 pub(crate) mod pipeline;
 mod vertex;
 
 pub struct RectangleRenderer {
     pub(crate) cached_pipelines: HashMap<RectanglePipelineConfig, RectanglePipeline>,
-    pub(crate) vertices: Vec<Vertex>,
+    pub(crate) vertices: Vec<RectangleVertex>,
     pub(crate) indices: Vec<u32>,
 }
 pub struct PerFrameData {
@@ -29,8 +29,8 @@ impl RectangleRenderer {
         };
         
         renderer.cached_pipelines.insert(
-            DEFAULT_PIPELINE_CONFIG, 
-            RectanglePipeline::new_pipeline_with_configuration(context, DEFAULT_PIPELINE_CONFIG)
+            DEFAULT_RECTANGLE_PIPELINE_CONFIG,
+            RectanglePipeline::new_pipeline_with_configuration(context, DEFAULT_RECTANGLE_PIPELINE_CONFIG)
         );
         
         renderer
@@ -59,7 +59,7 @@ impl RectangleRenderer {
         let border_thickness = [0.0, 0.0, 0.0, 0.0];
 
         self.vertices.append(&mut vec![
-            Vertex {
+            RectangleVertex {
                 position: [top_left.x, top_left.y, top_left.z],
                 size: [rectangle.width, rectangle.height],
                 background_color: [color[0], color[1], color[2], color[3]],
@@ -68,7 +68,7 @@ impl RectangleRenderer {
                 border_thickness,
             },
 
-            Vertex {
+            RectangleVertex {
                 position: [bottom_left.x, bottom_left.y, bottom_left.z],
                 size: [rectangle.width, rectangle.height],
                 background_color: [color[0], color[1], color[2], color[3]],
@@ -77,7 +77,7 @@ impl RectangleRenderer {
                 border_thickness,
             },
 
-            Vertex {
+            RectangleVertex {
                 position: [top_right.x, top_right.y, top_right.z],
                 size: [rectangle.width, rectangle.height],
                 background_color: [color[0], color[1], color[2], color[3]],
@@ -86,7 +86,7 @@ impl RectangleRenderer {
                 border_thickness,
             },
 
-            Vertex {
+            RectangleVertex {
                 position: [bottom_right.x, bottom_right.y, bottom_right.z],
                 size: [rectangle.width, rectangle.height],
                 background_color: [color[0], color[1], color[2], color[3]],
@@ -135,7 +135,7 @@ impl RectangleRenderer {
         if self.vertices.is_empty() {
             return;
         }
-        let rectangle_pipeline = self.cached_pipelines.get(&DEFAULT_PIPELINE_CONFIG).unwrap();
+        let rectangle_pipeline = self.cached_pipelines.get(&DEFAULT_RECTANGLE_PIPELINE_CONFIG).unwrap();
         render_pass.set_pipeline(&rectangle_pipeline.pipeline);
         render_pass.set_bind_group(0, Some(&rectangle_pipeline.global_bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));

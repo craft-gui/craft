@@ -17,8 +17,8 @@ pub struct TextAtlas {
     texture: wgpu::Texture,
     pub(crate) texture_view: wgpu::TextureView,
     pub(crate) texture_sampler: wgpu::Sampler,
-    texture_width: u32,
-    texture_height: u32,
+    pub(crate) texture_width: u32,
+    pub(crate) texture_height: u32,
     glyph_cache: HashMap<CacheKey, GlyphInfo>,
     x_offset: u32,
     y_offset: u32,
@@ -31,11 +31,16 @@ impl TextAtlas {
         
         // FIXME: Do not hardcode this.
         let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+        let max_texture_size = device.limits().max_texture_dimension_2d;
+        let texture_width = u32::clamp(width, 1, max_texture_size);
+        let texture_height = u32::clamp(height, 1, max_texture_size);
+        
+        
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Text Atlas Texture"),
             size: wgpu::Extent3d {
-                width,
-                height,
+                width: texture_width,
+                height: texture_height,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -61,8 +66,8 @@ impl TextAtlas {
             texture,
             texture_view: view,
             texture_sampler: sampler,
-            texture_width: width,
-            texture_height: height,
+            texture_width,
+            texture_height,
             glyph_cache: Default::default(),
             x_offset: 0,
             y_offset: 0,
@@ -115,7 +120,6 @@ impl TextAtlas {
                 for y in 0..glyph_height {
                     for x in 0..glyph_width {
                         let alpha = swash_image.data[(y as usize * swash_image.placement.width as usize) + x as usize];
-                        // self.text_atlas.put_pixel(x + self.x_offset, y + self.y_offset, image::Rgba([alpha, alpha, alpha, alpha]));
                         data[data_i] = 0xFF;
                         data[data_i + 1] = 0xFF;
                         data[data_i + 2] = 0xFF;

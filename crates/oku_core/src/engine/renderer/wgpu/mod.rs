@@ -1,9 +1,6 @@
 mod camera;
 mod context;
-mod pipeline_2d;
-mod texture;
 mod uniform;
-mod vertex;
 mod rectangle;
 mod text;
 mod render_group;
@@ -15,16 +12,14 @@ use crate::engine::renderer::wgpu::camera::Camera;
 use crate::engine::renderer::wgpu::context::{
     create_surface_config, request_adapter, request_device_and_queue, Context,
 };
-use crate::engine::renderer::wgpu::texture::Texture;
 use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
-use winit::event::ElementState;
 use winit::window::Window;
-use crate::engine::renderer::wgpu::rectangle::pipeline::DEFAULT_PIPELINE_CONFIG;
+use crate::engine::renderer::wgpu::rectangle::pipeline::DEFAULT_RECTANGLE_PIPELINE_CONFIG;
 use crate::engine::renderer::wgpu::rectangle::RectangleRenderer;
 use crate::engine::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::engine::renderer::wgpu::text::text::TextRenderer;
@@ -53,8 +48,6 @@ impl<'a> WgpuRenderer<'a> {
             create_surface_config(&surface, surface_size.width, surface_size.height, &device, &adapter);
         surface.configure(&device, &surface_config);
 
-        let default_texture = Texture::generate_default_white_texture(&device, &queue);
-
         let context = Context {
             camera: Camera {
                 width: surface_config.width as f32,
@@ -64,7 +57,6 @@ impl<'a> WgpuRenderer<'a> {
             },
             device,
             queue,
-            default_texture,
             surface,
             surface_config,
             surface_clear_color: Color::rgba(255, 255, 255, 255),
@@ -108,20 +100,13 @@ impl Renderer for WgpuRenderer<'_> {
             z_near: 0.0,
             z_far: 100.0,
         };
-
-        // self.pipeline2d.global_uniform.set_view_proj_with_camera(&self.context.camera);
         
-        let rect_pipeline = self.rectangle_renderer.cached_pipelines.get_mut(&DEFAULT_PIPELINE_CONFIG).unwrap();
+        let rect_pipeline = self.rectangle_renderer.cached_pipelines.get_mut(&DEFAULT_RECTANGLE_PIPELINE_CONFIG).unwrap();
         rect_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
 
-        let text_pipeline = self.text_renderer.cached_pipelines.get_mut(&text::pipeline::DEFAULT_PIPELINE_CONFIG).unwrap();
+        let text_pipeline = self.text_renderer.cached_pipelines.get_mut(&text::pipeline::DEFAULT_TEXT_PIPELINE_CONFIG).unwrap();
         text_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
         
-        // self.context.queue.write_buffer(
-        //     &self.pipeline2d.global_buffer,
-        //     0,
-        //     bytemuck::cast_slice(&[self.pipeline2d.global_uniform.view_proj]),
-        // );
         self.context.queue.write_buffer(
             &rect_pipeline.global_buffer,
             0,

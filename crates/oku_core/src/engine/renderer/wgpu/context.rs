@@ -1,5 +1,4 @@
 use crate::engine::renderer::color::Color;
-use crate::engine::renderer::wgpu::texture::Texture;
 use wgpu::{CompositeAlphaMode, PresentMode};
 use crate::engine::renderer::wgpu::camera::Camera;
 
@@ -10,7 +9,6 @@ pub struct Context<'a> {
     pub(crate) surface: wgpu::Surface<'a>,
     pub(crate) surface_clear_color: Color,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,
-    pub(crate) default_texture: Texture,
     pub(crate) is_srgba_format: bool,
 }
 

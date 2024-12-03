@@ -11,39 +11,44 @@ use crate::elements::text_input::TextInputState;
 use crate::engine::renderer::color::Color;
 use crate::engine::renderer::renderer::{Rectangle, RenderCommand};
 use crate::engine::renderer::wgpu::context::Context;
-use crate::engine::renderer::wgpu::pipeline_2d::TextRenderInfo;
 use crate::engine::renderer::wgpu::rectangle::PerFrameData;
 use crate::engine::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::engine::renderer::wgpu::text::caching::{GlyphInfo, TextAtlas};
-use crate::engine::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_PIPELINE_CONFIG};
-use crate::engine::renderer::wgpu::text::vertex::Vertex;
+use crate::engine::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
+use crate::engine::renderer::wgpu::text::vertex::TextVertex;
 use crate::platform::resource_manager::ResourceManager;
 use crate::reactive::state_store::StateStore;
+
+pub struct TextRenderInfo {
+    pub(crate) element_id: ComponentId,
+    pub(crate) rectangle: Rectangle,
+    pub(crate) fill_color: Color,
+}
 
 pub(crate) struct TextRenderer {
     pub(crate) cached_pipelines: HashMap<TextPipelineConfig, TextPipeline>,
     pub(crate) text_areas: Vec<TextRenderInfo>,
     pub(crate) swash_cache: SwashCache,
     pub(crate) text_atlas: TextAtlas,
-    pub(crate) vertices: Vec<Vertex>,
+    pub(crate) vertices: Vec<TextVertex>,
     pub(crate) indices: Vec<u32>,
 }
 
 impl TextRenderer {
     pub(crate) fn new(context: &Context) -> Self {
-
+        let max_texture_size = context.device.limits().max_texture_dimension_2d;
         let mut renderer = TextRenderer {
             cached_pipelines: Default::default(),
             text_areas: vec![],
             swash_cache: SwashCache::new(),
-            text_atlas: TextAtlas::new(&context.device, 280, 400),
+            text_atlas: TextAtlas::new(&context.device, max_texture_size, max_texture_size),
             vertices: vec![],
             indices: vec![],
         };
 
         renderer.cached_pipelines.insert(
-            DEFAULT_PIPELINE_CONFIG,
-            TextPipeline::new_pipeline_with_configuration(context, DEFAULT_PIPELINE_CONFIG)
+            DEFAULT_TEXT_PIPELINE_CONFIG,
+            TextPipeline::new_pipeline_with_configuration(context, DEFAULT_TEXT_PIPELINE_CONFIG)
         );
 
         renderer
@@ -90,7 +95,7 @@ impl TextRenderer {
                         if let Some(glyph_info) = glyph_info {
                             let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
                             let rel_gylh_y = run.line_y as i32 + physical_glyph.y + (-glyph_info.swash_image_placement.top);
-                            build_glyph_rectangle(glyph_info.clone(), Rectangle {
+                            build_glyph_rectangle(self.text_atlas.texture_width, self.text_atlas.texture_height, glyph_info.clone(), Rectangle {
                                 x: text_area.rectangle.x + rel_gylh_x as f32,
                                 y: text_area.rectangle.y + rel_gylh_y as f32,
                                 width: glyph_info.width as f32,
@@ -130,7 +135,7 @@ impl TextRenderer {
         if self.vertices.is_empty() {
             return;
         }
-        let text_pipeline = self.cached_pipelines.get(&DEFAULT_PIPELINE_CONFIG).unwrap();
+        let text_pipeline = self.cached_pipelines.get(&DEFAULT_TEXT_PIPELINE_CONFIG).unwrap();
 
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
@@ -181,7 +186,14 @@ impl TextRenderer {
     }
 }
 
-pub(crate) fn build_glyph_rectangle(glyph_info: GlyphInfo, rectangle: Rectangle, fill_color: Color, vertices: &mut Vec<Vertex>, indices: &mut Vec<u32>) {
+pub(crate) fn build_glyph_rectangle(
+                                    text_atlas_texture_width: u32,
+                                    text_atlas_texture_height: u32,
+                                    glyph_info: GlyphInfo,
+                                    rectangle: Rectangle,
+                                    fill_color: Color,
+                                    vertices: &mut Vec<TextVertex>,
+                                    indices: &mut Vec<u32>) {
     let x = rectangle.x;
     let y = rectangle.y;
     let width = rectangle.width;
@@ -193,38 +205,35 @@ pub(crate) fn build_glyph_rectangle(glyph_info: GlyphInfo, rectangle: Rectangle,
     let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
     let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
-
-    let temp_atlas_width: f32 = 280.0;
-    let temp_atlas_height: f32 = 400.0;
     
-    let left_text_corod = glyph_info.texture_coordinate_x as f32 / temp_atlas_width;
-    let top_tex_coord = glyph_info.texture_coordinate_y as f32 / temp_atlas_height;
+    let left_text_corod = glyph_info.texture_coordinate_x as f32 / text_atlas_texture_width as f32;
+    let top_tex_coord = glyph_info.texture_coordinate_y as f32 / text_atlas_texture_height as f32;
     
     vertices.append(&mut vec![
-        Vertex {
+        TextVertex {
             position: [top_left.x, top_left.y, top_left.z],
             uv: [left_text_corod, top_tex_coord],
             background_color: [color[0], color[1], color[2], color[3]],
             content_type: glyph_info.content_type
         },
 
-        Vertex {
+        TextVertex {
             position: [bottom_left.x, bottom_left.y, bottom_left.z],
-            uv: [left_text_corod, top_tex_coord + (rectangle.height / temp_atlas_height)],
+            uv: [left_text_corod, top_tex_coord + (rectangle.height / text_atlas_texture_height as f32)],
             background_color: [color[0], color[1], color[2], color[3]],
             content_type: glyph_info.content_type
         },
 
-        Vertex {
+        TextVertex {
             position: [top_right.x, top_right.y, top_right.z],
-            uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord],
+            uv: [left_text_corod + (rectangle.width / text_atlas_texture_width as f32), top_tex_coord],
             background_color: [color[0], color[1], color[2], color[3]],
             content_type: glyph_info.content_type
         },
 
-        Vertex {
+        TextVertex {
             position: [bottom_right.x, bottom_right.y, bottom_right.z],
-            uv: [left_text_corod + (rectangle.width / temp_atlas_width), top_tex_coord + (rectangle.height / temp_atlas_height)],
+            uv: [left_text_corod + (rectangle.width / text_atlas_texture_width as f32), top_tex_coord + (rectangle.height / text_atlas_texture_height as f32)],
             background_color: [color[0], color[1], color[2], color[3]],
             content_type: glyph_info.content_type
         },

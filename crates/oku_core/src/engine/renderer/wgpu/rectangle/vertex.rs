@@ -1,6 +1,6 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct Vertex {
+pub struct RectangleVertex {
     pub position: [f32; 3],             // 12 bytes
     pub size: [f32; 2],                 // 8 bytes
     pub background_color: [f32; 4],     // 16 bytes (assuming Color is [f32; 4])
@@ -10,11 +10,11 @@ pub struct Vertex {
 }
 
 // FIXME: Make a builder for this.
-impl Vertex {
+impl RectangleVertex {
     pub(crate) fn description<'a>() -> wgpu::VertexBufferLayout<'a> {
 
         wgpu::VertexBufferLayout {
-            array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
+            array_stride: size_of::<RectangleVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 // position - Float32x3

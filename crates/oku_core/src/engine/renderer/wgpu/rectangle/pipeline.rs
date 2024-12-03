@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 use crate::engine::renderer::wgpu::camera::Camera;
 use crate::engine::renderer::wgpu::context::Context;
-use crate::engine::renderer::wgpu::rectangle::vertex::Vertex;
+use crate::engine::renderer::wgpu::rectangle::vertex::RectangleVertex;
 use crate::engine::renderer::wgpu::uniform::GlobalUniform;
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -22,7 +22,7 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
     },
 };
 
-pub(crate) const DEFAULT_PIPELINE_CONFIG: RectanglePipelineConfig = RectanglePipelineConfig {
+pub(crate) const DEFAULT_RECTANGLE_PIPELINE_CONFIG: RectanglePipelineConfig = RectanglePipelineConfig {
     blend_state: DEFAULT_BLEND_STATE
 };
 
@@ -89,7 +89,7 @@ impl RectanglePipeline {
                 module: &shader,
                 entry_point: Some("vs_main"),
                 compilation_options: Default::default(),
-                buffers: &[Vertex::description()],
+                buffers: &[RectangleVertex::description()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,

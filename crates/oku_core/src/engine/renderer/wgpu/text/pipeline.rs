@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 use crate::engine::renderer::wgpu::camera::Camera;
 use crate::engine::renderer::wgpu::context::Context;
-use crate::engine::renderer::wgpu::text::vertex::Vertex;
+use crate::engine::renderer::wgpu::text::vertex::TextVertex;
 use crate::engine::renderer::wgpu::uniform::GlobalUniform;
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -22,7 +22,7 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
     },
 };
 
-pub(crate) const DEFAULT_PIPELINE_CONFIG: TextPipelineConfig = TextPipelineConfig {
+pub(crate) const DEFAULT_TEXT_PIPELINE_CONFIG: TextPipelineConfig = TextPipelineConfig {
     blend_state: DEFAULT_BLEND_STATE
 };
 
@@ -111,7 +111,7 @@ impl TextPipeline {
                 module: &shader,
                 entry_point: Some("vs_main"),
                 compilation_options: Default::default(),
-                buffers: &[Vertex::description()],
+                buffers: &[TextVertex::description()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
