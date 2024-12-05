@@ -1,85 +1,136 @@
-use oku::components::ComponentSpecification;
+mod ani_list;
 
-use oku::components::{Component, ComponentId, UpdateResult};
-use oku::elements::{Container, Image};
-use oku::platform::resource_manager::ResourceIdentifier;
-use oku::style::Overflow;
-use oku::style::{Display, Unit, Wrap};
-use oku::RendererType::Wgpu;
-use oku::{oku_main_with_options, OkuOptions};
-use oku::engine::events::Event;
-use oku_core::elements::ElementStyles;
-use oku_core::RendererType::Vello;
+use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::elements::{Container, Text};
+use oku::engine::events::{ButtonSource, ElementState, Event, Message, MouseButton};
+use oku::oku_main_with_options;
+use oku::style::FlexDirection;
+use oku::OkuOptions;
+use reqwest::Client;
+use serde_json::json;
+use std::any::Any;
+
+use oku::elements::ElementStyles;
+use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku::engine::renderer::color::Color;
+use oku::style::{Display, Overflow, Unit, Wrap};
 
 #[derive(Default, Clone)]
-pub struct Request {
-    image: Option<Vec<u8>>,
+pub struct AniList {
+    pub(crate) response_data: Option<AniListResponse>,
 }
 
-const RED_PANDA: &'static str =
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Red_Panda_%2824986761703%29.jpg/440px-Red_Panda_%2824986761703%29.jpg";
-const TREE: &'static str = "https://www.w3schools.com/css/img_tree.png";
+impl Component for AniList {
+    type Props = ();
 
-impl Component for Request {
-    type Props = u64;
+    fn view(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
 
-    fn view(
-        _state: &Self,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-    ) -> ComponentSpecification {
-        Container::new()
+        let mut anime_views = Vec::new();
+        if let Some(response) = &state.response_data {
+            for media in response.data.page.media.clone() {
+                anime_views.push(anime_view(&media));
+            }
+        }
+
+        let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
+            .height("100%")
             .overflow(Overflow::Scroll)
-            .component()
-            .push(
-                Image::new(ResourceIdentifier::Url(RED_PANDA.to_string()))
-                    .max_width(Unit::Percentage(100.0))
-                    .display(Display::Block)
-                    .component(),
-            )
-            .push(Image::new(ResourceIdentifier::Url(TREE.to_string())).max_width(Unit::Percentage(100.0)).component())
+            .background(Color::rgba(230, 230, 230, 255))
+            .gap("40px")
+            .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Percentage(10.0))
+            .push(Container::new()
+                .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
+                .push(Text::new("Get Data").id("get_data"))
+                .width("100%")
+                .display(Display::Flex)
+                .flex_direction(FlexDirection::Column)
+            );
+
+        for anime_view in anime_views {
+            root = root.push(anime_view);
+        }
+
+        root.component()
     }
 
-    fn update(
-        _state: &mut Self,
-        _props: &Self::Props,
-        _event: Event,
-    ) -> UpdateResult {
-        if _event.target.as_deref() != Some("increment") {
-            return UpdateResult::default();
+    fn update(state: &mut Self, _props: &Self::Props, message: Event) -> UpdateResult {
+        match message.message {
+            Message::OkuMessage(_) => {}
+            Message::UserMessage(msg) => {
+                if let Some(response) = msg.downcast_ref::<AniListResponse>() {
+                    state.response_data = Some(response.clone());
+                }
+                return UpdateResult::default();
+            }
         }
-        /*
-                let res: Option<PinnedFutureAny> = match message {
-                    Message::OkuMessage(OkuEvent::PointerButtonEvent(pointer_button)) => Some(Box::pin(async {
-                        let res = reqwest::get("https://picsum.photos/800").await;
-                        let bytes = res.unwrap().bytes().await.ok();
-                        let boxed: Box<dyn Any + Send> = Box::new(bytes);
 
-                        boxed
-                    })),
-                    Message::UserMessage(user_message) => {
-                        if let Ok(image_data) = user_message.downcast::<Option<Bytes>>() {
-                            std::fs::write("a.jpg", image_data.clone().unwrap().as_ref()).ok();
-                            state.image = Some(image_data.clone().unwrap().as_ref().to_vec());
-                        }
-                        None
-                    }
-                    _ => None,
-                };
-        */
+        let get_ani_list_data: PinnedFutureAny = Box::pin(async {
+            let client = Client::new();
+            let json = json!({"query": QUERY});
 
-        UpdateResult::new().prevent_propagate()
+            let response = client.post("https://graphql.anilist.co/")
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .body(json.to_string())
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await;
+
+            let result: AniListResponse = serde_json::from_str(&response.unwrap()).unwrap();
+
+            let boxed: Box<dyn Any + Send> = Box::new(result);
+            boxed
+        });
+
+        if let (Some("get_data"), Message::OkuMessage(PointerButtonEvent(pointer_button))) = (message.target.as_deref(), &message.message) {
+            if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+                && pointer_button.state == ElementState::Released
+            {
+                return UpdateResult::default().future(get_ani_list_data);
+            }
+        }
+
+        UpdateResult::default()
     }
 }
 
+#[cfg(not(target_os = "android"))]
 fn main() {
+    #[cfg(not(target_arch = "wasm32"))]
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+
     oku_main_with_options(
-        Container::new().wrap(Wrap::Wrap).component().push(Request::component()),
+        AniList::component(),
         Some(OkuOptions {
             renderer: Vello,
-            window_title: "Request".to_string(),
+            window_title: "Ani List".to_string(),
         }),
+    );
+}
+
+use crate::ani_list::{anime_view, AniListResponse, QUERY};
+#[cfg(target_os = "android")]
+use oku::AndroidApp;
+use oku::PinnedFutureAny;
+use oku::RendererType::Vello;
+
+#[allow(dead_code)]
+#[cfg(target_os = "android")]
+#[no_mangle]
+fn android_main(app: AndroidApp) {
+    #[cfg(not(target_arch = "wasm32"))]
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+
+    oku_main_with_options(
+        AniList::component(),
+        Some(OkuOptions {
+            renderer: Vello,
+            window_title: "Counter".to_string(),
+        }),
+        app,
     );
 }

@@ -8,8 +8,7 @@ use oku::OkuOptions;
 use oku::components::ComponentSpecification;
 use oku::elements::ElementStyles;
 use oku::engine::events::{Event, OkuMessage};
-use oku::RendererType::{Wgpu};
-use oku_core::RendererType::Vello;
+use oku::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}

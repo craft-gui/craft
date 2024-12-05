@@ -5,11 +5,11 @@ use oku::oku_main_with_options;
 use oku::style::{AlignItems, FlexDirection, JustifyContent};
 use oku::OkuOptions;
 
-use oku_core::elements::ElementStyles;
-use oku_core::engine::events::OkuMessage::PointerButtonEvent;
-use oku_core::engine::renderer::color::Color;
-use oku_core::style::Display;
-use oku_core::RendererType::{Vello, Wgpu};
+use oku::elements::ElementStyles;
+use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku::engine::renderer::color::Color;
+use oku::style::Display;
+use oku::RendererType::{Vello, Wgpu};
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {

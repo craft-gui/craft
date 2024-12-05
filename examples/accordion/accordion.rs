@@ -10,8 +10,8 @@ use oku::style::FlexDirection;
 use oku::elements::ElementStyles;
 use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
-use oku_core::RendererType::Vello;
-use oku_core::style::Unit;
+use oku::RendererType::Vello;
+use oku::style::Unit;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {

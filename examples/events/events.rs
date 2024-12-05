@@ -10,8 +10,7 @@ use oku::engine::events::Event;
 use oku::engine::events::OkuMessage::PointerButtonEvent;
 use oku::engine::renderer::color::Color;
 use oku::style::Unit;
-use oku_core::RendererType::Vello;
-use oku_core::style::Position;
+use oku::style::Position;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
