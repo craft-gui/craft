@@ -31,7 +31,7 @@ impl Component for Request {
         Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
-            .overflow_y(Overflow::Scroll)
+            .overflow(Overflow::Scroll)
             .component()
             .push(
                 Image::new(ResourceIdentifier::Url(RED_PANDA.to_string()))
@@ -78,7 +78,7 @@ fn main() {
     oku_main_with_options(
         Container::new().wrap(Wrap::Wrap).component().push(Request::component()),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: Wgpu,
             window_title: "Request".to_string(),
         }),
     );

@@ -6,6 +6,7 @@ use crate::engine::renderer::renderer::Rectangle;
 use crate::engine::renderer::wgpu::context::Context;
 use crate::engine::renderer::wgpu::rectangle::pipeline::{RectanglePipeline, RectanglePipelineConfig, DEFAULT_RECTANGLE_PIPELINE_CONFIG};
 use crate::engine::renderer::wgpu::rectangle::vertex::RectangleVertex;
+use crate::platform::resource_manager::ResourceIdentifier;
 
 pub(crate) mod pipeline;
 mod vertex;
@@ -15,6 +16,13 @@ pub struct RectangleRenderer {
     pub(crate) vertices: Vec<RectangleVertex>,
     pub(crate) indices: Vec<u32>,
 }
+
+pub struct ImagePerFrameData {
+    pub(crate) vertex_buffers: Vec<wgpu::Buffer>,
+    pub(crate) index_buffers: Vec<wgpu::Buffer>,
+    pub resource_identifiers: Vec<Option<ResourceIdentifier>>,
+}
+
 pub struct PerFrameData {
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,

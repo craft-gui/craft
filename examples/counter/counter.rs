@@ -9,7 +9,7 @@ use oku_core::elements::ElementStyles;
 use oku_core::engine::events::OkuMessage::PointerButtonEvent;
 use oku_core::engine::renderer::color::Color;
 use oku_core::style::Display;
-use oku_core::RendererType::Vello;
+use oku_core::RendererType::{Vello, Wgpu};
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -91,7 +91,7 @@ fn main() {
     oku_main_with_options(
         Counter::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: Wgpu,
             window_title: "Counter".to_string(),
         }),
     );
