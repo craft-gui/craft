@@ -188,7 +188,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let visible_y = client_height / scroll_height;
         let scrollthumb_height = scrolltrack_height * visible_y;
         let remaining_height = scrolltrack_height - scrollthumb_height;
-        let scrollthumb_offset = scroll_y / max_scroll_y * remaining_height;
+        let scrollthumb_offset = if max_scroll_y != 0.0 {
+            scroll_y / max_scroll_y * remaining_height
+        } else {
+            0.0
+        };
 
         common_element_data.computed_scroll_track = Rectangle::new(
             computed_x_transformed + computed_width - scrolltrack_width - border_right,
