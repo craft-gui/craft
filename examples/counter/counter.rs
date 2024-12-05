@@ -91,7 +91,7 @@ fn main() {
     oku_main_with_options(
         Counter::component(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "Counter".to_string(),
         }),
     );

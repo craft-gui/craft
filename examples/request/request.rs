@@ -78,7 +78,7 @@ fn main() {
     oku_main_with_options(
         Container::new().wrap(Wrap::Wrap).component().push(Request::component()),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: Vello,
             window_title: "Request".to_string(),
         }),
     );
