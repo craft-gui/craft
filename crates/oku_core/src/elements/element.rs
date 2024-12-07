@@ -2,8 +2,8 @@ use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpe
 use crate::components::props::Props;
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
-use crate::engine::events::OkuMessage;
-use crate::engine::renderer::renderer::Rectangle;
+use crate::events::OkuMessage;
+use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::Style;
 use crate::RendererBox;

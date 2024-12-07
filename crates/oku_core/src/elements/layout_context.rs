@@ -1,8 +1,8 @@
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
-use crate::platform::resource_manager::resource::Resource;
-use crate::platform::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::resource_manager::resource::Resource;
+use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, FontSystem, Metrics, Motion, Shaping};
 use taffy::Size;

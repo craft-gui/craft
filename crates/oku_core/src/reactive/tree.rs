@@ -3,7 +3,7 @@ use crate::components::props::Props;
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::Container;
-use crate::engine::events::{Event, Message, OkuMessage};
+use crate::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use std::cell::RefCell;

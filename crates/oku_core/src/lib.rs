@@ -1,26 +1,29 @@
 pub mod accessibility;
 pub mod components;
 pub mod elements;
-pub mod engine;
 pub mod oku_runtime;
 mod oku_winit_state;
 mod options;
-pub mod platform;
 pub mod reactive;
 pub mod style;
 #[cfg(test)]
 mod tests;
+pub mod renderer;
+pub mod events;
+pub mod app_message;
+pub mod resource_manager;
 
+use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 pub use oku_runtime::OkuRuntime;
 
-use crate::engine::events::update_queue_entry::UpdateQueueEntry;
+use events::update_queue_entry::UpdateQueueEntry;
 use crate::style::{Display, Unit, Wrap};
 use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
-use engine::events::Message;
-use engine::renderer::color::Color;
-use engine::renderer::renderer::Renderer;
+use events::Message;
+use renderer::color::Color;
+use renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
 
 use futures::channel::mpsc::channel;
@@ -69,13 +72,12 @@ use winit::window::Window;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
-use crate::engine::app_message::AppMessage;
-use crate::engine::events::resource_event::ResourceEvent;
-use crate::engine::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
+use app_message::AppMessage;
+use events::resource_event::ResourceEvent;
 pub use crate::options::RendererType;
-use crate::platform::resource_manager::ResourceManager;
+use resource_manager::ResourceManager;
 use elements::image::Image;
-use engine::events::internal::InternalMessage;
+use events::internal::InternalMessage;
 
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};

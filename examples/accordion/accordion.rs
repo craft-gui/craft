@@ -5,11 +5,11 @@ use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
 
 use oku::components::{Component, UpdateResult};
-use oku::engine::events::{ButtonSource, ElementState, Message, MouseButton};
+use oku_core::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::style::FlexDirection;
 use oku::elements::ElementStyles;
-use oku::engine::events::Event;
-use oku::engine::events::OkuMessage::PointerButtonEvent;
+use oku_core::events::Event;
+use oku_core::events::OkuMessage::PointerButtonEvent;
 use oku::RendererType::Vello;
 use oku::style::Unit;
 

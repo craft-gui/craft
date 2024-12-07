@@ -1,9 +1,9 @@
 use crate::components::component::ComponentSpecification;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::{ImageContext, LayoutContext};
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::Rectangle;
-use crate::platform::resource_manager::ResourceIdentifier;
+use crate::renderer::color::Color;
+use crate::renderer::renderer::Rectangle;
+use crate::resource_manager::ResourceIdentifier;
 use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
 use crate::{generate_component_methods_no_children, RendererBox};

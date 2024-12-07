@@ -1,7 +1,7 @@
 use oku::elements::Container;
 use oku::elements::ElementStyles;
 use oku::elements::Text;
-use oku::engine::renderer::color::Color;
+use oku_core::::color::Color;
 use oku::style::{Display, JustifyContent};
 use oku::style::FlexDirection;
 use oku::style::Overflow;

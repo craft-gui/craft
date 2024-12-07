@@ -6,9 +6,9 @@ use crate::elements::layout_context::{
 };
 use crate::elements::text::TextHashValue;
 use crate::elements::ElementStyles;
-use crate::engine::events::OkuMessage;
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::Rectangle;
+use crate::events::OkuMessage;
+use crate::renderer::color::Color;
+use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{FontStyle, Style};
 use crate::{generate_component_methods_no_children, RendererBox};

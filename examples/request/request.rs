@@ -2,7 +2,7 @@ mod ani_list;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku::engine::events::{ButtonSource, ElementState, Event, Message, MouseButton};
+use oku_core::events::{ButtonSource, ElementState, Event, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
@@ -11,8 +11,8 @@ use serde_json::json;
 use std::any::Any;
 
 use oku::elements::ElementStyles;
-use oku::engine::events::OkuMessage::PointerButtonEvent;
-use oku::engine::renderer::color::Color;
+use oku_core::events::OkuMessage::PointerButtonEvent;
+use oku_core::renderer::color::Color;
 use oku::style::{Display, Overflow, Unit, Wrap};
 
 #[derive(Default, Clone)]

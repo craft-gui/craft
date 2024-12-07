@@ -13,14 +13,14 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowAttributesExtWeb;
 
-use crate::engine::renderer::vello::VelloRenderer;
-use crate::engine::app_message::AppMessage;
-use crate::engine::events::internal::InternalMessage;
-use crate::engine::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
-use crate::engine::renderer::renderer::Renderer;
+use crate::renderer::vello::VelloRenderer;
+use crate::app_message::AppMessage;
+use crate::events::internal::InternalMessage;
+use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
+use crate::renderer::renderer::Renderer;
 #[cfg(not(target_os = "android"))]
-use crate::engine::renderer::softbuffer::SoftwareRenderer;
-use crate::engine::renderer::wgpu::WgpuRenderer;
+use crate::renderer::softbuffer::SoftwareRenderer;
+use crate::renderer::wgpu::WgpuRenderer;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::SinkExt;

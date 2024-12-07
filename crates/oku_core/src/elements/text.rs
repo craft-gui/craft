@@ -1,8 +1,8 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::Rectangle;
+use crate::renderer::color::Color;
+use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Style, Unit, Weight};
 use crate::{generate_component_methods, generate_component_methods_no_children, RendererBox};

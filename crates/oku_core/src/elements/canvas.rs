@@ -2,8 +2,8 @@ use crate::components::component::ComponentSpecification;
 use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
-use crate::engine::renderer::color::Color;
-use crate::engine::renderer::renderer::{Rectangle, RenderCommand};
+use crate::renderer::color::Color;
+use crate::renderer::renderer::{Rectangle, RenderCommand};
 use crate::reactive::state_store::StateStore;
 use crate::style::{Style};
 use crate::{generate_component_methods_no_children, RendererBox};
@@ -12,8 +12,8 @@ use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
 use crate::elements::element_styles::ElementStyles;
-use crate::engine::events::{Message, OkuMessage};
-use crate::engine::events::OkuMessage::PointerButtonEvent;
+use crate::events::{Message, OkuMessage};
+use crate::events::OkuMessage::PointerButtonEvent;
 use crate::components::props::Props;
 
 /// A stateless element that stores other elements.

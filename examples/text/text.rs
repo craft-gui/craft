@@ -1,13 +1,13 @@
 
 use oku::components::{Component, UpdateResult};
 use oku::elements::text_input::TextInput;
-use oku::engine::events::Message;
+use oku_core::events::Message;
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::components::ComponentSpecification;
 use oku::elements::ElementStyles;
-use oku::engine::events::{Event, OkuMessage};
+use oku_core::events::{Event, OkuMessage};
 use oku::RendererType::Vello;
 
 #[derive(Default, Copy, Clone)]

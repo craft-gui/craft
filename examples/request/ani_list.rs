@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use oku::components::ComponentSpecification;
 use oku::elements::{Container, ElementStyles, Image, Text};
-use oku::platform::resource_manager::ResourceIdentifier;
+use oku_core::resource_manager::ResourceIdentifier;
 use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
 
 #[derive(Debug, Clone, Deserialize)]
