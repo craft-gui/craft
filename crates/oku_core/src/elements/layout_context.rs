@@ -134,8 +134,7 @@ pub fn measure_content(
                 available_space,
                 font_system,
                 text_input_state.text_hash,
-                text_input_state.metrics,
-                taffy_text_input_context.scale_factor
+                taffy_text_input_context.metrics,
             )
         }
     }
@@ -145,14 +144,14 @@ pub fn measure_content(
 
 pub struct TaffyTextInputContext {
     pub id: ComponentId,
-    pub scale_factor: f64,
+    metrics: Metrics,
 }
 
 impl<'a> TaffyTextInputContext {
-    pub fn new(id: ComponentId, scale_factor: f64) -> Self {
+    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
         Self {
             id,
-            scale_factor
+            metrics,
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::props::Props;
 use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{
@@ -7,15 +8,14 @@ use crate::elements::layout_context::{
 use crate::elements::text::{TextHashValue, TextState};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Rectangle;
-use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{FontStyle, Style};
 use crate::{generate_component_methods_no_children, RendererBox};
-use crate::components::props::Props;
+use cosmic_text::Edit;
 use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
-use cosmic_text::Edit;
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -37,7 +37,6 @@ pub struct TextInputState<'a> {
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
-    pub metrics: Metrics,
     pub editor: Editor<'a>,
     pub text: String,
     pub original_text_hash: u64,
@@ -67,7 +66,6 @@ impl<'a> TextInputState<'a> {
                     line_height: metrics.line_height.to_bits(),
                 },
             },
-            metrics,
             editor,
             text,
             original_text_hash,
@@ -81,7 +79,6 @@ impl<'a> TextInputState<'a> {
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
-        scale_factor: f64,
     ) -> Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -121,7 +118,7 @@ impl<'a> TextInputState<'a> {
 
         if cached_text_layout_value.is_none() {
             self.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics(font_system, self.metrics);
+                buffer.set_metrics(font_system, metrics);
                 buffer.set_size(font_system, width_constraint, height_constraint);
             });
             self.editor.shape_as_needed(font_system, true);
@@ -215,40 +212,20 @@ impl Element for TextInput {
         element_state: &mut StateStore,
         scale_factor: f64,
     ) -> NodeId {
-        let (text_hash, _text) = if let Some(state) = element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .as_mut()
-            .downcast_mut::<TextInputState>()
-        {
-            (state.text_hash, state.text.clone())
-        } else {
-            let mut text_hasher = FxHasher::default();
-            text_hasher.write(self.text.as_ref());
-            (text_hasher.finish(), self.text.clone())
-        };
-
-        let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
+        let font_size = PhysicalPosition::from_logical(
+            LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
+            scale_factor,
+        )
+        .x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
-        let mut attributes = Attrs::new();
-        attributes = attributes.style(match self.common_element_data.style.font_style {
-            FontStyle::Normal => cosmic_text::Style::Normal,
-            FontStyle::Italic => cosmic_text::Style::Italic,
-            FontStyle::Oblique => cosmic_text::Style::Oblique,
-        });
 
-        attributes.weight = cosmic_text::Weight(self.common_element_data.style.font_weight.0);
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         taffy_tree
             .new_leaf_with_context(
                 style,
-                LayoutContext::TextInput(TaffyTextInputContext::new(
-                    self.common_element_data.component_id,
-                    scale_factor
-                )),
+                LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id, metrics)),
             )
             .unwrap()
     }
@@ -264,8 +241,8 @@ impl Element for TextInput {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        
-        let text_context: &mut TextInputState = element_state
+
+        let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
@@ -273,19 +250,24 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        text_context.editor.with_buffer_mut(|buffer| {
-            buffer.set_metrics(font_system, text_context.metrics);
+        let metrics = Metrics::new(
+            f32::from_bits(state.last_key.metrics.font_size),
+            f32::from_bits(state.last_key.metrics.line_height),
+        );
+
+        state.editor.with_buffer_mut(|buffer| {
+            buffer.set_metrics(font_system, metrics);
 
             buffer.set_size(
                 font_system,
-                text_context.last_key.width_constraint.map(|w| f32::from_bits(w)),
-                text_context.last_key.height_constraint.map(|h| f32::from_bits(h)),
+                state.last_key.width_constraint.map(|w| f32::from_bits(w)),
+                state.last_key.height_constraint.map(|h| f32::from_bits(h)),
             );
             buffer.shape_until_scroll(font_system, true);
         });
 
         self.resolve_position(x, y, result);
-        
+
         self.common_element_data.computed_width = result.size.width;
         self.common_element_data.computed_height = result.size.height;
         self.common_element_data.computed_padding =
@@ -305,7 +287,12 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        message: OkuMessage,
+        element_state: &mut StateStore,
+        font_system: &mut FontSystem,
+    ) -> UpdateResult {
         let text_context: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
@@ -413,14 +400,7 @@ impl Element for TextInput {
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
 
-        editor.with_buffer_mut(|buffer| {
-            buffer.set_text(
-                font_system,
-                &self.text,
-                attributes,
-                Shaping::Advanced,
-            )
-        });
+        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced));
         editor.action(font_system, Action::Motion(Motion::End));
 
         let cosmic_text_content = TextInputState::new(
@@ -429,47 +409,44 @@ impl Element for TextInput {
             text_hash,
             editor,
             self.text.clone(),
-            text_hash
+            text_hash,
         );
 
         Box::new(cosmic_text_content)
     }
 
     fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
-        let state: &mut TextInputState = element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+        let state: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
 
         let font_size = self.common_element_data.style.font_size;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
-        
+
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
 
         let attributes = Attrs::new();
-        
-        if text_hash != state.original_text_hash || metrics != state.metrics
-        {
+
+        if text_hash != state.original_text_hash {
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
-            state.metrics = metrics;
             state.text = self.text.clone();
 
             state.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics(font_system, state.metrics);
-                buffer.set_text(
-                    font_system,
-                    &self.text,
-                    attributes,
-                    Shaping::Advanced,
-                );
+                buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
             });
         }
     }
 }
 
 impl TextInput {
-
     pub fn id(mut self, id: &str) -> Self {
         self.common_element_data.id = Some(id.to_string());
         self
