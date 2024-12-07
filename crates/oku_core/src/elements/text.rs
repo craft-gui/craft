@@ -209,7 +209,6 @@ impl Element for Text {
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
-        let text_state: &mut TextState = _element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
         taffy_tree
             .new_leaf_with_context(
                 style,
