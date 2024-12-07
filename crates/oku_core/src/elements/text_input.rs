@@ -81,6 +81,7 @@ impl<'a> TextInputState<'a> {
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
+        scale_factor: f64,
     ) -> Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -246,10 +247,7 @@ impl Element for TextInput {
                 style,
                 LayoutContext::TextInput(TaffyTextInputContext::new(
                     self.common_element_data.component_id,
-                    metrics,
-                    self.text.clone(),
-                    text_hash,
-                    attributes,
+                    scale_factor
                 )),
             )
             .unwrap()

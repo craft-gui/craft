@@ -1,11 +1,10 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
-use crate::renderer::color::Color;
 use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
-use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Style, Unit, Weight};
-use crate::{generate_component_methods, generate_component_methods_no_children, RendererBox};
+use crate::style::{Style};
+use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping};
 use rustc_hash::FxHasher;
 use std::any::Any;
@@ -34,7 +33,6 @@ pub struct TextState {
     #[allow(dead_code)]
     pub id: ComponentId,
     pub buffer: Buffer,
-    pub metrics: Metrics,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
@@ -43,13 +41,11 @@ pub struct TextState {
 impl TextState {
     pub(crate) fn new(
         id: ComponentId,
-        metrics: Metrics,
         text_hash: u64,
         buffer: Buffer,
     ) -> Self {
         Self {
             id,
-            metrics,
             buffer,
             text_hash,
             cached_text_layout: Default::default(),
@@ -60,8 +56,8 @@ impl TextState {
                 available_space_width: AvailableSpace::MinContent,
                 available_space_height: AvailableSpace::MinContent,
                 metrics: MetricsDummy {
-                    font_size: metrics.font_size.to_bits(),
-                    line_height: metrics.line_height.to_bits(),
+                    font_size: 0,
+                    line_height: 0,
                 },
             },
         }
@@ -112,7 +108,7 @@ impl TextState {
         self.text_hash = text_hash;
 
         if cached_text_layout_value.is_none() {
-            self.buffer.set_metrics(font_system, self.metrics);
+            self.buffer.set_metrics(font_system, metrics);
             self.buffer.set_size(font_system, width_constraint, height_constraint);
             self.buffer.shape_until_scroll(font_system, true);
 
@@ -207,32 +203,20 @@ impl Element for Text {
         _element_state: &mut StateStore,
         scale_factor: f64,
     ) -> NodeId {
+        println!("Scaling text by factor: {}", scale_factor);
+        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+
         let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
-        let mut attributes = Attrs::new();
-        attributes = attributes.style(match self.common_element_data.style.font_style {
-            FontStyle::Normal => cosmic_text::Style::Normal,
-            FontStyle::Italic => cosmic_text::Style::Italic,
-            FontStyle::Oblique => cosmic_text::Style::Oblique,
-        });
-
-        attributes.weight = cosmic_text::Weight(self.common_element_data.style.font_weight.0);
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
+        
+        let text_state: &mut TextState = _element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
         taffy_tree
             .new_leaf_with_context(
                 style,
                 LayoutContext::Text(TaffyTextContext::new(
                     self.common_element_data.component_id,
-                    metrics,
-                    self.text.clone(),
-                    text_hash,
-                    attributes,
+                    metrics
                 )),
             )
             .unwrap()
@@ -249,10 +233,14 @@ impl Element for Text {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-
+        
         let text_context = self.get_state_mut(element_state);
 
-        text_context.buffer.set_metrics(font_system, text_context.metrics);
+        let metrics = text_context.last_key;
+        
+        let metrics = Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
+        
+        text_context.buffer.set_metrics(font_system, metrics);
 
         text_context.buffer.set_size(
             font_system,
@@ -290,7 +278,7 @@ impl Element for Text {
         let metrics = Metrics::new(font_size, font_line_height);
 
         let attributes = Attrs::new();
-        
+
         let mut buffer = Buffer::new(font_system, metrics);
         buffer.set_text(
             font_system,
@@ -302,10 +290,9 @@ impl Element for Text {
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
-        
+
         let state = TextState::new(
             self.common_element_data.component_id,
-            metrics,
             text_hash,
             buffer,
         );
@@ -326,10 +313,8 @@ impl Element for Text {
 
         let attributes = Attrs::new();
 
-        if text_hash != state.text_hash || metrics != state.metrics {
+        if text_hash != state.text_hash {
             state.text_hash = state.text_hash;
-            state.metrics = state.metrics;
-            state.buffer.set_metrics(font_system, state.metrics);
             state.buffer.set_text(
                 font_system,
                 &self.text,

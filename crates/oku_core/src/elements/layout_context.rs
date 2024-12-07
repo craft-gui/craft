@@ -8,23 +8,16 @@ use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, FontSystem, Metrics, Moti
 use taffy::Size;
 use tokio::sync::RwLockReadGuard;
 
-pub struct TaffyTextContext<'a> {
+pub struct TaffyTextContext {
     pub id: ComponentId,
     pub metrics: Metrics,
-
-    pub text: String,
-    pub text_hash: u64,
-    pub attributes: Attrs<'a>,
 }
 
-impl<'a> TaffyTextContext<'a> {
-    pub fn new(id: ComponentId, metrics: Metrics, text: String, text_hash: u64, attributes: Attrs<'a>) -> Self {
+impl<'a> TaffyTextContext {
+    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
         Self {
             id,
-            metrics,
-            text,
-            text_hash,
-            attributes,
+            metrics
         }
     }
 }
@@ -98,9 +91,9 @@ impl ImageContext {
     }
 }
 
-pub(crate) enum LayoutContext<'a> {
-    Text(TaffyTextContext<'a>),
-    TextInput(TaffyTextInputContext<'a>),
+pub(crate) enum LayoutContext {
+    Text(TaffyTextContext),
+    TextInput(TaffyTextInputContext),
     Image(ImageContext),
 }
 
@@ -120,13 +113,13 @@ pub fn measure_content(
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let cosmic_text_content: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap();
+            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap();
 
-            cosmic_text_content.measure(
+            text_state.measure(
                 known_dimensions,
                 available_space,
                 font_system,
-                taffy_text_context.text_hash,
+                text_state.text_hash,
                 taffy_text_context.metrics,
             )
         }
@@ -134,14 +127,15 @@ pub fn measure_content(
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let cosmic_text_content: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap();
+            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap();
 
-            cosmic_text_content.measure(
+            text_input_state.measure(
                 known_dimensions,
                 available_space,
                 font_system,
-                taffy_text_input_context.text_hash,
-                taffy_text_input_context.metrics,
+                text_input_state.text_hash,
+                text_input_state.metrics,
+                taffy_text_input_context.scale_factor
             )
         }
     }
@@ -149,23 +143,16 @@ pub fn measure_content(
 
 //////////////////////////////////////////////////////////////////////////////
 
-pub struct TaffyTextInputContext<'a> {
+pub struct TaffyTextInputContext {
     pub id: ComponentId,
-    pub metrics: Metrics,
-
-    pub text: String,
-    pub text_hash: u64,
-    pub attributes: Attrs<'a>,
+    pub scale_factor: f64,
 }
 
-impl<'a> TaffyTextInputContext<'a> {
-    pub fn new(id: ComponentId, metrics: Metrics, text: String, text_hash: u64, attributes: Attrs<'a>) -> Self {
+impl<'a> TaffyTextInputContext {
+    pub fn new(id: ComponentId, scale_factor: f64) -> Self {
         Self {
             id,
-            metrics,
-            text,
-            text_hash,
-            attributes,
+            scale_factor
         }
     }
 }

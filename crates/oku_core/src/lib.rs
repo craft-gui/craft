@@ -671,7 +671,7 @@ fn layout<'a>(
     root_element: &mut dyn Element,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     scale_factor: f64,
-) -> (TaffyTree<LayoutContext<'a>>, NodeId) {
+) -> (TaffyTree<LayoutContext>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
     let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor);
 
