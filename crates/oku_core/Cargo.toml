@@ -10,17 +10,17 @@ resolver = "2"
 futures = "0.3.31"
 winit = { git = "https://github.com/rust-windowing/winit",  rev="ae4c449670674d8ac0d6d8754caf3fe5f4954c25" }
 cosmic-text = { version = "0.12.1" }
-taffy = { version = "0.6.2" }
-wgpu = { version = "23.0.0", features = ["fragile-send-sync-non-atomic-wasm"] }
-accesskit = "0.17.0"
+taffy = { version = "0.6.3" }
+wgpu = { version = "23.0.1", features = ["fragile-send-sync-non-atomic-wasm"] }
+accesskit = "0.17.1"
 #accesskit_winit = { version = "0.18.0" }
-rustc-hash = { version = "2.0", default-features = false }
+rustc-hash = { version = "2.1.0", default-features = false }
 unicode-segmentation = "1.12.0"
 
 # https://crates.io/crates/glam
 # SSE2 is enabled by default on x86_64 targets.
 glam = { version = "0.29.2" }
-bytemuck = { version = "1.19.0", features = ["derive"] }
+bytemuck = { version = "1.20.0", features = ["derive"] }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
 vello = { git = "https://github.com/NoahR02/vello.git", rev="5e1548da28b014a56e3d19f8b1277688051847f7" }
 cfg-if = "1.0.0"
