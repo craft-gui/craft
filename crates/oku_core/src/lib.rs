@@ -590,7 +590,7 @@ async fn on_request_redraw(app: &mut App) {
     let old_component_tree = app.component_tree.as_ref();
 
     let new_tree =
-        diff_trees(app.app.clone(), window_element, old_component_tree, &mut app.user_state, &mut app.element_state);
+        diff_trees(app.app.clone(), window_element, old_component_tree, &mut app.user_state, &mut app.element_state, app.font_system.as_mut().unwrap());
 
     scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 

@@ -4,7 +4,7 @@ use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Rectangle;
-use crate::reactive::state_store::StateStore;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{Style};
 use crate::{generate_component_methods, RendererBox};
 use crate::components::props::Props;
@@ -266,6 +266,10 @@ impl Element for Container {
         } else {
             UpdateResult::new()
         }
+    }
+
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
+        Box::new(ContainerState::default())
     }
 }
 

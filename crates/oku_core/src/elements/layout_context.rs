@@ -120,45 +120,8 @@ pub fn measure_content(
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let cosmic_text_content: &mut TextState = if let Some(cosmic_text_content) =
-                element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut()
-            {
-                let cosmic_text_content: &mut TextState = cosmic_text_content;
+            let cosmic_text_content: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap();
 
-                if cosmic_text_content.text_hash != taffy_text_context.text_hash
-                    || cosmic_text_content.metrics != taffy_text_context.metrics
-                {
-                    cosmic_text_content.text_hash = taffy_text_context.text_hash;
-                    cosmic_text_content.metrics = taffy_text_context.metrics;
-                    cosmic_text_content.buffer.set_metrics(font_system, cosmic_text_content.metrics);
-                    cosmic_text_content.buffer.set_text(
-                        font_system,
-                        &taffy_text_context.text,
-                        taffy_text_context.attributes,
-                        Shaping::Advanced,
-                    );
-                }
-                cosmic_text_content
-            } else {
-                let mut buffer = Buffer::new(font_system, taffy_text_context.metrics);
-                buffer.set_text(
-                    font_system,
-                    &taffy_text_context.text,
-                    taffy_text_context.attributes,
-                    Shaping::Advanced,
-                );
-
-                let cosmic_text_content = TextState::new(
-                    taffy_text_context.id,
-                    taffy_text_context.metrics,
-                    taffy_text_context.text_hash,
-                    buffer,
-                    taffy_text_context.attributes.color_opt,
-                );
-
-                element_state.storage.insert(taffy_text_context.id, Box::new(cosmic_text_content));
-                element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap()
-            };
             cosmic_text_content.measure(
                 known_dimensions,
                 available_space,
@@ -171,55 +134,7 @@ pub fn measure_content(
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let cosmic_text_content: &mut TextInputState = if let Some(cosmic_text_content) =
-                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut()
-            {
-                let cosmic_text_content: &mut TextInputState = cosmic_text_content;
-
-                if cosmic_text_content.text_hash != taffy_text_input_context.text_hash
-                    || cosmic_text_content.metrics != taffy_text_input_context.metrics
-                {
-                    cosmic_text_content.text_hash = taffy_text_input_context.text_hash;
-                    cosmic_text_content.metrics = taffy_text_input_context.metrics;
-
-                    cosmic_text_content.editor.with_buffer_mut(|buffer| {
-                        buffer.set_metrics(font_system, cosmic_text_content.metrics);
-                        buffer.set_text(
-                            font_system,
-                            &taffy_text_input_context.text,
-                            taffy_text_input_context.attributes,
-                            Shaping::Advanced,
-                        );
-                    });
-                }
-                cosmic_text_content
-            } else {
-                let buffer = Buffer::new(font_system, taffy_text_input_context.metrics);
-                let mut editor = Editor::new(buffer);
-                editor.borrow_with(font_system);
-
-                editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(
-                        font_system,
-                        &taffy_text_input_context.text,
-                        taffy_text_input_context.attributes,
-                        Shaping::Advanced,
-                    )
-                });
-                editor.action(font_system, Action::Motion(Motion::End));
-
-                let cosmic_text_content = TextInputState::new(
-                    taffy_text_input_context.id,
-                    taffy_text_input_context.metrics,
-                    taffy_text_input_context.text_hash,
-                    editor,
-                    taffy_text_input_context.attributes.color_opt,
-                    taffy_text_input_context.text.clone(),
-                );
-
-                element_state.storage.insert(taffy_text_input_context.id, Box::new(cosmic_text_content));
-                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap()
-            };
+            let cosmic_text_content: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap();
 
             cosmic_text_content.measure(
                 known_dimensions,

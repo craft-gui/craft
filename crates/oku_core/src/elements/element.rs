@@ -4,7 +4,7 @@ use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
 use crate::renderer::renderer::Rectangle;
-use crate::reactive::state_store::StateStore;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
@@ -209,6 +209,15 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             scrollthumb_width,
             scrollthumb_height,
         )
+    }
+    
+    /// Called when the element is assigned a unique component id.
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
+        Box::new(())
+    }
+
+    /// Called on sequential renders to update any state that the element may have.
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore) {
     }
 }
 

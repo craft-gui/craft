@@ -4,11 +4,12 @@ use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::Container;
 use crate::events::{Event, Message, OkuMessage};
-use crate::reactive::element_id::create_unique_element_id;
+use crate::reactive::element_id::{create_unique_element_id};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use cosmic_text::FontSystem;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -72,6 +73,7 @@ pub(crate) fn diff_trees(
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut StateStore,
     element_state: &mut StateStore,
+    font_system: &mut FontSystem,
 ) -> (ComponentTreeNode, ElementBox) {
     //println!("-----------------------------------------");
     unsafe {
@@ -139,18 +141,24 @@ pub(crate) fn diff_trees(
                     // Store the new tag, i.e. the element's name.
                     let new_tag = element.internal.name().to_string();
 
-                    let default: Box<StateStoreItem> = Box::new(());
-                    let id = if let Some(old_tag) = old_tag {
-                        if new_tag == old_tag {
+                    let mut should_update = false;
+                    let id = match old_tag {
+                        Some(ref old_tag) if new_tag == *old_tag => {
+                            should_update = true;
                             (*tree_node.old_component_node.unwrap()).id
-                        } else {
-                            create_unique_element_id(user_state, default)
                         }
-                    } else {
-                        create_unique_element_id(user_state, default)
+                        _ => {
+                            create_unique_element_id()
+                        }
                     };
-
                     element.internal.set_component_id(id);
+                    
+                    if should_update {
+                        element.internal.update_state(font_system, element_state);
+                    } else {
+                        let state = element.internal.initialize_state(font_system);
+                        element_state.storage.insert(id, state);
+                    }
 
                     if let Some(_container) = element.internal.as_any().downcast_ref::<Container>() {
                         if !element_state.storage.contains_key(&id) {
@@ -235,36 +243,32 @@ pub(crate) fn diff_trees(
                 ComponentOrElement::ComponentSpec(component_data) => {
                     let children_keys = (*parent_component_ptr).children_keys.clone();
                     let props = props.unwrap_or((component_data.default_props)());
-                    let mut initialized = false;
 
+                    let mut should_update = false;
                     let id: ComponentId = if key.is_some() && children_keys.contains_key(&key.clone().unwrap()) {
                         *(children_keys.get(&key.clone().unwrap()).unwrap())
                     } else if let Some(old_tag) = old_tag {
                         if *component_data.tag == old_tag {
                             // If the old tag is the same as the new tag, we can reuse the old id.
+                            should_update = true;
                             (*tree_node.old_component_node.unwrap()).id
                         } else {
-                            let id = create_unique_element_id(user_state, (component_data.default_state)());
-
-                            initialized = true;
-                            id
+                            create_unique_element_id()
                         }
                     } else {
-                        let id = create_unique_element_id(user_state, (component_data.default_state)());
-                        initialized = true;
-                        id
+                        create_unique_element_id()
                     };
-
-                    {
+                    
+                    if !should_update {
+                        let default_state = (component_data.default_state)();
+                        user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
-
-                        if initialized {
-                            (component_data.update_fn)(
-                                state_mut,
-                                props.clone(),
-                                Event::new(Message::OkuMessage(OkuMessage::Initialized)),
-                            );
-                        }
+                        
+                        (component_data.update_fn)(
+                            state_mut,
+                            props.clone(),
+                            Event::new(Message::OkuMessage(OkuMessage::Initialized)),
+                        );
                     }
 
                     let state = user_state.storage.get(&id);

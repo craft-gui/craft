@@ -3,10 +3,10 @@ use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Rectangle;
-use crate::reactive::state_store::StateStore;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Style, Unit, Weight};
 use crate::{generate_component_methods, generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Attrs, Buffer, FontSystem, Metrics};
+use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -37,8 +37,6 @@ pub struct TextState {
     pub metrics: Metrics,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
-    #[allow(dead_code)]
-    pub color: cosmic_text::Color,
     pub last_key: TextHashKey,
 }
 
@@ -48,7 +46,6 @@ impl TextState {
         metrics: Metrics,
         text_hash: u64,
         buffer: Buffer,
-        color: Option<cosmic_text::Color>,
     ) -> Self {
         Self {
             id,
@@ -56,7 +53,6 @@ impl TextState {
             buffer,
             text_hash,
             cached_text_layout: Default::default(),
-            color: color.unwrap_or(cosmic_text::Color::rgb(0, 0, 0)),
             last_key: TextHashKey {
                 text_hash,
                 width_constraint: None,
@@ -287,6 +283,62 @@ impl Element for Text {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
+        let font_size = self.common_element_data.style.font_size;
+        let font_line_height = font_size * 1.2;
+        let metrics = Metrics::new(font_size, font_line_height);
+
+        let attributes = Attrs::new();
+        
+        let mut buffer = Buffer::new(font_system, metrics);
+        buffer.set_text(
+            font_system,
+            &self.text,
+            attributes,
+            Shaping::Advanced,
+        );
+
+        let mut text_hasher = FxHasher::default();
+        text_hasher.write(self.text.as_ref());
+        let text_hash = text_hasher.finish();
+        
+        let state = TextState::new(
+            self.common_element_data.component_id,
+            metrics,
+            text_hash,
+            buffer,
+        );
+
+        Box::new(state)
+    }
+
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
+        let state = self.get_state_mut(element_state);
+
+        let font_size = self.common_element_data.style.font_size;
+        let font_line_height = font_size * 1.2;
+        let metrics = Metrics::new(font_size, font_line_height);
+
+        let mut text_hasher = FxHasher::default();
+        text_hasher.write(self.text.as_ref());
+        let text_hash = text_hasher.finish();
+
+        let attributes = Attrs::new();
+
+        if text_hash != state.text_hash || metrics != state.metrics {
+            state.text_hash = state.text_hash;
+            state.metrics = state.metrics;
+            state.buffer.set_metrics(font_system, state.metrics);
+            state.buffer.set_text(
+                font_system,
+                &self.text,
+                attributes,
+                Shaping::Advanced,
+            );
+        }
+    }
+    
 }
 
 impl Text {

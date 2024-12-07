@@ -4,16 +4,16 @@ use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
-use crate::elements::text::TextHashValue;
+use crate::elements::text::{TextHashValue, TextState};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Rectangle;
-use crate::reactive::state_store::StateStore;
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{FontStyle, Style};
 use crate::{generate_component_methods_no_children, RendererBox};
 use crate::components::props::Props;
-use cosmic_text::{Action, Cursor, Motion, Selection};
+use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
 use cosmic_text::Edit;
 use rustc_hash::FxHasher;
@@ -40,6 +40,7 @@ pub struct TextInputState<'a> {
     pub metrics: Metrics,
     pub editor: Editor<'a>,
     pub text: String,
+    pub original_text_hash: u64,
 }
 
 impl<'a> TextInputState<'a> {
@@ -48,8 +49,8 @@ impl<'a> TextInputState<'a> {
         metrics: Metrics,
         text_hash: u64,
         editor: Editor<'a>,
-        _color: Option<cosmic_text::Color>,
         text: String,
+        original_text_hash: u64,
     ) -> Self {
         Self {
             id,
@@ -69,6 +70,7 @@ impl<'a> TextInputState<'a> {
             metrics,
             editor,
             text,
+            original_text_hash,
         }
     }
 
@@ -188,7 +190,7 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &StateStore,
+        _element_state: &StateStore,
     ) {
         let bounding_rectangle = Rectangle::new(
             self.common_element_data.computed_x_transformed + self.common_element_data.computed_padding[3],
@@ -396,6 +398,75 @@ impl Element for TextInput {
         };
 
         res
+    }
+
+    fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
+        let font_size = self.common_element_data.style.font_size;
+        let font_line_height = font_size * 1.2;
+        let metrics = Metrics::new(font_size, font_line_height);
+
+        let attributes = Attrs::new();
+
+        let buffer = Buffer::new(font_system, metrics);
+        let mut editor = Editor::new(buffer);
+        editor.borrow_with(font_system);
+
+        let mut text_hasher = FxHasher::default();
+        text_hasher.write(self.text.as_ref());
+        let text_hash = text_hasher.finish();
+
+        editor.with_buffer_mut(|buffer| {
+            buffer.set_text(
+                font_system,
+                &self.text,
+                attributes,
+                Shaping::Advanced,
+            )
+        });
+        editor.action(font_system, Action::Motion(Motion::End));
+
+        let cosmic_text_content = TextInputState::new(
+            self.common_element_data.component_id,
+            metrics,
+            text_hash,
+            editor,
+            self.text.clone(),
+            text_hash
+        );
+
+        Box::new(cosmic_text_content)
+    }
+
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
+        let state: &mut TextInputState = element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
+
+        let font_size = self.common_element_data.style.font_size;
+        let font_line_height = font_size * 1.2;
+        let metrics = Metrics::new(font_size, font_line_height);
+        
+        let mut text_hasher = FxHasher::default();
+        text_hasher.write(self.text.as_ref());
+        let text_hash = text_hasher.finish();
+
+        let attributes = Attrs::new();
+        
+        if text_hash != state.original_text_hash || metrics != state.metrics
+        {
+            state.original_text_hash = text_hash;
+            state.text_hash = text_hash;
+            state.metrics = metrics;
+            state.text = self.text.clone();
+
+            state.editor.with_buffer_mut(|buffer| {
+                buffer.set_metrics(font_system, state.metrics);
+                buffer.set_text(
+                    font_system,
+                    &self.text,
+                    attributes,
+                    Shaping::Advanced,
+                );
+            });
+        }
     }
 }
 
