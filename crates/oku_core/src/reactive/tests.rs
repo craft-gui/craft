@@ -1,3 +1,4 @@
+use cosmic_text::FontSystem;
 use crate::components::ComponentSpecification;
 use crate::elements::{Container, Text};
 use crate::elements::element::ElementBox;
@@ -8,6 +9,8 @@ use crate::reactive::tree::diff_trees;
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
     reset_unique_element_id();
+    
+    let mut font_system = FontSystem::new();
 
     let initial_view = Container::new().component().push(Text::new("Foo").component());
     let updated_view = Container::new().component().push(Text::new("Foo").component());
@@ -22,7 +25,8 @@ fn diff_trees_same_tag_same_id_are_equal() {
         root_element.clone(),
         None,
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let updated_tree = diff_trees(
@@ -30,7 +34,8 @@ fn diff_trees_same_tag_same_id_are_equal() {
         root_element.clone(),
         Some(&initial_tree.0),
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let initial_id = &initial_tree.0.children[0].children[0].id;
@@ -41,6 +46,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
 #[test]
 fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
+    let mut font_system = FontSystem::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component());
@@ -58,7 +64,8 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         root_element.clone(),
         None,
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let tree_2 = diff_trees(
@@ -66,7 +73,8 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         root_element.clone(),
         Some(&tree_1.0),
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let initial_id = &tree_1.0.children[0].children[0].id;
@@ -77,6 +85,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
 
 #[test]
 fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
+    let mut font_system = FontSystem::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -94,7 +103,8 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         root_element.clone(),
         None,
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let tree_2 = diff_trees(
@@ -102,7 +112,8 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         root_element.clone(),
         Some(&tree_1.0),
         &mut user_state,
-        &mut element_state
+        &mut element_state,
+        &mut font_system
     );
 
     let initial_id = &tree_1.0.children[0].children[0].id;

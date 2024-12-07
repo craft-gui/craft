@@ -1,7 +1,6 @@
 use oku::elements::Container;
 use oku::elements::ElementStyles;
 use oku::elements::Text;
-use oku_core::::color::Color;
 use oku::style::{Display, JustifyContent};
 use oku::style::FlexDirection;
 use oku::style::Overflow;
@@ -9,6 +8,7 @@ use oku::style::Unit;
 use oku::RendererType::Vello;
 use oku::{oku_main_with_options, OkuOptions};
 use oku::components::ComponentSpecification;
+use oku::renderer::color::Color;
 
 fn main() {
     oku_main_with_options(

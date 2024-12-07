@@ -37,9 +37,11 @@ mod tests {
     use crate::reactive::element_id::reset_unique_element_id;
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
+    use cosmic_text::FontSystem;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
+        let mut font_system = FontSystem::new();
         reset_unique_element_id();
 
         let initial_view = Container::new().id("1").component().push(Text::new("Foo").id("2").component()).push(
@@ -54,7 +56,8 @@ mod tests {
         let mut user_state = StateStore::default();
         let mut element_state = StateStore::default();
 
-        let initial_tree = diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state);
+        let initial_tree =
+            diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state, &mut font_system);
 
         initial_tree.0.print_tree();
         initial_tree.1.internal.print_tree();
