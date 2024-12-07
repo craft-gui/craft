@@ -203,13 +203,12 @@ impl Element for Text {
         _element_state: &mut StateStore,
         scale_factor: f64,
     ) -> NodeId {
-        println!("Scaling text by factor: {}", scale_factor);
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
-        
+
         let text_state: &mut TextState = _element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap();
         taffy_tree
             .new_leaf_with_context(
@@ -237,7 +236,7 @@ impl Element for Text {
         let text_context = self.get_state_mut(element_state);
 
         let metrics = text_context.last_key;
-        
+
         let metrics = Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
         
         text_context.buffer.set_metrics(font_system, metrics);
@@ -273,9 +272,7 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
-        let font_size = self.common_element_data.style.font_size;
-        let font_line_height = font_size * 1.2;
-        let metrics = Metrics::new(font_size, font_line_height);
+        let metrics = Metrics::new(12.0, 12.0);
 
         let attributes = Attrs::new();
 
@@ -303,10 +300,6 @@ impl Element for Text {
     fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
         let state = self.get_state_mut(element_state);
 
-        let font_size = self.common_element_data.style.font_size;
-        let font_line_height = font_size * 1.2;
-        let metrics = Metrics::new(font_size, font_line_height);
-
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
@@ -314,7 +307,7 @@ impl Element for Text {
         let attributes = Attrs::new();
 
         if text_hash != state.text_hash {
-            state.text_hash = state.text_hash;
+            state.text_hash = text_hash;
             state.buffer.set_text(
                 font_system,
                 &self.text,
