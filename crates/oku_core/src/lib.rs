@@ -121,6 +121,7 @@ pub fn oku_wasm_init() {
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
+use crate::resource_manager::resource_type::ResourceType;
 
 #[cfg(not(target_os = "android"))]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
@@ -578,7 +579,7 @@ async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTre
         if let Some(element) = fiber_node.element {
             if element.name() == Image::name() {
                 let resource_identifier = element.as_any().downcast_ref::<Image>().unwrap().resource_identifier.clone();
-                resource_manager.write().await.add(resource_identifier).await;
+                resource_manager.write().await.add(resource_identifier, ResourceType::Image).await;
             }
         }
     }
