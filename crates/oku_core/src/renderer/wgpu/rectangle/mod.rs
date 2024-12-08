@@ -116,7 +116,7 @@ impl RectangleRenderer {
     }
 
     
-    pub fn prepare(&self, context: &Context<'_>) -> PerFrameData {
+    pub fn prepare(&self, context: &Context) -> PerFrameData {
         let vertex_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&self.vertices),
@@ -137,15 +137,16 @@ impl RectangleRenderer {
 
     pub fn draw(
         &mut self,
+        context: &Context,
         render_pass: &mut RenderPass,
-        per_frame_data: PerFrameData,
+        per_frame_data: PerFrameData
     ) {
         if self.vertices.is_empty() {
             return;
         }
         let rectangle_pipeline = self.cached_pipelines.get(&DEFAULT_RECTANGLE_PIPELINE_CONFIG).unwrap();
         render_pass.set_pipeline(&rectangle_pipeline.pipeline);
-        render_pass.set_bind_group(0, Some(&rectangle_pipeline.global_bind_group), &[]);
+        render_pass.set_bind_group(0, Some(&context.global_buffer.bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));
         render_pass.set_index_buffer(per_frame_data.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
         render_pass.draw_indexed(0..(self.indices.len() as u32), 0, 0..1);

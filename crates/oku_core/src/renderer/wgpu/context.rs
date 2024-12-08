@@ -1,11 +1,14 @@
 use crate::renderer::color::Color;
 use wgpu::{CompositeAlphaMode, PresentMode};
 use crate::renderer::wgpu::camera::Camera;
+use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 
 pub struct Context<'a> {
     pub(crate) camera: Camera,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
+    pub(crate) global_buffer: GlobalBuffer,
+    pub(crate) global_buffer_uniform: GlobalUniform,
     pub(crate) surface: wgpu::Surface<'a>,
     pub(crate) surface_clear_color: Color,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,

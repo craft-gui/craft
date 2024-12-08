@@ -1,6 +1,6 @@
 mod camera;
 mod context;
-mod uniform;
+mod globals;
 mod rectangle;
 mod text;
 mod render_group;
@@ -21,6 +21,7 @@ use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
 use winit::window::Window;
+use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::image::image::ImageRenderer;
 use crate::renderer::wgpu::image::pipeline::DEFAULT_IMAGE_PIPELINE_CONFIG;
 use crate::renderer::wgpu::rectangle::pipeline::DEFAULT_RECTANGLE_PIPELINE_CONFIG;
@@ -53,28 +54,33 @@ impl<'a> WgpuRenderer<'a> {
             create_surface_config(&surface, surface_size.width, surface_size.height, &device, &adapter);
         surface.configure(&device, &surface_config);
 
+        let camera = Camera {
+            width: surface_config.width as f32,
+            height: surface_config.height as f32,
+            z_near: 0.0,
+            z_far: 100.0,
+        };
+        let mut global_buffer_uniform = GlobalUniform::new();
+        global_buffer_uniform.set_view_proj_with_camera(&camera);
+
+        let global_buffer = GlobalBuffer::new(&device, &global_buffer_uniform);
+
         let context = Context {
-            camera: Camera {
-                width: surface_config.width as f32,
-                height: surface_config.height as f32,
-                z_near: 0.0,
-                z_far: 100.0,
-            },
+            camera,
             device,
             queue,
+            global_buffer,
+            global_buffer_uniform,
             surface,
             surface_config,
             surface_clear_color: Color::rgba(255, 255, 255, 255),
             is_srgba_format: false,
         };
-
-        // let pipeline2d = Pipeline2D::new(&context);
         let rectangle_renderer = RectangleRenderer::new(&context);
         let text_renderer = TextRenderer::new(&context);
         let image_renderer = ImageRenderer::new(&context);
 
         WgpuRenderer {
-            // pipeline2d,
             context,
             rectangle_renderer,
             text_renderer,
@@ -107,31 +113,10 @@ impl Renderer for WgpuRenderer<'_> {
             z_near: 0.0,
             z_far: 100.0,
         };
-        
-        let rect_pipeline = self.rectangle_renderer.cached_pipelines.get_mut(&DEFAULT_RECTANGLE_PIPELINE_CONFIG).unwrap();
-        rect_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
 
-        let text_pipeline = self.text_renderer.cached_pipelines.get_mut(&text::pipeline::DEFAULT_TEXT_PIPELINE_CONFIG).unwrap();
-        text_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
 
-        let image_pipeline = self.image_renderer.cached_pipelines.get_mut(&DEFAULT_IMAGE_PIPELINE_CONFIG).unwrap();
-        image_pipeline.global_uniform.set_view_proj_with_camera(&self.context.camera);
-        
-        self.context.queue.write_buffer(
-            &rect_pipeline.global_buffer,
-            0,
-            bytemuck::cast_slice(&[rect_pipeline.global_uniform.view_proj]),
-        );
-        self.context.queue.write_buffer(
-            &text_pipeline.global_buffer,
-            0,
-            bytemuck::cast_slice(&[text_pipeline.global_uniform.view_proj]),
-        );
-        self.context.queue.write_buffer(
-            &image_pipeline.global_buffer,
-            0,
-            bytemuck::cast_slice(&[image_pipeline.global_uniform.view_proj]),
-        );
+        self.context.global_buffer_uniform.set_view_proj_with_camera(&self.context.camera);
+        self.context.global_buffer.update(&self.context.queue, &self.context.global_buffer_uniform);
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
@@ -288,7 +273,7 @@ fn draw(
     let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state, clip_rectangle);
     let image_renderer_per_frame_data = image_renderer.prepare(context, font_system, element_state, clip_rectangle);
 
-    rectangle_renderer.draw(render_pass, rectangle_renderer_per_frame_data);
+    rectangle_renderer.draw(context, render_pass, rectangle_renderer_per_frame_data);
     text_renderer.draw(context, render_pass, &text_renderer_per_frame_data);
     image_renderer.draw(context, resource_manager, render_pass, &image_renderer_per_frame_data);
 }

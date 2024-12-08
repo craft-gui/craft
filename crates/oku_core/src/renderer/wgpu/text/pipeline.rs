@@ -2,7 +2,7 @@ use wgpu::util::DeviceExt;
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::text::vertex::TextVertex;
-use crate::renderer::wgpu::uniform::GlobalUniform;
+use crate::renderer::wgpu::globals::GlobalUniform;
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
 pub struct TextPipelineConfig {
@@ -27,9 +27,6 @@ pub(crate) const DEFAULT_TEXT_PIPELINE_CONFIG: TextPipelineConfig = TextPipeline
 };
 
 pub struct TextPipeline {
-    pub(crate) global_uniform: GlobalUniform,
-    pub(crate) global_buffer: wgpu::Buffer,
-    pub(crate) global_bind_group: wgpu::BindGroup,
     pub(crate) pipeline: wgpu::RenderPipeline,
 }
 
@@ -142,9 +139,6 @@ impl TextPipeline {
         });
 
         Self {
-            global_uniform,
-            global_buffer,
-            global_bind_group,
             pipeline: render_pipeline,
         }
 

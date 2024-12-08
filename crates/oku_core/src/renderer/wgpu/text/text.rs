@@ -176,7 +176,7 @@ impl TextRenderer {
         
         render_pass.set_pipeline(&text_pipeline.pipeline);
         render_pass.set_bind_group(0, Some(&texture_bind_group), &[]);
-        render_pass.set_bind_group(1, Some(&text_pipeline.global_bind_group), &[]);
+        render_pass.set_bind_group(1, Some(&context.global_buffer.bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));
         render_pass.set_index_buffer(per_frame_data.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
         render_pass.draw_indexed(0..(self.indices.len() as u32), 0, 0..1);
