@@ -57,7 +57,7 @@ impl ImageRenderer {
         ImageRenderer::build_texture_rectangle(rectangle, color, &mut current_batch.vertices, &mut current_batch.indices);
     }
 
-    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &StateStore, clip_rectangle: ClipRectangle) -> ImagePerFrameData {
+    pub(crate) fn prepare(&mut self, context: &Context) -> ImagePerFrameData {
 
         let mut vertex_buffers = Vec::new();
         let mut index_buffers = Vec::new();
@@ -103,7 +103,7 @@ impl ImageRenderer {
             // Get the batch texture or use the default white texture if we cannot find the batch texture.
             let texture = if let Some(texture_path) = texture_path {
                 
-                if let Some(texture) = self.cached_textures.get(&texture_path) {
+                if let Some(texture) = self.cached_textures.get(texture_path) {
                     texture
                 } else {
                     // If we were given an image path, but it isn't in our texture cache then try to load the image from the filesystem.

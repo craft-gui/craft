@@ -11,9 +11,7 @@ use crate::components::component::ComponentId;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{Rectangle, RenderCommand, Renderer};
 use crate::renderer::wgpu::camera::Camera;
-use crate::renderer::wgpu::context::{
-    create_surface_config, request_adapter, request_device_and_queue, Context,
-};
+use crate::renderer::wgpu::context::{ create_surface_config, request_adapter, request_device_and_queue, Context };
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
@@ -23,8 +21,7 @@ use wgpu::RenderPass;
 use winit::window::Window;
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::image::image::ImageRenderer;
-use crate::renderer::wgpu::image::pipeline::DEFAULT_IMAGE_PIPELINE_CONFIG;
-use crate::renderer::wgpu::rectangle::pipeline::DEFAULT_RECTANGLE_PIPELINE_CONFIG;
+
 use crate::renderer::wgpu::rectangle::RectangleRenderer;
 use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::renderer::wgpu::text::text::TextRenderer;
@@ -173,7 +170,7 @@ impl Renderer for WgpuRenderer<'_> {
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
+                label: Some("Oku Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &texture_view,
                     resolve_target: None,
@@ -220,11 +217,7 @@ impl Renderer for WgpuRenderer<'_> {
                         draw(&mut self.context, &mut render_pass, font_system, element_state, &resource_manager, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
                     }
                     RenderCommand::PopLayer => {
-                        if should_submit {
-                            should_submit = false;
-                        }
-                        let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                        draw(&mut self.context, &mut render_pass, font_system, element_state, &resource_manager, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
+                        should_submit = true;
                     }
                     RenderCommand::DrawRect(rectangle, fill_color) => {
                         self.rectangle_renderer.build(rectangle, fill_color);
@@ -270,8 +263,8 @@ fn draw(
     );
 
     let rectangle_renderer_per_frame_data = rectangle_renderer.prepare(context);
-    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state, clip_rectangle);
-    let image_renderer_per_frame_data = image_renderer.prepare(context, font_system, element_state, clip_rectangle);
+    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
+    let image_renderer_per_frame_data = image_renderer.prepare(context);
 
     rectangle_renderer.draw(context, render_pass, rectangle_renderer_per_frame_data);
     text_renderer.draw(context, render_pass, &text_renderer_per_frame_data);

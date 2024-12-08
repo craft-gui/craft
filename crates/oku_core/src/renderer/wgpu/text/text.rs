@@ -62,7 +62,7 @@ impl TextRenderer {
         });
     }
 
-    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &StateStore, clip_rectangle: ClipRectangle) -> PerFrameData {
+    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &StateStore) -> PerFrameData {
 
         for text_area in self.text_areas.iter() { 
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {
