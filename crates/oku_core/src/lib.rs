@@ -604,11 +604,12 @@ async fn on_request_redraw(app: &mut App) {
         return;
     }
 
+    let scale_factor = app.window.as_ref().unwrap().scale_factor();
     {
         let renderer = app.renderer.as_mut().unwrap();
         renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
-        surface_width = renderer.surface_width();
-        surface_height = renderer.surface_height();
+        surface_width = renderer.surface_width() / scale_factor as f32;
+        surface_height = renderer.surface_height() / scale_factor as f32;
     }
 
     root.internal.style_mut().width = Unit::Px(surface_width);
@@ -642,7 +643,7 @@ async fn on_request_redraw(app: &mut App) {
         app.font_system.as_mut().unwrap(),
         root.internal.as_mut(),
         &resource_manager,
-        app.window.as_ref().unwrap().scale_factor()
+        scale_factor
     );
     
     //let duration = layout_start.elapsed(); // Get the elapsed time
