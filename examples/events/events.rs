@@ -55,7 +55,7 @@ impl Component for EventsExample {
         event: Event,
     ) -> UpdateResult {
         if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = event.message {
-            if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+            if pointer_button.button.mouse_button() == MouseButton::Left
                 && pointer_button.state == ElementState::Pressed
             {
                 println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);

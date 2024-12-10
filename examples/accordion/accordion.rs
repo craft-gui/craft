@@ -45,7 +45,7 @@ impl Component for Accordion {
         }
 
         if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = event.message {
-            if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+            if pointer_button.button.mouse_button() == MouseButton::Left
                 && pointer_button.state == ElementState::Pressed
             {
                 state.show_content = !state.show_content

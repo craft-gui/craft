@@ -87,7 +87,7 @@ impl Component for AniList {
         });
 
         if let (Some("get_data"), Message::OkuMessage(PointerButtonEvent(pointer_button))) = (message.target.as_deref(), &message.message) {
-            if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+            if pointer_button.button.mouse_button() == MouseButton::Left
                 && pointer_button.state == ElementState::Released
             {
                 return UpdateResult::default().future(get_ani_list_data);

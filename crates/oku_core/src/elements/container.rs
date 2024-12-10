@@ -217,7 +217,7 @@ impl Element for Container {
                     UpdateResult::new().prevent_propagate().prevent_defaults()
                 }
                 OkuMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button == ButtonSource::Mouse(MouseButton::Left) {
+                    if pointer_button.button.mouse_button() == MouseButton::Left {
                             match pointer_button.state {
                                 ElementState::Pressed => {
                                     if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {

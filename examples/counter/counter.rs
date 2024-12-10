@@ -48,7 +48,7 @@ impl Component for Counter {
     fn update(state: &mut Self, _props: &Self::Props, message: Event) -> UpdateResult {
         if let Some(target) = message.target.as_deref() {
             if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message.message {
-                if pointer_button.button == ButtonSource::Mouse(MouseButton::Left)
+                if pointer_button.button.mouse_button() == MouseButton::Left
                     && pointer_button.state == ElementState::Pressed
                 {
                     match target {
