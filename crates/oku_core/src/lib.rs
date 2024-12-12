@@ -520,6 +520,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
+    app.mouse_position = (pointer_button.position.x as f32, pointer_button.position.y as f32);
     dispatch_event(app, event).await;
 
     app.window.as_ref().unwrap().request_redraw();
