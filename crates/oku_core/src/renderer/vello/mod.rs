@@ -66,10 +66,19 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
         RendererOptions {
             surface_format: Some(surface.format),
             use_cpu: false,
-            antialiasing_support: vello::AaSupport {
-                area: false,
-                msaa8: false,
-                msaa16: true,
+            // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
+            antialiasing_support:  if cfg!(any(target_os = "android", target_os = "ios")) {
+                vello::AaSupport {
+                    area: true,
+                    msaa8: false,
+                    msaa16: false,
+                }
+            } else {
+                vello::AaSupport {
+                    area: false,
+                    msaa8: false,
+                    msaa16: true,
+                }
             },
             num_init_threads: None,
         },
@@ -362,7 +371,12 @@ impl Renderer for VelloRenderer<'_> {
                     base_color: to_vello_rgba_f32_color(self.surface_clear_color),
                     width,
                     height,
-                    antialiasing_method: AaConfig::Msaa16,
+                    // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
+                    antialiasing_method: if cfg!(any(target_os = "android", target_os = "ios")) {
+                        AaConfig::Area
+                    } else {
+                        AaConfig::Msaa16
+                    },
                 },
             )
             .expect("failed to render to surface");
