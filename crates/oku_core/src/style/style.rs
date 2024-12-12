@@ -194,7 +194,11 @@ impl Default for Style {
     fn default() -> Self {
         Style {
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: 15.0,
+            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
+                0.0
+            } else {
+                15.0
+            },
             position: Position::Relative,
             margin: [Unit::Px(0.0); 4],
             padding: [Unit::Px(0.0); 4],
