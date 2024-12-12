@@ -11,7 +11,7 @@ use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
-use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
+use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
 use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
@@ -140,7 +140,6 @@ impl Element for Container {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-
         self.common_element_data.computed_content_width = result.content_size.width;
         self.common_element_data.computed_content_height = result.content_size.height;
         self.common_element_data.scrollbar_size = [result.scrollbar_size.width, result.scrollbar_size.height];
@@ -209,7 +208,6 @@ impl Element for Container {
                         MouseScrollDelta::PixelDelta(y) => y.y as f32,
                     };
                     let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
-
                     let max_scroll_y = self.common_element_data.max_scroll_y;
 
                     container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
@@ -218,29 +216,47 @@ impl Element for Container {
                 }
                 OkuMessage::PointerButtonEvent(pointer_button) => {
                     if pointer_button.button.mouse_button() == MouseButton::Left {
-                            match pointer_button.state {
-                                ElementState::Pressed => {
-                                    if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
-                                        container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
-                                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                                    } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
-                                        let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
+                        
+                        // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
+                        if let ButtonSource::Touch { .. } = pointer_button.button {
+                            let container_rectangle = Rectangle::new(
+                                self.common_element_data.computed_x + self.common_element_data.computed_border[3],
+                                self.common_element_data.computed_y + self.common_element_data.computed_border[0],
+                                self.common_element_data.computed_width - self.common_element_data.computed_border[1],
+                                self.common_element_data.computed_height - self.common_element_data.computed_border[2]
+                            );
+                            
+                            let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32);
 
-                                        let percent = offset_y / self.common_element_data.computed_scroll_track.height;
-                                        let scroll_y = percent * self.common_element_data.max_scroll_y;
+                            if container_rectangle.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) && !in_scroll_bar {
+                                container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                return UpdateResult::new().prevent_propagate().prevent_defaults();
+                            }
+                        }
 
-                                        container_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
-
-                                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                                    } else {
-                                        UpdateResult::new()
-                                    }
-                                }
-                                ElementState::Released => {
-                                    container_state.scroll_click = None;
+                        match pointer_button.state {
+                            ElementState::Pressed => {
+                                if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                    container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
                                     UpdateResult::new().prevent_propagate().prevent_defaults()
+                                } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                    let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
+
+                                    let percent = offset_y / self.common_element_data.computed_scroll_track.height;
+                                    let scroll_y = percent * self.common_element_data.max_scroll_y;
+
+                                    container_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
+
+                                    UpdateResult::new().prevent_propagate().prevent_defaults()
+                                } else {
+                                    UpdateResult::new()
                                 }
                             }
+                            ElementState::Released => {
+                                container_state.scroll_click = None;
+                                UpdateResult::new().prevent_propagate().prevent_defaults()
+                            }
+                        }
                     } else {
                         UpdateResult::new()
                     }
@@ -252,8 +268,13 @@ impl Element for Container {
 
                         let max_scroll_y = self.common_element_data.max_scroll_y;
 
-                        let delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
+                        let mut delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
 
+                        // DEVICE(TOUCH): Reverse the direction on touch based input devices.
+                        if let PointerSource::Touch {..} = pointer_motion.source {
+                            delta = -delta;
+                        }
+                        
                         container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
                         container_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
                         UpdateResult::new().prevent_propagate().prevent_defaults()
