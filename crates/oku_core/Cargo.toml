@@ -10,7 +10,7 @@ resolver = "2"
 futures = "0.3.31"
 winit = { git = "https://github.com/rust-windowing/winit",  rev="ae4c449670674d8ac0d6d8754caf3fe5f4954c25" }
 cosmic-text = { version = "0.12.1" }
-taffy = { version = "0.6.3" }
+taffy = { version = "0.7.0" }
 wgpu = { version = "23.0.1", features = ["fragile-send-sync-non-atomic-wasm"] }
 accesskit = "0.17.1"
 #accesskit_winit = { version = "0.18.0" }
