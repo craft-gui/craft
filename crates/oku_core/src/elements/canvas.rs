@@ -15,7 +15,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
 use crate::components::props::Props;
-use crate::geometry::{Padding, Size};
+use crate::geometry::{Padding, Position, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -231,17 +231,13 @@ impl Element for Canvas {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
-        self.common_element_data.computed_content_size.width = result.content_size.width;
-        self.common_element_data.computed_content_size.height = result.content_size.height;
+        self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
 
         self.resolve_position(x, y, result);
         
-        self.common_element_data.computed_size.width = result.size.width;
-        self.common_element_data.computed_size.height = result.size.height;
-        
-        self.common_element_data.computed_scrollbar_size.width = result.scroll_width();
-        self.common_element_data.computed_scrollbar_size.height = result.scroll_height();
+        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
+        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
         
         self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
         self.common_element_data.computed_border = Padding::new(result.border.top, result.border.right, result.border.bottom, result.border.left);
@@ -252,8 +248,7 @@ impl Element for Canvas {
             0.0,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
-        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
+        self.common_element_data.computed_position_transformed = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
 
         let scroll_y = if let Some(canvas_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()

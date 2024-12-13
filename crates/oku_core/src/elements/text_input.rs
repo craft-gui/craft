@@ -20,11 +20,11 @@ use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use taffy::{NodeId, Size, TaffyTree};
+use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::geometry::Padding;
+use crate::geometry::{Padding, Position, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -75,12 +75,12 @@ impl<'a> TextInputState<'a> {
 
     pub(crate) fn measure(
         &mut self,
-        known_dimensions: Size<Option<f32>>,
-        available_space: Size<taffy::AvailableSpace>,
+        known_dimensions: taffy::Size<Option<f32>>,
+        available_space: taffy::Size<taffy::AvailableSpace>,
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
-    ) -> Size<f32> {
+    ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -138,13 +138,13 @@ impl<'a> TextInputState<'a> {
             });
 
             self.cached_text_layout.insert(key, cached_text_layout_value);
-            Size {
+            taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             }
         } else {
             let cached_text_layout_value = cached_text_layout_value.unwrap();
-            Size {
+            taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             }
@@ -216,8 +216,8 @@ impl Element for TextInput {
         let font_size = PhysicalPosition::from_logical(
             LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
             scale_factor,
-        )
-        .x;
+        ).x;
+        
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
@@ -269,8 +269,7 @@ impl Element for TextInput {
 
         self.resolve_position(x, y, result);
 
-        self.common_element_data.computed_size.width = result.size.width;
-        self.common_element_data.computed_size.height = result.size.height;
+        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
         self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
@@ -279,8 +278,8 @@ impl Element for TextInput {
             0.0,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
-        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
+        
+        self.common_element_data.computed_position_transformed = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
     }
 
     fn as_any(&self) -> &dyn Any {

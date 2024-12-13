@@ -95,10 +95,8 @@ impl Element for Image {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
 
-        self.common_element_data.computed_position.x = x + result.location.x;
-        self.common_element_data.computed_position.y = y + result.location.y;
-        self.common_element_data.computed_size.width = result.size.width;
-        self.common_element_data.computed_size.height = result.size.height;
+        self.common_element_data.computed_position = Position::new(x + result.location.x, y + result.location.y, 1.0);
+        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
         self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
@@ -107,8 +105,7 @@ impl Element for Image {
             0.0,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
-        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
+        self.common_element_data.computed_position_transformed = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
     }
 
     fn as_any(&self) -> &dyn Any {

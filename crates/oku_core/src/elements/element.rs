@@ -143,12 +143,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
         match self.common_element_data().style.position {
             taffy::Position::Relative => {
-                self.common_element_data_mut().computed_position.x = x + result.location.x;
-                self.common_element_data_mut().computed_position.y = y + result.location.y;
+                self.common_element_data_mut().computed_position = Position::new(x + result.location.x, y + result.location.y, 1.0);
             }
             taffy::Position::Absolute => {
-                self.common_element_data_mut().computed_position.x = result.location.x;
-                self.common_element_data_mut().computed_position.y = result.location.y;
+                self.common_element_data_mut().computed_position = Position::new(result.location.x, result.location.y, 1.0);
             }
         }
     }

@@ -15,7 +15,7 @@ use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, Po
 use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
-use crate::geometry::{Border, Padding, Size};
+use crate::geometry::{Border, Padding, Position, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -141,20 +141,15 @@ impl Element for Container {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.common_element_data.computed_content_size.width = result.content_size.width;
-        self.common_element_data.computed_content_size.height = result.content_size.height;
+        self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
 
         self.resolve_position(x, y, result);
+        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
         
-        self.common_element_data.computed_size.width = result.size.width;
-        self.common_element_data.computed_size.height = result.size.height;
-        
-        self.common_element_data.computed_scrollbar_size.width = result.scroll_width();
-        self.common_element_data.computed_scrollbar_size.height = result.scroll_height();
+        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
         
         self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
-
         self.common_element_data.computed_border = Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
@@ -163,8 +158,7 @@ impl Element for Container {
             self.common_element_data.computed_position.z,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
-        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
+        self.common_element_data.computed_position_transformed = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
@@ -175,7 +169,6 @@ impl Element for Container {
         };
 
         self.finalize_scrollbar(scroll_y);
-
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {

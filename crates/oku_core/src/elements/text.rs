@@ -10,12 +10,12 @@ use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use taffy::{NodeId, Size, TaffyTree};
+use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
 
 use crate::components::props::Props;
-use crate::geometry::Padding;
+use crate::geometry::{Padding, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -66,12 +66,12 @@ impl TextState {
 
     pub(crate) fn measure(
         &mut self,
-        known_dimensions: Size<Option<f32>>,
-        available_space: Size<taffy::AvailableSpace>,
+        known_dimensions: taffy::Size<Option<f32>>,
+        available_space: taffy::Size<taffy::AvailableSpace>,
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
-    ) -> Size<f32> {
+    ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -126,13 +126,13 @@ impl TextState {
             };
 
             self.cached_text_layout.insert(key, cached_text_layout_value);
-            Size {
+            taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             }
         } else {
             let cached_text_layout_value = cached_text_layout_value.unwrap();
-            Size {
+            taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             }
@@ -232,11 +232,9 @@ impl Element for Text {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        
         let text_context = self.get_state_mut(element_state);
 
         let metrics = text_context.last_key;
-
         let metrics = Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
         
         text_context.buffer.set_metrics(font_system, metrics);
@@ -250,10 +248,8 @@ impl Element for Text {
 
         self.resolve_position(x, y, result);
 
-        self.common_element_data.computed_content_size.width = result.content_size.width;
-        self.common_element_data.computed_content_size.height = result.content_size.height;
-        self.common_element_data.computed_size.width = result.size.width;
-        self.common_element_data.computed_size.height = result.size.height;
+        self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
+        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
         self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
