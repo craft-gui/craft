@@ -42,36 +42,7 @@ impl TextPipeline {
 
         let mut global_uniform = GlobalUniform::new();
         global_uniform.set_view_proj_with_camera(&camera);
-
-        let global_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Global Buffer"),
-            contents: bytemuck::bytes_of(&global_uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let global_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("global_bind_group_layout"),
-        });
-
-        let global_bind_group = context.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &global_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: global_buffer.as_entire_binding(),
-            }],
-            label: Some("global_bind_group"),
-        });
-
+        
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -97,7 +68,7 @@ impl TextPipeline {
         let shader = context.device.create_shader_module(wgpu::include_wgsl!("./text.wgsl"));
         let render_pipeline_layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Text Renderer Pipeline Layout"),
-            bind_group_layouts: &[&texture_bind_group_layout, &global_bind_group_layout],
+            bind_group_layouts: &[&texture_bind_group_layout, &context.global_buffer.bind_group_layout],
             push_constant_ranges: &[],
         });
 
