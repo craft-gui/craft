@@ -12,6 +12,7 @@ pub mod renderer;
 pub mod events;
 pub mod app_message;
 pub mod resource_manager;
+mod geometry;
 
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 pub use oku_runtime::OkuRuntime;
@@ -58,6 +59,7 @@ use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Instant;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::sync::{RwLock, RwLockReadGuard};
 
@@ -587,7 +589,7 @@ async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTre
 }
 
 async fn on_request_redraw(app: &mut App) {
-    //let total_time_start = Instant::now();
+    let total_time_start = Instant::now();
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();
 
@@ -633,7 +635,7 @@ async fn on_request_redraw(app: &mut App) {
         root.internal.style_mut().height = Unit::Px(surface_height);
     }
 
-    //let layout_start = Instant::now(); // Start measuring time
+    let layout_start = Instant::now(); // Start measuring time
     let resource_manager = app.resource_manager.read().await;
     
     let element_state = &mut app.element_state;
@@ -647,21 +649,21 @@ async fn on_request_redraw(app: &mut App) {
         scale_factor
     );
     
-    //let duration = layout_start.elapsed(); // Get the elapsed time
-    //println!("Layout Time Taken: {:?} ms -------------------------------------------------------------------------------------------------------------", duration.as_millis());
+    let duration = layout_start.elapsed(); // Get the elapsed time
+    println!("Layout Time Taken: {:?} ms -------------------------------------------------------------------------------------------------------------", duration.as_millis());
 
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
         root.internal.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, &element_state);
         app.element_tree = Some(root.internal);
-        //let renderer_submit_start = Instant::now();
+        let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
         
-        //let renderer_duration = renderer_submit_start.elapsed();
-        //println!("Renderer Submit Time Taken: {:?} ms", renderer_duration.as_millis());
-        //let total_duration = total_time_start.elapsed();
-        //println!("Other: {:?} ms", (total_duration - renderer_duration - duration).as_millis());
-        //println!("Total Time Taken: {:?} ms", total_duration.as_millis());
+        let renderer_duration = renderer_submit_start.elapsed();
+        println!("Renderer Submit Time Taken: {:?} ms", renderer_duration.as_millis());
+        let total_duration = total_time_start.elapsed();
+        println!("Other: {:?} ms", (total_duration - renderer_duration - duration).as_millis());
+        println!("Total Time Taken: {:?} ms", total_duration.as_millis());
     }
     //taffy_tree.print_tree(taffy_root);
 }

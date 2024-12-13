@@ -11,6 +11,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
+use crate::geometry::{Border, Padding, Position, Size};
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -18,25 +19,20 @@ pub struct CommonElementData {
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
     // The computed values after transforms are applied.
-    pub computed_x_transformed: f32,
-    pub computed_y_transformed: f32,
+    pub computed_position_transformed: Position,
 
     // The computed values without any transforms applied to them.
-    pub computed_x: f32,
-    pub computed_y: f32,
-    pub computed_width: f32,
-    pub computed_height: f32,
-    pub computed_scrollbar_width: f32,
-    pub computed_scrollbar_height: f32,
-    pub computed_content_width: f32,
-    pub computed_content_height: f32,
-    pub computed_padding: [f32; 4],
-    pub computed_border: [f32; 4],
+    pub computed_position: Position,
+    pub computed_size: Size,
+    pub computed_scrollbar_size: Size,
+    pub computed_content_size: Size,
+    pub computed_padding: Padding,
+    pub computed_border: Border,
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
-    pub scrollbar_size: [f32; 2],
+    pub scrollbar_size: Size,
 
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
@@ -75,10 +71,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn in_bounds(&self, x: f32, y: f32) -> bool {
         let common_element_data = self.common_element_data();
-        x >= common_element_data.computed_x_transformed
-            && x <= common_element_data.computed_x_transformed + common_element_data.computed_width
-            && y >= common_element_data.computed_y_transformed
-            && y <= common_element_data.computed_y_transformed + common_element_data.computed_height
+        x >= common_element_data.computed_position_transformed.x
+            && x <= common_element_data.computed_position_transformed.x + common_element_data.computed_size.width
+            && y >= common_element_data.computed_position_transformed.y
+            && y <= common_element_data.computed_position_transformed.y + common_element_data.computed_size.height
     }
 
     fn get_id(&self) -> &Option<String> {
@@ -147,12 +143,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
         match self.common_element_data().style.position {
             taffy::Position::Relative => {
-                self.common_element_data_mut().computed_x = x + result.location.x;
-                self.common_element_data_mut().computed_y = y + result.location.y;
+                self.common_element_data_mut().computed_position.x = x + result.location.x;
+                self.common_element_data_mut().computed_position.y = y + result.location.y;
             }
             taffy::Position::Absolute => {
-                self.common_element_data_mut().computed_x = result.location.x;
-                self.common_element_data_mut().computed_y = result.location.y;
+                self.common_element_data_mut().computed_position.x = result.location.x;
+                self.common_element_data_mut().computed_position.y = result.location.y;
             }
         }
     }
@@ -164,22 +160,22 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             return;
         }
 
-        let computed_x_transformed = common_element_data.computed_x_transformed;
-        let computed_y_transformed = common_element_data.computed_y_transformed;
+        let computed_x_transformed = common_element_data.computed_position_transformed.x;
+        let computed_y_transformed = common_element_data.computed_position_transformed.y;
 
-        let computed_width = common_element_data.computed_width;
-        let computed_height = common_element_data.computed_height;
+        let computed_width = common_element_data.computed_size.width;
+        let computed_height = common_element_data.computed_size.height;
 
-        let computed_content_height = common_element_data.computed_content_height;
+        let computed_content_height = common_element_data.computed_content_size.height;
 
-        let border_top = common_element_data.computed_border[0];
-        let border_right = common_element_data.computed_border[1];
-        let border_bottom = common_element_data.computed_border[2];
+        let border_top = common_element_data.computed_border.top;
+        let border_right = common_element_data.computed_border.right;
+        let border_bottom = common_element_data.computed_border.bottom;
 
         let client_height = computed_height - border_top - border_bottom;
         let scroll_height = computed_content_height - border_top;
 
-        let scrolltrack_width = common_element_data.scrollbar_size[0];
+        let scrolltrack_width = common_element_data.scrollbar_size.width;
         let scrolltrack_height = client_height;
 
         let max_scroll_y = (scroll_height - client_height).max(0.0);

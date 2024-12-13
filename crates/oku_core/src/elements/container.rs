@@ -15,6 +15,7 @@ use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, Po
 use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
+use crate::geometry::{Border, Padding, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -52,16 +53,16 @@ impl Element for Container {
         let border_color: Color = self.style().border_color;
 
         // background
-        let computed_x_transformed = self.common_element_data.computed_x_transformed;
-        let computed_y_transformed = self.common_element_data.computed_y_transformed;
+        let computed_x_transformed = self.common_element_data.computed_position_transformed.x;
+        let computed_y_transformed = self.common_element_data.computed_position_transformed.y;
 
-        let computed_width = self.common_element_data.computed_width;
-        let computed_height = self.common_element_data.computed_height;
+        let computed_width = self.common_element_data.computed_size.width;
+        let computed_height = self.common_element_data.computed_size.height;
         
-        let border_top = self.common_element_data.computed_border[0];
-        let border_right = self.common_element_data.computed_border[1];
-        let border_bottom = self.common_element_data.computed_border[2];
-        let border_left = self.common_element_data.computed_border[3];
+        let border_top = self.common_element_data.computed_border.top;
+        let border_right = self.common_element_data.computed_border.right;
+        let border_bottom = self.common_element_data.computed_border.bottom;
+        let border_left = self.common_element_data.computed_border.left;
         
         // Background
         renderer.draw_rect(
@@ -140,32 +141,30 @@ impl Element for Container {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.common_element_data.computed_content_width = result.content_size.width;
-        self.common_element_data.computed_content_height = result.content_size.height;
-        self.common_element_data.scrollbar_size = [result.scrollbar_size.width, result.scrollbar_size.height];
+        self.common_element_data.computed_content_size.width = result.content_size.width;
+        self.common_element_data.computed_content_size.height = result.content_size.height;
+        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
 
         self.resolve_position(x, y, result);
         
-        self.common_element_data.computed_width = result.size.width;
-        self.common_element_data.computed_height = result.size.height;
+        self.common_element_data.computed_size.width = result.size.width;
+        self.common_element_data.computed_size.height = result.size.height;
         
-        self.common_element_data.computed_scrollbar_width = result.scroll_width();
-        self.common_element_data.computed_scrollbar_height = result.scroll_height();
+        self.common_element_data.computed_scrollbar_size.width = result.scroll_width();
+        self.common_element_data.computed_scrollbar_size.height = result.scroll_height();
         
-        self.common_element_data.computed_padding =
-            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
 
-        self.common_element_data.computed_border =
-            [result.border.top, result.border.right, result.border.bottom, result.border.left];
+        self.common_element_data.computed_border = Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
-            self.common_element_data.computed_x,
-            self.common_element_data.computed_y,
-            0.0,
+            self.common_element_data.computed_position.x,
+            self.common_element_data.computed_position.y,
+            self.common_element_data.computed_position.z,
             1.0,
         ));
-        self.common_element_data.computed_x_transformed = transformed_xy.x;
-        self.common_element_data.computed_y_transformed = transformed_xy.y;
+        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
+        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
@@ -184,8 +183,8 @@ impl Element for Container {
             child.internal.finalize_layout(
                 taffy_tree,
                 child2,
-                self.common_element_data.computed_x,
-                self.common_element_data.computed_y,
+                self.common_element_data.computed_position.x,
+                self.common_element_data.computed_position.y,
                 child_transform * transform,
                 font_system,
                 element_state,
@@ -220,10 +219,10 @@ impl Element for Container {
                         // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                         if let ButtonSource::Touch { .. } = pointer_button.button {
                             let container_rectangle = Rectangle::new(
-                                self.common_element_data.computed_x + self.common_element_data.computed_border[3],
-                                self.common_element_data.computed_y + self.common_element_data.computed_border[0],
-                                self.common_element_data.computed_width - self.common_element_data.computed_border[1],
-                                self.common_element_data.computed_height - self.common_element_data.computed_border[2]
+                                self.common_element_data.computed_position.x + self.common_element_data.computed_border.left,
+                                self.common_element_data.computed_position.y + self.common_element_data.computed_border.top,
+                                self.common_element_data.computed_size.width - self.common_element_data.computed_border.right,
+                                self.common_element_data.computed_size.height - self.common_element_data.computed_border.bottom
                             );
                             
                             let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32);

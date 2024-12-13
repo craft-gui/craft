@@ -15,6 +15,7 @@ use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
 
 use crate::components::props::Props;
+use crate::geometry::Padding;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -183,10 +184,10 @@ impl Element for Text {
         _element_state: &StateStore,
     ) {
         let bounding_rectangle = Rectangle::new(
-            self.common_element_data.computed_x_transformed + self.common_element_data.computed_padding[3],
-            self.common_element_data.computed_y_transformed + self.common_element_data.computed_padding[0],
-            self.common_element_data.computed_width,
-            self.common_element_data.computed_height,
+            self.common_element_data.computed_position_transformed.x + self.common_element_data.computed_padding.right,
+            self.common_element_data.computed_position_transformed.y + self.common_element_data.computed_padding.top,
+            self.common_element_data.computed_size.width,
+            self.common_element_data.computed_size.height,
         );
         renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background);
         renderer.draw_text(
@@ -249,21 +250,20 @@ impl Element for Text {
 
         self.resolve_position(x, y, result);
 
-        self.common_element_data.computed_content_width = result.content_size.width;
-        self.common_element_data.computed_content_height = result.content_size.height;
-        self.common_element_data.computed_width = result.size.width;
-        self.common_element_data.computed_height = result.size.height;
-        self.common_element_data.computed_padding =
-            [result.padding.top, result.padding.right, result.padding.bottom, result.padding.left];
+        self.common_element_data.computed_content_size.width = result.content_size.width;
+        self.common_element_data.computed_content_size.height = result.content_size.height;
+        self.common_element_data.computed_size.width = result.size.width;
+        self.common_element_data.computed_size.height = result.size.height;
+        self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
-            self.common_element_data.computed_x,
-            self.common_element_data.computed_y,
+            self.common_element_data.computed_position.x,
+            self.common_element_data.computed_position.y,
             0.0,
             1.0,
         ));
-        self.common_element_data.computed_x_transformed = transformed_xy.x;
-        self.common_element_data.computed_y_transformed = transformed_xy.y;
+        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
+        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
     }
 
     fn as_any(&self) -> &dyn Any {
