@@ -15,7 +15,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
 use crate::components::props::Props;
-use crate::geometry::{Padding, Position, Size};
+use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -53,17 +53,21 @@ impl Element for Canvas {
     ) {
         let border_color: Color = self.style().border_color;
 
-        // background
-        let computed_x_transformed = self.common_element_data.computed_position_transformed.x;
-        let computed_y_transformed = self.common_element_data.computed_position_transformed.y;
-
-        let computed_width = self.common_element_data.computed_size.width;
-        let computed_height = self.common_element_data.computed_size.height;
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
+        let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         
-        let border_top = self.common_element_data.computed_border.top;
-        let border_right = self.common_element_data.computed_border.right;
-        let border_bottom = self.common_element_data.computed_border.bottom;
-        let border_left = self.common_element_data.computed_border.left;
+        // background
+        let computed_x_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.x;
+        let computed_y_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.y;
+
+        let computed_width = self.common_element_data.computed_layered_rectangle_transformed.size.width;
+        let computed_height = self.common_element_data.computed_layered_rectangle_transformed.size.height;
+        
+        let border_top = self.common_element_data.computed_layered_rectangle_transformed.border.top;
+        let border_right = self.common_element_data.computed_layered_rectangle_transformed.border.right;
+        let border_bottom = self.common_element_data.computed_layered_rectangle_transformed.border.bottom;
+        let border_left = self.common_element_data.computed_layered_rectangle_transformed.border.left;
         
         // Background
         renderer.draw_rect(
@@ -230,36 +234,43 @@ impl Element for Canvas {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-
-        self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
-        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-
         self.resolve_position(x, y, result);
-        
-        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
+
+        self.common_element_data.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
+
+        let computed_layer_rectangle = LayeredRectangle {
+            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
+            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
+            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
+            position: self.common_element_data.computed_layered_rectangle.position.clone(),
+            size: Size::new(result.size.width, result.size.height),
+        };
+        let mut computed_layer_rectangle_transformed = computed_layer_rectangle.clone();
+
+        // self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
+        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-        
-        self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
-        self.common_element_data.computed_border = Padding::new(result.border.top, result.border.right, result.border.bottom, result.border.left);
 
         let transformed_xy = transform.mul_vec4(glam::vec4(
-            self.common_element_data.computed_position.x,
-            self.common_element_data.computed_position.y,
-            0.0,
+            computed_layer_rectangle.position.x,
+            computed_layer_rectangle.position.y,
+            computed_layer_rectangle.position.z,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
+        computed_layer_rectangle_transformed.position = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
 
-        let scroll_y = if let Some(canvas_state) =
+        let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()
         {
-            canvas_state.scroll_y
+            container_state.scroll_y
         } else {
             0.0
         };
 
-        self.finalize_scrollbar(scroll_y);
+        self.common_element_data.computed_layered_rectangle = computed_layer_rectangle.clone();
+        self.common_element_data.computed_layered_rectangle_transformed = computed_layer_rectangle_transformed.clone();
 
+        self.finalize_scrollbar(scroll_y);
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
@@ -267,9 +278,9 @@ impl Element for Canvas {
             child.internal.finalize_layout(
                 taffy_tree,
                 child2,
-                self.common_element_data.computed_position.x,
-                self.common_element_data.computed_position.y,
-                child_transform * transform,
+                computed_layer_rectangle.position.x,
+                computed_layer_rectangle.position.y,
+                transform * child_transform,
                 font_system,
                 element_state,
             );

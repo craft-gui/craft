@@ -15,7 +15,7 @@ use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
 
 use crate::components::props::Props;
-use crate::geometry::{Padding, Size};
+use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -183,16 +183,14 @@ impl Element for Text {
         _root_node: NodeId,
         _element_state: &StateStore,
     ) {
-        let bounding_rectangle = Rectangle::new(
-            self.common_element_data.computed_position_transformed.x + self.common_element_data.computed_padding.right,
-            self.common_element_data.computed_position_transformed.y + self.common_element_data.computed_padding.top,
-            self.common_element_data.computed_size.width,
-            self.common_element_data.computed_size.height,
-        );
-        renderer.draw_rect(bounding_rectangle, self.common_element_data.style.background);
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
+        let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
+        
+        renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
         renderer.draw_text(
             self.common_element_data.component_id,
-            bounding_rectangle,
+            content_rectangle,
             self.common_element_data.style.color,
         );
     }
@@ -231,7 +229,6 @@ impl Element for Text {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) {
-        let result = taffy_tree.layout(root_node).unwrap();
         let text_context = self.get_state_mut(element_state);
 
         let metrics = text_context.last_key;
@@ -246,20 +243,29 @@ impl Element for Text {
         );
         text_context.buffer.shape_until_scroll(font_system, true);
 
+
+        let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_position(x, y, result);
+        self.common_element_data.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
 
-        self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
-        self.common_element_data.computed_size = Size::new(result.size.width, result.size.height);
-        self.common_element_data.computed_padding = Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left);
-
+        let computed_layer_rectangle = LayeredRectangle {
+            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
+            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
+            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
+            position: self.common_element_data.computed_layered_rectangle.position.clone(),
+            size: Size::new(result.size.width, result.size.height),
+        };
+        let mut computed_layer_rectangle_transformed = computed_layer_rectangle.clone();
         let transformed_xy = transform.mul_vec4(glam::vec4(
-            self.common_element_data.computed_position.x,
-            self.common_element_data.computed_position.y,
-            0.0,
+            computed_layer_rectangle.position.x,
+            computed_layer_rectangle.position.y,
+            computed_layer_rectangle.position.z,
             1.0,
         ));
-        self.common_element_data.computed_position_transformed.x = transformed_xy.x;
-        self.common_element_data.computed_position_transformed.y = transformed_xy.y;
+        computed_layer_rectangle_transformed.position = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
+
+        self.common_element_data.computed_layered_rectangle = computed_layer_rectangle.clone();
+        self.common_element_data.computed_layered_rectangle_transformed = computed_layer_rectangle_transformed.clone();
     }
 
     fn as_any(&self) -> &dyn Any {

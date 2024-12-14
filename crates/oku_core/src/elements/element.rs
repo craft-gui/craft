@@ -11,29 +11,26 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::geometry::{Border, Padding, Position, Size};
+use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
+    
+    pub computed_border_rectangle_overflow_size: Size,
     // The computed values after transforms are applied.
-    pub computed_position_transformed: Position,
-
+    pub computed_layered_rectangle_transformed: LayeredRectangle,
     // The computed values without any transforms applied to them.
-    pub computed_position: Position,
-    pub computed_size: Size,
-    pub computed_scrollbar_size: Size,
-    pub computed_content_size: Size,
-    pub computed_padding: Padding,
-    pub computed_border: Border,
+    pub computed_layered_rectangle: LayeredRectangle,
+    
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
+    pub computed_scrollbar_size: Size,
     pub scrollbar_size: Size,
-
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
     pub(crate) max_scroll_y: f32,
@@ -68,15 +65,20 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn style_mut(&mut self) -> &mut Style {
         &mut self.common_element_data_mut().style
     }
-
+    
     fn in_bounds(&self, x: f32, y: f32) -> bool {
         let common_element_data = self.common_element_data();
-        x >= common_element_data.computed_position_transformed.x
-            && x <= common_element_data.computed_position_transformed.x + common_element_data.computed_size.width
-            && y >= common_element_data.computed_position_transformed.y
-            && y <= common_element_data.computed_position_transformed.y + common_element_data.computed_size.height
-    }
+        
+        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+        
+        let left = transformed_border_rectangle.x;
+        let right = left + transformed_border_rectangle.width;
+        let top = transformed_border_rectangle.y;
+        let bottom = top + transformed_border_rectangle.height;
 
+        x >= left && x <= right && y >= top && y <= bottom
+    }
+    
     fn get_id(&self) -> &Option<String> {
         &self.common_element_data().id
     }
@@ -143,10 +145,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
         match self.common_element_data().style.position {
             taffy::Position::Relative => {
-                self.common_element_data_mut().computed_position = Position::new(x + result.location.x, y + result.location.y, 1.0);
+                self.common_element_data_mut().computed_layered_rectangle.position = Position::new(x + result.location.x, y + result.location.y, 1.0);
             }
             taffy::Position::Absolute => {
-                self.common_element_data_mut().computed_position = Position::new(result.location.x, result.location.y, 1.0);
+                self.common_element_data_mut().computed_layered_rectangle.position = Position::new(result.location.x, result.location.y, 1.0);
             }
         }
     }
@@ -158,20 +160,13 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             return;
         }
 
-        let computed_x_transformed = common_element_data.computed_position_transformed.x;
-        let computed_y_transformed = common_element_data.computed_position_transformed.y;
+        let computed_layered_rectangle_transformed = common_element_data.computed_layered_rectangle_transformed.clone();
+        let content_rectangle = computed_layered_rectangle_transformed.content_rectangle();
 
-        let computed_width = common_element_data.computed_size.width;
-        let computed_height = common_element_data.computed_size.height;
+        let computed_content_height = common_element_data.computed_border_rectangle_overflow_size.height;
 
-        let computed_content_height = common_element_data.computed_content_size.height;
-
-        let border_top = common_element_data.computed_border.top;
-        let border_right = common_element_data.computed_border.right;
-        let border_bottom = common_element_data.computed_border.bottom;
-
-        let client_height = computed_height - border_top - border_bottom;
-        let scroll_height = computed_content_height - border_top;
+        let client_height = content_rectangle.height - computed_layered_rectangle_transformed.border.top - computed_layered_rectangle_transformed.border.bottom;
+        let scroll_height = computed_content_height - computed_layered_rectangle_transformed.border.top;
 
         let scrolltrack_width = common_element_data.scrollbar_size.width;
         let scrolltrack_height = client_height;
@@ -189,8 +184,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         };
 
         common_element_data.computed_scroll_track = Rectangle::new(
-            computed_x_transformed + computed_width - scrolltrack_width - border_right,
-            computed_y_transformed + border_top,
+            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width - scrolltrack_width - computed_layered_rectangle_transformed.border.right,
+            computed_layered_rectangle_transformed.position.y + computed_layered_rectangle_transformed.border.top,
             scrolltrack_width,
             scrolltrack_height,
         );
@@ -198,11 +193,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let scrollthumb_width = scrolltrack_width;
 
         common_element_data.computed_scroll_thumb = Rectangle::new(
-            computed_x_transformed + computed_width - scrolltrack_width - border_right,
-            computed_y_transformed + border_top + scrollthumb_offset,
+            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width - scrolltrack_width - computed_layered_rectangle_transformed.border.right,
+            computed_layered_rectangle_transformed.position.y + computed_layered_rectangle_transformed.border.top + scrollthumb_offset,
             scrollthumb_width,
             scrollthumb_height,
-        )
+        );
     }
     
     /// Called when the element is assigned a unique component id.
