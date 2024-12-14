@@ -59,6 +59,13 @@ pub struct LayeredRectangle {
 }
 
 impl LayeredRectangle {
+    pub fn transform(&self, transform: glam::Mat4) -> Self {
+        let mut transformed_layered_rectangle = self.clone();
+        let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x, self.position.y, self.position.z, 1.0));
+        transformed_layered_rectangle.position = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
+        transformed_layered_rectangle
+    }
+    
     pub fn margin_rectangle_position(&self) -> Position {
         Position {
             x: self.position.x - self.margin.left,

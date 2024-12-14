@@ -238,26 +238,18 @@ impl Element for Canvas {
 
         self.common_element_data.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
 
-        let computed_layer_rectangle = LayeredRectangle {
+        self.common_element_data.computed_layered_rectangle = LayeredRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position: self.common_element_data.computed_layered_rectangle.position.clone(),
             size: Size::new(result.size.width, result.size.height),
         };
-        let mut computed_layer_rectangle_transformed = computed_layer_rectangle.clone();
+        self.common_element_data.computed_layered_rectangle_transformed = self.common_element_data.computed_layered_rectangle.transform(transform);
 
         // self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-
-        let transformed_xy = transform.mul_vec4(glam::vec4(
-            computed_layer_rectangle.position.x,
-            computed_layer_rectangle.position.y,
-            computed_layer_rectangle.position.z,
-            1.0,
-        ));
-        computed_layer_rectangle_transformed.position = Position::new(transformed_xy.x, transformed_xy.y, 1.0);
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()
@@ -267,9 +259,6 @@ impl Element for Canvas {
             0.0
         };
 
-        self.common_element_data.computed_layered_rectangle = computed_layer_rectangle.clone();
-        self.common_element_data.computed_layered_rectangle_transformed = computed_layer_rectangle_transformed.clone();
-
         self.finalize_scrollbar(scroll_y);
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
 
@@ -278,8 +267,8 @@ impl Element for Canvas {
             child.internal.finalize_layout(
                 taffy_tree,
                 child2,
-                computed_layer_rectangle.position.x,
-                computed_layer_rectangle.position.y,
+                self.common_element_data.computed_layered_rectangle.position.x,
+                self.common_element_data.computed_layered_rectangle.position.y,
                 transform * child_transform,
                 font_system,
                 element_state,
