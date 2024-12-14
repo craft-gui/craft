@@ -142,15 +142,27 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         UpdateResult::default()
     }
 
-    fn resolve_position(&mut self, x: f32, y: f32, result: &taffy::Layout) {
-        match self.common_element_data().style.position {
+    fn resolve_layer_rectangle(&mut self, relative_x: f32, relative_y: f32, scroll_transform: glam::Mat4, result: &taffy::Layout) {
+        let common_element_data_mut = self.common_element_data_mut();
+        
+        let position = match common_element_data_mut.style.position {
             taffy::Position::Relative => {
-                self.common_element_data_mut().computed_layered_rectangle.position = Position::new(x + result.location.x, y + result.location.y, 1.0);
+                Position::new(relative_x + result.location.x, relative_y + result.location.y, 1.0)
             }
             taffy::Position::Absolute => {
-                self.common_element_data_mut().computed_layered_rectangle.position = Position::new(result.location.x, result.location.y, 1.0);
+                Position::new(result.location.x, result.location.y, 1.0)
             }
-        }
+        };
+
+        common_element_data_mut.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
+        common_element_data_mut.computed_layered_rectangle = LayeredRectangle {
+            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
+            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
+            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
+            position,
+            size: Size::new(result.size.width, result.size.height),
+        };
+        common_element_data_mut.computed_layered_rectangle_transformed = common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
     }
 
     fn finalize_scrollbar(&mut self, scroll_y: f32) {

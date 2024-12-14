@@ -245,17 +245,7 @@ impl Element for Text {
 
 
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_position(x, y, result);
-        self.common_element_data.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
-
-        self.common_element_data.computed_layered_rectangle = LayeredRectangle {
-            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
-            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
-            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
-            position: self.common_element_data.computed_layered_rectangle.position.clone(),
-            size: Size::new(result.size.width, result.size.height),
-        };
-        self.common_element_data.computed_layered_rectangle_transformed = self.common_element_data.computed_layered_rectangle.transform(transform);
+        self.resolve_layer_rectangle(x, y, transform, result);
     }
 
     fn as_any(&self) -> &dyn Any {

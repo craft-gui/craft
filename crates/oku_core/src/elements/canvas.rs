@@ -234,20 +234,8 @@ impl Element for Canvas {
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_position(x, y, result);
-
-        self.common_element_data.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
-
-        self.common_element_data.computed_layered_rectangle = LayeredRectangle {
-            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
-            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
-            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
-            position: self.common_element_data.computed_layered_rectangle.position.clone(),
-            size: Size::new(result.size.width, result.size.height),
-        };
-        self.common_element_data.computed_layered_rectangle_transformed = self.common_element_data.computed_layered_rectangle.transform(transform);
-
-        // self.common_element_data.computed_content_size = Size::new(result.content_size.width, result.content_size.height);
+        self.resolve_layer_rectangle(x, y, transform, result);
+        
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
