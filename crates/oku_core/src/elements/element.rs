@@ -34,6 +34,7 @@ pub struct CommonElementData {
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
     pub(crate) max_scroll_y: f32,
+    pub layout_order: u32,
 
     // Used for converting the element to a component specification.
     pub(crate) child_specs: Vec<ComponentSpecification>,
@@ -126,6 +127,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         root_node: NodeId,
         x: f32,
         y: f32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
@@ -142,8 +144,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         UpdateResult::default()
     }
 
-    fn resolve_layer_rectangle(&mut self, relative_x: f32, relative_y: f32, scroll_transform: glam::Mat4, result: &taffy::Layout) {
+    fn resolve_layer_rectangle(&mut self, relative_x: f32, relative_y: f32, scroll_transform: glam::Mat4, result: &taffy::Layout, layout_order: &mut u32) {
         let common_element_data_mut = self.common_element_data_mut();
+        common_element_data_mut.layout_order = *layout_order;
+        *layout_order += 1;
         
         let position = match common_element_data_mut.style.position {
             taffy::Position::Relative => {

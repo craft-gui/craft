@@ -367,7 +367,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         }
     }
 
-    let mut targets: VecDeque<(ComponentId, Option<String>)> = VecDeque::new();
+    let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
     let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
 
     /////////////////////////////////////////
@@ -390,8 +390,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         if let Some(element) = fiber_node.element {
             let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
             if in_bounds {
-                //println!("In bounds, Element: {:?}", element.get_id());
-                targets.push_back((element.component_id(), element.get_id().clone()))
+                targets.push_back((element.component_id(), element.get_id().clone(), element.common_element_data().layout_order))
             } else {
                 //println!("Not in bounds, Element: {:?}", element.get_id());
             }
@@ -406,9 +405,12 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     // The target is always the first node (2, Some(c)).
 
-    let target = targets[0].clone();
-    let (_target_component_id, target_element_id) = target.clone();
+    let mut tmp_targets: Vec<(ComponentId, Option<String>, u32)> = targets.clone().into_iter().collect();
+    tmp_targets.sort_by(|a, b| b.2.cmp(&a.2)); // Sort using the 3rd field (u32)
+    targets = VecDeque::from(tmp_targets);
 
+    let target = targets[0].clone();
+    let (_target_component_id, target_element_id, _layout_order) = target.clone();
     let mut propagate = true;
     let mut prevent_defaults = false;
     for current_target in targets.iter() {
@@ -416,7 +418,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             break;
         }
 
-        let (current_target_component_id, current_target_element_id) = current_target.clone();
+        let (current_target_component_id, current_target_element_id, layout_order) = current_target.clone();
 
         // Get the element's component tree node.
         let current_target_component = app
@@ -471,7 +473,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     // Handle element events if prevent defaults was not set to true.
     if !prevent_defaults {
         for target in targets.iter() {
-            let (target_component_id, _target_element_id) = target.clone();
+            let (target_component_id, _target_element_id, _layout_order) = target.clone();
 
             let mut propagate = true;
             let mut prevent_defaults = false;
@@ -707,7 +709,8 @@ fn layout<'a>(
 
     let transform = glam::Mat4::IDENTITY;
 
-    root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, transform, font_system, element_state);
+    let mut layout_order: u32 = 0;
+    root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, &mut layout_order, transform, font_system, element_state);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

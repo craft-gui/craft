@@ -91,12 +91,13 @@ impl Element for Image {
         root_node: NodeId,
         x: f32,
         y: f32,
+        layout_order: &mut u32,
         transform: glam::Mat4,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result);
+        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
     }
 
     fn as_any(&self) -> &dyn Any {

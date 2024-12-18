@@ -229,12 +229,13 @@ impl Element for Canvas {
         root_node: NodeId,
         x: f32,
         y: f32,
+        layout_order: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result);
+        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
@@ -257,6 +258,7 @@ impl Element for Canvas {
                 child2,
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
+                layout_order,
                 transform * child_transform,
                 font_system,
                 element_state,
