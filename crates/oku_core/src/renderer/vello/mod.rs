@@ -22,7 +22,7 @@ use winit::window::Window;
 
 impl From<Color> for peniko::Color {
     fn from(color: Color) -> Self {
-        peniko::Color::rgba(color.r as f64 / 255.0, color.g as f64 / 255.0, color.b as f64 / 255.0, color.a as f64 / 255.0)
+        to_vello_rgba_f32_color(color)
     }
 }
 
@@ -124,7 +124,7 @@ impl<'a> VelloRenderer<'a> {
 }
 
 fn to_vello_rgba_f32_color(color: Color) -> vello::peniko::Color {
-    vello::peniko::Color::rgba(color.r as f64 / 255.0, color.g as f64 / 255.0, color.b as f64 / 255.0, color.a as f64 / 255.0)
+    peniko::Color::new([color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0])
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
@@ -241,7 +241,7 @@ impl Renderer for VelloRenderer<'_> {
                         let image = &resource.image;
                         let data = Arc::new(image.clone().into_raw().to_vec());
                         let blob = Blob::new(data);
-                        let vello_image = peniko::Image::new(blob, peniko::Format::Rgba8, image.width() as u32, image.height() as u32);
+                        let vello_image = peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width() as u32, image.height() as u32);
 
                         let mut transform= Affine::IDENTITY;
                         transform = transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
@@ -264,9 +264,9 @@ impl Renderer for VelloRenderer<'_> {
                         let editor = &text_context.editor;
                         let buffer_glyphs = text::create_glyphs_for_editor(editor,
                                                        fill_color.into(),
-                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0),
-                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0),
-                                                       peniko::Color::rgba(0.0, 0.0, 0.0, 1.0)
+                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0]),
+                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0]),
+                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0])
                         );
 
                         // Draw the Glyphs
@@ -368,7 +368,7 @@ impl Renderer for VelloRenderer<'_> {
                 &self.scene,
                 &surface_texture,
                 &vello::RenderParams {
-                    base_color: to_vello_rgba_f32_color(self.surface_clear_color),
+                    base_color: self.surface_clear_color.into(),
                     width,
                     height,
                     // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.

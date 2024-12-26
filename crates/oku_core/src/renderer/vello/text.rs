@@ -82,8 +82,8 @@ pub(crate) fn create_glyphs(
 
     let mut buffer_glyphs = BufferGlyphs {
         font_size: buffer.metrics().font_size,
-        glyph_highlight_color: Default::default(),
-        cursor_color: Default::default(),
+        glyph_highlight_color: Color::WHITE,
+        cursor_color: Color::BLACK,
         buffer_lines: vec![],
     };
 
@@ -172,7 +172,7 @@ pub(crate) fn create_glyphs(
 
         for glyph in layout_run.glyphs {
             let mut glyph_color = match glyph.color_opt {
-                Some(color) => Color::rgba8(color.r(), color.g(), color.b(), color.a()),
+                Some(color) => Color::from_rgba8(color.r(), color.g(), color.b(), color.a()),
                 None => text_color,
             };
 

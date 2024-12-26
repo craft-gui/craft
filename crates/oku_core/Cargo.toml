@@ -8,9 +8,9 @@ resolver = "2"
 [dependencies]
 
 futures = "0.3.31"
-winit = { git = "https://github.com/rust-windowing/winit",  rev="ae4c449670674d8ac0d6d8754caf3fe5f4954c25" }
+winit = { git = "https://github.com/rust-windowing/winit",  rev="6896de5b73817a51c2e9311a52a571b400411602" }
 cosmic-text = { version = "0.12.1" }
-taffy = { version = "0.7.0" }
+taffy = { version = "0.7.1" }
 wgpu = { version = "23.0.1", features = ["fragile-send-sync-non-atomic-wasm"] }
 accesskit = "0.17.1"
 #accesskit_winit = { version = "0.18.0" }
@@ -20,11 +20,11 @@ unicode-segmentation = "1.12.0"
 # https://crates.io/crates/glam
 # SSE2 is enabled by default on x86_64 targets.
 glam = { version = "0.29.2" }
-bytemuck = { version = "1.20.0", features = ["derive"] }
+bytemuck = { version = "1.21.0", features = ["derive"] }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
-vello = { git = "https://github.com/NoahR02/vello.git", rev="5e1548da28b014a56e3d19f8b1277688051847f7" }
+vello = { git = "https://github.com/NoahR02/vello.git", rev="8a84a4abf7aaabdb7de82e3d9d86ed427ad21638" }
 cfg-if = "1.0.0"
-chrono = "0.4.38"
+chrono = "0.4.39"
 log = "0.4.22"
 
 [dependencies.reqwest]
@@ -36,23 +36,23 @@ features = ["rustls-tls"]
 web-time = "1.1.0"
 getrandom = { version = "0.2", features = ["js"] }
 console_error_panic_hook = "0.1.7"
-wasm-bindgen = "0.2.95"
-wasm-bindgen-futures = "0.4.45"
-web-sys = { version = "0.3.72", features = [
+wasm-bindgen = "0.2.99"
+wasm-bindgen-futures = "0.4.49"
+web-sys = { version = "0.3.76", features = [
     "Document",
     "Window",
     "Element",
 ] }
 
 console_log = "1.0"
-tokio = { version = "1.41.0", features = ["sync", "macros"] }
+tokio = { version = "1.42.0", features = ["sync", "macros"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.41.0", features = ["full"] }
+tokio = { version = "1.42.0", features = ["full"] }
 tracing = "0.1.40"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
-tiny-skia = { git = "https://github.com/RazrFalcon/tiny-skia", rev = "2cba78f9fd855804dbee65864929925ac88d7f08" }
+tiny-skia = { git = "https://github.com/RazrFalcon/tiny-skia", rev = "cf6530d4b58ebb059684b446f54794b91ccc96a1" }
 softbuffer = { version = "0.4.6"}
 
 [features]
