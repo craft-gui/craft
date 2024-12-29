@@ -13,7 +13,7 @@ cosmic-text = { version = "0.12.1" }
 taffy = { version = "0.7.1" }
 wgpu = { version = "23.0.1", features = ["fragile-send-sync-non-atomic-wasm"] }
 accesskit = "0.17.1"
-accesskit_winit = { version = "0.23.1" }
+accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 rustc-hash = { version = "2.1.0", default-features = false }
 unicode-segmentation = "1.12.0"
 
@@ -35,6 +35,7 @@ default-features = false
 features = ["rustls-tls"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+accesskit_winit = { version = "0.23.1" }
 web-time = "1.1.0"
 getrandom = { version = "0.2", features = ["js"] }
 console_error_panic_hook = "0.1.7"
