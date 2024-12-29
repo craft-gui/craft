@@ -14,7 +14,7 @@ use std::num::NonZeroU32;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use peniko::kurbo::BezPath;
-use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
+use tiny_skia::{ColorSpace, FillRule, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
 use crate::geometry::Rectangle;
@@ -276,7 +276,52 @@ impl Renderer for SoftwareRenderer {
                     todo!()
                 }
                 RenderCommand::FillBezPath(_path, _color) => {
-                    //self.framebuffer.fill_path()
+                    let mut paint = Paint::default();
+                    paint.set_color_rgba8(_color.r_u8(), _color.g_u8(), _color.b_u8(), _color.a_u8());
+
+                    let mut path = tiny_skia::PathBuilder::new();
+                    let mut last_point = (0.0, 0.0);
+                    for path_element in _path {
+                        match path_element {
+                            peniko::kurbo::PathEl::MoveTo(point) => {
+                                path.move_to(point.x as f32, point.y as f32);
+                                last_point = (point.x as f32, point.y as f32);
+                            }
+                            peniko::kurbo::PathEl::LineTo(point) => {
+                                if last_point.0 == point.x as f32 && last_point.1 == point.y as f32 {
+                                    continue;
+                                }
+                                if last_point.0 == point.x as f32 || last_point.1 == point.y as f32 {
+                                    self.framebuffer.fill_rect(
+                                        Rect::from_points(&[tiny_skia::Point::from_xy(last_point.0, last_point.1), tiny_skia::Point::from_xy(point.x as f32, point.y as f32)]).unwrap(),
+                                        &paint,
+                                        Transform::identity(),
+                                        None
+                                    );
+                                } else {
+                                    path.line_to(point.x as f32, point.y as f32);
+                                }
+
+                                last_point = (point.x as f32, point.y as f32);
+                            }
+                            peniko::kurbo::PathEl::QuadTo(point1, point2) => {
+                                path.quad_to(point1.x as f32, point1.y as f32, point2.x as f32, point2.y as f32);
+                                last_point = (point2.x as f32, point2.y as f32);
+                            }
+                            peniko::kurbo::PathEl::CurveTo(point1, point2, point3) => {
+                                path.cubic_to(point1.x as f32, point1.y as f32, point2.x as f32, point2.y as f32, point3.x as f32, point3.y as f32);
+                                last_point = (point3.x as f32, point3.y as f32);
+                            }
+                            peniko::kurbo::PathEl::ClosePath => {
+                                path.close();
+                            }
+                        }
+                    }
+                    let path = path.finish().unwrap();
+                    if path.len() <= 2 {
+                        continue;
+                    }
+                    self.framebuffer.fill_path(&path, &paint, FillRule::EvenOdd, Transform::identity(), None);
                 }
             }
         }
