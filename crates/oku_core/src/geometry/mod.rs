@@ -1,5 +1,10 @@
 use crate::renderer::renderer::Rectangle;
 
+pub(crate) mod borders;
+pub(crate) mod corner;
+pub(crate) mod cornerside;
+pub(crate) mod side;
+
 #[derive(Clone, Debug, Default)]
 pub struct Position {
     pub(crate) x: f32,

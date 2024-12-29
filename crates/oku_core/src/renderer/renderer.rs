@@ -3,6 +3,7 @@ use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
+use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -38,6 +39,7 @@ pub enum RenderCommand {
     DrawText(Rectangle, ComponentId, Color),
     PushLayer(Rectangle),
     PopLayer,
+    FillBezPath(kurbo::BezPath, Color),
 }
 
 pub trait Surface {
@@ -61,6 +63,8 @@ pub trait Renderer {
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
+
+    fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);

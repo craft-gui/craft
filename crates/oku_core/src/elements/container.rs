@@ -10,12 +10,15 @@ use crate::{generate_component_methods, RendererBox};
 use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
+use peniko::kurbo::Affine;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
 use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
 use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::borders::BorderSpec;
+use crate::geometry::side::Side;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -58,9 +61,36 @@ impl Element for Container {
         // Background
         renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
         
+        {
+            let computed_border_spec = &self.common_element_data.computed_border;
+
+            let top = computed_border_spec.get_side(Side::Top);
+            let right = computed_border_spec.get_side(Side::Right);
+            let bottom = computed_border_spec.get_side(Side::Bottom);
+            let left = computed_border_spec.get_side(Side::Left);
+
+            ////////////////////////////////////////////////////////////////
+
+            let border_top_path = computed_border_spec.build_side_path(Side::Top);
+            let border_right_path = computed_border_spec.build_side_path(Side::Right);
+            let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
+            let border_left_path = computed_border_spec.build_side_path(Side::Left);
+
+            ////////////////////////////////////////////////////////////////
+
+            //let background_path = build_background_path(&border_spec, &computed_border_spec);
+
+            renderer.fill_bez_path(border_top_path, top.color);
+            renderer.fill_bez_path(border_right_path, right.color);
+            renderer.fill_bez_path(border_bottom_path, bottom.color);
+            renderer.fill_bez_path(border_left_path, left.color);
+            
+        }
+        
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
         }
+
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
@@ -123,6 +153,20 @@ impl Element for Container {
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+
+        let borders = &self.common_element_data.computed_layered_rectangle.border;
+        let border_spec = BorderSpec::new(
+            self.common_element_data.computed_layered_rectangle.border_rectangle(),
+            [
+                borders.top,
+                borders.right,
+                borders.bottom,
+                borders.left,
+            ],
+            self.common_element_data.style.border_radius,
+            self.common_element_data.style.border_color
+        );
+        self.common_element_data.computed_border = border_spec.compute_border_spec();
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()

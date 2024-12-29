@@ -66,6 +66,9 @@ impl Component for Counter {
 
 fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification {
     Container::new()
+        .border_width("1px", "2px", "3px", "4px")
+        .border_color(Color::rgba(0, 0, 0, 255))
+        .border_radius(10.0, 10.0, 10.0, 10.0)
         .padding("15px", "30px", "15px", "30px")
         .background(color)
         .display(Display::Flex)

@@ -12,9 +12,12 @@ use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
 use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::borders::ComputedBorderSpec;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
+    pub computed_border: ComputedBorderSpec,
+    
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,

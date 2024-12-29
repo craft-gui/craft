@@ -23,13 +23,43 @@ where
         self
     }
 
-    fn border<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        self.styles_mut().border = [top.into(), right.into(), bottom.into(), left.into()];
+    fn border_width<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().border_width = [top.into(), right.into(), bottom.into(), left.into()];
         self
     }
 
-    fn border_color(mut self, border_color: Color) -> Self {
-        self.styles_mut().border_color = border_color;
+    fn border_radius<U: Into<f32> + Copy>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+        self.styles_mut().border_radius = [
+            (top.into(), top.into()),
+            (right.into(), right.into()),
+            (bottom.into(), bottom.into()),
+            (left.into(), left.into())
+        ];
+        self
+    }
+
+    fn border_color(mut self, color: Color) -> Self {
+        self.styles_mut().border_color = [color, color, color, color];
+        self
+    }
+    
+    fn border_color_top(mut self, color: Color) -> Self {
+        self.styles_mut().border_color[0] = color;
+        self
+    }
+    
+    fn border_color_right(mut self, color: Color) -> Self {
+        self.styles_mut().border_color[1] = color;
+        self
+    }
+    
+    fn border_color_bottom(mut self, color: Color) -> Self {
+        self.styles_mut().border_color[2] = color;
+        self
+    }
+    
+    fn border_color_left(mut self, color: Color) -> Self {
+        self.styles_mut().border_color[3] = color;
         self
     }
 

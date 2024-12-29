@@ -51,7 +51,7 @@ impl Element for Canvas {
         root_node: NodeId,
         element_state: &StateStore,
     ) {
-        let border_color: Color = self.style().border_color;
+        let border_color: Color = self.style().border_color[0];
 
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
@@ -180,6 +180,9 @@ impl Element for Canvas {
                 }
                 RenderCommand::PopLayer => {
                     renderer.pop_layer();
+                }
+                RenderCommand::FillBezPath(path, color) => {
+                    renderer.fill_bez_path(path.clone(), *color);
                 }
             }
         }

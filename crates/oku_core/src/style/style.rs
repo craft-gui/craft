@@ -136,7 +136,6 @@ pub struct Style {
     pub position: Position,
     pub margin: [Unit; 4],
     pub padding: [Unit; 4],
-    pub border: [Unit; 4],
     pub gap: [Unit; 2],
     pub inset: [Unit; 4],
     pub width: Unit,
@@ -158,11 +157,15 @@ pub struct Style {
 
     pub color: Color,
     pub background: Color,
-    pub border_color: Color,
     pub font_size: f32,
     pub font_weight: Weight,
     pub font_style: FontStyle,
     pub overflow: [Overflow; 2],
+
+    pub border_color: [Color; 4],
+    pub border_width: [Unit; 4],
+    pub border_radius: [(f32, f32); 4],
+
 }
 
 fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::Dimension {
@@ -202,7 +205,7 @@ impl Default for Style {
             position: Position::Relative,
             margin: [Unit::Px(0.0); 4],
             padding: [Unit::Px(0.0); 4],
-            border: [Unit::Px(0.0); 4],
+            border_width: [Unit::Px(0.0); 4],
             gap: [Unit::Px(0.0); 2],
             inset: [Unit::Px(0.0); 4],
             width: Unit::Auto,
@@ -223,11 +226,12 @@ impl Default for Style {
             flex_basis: Unit::Auto,
             color: Color::rgba(0, 0, 0, 255),
             background: Color::rgba(0, 0, 0, 0),
-            border_color: Color::rgba(0, 0, 0, 255),
+            border_color: [Color::BLACK; 4],
             font_size: 16.0,
             font_weight: Default::default(),
             font_style: Default::default(),
             overflow: [Overflow::default(), Overflow::default()],
+            border_radius: [(0.0, 0.0); 4],
         }
     }
 }
@@ -277,10 +281,10 @@ impl Style {
         };
 
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage_with_scale_factor(style.border[3], scale_factor),
-            right: unit_to_taffy_length_percentage_with_scale_factor(style.border[1], scale_factor),
-            top: unit_to_taffy_length_percentage_with_scale_factor(style.border[0], scale_factor),
-            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border[2], scale_factor),
+            left: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[3], scale_factor),
+            right: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[1], scale_factor),
+            top: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[0], scale_factor),
+            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[2], scale_factor),
         };
 
         let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {

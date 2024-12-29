@@ -11,6 +11,7 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::{Edit, FontSystem, SwashCache};
 use std::collections::HashMap;
 use std::sync::Arc;
+use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use unicode_segmentation::UnicodeSegmentation;
 use vello::kurbo::{Affine, Rect};
@@ -340,6 +341,9 @@ impl Renderer for VelloRenderer<'_> {
                 RenderCommand::PopLayer => {
                     self.scene.pop_layer();
                 },
+                RenderCommand::FillBezPath(path, color) => {
+                    self.scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(color), None, &path);
+                }
             }
         }
         // Get the RenderSurface (surface + config)
@@ -384,5 +388,9 @@ impl Renderer for VelloRenderer<'_> {
         // Queue the texture to be presented on the surface
         surface_texture.present();
 
+    }
+
+    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 }

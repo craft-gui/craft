@@ -13,6 +13,7 @@ use softbuffer::Buffer;
 use std::num::NonZeroU32;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use peniko::kurbo::BezPath;
 use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
@@ -156,6 +157,10 @@ impl Renderer for SoftwareRenderer {
         self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
     }
 
+    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    }
+
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
@@ -268,6 +273,9 @@ impl Renderer for SoftwareRenderer {
                 }
                 RenderCommand::PopLayer => {
                     todo!()
+                }
+                RenderCommand::FillBezPath(_path, _color) => {
+                    //self.framebuffer.fill_path()
                 }
             }
         }

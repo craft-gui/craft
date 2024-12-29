@@ -16,6 +16,7 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use std::sync::Arc;
+use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
 use winit::window::Window;
@@ -128,6 +129,10 @@ impl Renderer for WgpuRenderer<'_> {
         //self.pipeline2d.draw_rect_outline(rectangle, outline_color);
     }
 
+    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    }
+
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
@@ -228,6 +233,9 @@ impl Renderer for WgpuRenderer<'_> {
                     }
                     RenderCommand::DrawText(rectangle, component_id, color) => {
                         self.text_renderer.build(rectangle, component_id, color);
+                    }
+                    RenderCommand::FillBezPath(_, _) => {
+                        
                     }
                 }
 
