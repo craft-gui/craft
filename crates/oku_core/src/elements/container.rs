@@ -3,7 +3,6 @@ use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{Style};
 use crate::{generate_component_methods, RendererBox};
@@ -16,7 +15,7 @@ use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, Po
 use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 use crate::geometry::borders::BorderSpec;
 use crate::geometry::side::Side;
 
@@ -222,9 +221,9 @@ impl Element for Container {
                         if let ButtonSource::Touch { .. } = pointer_button.button {
                             let container_rectangle = self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle();
                             
-                            let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32);
+                            let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position);
 
-                            if container_rectangle.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) && !in_scroll_bar {
+                            if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
                                 container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
                                 return UpdateResult::new().prevent_propagate().prevent_defaults();
                             }
@@ -232,10 +231,10 @@ impl Element for Container {
 
                         match pointer_button.state {
                             ElementState::Pressed => {
-                                if self.common_element_data.computed_scroll_thumb.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
                                     container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
                                     UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else if self.common_element_data.computed_scroll_track.contains(pointer_button.position.x as f32, pointer_button.position.y as f32) {
+                                } else if self.common_element_data.computed_scroll_track.contains(&pointer_button.position) {
                                     let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
 
                                     let percent = offset_y / self.common_element_data.computed_scroll_track.height;

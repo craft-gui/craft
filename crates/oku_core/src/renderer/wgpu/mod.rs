@@ -9,7 +9,7 @@ pub(crate) mod texture;
 
 use crate::components::component::ComponentId;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{Rectangle, RenderCommand, Renderer};
+use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::{ create_surface_config, request_adapter, request_device_and_queue, Context };
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
@@ -20,6 +20,7 @@ use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
 use winit::window::Window;
+use crate::geometry::Rectangle;
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::image::image::ImageRenderer;
 
@@ -235,7 +236,7 @@ impl Renderer for WgpuRenderer<'_> {
                         self.text_renderer.build(rectangle, component_id, color);
                     }
                     RenderCommand::FillBezPath(_, _) => {
-                        
+
                     }
                 }
 

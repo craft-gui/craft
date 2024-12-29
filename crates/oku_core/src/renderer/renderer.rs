@@ -5,31 +5,7 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Rectangle {
-    pub(crate) x: f32,
-    pub(crate) y: f32,
-    pub(crate) width: f32,
-    pub(crate) height: f32,
-}
-
-impl Rectangle {
-    pub fn contains(&self, x: f32, y: f32) -> bool {
-        x >= self.x && x <= self.x + self.width && y >= self.y && y <= self.y + self.height
-    }
-}
-
-impl Rectangle {
-    pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        Rectangle {
-            x,
-            y,
-            width,
-            height,
-        }
-    }
-}
+use crate::geometry::Rectangle;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {

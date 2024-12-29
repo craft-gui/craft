@@ -2,7 +2,6 @@ use crate::components::component::ComponentSpecification;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::renderer::color::Color;
-use crate::renderer::renderer::Rectangle;
 use crate::resource_manager::ResourceIdentifier;
 use crate::reactive::state_store::StateStore;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
@@ -11,7 +10,7 @@ use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 
 #[derive(Clone, Debug)]
 pub struct Image {

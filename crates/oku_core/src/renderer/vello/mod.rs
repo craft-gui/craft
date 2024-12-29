@@ -4,7 +4,7 @@ use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{Rectangle, RenderCommand, Renderer};
+use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
@@ -20,6 +20,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
+use crate::geometry::Rectangle;
 
 impl From<Color> for peniko::Color {
     fn from(color: Color) -> Self {
@@ -265,9 +266,9 @@ impl Renderer for VelloRenderer<'_> {
                         let editor = &text_context.editor;
                         let buffer_glyphs = text::create_glyphs_for_editor(editor,
                                                        fill_color.into(),
-                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0]),
-                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0]),
-                                                       peniko::Color::new([0.0, 0.0, 0.0, 1.0])
+                                                       peniko::Color::from_rgba8(0, 0, 0, 255),
+                                                       peniko::Color::from_rgba8(0, 120, 215, 255),
+                                                       peniko::Color::from_rgba8(255, 255, 255, 255)
                         );
 
                         // Draw the Glyphs

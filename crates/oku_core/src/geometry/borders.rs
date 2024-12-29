@@ -5,8 +5,8 @@ use peniko::kurbo::{BezPath, PathEl, Point, Shape, Vec2};
 
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use crate::geometry::cornerside::CornerSide;
+use crate::geometry::Rectangle;
 use crate::geometry::side::Side;
-use crate::renderer::renderer::Rectangle;
 
 pub struct BorderSpec {
     x1: f64,

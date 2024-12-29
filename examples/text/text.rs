@@ -1,4 +1,3 @@
-
 use oku::components::{Component, UpdateResult};
 use oku::elements::text_input::TextInput;
 use oku_core::events::Message;
@@ -9,6 +8,7 @@ use oku::components::ComponentSpecification;
 use oku::elements::ElementStyles;
 use oku_core::events::{Event, OkuMessage};
 use oku::RendererType::Vello;
+use oku_core::elements::{Container, Text};
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -21,7 +21,11 @@ impl Component for TextState {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
-        TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input").component()
+        Container::new()
+            .flex_direction(FlexDirection::Column)
+            .push(Text::new("Hello, World!").id("hello_text"))
+            .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input")
+        ).component()
     }
 
     fn update(

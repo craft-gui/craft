@@ -3,7 +3,7 @@ use crate::components::UpdateResult;
 use crate::elements::element::{CommonElementData, Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{Rectangle, RenderCommand};
+use crate::renderer::renderer::{RenderCommand};
 use crate::reactive::state_store::StateStore;
 use crate::style::{Style};
 use crate::{generate_component_methods_no_children, RendererBox};
@@ -15,7 +15,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
 use crate::components::props::Props;
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Rectangle, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]

@@ -1,7 +1,6 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
-use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{Style};
 use crate::{generate_component_methods_no_children, RendererBox};
@@ -15,7 +14,7 @@ use winit::dpi::{LogicalPosition, PhysicalPosition};
 use crate::elements::ElementStyles;
 
 use crate::components::props::Props;
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]

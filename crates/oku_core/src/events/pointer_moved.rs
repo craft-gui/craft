@@ -1,5 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use winit::event::{DeviceId, PointerSource};
+use crate::geometry::Point;
 
 #[derive(Clone, Debug)]
 pub struct PointerMoved {
@@ -18,7 +19,7 @@ pub struct PointerMoved {
     /// [`border`]: https://developer.mozilla.org/en-US/docs/Web/CSS/border
     /// [`padding`]: https://developer.mozilla.org/en-US/docs/Web/CSS/padding
     /// [`transform`]: https://developer.mozilla.org/en-US/docs/Web/CSS/transform
-    pub position: PhysicalPosition<f64>,
+    pub position: Point,
 
     pub source: PointerSource,
     pub primary: bool,
@@ -33,7 +34,7 @@ impl PointerMoved {
     ) -> Self {
         Self {
             device_id,
-            position,
+            position: position.into(),
             source,
             primary,
         }

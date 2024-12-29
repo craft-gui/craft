@@ -2,7 +2,7 @@ use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{Rectangle, RenderCommand, Renderer};
+use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
@@ -17,6 +17,7 @@ use peniko::kurbo::BezPath;
 use tiny_skia::{ColorSpace, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
+use crate::geometry::Rectangle;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,

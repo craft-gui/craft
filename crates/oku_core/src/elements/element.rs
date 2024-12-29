@@ -3,7 +3,6 @@ use crate::components::props::Props;
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
-use crate::renderer::renderer::Rectangle;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
@@ -11,22 +10,22 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
 use crate::geometry::borders::ComputedBorderSpec;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
     pub computed_border: ComputedBorderSpec,
-    
+
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
     
     pub computed_border_rectangle_overflow_size: Size,
     // The computed values after transforms are applied.
-    pub computed_layered_rectangle_transformed: LayeredRectangle,
+    pub computed_layered_rectangle_transformed: ElementRectangle,
     // The computed values without any transforms applied to them.
-    pub computed_layered_rectangle: LayeredRectangle,
+    pub computed_layered_rectangle: ElementRectangle,
     
     /// A user-defined id for the element.
     pub id: Option<String>,
@@ -154,20 +153,20 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         
         let position = match common_element_data_mut.style.position {
             taffy::Position::Relative => {
-                Position::new(relative_x + result.location.x, relative_y + result.location.y, 1.0)
+                Point::new(relative_x + result.location.x, relative_y + result.location.y)
             }
             taffy::Position::Absolute => {
-                Position::new(result.location.x, result.location.y, 1.0)
+                Point::new(result.location.x, result.location.y)
             }
         };
 
         common_element_data_mut.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
-        common_element_data_mut.computed_layered_rectangle = LayeredRectangle {
+        common_element_data_mut.computed_layered_rectangle = ElementRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
-            size: Size::new(result.size.width, result.size.height),
+            size: result.size.into(),
         };
         common_element_data_mut.computed_layered_rectangle_transformed = common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
     }

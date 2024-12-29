@@ -10,7 +10,6 @@ use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
-use crate::renderer::renderer::Rectangle;
 use crate::style::{FontStyle, Style};
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::Edit;
@@ -24,7 +23,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::geometry::{Border, LayeredRectangle, Margin, Padding, Position, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -41,6 +40,7 @@ pub struct TextInputState<'a> {
     pub editor: Editor<'a>,
     pub text: String,
     pub original_text_hash: u64,
+    pub dragging: bool,
 }
 
 impl<'a> TextInputState<'a> {
@@ -70,6 +70,7 @@ impl<'a> TextInputState<'a> {
             editor,
             text,
             original_text_hash,
+            dragging: false,
         }
     }
 
@@ -278,60 +279,92 @@ impl Element for TextInput {
         element_state: &mut StateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
-        let text_context: &mut TextInputState = element_state
+        let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
             .as_mut()
             .downcast_mut()
             .unwrap();
-
+        
+        let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
+        let content_position = content_rect.position();
         let res = match message {
+            OkuMessage::PointerButtonEvent(pointer_button) => {
+                let pointer_position = pointer_button.position;
+                let pointer_content_position = pointer_position - content_position;
+                if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
+                    state.editor.action(
+                        font_system,
+                        Action::Click {
+                            x: pointer_content_position.x as i32,
+                            y: pointer_content_position.y as i32,
+                        },
+                    );
+                    state.dragging = true;
+                } else {
+                    state.dragging = false;
+                }
+                UpdateResult::new().prevent_defaults().prevent_propagate()
+            },
+            OkuMessage::PointerMovedEvent(moved) => {
+                if state.dragging {
+                    let pointer_position = moved.position;
+                    let pointer_content_position = pointer_position - content_position;
+                    state.editor.action(
+                        font_system,
+                        Action::Drag {
+                            x: pointer_content_position.x as i32,
+                            y: pointer_content_position.y as i32,
+                        },
+                    );
+                }
+                UpdateResult::new().prevent_defaults().prevent_propagate()
+            },
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
-                let KeyEvent {
-                    logical_key, state, ..
-                } = keyboard_input.event;
+                let logical_key = keyboard_input.event.logical_key;
+                let key_state = keyboard_input.event.state;
 
-                if state.is_pressed() {
+                if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::Left))
+                            state.editor.action(font_system, Action::Motion(Motion::Left))
                         }
                         Key::Named(NamedKey::ArrowRight) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::Right))
+                            state.editor.action(font_system, Action::Motion(Motion::Right))
                         }
                         Key::Named(NamedKey::ArrowUp) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::Up))
+                            state.editor.action(font_system, Action::Motion(Motion::Up))
                         }
                         Key::Named(NamedKey::ArrowDown) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::Down))
+                            state.editor.action(font_system, Action::Motion(Motion::Down))
                         }
                         Key::Named(NamedKey::Home) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::Home))
+                            state.editor.action(font_system, Action::Motion(Motion::Home))
                         }
                         Key::Named(NamedKey::End) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::End))
+                            state.editor.action(font_system, Action::Motion(Motion::End))
                         }
                         Key::Named(NamedKey::PageUp) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::PageUp))
+                            state.editor.action(font_system, Action::Motion(Motion::PageUp))
                         }
                         Key::Named(NamedKey::PageDown) => {
-                            text_context.editor.action(font_system, Action::Motion(Motion::PageDown))
+                            state.editor.action(font_system, Action::Motion(Motion::PageDown))
                         }
-                        Key::Named(NamedKey::Escape) => text_context.editor.action(font_system, Action::Escape),
-                        Key::Named(NamedKey::Enter) => text_context.editor.action(font_system, Action::Enter),
-                        Key::Named(NamedKey::Backspace) => text_context.editor.action(font_system, Action::Backspace),
-                        Key::Named(NamedKey::Delete) => text_context.editor.action(font_system, Action::Delete),
+                        Key::Named(NamedKey::Escape) => state.editor.action(font_system, Action::Escape),
+                        Key::Named(NamedKey::Enter) => state.editor.action(font_system, Action::Enter),
+                        Key::Named(NamedKey::Backspace) => state.editor.action(font_system, Action::Backspace),
+                        Key::Named(NamedKey::Delete) => state.editor.action(font_system, Action::Delete),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
                                 for char in text.chars() {
-                                    text_context.editor.action(font_system, Action::Insert(char));
+                                    state.editor.action(font_system, Action::Insert(char));
                                 }
                             }
                         }
                         Key::Character(text) => {
                             for c in text.chars() {
-                                text_context.editor.action(font_system, Action::Insert(c));
+                                state.editor.action(font_system, Action::Insert(c));
 
                                 //text_context.editor.set_selection(Selection::Line(Cursor::new(0, 0)));
                             }
@@ -339,9 +372,9 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
-                text_context.editor.shape_as_needed(font_system, true);
+                state.editor.shape_as_needed(font_system, true);
 
-                text_context.editor.with_buffer(|buffer| {
+                state.editor.with_buffer(|buffer| {
                     let mut buffer_string: String = String::new();
                     let last_line = buffer.lines.len() - 1;
                     for (line_number, line) in buffer.lines.iter().enumerate() {
@@ -355,8 +388,8 @@ impl Element for TextInput {
                     text_hasher.write(buffer_string.as_bytes());
                     let text_hash = text_hasher.finish();
 
-                    text_context.text_hash = text_hash;
-                    text_context.text = buffer_string.clone();
+                    state.text_hash = text_hash;
+                    state.text = buffer_string.clone();
 
                     UpdateResult::new()
                         .prevent_defaults()

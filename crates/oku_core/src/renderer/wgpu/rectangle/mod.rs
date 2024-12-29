@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use wgpu::RenderPass;
 use wgpu::util::DeviceExt;
+use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::Rectangle;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::rectangle::pipeline::{RectanglePipeline, RectanglePipelineConfig, DEFAULT_RECTANGLE_PIPELINE_CONFIG};
 use crate::renderer::wgpu::rectangle::vertex::RectangleVertex;

@@ -1,4 +1,4 @@
-use crate::renderer::renderer::Rectangle;
+use crate::geometry::Rectangle;
 
 pub(crate) type ClipRectangle = Rectangle;
 

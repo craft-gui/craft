@@ -1,5 +1,6 @@
 use winit::dpi::PhysicalPosition;
 use winit::event::{ButtonSource, DeviceId, ElementState};
+use crate::geometry::Point;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PointerButton {
@@ -16,7 +17,7 @@ pub struct PointerButton {
     /// [`border`]: https://developer.mozilla.org/en-US/docs/Web/CSS/border
     /// [`padding`]: https://developer.mozilla.org/en-US/docs/Web/CSS/padding
     /// [`transform`]: https://developer.mozilla.org/en-US/docs/Web/CSS/transform
-    pub position: PhysicalPosition<f64>,
+    pub position: Point,
 
     pub button: ButtonSource,
     pub primary: bool,
@@ -33,7 +34,7 @@ impl PointerButton {
         Self {
             device_id,
             state,
-            position,
+            position: position.into(),
             button,
             primary,
         }
