@@ -58,11 +58,12 @@ impl Element for Container {
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
-        // Background
-        renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
-        
         {
             let computed_border_spec = &self.common_element_data.computed_border;
+            
+            let background_path = computed_border_spec.build_background_path();
+            let background_color = self.common_element_data.style.background;
+            renderer.fill_bez_path(background_path, background_color);
 
             let top = computed_border_spec.get_side(Side::Top);
             let right = computed_border_spec.get_side(Side::Right);
@@ -84,7 +85,6 @@ impl Element for Container {
             renderer.fill_bez_path(border_right_path, right.color);
             renderer.fill_bez_path(border_bottom_path, bottom.color);
             renderer.fill_bez_path(border_left_path, left.color);
-            
         }
         
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {

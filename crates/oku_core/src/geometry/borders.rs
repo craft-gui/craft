@@ -521,6 +521,46 @@ impl ComputedBorderSpec {
 
         path
     }
+
+    pub(crate) fn build_background_path(&self) -> BezPath {
+        let mut background_path = BezPath::new();
+
+        let top_left = self.get_computed_corner(Corner::TopLeft);
+        let top_right = self.get_computed_corner(Corner::TopRight);
+        let bottom_right = self.get_computed_corner(Corner::BottomRight);
+        let bottom_left = self.get_computed_corner(Corner::BottomLeft);
+
+        if !top_left.is_outer_sharp {
+            background_path.extend(top_left.outer_sides[CornerSide::Top as usize].arc.clone());
+            extend_path_with_arc(&mut background_path, &top_left.outer_sides[CornerSide::Bottom as usize].arc);
+        } else {
+            background_path.move_to(top_left.corner_point);
+        }
+
+        if !bottom_left.is_outer_sharp {
+            extend_path_with_arc(&mut background_path, &bottom_left.outer_sides[CornerSide::Top as usize].arc);
+            extend_path_with_arc(&mut background_path, &bottom_left.outer_sides[CornerSide::Bottom as usize].arc);
+        } else {
+            background_path.line_to(bottom_left.corner_point);
+        }
+
+        if !bottom_right.is_outer_sharp {
+            extend_path_with_arc(&mut background_path, &bottom_right.outer_sides[CornerSide::Bottom as usize].arc);
+            extend_path_with_arc(&mut background_path, &bottom_right.outer_sides[CornerSide::Top as usize].arc);
+        } else {
+            background_path.line_to(bottom_right.corner_point);
+        }
+
+        if !top_right.is_outer_sharp {
+            extend_path_with_arc(&mut background_path, &top_right.outer_sides[CornerSide::Bottom as usize].arc);
+            extend_path_with_arc(&mut background_path, &top_right.outer_sides[CornerSide::Top as usize].arc);
+        } else {
+            background_path.line_to(top_right.corner_point);
+        }
+        background_path.close_path();
+
+        background_path
+    }
 }
 
 const fn to_clockwise_angle(angle: f64) -> f64 {
