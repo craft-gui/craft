@@ -205,9 +205,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn finalize_borders(&mut self) {
         let common_element_data = self.common_element_data_mut();
 
-        let borders = common_element_data.computed_layered_rectangle.border;
+        let element_rect = common_element_data.computed_layered_rectangle_transformed;
+        let borders = element_rect.border;
         let border_spec = BorderSpec::new(
-            common_element_data.computed_layered_rectangle.border_rectangle(),
+            element_rect.border_rectangle(),
             [borders.top, borders.right, borders.bottom, borders.left],
             common_element_data.style.border_radius,
             common_element_data.style.border_color,
