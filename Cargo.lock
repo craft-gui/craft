@@ -1865,6 +1865,7 @@ dependencies = [
  "glam",
  "image",
  "log",
+ "peniko",
  "reqwest",
  "rustc-hash 2.1.0",
  "softbuffer",

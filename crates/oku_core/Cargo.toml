@@ -23,6 +23,8 @@ glam = { version = "0.29.2" }
 bytemuck = { version = "1.21.0", features = ["derive"] }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
 vello = { git = "https://github.com/linebender/vello", rev="8a84a4abf7aaabdb7de82e3d9d86ed427ad21638" }
+peniko = "0.3.0"
+
 cfg-if = "1.0.0"
 chrono = "0.4.39"
 log = "0.4.22"
