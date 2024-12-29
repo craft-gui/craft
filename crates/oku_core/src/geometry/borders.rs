@@ -497,9 +497,6 @@ impl ComputedBorderSpec {
         if !end_corner.is_outer_sharp {
             path.line_to(end_corner.outer_transition_point);
             extend_path_with_arc(&mut path, &end_corner.outer_sides[end_side as usize].arc);
-            if side == Side::Bottom {
-                println!("\n\nEnd corner: {:?} - {:?}", end_corner, end_corner.outer_sides[end_side as usize].arc);
-            }
         } else {
             path.line_to(end_corner.corner_point);
         }
