@@ -52,13 +52,11 @@ impl Element for Image {
         _root_node: NodeId,
         _element_state: &StateStore,
     ) {
+        self.draw_borders(renderer);
+        
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
-
-        // Background
-        renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
-
+        
         renderer.draw_image(
             content_rectangle,
             self.resource_identifier.clone(),
@@ -73,7 +71,7 @@ impl Element for Image {
         scale_factor: f64,
     ) -> NodeId {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-
+        
         taffy_tree
             .new_leaf_with_context(
                 style,
@@ -97,6 +95,8 @@ impl Element for Image {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+
+        self.finalize_borders();
     }
 
     fn as_any(&self) -> &dyn Any {

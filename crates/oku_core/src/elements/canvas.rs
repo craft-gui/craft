@@ -68,61 +68,8 @@ impl Element for Canvas {
         let border_right = self.common_element_data.computed_layered_rectangle_transformed.border.right;
         let border_bottom = self.common_element_data.computed_layered_rectangle_transformed.border.bottom;
         let border_left = self.common_element_data.computed_layered_rectangle_transformed.border.left;
-        
-        // Background
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed,
-                computed_y_transformed,
-                computed_width,
-                computed_height,
-            ),
-            self.common_element_data.style.background,
-        );
 
-        // border top
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed,
-                computed_y_transformed,
-                computed_width,
-                border_top,
-            ),
-            border_color,
-        );
-
-        // border right
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed + computed_width - border_right,
-                computed_y_transformed + border_top,
-                border_right,
-                computed_height - border_top,
-            ),
-            border_color,
-        );
-
-        // border bottom
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed + border_left,
-                computed_y_transformed + computed_height - border_bottom,
-                computed_width - (border_right + border_left),
-                border_bottom,
-            ),
-            border_color,
-        );
-
-        // border left
-        renderer.draw_rect(
-            Rectangle::new(
-                computed_x_transformed,
-                computed_y_transformed + border_top,
-                border_right,
-                computed_height - border_top,
-            ),
-            border_color,
-        );
+        self.draw_borders(renderer);
 
         renderer.push_layer(Rectangle::new(
             computed_x_transformed + border_left,
@@ -239,6 +186,7 @@ impl Element for Canvas {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+        self.finalize_borders();
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());

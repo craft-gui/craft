@@ -10,7 +10,7 @@ use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
-use crate::style::{FontStyle, Style};
+use crate::style::{FontStyle, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::Edit;
 use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
@@ -155,9 +155,15 @@ impl<'a> TextInputState<'a> {
 
 impl TextInput {
     pub fn new(text: &str) -> Self {
+        let mut common_element_data = CommonElementData::default();
+        const BORDER_COLOR: Color = Color::rgba(199, 199, 206, 255);
+        common_element_data.style.border_color = [BORDER_COLOR; 4];
+        common_element_data.style.border_width = [Unit::Px(1.0); 4];
+        common_element_data.style.border_radius = [(5.0, 5.0); 4];
+        
         Self {
             text: text.to_string(),
-            common_element_data: Default::default(),
+            common_element_data,
         }
     }
 
@@ -196,7 +202,8 @@ impl Element for TextInput {
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
-        renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
+        self.draw_borders(renderer);
+        
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
@@ -267,6 +274,8 @@ impl Element for TextInput {
 
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+
+        self.finalize_borders();
     }
 
     fn as_any(&self) -> &dyn Any {

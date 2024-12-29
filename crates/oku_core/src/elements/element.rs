@@ -3,6 +3,9 @@ use crate::components::props::Props;
 use crate::components::UpdateResult;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
+use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use crate::geometry::side::Side;
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
@@ -10,8 +13,6 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
-use crate::geometry::borders::ComputedBorderSpec;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -20,13 +21,13 @@ pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
-    
+
     pub computed_border_rectangle_overflow_size: Size,
     // The computed values after transforms are applied.
     pub computed_layered_rectangle_transformed: ElementRectangle,
     // The computed values without any transforms applied to them.
     pub computed_layered_rectangle: ElementRectangle,
-    
+
     /// A user-defined id for the element.
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
@@ -68,12 +69,13 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn style_mut(&mut self) -> &mut Style {
         &mut self.common_element_data_mut().style
     }
-    
+
     fn in_bounds(&self, x: f32, y: f32) -> bool {
         let common_element_data = self.common_element_data();
-        
-        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
-        
+
+        let transformed_border_rectangle =
+            common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+
         let left = transformed_border_rectangle.x;
         let right = left + transformed_border_rectangle.width;
         let top = transformed_border_rectangle.y;
@@ -81,7 +83,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         x >= left && x <= right && y >= top && y <= bottom
     }
-    
+
     fn get_id(&self) -> &Option<String> {
         &self.common_element_data().id
     }
@@ -146,21 +148,25 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         UpdateResult::default()
     }
 
-    fn resolve_layer_rectangle(&mut self, relative_x: f32, relative_y: f32, scroll_transform: glam::Mat4, result: &taffy::Layout, layout_order: &mut u32) {
+    fn resolve_layer_rectangle(
+        &mut self,
+        relative_x: f32,
+        relative_y: f32,
+        scroll_transform: glam::Mat4,
+        result: &taffy::Layout,
+        layout_order: &mut u32,
+    ) {
         let common_element_data_mut = self.common_element_data_mut();
         common_element_data_mut.layout_order = *layout_order;
         *layout_order += 1;
-        
+
         let position = match common_element_data_mut.style.position {
-            taffy::Position::Relative => {
-                Point::new(relative_x + result.location.x, relative_y + result.location.y)
-            }
-            taffy::Position::Absolute => {
-                Point::new(result.location.x, result.location.y)
-            }
+            taffy::Position::Relative => Point::new(relative_x + result.location.x, relative_y + result.location.y),
+            taffy::Position::Absolute => Point::new(result.location.x, result.location.y),
         };
 
-        common_element_data_mut.computed_border_rectangle_overflow_size = Size::new(result.content_size.width, result.content_size.height);
+        common_element_data_mut.computed_border_rectangle_overflow_size =
+            Size::new(result.content_size.width, result.content_size.height);
         common_element_data_mut.computed_layered_rectangle = ElementRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
@@ -168,7 +174,45 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             position,
             size: result.size.into(),
         };
-        common_element_data_mut.computed_layered_rectangle_transformed = common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
+        common_element_data_mut.computed_layered_rectangle_transformed =
+            common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
+    }
+
+    fn draw_borders(&self, renderer: &mut RendererBox) {
+        let common_element_data = self.common_element_data();
+        let computed_border_spec = &common_element_data.computed_border;
+
+        let background_path = computed_border_spec.build_background_path();
+        let background_color = common_element_data.style.background;
+        renderer.fill_bez_path(background_path, background_color);
+
+        let top = computed_border_spec.get_side(Side::Top);
+        let right = computed_border_spec.get_side(Side::Right);
+        let bottom = computed_border_spec.get_side(Side::Bottom);
+        let left = computed_border_spec.get_side(Side::Left);
+
+        let border_top_path = computed_border_spec.build_side_path(Side::Top);
+        let border_right_path = computed_border_spec.build_side_path(Side::Right);
+        let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
+        let border_left_path = computed_border_spec.build_side_path(Side::Left);
+
+        renderer.fill_bez_path(border_top_path, top.color);
+        renderer.fill_bez_path(border_right_path, right.color);
+        renderer.fill_bez_path(border_bottom_path, bottom.color);
+        renderer.fill_bez_path(border_left_path, left.color);
+    }
+
+    fn finalize_borders(&mut self) {
+        let common_element_data = self.common_element_data_mut();
+
+        let borders = common_element_data.computed_layered_rectangle.border;
+        let border_spec = BorderSpec::new(
+            common_element_data.computed_layered_rectangle.border_rectangle(),
+            [borders.top, borders.right, borders.bottom, borders.left],
+            common_element_data.style.border_radius,
+            common_element_data.style.border_color,
+        );
+        common_element_data.computed_border = border_spec.compute_border_spec();
     }
 
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
@@ -183,7 +227,9 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let computed_content_height = common_element_data.computed_border_rectangle_overflow_size.height;
 
-        let client_height = content_rectangle.height - computed_layered_rectangle_transformed.border.top - computed_layered_rectangle_transformed.border.bottom;
+        let client_height = content_rectangle.height
+            - computed_layered_rectangle_transformed.border.top
+            - computed_layered_rectangle_transformed.border.bottom;
         let scroll_height = computed_content_height - computed_layered_rectangle_transformed.border.top;
 
         let scrolltrack_width = common_element_data.scrollbar_size.width;
@@ -195,14 +241,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let visible_y = client_height / scroll_height;
         let scrollthumb_height = scrolltrack_height * visible_y;
         let remaining_height = scrolltrack_height - scrollthumb_height;
-        let scrollthumb_offset = if max_scroll_y != 0.0 {
-            scroll_y / max_scroll_y * remaining_height
-        } else {
-            0.0
-        };
+        let scrollthumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
 
         common_element_data.computed_scroll_track = Rectangle::new(
-            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width - scrolltrack_width - computed_layered_rectangle_transformed.border.right,
+            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width
+                - scrolltrack_width
+                - computed_layered_rectangle_transformed.border.right,
             computed_layered_rectangle_transformed.position.y + computed_layered_rectangle_transformed.border.top,
             scrolltrack_width,
             scrolltrack_height,
@@ -211,21 +255,24 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let scrollthumb_width = scrolltrack_width;
 
         common_element_data.computed_scroll_thumb = Rectangle::new(
-            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width - scrolltrack_width - computed_layered_rectangle_transformed.border.right,
-            computed_layered_rectangle_transformed.position.y + computed_layered_rectangle_transformed.border.top + scrollthumb_offset,
+            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width
+                - scrolltrack_width
+                - computed_layered_rectangle_transformed.border.right,
+            computed_layered_rectangle_transformed.position.y
+                + computed_layered_rectangle_transformed.border.top
+                + scrollthumb_offset,
             scrollthumb_width,
             scrollthumb_height,
         );
     }
-    
+
     /// Called when the element is assigned a unique component id.
     fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
         Box::new(())
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore) {
-    }
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore) {}
 }
 
 impl<T: Element> From<T> for ElementBox {

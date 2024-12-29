@@ -186,7 +186,8 @@ impl Element for Text {
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         
-        renderer.draw_rect(border_rectangle, self.common_element_data.style.background);
+        self.draw_borders(renderer);
+        
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
@@ -246,6 +247,8 @@ impl Element for Text {
 
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+
+        self.finalize_borders();
     }
 
     fn as_any(&self) -> &dyn Any {

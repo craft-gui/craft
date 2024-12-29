@@ -9,6 +9,7 @@ use oku::elements::ElementStyles;
 use oku_core::events::{Event, OkuMessage};
 use oku::RendererType::Vello;
 use oku_core::elements::{Container, Text};
+use oku_core::renderer::color::Color;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -24,7 +25,10 @@ impl Component for TextState {
         Container::new()
             .flex_direction(FlexDirection::Column)
             .push(Text::new("Hello, World!").id("hello_text"))
-            .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input")
+            .push(
+                TextInput::new("Test")
+                    .flex_direction(FlexDirection::Column)
+                    .id("text_input")
         ).component()
     }
 

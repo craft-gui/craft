@@ -57,34 +57,7 @@ impl Element for Container {
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
-        {
-            let computed_border_spec = &self.common_element_data.computed_border;
-            
-            let background_path = computed_border_spec.build_background_path();
-            let background_color = self.common_element_data.style.background;
-            renderer.fill_bez_path(background_path, background_color);
-
-            let top = computed_border_spec.get_side(Side::Top);
-            let right = computed_border_spec.get_side(Side::Right);
-            let bottom = computed_border_spec.get_side(Side::Bottom);
-            let left = computed_border_spec.get_side(Side::Left);
-
-            ////////////////////////////////////////////////////////////////
-
-            let border_top_path = computed_border_spec.build_side_path(Side::Top);
-            let border_right_path = computed_border_spec.build_side_path(Side::Right);
-            let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
-            let border_left_path = computed_border_spec.build_side_path(Side::Left);
-
-            ////////////////////////////////////////////////////////////////
-
-            //let background_path = build_background_path(&border_spec, &computed_border_spec);
-
-            renderer.fill_bez_path(border_top_path, top.color);
-            renderer.fill_bez_path(border_right_path, right.color);
-            renderer.fill_bez_path(border_bottom_path, bottom.color);
-            renderer.fill_bez_path(border_left_path, left.color);
-        }
+        self.draw_borders(renderer);
         
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
@@ -149,23 +122,11 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+
+        self.finalize_borders();
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-
-        let borders = &self.common_element_data.computed_layered_rectangle.border;
-        let border_spec = BorderSpec::new(
-            self.common_element_data.computed_layered_rectangle.border_rectangle(),
-            [
-                borders.top,
-                borders.right,
-                borders.bottom,
-                borders.left,
-            ],
-            self.common_element_data.style.border_radius,
-            self.common_element_data.style.border_color
-        );
-        self.common_element_data.computed_border = border_spec.compute_border_spec();
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
