@@ -57,25 +57,25 @@ impl Rectangle {
 
     /// Returns the y-coordinate of the top edge of the rectangle.
     #[inline]
-    fn top(&self) -> f32 {
+    pub fn top(&self) -> f32 {
         self.y
     }
 
     /// Returns the x-coordinate of the right edge of the rectangle.
     #[inline]
-    fn right(&self) -> f32 {
+    pub fn right(&self) -> f32 {
         self.x + self.width
     }
 
     /// Returns the y-coordinate of the bottom edge of the rectangle.
     #[inline]
-    fn bottom(&self) -> f32 {
+    pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
 
     /// Returns the x-coordinate of the left edge of the rectangle.
     #[inline]
-    fn left(&self) -> f32 {
+    pub fn left(&self) -> f32 {
         self.x
     }
 }

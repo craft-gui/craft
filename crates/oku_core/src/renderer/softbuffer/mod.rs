@@ -1,23 +1,25 @@
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
+use crate::geometry::Rectangle;
+use crate::reactive::state_store::StateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
 use cosmic_text::{FontSystem, SwashCache};
 use image::EncodableLayout;
 use log::info;
+use peniko::kurbo::BezPath;
 use softbuffer::Buffer;
 use std::num::NonZeroU32;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use peniko::kurbo::BezPath;
-use tiny_skia::{ColorSpace, FillRule, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform};
+use tiny_skia::{
+    ColorSpace, FillRule, Mask, MaskType, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform,
+};
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
-use crate::geometry::Rectangle;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -60,7 +62,7 @@ pub struct SoftwareRenderer {
     surface_width: f32,
     surface_height: f32,
     surface_clear_color: Color,
-    framebuffer: Pixmap,
+    framebuffer: Vec<(Pixmap, Rectangle)>,
     cache: SwashCache,
 }
 
@@ -74,7 +76,8 @@ impl SoftwareRenderer {
             .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
             .expect("TODO: panic message");
 
-        let framebuffer = Pixmap::new(width as u32, height as u32).unwrap();
+        let framebuffer =
+            vec![(Pixmap::new(width as u32, height as u32).unwrap(), Rectangle::new(0.0, 0.0, width, height))];
 
         Self {
             render_commands: vec![],
@@ -142,7 +145,7 @@ impl Renderer for SoftwareRenderer {
         self.surface
             .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
             .expect("TODO: panic message");
-        self.framebuffer = framebuffer;
+        self.framebuffer = vec![(framebuffer, Rectangle::new(0.0, 0.0, width, height))];
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
@@ -151,7 +154,6 @@ impl Renderer for SoftwareRenderer {
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, Color::RED));
     }
 
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
@@ -168,7 +170,6 @@ impl Renderer for SoftwareRenderer {
 
     fn draw_image(&mut self, _rectangle: Rectangle, resource: ResourceIdentifier) {
         self.render_commands.push(RenderCommand::DrawImage(_rectangle, resource));
-        info!("Image added");
     }
 
     fn push_layer(&mut self, rect: Rectangle) {
@@ -185,7 +186,10 @@ impl Renderer for SoftwareRenderer {
         font_system: &mut FontSystem,
         element_state: &StateStore,
     ) {
-        self.framebuffer.fill(tiny_skia::Color::from_rgba8(
+        let framebuffer = self.framebuffer.last_mut().unwrap();
+        let framebuffer = &mut framebuffer.0;
+
+        framebuffer.fill(tiny_skia::Color::from_rgba8(
             self.surface_clear_color.r_u8(),
             self.surface_clear_color.g_u8(),
             self.surface_clear_color.b_u8(),
@@ -193,12 +197,15 @@ impl Renderer for SoftwareRenderer {
         ));
 
         for command in self.render_commands.drain(..) {
+            let framebuffer = self.framebuffer.last_mut().unwrap();
+            let framebuffer = &mut framebuffer.0;
+
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
-                    draw_rect(&mut self.framebuffer, rectangle, fill_color);
+                    draw_rect(framebuffer, rectangle, fill_color);
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color) => {
-                    draw_rect_outline(&mut self.framebuffer, rectangle, outline_color);
+                    draw_rect_outline(framebuffer, rectangle, outline_color);
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
@@ -207,7 +214,7 @@ impl Renderer for SoftwareRenderer {
                         let image = &resource.image;
                         let pixmap = PixmapRef::from_bytes(image.as_bytes(), image.width(), image.height()).unwrap();
                         let pixmap_paint = PixmapPaint::default();
-                        self.framebuffer.draw_pixmap(
+                        framebuffer.draw_pixmap(
                             rectangle.x as i32,
                             rectangle.y as i32,
                             pixmap,
@@ -233,7 +240,7 @@ impl Renderer for SoftwareRenderer {
                             cosmic_text::Color::rgba(255, 255, 255, 255),
                             |x, y, w, h, colora: cosmic_text::Color| {
                                 paint.set_color_rgba8(colora.r(), colora.g(), colora.b(), colora.a());
-                                self.framebuffer.fill_rect(
+                                framebuffer.fill_rect(
                                     Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
                                     &paint,
                                     Transform::identity(),
@@ -257,7 +264,7 @@ impl Renderer for SoftwareRenderer {
                             ),
                             |x, y, w, h, color| {
                                 paint.set_color_rgba8(color.r(), color.g(), color.b(), color.a());
-                                self.framebuffer.fill_rect(
+                                framebuffer.fill_rect(
                                     Rect::from_xywh(rect.x + x as f32, rect.y + y as f32, w as f32, h as f32).unwrap(),
                                     &paint,
                                     Transform::identity(),
@@ -269,11 +276,48 @@ impl Renderer for SoftwareRenderer {
                         panic!("Unknown state provided to the renderer!");
                     };
                 }
-                RenderCommand::PushLayer(_rect) => {
-                    todo!()
+                RenderCommand::PushLayer(rect) => {
+                    let framebuffer = Pixmap::new(self.surface_width as u32, self.surface_height as u32).unwrap();
+                    self.framebuffer.push((framebuffer, rect));
                 }
                 RenderCommand::PopLayer => {
-                    todo!()
+                    let top_layer = self.framebuffer.pop().unwrap();
+
+                    let clip_rect = top_layer.1;
+                    let top_framebuffer = top_layer.0;
+
+                    let mut mask_framebuffer = Pixmap::new(top_framebuffer.width(), top_framebuffer.height()).unwrap();
+
+                    let mut clip_paint = Paint::default();
+                    clip_paint.set_color_rgba8(255, 255, 255, 255);
+
+                    mask_framebuffer.fill_rect(
+                        Rect::from_ltrb(clip_rect.left(), clip_rect.top(), clip_rect.right(), clip_rect.bottom())
+                            .unwrap(),
+                        &clip_paint,
+                        Transform::identity(),
+                        None,
+                    );
+
+                    let top_framebuffer = top_framebuffer.as_ref();
+
+                    let current_layer = self.framebuffer.last_mut().unwrap();
+                    let current_framebuffer = &mut current_layer.0;
+
+                    let mut paint = Paint::default();
+                    paint.colorspace = ColorSpace::Linear;
+
+                    let pixmap_paint = PixmapPaint::default();
+                    let mask = Mask::from_pixmap(mask_framebuffer.as_ref(), MaskType::Alpha);
+
+                    current_framebuffer.draw_pixmap(
+                        0,
+                        0,
+                        top_framebuffer,
+                        &pixmap_paint,
+                        Transform::identity(),
+                        Some(&mask),
+                    );
                 }
                 RenderCommand::FillBezPath(_path, _color) => {
                     let mut paint = Paint::default();
@@ -292,11 +336,15 @@ impl Renderer for SoftwareRenderer {
                                     continue;
                                 }
                                 if last_point.0 == point.x as f32 || last_point.1 == point.y as f32 {
-                                    self.framebuffer.fill_rect(
-                                        Rect::from_points(&[tiny_skia::Point::from_xy(last_point.0, last_point.1), tiny_skia::Point::from_xy(point.x as f32, point.y as f32)]).unwrap(),
+                                    framebuffer.fill_rect(
+                                        Rect::from_points(&[
+                                            tiny_skia::Point::from_xy(last_point.0, last_point.1),
+                                            tiny_skia::Point::from_xy(point.x as f32, point.y as f32),
+                                        ])
+                                        .unwrap(),
                                         &paint,
                                         Transform::identity(),
-                                        None
+                                        None,
                                     );
                                 } else {
                                     path.line_to(point.x as f32, point.y as f32);
@@ -309,7 +357,14 @@ impl Renderer for SoftwareRenderer {
                                 last_point = (point2.x as f32, point2.y as f32);
                             }
                             peniko::kurbo::PathEl::CurveTo(point1, point2, point3) => {
-                                path.cubic_to(point1.x as f32, point1.y as f32, point2.x as f32, point2.y as f32, point3.x as f32, point3.y as f32);
+                                path.cubic_to(
+                                    point1.x as f32,
+                                    point1.y as f32,
+                                    point2.x as f32,
+                                    point2.y as f32,
+                                    point3.x as f32,
+                                    point3.y as f32,
+                                );
                                 last_point = (point3.x as f32, point3.y as f32);
                             }
                             peniko::kurbo::PathEl::ClosePath => {
@@ -321,7 +376,7 @@ impl Renderer for SoftwareRenderer {
                     if path.len() <= 2 {
                         continue;
                     }
-                    self.framebuffer.fill_path(&path, &paint, FillRule::EvenOdd, Transform::identity(), None);
+                    framebuffer.fill_path(&path, &paint, FillRule::EvenOdd, Transform::identity(), None);
                 }
             }
         }
@@ -336,7 +391,7 @@ impl SoftwareRenderer {
         for y in 0..height as u32 {
             for x in 0..width as u32 {
                 let index = y as usize * width as usize + x as usize;
-                let current_pixel = self.framebuffer.pixels()[index];
+                let current_pixel = self.framebuffer.last_mut().unwrap().0.pixels()[index];
 
                 let red = current_pixel.red() as u32;
                 let green = current_pixel.green() as u32;
