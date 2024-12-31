@@ -1,17 +1,17 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{CommonElementData, Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
+use crate::elements::ElementStyles;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
-use crate::style::{Style};
+use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping};
+use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
-use crate::elements::ElementStyles;
 
 use crate::components::props::Props;
 use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
@@ -39,6 +39,7 @@ pub struct TextState {
 
     pub(crate) font_family_length: u8,
     pub(crate) font_family: [u8; 64],
+    weight: Weight,
 }
 
 impl TextState {
@@ -48,6 +49,7 @@ impl TextState {
         buffer: Buffer,
         font_family_length: u8,
         font_family: [u8; 64],
+        weight: Weight,
     ) -> Self {
         Self {
             id,
@@ -69,6 +71,7 @@ impl TextState {
             },
             font_family_length,
             font_family,
+            weight,
         }
     }
 
@@ -203,12 +206,13 @@ impl Element for Text {
         _root_node: NodeId,
         _element_state: &StateStore,
     ) {
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layer_rectangle_transformed =
+            self.common_element_data.computed_layered_rectangle_transformed.clone();
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
-        
+
         self.draw_borders(renderer);
-        
+
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
@@ -225,17 +229,18 @@ impl Element for Text {
     ) -> NodeId {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        let font_size = PhysicalPosition::from_logical(LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size), scale_factor).x;
+        let font_size = PhysicalPosition::from_logical(
+            LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
+            scale_factor,
+        )
+        .x;
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
         taffy_tree
             .new_leaf_with_context(
                 style,
-                LayoutContext::Text(TaffyTextContext::new(
-                    self.common_element_data.component_id,
-                    metrics
-                )),
+                LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id, metrics)),
             )
             .unwrap()
     }
@@ -254,8 +259,9 @@ impl Element for Text {
         let text_context = self.get_state_mut(element_state);
 
         let metrics = text_context.last_key;
-        let metrics = Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
-        
+        let metrics =
+            Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
+
         text_context.buffer.set_metrics(font_system, metrics);
 
         text_context.buffer.set_size(
@@ -264,7 +270,6 @@ impl Element for Text {
             text_context.last_key.height_constraint.map(|h| f32::from_bits(h)),
         );
         text_context.buffer.shape_until_scroll(font_system, true);
-
 
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, layout_order);
@@ -281,20 +286,16 @@ impl Element for Text {
 
         let mut attributes = Attrs::new();
 
-        
         let new_font_family = self.common_element_data.style.font_family();
 
         if let Some(family) = new_font_family {
             attributes.family = Family::Name(family);
         }
 
+        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+
         let mut buffer = Buffer::new(font_system, metrics);
-        buffer.set_text(
-            font_system,
-            &self.text,
-            attributes,
-            Shaping::Advanced,
-        );
+        buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
 
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());
@@ -306,6 +307,7 @@ impl Element for Text {
             buffer,
             self.common_element_data.style.font_family_length,
             self.common_element_data.style.font_family,
+            attributes.weight,
         );
 
         Box::new(state)
@@ -319,30 +321,31 @@ impl Element for Text {
         let text_hash = text_hasher.finish();
 
         let mut attributes = Attrs::new();
-        
+
+        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+
         let new_font_family = self.common_element_data.style.font_family();
-        
+
         if let Some(family) = new_font_family {
             attributes.family = Family::Name(family);
         }
 
-        if text_hash != state.text_hash || state.font_family() != new_font_family || reload_fonts {
+        if text_hash != state.text_hash
+            || state.font_family() != new_font_family
+            || reload_fonts
+            || attributes.weight != state.weight
+        {
             state.font_family_length = self.common_element_data.style.font_family_length;
             state.font_family = self.common_element_data.style.font_family;
             state.text_hash = text_hash;
-            state.buffer.set_text(
-                font_system,
-                &self.text,
-                attributes,
-                Shaping::Advanced,
-            );
+            state.weight = attributes.weight;
+            
+            state.buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
         }
     }
-    
 }
 
 impl Text {
-    
     pub fn id(mut self, id: &str) -> Self {
         self.common_element_data.id = Some(id.to_string());
         self

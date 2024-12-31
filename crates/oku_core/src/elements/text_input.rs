@@ -8,13 +8,14 @@ use crate::elements::layout_context::{
 use crate::elements::text::{TextHashValue, TextState};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::{FontStyle, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Edit, Family};
 use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
+use cosmic_text::{Edit, Family, Weight};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -23,7 +24,6 @@ use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -43,6 +43,7 @@ pub struct TextInputState<'a> {
     pub dragging: bool,
     pub(crate) font_family_length: u8,
     pub(crate) font_family: [u8; 64],
+    weight: Weight,
 }
 
 impl<'a> TextInputState<'a> {
@@ -55,6 +56,7 @@ impl<'a> TextInputState<'a> {
         original_text_hash: u64,
         font_family_length: u8,
         font_family: [u8; 64],
+        weight: Weight,
     ) -> Self {
         Self {
             id,
@@ -79,6 +81,7 @@ impl<'a> TextInputState<'a> {
             dragging: false,
             font_family_length,
             font_family,
+            weight,
         }
     }
 
@@ -180,7 +183,7 @@ impl TextInput {
         common_element_data.style.border_color = [BORDER_COLOR; 4];
         common_element_data.style.border_width = [Unit::Px(1.0); 4];
         common_element_data.style.border_radius = [(5.0, 5.0); 4];
-        
+
         Self {
             text: text.to_string(),
             common_element_data,
@@ -218,12 +221,13 @@ impl Element for TextInput {
         _root_node: NodeId,
         _element_state: &StateStore,
     ) {
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layer_rectangle_transformed =
+            self.common_element_data.computed_layered_rectangle_transformed.clone();
         let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
-        
+
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
@@ -241,8 +245,9 @@ impl Element for TextInput {
         let font_size = PhysicalPosition::from_logical(
             LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
             scale_factor,
-        ).x;
-        
+        )
+        .x;
+
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
@@ -267,7 +272,6 @@ impl Element for TextInput {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
     ) {
-
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
@@ -315,7 +319,7 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-        
+
         let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
         let content_position = content_rect.position();
         let res = match message {
@@ -335,7 +339,7 @@ impl Element for TextInput {
                     state.dragging = false;
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
-            },
+            }
             OkuMessage::PointerMovedEvent(moved) => {
                 if state.dragging {
                     let pointer_position = moved.position;
@@ -349,7 +353,7 @@ impl Element for TextInput {
                     );
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
-            },
+            }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
@@ -362,18 +366,12 @@ impl Element for TextInput {
                         Key::Named(NamedKey::ArrowRight) => {
                             state.editor.action(font_system, Action::Motion(Motion::Right))
                         }
-                        Key::Named(NamedKey::ArrowUp) => {
-                            state.editor.action(font_system, Action::Motion(Motion::Up))
-                        }
+                        Key::Named(NamedKey::ArrowUp) => state.editor.action(font_system, Action::Motion(Motion::Up)),
                         Key::Named(NamedKey::ArrowDown) => {
                             state.editor.action(font_system, Action::Motion(Motion::Down))
                         }
-                        Key::Named(NamedKey::Home) => {
-                            state.editor.action(font_system, Action::Motion(Motion::Home))
-                        }
-                        Key::Named(NamedKey::End) => {
-                            state.editor.action(font_system, Action::Motion(Motion::End))
-                        }
+                        Key::Named(NamedKey::Home) => state.editor.action(font_system, Action::Motion(Motion::Home)),
+                        Key::Named(NamedKey::End) => state.editor.action(font_system, Action::Motion(Motion::End)),
                         Key::Named(NamedKey::PageUp) => {
                             state.editor.action(font_system, Action::Motion(Motion::PageUp))
                         }
@@ -437,7 +435,15 @@ impl Element for TextInput {
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
-        let attributes = Attrs::new();
+        let new_font_family = self.common_element_data.style.font_family();
+
+        let mut attributes = Attrs::new();
+
+        if let Some(family) = new_font_family {
+            attributes.family = Family::Name(family);
+        }
+
+        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
 
         let buffer = Buffer::new(font_system, metrics);
         let mut editor = Editor::new(buffer);
@@ -459,6 +465,7 @@ impl Element for TextInput {
             text_hash,
             self.common_element_data.style.font_family_length,
             self.common_element_data.style.font_family,
+            attributes.weight,
         );
 
         Box::new(cosmic_text_content)
@@ -482,17 +489,26 @@ impl Element for TextInput {
         let text_hash = text_hasher.finish();
 
         let mut attributes = Attrs::new();
-        
+
+        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+
         let new_font_family = self.common_element_data().style.font_family();
 
         if let Some(family) = new_font_family {
             attributes.family = Family::Name(family);
         }
 
-        if text_hash != state.original_text_hash || state.font_family() != new_font_family || reload_fonts {
+        if text_hash != state.original_text_hash
+            || state.font_family() != new_font_family
+            || reload_fonts
+            || attributes.weight != state.weight
+        {
+            state.font_family_length = self.common_element_data.style.font_family_length;
+            state.font_family = self.common_element_data.style.font_family;
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
             state.text = self.text.clone();
+            state.weight = attributes.weight;
 
             state.editor.with_buffer_mut(|buffer| {
                 buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
