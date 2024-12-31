@@ -464,7 +464,7 @@ impl Element for TextInput {
         Box::new(cosmic_text_content)
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore, reload_fonts: bool) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
@@ -489,7 +489,7 @@ impl Element for TextInput {
             attributes.family = Family::Name(family);
         }
 
-        if text_hash != state.original_text_hash || state.font_family() != new_font_family {
+        if text_hash != state.original_text_hash || state.font_family() != new_font_family || reload_fonts {
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
             state.text = self.text.clone();

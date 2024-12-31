@@ -66,13 +66,9 @@ impl ImageContext {
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(image_resource) = resource_manager.resources.get(&self.resource_identifier) {
-            match image_resource {
-                Resource::Image(image_data) => {
-                    original_image_width = image_data.width as f32;
-                    original_image_height = image_data.height as f32;
-                }
-            }
+        if let Some(Resource::Image(image_data)) = resource_manager.resources.get(&self.resource_identifier) {
+            original_image_width = image_data.width as f32;
+            original_image_height = image_data.height as f32;
         }
         // println!("image size: {} {}", original_image_width, original_image_height);
         // println!("known dims: {:?}", known_dimensions);

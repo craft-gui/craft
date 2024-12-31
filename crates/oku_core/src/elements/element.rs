@@ -273,7 +273,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore) {}
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore, reload_fonts: bool) {}
 }
 
 impl<T: Element> From<T> for ElementBox {

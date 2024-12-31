@@ -3,18 +3,15 @@ use crate::resource_manager::image::ImageResource;
 
 pub enum Resource {
     Image(ImageResource),
+    Font(Vec<u8>),
 }
 
 impl Resource {
-    pub fn resource_identifier(&self) -> ResourceIdentifier {
-        match self {
-            Resource::Image(data) => data.common_data.resource_identifier.clone(),
-        }
-    }
 
     pub fn data(&self) -> Option<&[u8]> {
         match self {
             Resource::Image(data) => data.common_data.data.as_deref(),
+            Resource::Font(data) => Some(data),
         }
     }
 }

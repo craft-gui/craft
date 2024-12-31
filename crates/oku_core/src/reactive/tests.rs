@@ -26,7 +26,8 @@ fn diff_trees_same_tag_same_id_are_equal() {
         None,
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let updated_tree = diff_trees(
@@ -35,7 +36,8 @@ fn diff_trees_same_tag_same_id_are_equal() {
         Some(&initial_tree.0),
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let initial_id = &initial_tree.0.children[0].children[0].id;
@@ -65,7 +67,8 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         None,
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let tree_2 = diff_trees(
@@ -74,7 +77,8 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         Some(&tree_1.0),
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let initial_id = &tree_1.0.children[0].children[0].id;
@@ -104,7 +108,8 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         None,
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let tree_2 = diff_trees(
@@ -113,7 +118,8 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         Some(&tree_1.0),
         &mut user_state,
         &mut element_state,
-        &mut font_system
+        &mut font_system,
+        false
     );
 
     let initial_id = &tree_1.0.children[0].children[0].id;

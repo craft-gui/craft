@@ -100,6 +100,7 @@ struct App {
     element_state: StateStore,
     resource_manager: Arc<RwLock<ResourceManager>>,
     winit_sender: Sender<AppMessage>,
+    reload_fonts: bool,
 }
 
 #[cfg(target_os = "android")]
@@ -124,6 +125,7 @@ pub fn oku_wasm_init() {
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
+use crate::elements::{ElementStyles, Text};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 
@@ -208,6 +210,7 @@ async fn async_main(
         element_state: Default::default(),
         resource_manager,
         winit_sender: winit_sender.clone(),
+        reload_fonts: false,
     });
 
     info!("starting main event loop");
@@ -262,8 +265,14 @@ async fn async_main(
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
                     match resource_event {
-                        ResourceEvent::Added(_) => {
-                            // println!("Added resource event");
+                        ResourceEvent::Added((_resource_identifier, resource_type)) => {
+                            if resource_type == ResourceType::Font {
+                                if let Some(renderer) = app.renderer.as_mut() {
+                                    renderer.load_font(app.font_system.as_mut().unwrap());
+                                }
+                                app.reload_fonts = true;
+                                app.window.as_ref().unwrap().request_redraw();
+                            }
                         }
                         ResourceEvent::Loaded(_) => {}
                         ResourceEvent::UnLoaded(_) => {}
@@ -579,8 +588,17 @@ async fn on_request_redraw(app: &mut App) {
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();
 
-    let new_tree =
-        diff_trees(app.app.clone(), window_element, old_component_tree, &mut app.user_state, &mut app.element_state, app.font_system.as_mut().unwrap());
+    let new_tree = diff_trees(
+        app.app.clone(),
+        window_element,
+        old_component_tree,
+        &mut app.user_state,
+        &mut app.element_state,
+        app.font_system.as_mut().unwrap(),
+        app.reload_fonts
+    );
+
+    app.reload_fonts = false;
 
     scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 

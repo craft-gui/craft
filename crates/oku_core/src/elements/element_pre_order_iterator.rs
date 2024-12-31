@@ -57,7 +57,7 @@ mod tests {
         let mut element_state = StateStore::default();
 
         let initial_tree =
-            diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state, &mut font_system);
+            diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state, &mut font_system, false);
 
         initial_tree.0.print_tree();
         initial_tree.1.internal.print_tree();

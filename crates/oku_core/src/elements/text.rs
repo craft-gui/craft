@@ -281,6 +281,7 @@ impl Element for Text {
 
         let mut attributes = Attrs::new();
 
+        
         let new_font_family = self.common_element_data.style.font_family();
 
         if let Some(family) = new_font_family {
@@ -310,7 +311,7 @@ impl Element for Text {
         Box::new(state)
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore) {
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
 
         let mut text_hasher = FxHasher::default();
@@ -325,7 +326,7 @@ impl Element for Text {
             attributes.family = Family::Name(family);
         }
 
-        if text_hash != state.text_hash || state.font_family() != new_font_family {
+        if text_hash != state.text_hash || state.font_family() != new_font_family || reload_fonts {
             state.font_family_length = self.common_element_data.style.font_family_length;
             state.font_family = self.common_element_data.style.font_family;
             state.text_hash = text_hash;

@@ -74,6 +74,7 @@ pub(crate) fn diff_trees(
     user_state: &mut StateStore,
     element_state: &mut StateStore,
     font_system: &mut FontSystem,
+    reload_fonts: bool,
 ) -> (ComponentTreeNode, ElementBox) {
     //println!("-----------------------------------------");
     unsafe {
@@ -154,7 +155,7 @@ pub(crate) fn diff_trees(
                     element.internal.set_component_id(id);
                     
                     if should_update {
-                        element.internal.update_state(font_system, element_state);
+                        element.internal.update_state(font_system, element_state, reload_fonts);
                     } else {
                         let state = element.internal.initialize_state(font_system);
                         element_state.storage.insert(id, state);

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use crate::App;
 use crate::elements::element::Element;
-use crate::elements::Image;
+use crate::elements::{Font, Image};
 use crate::reactive::fiber_node::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
@@ -24,12 +24,23 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
             } else {
                 None
             };
+            
+            let font_resource = if let Some(font) = element.as_any().downcast_ref::<Font>() {
+                Some(font.resource_identifier.clone())
+            } else {
+                None
+            };
 
-            if image_resource.is_some() {
+            if image_resource.is_some() || font_resource.is_some() {
                 let mut resource_manager = resource_manager.write().await;
                 
                 if let Some(image_resource) = image_resource {
-                    resource_manager.add(image_resource.clone(), ResourceType::Image).await;
+                    resource_manager.add(image_resource.clone(), ResourceType::Image, None).await;
+                }
+                
+                if let Some(font_resource) = font_resource {
+                    let font_db = app.font_system.as_mut().unwrap().db_mut();
+                    resource_manager.add(font_resource.clone(), ResourceType::Font, Some(font_db)).await;
                 }
             }
             
