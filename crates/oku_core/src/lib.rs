@@ -13,6 +13,7 @@ pub mod events;
 pub mod app_message;
 pub mod resource_manager;
 mod geometry;
+mod view_introspection;
 
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 pub use oku_runtime::OkuRuntime;
@@ -124,6 +125,7 @@ pub fn oku_wasm_init() {
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
 use crate::resource_manager::resource_type::ResourceType;
+use crate::view_introspection::scan_view_for_resources;
 
 #[cfg(not(target_os = "android"))]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
@@ -570,24 +572,6 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     }
 
     app.window = Some(window.clone());
-}
-
-// Scans through the component tree and diffs it for resources that need to be updated.
-async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTreeNode, app: &mut App) {
-    let fiber: FiberNode = FiberNode {
-        element: Some(element),
-        component: Some(component),
-    };
-
-    let resource_manager = &mut app.resource_manager;
-    for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-        if let Some(element) = fiber_node.element {
-            if element.name() == Image::name() {
-                let resource_identifier = element.as_any().downcast_ref::<Image>().unwrap().resource_identifier.clone();
-                resource_manager.write().await.add(resource_identifier, ResourceType::Image).await;
-            }
-        }
-    }
 }
 
 async fn on_request_redraw(app: &mut App) {

@@ -147,6 +147,11 @@ where
         self.styles_mut().color = color;
         self
     }
+    
+    fn font_family(mut self, font_family: &str) -> Self {
+        self.styles_mut().set_font_family(font_family);
+        self
+    }
 
     fn font_size(mut self, font_size: f32) -> Self {
         self.styles_mut().font_size = font_size;

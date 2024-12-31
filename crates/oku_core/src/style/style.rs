@@ -131,6 +131,8 @@ impl Default for FontStyle {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
+    font_family_len: u8,
+    font_family: [u8; 64],
     pub box_sizing: BoxSizing,
     pub scrollbar_width: f32,
     pub position: Position,
@@ -194,8 +196,11 @@ fn unit_to_taffy_length_percentage_with_scale_factor(unit: Unit, scale_factor: f
 
 
 impl Default for Style {
+    
     fn default() -> Self {
         Style {
+            font_family_len: 0,
+            font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
             scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
                 0.0
@@ -237,6 +242,22 @@ impl Default for Style {
 }
 
 impl Style {
+
+    pub fn font_family(&self) -> Option<&str> {
+        if self.font_family_len == 0 {
+            None
+        } else {
+            Some(std::str::from_utf8(&self.font_family[..self.font_family_len as usize]).unwrap())
+        }
+    }
+    
+    pub(crate) fn set_font_family(&mut self, font_family: &str) {
+        let chars = font_family.chars().collect::<Vec<char>>();
+
+        self.font_family_len = chars.len() as u8;
+        self.font_family[..font_family.len()].copy_from_slice(font_family.as_bytes());
+    }
+
     pub fn to_taffy_style_with_scale_factor(&self, scale_factor: f64) -> taffy::Style {
         let style = self;
 
