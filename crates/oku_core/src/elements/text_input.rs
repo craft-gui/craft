@@ -12,7 +12,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::{FontStyle, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::Edit;
+use cosmic_text::{Edit, Family};
 use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
 use rustc_hash::FxHasher;
@@ -41,6 +41,8 @@ pub struct TextInputState<'a> {
     pub text: String,
     pub original_text_hash: u64,
     pub dragging: bool,
+    pub(crate) font_family_length: u8,
+    pub(crate) font_family: [u8; 64],
 }
 
 impl<'a> TextInputState<'a> {
@@ -51,6 +53,8 @@ impl<'a> TextInputState<'a> {
         editor: Editor<'a>,
         text: String,
         original_text_hash: u64,
+        font_family_length: u8,
+        font_family: [u8; 64],
     ) -> Self {
         Self {
             id,
@@ -66,11 +70,23 @@ impl<'a> TextInputState<'a> {
                     font_size: metrics.font_size.to_bits(),
                     line_height: metrics.line_height.to_bits(),
                 },
+                font_family_length,
+                font_family,
             },
             editor,
             text,
             original_text_hash,
             dragging: false,
+            font_family_length,
+            font_family,
+        }
+    }
+
+    pub fn font_family(&self) -> Option<&str> {
+        if self.font_family_length == 0 {
+            None
+        } else {
+            Some(std::str::from_utf8(&self.font_family[..self.font_family_length as usize]).unwrap())
         }
     }
 
@@ -81,6 +97,8 @@ impl<'a> TextInputState<'a> {
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
+        font_family_length: u8,
+        font_family: [u8; 64],
     ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -112,6 +130,8 @@ impl<'a> TextInputState<'a> {
                 font_size: metrics.font_size.to_bits(),
                 line_height: metrics.line_height.to_bits(),
             },
+            font_family_length,
+            font_family,
         };
 
         self.last_key = key;
@@ -437,6 +457,8 @@ impl Element for TextInput {
             editor,
             self.text.clone(),
             text_hash,
+            self.common_element_data.style.font_family_length,
+            self.common_element_data.style.font_family,
         );
 
         Box::new(cosmic_text_content)
@@ -459,9 +481,15 @@ impl Element for TextInput {
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
 
-        let attributes = Attrs::new();
+        let mut attributes = Attrs::new();
+        
+        let new_font_family = self.common_element_data().style.font_family();
 
-        if text_hash != state.original_text_hash {
+        if let Some(family) = new_font_family {
+            attributes.family = Family::Name(family);
+        }
+
+        if text_hash != state.original_text_hash || state.font_family() != new_font_family {
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
             state.text = self.text.clone();

@@ -37,6 +37,9 @@ pub struct TextHashKey {
     pub available_space_width: AvailableSpace,
     pub available_space_height: AvailableSpace,
     pub metrics: MetricsDummy,
+    
+    pub font_family_length: u8,
+    pub font_family: [u8; 64]
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -121,6 +124,8 @@ pub fn measure_content(
                 font_system,
                 text_state.text_hash,
                 taffy_text_context.metrics,
+                text_state.font_family_length,
+                text_state.font_family,
             )
         }
         Some(LayoutContext::Image(image_context)) => {
@@ -135,6 +140,8 @@ pub fn measure_content(
                 font_system,
                 text_input_state.text_hash,
                 taffy_text_input_context.metrics,
+                text_input_state.font_family_length,
+                text_input_state.font_family,
             )
         }
     }

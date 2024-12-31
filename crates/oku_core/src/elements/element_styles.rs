@@ -42,22 +42,22 @@ where
         self.styles_mut().border_color = [color, color, color, color];
         self
     }
-    
+
     fn border_color_top(mut self, color: Color) -> Self {
         self.styles_mut().border_color[0] = color;
         self
     }
-    
+
     fn border_color_right(mut self, color: Color) -> Self {
         self.styles_mut().border_color[1] = color;
         self
     }
-    
+
     fn border_color_bottom(mut self, color: Color) -> Self {
         self.styles_mut().border_color[2] = color;
         self
     }
-    
+
     fn border_color_left(mut self, color: Color) -> Self {
         self.styles_mut().border_color[3] = color;
         self
@@ -147,7 +147,7 @@ where
         self.styles_mut().color = color;
         self
     }
-    
+
     fn font_family(mut self, font_family: &str) -> Self {
         self.styles_mut().set_font_family(font_family);
         self

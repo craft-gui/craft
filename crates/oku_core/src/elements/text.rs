@@ -4,7 +4,7 @@ use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDumm
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::style::{Style};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping};
+use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -36,6 +36,9 @@ pub struct TextState {
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
+
+    pub(crate) font_family_length: u8,
+    pub(crate) font_family: [u8; 64],
 }
 
 impl TextState {
@@ -43,6 +46,8 @@ impl TextState {
         id: ComponentId,
         text_hash: u64,
         buffer: Buffer,
+        font_family_length: u8,
+        font_family: [u8; 64],
     ) -> Self {
         Self {
             id,
@@ -59,7 +64,19 @@ impl TextState {
                     font_size: 0,
                     line_height: 0,
                 },
+                font_family_length,
+                font_family,
             },
+            font_family_length,
+            font_family,
+        }
+    }
+
+    pub fn font_family(&self) -> Option<&str> {
+        if self.font_family_length == 0 {
+            None
+        } else {
+            Some(std::str::from_utf8(&self.font_family[..self.font_family_length as usize]).unwrap())
         }
     }
 
@@ -70,6 +87,8 @@ impl TextState {
         font_system: &mut FontSystem,
         text_hash: u64,
         metrics: Metrics,
+        font_family_length: u8,
+        font_family: [u8; 64],
     ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -101,6 +120,8 @@ impl TextState {
                 font_size: metrics.font_size.to_bits(),
                 line_height: metrics.line_height.to_bits(),
             },
+            font_family_length,
+            font_family,
         };
 
         self.last_key = key;
@@ -258,7 +279,13 @@ impl Element for Text {
     fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
         let metrics = Metrics::new(12.0, 12.0);
 
-        let attributes = Attrs::new();
+        let mut attributes = Attrs::new();
+
+        let new_font_family = self.common_element_data.style.font_family();
+
+        if let Some(family) = new_font_family {
+            attributes.family = Family::Name(family);
+        }
 
         let mut buffer = Buffer::new(font_system, metrics);
         buffer.set_text(
@@ -276,6 +303,8 @@ impl Element for Text {
             self.common_element_data.component_id,
             text_hash,
             buffer,
+            self.common_element_data.style.font_family_length,
+            self.common_element_data.style.font_family,
         );
 
         Box::new(state)
@@ -288,9 +317,17 @@ impl Element for Text {
         text_hasher.write(self.text.as_ref());
         let text_hash = text_hasher.finish();
 
-        let attributes = Attrs::new();
+        let mut attributes = Attrs::new();
+        
+        let new_font_family = self.common_element_data.style.font_family();
+        
+        if let Some(family) = new_font_family {
+            attributes.family = Family::Name(family);
+        }
 
-        if text_hash != state.text_hash {
+        if text_hash != state.text_hash || state.font_family() != new_font_family {
+            state.font_family_length = self.common_element_data.style.font_family_length;
+            state.font_family = self.common_element_data.style.font_family;
             state.text_hash = text_hash;
             state.buffer.set_text(
                 font_system,

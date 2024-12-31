@@ -131,8 +131,8 @@ impl Default for FontStyle {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
-    font_family_len: u8,
-    font_family: [u8; 64],
+    pub(crate) font_family_length: u8,
+    pub(crate) font_family: [u8; 64],
     pub box_sizing: BoxSizing,
     pub scrollbar_width: f32,
     pub position: Position,
@@ -199,7 +199,7 @@ impl Default for Style {
     
     fn default() -> Self {
         Style {
-            font_family_len: 0,
+            font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
             scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
@@ -244,17 +244,17 @@ impl Default for Style {
 impl Style {
 
     pub fn font_family(&self) -> Option<&str> {
-        if self.font_family_len == 0 {
+        if self.font_family_length == 0 {
             None
         } else {
-            Some(std::str::from_utf8(&self.font_family[..self.font_family_len as usize]).unwrap())
+            Some(std::str::from_utf8(&self.font_family[..self.font_family_length as usize]).unwrap())
         }
     }
     
     pub(crate) fn set_font_family(&mut self, font_family: &str) {
         let chars = font_family.chars().collect::<Vec<char>>();
 
-        self.font_family_len = chars.len() as u8;
+        self.font_family_length = chars.len() as u8;
         self.font_family[..font_family.len()].copy_from_slice(font_family.as_bytes());
     }
 
