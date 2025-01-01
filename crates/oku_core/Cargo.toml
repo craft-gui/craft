@@ -7,8 +7,8 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 
-futures = "0.3.31"
-winit = { git = "https://github.com/rust-windowing/winit",  rev="6896de5b73817a51c2e9311a52a571b400411602" }
+futures = {version = "0.3.31", default-features = false, features = ["std", "async-await"]}
+winit = { git = "https://github.com/rust-windowing/winit", rev="6896de5b73817a51c2e9311a52a571b400411602" }
 cosmic-text = { version = "0.12.1", default-features = false, features = ["std", "fontconfig"] }
 taffy = { version = "0.7.1", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
@@ -45,6 +45,7 @@ optional = true
 version = "0.12.9"
 default-features = false
 features = ["native-tls"]
+optional = true
 
 [target.target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
 version = "23.0.1"
@@ -66,10 +67,10 @@ web-sys = { version = "0.3.76", features = [
 ] }
 
 console_log = "1.0"
-tokio = { version = "1.42.0", default-features = false, features = [] }
+tokio = { version = "1.42.0", default-features = false, features = ["sync"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.42.0", default-features = false, features = ["rt-multi-thread"] }
+tokio = { version = "1.42.0", default-features = false, features = ["rt-multi-thread", "sync"] }
 tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes"] }
 
 
@@ -86,6 +87,7 @@ optional = true
 version = "0.12.9"
 default-features = false
 features = ["rustls-tls"]
+optional = true
 
 [features]
 dynamic_linking = []
@@ -95,3 +97,4 @@ web = []
 wgpu_renderer = ["wgpu", "cosmic-text/swash"]
 tinyskia_renderer = ["tiny-skia", "softbuffer", "cosmic-text/swash"]
 vello_renderer = ["vello"]
+http_client = ["reqwest"]

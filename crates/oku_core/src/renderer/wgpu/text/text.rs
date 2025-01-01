@@ -1,24 +1,18 @@
-use std::collections::HashMap;
-use cosmic_text::{Buffer, BufferRef, CacheKey, Edit, FontSystem, SwashCache};
-use cosmic_text::fontdb::ID;
-use image::{ColorType, DynamicImage, GenericImage, GrayImage, Luma};
-use tokio::sync::RwLockReadGuard;
-use wgpu::{MultisampleState, RenderPass};
-use wgpu::util::DeviceExt;
 use crate::components::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
+use crate::reactive::state_store::StateStore;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderCommand};
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::rectangle::PerFrameData;
-use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::renderer::wgpu::text::caching::{GlyphInfo, TextAtlas};
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
 use crate::renderer::wgpu::text::vertex::TextVertex;
-use crate::resource_manager::ResourceManager;
-use crate::reactive::state_store::StateStore;
+use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
+use std::collections::HashMap;
+use wgpu::util::DeviceExt;
+use wgpu::RenderPass;
 
 pub struct TextRenderInfo {
     pub(crate) element_id: ComponentId,
