@@ -17,13 +17,13 @@ Updates are performed by handling messages from a Component.
 * ✅ Android(basic)
 * ✅ Web(basic)
 * ✅ Image Support
-* ⬜️ DPI Scaling Support
+* ✅ DPI Scaling Support
 * ⬜️ Transform (Rotation, Skew, Scale) Support
 * ⬜️ Mac
 * ⬜️ iOS
-* ⬜️ Text Input
+* ✅ Text Input (Basic)
 * ⬜️ Animations
-* ⬜️ Scrollables
+* ✅ Scrollables (Basic)
 * ⬜️ Documentation
 * ⬜️ Tests
 * ⬜ Videos
