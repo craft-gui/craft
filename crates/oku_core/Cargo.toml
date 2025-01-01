@@ -41,13 +41,13 @@ default-features = false
 features = ["wgsl"]
 optional = true
 
-[dependencies.reqwest]
+[target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.12"
 default-features = false
 features = ["native-tls"]
 optional = true
 
-[target.target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
+[target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
 version = "23.0.1"
 default-features = false
 features = ["fragile-send-sync-non-atomic-wasm", "wgsl"]
