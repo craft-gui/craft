@@ -12,8 +12,10 @@ winit = { git = "https://github.com/rust-windowing/winit", rev="6896de5b73817a51
 cosmic-text = { version = "0.12.1", default-features = false, features = ["std", "fontconfig"] }
 taffy = { version = "0.7.1", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
-accesskit = "0.17.1"
-accesskit_winit = { version = "0.23.1", features = ["tokio"] }
+# Add at the next stable release.
+#accesskit = "0.17.1"
+#accesskit_winit = { version = "0.23.1", features = ["tokio"] }
+
 rustc-hash = { version = "2.1.0", default-features = false }
 unicode-segmentation = "1.12.0"
 
