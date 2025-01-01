@@ -113,7 +113,7 @@ fn android_main(app: AndroidApp) {
     oku_main_with_options(
         Counter::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "Counter".to_string(),
         }),
         app,
