@@ -2320,6 +2320,7 @@ dependencies = [
 name = "oku"
 version = "0.1.0"
 dependencies = [
+ "log",
  "oku",
  "oku_core",
  "oku_dylib",

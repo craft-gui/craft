@@ -49,12 +49,6 @@ default-features = false
 features = ["native-tls"]
 optional = true
 
-[target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
-version = "23.0.1"
-default-features = false
-features = ["fragile-send-sync-non-atomic-wasm", "wgsl", "webgl", "webgpu"]
-optional = true
-
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 accesskit_winit = { version = "0.23.1" }
 web-time = "1.1.0"
@@ -95,9 +89,9 @@ optional = true
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 
-wgpu_renderer = ["dep:wgpu", "cosmic-text/swash"]
+wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm"]
 tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer", "cosmic-text/swash"]
-vello_renderer = ["dep:vello", "wgpu/fragile-send-sync-non-atomic-wasm"]
+vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 
 default = ["vello_renderer", "http_client"]

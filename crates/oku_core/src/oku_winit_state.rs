@@ -101,14 +101,15 @@ impl ApplicationHandler for OkuWinitState {
         {
             let mut tx = self.app_sender.clone();
             let renderer = self.oku_options.renderer.clone();
+            let window_copy = window.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let renderer: Box<dyn Renderer + Send> = match renderer {
                     #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-                    RendererType::Software => Box::new(SoftwareRenderer::new(window.clone())),
+                    RendererType::Software => Box::new(SoftwareRenderer::new(window_copy)),
                     #[cfg(feature = "wgpu_renderer")]
-                    RendererType::Wgpu => Box::new(WgpuRenderer::new(window.clone()).await),
+                    RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
                     #[cfg(feature = "vello_renderer")]
-                    RendererType::Vello => Box::new(VelloRenderer::new(window.clone()).await),
+                    RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
                     RendererType::Blank => {
                         Box::new(BlankRenderer)
                     }
