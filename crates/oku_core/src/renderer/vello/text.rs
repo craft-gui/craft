@@ -1,10 +1,28 @@
 use std::cmp;
+use std::sync::Arc;
 use cosmic_text::{Buffer, Cursor, Edit, Editor, LayoutRun};
 use cosmic_text::fontdb::ID;
 use unicode_segmentation::UnicodeSegmentation;
 use vello::Glyph;
 use vello::kurbo::{Point, Rect, Size};
 use vello::peniko::Color;
+
+pub(crate) struct CosmicFontBlobAdapter {
+    font: Arc<cosmic_text::Font>,
+}
+
+/// Adapter to allow `cosmic_text::Font` to be used as a Blob.
+impl CosmicFontBlobAdapter {
+    pub(crate) fn new(font: Arc<cosmic_text::Font>) -> Self {
+        Self { font }
+    }
+}
+
+impl AsRef<[u8]> for CosmicFontBlobAdapter {
+    fn as_ref(&self) -> &[u8] {
+        self.font.data()
+    }
+}
 
 pub(crate) struct BufferGlyphs {
     pub(crate) font_size: f32,

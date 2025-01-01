@@ -11,6 +11,7 @@ use crate::reactive::state_store::StateStore;
 use cosmic_text::{Edit, FontSystem};
 use std::collections::HashMap;
 use std::sync::Arc;
+use peniko::Font;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use unicode_segmentation::UnicodeSegmentation;
@@ -21,6 +22,7 @@ use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
 use crate::geometry::Rectangle;
+use crate::renderer::vello::text::CosmicFontBlobAdapter;
 
 impl From<Color> for peniko::Color {
     fn from(color: Color) -> Self {
@@ -203,13 +205,12 @@ impl Renderer for VelloRenderer<'_> {
     fn load_font(&mut self, font_system: &mut FontSystem) {
         let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> = font_system.db().faces().map(|face| (face.id, face.index)).collect();
         for (font_id, index) in font_faces {
-            let font = font_system.get_font(font_id).unwrap();
-            let resource = Arc::new(font.data().to_vec());
-            let blob = Blob::new(resource);
-            let vello_font = peniko::Font::new(blob, index);
-            self.vello_fonts.insert(font_id, vello_font);
+            if let Some(font) = font_system.get_font(font_id) {
+                let font_blob = Blob::new(Arc::new(CosmicFontBlobAdapter::new(font)));
+                let vello_font = Font::new(font_blob, index);
+                self.vello_fonts.insert(font_id, vello_font);
+            }
         }
-        
     }
     
 
