@@ -85,7 +85,11 @@ use events::internal::InternalMessage;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any + Send>> + Send>>;
+#[cfg(target_arch = "wasm32")]
+pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any>> + 'static>>;
+
 
 struct App {
     app: ComponentSpecification,
@@ -302,6 +306,10 @@ async fn async_main(
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
                             }
+
+                            if resource_type == ResourceType::Image {
+                                app.window.as_ref().unwrap().request_redraw();
+                            }
                         }
                         ResourceEvent::Loaded(_) => {}
                         ResourceEvent::UnLoaded(_) => {}
@@ -350,7 +358,10 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
     dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved)).await;
-    app.window.as_ref().unwrap().request_redraw();
+
+    if let Some(window) = app.window.as_ref() {
+        window.request_redraw();
+    }
 }
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
@@ -595,11 +606,11 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
 }
 
 async fn on_request_redraw(app: &mut App) {
-    
+
     if app.font_system.is_none() {
         app.setup_font_system();
     }
-    
+
     //let total_time_start = Instant::now();
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();

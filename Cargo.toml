@@ -8,7 +8,6 @@ version = "0.1.0"
 # Force dynamic linking, which improves iterative compile times
 dynamic_linking = ["dep:oku_dylib", "oku_core/dynamic_linking"]
 android = ["oku_core/android"]
-web = ["oku_core/web"]
 http_client = ["oku_core/http_client"]
 
 default = ["oku_core/vello_renderer", "oku_core/http_client"]

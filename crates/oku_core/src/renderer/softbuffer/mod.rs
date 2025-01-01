@@ -139,6 +139,8 @@ impl Renderer for SoftwareRenderer {
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
+        let width = width.max(1.0);
+        let height = height.max(1.0);
         self.surface_width = width;
         self.surface_height = height;
         let framebuffer = Pixmap::new(width as u32, height as u32).unwrap();

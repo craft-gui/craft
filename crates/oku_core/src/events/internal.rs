@@ -20,6 +20,9 @@ pub(crate) enum InternalMessage {
     MouseWheel(MouseWheel),
     KeyboardInput(KeyboardInput),
     ProcessUserEvents,
+    #[cfg(not(target_arch = "wasm32"))]
     GotUserMessage((UpdateFn, ComponentId, Box<dyn Any + Send>, Props)),
+    #[cfg(target_arch = "wasm32")]
+    GotUserMessage((UpdateFn, ComponentId, Box<dyn Any>, Props)),
     ResourceEvent(ResourceEvent),
 }

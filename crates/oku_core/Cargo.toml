@@ -52,7 +52,7 @@ optional = true
 [target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
 version = "23.0.1"
 default-features = false
-features = ["fragile-send-sync-non-atomic-wasm", "wgsl"]
+features = ["fragile-send-sync-non-atomic-wasm", "wgsl", "webgl", "webgpu"]
 optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -94,7 +94,6 @@ optional = true
 [features]
 dynamic_linking = []
 android = ["winit/android-native-activity"]
-web = []
 
 wgpu_renderer = ["dep:wgpu", "cosmic-text/swash"]
 tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer", "cosmic-text/swash"]

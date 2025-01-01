@@ -2,7 +2,7 @@ mod ani_list;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku::events::{ButtonSource, ElementState, Event, Message, MouseButton};
+use oku::events::{ElementState, Event, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
@@ -14,9 +14,9 @@ use serde_json::json;
 use std::any::Any;
 
 use oku::elements::ElementStyles;
+use oku::style::{Display, Overflow, Unit, Wrap};
 use oku_core::events::OkuMessage::PointerButtonEvent;
 use oku_core::renderer::color::Color;
-use oku::style::{Display, Overflow, Unit, Wrap};
 
 #[derive(Default, Clone)]
 pub struct AniList {
@@ -85,7 +85,11 @@ impl Component for AniList {
 
             let result: AniListResponse = serde_json::from_str(&response.unwrap()).unwrap();
 
+            #[cfg(not(target_arch = "wasm32"))]
             let boxed: Box<dyn Any + Send> = Box::new(result);
+            #[cfg(target_arch = "wasm32")]
+            let boxed: Box<dyn Any> = Box::new(result.clone());
+
             boxed
         });
 
