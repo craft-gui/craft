@@ -9,9 +9,9 @@ resolver = "2"
 
 futures = "0.3.31"
 winit = { git = "https://github.com/rust-windowing/winit",  rev="6896de5b73817a51c2e9311a52a571b400411602" }
-cosmic-text = { version = "0.12.1" }
-taffy = { version = "0.7.1" }
-wgpu = { version = "23.0.1", features = ["fragile-send-sync-non-atomic-wasm"] }
+cosmic-text = { version = "0.12.1", default-features = false, features = ["std", "fontconfig"] }
+taffy = { version = "0.7.1", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
+
 accesskit = "0.17.1"
 accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 rustc-hash = { version = "2.1.0", default-features = false }
@@ -22,17 +22,35 @@ unicode-segmentation = "1.12.0"
 glam = { version = "0.29.2" }
 bytemuck = { version = "1.21.0", features = ["derive"] }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
-vello = { git = "https://github.com/linebender/vello", rev="8a84a4abf7aaabdb7de82e3d9d86ed427ad21638" }
+
+
 peniko = "0.3.0"
 
 cfg-if = "1.0.0"
 chrono = "0.4.39"
 log = "0.4.22"
 
+[dependencies.vello]
+git = "https://github.com/linebender/vello"
+rev="8a84a4abf7aaabdb7de82e3d9d86ed427ad21638"
+optional = true
+
+[dependencies.wgpu]
+version = "23.0.1"
+default-features = false
+features = ["wgsl"]
+optional = true
+
 [dependencies.reqwest]
 version = "0.12.9"
 default-features = false
-features = ["rustls-tls"]
+features = ["native-tls"]
+
+[target.target.'cfg(target_os = "wasm32")'.dependencies.wgpu]
+version = "23.0.1"
+default-features = false
+features = ["fragile-send-sync-non-atomic-wasm", "wgsl"]
+optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 accesskit_winit = { version = "0.23.1" }
@@ -48,17 +66,32 @@ web-sys = { version = "0.3.76", features = [
 ] }
 
 console_log = "1.0"
-tokio = { version = "1.42.0", features = ["sync", "macros"] }
+tokio = { version = "1.42.0", default-features = false, features = [] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.42.0", features = ["full"] }
-tracing = "0.1.40"
+tokio = { version = "1.42.0", default-features = false, features = ["rt-multi-thread"] }
+tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes"] }
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
-tiny-skia = { git = "https://github.com/RazrFalcon/tiny-skia", rev = "cf6530d4b58ebb059684b446f54794b91ccc96a1" }
-softbuffer = { version = "0.4.6"}
+
+[target.'cfg(not(target_os = "android"))'.dependencies.softbuffer]
+version = "0.4.6"
+optional = true
+
+[target.'cfg(not(target_os = "android"))'.dependencies.tiny-skia]
+git = "https://github.com/RazrFalcon/tiny-skia"
+rev = "cf6530d4b58ebb059684b446f54794b91ccc96a1"
+optional = true
+
+[target.'cfg(target_os = "android")'.dependencies.reqwest]
+version = "0.12.9"
+default-features = false
+features = ["rustls-tls"]
 
 [features]
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 web = []
+
+wgpu_renderer = ["wgpu", "cosmic-text/swash"]
+tinyskia_renderer = ["tiny-skia", "softbuffer", "cosmic-text/swash"]
+vello_renderer = ["vello"]

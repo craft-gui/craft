@@ -551,9 +551,12 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     if app.font_system.is_none() {
         let mut font_system = FontSystem::new();
 
-        font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-        font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-        font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+        #[cfg(target_arch = "wasm32")]
+        {
+            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+        }
 
         #[cfg(target_os = "android")]
         {

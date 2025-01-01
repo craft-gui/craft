@@ -2,11 +2,14 @@ mod ani_list;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku_core::events::{ButtonSource, ElementState, Event, Message, MouseButton};
+use oku::events::{ButtonSource, ElementState, Event, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
+use oku::{PinnedFutureAny, RendererType};
+
 use reqwest::Client;
+
 use serde_json::json;
 use std::any::Any;
 
@@ -106,7 +109,7 @@ fn main() {
     oku_main_with_options(
         AniList::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "Ani List".to_string(),
         }),
     );
@@ -115,8 +118,6 @@ fn main() {
 use crate::ani_list::{anime_view, AniListResponse, QUERY};
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku::PinnedFutureAny;
-use oku::RendererType::Vello;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -128,7 +129,7 @@ fn android_main(app: AndroidApp) {
     oku_main_with_options(
         AniList::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "Counter".to_string(),
         }),
         app,

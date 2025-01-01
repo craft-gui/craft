@@ -8,7 +8,7 @@ use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::reactive::state_store::StateStore;
-use cosmic_text::{Edit, FontSystem, SwashCache};
+use cosmic_text::{Edit, FontSystem};
 use std::collections::HashMap;
 use std::sync::Arc;
 use peniko::kurbo::BezPath;
@@ -58,7 +58,6 @@ pub struct VelloRenderer<'a> {
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
-    cache: SwashCache,
     vello_fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font>,
 }
 
@@ -99,7 +98,6 @@ impl<'a> VelloRenderer<'a> {
             renderers: vec![],
             state: RenderState::Suspended(None),
             scene: Scene::new(),
-            cache: SwashCache::new(),
             surface_clear_color: Color::rgba(255, 255, 255, 255),
             vello_fonts: HashMap::new(),
         };
@@ -111,7 +109,7 @@ impl<'a> VelloRenderer<'a> {
             window.clone(),
             surface_size.width,
             surface_size.height,
-            wgpu::PresentMode::AutoVsync,
+            vello::wgpu::PresentMode::AutoVsync,
         ).await.unwrap();
 
         // Create a vello Renderer for the surface (using its device id)

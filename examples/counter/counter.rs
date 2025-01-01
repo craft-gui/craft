@@ -9,7 +9,6 @@ use oku::elements::ElementStyles;
 use oku_core::events::OkuMessage::PointerButtonEvent;
 use oku_core::renderer::color::Color;
 use oku::style::Display;
-use oku::RendererType::{Vello, Wgpu};
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -94,7 +93,7 @@ fn main() {
     oku_main_with_options(
         Counter::component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "Counter".to_string(),
         }),
     );
@@ -102,6 +101,7 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
+use oku_core::RendererType;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

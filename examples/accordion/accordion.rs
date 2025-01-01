@@ -1,7 +1,6 @@
 use oku::components::ComponentSpecification;
 use oku::elements::{Container, Text};
 
-use oku::RendererType::Wgpu;
 use oku::{oku_main_with_options, OkuOptions};
 
 use oku::components::{Component, UpdateResult};
@@ -10,8 +9,8 @@ use oku::style::FlexDirection;
 use oku::elements::ElementStyles;
 use oku_core::events::Event;
 use oku_core::events::OkuMessage::PointerButtonEvent;
-use oku::RendererType::Vello;
 use oku::style::Unit;
+use oku_core::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -64,7 +63,7 @@ fn main() {
     oku_main_with_options(
         Container::new().push_children(vec![Accordion::component(), Accordion::component()]).component(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "accordion".to_string(),
         }),
     );

@@ -5,13 +5,11 @@ use oku::elements::ElementStyles;
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
-use oku::RendererType::Vello;
 use oku_core::elements::{Container, Font, Text};
 use oku_core::events::Message;
 use oku_core::events::{Event, OkuMessage};
-use oku_core::renderer::color::Color;
+use oku_core::RendererType;
 use oku_core::resource_manager::ResourceIdentifier;
-use oku_core::RendererType::Software;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -49,7 +47,7 @@ fn main() {
     oku_main_with_options(
         TextState::component().into(),
         Some(OkuOptions {
-            renderer: Vello,
+            renderer: RendererType::default(),
             window_title: "text".to_string(),
         }),
     );

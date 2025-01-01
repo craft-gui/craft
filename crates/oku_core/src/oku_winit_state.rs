@@ -13,14 +13,22 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowAttributesExtWeb;
 
+use crate::renderer::blank_renderer::BlankRenderer;
+
+#[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
+
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::renderer::renderer::Renderer;
-#[cfg(not(target_os = "android"))]
+
+#[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
 use crate::renderer::softbuffer::SoftwareRenderer;
+
+#[cfg(feature = "wgpu_renderer")]
 use crate::renderer::wgpu::WgpuRenderer;
+
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::SinkExt;
@@ -38,6 +46,7 @@ use web_time as time;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use crate::RendererType::Blank;
 
 /// Stores state relate to Winit.
 ///
@@ -109,14 +118,19 @@ impl ApplicationHandler for OkuWinitState {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let renderer: Box<dyn Renderer + Send> = match self.oku_options.renderer {
-                #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+                #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
                 RendererType::Software => Box::new(SoftwareRenderer::new(window.clone())),
+                #[cfg(feature = "wgpu_renderer")]
                 RendererType::Wgpu => Box::new({
                     self.runtime.borrow_tokio_runtime().block_on(async { WgpuRenderer::new(window.clone()).await })
                 }),
+                #[cfg(feature = "vello_renderer")]
                 RendererType::Vello => Box::new({
                     self.runtime.borrow_tokio_runtime().block_on(async { VelloRenderer::new(window.clone()).await })
                 }),
+                RendererType::Blank => {
+                    Box::new(BlankRenderer)
+                }
             };
             info!("Created renderer");
 

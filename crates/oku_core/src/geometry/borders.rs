@@ -394,7 +394,7 @@ impl ComputedBorderSpec {
             -corner_data.outer_radius_y * f64::sin(outer_intersect_angle),
         );
 
-        let inner_arc_first = vello::kurbo::Arc::new(
+        let inner_arc_first = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
             Vec2::new(corner_data.inner_radius_x, corner_data.inner_radius_y),
             to_clockwise_angle(inner_first_start_angle),
@@ -402,7 +402,7 @@ impl ComputedBorderSpec {
             0.0,
         ).to_path(0.1);
 
-        let inner_arc_second = vello::kurbo::Arc::new(
+        let inner_arc_second = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
             Vec2::new(corner_data.inner_radius_x, corner_data.inner_radius_y),
             to_clockwise_angle(inner_second_start_angle),
@@ -410,7 +410,7 @@ impl ComputedBorderSpec {
             0.0,
         ).to_path(0.1);
 
-        let outer_arc_first = vello::kurbo::Arc::new(
+        let outer_arc_first = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
             Vec2::new(corner_data.outer_radius_x, corner_data.outer_radius_y),
             to_clockwise_angle(outer_first_start_angle),
@@ -418,7 +418,7 @@ impl ComputedBorderSpec {
             0.0,
         ).to_path(0.1);
 
-        let outer_arc_second = vello::kurbo::Arc::new(
+        let outer_arc_second = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
             Vec2::new(corner_data.outer_radius_x, corner_data.outer_radius_y),
             to_clockwise_angle(outer_second_start_angle),
