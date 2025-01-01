@@ -12,11 +12,17 @@ pub mod renderer;
 pub mod events;
 pub mod app_message;
 pub mod resource_manager;
-mod geometry;
+pub mod geometry;
 mod view_introspection;
 
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
+
 pub use oku_runtime::OkuRuntime;
+pub use renderer::color::Color;
+pub use options::OkuOptions;
+
+#[cfg(all(feature = "android", target_os = "android"))]
+pub use winit::platform::android::activity::*;
 
 use events::update_queue_entry::UpdateQueueEntry;
 use crate::style::{Display, Unit, Wrap};
@@ -24,15 +30,12 @@ use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
 use events::Message;
-use renderer::color::Color;
 use renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
 
 use futures::channel::mpsc::channel;
 use futures::channel::mpsc::Receiver;
 use futures::channel::mpsc::Sender;
-
-pub use options::OkuOptions;
 
 #[cfg(target_arch = "wasm32")]
 use {log::info, std::cell::RefCell, web_time as time};
@@ -41,9 +44,6 @@ use {log::info, std::cell::RefCell, web_time as time};
 thread_local! {
     pub static MESSAGE_QUEUE: RefCell<Vec<Message>> = RefCell::new(Vec::new());
 }
-
-#[cfg(all(feature = "android", target_os = "android"))]
-pub use winit::platform::android::activity::*;
 
 type RendererBox = dyn Renderer;
 
