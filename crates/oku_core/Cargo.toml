@@ -42,7 +42,7 @@ features = ["wgsl"]
 optional = true
 
 [dependencies.reqwest]
-version = "0.12.9"
+version = "0.12.12"
 default-features = false
 features = ["native-tls"]
 optional = true
@@ -94,7 +94,9 @@ dynamic_linking = []
 android = ["winit/android-native-activity"]
 web = []
 
-wgpu_renderer = ["wgpu", "cosmic-text/swash"]
-tinyskia_renderer = ["tiny-skia", "softbuffer", "cosmic-text/swash"]
-vello_renderer = ["vello"]
-http_client = ["reqwest"]
+wgpu_renderer = ["dep:wgpu", "cosmic-text/swash"]
+tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer", "cosmic-text/swash"]
+vello_renderer = ["dep:vello", "wgpu/fragile-send-sync-non-atomic-wasm"]
+http_client = ["dep:reqwest"]
+
+default = ["vello_renderer", "http_client"]

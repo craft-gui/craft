@@ -14,24 +14,6 @@ impl Default for OkuOptions {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-#[derive(Default, Copy, Clone, Debug)]
-pub enum RendererType {
-    Software,
-    Wgpu,
-    #[default]
-    Vello,
-}
-
-#[cfg(target_os = "android")]
-#[derive(Default, Copy, Clone, Debug)]
-pub enum RendererType {
-    Wgpu,
-    #[default]
-    Vello,
-}
-
-#[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
 #[derive(Copy, Clone, Debug)]
 pub enum RendererType {
     #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]

@@ -5,9 +5,10 @@ pub mod renderer;
 #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
 pub mod softbuffer;
 
-#[cfg(feature = "wgpu")]
+#[cfg(feature = "wgpu_renderer")]
 pub mod wgpu;
 
-#[cfg(feature = "vello")]
+#[cfg(feature = "vello_renderer")]
 pub mod vello;
+
 pub mod blank_renderer;

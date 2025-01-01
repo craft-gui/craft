@@ -26,7 +26,7 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.133"
-oku = { path = ".", version = "0.1.0" , features = ["vello_renderer"]}
+oku = { path = ".", version = "0.1.0" }
 
 [dev-dependencies.reqwest]
 version = "0.12.9"

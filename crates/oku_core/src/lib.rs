@@ -103,6 +103,35 @@ struct App {
     reload_fonts: bool,
 }
 
+impl App {
+
+    fn setup_font_system(&mut self) {
+        if self.font_system.is_none() {
+            let mut font_system = FontSystem::new();
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+            }
+
+            #[cfg(target_os = "android")]
+            {
+                font_system.db_mut().load_fonts_dir("/system/fonts");
+                font_system.db_mut().set_sans_serif_family("Roboto");
+                font_system.db_mut().set_serif_family("Noto Serif");
+                font_system.db_mut().set_monospace_family("Droid Sans Mono"); // Cutive Mono looks more printer-like
+                font_system.db_mut().set_cursive_family("Dancing Script");
+                font_system.db_mut().set_fantasy_family("Dancing Script");
+            }
+
+            self.font_system = Some(font_system);
+        }
+    }
+
+}
+
 #[cfg(target_os = "android")]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>, app: AndroidApp) {
     #[cfg(target_arch = "wasm32")]
@@ -548,28 +577,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
         //app.element_tree = Some(new_view);
     }
 
-    if app.font_system.is_none() {
-        let mut font_system = FontSystem::new();
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-            font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
-        }
-
-        #[cfg(target_os = "android")]
-        {
-            font_system.db_mut().load_fonts_dir("/system/fonts");
-            font_system.db_mut().set_sans_serif_family("Roboto");
-            font_system.db_mut().set_serif_family("Noto Serif");
-            font_system.db_mut().set_monospace_family("Droid Sans Mono"); // Cutive Mono looks more printer-like
-            font_system.db_mut().set_cursive_family("Dancing Script");
-            font_system.db_mut().set_fantasy_family("Dancing Script");
-        }
-
-        app.font_system = Some(font_system);
-    }
+    app.setup_font_system();
     if renderer.is_some() {
         app.renderer = renderer;
         app.renderer.as_mut().unwrap().load_font(app.font_system.as_mut().unwrap());
@@ -587,6 +595,11 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
 }
 
 async fn on_request_redraw(app: &mut App) {
+    
+    if app.font_system.is_none() {
+        app.setup_font_system();
+    }
+    
     //let total_time_start = Instant::now();
     let window_element = Container::new().into();
     let old_component_tree = app.component_tree.as_ref();

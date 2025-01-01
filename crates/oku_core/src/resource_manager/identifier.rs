@@ -38,7 +38,7 @@ impl ResourceIdentifier {
 
                 if let Ok(data) = res {
                     if !data.status().is_success() {
-                        tracing::warn!("Failed to fetch the resource from {}, Status: {}", url, data.status());
+                        //tracing::warn!("Failed to fetch the resource from {}, Status: {}", url, data.status());
                         return None;
                     }
 
@@ -54,7 +54,7 @@ impl ResourceIdentifier {
                 if let Ok(data) = file {
                     return Some(data);
                 }
-                tracing::warn!("Failed to find the local file: {:?}", path.as_os_str().to_str());
+                //tracing::warn!("Failed to find the local file: {:?}", path.as_os_str().to_str());
                 None
             }
         }
