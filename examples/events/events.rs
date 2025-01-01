@@ -1,5 +1,4 @@
 use oku::elements::ElementStyles;
-use oku::RendererType::Wgpu;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
@@ -11,6 +10,7 @@ use oku_core::events::OkuMessage::PointerButtonEvent;
 use oku_core::renderer::color::Color;
 use oku::style::Unit;
 use oku::style::Position;
+use oku_core::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -74,7 +74,7 @@ fn main() {
     oku_main_with_options(
         EventsExample::component(),
         Some(OkuOptions {
-            renderer: Wgpu,
+            renderer: RendererType::default(),
             window_title: "events".to_string(),
         }),
     );
