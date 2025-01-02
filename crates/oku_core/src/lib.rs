@@ -167,6 +167,8 @@ pub fn oku_wasm_init() {
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
 use crate::elements::{ElementStyles, Text};
+use crate::elements::element::ElementBox;
+use crate::geometry::Size;
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 
@@ -294,7 +296,7 @@ async fn async_main(
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::ProcessUserEvents => {
-                    on_process_user_events(&mut app, &mut app_sender);
+                    on_process_user_events(app.window.clone(), &mut app_sender, &mut app.user_tree);
                 }
                 InternalMessage::GotUserMessage(message) => {
                     let update_fn = message.0;
@@ -334,14 +336,14 @@ async fn async_main(
     }
 }
 
-fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage>) {
-    if app.user_tree.update_queue.is_empty() {
+fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Sender<AppMessage>, reactive_tree: &mut ReactiveTree) {
+    if reactive_tree.update_queue.is_empty() {
         return;
     }
 
-    for event in app.user_tree.update_queue.drain(..) {
+    for event in reactive_tree.update_queue.drain(..) {
         let mut app_sender_copy = app_sender.clone();
-        let window_clone = app.window.clone().unwrap();
+        let window_clone = window.clone().unwrap();
         let f = async move {
             let update_result = event.update_result.future.unwrap();
             let res = update_result.await;
@@ -367,7 +369,7 @@ fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
-    dispatch_event(app, OkuMessage::PointerMovedEvent(mouse_moved)).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -377,7 +379,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(app, event).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -385,7 +387,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let event = OkuMessage::KeyboardInputEvent(keyboard_input);
 
-    dispatch_event(app, event).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -402,8 +404,8 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
-    let current_element_tree = if let Some(current_element_tree) = app.user_tree.element_tree.as_ref() {
+async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: (f32, f32), reactive_tree: &mut ReactiveTree) {
+    let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
         return;
@@ -411,7 +413,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     let fiber: FiberNode = FiberNode {
         element: Some(current_element_tree.as_ref()),
-        component: Some(app.user_tree.component_tree.as_ref().unwrap()),
+        component: Some(reactive_tree.component_tree.as_ref().unwrap()),
     };
 
     // Dispatch some events globally to elements.
@@ -419,7 +421,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     if matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_)) {
         for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
             if let Some(element) = fiber_node.element {
-                let res = element.on_event(event.clone(), &mut app.user_tree.element_state, app.font_system.as_mut().unwrap());
+                let res = element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
 
                 if !res.propagate {
                     break;
@@ -449,7 +451,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     // Nodes added last are usually on top, so this elements in visual order.
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
-            let in_bounds = element.in_bounds(app.mouse_position.0, app.mouse_position.1);
+            let in_bounds = element.in_bounds(mouse_position.0, mouse_position.1);
             if in_bounds {
                 targets.push_back((element.component_id(), element.get_id().clone(), element.common_element_data().layout_order))
             } else {
@@ -482,8 +484,8 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         let (current_target_component_id, current_target_element_id, layout_order) = current_target.clone();
 
         // Get the element's component tree node.
-        let current_target_component = app
-            .user_tree
+        let current_target_component = 
+            reactive_tree
             .component_tree
             .as_ref()
             .unwrap()
@@ -505,7 +507,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 } else {
                     let parent_id = node.parent_id.unwrap();
                     to_visit =
-                        app.user_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
+                        reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
                 }
             }
         }
@@ -514,7 +516,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         if let Some(node) = closest_ancestor_component {
             target_components.push_back(node);
 
-            let state = app.user_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+            let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -525,7 +527,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.user_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -539,15 +541,14 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
             let mut propagate = true;
             let mut prevent_defaults = false;
-
-            let _resource_manager = &mut app.resource_manager;
+            
             for element in current_element_tree.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
                 if !propagate {
                     break;
                 }
                 if element.component_id() == target_component_id {
                     let res =
-                        element.on_event(event.clone(), &mut app.user_tree.element_state, app.font_system.as_mut().unwrap());
+                        element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
 
                     if let Some(result_message) = res.result_message {
                         element_events.push_back((result_message, element.get_id().clone()));
@@ -568,7 +569,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 break;
             }
 
-            let state = app.user_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+            let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -577,7 +578,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.user_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -587,7 +588,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     app.mouse_position = (pointer_button.position.x as f32, pointer_button.position.y as f32);
-    dispatch_event(app, event).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -616,98 +617,122 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     app.window = Some(window.clone());
 }
 
-async fn on_request_redraw(app: &mut App) {
-
-    if app.font_system.is_none() {
-        app.setup_font_system();
-    }
-
-    //let total_time_start = Instant::now();
+async fn update_reactive_tree(
+    component_spec_to_generate_tree: ComponentSpecification,
+    reactive_tree: &mut ReactiveTree,
+    resource_manager: Arc<RwLock<ResourceManager>>,
+    font_system: &mut FontSystem,
+    should_reload_fonts: &mut bool,
+) {
     let window_element = Container::new().into();
-    let old_component_tree = app.user_tree.component_tree.as_ref();
+    let old_component_tree = reactive_tree.component_tree.as_ref();
 
     let new_tree = diff_trees(
-        app.app.clone(),
+        component_spec_to_generate_tree.clone(),
         window_element,
         old_component_tree,
-        &mut app.user_tree.user_state,
-        &mut app.user_tree.element_state,
-        app.font_system.as_mut().unwrap(),
-        app.reload_fonts
+        &mut reactive_tree.user_state,
+        &mut reactive_tree.element_state,
+        font_system,
+        *should_reload_fonts
     );
 
-    app.reload_fonts = false;
+    *should_reload_fonts = false;
 
-    scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 
-    app.user_tree.component_tree = Some(new_tree.0);
-    let mut root = new_tree.1;
-    let surface_width: f32;
-    let surface_height: f32;
+    scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, resource_manager.clone(), font_system).await;
+    reactive_tree.component_tree = Some(new_tree.0);
+    reactive_tree.element_tree = Some(new_tree.1.internal);
+}
 
-    if app.renderer.is_none() {
+async fn draw_reactive_tree(
+    window: Arc<dyn Window>,
+    reactive_tree: &mut ReactiveTree,
+    resource_manager: Arc<RwLock<ResourceManager>>,
+    renderer: &mut Option<Box<dyn Renderer + Send>>,
+    font_system: &mut FontSystem,
+) {
+    
+    let root = reactive_tree.element_tree.as_mut().unwrap();
+    if renderer.is_none() {
         return;
     }
 
-    let scale_factor = app.window.as_ref().unwrap().scale_factor();
+    // Clear the surface.
+    let renderer = renderer.as_mut().unwrap();
+    renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
+
+    let mut root_size = Size::new(renderer.surface_width(), renderer.surface_height());
+
+    // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
+    // We do not want to scale the window size.
+    let scale_factor = window.scale_factor();
     {
-        let renderer = app.renderer.as_mut().unwrap();
-        renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
-        surface_width = renderer.surface_width() / scale_factor as f32;
-        surface_height = renderer.surface_height() / scale_factor as f32;
+        root_size.width = renderer.surface_width() / scale_factor as f32;
+        root_size.height = renderer.surface_height() / scale_factor as f32;
     }
 
-    root.internal.style_mut().width = Unit::Px(surface_width);
-    root.internal.style_mut().wrap = Wrap::Wrap;
-    root.internal.style_mut().display = Display::Block;
-
-    let is_user_root_height_auto = {
-        let root_children = root.internal.children_mut();
-        root_children[0].internal.style().height.is_auto()
-    };
-
-    root.internal.style_mut().width = Unit::Px(surface_width);
-    root.internal.style_mut().wrap = Wrap::Wrap;
-    root.internal.style_mut().display = Display::Block;
-
-    if is_user_root_height_auto {
-        root.internal.style_mut().height = Unit::Auto;
-    } else {
-        root.internal.style_mut().height = Unit::Px(surface_height);
-        root.internal.style_mut().height = Unit::Px(surface_height);
-    }
-
-    //let layout_start = Instant::now(); // Start measuring time
-    let resource_manager = app.resource_manager.read().await;
+    style_root_element(root, root_size);
     
-    let element_state = &mut app.user_tree.element_state;
+    
+    let resource_manager = resource_manager.read().await;
     let (mut taffy_tree, taffy_root) = layout(
-        element_state,
-        surface_width,
-        surface_height,
-        app.font_system.as_mut().unwrap(),
-        root.internal.as_mut(),
+        &mut reactive_tree.element_state,
+        root_size.width,
+        root_size.height,
+        font_system,
+        root.as_mut(),
         &resource_manager,
         scale_factor
     );
     
-    //let duration = layout_start.elapsed(); // Get the elapsed time
-    //println!("Layout Time Taken: {:?} ms -------------------------------------------------------------------------------------------------------------", duration.as_millis());
+    let renderer = renderer.as_mut();
+    root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state);
+    renderer.submit(resource_manager, font_system, &reactive_tree.element_state);
+}
 
-    {
-        let renderer = app.renderer.as_mut().unwrap().as_mut();
-        root.internal.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, &element_state);
-        app.user_tree.element_tree = Some(root.internal);
-        //let renderer_submit_start = Instant::now();
-        renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
-        
-        //let renderer_duration = renderer_submit_start.elapsed();
-        //println!("Renderer Submit Time Taken: {:?} ms", renderer_duration.as_millis());
-        //let total_duration = total_time_start.elapsed();
-        //println!("Other: {:?} ms", (total_duration - renderer_duration - duration).as_millis());
-        //println!("Total Time Taken: {:?} ms", total_duration.as_millis());
+async fn on_request_redraw(app: &mut App) {
+    if app.font_system.is_none() {
+        app.setup_font_system();
     }
-    //taffy_tree.print_tree(taffy_root);
+    
+    update_reactive_tree(
+        app.app.clone(),
+        &mut app.user_tree,
+        app.resource_manager.clone(),
+        app.font_system.as_mut().unwrap(),
+        &mut app.reload_fonts,
+    ).await;
+    
+    draw_reactive_tree(
+        app.window.clone().unwrap(),
+        &mut app.user_tree,
+        app.resource_manager.clone(),
+        &mut app.renderer,
+        app.font_system.as_mut().unwrap(),
+    ).await;
+}
+
+fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
+    root.style_mut().width = Unit::Px(root_size.width);
+    root.style_mut().wrap = Wrap::Wrap;
+    root.style_mut().display = Display::Block;
+
+    let is_user_root_height_auto = {
+        let root_children = root.children_mut();
+        root_children[0].internal.style().height.is_auto()
+    };
+
+    root.style_mut().width = Unit::Px(root_size.width);
+    root.style_mut().wrap = Wrap::Wrap;
+    root.style_mut().display = Display::Block;
+
+    if is_user_root_height_auto {
+        root.style_mut().height = Unit::Auto;
+    } else {
+        root.style_mut().height = Unit::Px(root_size.height);
+        root.style_mut().height = Unit::Px(root_size.height);
+    }
 }
 
 fn layout<'a>(

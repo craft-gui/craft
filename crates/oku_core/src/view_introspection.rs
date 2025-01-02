@@ -1,22 +1,22 @@
-use std::path::PathBuf;
-use crate::App;
+use std::sync::{Arc};
+use cosmic_text::FontSystem;
+use tokio::sync::RwLock;
 use crate::elements::element::Element;
 use crate::elements::{Font, Image};
 use crate::reactive::fiber_node::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
-use crate::resource_manager::ResourceIdentifier;
+use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 
 /// Introspect the view.
 
 // Scans through the component tree and diffs it for resources that need to be updated.
-pub async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTreeNode, app: &mut App) {
+pub async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTreeNode, resource_manager: Arc<RwLock<ResourceManager>>, font_system: &mut FontSystem) {
     let fiber: FiberNode = FiberNode {
         element: Some(element),
         component: Some(component),
     };
-
-    let resource_manager = &mut app.resource_manager;
+    
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
             let image_resource = if let Some(image) = element.as_any().downcast_ref::<Image>() {
@@ -39,7 +39,7 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
                 }
                 
                 if let Some(font_resource) = font_resource {
-                    let font_db = app.font_system.as_mut().unwrap().db_mut();
+                    let font_db = font_system.db_mut();
                     resource_manager.add(font_resource.clone(), ResourceType::Font, Some(font_db)).await;
                 }
             }
