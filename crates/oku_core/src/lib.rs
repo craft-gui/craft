@@ -91,20 +91,28 @@ pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any + Send>> + Se
 pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any>> + 'static>>;
 
 
+struct ReactiveTree {
+    element_tree: Option<Box<dyn Element>>,
+    component_tree: Option<ComponentTreeNode>,
+    update_queue: VecDeque<UpdateQueueEntry>,
+    user_state: StateStore,
+    element_state: StateStore,
+}
+
+
 struct App {
     app: ComponentSpecification,
     window: Option<Arc<dyn Window>>,
     font_system: Option<FontSystem>,
     renderer: Option<Box<dyn Renderer + Send>>,
-    element_tree: Option<Box<dyn Element>>,
-    component_tree: Option<ComponentTreeNode>,
     mouse_position: (f32, f32),
-    update_queue: VecDeque<UpdateQueueEntry>,
-    user_state: StateStore,
-    element_state: StateStore,
+    reload_fonts: bool,
     resource_manager: Arc<RwLock<ResourceManager>>,
     winit_sender: Sender<AppMessage>,
-    reload_fonts: bool,
+
+    user_tree: ReactiveTree,
+    // is_dev_tools_open: bool,
+    // dev_tree: ReactiveTree,
 }
 
 impl App {
@@ -235,15 +243,17 @@ async fn async_main(
         window: None,
         font_system: None,
         renderer: None,
-        element_tree: None,
-        component_tree: None,
         mouse_position: (0.0, 0.0),
-        update_queue: VecDeque::new(),
-        user_state,
-        element_state: Default::default(),
         resource_manager,
         winit_sender: winit_sender.clone(),
         reload_fonts: false,
+        user_tree: ReactiveTree {
+            element_tree: None,
+            component_tree: None,
+            update_queue: VecDeque::new(),
+            user_state: user_state,
+            element_state: Default::default(),
+        },
     });
 
     info!("starting main event loop");
@@ -292,7 +302,7 @@ async fn async_main(
                     let props = message.3;
                     let message = message.2;
 
-                    let state = app.user_state.storage.get_mut(&source_component).unwrap().as_mut();
+                    let state = app.user_tree.user_state.storage.get_mut(&source_component).unwrap().as_mut();
                     update_fn(state, props, Event::new(Message::UserMessage(message)));
                     app.window.as_ref().unwrap().request_redraw();
                 }
@@ -325,11 +335,11 @@ async fn async_main(
 }
 
 fn on_process_user_events(app: &mut Box<App>, app_sender: &mut Sender<AppMessage>) {
-    if app.update_queue.is_empty() {
+    if app.user_tree.update_queue.is_empty() {
         return;
     }
 
-    for event in app.update_queue.drain(..) {
+    for event in app.user_tree.update_queue.drain(..) {
         let mut app_sender_copy = app_sender.clone();
         let window_clone = app.window.clone().unwrap();
         let f = async move {
@@ -393,7 +403,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 }
 
 async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
-    let current_element_tree = if let Some(current_element_tree) = app.element_tree.as_ref() {
+    let current_element_tree = if let Some(current_element_tree) = app.user_tree.element_tree.as_ref() {
         current_element_tree
     } else {
         return;
@@ -401,7 +411,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
     let fiber: FiberNode = FiberNode {
         element: Some(current_element_tree.as_ref()),
-        component: Some(app.component_tree.as_ref().unwrap()),
+        component: Some(app.user_tree.component_tree.as_ref().unwrap()),
     };
 
     // Dispatch some events globally to elements.
@@ -409,7 +419,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
     if matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_)) {
         for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
             if let Some(element) = fiber_node.element {
-                let res = element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+                let res = element.on_event(event.clone(), &mut app.user_tree.element_state, app.font_system.as_mut().unwrap());
 
                 if !res.propagate {
                     break;
@@ -473,6 +483,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
 
         // Get the element's component tree node.
         let current_target_component = app
+            .user_tree
             .component_tree
             .as_ref()
             .unwrap()
@@ -494,7 +505,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 } else {
                     let parent_id = node.parent_id.unwrap();
                     to_visit =
-                        app.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
+                        app.user_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
                 }
             }
         }
@@ -503,7 +514,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
         if let Some(node) = closest_ancestor_component {
             target_components.push_back(node);
 
-            let state = app.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+            let state = app.user_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -514,7 +525,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                app.user_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -536,7 +547,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 }
                 if element.component_id() == target_component_id {
                     let res =
-                        element.on_event(event.clone(), &mut app.element_state, app.font_system.as_mut().unwrap());
+                        element.on_event(event.clone(), &mut app.user_tree.element_state, app.font_system.as_mut().unwrap());
 
                     if let Some(result_message) = res.result_message {
                         element_events.push_back((result_message, element.get_id().clone()));
@@ -557,7 +568,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
                 break;
             }
 
-            let state = app.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+            let state = app.user_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
                 node.props.clone(),
@@ -566,7 +577,7 @@ async fn dispatch_event(app: &mut Box<App>, event: OkuMessage) {
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                app.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                app.user_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
             }
         }
     }
@@ -582,7 +593,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
 }
 
 async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<dyn Renderer + Send>>) {
-    if app.element_tree.is_none() {
+    if app.user_tree.element_tree.is_none() {
         reset_unique_element_id();
         //let new_view = app.app.view();
         //app.element_tree = Some(new_view);
@@ -613,14 +624,14 @@ async fn on_request_redraw(app: &mut App) {
 
     //let total_time_start = Instant::now();
     let window_element = Container::new().into();
-    let old_component_tree = app.component_tree.as_ref();
+    let old_component_tree = app.user_tree.component_tree.as_ref();
 
     let new_tree = diff_trees(
         app.app.clone(),
         window_element,
         old_component_tree,
-        &mut app.user_state,
-        &mut app.element_state,
+        &mut app.user_tree.user_state,
+        &mut app.user_tree.element_state,
         app.font_system.as_mut().unwrap(),
         app.reload_fonts
     );
@@ -629,7 +640,7 @@ async fn on_request_redraw(app: &mut App) {
 
     scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, app).await;
 
-    app.component_tree = Some(new_tree.0);
+    app.user_tree.component_tree = Some(new_tree.0);
     let mut root = new_tree.1;
     let surface_width: f32;
     let surface_height: f32;
@@ -669,7 +680,7 @@ async fn on_request_redraw(app: &mut App) {
     //let layout_start = Instant::now(); // Start measuring time
     let resource_manager = app.resource_manager.read().await;
     
-    let element_state = &mut app.element_state;
+    let element_state = &mut app.user_tree.element_state;
     let (mut taffy_tree, taffy_root) = layout(
         element_state,
         surface_width,
@@ -686,7 +697,7 @@ async fn on_request_redraw(app: &mut App) {
     {
         let renderer = app.renderer.as_mut().unwrap().as_mut();
         root.internal.draw(renderer, app.font_system.as_mut().unwrap(), &mut taffy_tree, taffy_root, &element_state);
-        app.element_tree = Some(root.internal);
+        app.user_tree.element_tree = Some(root.internal);
         //let renderer_submit_start = Instant::now();
         renderer.submit(resource_manager, app.font_system.as_mut().unwrap(), &element_state);
         
