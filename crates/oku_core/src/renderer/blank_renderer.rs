@@ -49,6 +49,9 @@ impl Renderer for BlankRenderer {
     fn pop_layer(&mut self) {
     }
 
-    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, _font_system: &mut FontSystem, _element_state: &StateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
+    }
+
+    fn submit(&mut self) {
     }
 }

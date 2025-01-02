@@ -10,6 +10,7 @@ pub mod style;
 mod tests;
 pub mod renderer;
 pub mod events;
+pub(crate) mod devtools;
 pub mod app_message;
 pub mod resource_manager;
 pub mod geometry;
@@ -111,8 +112,12 @@ struct App {
     winit_sender: Sender<AppMessage>,
 
     user_tree: ReactiveTree,
-    // is_dev_tools_open: bool,
-    // dev_tree: ReactiveTree,
+
+    #[cfg(feature = "dev_tools")]
+    is_dev_tools_open: bool,
+
+    #[cfg(feature = "dev_tools")]
+    dev_tree: ReactiveTree,
 }
 
 impl App {
@@ -166,9 +171,10 @@ pub fn oku_wasm_init() {
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
+use crate::devtools::dev_tools_view;
 use crate::elements::{ElementStyles, Text};
 use crate::elements::element::ElementBox;
-use crate::geometry::Size;
+use crate::geometry::{Point, Size};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 
@@ -240,6 +246,9 @@ async fn async_main(
     let dummy_root_value: Box<StateStoreItem> = Box::new(());
     user_state.storage.insert(0, dummy_root_value);
 
+    let mut dev_tools_user_state = StateStore::default();
+    dev_tools_user_state.storage.insert(0, Box::new(()));
+
     let mut app = Box::new(App {
         app: application,
         window: None,
@@ -254,6 +263,18 @@ async fn async_main(
             component_tree: None,
             update_queue: VecDeque::new(),
             user_state: user_state,
+            element_state: Default::default(),
+        },
+
+        #[cfg(feature = "dev_tools")]
+        is_dev_tools_open: false,
+
+        #[cfg(feature = "dev_tools")]
+        dev_tree: ReactiveTree {
+            element_tree: None,
+            component_tree: None,
+            update_queue: VecDeque::new(),
+            user_state: dev_tools_user_state,
             element_state: Default::default(),
         },
     });
@@ -297,6 +318,8 @@ async fn async_main(
                 }
                 InternalMessage::ProcessUserEvents => {
                     on_process_user_events(app.window.clone(), &mut app_sender, &mut app.user_tree);
+                    #[cfg(feature = "dev_tools")]
+                    on_process_user_events(app.window.clone(), &mut app_sender, &mut app.dev_tree);
                 }
                 InternalMessage::GotUserMessage(message) => {
                     let update_fn = message.0;
@@ -369,7 +392,10 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+
+    #[cfg(feature = "dev_tools")]
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -379,7 +405,10 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+
+    #[cfg(feature = "dev_tools")]
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -387,7 +416,10 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let event = OkuMessage::KeyboardInputEvent(keyboard_input);
 
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+
+    #[cfg(feature = "dev_tools")]
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -588,7 +620,10 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     app.mouse_position = (pointer_button.position.x as f32, pointer_button.position.y as f32);
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+
+    #[cfg(feature = "dev_tools")]
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -649,31 +684,25 @@ async fn draw_reactive_tree(
     window: Arc<dyn Window>,
     reactive_tree: &mut ReactiveTree,
     resource_manager: Arc<RwLock<ResourceManager>>,
-    renderer: &mut Option<Box<dyn Renderer + Send>>,
+    renderer: &mut Box<dyn Renderer + Send>,
+    viewport_size: Size,
+    origin: Point,
     font_system: &mut FontSystem,
 ) {
     
     let root = reactive_tree.element_tree.as_mut().unwrap();
-    if renderer.is_none() {
-        return;
-    }
 
-    // Clear the surface.
-    let renderer = renderer.as_mut().unwrap();
-    renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
-
-    let mut root_size = Size::new(renderer.surface_width(), renderer.surface_height());
+    let mut root_size = viewport_size;
 
     // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
     // We do not want to scale the window size.
     let scale_factor = window.scale_factor();
     {
-        root_size.width = renderer.surface_width() / scale_factor as f32;
-        root_size.height = renderer.surface_height() / scale_factor as f32;
+        root_size.width /= scale_factor as f32;
+        root_size.height /= scale_factor as f32;
     }
 
     style_root_element(root, root_size);
-    
     
     let resource_manager = resource_manager.read().await;
     let (mut taffy_tree, taffy_root) = layout(
@@ -682,35 +711,76 @@ async fn draw_reactive_tree(
         root_size.height,
         font_system,
         root.as_mut(),
+        origin,
         &resource_manager,
         scale_factor
     );
     
     let renderer = renderer.as_mut();
     root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state);
-    renderer.submit(resource_manager, font_system, &reactive_tree.element_state);
+    renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
 }
 
 async fn on_request_redraw(app: &mut App) {
     if app.font_system.is_none() {
         app.setup_font_system();
     }
+    let font_system = app.font_system.as_mut().unwrap();
     
     update_reactive_tree(
         app.app.clone(),
         &mut app.user_tree,
         app.resource_manager.clone(),
-        app.font_system.as_mut().unwrap(),
-        &mut app.reload_fonts,
+        font_system,
+        &mut app.reload_fonts
     ).await;
+    
+    if app.renderer.is_none() {
+        return;
+    }
+
+    let renderer = app.renderer.as_mut().unwrap();
+    let mut root_size = Size::new(renderer.surface_width(), renderer.surface_height());
+
+    renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
+
+    #[cfg(feature = "dev_tools")] {
+        let dev_tools_size = Size::new(350.0, renderer.surface_height());
+        root_size.width -= dev_tools_size.width;
+    }
     
     draw_reactive_tree(
         app.window.clone().unwrap(),
         &mut app.user_tree,
         app.resource_manager.clone(),
-        &mut app.renderer,
-        app.font_system.as_mut().unwrap(),
+        renderer,
+        root_size,
+        Point::new(0.0, 0.0),
+        font_system
     ).await;
+
+    #[cfg(feature = "dev_tools")] {
+        update_reactive_tree(
+            dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
+            &mut app.dev_tree,
+            app.resource_manager.clone(),
+            font_system,
+            &mut app.reload_fonts
+        ).await;
+
+        draw_reactive_tree(
+            app.window.clone().unwrap(),
+            &mut app.dev_tree,
+            app.resource_manager.clone(),
+            renderer,
+            Size::new(renderer.surface_width() - root_size.width, renderer.surface_height()),
+            Point::new(root_size.width, 0.0),
+            font_system
+        ).await;
+    }
+
+    renderer.submit();
+    
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
@@ -741,10 +811,11 @@ fn layout<'a>(
     _window_height: f32,
     font_system: &mut FontSystem,
     root_element: &mut dyn Element,
+    origin: Point,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     scale_factor: f64,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
-    let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
+    let mut taffy_tree: TaffyTree<LayoutContext> = TaffyTree::new();
     let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor);
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
@@ -775,7 +846,7 @@ fn layout<'a>(
     let transform = glam::Mat4::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.finalize_layout(&mut taffy_tree, root_node, 0.0, 0.0, &mut layout_order, transform, font_system, element_state);
+    root_element.finalize_layout(&mut taffy_tree, root_node, origin.x, origin.y, &mut layout_order, transform, font_system, element_state);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

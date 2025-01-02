@@ -14,6 +14,14 @@ pub use taffy::Overflow;
 use winit::dpi::{LogicalPosition, PhysicalPosition, PhysicalSize};
 
 impl Unit {
+    pub fn to_string(&self) -> String {
+        match self {
+            Unit::Px(value) => format!("{value}px"),
+            Unit::Percentage(value) => format!("{value}%"),
+            Unit::Auto => "auto".to_string(),
+        }
+    }
+    
     pub fn is_auto(&self) -> bool {
         matches!(self, Unit::Auto)
     }

@@ -49,10 +49,12 @@ pub trait Renderer {
     
     fn pop_layer(&mut self);
 
-    fn submit(
+    fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
         element_state: &StateStore,
     );
+    
+    fn submit(&mut self);
 }

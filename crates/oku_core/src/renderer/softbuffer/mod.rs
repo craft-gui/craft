@@ -182,12 +182,7 @@ impl Renderer for SoftwareRenderer {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn submit(
-        &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
-        element_state: &StateStore,
-    ) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
         let framebuffer = self.framebuffer.last_mut().unwrap();
         let framebuffer = &mut framebuffer.0;
 
@@ -343,7 +338,7 @@ impl Renderer for SoftwareRenderer {
                                             tiny_skia::Point::from_xy(last_point.0, last_point.1),
                                             tiny_skia::Point::from_xy(point.x as f32, point.y as f32),
                                         ])
-                                        .unwrap(),
+                                            .unwrap(),
                                         &paint,
                                         Transform::identity(),
                                         None,
@@ -382,6 +377,9 @@ impl Renderer for SoftwareRenderer {
                 }
             }
         }
+    }
+    
+    fn submit(&mut self) {
         let buffer = self.copy_skia_buffer_to_softbuffer(self.surface_width, self.surface_height);
         buffer.present().unwrap();
     }

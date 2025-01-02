@@ -150,19 +150,14 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn submit(
-        &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
-        element_state: &StateStore,
-    ) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
 
         let render_commands_len = self.render_commands.len();
-       
+
         if render_commands_len == 0 {
             return;
         }
-        
+
         let mut encoder = self.context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
@@ -196,14 +191,14 @@ impl Renderer for WgpuRenderer<'_> {
             });
 
             let render_commands = self.render_commands.drain(..);
-            
+
             let viewport_clip_rect = Rectangle {
                 x: 0.0,
                 y: 0.0,
                 width: self.context.surface_config.width as f32,
                 height: self.context.surface_config.height as f32
             };
-            
+
             let mut render_groups: Vec<RenderGroup> = Vec::new();
             render_groups.push(RenderGroup {
                 clip_rectangle: viewport_clip_rect,
@@ -248,7 +243,11 @@ impl Renderer for WgpuRenderer<'_> {
             }
         }
         self.context.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
+        output.present(); 
+    }
+
+
+    fn submit(&mut self) {
         
     }
 }

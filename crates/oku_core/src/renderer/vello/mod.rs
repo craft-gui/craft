@@ -212,21 +212,9 @@ impl Renderer for VelloRenderer<'_> {
             }
         }
     }
-    
 
-    fn submit(
-        &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
-        element_state: &StateStore,
-    ) {
-        self.scene.reset();
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
 
-        let render_state = match &mut self.state {
-            RenderState::Active(state) => state,
-            _ => panic!("!!!"),
-        };
-        
         for command in self.render_commands.drain(..) {
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
@@ -264,10 +252,10 @@ impl Renderer for VelloRenderer<'_> {
                     {
                         let editor = &text_context.editor;
                         let buffer_glyphs = text::create_glyphs_for_editor(editor,
-                                                       fill_color.into(),
-                                                       peniko::Color::from_rgba8(0, 0, 0, 255),
-                                                       peniko::Color::from_rgba8(0, 120, 215, 255),
-                                                       peniko::Color::from_rgba8(255, 255, 255, 255)
+                                                                           fill_color.into(),
+                                                                           peniko::Color::from_rgba8(0, 0, 0, 255),
+                                                                           peniko::Color::from_rgba8(0, 120, 215, 255),
+                                                                           peniko::Color::from_rgba8(255, 255, 255, 255)
                         );
 
                         // Draw the Glyphs
@@ -346,6 +334,14 @@ impl Renderer for VelloRenderer<'_> {
                 }
             }
         }
+    }
+
+    fn submit(&mut self) {
+        let render_state = match &mut self.state {
+            RenderState::Active(state) => state,
+            _ => panic!("!!!"),
+        };
+        
         // Get the RenderSurface (surface + config)
         let surface = &render_state.surface;
 
@@ -388,6 +384,7 @@ impl Renderer for VelloRenderer<'_> {
         // Queue the texture to be presented on the surface
         surface_texture.present();
 
+        self.scene.reset();
     }
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
