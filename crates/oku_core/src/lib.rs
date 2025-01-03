@@ -72,6 +72,7 @@ use reactive::element_id::reset_unique_element_id;
 use reactive::fiber_node::FiberNode;
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
+use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
@@ -414,13 +415,22 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 }
 
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
-    let event = OkuMessage::KeyboardInputEvent(keyboard_input);
+    let keyboard_event = OkuMessage::KeyboardInputEvent(keyboard_input.clone());
 
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
-    #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
+    #[cfg(feature = "dev_tools")] {
+        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
 
+        let logical_key = keyboard_input.event.logical_key;
+        let key_state = keyboard_input.event.state;
+
+        if key_state.is_pressed() {
+            if let Key::Named(NamedKey::F12) = logical_key {
+                app.is_dev_tools_open = !app.is_dev_tools_open;
+            }
+        }
+    }
     app.window.as_ref().unwrap().request_redraw();
 }
 
@@ -745,8 +755,10 @@ async fn on_request_redraw(app: &mut App) {
     renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
 
     #[cfg(feature = "dev_tools")] {
-        let dev_tools_size = Size::new(350.0, renderer.surface_height());
-        root_size.width -= dev_tools_size.width;
+        if app.is_dev_tools_open {
+            let dev_tools_size = Size::new(350.0, renderer.surface_height());
+            root_size.width -= dev_tools_size.width;
+        }
     }
     
     draw_reactive_tree(
@@ -768,15 +780,17 @@ async fn on_request_redraw(app: &mut App) {
             &mut app.reload_fonts
         ).await;
 
-        draw_reactive_tree(
-            app.window.clone().unwrap(),
-            &mut app.dev_tree,
-            app.resource_manager.clone(),
-            renderer,
-            Size::new(renderer.surface_width() - root_size.width, renderer.surface_height()),
-            Point::new(root_size.width, 0.0),
-            font_system
-        ).await;
+        if app.is_dev_tools_open {
+            draw_reactive_tree(
+                app.window.clone().unwrap(),
+                &mut app.dev_tree,
+                app.resource_manager.clone(),
+                renderer,
+                Size::new(renderer.surface_width() - root_size.width, renderer.surface_height()),
+                Point::new(root_size.width, 0.0),
+                font_system
+            ).await;
+        }
     }
 
     renderer.submit();

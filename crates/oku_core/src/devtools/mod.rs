@@ -105,7 +105,7 @@ impl Component for DevTools {
                     continue;
                 }
 
-                selected_element = Some(Box::new(element.clone()));
+                selected_element = Some(Box::new(<&dyn Element>::clone(element)));
                 break;
             }
 
