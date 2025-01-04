@@ -41,7 +41,7 @@ impl Element for Font {
     }
 
     fn name(&self) -> &'static str {
-        "Image"
+        "Font"
     }
 
     fn draw(

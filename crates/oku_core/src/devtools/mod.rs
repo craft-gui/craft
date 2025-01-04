@@ -1,35 +1,37 @@
-use std::fmt::format;
+mod dev_tools_widget;
+
+use crate::components::props::Props;
+use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use crate::devtools::dev_tools_widget::DevTools;
+use crate::elements::element::Element;
+use crate::elements::{Container, ElementStyles, Text};
+use crate::events::{Event, Message, OkuMessage};
+use crate::renderer::color::Color;
+use crate::style::Display::Flex;
+use crate::style::{AlignItems, Display, FlexDirection, Unit};
 use taffy::Overflow;
 use winit::event::{ElementState, MouseButton};
-use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use crate::components::props::Props;
-use crate::elements::{Container, ElementStyles, Text};
-use crate::elements::element::{Element, ElementBox};
-use crate::events::{Event, Message, OkuMessage};
-use crate::geometry::Size;
-use crate::renderer::color::Color;
-use crate::style::{FlexDirection, Unit};
-use crate::elements;
-use crate::style::Display::Flex;
 
-pub(crate) struct DevTools {
+pub(crate) struct DevToolsComponent {
     pub width: Unit,
     pub height: Unit,
 
     pub selected_element: Option<ComponentId>,
+    pub inspector_hovered_element: Option<ComponentId>,
 }
 
-impl Default for DevTools {
+impl Default for DevToolsComponent {
     fn default() -> Self {
         Self {
             width: Unit::Percentage(100.0),
             height: Unit::Percentage(100.0),
             selected_element: None,
+            inspector_hovered_element: None,
         }
     }
 }
 
-impl Component for DevTools {
+impl Component for DevToolsComponent {
     type Props = Option<Box<dyn Element>>;
 
     fn view(state: &Self, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
@@ -58,22 +60,41 @@ impl Component for DevTools {
             };
             
             let id = element.component_id().to_string();
-            
-            element_tree = element_tree.push(
-                Container::new()
-                    .push(
-                        Text::new(format!("{}", element.name()).as_str())
-                            .padding("0px", "0px", "0px", format!("{}px", indent * 10).as_str())
-                            .color(Color::WHITE)
-                            .id(id.as_str())
-                            .component()
-                    )
-                    .background(background_color)
-                    .padding("5px", "5px", "5px", "5px")
-                    .key(element_count.to_string().as_str())
+
+            let mut row_name = element.name().to_string();
+
+            let mut row =  Container::new()
+                .push(
+                    Text::new(row_name.as_str())
+                        .padding("0px", "0px", "0px", format!("{}px", indent * 10).as_str())
+                        .color(Color::WHITE)
+                        .id(id.as_str())
+                        .component()
+                )
+                .display(Display::Flex)
+                .align_items(AlignItems::Center)
+                .background(background_color)
+                .padding("6px", "6px", "6px", "6px")
+                .height("40px")
+                .max_height("40px")
+                .key(element_count.to_string().as_str())
+                .id(id.as_str())
+                .width("100%");
+
+            if let Some(custom_id) = element.get_id() {
+                let user_id_color = Color::rgba(68, 147, 248, 255);
+                row = row.push(Container::new()
+                    .push(Text::new(custom_id.as_str()).color(Color::WHITE).margin("2.5px", "10px", "2.5px", "10px").id(id.as_str()))
                     .id(id.as_str())
-                    .width("100%")
-            );
+                    .border_width("2px", "2px", "2px", "2px")
+                    .border_color(user_id_color)
+                    .border_radius(100.0, 100.0, 100.0, 100.0)
+                    .margin("0px", "0px", "0px", "5px")
+                    .component()
+                );
+            }
+
+            element_tree = element_tree.push(row);
 
             let children = element.children();
             for (i, child) in children.iter().enumerate().rev() {
@@ -97,7 +118,7 @@ impl Component for DevTools {
                 .push(Text::new("Styles Window").color(Color::rgba(230, 230, 230, 255)).margin("10px", "0px", "0px", "0px"))
             )
             .component();
-
+        
         let mut selected_element: Option<Box<&dyn Element>> = None;
         if state.selected_element.is_some() {
             for element in root.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
@@ -122,8 +143,11 @@ impl Component for DevTools {
             }
         }
 
-        Container::new()
+        DevTools::new()
             .display(Flex)
+            .push_inspector_root_element(&root)
+            .push_element_to_inspect(state.selected_element)
+            .push_inspector_hovered_element(state.inspector_hovered_element)
             .flex_direction(FlexDirection::Column)
             .background(Color::rgba(45, 45, 45, 255))
             .width(state.width)
@@ -145,6 +169,13 @@ impl Component for DevTools {
                     state.selected_element = Some(component_id);
                 }
             }
+            
+            if let Message::OkuMessage(OkuMessage::PointerMovedEvent(pointer_moved_event)) = event.message {
+                let component_id: ComponentId = id.parse().unwrap();
+                state.inspector_hovered_element = Some(component_id);
+            }
+        } else {
+            state.inspector_hovered_element = None;
         }
 
         UpdateResult::default()
@@ -152,5 +183,5 @@ impl Component for DevTools {
 }
 
 pub fn dev_tools_view(root: &Box<dyn Element>) -> ComponentSpecification {
-    DevTools::component().props(Props::new(Some(root.clone())))
+    DevToolsComponent::component().props(Props::new(Some(root.clone())))
 }

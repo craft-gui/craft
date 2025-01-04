@@ -9,7 +9,7 @@ pub(crate) mod canvas;
 
 mod element_pre_order_iterator;
 pub mod text_input;
-mod element_styles;
+pub(crate) mod element_styles;
 pub(crate) mod font;
 
 pub use crate::elements::container::Container;
