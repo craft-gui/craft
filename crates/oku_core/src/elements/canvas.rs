@@ -206,11 +206,11 @@ impl Element for Canvas {
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
         
         for child in self.common_element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
+            let taffy_child_node_id = child.internal.taffy_node_id();
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            
+
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),

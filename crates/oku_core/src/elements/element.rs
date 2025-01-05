@@ -21,7 +21,7 @@ pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
-    
+
     /// The taffy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
     pub(crate) taffy_node_id: Option<NodeId>,
@@ -100,6 +100,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn component_id(&self) -> u64 {
         self.common_element_data().component_id
+    }
+
+    fn taffy_node_id(&self) -> Option<NodeId> {
+        self.common_element_data().taffy_node_id
     }
 
     fn set_component_id(&mut self, id: u64) {
