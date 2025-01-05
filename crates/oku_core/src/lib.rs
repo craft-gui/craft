@@ -72,8 +72,8 @@ use reactive::element_id::reset_unique_element_id;
 use reactive::fiber_node::FiberNode;
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
-use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
+use winit::keyboard::{Key, NamedKey};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
@@ -526,7 +526,7 @@ async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<Res
         let (current_target_component_id, current_target_element_id, layout_order) = current_target.clone();
 
         // Get the element's component tree node.
-        let current_target_component = 
+        let current_target_component =
             reactive_tree
             .component_tree
             .as_ref()
@@ -583,7 +583,7 @@ async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<Res
 
             let mut propagate = true;
             let mut prevent_defaults = false;
-            
+
             for element in current_element_tree.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
                 if !propagate {
                     break;
@@ -699,7 +699,7 @@ async fn draw_reactive_tree(
     origin: Point,
     font_system: &mut FontSystem,
 ) {
-    
+
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
     let mut root_size = viewport_size;
@@ -713,7 +713,7 @@ async fn draw_reactive_tree(
     }
 
     style_root_element(root, root_size);
-    
+
     let resource_manager = resource_manager.read().await;
     let (mut taffy_tree, taffy_root) = layout(
         &mut reactive_tree.element_state,
@@ -725,7 +725,7 @@ async fn draw_reactive_tree(
         &resource_manager,
         scale_factor
     );
-    
+
     let renderer = renderer.as_mut();
     root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state);
     renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
@@ -736,7 +736,7 @@ async fn on_request_redraw(app: &mut App) {
         app.setup_font_system();
     }
     let font_system = app.font_system.as_mut().unwrap();
-    
+
     update_reactive_tree(
         app.app.clone(),
         &mut app.user_tree,
@@ -744,7 +744,7 @@ async fn on_request_redraw(app: &mut App) {
         font_system,
         &mut app.reload_fonts
     ).await;
-    
+
     if app.renderer.is_none() {
         return;
     }
@@ -760,7 +760,7 @@ async fn on_request_redraw(app: &mut App) {
             root_size.width -= dev_tools_size.width;
         }
     }
-    
+
     draw_reactive_tree(
         app.window.clone().unwrap(),
         &mut app.user_tree,
@@ -794,7 +794,7 @@ async fn on_request_redraw(app: &mut App) {
     }
 
     renderer.submit();
-    
+
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
@@ -829,8 +829,8 @@ fn layout<'a>(
     resource_manager: &RwLockReadGuard<ResourceManager>,
     scale_factor: f64,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
-    let mut taffy_tree: TaffyTree<LayoutContext> = TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor);
+    let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
+    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),

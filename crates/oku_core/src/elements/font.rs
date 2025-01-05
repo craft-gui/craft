@@ -60,10 +60,8 @@ impl Element for Font {
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-
-        taffy_tree.new_leaf(style).unwrap()
+    ) -> Option<NodeId> {
+        None
     }
 
     fn finalize_layout(

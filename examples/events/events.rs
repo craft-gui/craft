@@ -2,15 +2,14 @@ use oku::elements::ElementStyles;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
-use oku_core::events::{ButtonSource, ElementState, Message, MouseButton};
 use oku::oku_main_with_options;
-use oku::OkuOptions;
-use oku_core::events::Event;
-use oku_core::events::OkuMessage::PointerButtonEvent;
-use oku_core::renderer::color::Color;
-use oku::style::Unit;
 use oku::style::Position;
-use oku_core::RendererType;
+use oku::style::Unit;
+use oku::OkuOptions;
+use oku::events::Event;
+use oku::events::clicked;
+use oku::renderer::color::Color;
+use oku::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -54,14 +53,10 @@ impl Component for EventsExample {
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {
-        if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = event.message {
-            if pointer_button.button.mouse_button() == MouseButton::Left
-                && pointer_button.state == ElementState::Pressed
-            {
-                println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
-
-            }
-        };
+        
+        if clicked(event.message) {
+            println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
+        }
 
         UpdateResult::new()
     }

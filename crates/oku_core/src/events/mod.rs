@@ -16,6 +16,7 @@ pub use winit::event::ElementState;
 
 use std::any::Any;
 pub use winit::event::MouseButton;
+use crate::events::OkuMessage::PointerButtonEvent;
 
 pub struct Event {
     /// The id of the element that triggered this event.
@@ -60,4 +61,16 @@ pub enum OkuMessage {
 pub enum Message {
     OkuMessage(OkuMessage),
     UserMessage(Box<dyn Any>),
+}
+
+pub fn clicked(message: Message) -> bool {
+    if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message {
+        if pointer_button.button.mouse_button() == MouseButton::Left
+            && pointer_button.state == ElementState::Released
+        {
+            return true;
+        }
+    }
+
+    false
 }

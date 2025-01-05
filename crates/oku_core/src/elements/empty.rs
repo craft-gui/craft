@@ -49,17 +49,8 @@ impl Element for Empty {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
-
-        for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
-            child_nodes.push(child_node);
-        }
-
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-
-        taffy_tree.new_with_children(style, &vec![]).unwrap()
+    ) -> Option<NodeId> {
+        None
     }
 
     fn finalize_layout(

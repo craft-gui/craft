@@ -69,17 +69,19 @@ impl Element for Image {
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
+    ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-        
-        taffy_tree
+
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
                 LayoutContext::Image(ImageContext {
                     resource_identifier: self.resource_identifier.clone(),
                 }),
             )
-            .unwrap()
+            .unwrap());
+        
+        self.common_element_data().taffy_node_id
     }
 
     fn finalize_layout(
