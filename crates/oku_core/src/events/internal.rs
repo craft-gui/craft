@@ -8,9 +8,10 @@ use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use crate::components::ComponentId;
+use crate::geometry::Size;
 
 pub(crate) enum InternalMessage {
-    RequestRedraw,
+    RequestRedraw(f64, Size),
     Close,
     Confirmation,
     Resume(Arc<dyn Window>, Option<Box<dyn Renderer + Send>>),

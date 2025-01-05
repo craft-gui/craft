@@ -287,8 +287,8 @@ async fn async_main(
             dummy_message.blocking = app_message.blocking;
 
             match app_message.data {
-                InternalMessage::RequestRedraw => {
-                    on_request_redraw(&mut app).await;
+                InternalMessage::RequestRedraw(scale_factor, surface_size) => {
+                    on_request_redraw(&mut app, scale_factor, surface_size).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Close => {
@@ -698,6 +698,7 @@ async fn draw_reactive_tree(
     viewport_size: Size,
     origin: Point,
     font_system: &mut FontSystem,
+    scale_factor: f64,
 ) {
 
     let root = reactive_tree.element_tree.as_mut().unwrap();
@@ -706,13 +707,6 @@ async fn draw_reactive_tree(
 
     // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
     // We do not want to scale the window size.
-    cfg_if::cfg_if!  {
-        if #[cfg(not(target_os = "macos"))] {
-            let scale_factor = window.scale_factor();
-        } else {
-            let scale_factor = 1.0;
-        }
-    }
     {
         root_size.width /= scale_factor as f32;
         root_size.height /= scale_factor as f32;
@@ -737,7 +731,7 @@ async fn draw_reactive_tree(
     renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
 }
 
-async fn on_request_redraw(app: &mut App) {
+async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size) {
     if app.font_system.is_none() {
         app.setup_font_system();
     }
@@ -756,13 +750,13 @@ async fn on_request_redraw(app: &mut App) {
     }
 
     let renderer = app.renderer.as_mut().unwrap();
-    let mut root_size = Size::new(renderer.surface_width(), renderer.surface_height());
-
+    let mut root_size = surface_size;
+    
     renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
 
     #[cfg(feature = "dev_tools")] {
         if app.is_dev_tools_open {
-            let dev_tools_size = Size::new(350.0, renderer.surface_height());
+            let dev_tools_size = Size::new(350.0, root_size.height);
             root_size.width -= dev_tools_size.width;
         }
     }
@@ -774,7 +768,8 @@ async fn on_request_redraw(app: &mut App) {
         renderer,
         root_size,
         Point::new(0.0, 0.0),
-        font_system
+        font_system,
+        scale_factor
     ).await;
 
     #[cfg(feature = "dev_tools")] {
@@ -792,9 +787,10 @@ async fn on_request_redraw(app: &mut App) {
                 &mut app.dev_tree,
                 app.resource_manager.clone(),
                 renderer,
-                Size::new(renderer.surface_width() - root_size.width, renderer.surface_height()),
+                Size::new(surface_size.width - root_size.width, root_size.height),
                 Point::new(root_size.width, 0.0),
-                font_system
+                font_system,
+                scale_factor
             ).await;
         }
     }

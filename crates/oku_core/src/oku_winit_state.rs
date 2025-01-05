@@ -46,6 +46,7 @@ use web_time as time;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use crate::geometry::Size;
 use crate::RendererType::Blank;
 
 /// Stores state relate to Winit.
@@ -198,8 +199,14 @@ impl ApplicationHandler for OkuWinitState {
                 );
             }
             WindowEvent::RedrawRequested => {
-                self.send_message(InternalMessage::RequestRedraw, true);
-                self.window.clone().unwrap().pre_present_notify();
+                // We want to do any window operations within the main thread.
+                // On some operating systems, the window is not thread-safe.
+                let window = self.window.clone().unwrap();
+                let scale_factor = window.scale_factor();
+                let surface_size = Size::new(window.surface_size().width as f32, window.surface_size().height as f32);
+                
+                self.send_message(InternalMessage::RequestRedraw(scale_factor, surface_size), true);
+                window.pre_present_notify();
             }
             _ => (),
         }
