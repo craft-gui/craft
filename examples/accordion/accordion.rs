@@ -4,13 +4,12 @@ use oku::elements::{Container, Text};
 use oku::{oku_main_with_options, OkuOptions};
 
 use oku::components::{Component, UpdateResult};
-use oku_core::events::{ButtonSource, ElementState, Message, MouseButton};
-use oku::style::FlexDirection;
 use oku::elements::ElementStyles;
-use oku_core::events::Event;
-use oku_core::events::OkuMessage::PointerButtonEvent;
+use oku::events::Event;
+use oku::style::FlexDirection;
 use oku::style::Unit;
-use oku_core::RendererType;
+use oku::events::clicked;
+use oku::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -43,12 +42,8 @@ impl Component for Accordion {
             return UpdateResult::default();
         }
 
-        if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = event.message {
-            if pointer_button.button.mouse_button() == MouseButton::Left
-                && pointer_button.state == ElementState::Pressed
-            {
-                state.show_content = !state.show_content
-            }
+        if clicked(event.message) {
+            state.show_content = !state.show_content
         }
 
         UpdateResult::new().prevent_propagate()

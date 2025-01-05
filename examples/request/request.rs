@@ -2,7 +2,7 @@ mod ani_list;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku::events::{ElementState, Event, Message, MouseButton};
+use oku::events::{Event, Message};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
@@ -10,13 +10,10 @@ use oku::{PinnedFutureAny, RendererType};
 
 use reqwest::Client;
 
-use serde_json::json;
-use std::any::Any;
-
 use oku::elements::ElementStyles;
 use oku::style::{Display, Overflow, Unit, Wrap};
-use oku_core::events::OkuMessage::PointerButtonEvent;
-use oku_core::renderer::color::Color;
+use serde_json::json;
+use std::any::Any;
 
 #[derive(Default, Clone)]
 pub struct AniList {
@@ -58,8 +55,8 @@ impl Component for AniList {
         root.component()
     }
 
-    fn update(state: &mut Self, _props: &Self::Props, message: Event) -> UpdateResult {
-        match message.message {
+    fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+        match event.message {
             Message::OkuMessage(_) => {}
             Message::UserMessage(msg) => {
                 if let Some(response) = msg.downcast_ref::<AniListResponse>() {
@@ -93,12 +90,8 @@ impl Component for AniList {
             boxed
         });
 
-        if let (Some("get_data"), Message::OkuMessage(PointerButtonEvent(pointer_button))) = (message.target.as_deref(), &message.message) {
-            if pointer_button.button.mouse_button() == MouseButton::Left
-                && pointer_button.state == ElementState::Released
-            {
-                return UpdateResult::default().future(get_ani_list_data);
-            }
+        if clicked(event.message) && Some("get_data") == event.target.as_deref() {
+            return UpdateResult::default().future(get_ani_list_data);
         }
 
         UpdateResult::default()
@@ -122,6 +115,8 @@ fn main() {
 use crate::ani_list::{anime_view, AniListResponse, QUERY};
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
+use oku::Color;
+use oku::events::clicked;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

@@ -5,11 +5,11 @@ use oku::elements::ElementStyles;
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
-use oku_core::elements::{Container, Font, Text};
-use oku_core::events::Message;
-use oku_core::events::{Event, OkuMessage};
-use oku_core::RendererType;
-use oku_core::resource_manager::ResourceIdentifier;
+use oku::elements::{Container, Font, Text};
+use oku::events::Message;
+use oku::events::{Event, OkuMessage};
+use oku::RendererType;
+use oku::resource_manager::ResourceIdentifier;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -45,7 +45,7 @@ fn main() {
     tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     oku_main_with_options(
-        TextState::component().into(),
+        TextState::component(),
         Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "text".to_string(),

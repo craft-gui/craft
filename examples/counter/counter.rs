@@ -1,14 +1,13 @@
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
-use oku_core::events::{ButtonSource, ElementState, Event, Message, MouseButton};
 use oku::oku_main_with_options;
 use oku::style::{AlignItems, FlexDirection, JustifyContent};
 use oku::OkuOptions;
+use oku::events::{clicked, Event};
 
 use oku::elements::ElementStyles;
-use oku_core::events::OkuMessage::PointerButtonEvent;
-use oku_core::renderer::color::Color;
 use oku::style::Display;
+use oku::renderer::color::Color;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -44,21 +43,17 @@ impl Component for Counter {
             .component()
     }
 
-    fn update(state: &mut Self, _props: &Self::Props, message: Event) -> UpdateResult {
-        if let Some(target) = message.target.as_deref() {
-            if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message.message {
-                if pointer_button.button.mouse_button() == MouseButton::Left
-                    && pointer_button.state == ElementState::Pressed
-                {
-                    match target {
-                        "increment" => state.count += 1,
-                        "decrement" => state.count -= 1,
-                        _ => return UpdateResult::default(),
-                    }
-                    return UpdateResult::new().prevent_propagate();
-                }
-            }
+    fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+        if clicked(event.message) && event.target.is_some() {
+            match event.target.as_deref().unwrap() {
+                "increment" => state.count += 1,
+                "decrement" => state.count -= 1,
+                _ => return UpdateResult::default(),
+            };
+            
+            return UpdateResult::new().prevent_propagate();
         }
+
         UpdateResult::default()
     }
 }
@@ -101,7 +96,7 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku_core::RendererType;
+use oku::RendererType;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
