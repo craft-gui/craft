@@ -241,7 +241,7 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
+    ) -> Option<NodeId> {
         let font_size = PhysicalPosition::from_logical(
             LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
             scale_factor,
@@ -253,12 +253,14 @@ impl Element for TextInput {
 
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        taffy_tree
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
                 LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id, metrics)),
             )
-            .unwrap()
+            .unwrap());
+
+        self.common_element_data().taffy_node_id
     }
 
     fn finalize_layout(

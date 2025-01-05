@@ -21,6 +21,10 @@ pub struct CommonElementData {
     pub style: Style,
     /// The children of the element.
     pub(crate) children: Vec<ElementBox>,
+    
+    /// The taffy node id after this element is laid out.
+    /// This may be None if this is a non-visual element like Font.
+    pub(crate) taffy_node_id: Option<NodeId>,
 
     pub computed_border_rectangle_overflow_size: Size,
     // The computed values after transforms are applied.
@@ -119,7 +123,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId;
+    ) -> Option<NodeId>;
 
     /// Finalizes the layout of the element.
     ///

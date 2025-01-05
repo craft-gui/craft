@@ -226,7 +226,7 @@ impl Element for Text {
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
+    ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         let font_size = PhysicalPosition::from_logical(
@@ -237,12 +237,16 @@ impl Element for Text {
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
-        taffy_tree
+
+
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
                 LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id, metrics)),
             )
-            .unwrap()
+            .unwrap());
+
+        self.common_element_data().taffy_node_id
     }
 
     fn finalize_layout(

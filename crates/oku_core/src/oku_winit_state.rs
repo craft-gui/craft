@@ -74,7 +74,7 @@ impl ApplicationHandler for OkuWinitState {
     }
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
-        let window_attributes = WindowAttributes::default().with_title(self.oku_options.window_title.as_str()).with_surface_size(winit::dpi::PhysicalSize::new(395.0, 848.0));
+        let window_attributes = WindowAttributes::default().with_title(self.oku_options.window_title.as_str());
 
         #[cfg(target_arch = "wasm32")]
         let window_attributes = {

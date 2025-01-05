@@ -160,17 +160,20 @@ impl Element for Canvas {
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
         scale_factor: f64,
-    ) -> NodeId {
+    ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
-            child_nodes.push(child_node);
+            if let Some(child_node) = child_node {
+                child_nodes.push(child_node);
+            }
         }
 
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        taffy_tree.new_with_children(style, &child_nodes).unwrap()
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
+        self.common_element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -201,12 +204,16 @@ impl Element for Canvas {
 
         self.finalize_scrollbar(scroll_y);
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
-
-        for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
-            let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
+        
+        for child in self.common_element_data.children.iter_mut() {
+            let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
+            if taffy_child_node_id.is_none() {
+                continue;
+            }
+            
             child.internal.finalize_layout(
                 taffy_tree,
-                child2,
+                taffy_child_node_id.unwrap(),
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
                 layout_order,
