@@ -17,18 +17,22 @@ pub struct OkuRuntime {
 /// For more advanced cases get the underlying runtime and downcast.
 impl OkuRuntime {
     pub fn new() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
+        cfg_if::cfg_if! {
+            if #[cfg(target_arch = "wasm32")] {
+                let tokio_runtime = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .expect("Failed to create tokio runtime.");
             Self { tokio_runtime }
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            Self { wasm_runtime: () }
+            } else if #[cfg(target_os = "macos")] {
+                let tokio_runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create tokio runtime.");
+            Self { tokio_runtime }
+            } else {
+                Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
+            }
         }
     }
 
