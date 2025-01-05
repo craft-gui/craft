@@ -706,7 +706,13 @@ async fn draw_reactive_tree(
 
     // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
     // We do not want to scale the window size.
-    let scale_factor = window.scale_factor();
+    cfg_if::cfg_if!  {
+        if #[cfg(not(target_os = "macos"))] {
+            let scale_factor = window.scale_factor();
+        } else {
+            let scale_factor = 1.0;
+        }
+    }
     {
         root_size.width /= scale_factor as f32;
         root_size.height /= scale_factor as f32;
