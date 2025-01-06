@@ -8,7 +8,6 @@ use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;

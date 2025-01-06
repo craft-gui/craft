@@ -91,7 +91,7 @@ impl SoftwareRenderer {
             surface,
             surface_width: width,
             surface_height: height,
-            surface_clear_color: Color::rgba(255, 255, 255, 255),
+            surface_clear_color: Color::WHITE,
             framebuffer,
             cache: SwashCache::new(),
         }
@@ -101,7 +101,8 @@ impl SoftwareRenderer {
 fn draw_rect(canvas: &mut Pixmap, rectangle: Rectangle, fill_color: Color) {
     let mut paint = Paint::default();
     paint.colorspace = ColorSpace::Linear;
-    paint.set_color_rgba8(fill_color.r_u8(), fill_color.g_u8(), fill_color.b_u8(), fill_color.a_u8());
+    let [r, g, b, a] = fill_color.to_rgba8().to_u8_array();
+    paint.set_color_rgba8(r, g, b, a);
     paint.anti_alias = true;
 
     let rect = Rect::from_xywh(rectangle.x, rectangle.y, rectangle.width, rectangle.height).unwrap();
@@ -111,7 +112,8 @@ fn draw_rect(canvas: &mut Pixmap, rectangle: Rectangle, fill_color: Color) {
 fn draw_rect_outline(canvas: &mut Pixmap, rectangle: Rectangle, outline_color: Color) {
     let mut paint = Paint::default();
     paint.colorspace = ColorSpace::Linear;
-    paint.set_color_rgba8(outline_color.r_u8(), outline_color.g_u8(), outline_color.b_u8(), outline_color.a_u8());
+    let [r, g, b, a] = outline_color.to_rgba8().to_u8_array();
+    paint.set_color_rgba8(r, g, b, a);
     paint.anti_alias = true;
 
     let rect = Rect::from_xywh(rectangle.x, rectangle.y, rectangle.width, rectangle.height).unwrap();
@@ -193,12 +195,8 @@ impl Renderer for SoftwareRenderer {
         let framebuffer = self.framebuffer.last_mut().unwrap();
         let framebuffer = &mut framebuffer.0;
 
-        framebuffer.fill(tiny_skia::Color::from_rgba8(
-            self.surface_clear_color.r_u8(),
-            self.surface_clear_color.g_u8(),
-            self.surface_clear_color.b_u8(),
-            self.surface_clear_color.a_u8(),
-        ));
+        let [r, g, b, a] = self.surface_clear_color.to_rgba8().to_u8_array();
+        framebuffer.fill(tiny_skia::Color::from_rgba8(r, g, b, a));
 
         for command in self.render_commands.drain(..) {
             let framebuffer = self.framebuffer.last_mut().unwrap();
@@ -257,15 +255,14 @@ impl Renderer for SoftwareRenderer {
                     {
                         let buffer = &text_context.buffer;
 
+                        let fc = {
+                            let [r, g, b, a] = fill_color.to_rgba8().to_u8_array();
+                            cosmic_text::Color::rgba(r, g, b, a)
+                        };
                         buffer.draw(
                             font_system,
                             &mut self.cache,
-                            cosmic_text::Color::rgba(
-                                fill_color.r_u8(),
-                                fill_color.g_u8(),
-                                fill_color.b_u8(),
-                                fill_color.a_u8(),
-                            ),
+                            fc,
                             |x, y, w, h, color| {
                                 paint.set_color_rgba8(color.r(), color.g(), color.b(), color.a());
                                 framebuffer.fill_rect(
@@ -325,7 +322,8 @@ impl Renderer for SoftwareRenderer {
                 }
                 RenderCommand::FillBezPath(_path, _color) => {
                     let mut paint = Paint::default();
-                    paint.set_color_rgba8(_color.r_u8(), _color.g_u8(), _color.b_u8(), _color.a_u8());
+                    let [r, g, b, a] = _color.to_rgba8().to_u8_array();
+                    paint.set_color_rgba8(r, g, b, a);
 
                     let mut path = tiny_skia::PathBuilder::new();
                     let mut last_point = (0.0, 0.0);

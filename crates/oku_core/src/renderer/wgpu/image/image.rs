@@ -185,28 +185,26 @@ impl ImageRenderer {
         let top_right = glam::vec4(x + width, y, 0.0, 1.0);
         let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
-        let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
-
         vertices.append(&mut vec![
             ImageVertex {
                 position: [top_left.x, top_left.y, top_left.z],
                 uv: [0.0, 0.0],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
             },
             ImageVertex {
                 position: [bottom_left.x, bottom_left.y, bottom_left.z],
                 uv: [0.0, 1.0],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
             },
             ImageVertex {
                 position: [top_right.x, top_right.y, top_right.z],
                 uv: [1.0, 0.0],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
             },
             ImageVertex {
                 position: [bottom_right.x, bottom_right.y, bottom_right.z],
                 uv: [1.0, 1.0],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
             },
         ]);
 

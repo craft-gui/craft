@@ -71,7 +71,7 @@ impl<'a> WgpuRenderer<'a> {
             global_buffer_uniform,
             surface,
             surface_config,
-            surface_clear_color: Color::rgba(255, 255, 255, 255),
+            surface_clear_color: Color::WHITE,
             is_srgba_format: false,
         };
         let rectangle_renderer = RectangleRenderer::new(&context);
@@ -164,9 +164,7 @@ impl Renderer for WgpuRenderer<'_> {
         let output = self.context.surface.get_current_texture().unwrap();
         let texture_view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let r = self.context.surface_clear_color.r / 255.0;
-        let g = self.context.surface_clear_color.g / 255.0;
-        let b = self.context.surface_clear_color.b / 255.0;
+        let [r, g, b, a] = self.context.surface_clear_color.components;
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -179,7 +177,7 @@ impl Renderer for WgpuRenderer<'_> {
                             r: r as f64,
                             g: g as f64,
                             b: b as f64,
-                            a: self.context.surface_clear_color.a as f64 / 255.0,
+                            a: a as f64,
                         }),
                         store: wgpu::StoreOp::Store,
                     },

@@ -89,9 +89,9 @@ impl Element for DevTools {
             // Highlight the hovered element and draw their margin, padding, and content box.
             if let Some(selected_element) = hovered_inspector_element {
                 // FIXME: Make use of layers, so that the boxes only mix with the element's colors.
-                let content_box_highlight_color = Color::rgba(184, 226, 243, 125);
-                let padding_box_highlight_color = Color::rgba(102, 87, 166, 125);
-                let margin_box_highlight_color = Color::rgba(115, 118, 240, 50);
+                let content_box_highlight_color = Color::from_rgba8(184, 226, 243, 125);
+                let padding_box_highlight_color = Color::from_rgba8(102, 87, 166, 125);
+                let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
                 
                 let margin_rectangle = selected_element.common_element_data().computed_layered_rectangle_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
