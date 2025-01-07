@@ -13,41 +13,8 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-
-#[derive(Clone, Debug, Default)]
-pub struct CommonElementData {
-    pub computed_border: ComputedBorderSpec,
-
-    pub style: Style,
-    /// The children of the element.
-    pub(crate) children: Vec<ElementBox>,
-
-    /// The taffy node id after this element is laid out.
-    /// This may be None if this is a non-visual element like Font.
-    pub(crate) taffy_node_id: Option<NodeId>,
-
-    pub computed_border_rectangle_overflow_size: Size,
-    // The computed values after transforms are applied.
-    pub computed_layered_rectangle_transformed: ElementRectangle,
-    // The computed values without any transforms applied to them.
-    pub computed_layered_rectangle: ElementRectangle,
-
-    /// A user-defined id for the element.
-    pub id: Option<String>,
-    /// The id of the component that this element belongs to.
-    pub component_id: ComponentId,
-    pub computed_scrollbar_size: Size,
-    pub scrollbar_size: Size,
-    pub computed_scroll_track: Rectangle,
-    pub computed_scroll_thumb: Rectangle,
-    pub(crate) max_scroll_y: f32,
-    pub layout_order: u32,
-
-    // Used for converting the element to a component specification.
-    pub(crate) child_specs: Vec<ComponentSpecification>,
-    pub(crate) key: Option<String>,
-    pub(crate) props: Option<Props>,
-}
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_states::ElementState;
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -74,18 +41,13 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &mut self.common_element_data_mut().style
     }
 
-    fn in_bounds(&self, x: f32, y: f32) -> bool {
+    fn in_bounds(&self, point: Point) -> bool {
         let common_element_data = self.common_element_data();
 
         let transformed_border_rectangle =
             common_element_data.computed_layered_rectangle_transformed.border_rectangle();
 
-        let left = transformed_border_rectangle.x;
-        let right = left + transformed_border_rectangle.width;
-        let top = transformed_border_rectangle.y;
-        let bottom = top + transformed_border_rectangle.height;
-
-        x >= left && x <= right && y >= top && y <= bottom
+        transformed_border_rectangle.contains(&point)
     }
 
     fn get_id(&self) -> &Option<String> {
@@ -119,6 +81,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &StateStore,
+        pointer: Option<Point>,
     );
 
     fn compute_layout(
@@ -143,6 +106,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        pointer: Option<Point>,
     );
 
     fn as_any(&self) -> &dyn Any;
@@ -191,7 +155,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let computed_border_spec = &common_element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
-        let background_color = common_element_data.style.background;
+        let background_color = common_element_data.current_style().background;
         renderer.fill_bez_path(background_path, background_color);
 
         let top = computed_border_spec.get_side(Side::Top);
@@ -210,6 +174,19 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         renderer.fill_bez_path(border_left_path, left.color);
     }
 
+    fn finalize_state(&mut self, pointer: Option<Point>) {
+        let common_element_data = self.common_element_data_mut();
+        common_element_data.current_state = ElementState::Normal;
+        
+        let border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+
+        if let Some(pointer) = pointer {
+            if border_rectangle.contains(&pointer) {
+                common_element_data.current_state = ElementState::Hovered;
+            }
+        }
+    }
+
     fn finalize_borders(&mut self) {
         let common_element_data = self.common_element_data_mut();
 
@@ -218,8 +195,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
             [borders.top, borders.right, borders.bottom, borders.left],
-            common_element_data.style.border_radius,
-            common_element_data.style.border_color,
+            common_element_data.current_style().border_radius,
+            common_element_data.current_style().border_color,
         );
         common_element_data.computed_border = border_spec.compute_border_spec();
     }
@@ -402,28 +379,39 @@ macro_rules! generate_component_methods_no_children {
 
             self
         }
+
+        pub fn id(mut self, id: &str) -> Self {
+            self.common_element_data.id = Some(id.to_string());
+            self
+        }
+        
+        pub fn hovered(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Hovered;
+            self
+        }
+
+        pub fn pressed(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Pressed;
+            self
+        }
+
+        pub fn disabled(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Disabled;
+            self
+        }
+
+        pub fn focused(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Focused;
+            self
+        }
     };
 }
 
 #[macro_export]
 macro_rules! generate_component_methods {
     () => {
-        pub fn component(self) -> ComponentSpecification {
-            ComponentSpecification::new(self.into())
-        }
-
-        pub fn key(mut self, key: &str) -> Self {
-            self.common_element_data.key = Some(key.to_string());
-
-            self
-        }
-
-        pub fn props(mut self, props: Props) -> Self {
-            self.common_element_data.props = Some(props);
-
-            self
-        }
-
+        crate::generate_component_methods_no_children!();
+        
         pub fn push<T>(mut self, component_specification: T) -> Self
         where
             T: Into<ComponentSpecification>,
@@ -441,5 +429,12 @@ macro_rules! generate_component_methods {
 
             self
         }
+
+        pub fn normal(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+            self
+        }
+
+        
     };
 }

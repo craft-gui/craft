@@ -107,7 +107,7 @@ struct App {
     window: Option<Arc<dyn Window>>,
     font_system: Option<FontSystem>,
     renderer: Option<Box<dyn Renderer + Send>>,
-    mouse_position: (f32, f32),
+    mouse_position: Option<Point>,
     reload_fonts: bool,
     resource_manager: Arc<RwLock<ResourceManager>>,
     winit_sender: Sender<AppMessage>,
@@ -255,7 +255,7 @@ async fn async_main(
         window: None,
         font_system: None,
         renderer: None,
-        mouse_position: (0.0, 0.0),
+        mouse_position: None,
         resource_manager,
         winit_sender: winit_sender.clone(),
         reload_fonts: false,
@@ -392,7 +392,7 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 }
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
-    app.mouse_position = (mouse_moved.position.x as f32, mouse_moved.position.y as f32);
+    app.mouse_position = Some(Point::new(mouse_moved.position.x as f32, mouse_moved.position.y as f32));
     dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     #[cfg(feature = "dev_tools")]
@@ -446,7 +446,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: (f32, f32), reactive_tree: &mut ReactiveTree) {
+async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree) {
     let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -461,7 +461,7 @@ async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<Res
     // Dispatch some events globally to elements.
     // This is needed for things like scrolling while the mouse is not over an element.
     if matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_)) {
-        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter_mut().rev() {
             if let Some(element) = fiber_node.element {
                 let res = element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
 
@@ -493,7 +493,7 @@ async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<Res
     // Nodes added last are usually on top, so this elements in visual order.
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
-            let in_bounds = element.in_bounds(mouse_position.0, mouse_position.1);
+            let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
             if in_bounds {
                 targets.push_back((element.component_id(), element.get_id().clone(), element.common_element_data().layout_order))
             } else {
@@ -629,7 +629,7 @@ async fn dispatch_event(event: OkuMessage, resource_manager: &mut Arc<RwLock<Res
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
-    app.mouse_position = (pointer_button.position.x as f32, pointer_button.position.y as f32);
+    app.mouse_position = Some(Point::new(pointer_button.position.x as f32, pointer_button.position.y as f32));
     dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     #[cfg(feature = "dev_tools")]
@@ -699,6 +699,7 @@ async fn draw_reactive_tree(
     origin: Point,
     font_system: &mut FontSystem,
     scale_factor: f64,
+    mouse_position: Option<Point>,
 ) {
 
     let root = reactive_tree.element_tree.as_mut().unwrap();
@@ -723,11 +724,12 @@ async fn draw_reactive_tree(
         root.as_mut(),
         origin,
         &resource_manager,
-        scale_factor
+        scale_factor,
+        mouse_position
     );
 
     let renderer = renderer.as_mut();
-    root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state);
+    root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
     renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
 }
 
@@ -769,7 +771,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         root_size,
         Point::new(0.0, 0.0),
         font_system,
-        scale_factor
+        scale_factor,
+        app.mouse_position
     ).await;
 
     #[cfg(feature = "dev_tools")] {
@@ -790,7 +793,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 Size::new(surface_size.width - root_size.width, root_size.height),
                 Point::new(root_size.width, 0.0),
                 font_system,
-                scale_factor
+                scale_factor,
+                app.mouse_position
             ).await;
         }
     }
@@ -830,6 +834,7 @@ fn layout<'a>(
     origin: Point,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     scale_factor: f64,
+    pointer: Option<Point>,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
     let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor).unwrap();
@@ -862,7 +867,7 @@ fn layout<'a>(
     let transform = glam::Mat4::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.finalize_layout(&mut taffy_tree, root_node, origin.x, origin.y, &mut layout_order, transform, font_system, element_state);
+    root_element.finalize_layout(&mut taffy_tree, root_node, origin.x, origin.y, &mut layout_order, transform, font_system, element_state, pointer);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

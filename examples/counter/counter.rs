@@ -37,8 +37,8 @@ impl Component for Counter {
                     .display(Display::Flex)
                     .flex_direction(FlexDirection::Row)
                     .gap("20px")
-                    .push(create_button("-", "decrement", Color::rgba(244, 67, 54, 255)))
-                    .push(create_button("+", "increment", Color::rgba(76, 175, 80, 255))),
+                    .push(create_button("-", "decrement", Color::rgba(244, 67, 54, 255), Color::rgba(211, 47, 47, 255)))
+                    .push(create_button("+", "increment", Color::rgba(76, 175, 80, 255), Color::rgba(67, 160, 71, 255))),
             )
             .component()
     }
@@ -58,7 +58,7 @@ impl Component for Counter {
     }
 }
 
-fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification {
+fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> ComponentSpecification {
     Container::new()
         .border_width("1px", "2px", "3px", "4px")
         .border_color(Color::rgba(0, 0, 0, 255))
@@ -68,6 +68,8 @@ fn create_button(label: &str, id: &str, color: Color) -> ComponentSpecification 
         .display(Display::Flex)
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
+        .hovered()
+        .background(hover_color)
         .push(
             Text::new(label)
                 .id(id)

@@ -11,6 +11,8 @@ mod element_pre_order_iterator;
 pub mod text_input;
 pub(crate) mod element_styles;
 pub(crate) mod font;
+pub(crate) mod element_states;
+pub(crate) mod common_element_data;
 
 pub use crate::elements::container::Container;
 pub use crate::elements::image::Image;

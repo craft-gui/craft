@@ -1,11 +1,11 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::props::Props;
 use crate::components::{ComponentId, UpdateResult};
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{Element};
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
-use crate::geometry::Size;
+use crate::geometry::{Point, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
@@ -14,6 +14,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
+use crate::elements::common_element_data::CommonElementData;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -65,6 +66,7 @@ impl Element for DevTools {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
         // background
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
@@ -79,7 +81,7 @@ impl Element for DevTools {
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
+            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state, pointer);
         }
 
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {
@@ -180,14 +182,15 @@ impl Element for DevTools {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
-
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
 
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
@@ -215,10 +218,11 @@ impl Element for DevTools {
                 taffy_child_node_id.unwrap(),
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
-                layout_order,
+                z_index,
                 transform * child_transform,
                 font_system,
                 element_state,
+                pointer,
             );
         }
     }
@@ -336,11 +340,6 @@ impl DevTools {
             element_to_inspect: None,
             inspector_hovered_element: None,
         }
-    }
-
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
     }
 
     generate_component_methods!();

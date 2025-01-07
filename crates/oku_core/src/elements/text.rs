@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
-use crate::elements::element::{CommonElementData, Element, ElementBox};
+use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
 use crate::elements::ElementStyles;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
@@ -14,7 +14,8 @@ use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 
 use crate::components::props::Props;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
+use crate::elements::common_element_data::CommonElementData;
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -201,10 +202,11 @@ impl Element for Text {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
-        _element_state: &StateStore,
+        font_system: &mut FontSystem,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        root_node: NodeId,
+        element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
             self.common_element_data.computed_layered_rectangle_transformed.clone();
@@ -255,10 +257,11 @@ impl Element for Text {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        _pointer: Option<Point>,
     ) {
         let text_context = self.get_state_mut(element_state);
 
@@ -276,8 +279,8 @@ impl Element for Text {
         text_context.buffer.shape_until_scroll(font_system, true);
 
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
-
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
     }
 
@@ -350,16 +353,12 @@ impl Element for Text {
 }
 
 impl Text {
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
-    }
 
     generate_component_methods_no_children!();
 }
 
 impl ElementStyles for Text {
     fn styles_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data.style
+        self.common_element_data.current_style_mut()
     }
 }

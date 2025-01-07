@@ -1,23 +1,21 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::UpdateResult;
-use crate::elements::element::{CommonElementData, Element};
-use crate::elements::layout_context::LayoutContext;
-use crate::renderer::color::Color;
-use crate::reactive::state_store::{StateStore, StateStoreItem};
-use crate::style::{Style};
-use crate::{generate_component_methods, RendererBox};
 use crate::components::props::Props;
+use crate::components::UpdateResult;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
+use crate::elements::element_styles::ElementStyles;
+use crate::elements::layout_context::LayoutContext;
+use crate::events::OkuMessage;
+use crate::geometry::{Point, Size};
+use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::renderer::color::Color;
+use crate::style::Style;
+use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::kurbo::Affine;
 use taffy::{NodeId, Overflow, TaffyTree};
-use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
-use crate::elements::element_styles::ElementStyles;
-use crate::events::{Message, OkuMessage};
-use crate::events::OkuMessage::PointerButtonEvent;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
-use crate::geometry::borders::BorderSpec;
-use crate::geometry::side::Side;
+use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
+use crate::elements::element_states::ElementState;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -28,7 +26,7 @@ pub struct Container {
 #[derive(Clone, Copy, Default)]
 pub struct ContainerState {
     pub(crate) scroll_y: f32,
-    pub(crate) scroll_click: Option<(f32, f32)>
+    pub(crate) scroll_click: Option<(f32, f32)>,
 }
 
 impl Element for Container {
@@ -49,17 +47,17 @@ impl Element for Container {
         renderer: &mut RendererBox,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
+        _root_node: NodeId,
         element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
         // background
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
         self.draw_borders(renderer);
         
-        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
+        if self.common_element_data.current_style().overflow[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
         }
 
@@ -68,7 +66,7 @@ impl Element for Container {
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state);
+            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
         }
         
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {
@@ -121,14 +119,15 @@ impl Element for Container {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
-
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
@@ -156,10 +155,11 @@ impl Element for Container {
                 taffy_child_node_id.unwrap(),
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
-                layout_order,
+                z_index,
                 transform * child_transform,
                 font_system,
                 element_state,
+                pointer,
             );
         }
     }
@@ -201,7 +201,7 @@ impl Element for Container {
                         }
 
                         match pointer_button.state {
-                            ElementState::Pressed => {
+                            WinitElementState::Pressed => {
                                 if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
                                     container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
                                     UpdateResult::new().prevent_propagate().prevent_defaults()
@@ -218,7 +218,7 @@ impl Element for Container {
                                     UpdateResult::new()
                                 }
                             }
-                            ElementState::Released => {
+                            WinitElementState::Released => {
                                 container_state.scroll_click = None;
                                 UpdateResult::new().prevent_propagate().prevent_defaults()
                             }
@@ -275,17 +275,12 @@ impl Container {
             common_element_data: Default::default(),
         }
     }
-
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
-    }
-
+    
     generate_component_methods!();
 }
 
 impl ElementStyles for Container {
     fn styles_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data.style
+        self.common_element_data.current_style_mut()
     }
 }

@@ -1,16 +1,18 @@
 use crate::components::component::ComponentSpecification;
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{Element};
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::renderer::color::Color;
 use crate::resource_manager::ResourceIdentifier;
 use crate::reactive::state_store::StateStore;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
+use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Weight};
 use crate::{generate_component_methods_no_children, RendererBox};
 use crate::components::props::Props;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::ElementStyles;
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
 
 #[derive(Clone, Debug)]
 pub struct Image {
@@ -51,8 +53,8 @@ impl Element for Image {
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &StateStore,
+        _pointer: Option<Point>,
     ) {
-        self.draw_borders(renderer);
         
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
@@ -61,6 +63,8 @@ impl Element for Image {
             content_rectangle,
             self.resource_identifier.clone(),
         );
+
+        self.draw_borders(renderer);
     }
 
     fn compute_layout(
@@ -90,14 +94,15 @@ impl Element for Image {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
+        _pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
-
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
     }
 
@@ -107,79 +112,11 @@ impl Element for Image {
 }
 
 impl Image {
-    // Styles
-    pub const fn margin(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Image {
-        self.common_element_data.style.margin = [top, right, bottom, left];
-        self
-    }
-    pub const fn padding(mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Image {
-        self.common_element_data.style.padding = [top, right, bottom, left];
-        self
-    }
-
-    pub const fn background(mut self, background: Color) -> Image {
-        self.common_element_data.style.background = background;
-        self
-    }
-
-    pub const fn color(mut self, color: Color) -> Image {
-        self.common_element_data.style.color = color;
-        self
-    }
-
-    pub const fn font_size(mut self, font_size: f32) -> Image {
-        self.common_element_data.style.font_size = font_size;
-        self
-    }
-    pub const fn font_weight(mut self, font_weight: Weight) -> Image {
-        self.common_element_data.style.font_weight = font_weight;
-        self
-    }
-
-    pub const fn display(mut self, display: Display) -> Image {
-        self.common_element_data.style.display = display;
-        self
-    }
-
-    pub const fn justify_content(mut self, justify_content: JustifyContent) -> Image {
-        self.common_element_data.style.justify_content = Some(justify_content);
-        self
-    }
-
-    pub const fn align_items(mut self, align_items: AlignItems) -> Image {
-        self.common_element_data.style.align_items = Some(align_items);
-        self
-    }
-
-    pub const fn flex_direction(mut self, flex_direction: FlexDirection) -> Image {
-        self.common_element_data.style.flex_direction = flex_direction;
-        self
-    }
-
-    pub const fn width(mut self, width: Unit) -> Image {
-        self.common_element_data.style.width = width;
-        self
-    }
-
-    pub const fn height(mut self, height: Unit) -> Image {
-        self.common_element_data.style.height = height;
-        self
-    }
-
-    pub const fn max_width(mut self, max_width: Unit) -> Image {
-        self.common_element_data.style.max_width = max_width;
-        self
-    }
-
-    pub const fn max_height(mut self, max_height: Unit) -> Image {
-        self.common_element_data.style.max_height = max_height;
-        self
-    }
-
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
-    }
-
     generate_component_methods_no_children!();
+}
+
+impl ElementStyles for Image {
+    fn styles_mut(&mut self) -> &mut Style {
+        self.common_element_data.current_style_mut()
+    }
 }

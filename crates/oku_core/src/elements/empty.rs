@@ -1,10 +1,12 @@
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::reactive::state_store::StateStore;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
+use crate::elements::common_element_data::CommonElementData;
+use crate::geometry::Point;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -35,11 +37,12 @@ impl Element for Empty {
 
     fn draw(
         &mut self,
-        _renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
-        _element_state: &StateStore,
+        renderer: &mut RendererBox,
+        font_system: &mut FontSystem,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        root_node: NodeId,
+        element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
     }
 
@@ -55,14 +58,15 @@ impl Element for Empty {
 
     fn finalize_layout(
         &mut self,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
-        _x: f32,
-        _y: f32,
-        layout_order: &mut u32,
-        _transform: glam::Mat4,
-        _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        root_node: NodeId,
+        x: f32,
+        y: f32,
+        z_index: &mut u32,
+        transform: glam::Mat4,
+        font_system: &mut FontSystem,
+        element_state: &mut StateStore,
+        pointer: Option<Point>,
     ) {
     }
 

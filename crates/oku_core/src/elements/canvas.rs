@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::UpdateResult;
-use crate::elements::element::{CommonElementData, Element};
+use crate::elements::element::{Element};
 use crate::elements::layout_context::LayoutContext;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand};
@@ -15,7 +15,8 @@ use crate::elements::element_styles::ElementStyles;
 use crate::events::{Message, OkuMessage};
 use crate::events::OkuMessage::PointerButtonEvent;
 use crate::components::props::Props;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Rectangle, Size};
+use crate::elements::common_element_data::CommonElementData;
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -50,6 +51,7 @@ impl Element for Canvas {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
         let border_color: Color = self.style().border_color[0];
 
@@ -182,13 +184,15 @@ impl Element for Canvas {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
         
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
@@ -216,10 +220,11 @@ impl Element for Canvas {
                 taffy_child_node_id.unwrap(),
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
-                layout_order,
+                z_index,
                 transform * child_transform,
                 font_system,
                 element_state,
+                pointer,
             );
         }
     }
@@ -246,16 +251,11 @@ impl Canvas {
         }
     }
 
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
-    }
-
     generate_component_methods_no_children!();
 }
 
 impl ElementStyles for Canvas {
     fn styles_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data.style
+        self.common_element_data.current_style_mut()
     }
 }

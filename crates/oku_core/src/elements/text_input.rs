@@ -1,14 +1,14 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::components::props::Props;
 use crate::components::UpdateResult;
-use crate::elements::element::{CommonElementData, Element, ElementBox};
+use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
 use crate::elements::text::{TextHashValue, TextState};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Size};
+use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::{FontStyle, Style, Unit};
@@ -24,6 +24,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
+use crate::elements::common_element_data::CommonElementData;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -216,10 +217,11 @@ impl Element for TextInput {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
-        _element_state: &StateStore,
+        font_system: &mut FontSystem,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        root_node: NodeId,
+        element_state: &StateStore,
+        pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
             self.common_element_data.computed_layered_rectangle_transformed.clone();
@@ -269,10 +271,11 @@ impl Element for TextInput {
         root_node: NodeId,
         x: f32,
         y: f32,
-        layout_order: &mut u32,
+        z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut StateStore,
+        pointer: Option<Point>,
     ) {
         let state: &mut TextInputState = element_state
             .storage
@@ -299,8 +302,8 @@ impl Element for TextInput {
         });
 
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, layout_order);
-
+        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        
         self.finalize_borders();
     }
 
@@ -520,16 +523,11 @@ impl Element for TextInput {
 }
 
 impl TextInput {
-    pub fn id(mut self, id: &str) -> Self {
-        self.common_element_data.id = Some(id.to_string());
-        self
-    }
-
     generate_component_methods_no_children!();
 }
 
 impl ElementStyles for TextInput {
     fn styles_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data.style
+        self.common_element_data.current_style_mut()
     }
 }
