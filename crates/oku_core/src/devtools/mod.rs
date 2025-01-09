@@ -157,18 +157,18 @@ impl Component for DevToolsComponent {
 
                 // Margin
                 if style.dirty_flags.contains(StyleFlags::MARGIN) {
-                    styles_window = styles_window.push(Text::new(format!("Margin Top: {}", style.margin()[0].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Margin Right: {}", style.margin()[1].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", style.margin()[2].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Margin Left: {}", style.margin()[3].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Top: {}", style.margin()[0]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Right: {}", style.margin()[1]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", style.margin()[2]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Left: {}", style.margin()[3]).as_str()).color(white_color));
                 }
 
                 // Padding
                 if style.dirty_flags.contains(StyleFlags::PADDING) {
-                    styles_window = styles_window.push(Text::new(format!("Padding Top: {}", style.padding()[0].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Padding Right: {}", style.padding()[1].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", style.padding()[2].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Padding Left: {}", style.padding()[3].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Top: {}", style.padding()[0]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Right: {}", style.padding()[1]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", style.padding()[2]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Left: {}", style.padding()[3]).as_str()).color(white_color));
                 }
 
                 // Gap
@@ -178,40 +178,40 @@ impl Component for DevToolsComponent {
 
                 // Inset
                 if style.dirty_flags.contains(StyleFlags::INSET) {
-                    styles_window = styles_window.push(Text::new(format!("Inset Top: {}", style.inset()[0].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Inset Right: {}", style.inset()[1].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Inset Bottom: {}", style.inset()[2].to_string()).as_str()).color(white_color));
-                    styles_window = styles_window.push(Text::new(format!("Inset Left: {}", style.inset()[3].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Top: {}", style.inset()[0]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Right: {}", style.inset()[1]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Bottom: {}", style.inset()[2]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Left: {}", style.inset()[3]).as_str()).color(white_color));
                 }
 
                 // Width
                 if style.dirty_flags.contains(StyleFlags::WIDTH) {
-                    styles_window = styles_window.push(Text::new(format!("Width: {}", style.width().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Width: {}", style.width()).as_str()).color(white_color));
                 }
 
                 // Height
                 if style.dirty_flags.contains(StyleFlags::HEIGHT) {
-                    styles_window = styles_window.push(Text::new(format!("Height: {}", style.height().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Height: {}", style.height()).as_str()).color(white_color));
                 }
 
                 // Max Width
                 if style.dirty_flags.contains(StyleFlags::MAX_WIDTH) {
-                    styles_window = styles_window.push(Text::new(format!("Max Width: {}", style.max_width().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Max Width: {}", style.max_width()).as_str()).color(white_color));
                 }
 
                 // Max Height
                 if style.dirty_flags.contains(StyleFlags::MAX_HEIGHT) {
-                    styles_window = styles_window.push(Text::new(format!("Max Height: {}", style.max_height().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Max Height: {}", style.max_height()).as_str()).color(white_color));
                 }
 
                 // Min Width
                 if style.dirty_flags.contains(StyleFlags::MIN_WIDTH) {
-                    styles_window = styles_window.push(Text::new(format!("Min Width: {}", style.min_width().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Min Width: {}", style.min_width()).as_str()).color(white_color));
                 }
 
                 // Min Height
                 if style.dirty_flags.contains(StyleFlags::MIN_HEIGHT) {
-                    styles_window = styles_window.push(Text::new(format!("Min Height: {}", style.min_height().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Min Height: {}", style.min_height()).as_str()).color(white_color));
                 }
 
                 // X
@@ -261,7 +261,7 @@ impl Component for DevToolsComponent {
 
                 // Flex Basis
                 if style.dirty_flags.contains(StyleFlags::FLEX_BASIS) {
-                    styles_window = styles_window.push(Text::new(format!("Flex Basis: {}", style.flex_basis().to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Flex Basis: {}", style.flex_basis()).as_str()).color(white_color));
                 }
 
                 // Color
@@ -296,12 +296,12 @@ impl Component for DevToolsComponent {
 
                 // Border Color
                 if style.dirty_flags.contains(StyleFlags::BORDER_COLOR) {
-                    styles_window = styles_window.push(Text::new(format!("Border Color: {:?}", style.border_color()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Border Color: {:?}", style.border_color()/*.map(|c| c.to_string())*/).as_str()).color(white_color));
                 }
 
                 // Border Width
                 if style.dirty_flags.contains(StyleFlags::BORDER_WIDTH) {
-                    styles_window = styles_window.push(Text::new(format!("Border Width: {:?}", style.border_width()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Border Width: {:?}", style.border_width().map(|bw| bw.to_string())).as_str()).color(white_color));
                 }
 
                 // Border Radius

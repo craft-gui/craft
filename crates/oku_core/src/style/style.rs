@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::renderer::color::Color;
 use taffy::{FlexWrap};
 
@@ -14,15 +15,17 @@ pub use taffy::Overflow;
 use winit::dpi::{LogicalPosition, PhysicalPosition, PhysicalSize};
 use crate::style::style_flags::StyleFlags;
 
-impl Unit {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Unit::Px(value) => format!("{value}px"),
-            Unit::Percentage(value) => format!("{value}%"),
-            Unit::Auto => "auto".to_string(),
+            Unit::Px(value) => write!(f, "{value}px"),
+            Unit::Percentage(value) => write!(f, "{value}%"),
+            Unit::Auto => write!(f, "auto"),
         }
     }
-    
+}
+
+impl Unit {
     pub fn is_auto(&self) -> bool {
         matches!(self, Unit::Auto)
     }
