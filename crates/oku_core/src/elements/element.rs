@@ -132,7 +132,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         common_element_data_mut.layout_order = *layout_order;
         *layout_order += 1;
 
-        let position = match common_element_data_mut.style.position {
+        let position = match common_element_data_mut.style.position() {
             taffy::Position::Relative => Point::new(relative_x + result.location.x, relative_y + result.location.y),
             taffy::Position::Absolute => Point::new(result.location.x, result.location.y),
         };
@@ -155,7 +155,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let computed_border_spec = &common_element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
-        let background_color = common_element_data.current_style().background;
+        let background_color = common_element_data.current_style().background();
         renderer.fill_bez_path(background_path, background_color);
 
         let top = computed_border_spec.get_side(Side::Top);
@@ -195,8 +195,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
             [borders.top, borders.right, borders.bottom, borders.left],
-            common_element_data.current_style().border_radius,
-            common_element_data.current_style().border_color,
+            common_element_data.current_style().border_radius(),
+            common_element_data.current_style().border_color(),
         );
         common_element_data.computed_border = border_spec.compute_border_spec();
     }
@@ -204,7 +204,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
         let common_element_data = self.common_element_data_mut();
 
-        if common_element_data.style.overflow[0] != taffy::Overflow::Scroll {
+        if common_element_data.style.overflow()[0] != taffy::Overflow::Scroll {
             return;
         }
 

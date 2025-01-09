@@ -218,7 +218,7 @@ impl Element for Text {
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color,
+            self.common_element_data.style.color(),
         );
     }
 
@@ -232,7 +232,7 @@ impl Element for Text {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         let font_size = PhysicalPosition::from_logical(
-            LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
+            LogicalPosition::new(self.common_element_data.style.font_size(), self.common_element_data.style.font_size()),
             scale_factor,
         )
         .x;
@@ -299,7 +299,7 @@ impl Element for Text {
             attributes.family = Family::Name(family);
         }
 
-        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
 
         let mut buffer = Buffer::new(font_system, metrics);
         buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
@@ -312,8 +312,8 @@ impl Element for Text {
             self.common_element_data.component_id,
             text_hash,
             buffer,
-            self.common_element_data.style.font_family_length,
-            self.common_element_data.style.font_family,
+            self.common_element_data.style.font_family_length(),
+            self.common_element_data.style.font_family_raw(),
             attributes.weight,
         );
 
@@ -329,7 +329,7 @@ impl Element for Text {
 
         let mut attributes = Attrs::new();
 
-        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
 
         let new_font_family = self.common_element_data.style.font_family();
 
@@ -342,8 +342,8 @@ impl Element for Text {
             || reload_fonts
             || attributes.weight != state.weight
         {
-            state.font_family_length = self.common_element_data.style.font_family_length;
-            state.font_family = self.common_element_data.style.font_family;
+            state.font_family_length = self.common_element_data.style.font_family_length();
+            state.font_family = self.common_element_data.style.font_family_raw();
             state.text_hash = text_hash;
             state.weight = attributes.weight;
             

@@ -2336,6 +2336,7 @@ name = "oku_core"
 version = "0.1.0"
 dependencies = [
  "accesskit_winit",
+ "bitflags 1.3.2",
  "bytemuck",
  "cfg-if",
  "chrono",

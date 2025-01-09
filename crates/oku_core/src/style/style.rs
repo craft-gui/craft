@@ -12,6 +12,7 @@ pub use taffy::Position;
 pub use taffy::BoxSizing;
 pub use taffy::Overflow;
 use winit::dpi::{LogicalPosition, PhysicalPosition, PhysicalSize};
+use crate::style::style_flags::StyleFlags;
 
 impl Unit {
     pub fn to_string(&self) -> String {
@@ -139,67 +140,44 @@ impl Default for FontStyle {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
-    pub(crate) font_family_length: u8,
-    pub(crate) font_family: [u8; 64],
-    pub box_sizing: BoxSizing,
-    pub scrollbar_width: f32,
-    pub position: Position,
-    pub margin: [Unit; 4],
-    pub padding: [Unit; 4],
-    pub gap: [Unit; 2],
-    pub inset: [Unit; 4],
-    pub width: Unit,
-    pub height: Unit,
-    pub max_width: Unit,
-    pub max_height: Unit,
-    pub min_width: Unit,
-    pub min_height: Unit,
-    pub x: f32,
-    pub y: f32,
-    pub display: Display,
-    pub wrap: Wrap,
-    pub align_items: Option<AlignItems>,
-    pub justify_content: Option<JustifyContent>,
-    pub flex_direction: FlexDirection,
-    pub flex_grow: f32,
-    pub flex_shrink: f32,
-    pub flex_basis: Unit,
+    font_family_length: u8,
+    font_family: [u8; 64],
+    box_sizing: BoxSizing,
+    scrollbar_width: f32,
+    position: Position,
+    margin: [Unit; 4],
+    padding: [Unit; 4],
+    gap: [Unit; 2],
+    inset: [Unit; 4],
+    width: Unit,
+    height: Unit,
+    max_width: Unit,
+    max_height: Unit,
+    min_width: Unit,
+    min_height: Unit,
+    x: f32,
+    y: f32,
+    display: Display,
+    wrap: Wrap,
+    align_items: Option<AlignItems>,
+    justify_content: Option<JustifyContent>,
+    flex_direction: FlexDirection,
+    flex_grow: f32,
+    flex_shrink: f32,
+    flex_basis: Unit,
 
-    pub color: Color,
-    pub background: Color,
-    pub font_size: f32,
-    pub font_weight: Weight,
-    pub font_style: FontStyle,
-    pub overflow: [Overflow; 2],
+    color: Color,
+    background: Color,
+    font_size: f32,
+    font_weight: Weight,
+    font_style: FontStyle,
+    overflow: [Overflow; 2],
 
-    pub border_color: [Color; 4],
-    pub border_width: [Unit; 4],
-    pub border_radius: [(f32, f32); 4],
+    border_color: [Color; 4],
+    border_width: [Unit; 4],
+    border_radius: [(f32, f32); 4],
 
-}
-
-fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::Dimension {
-    match unit {
-        Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
-        Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
-        Unit::Auto => taffy::Dimension::Auto,
-    }
-}
-
-fn unit_to_taffy_lengthpercentageauto_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentageAuto {
-    match unit {
-        Unit::Px(px) => taffy::LengthPercentageAuto::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
-        Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
-        Unit::Auto => taffy::LengthPercentageAuto::Auto,
-    }
-}
-
-fn unit_to_taffy_length_percentage_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentage {
-    match unit {
-        Unit::Px(px) => taffy::LengthPercentage::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
-        Unit::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage / 100.0),
-        Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
-    }
+    pub dirty_flags: StyleFlags
 }
 
 
@@ -210,7 +188,7 @@ impl Default for Style {
             font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
+            scrollbar_width: if cfg!(any(taros = "android", taros = "ios")) {
                 0.0
             } else {
                 15.0
@@ -245,12 +223,12 @@ impl Default for Style {
             font_style: Default::default(),
             overflow: [Overflow::default(), Overflow::default()],
             border_radius: [(0.0, 0.0); 4],
+            dirty_flags: StyleFlags::empty(),
         }
     }
 }
 
 impl Style {
-
     pub fn font_family(&self) -> Option<&str> {
         if self.font_family_length == 0 {
             None
@@ -258,158 +236,320 @@ impl Style {
             Some(std::str::from_utf8(&self.font_family[..self.font_family_length as usize]).unwrap())
         }
     }
-    
+
     pub(crate) fn set_font_family(&mut self, font_family: &str) {
         let chars = font_family.chars().collect::<Vec<char>>();
 
         self.font_family_length = chars.len() as u8;
         self.font_family[..font_family.len()].copy_from_slice(font_family.as_bytes());
+        self.dirty_flags.insert(StyleFlags::FONT_FAMILY);
     }
 
-    pub fn to_taffy_style_with_scale_factor(&self, scale_factor: f64) -> taffy::Style {
-        let style = self;
-
-        let gap = taffy::Size {
-            width: unit_to_taffy_length_percentage_with_scale_factor(style.gap[0], scale_factor),
-            height: unit_to_taffy_length_percentage_with_scale_factor(style.gap[1], scale_factor),
-        };
-
-        let display = match style.display {
-            Display::Flex => taffy::Display::Flex,
-            Display::Block => taffy::Display::Block,
-            Display::None => taffy::Display::None,
-        };
-
-        let size = taffy::Size {
-            width: unit_to_taffy_dimension_with_scale_factor(style.width, scale_factor),
-            height: unit_to_taffy_dimension_with_scale_factor(style.height, scale_factor),
-        };
-
-        let max_size = taffy::Size {
-            width: unit_to_taffy_dimension_with_scale_factor(style.max_width, scale_factor),
-            height: unit_to_taffy_dimension_with_scale_factor(style.max_height, scale_factor),
-        };
-
-        let min_size = taffy::Size {
-            width: unit_to_taffy_dimension_with_scale_factor(style.min_width, scale_factor),
-            height: unit_to_taffy_dimension_with_scale_factor(style.min_height, scale_factor),
-        };
-
-        let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[3], scale_factor),
-            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[1], scale_factor),
-            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[0], scale_factor),
-            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin[2], scale_factor),
-        };
-
-        let padding: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage_with_scale_factor(style.padding[3], scale_factor),
-            right: unit_to_taffy_length_percentage_with_scale_factor(style.padding[1], scale_factor),
-            top: unit_to_taffy_length_percentage_with_scale_factor(style.padding[0], scale_factor),
-            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.padding[2], scale_factor),
-        };
-
-        let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[3], scale_factor),
-            right: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[1], scale_factor),
-            top: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[0], scale_factor),
-            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border_width[2], scale_factor),
-        };
-
-        let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[3], scale_factor),
-            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[1], scale_factor),
-            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[0], scale_factor),
-            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset[2], scale_factor),
-        };
-
-
-        let align_items = match style.align_items {
-            None => None,
-            Some(AlignItems::Start) => Some(taffy::AlignItems::Start),
-            Some(AlignItems::End) => Some(taffy::AlignItems::End),
-            Some(AlignItems::FlexStart) => Some(taffy::AlignItems::FlexStart),
-            Some(AlignItems::FlexEnd) => Some(taffy::AlignItems::FlexEnd),
-            Some(AlignItems::Center) => Some(taffy::AlignItems::Center),
-            Some(AlignItems::Baseline) => Some(taffy::AlignItems::Baseline),
-            Some(AlignItems::Stretch) => Some(taffy::AlignItems::Stretch),
-        };
-
-        let justify_content = match style.justify_content {
-            None => None,
-            Some(JustifyContent::Start) => Some(taffy::JustifyContent::Start),
-            Some(JustifyContent::End) => Some(taffy::JustifyContent::End),
-            Some(JustifyContent::FlexStart) => Some(taffy::JustifyContent::FlexStart),
-            Some(JustifyContent::FlexEnd) => Some(taffy::JustifyContent::FlexEnd),
-            Some(JustifyContent::Center) => Some(taffy::JustifyContent::Center),
-            Some(JustifyContent::Stretch) => Some(taffy::JustifyContent::Stretch),
-            Some(JustifyContent::SpaceBetween) => Some(taffy::JustifyContent::SpaceBetween),
-            Some(JustifyContent::SpaceEvenly) => Some(taffy::JustifyContent::SpaceEvenly),
-            Some(JustifyContent::SpaceAround) => Some(taffy::JustifyContent::SpaceAround),
-        };
-
-        let flex_direction = match style.flex_direction {
-            FlexDirection::Row => taffy::FlexDirection::Row,
-            FlexDirection::Column => taffy::FlexDirection::Column,
-            FlexDirection::RowReverse => taffy::FlexDirection::RowReverse,
-            FlexDirection::ColumnReverse => taffy::FlexDirection::ColumnReverse,
-        };
-
-        let flex_wrap = match style.wrap {
-            Wrap::NoWrap => FlexWrap::NoWrap,
-            Wrap::Wrap => FlexWrap::Wrap,
-            Wrap::WrapReverse => FlexWrap::WrapReverse,
-        };
-
-        let flex_grow = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_grow, style.flex_grow), scale_factor).x;
-        let flex_shrink = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_shrink, style.flex_shrink), scale_factor).x;
-        let flex_basis: taffy::Dimension = match style.flex_basis {
-            Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x),
-            Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
-            Unit::Auto => taffy::Dimension::Auto,
-        };
-
-        fn overflow_to_taffy_overflow(overflow: Overflow) -> taffy::Overflow {
-            match overflow {
-                Overflow::Visible => taffy::Overflow::Visible,
-                Overflow::Clip => taffy::Overflow::Clip,
-                Overflow::Hidden => taffy::Overflow::Hidden,
-                Overflow::Scroll => taffy::Overflow::Scroll,
-            }
-        }
-
-        let overflow_x = overflow_to_taffy_overflow(style.overflow[0]);
-        let overflow_y = overflow_to_taffy_overflow(style.overflow[1]);
-        
-        let scrollbar_width = PhysicalPosition::from_logical(LogicalPosition::new(style.scrollbar_width, style.scrollbar_width), scale_factor).x;
-
-        let box_sizing = taffy::BoxSizing::BorderBox;
-
-        taffy::Style {
-            gap,
-            box_sizing,
-            inset,
-            scrollbar_width,
-            position: style.position,
-            size,
-            min_size,
-            max_size,
-            flex_direction,
-            margin,
-            padding,
-            justify_content,
-            align_items,
-            display,
-            flex_wrap,
-            flex_grow,
-            flex_shrink,
-            flex_basis,
-            overflow: taffy::Point {
-                x: overflow_x,
-                y: overflow_y,
-            },
-            border,
-            ..Default::default()
-        }
+    pub fn font_family_raw(&self) -> [u8; 64] {
+        self.font_family
     }
+
+    pub fn font_family_mut(&mut self) -> &mut [u8; 64] {
+        self.dirty_flags.insert(StyleFlags::FONT_FAMILY);
+        &mut self.font_family
+    }
+
+    pub fn font_family_length(&self) -> u8 {
+        self.font_family_length
+    }
+
+    pub fn font_family_length_mut(&mut self) -> &mut u8 {
+        self.dirty_flags.insert(StyleFlags::FONT_FAMILY_LENGTH);
+        &mut self.font_family_length
+    }
+
+    pub fn box_sizing(&self) -> BoxSizing {
+        self.box_sizing
+    }
+
+    pub fn box_sizing_mut(&mut self) -> &mut BoxSizing {
+        self.dirty_flags.insert(StyleFlags::BOX_SIZING);
+        &mut self.box_sizing
+    }
+
+    pub fn scrollbar_width(&self) -> f32 {
+        self.scrollbar_width
+    }
+
+    pub fn scrollbar_width_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::SCROLLBAR_WIDTH);
+        &mut self.scrollbar_width
+    }
+
+    pub fn position(&self) -> Position {
+        self.position
+    }
+
+    pub fn position_mut(&mut self) -> &mut Position {
+        self.dirty_flags.insert(StyleFlags::POSITION);
+        &mut self.position
+    }
+
+    pub fn margin(&self) -> [Unit; 4] {
+        self.margin
+    }
+
+    pub fn margin_mut(&mut self) -> &mut [Unit; 4] {
+        self.dirty_flags.insert(StyleFlags::MARGIN);
+        &mut self.margin
+    }
+
+    pub fn padding(&self) -> [Unit; 4] {
+        self.padding
+    }
+
+    pub fn padding_mut(&mut self) -> &mut [Unit; 4] {
+        self.dirty_flags.insert(StyleFlags::PADDING);
+        &mut self.padding
+    }
+
+    pub fn gap(&self) -> [Unit; 2] {
+        self.gap
+    }
+
+    pub fn gap_mut(&mut self) -> &mut [Unit; 2] {
+        self.dirty_flags.insert(StyleFlags::GAP);
+        &mut self.gap
+    }
+
+    pub fn inset(&self) -> [Unit; 4] {
+        self.inset
+    }
+
+    pub fn inset_mut(&mut self) -> &mut [Unit; 4] {
+        self.dirty_flags.insert(StyleFlags::INSET);
+        &mut self.inset
+    }
+
+    pub fn width(&self) -> Unit {
+        self.width
+    }
+
+    pub fn width_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::WIDTH);
+        &mut self.width
+    }
+
+    pub fn height(&self) -> Unit {
+        self.height
+    }
+
+    pub fn height_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::HEIGHT);
+        &mut self.height
+    }
+
+    pub fn max_width(&self) -> Unit {
+        self.max_width
+    }
+
+    pub fn max_width_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::MAX_WIDTH);
+        &mut self.max_width
+    }
+
+    pub fn max_height(&self) -> Unit {
+        self.max_height
+    }
+
+    pub fn max_height_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::MAX_HEIGHT);
+        &mut self.max_height
+    }
+
+    pub fn min_width(&self) -> Unit {
+        self.min_width
+    }
+
+    pub fn min_width_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::MIN_WIDTH);
+        &mut self.min_width
+    }
+
+    pub fn min_height(&self) -> Unit {
+        self.min_height
+    }
+
+    pub fn min_height_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::MIN_HEIGHT);
+        &mut self.min_height
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn x_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::X);
+        &mut self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn y_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::Y);
+        &mut self.y
+    }
+
+    pub fn display(&self) -> Display {
+        self.display
+    }
+
+    pub fn display_mut(&mut self) -> &mut Display {
+        self.dirty_flags.insert(StyleFlags::DISPLAY);
+        &mut self.display
+    }
+
+    pub fn wrap(&self) -> Wrap {
+        self.wrap
+    }
+
+    pub fn wrap_mut(&mut self) -> &mut Wrap {
+        self.dirty_flags.insert(StyleFlags::WRAP);
+        &mut self.wrap
+    }
+
+    pub fn align_items(&self) -> Option<AlignItems> {
+        self.align_items
+    }
+
+    pub fn align_items_mut(&mut self) -> &mut Option<AlignItems> {
+        self.dirty_flags.insert(StyleFlags::ALIGN_ITEMS);
+        &mut self.align_items
+    }
+
+    pub fn justify_content(&self) -> Option<JustifyContent> {
+        self.justify_content
+    }
+
+    pub fn justify_content_mut(&mut self) -> &mut Option<JustifyContent> {
+        self.dirty_flags.insert(StyleFlags::JUSTIFY_CONTENT);
+        &mut self.justify_content
+    }
+
+    pub fn flex_direction(&self) -> FlexDirection {
+        self.flex_direction
+    }
+
+    pub fn flex_direction_mut(&mut self) -> &mut FlexDirection {
+        self.dirty_flags.insert(StyleFlags::FLEX_DIRECTION);
+        &mut self.flex_direction
+    }
+
+    pub fn flex_grow(&self) -> f32 {
+        self.flex_grow
+    }
+
+    pub fn flex_grow_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::FLEX_GROW);
+        &mut self.flex_grow
+    }
+
+    pub fn flex_shrink(&self) -> f32 {
+        self.flex_shrink
+    }
+
+    pub fn flex_shrink_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::FLEX_SHRINK);
+        &mut self.flex_shrink
+    }
+
+    pub fn flex_basis(&self) -> Unit {
+        self.flex_basis
+    }
+
+    pub fn flex_basis_mut(&mut self) -> &mut Unit {
+        self.dirty_flags.insert(StyleFlags::FLEX_BASIS);
+        &mut self.flex_basis
+    }
+
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
+    pub fn color_mut(&mut self) -> &mut Color {
+        self.dirty_flags.insert(StyleFlags::COLOR);
+        &mut self.color
+    }
+
+    pub fn background(&self) -> Color {
+        self.background
+    }
+
+    pub fn background_mut(&mut self) -> &mut Color {
+        self.dirty_flags.insert(StyleFlags::BACKGROUND);
+        &mut self.background
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.font_size
+    }
+
+    pub fn font_size_mut(&mut self) -> &mut f32 {
+        self.dirty_flags.insert(StyleFlags::FONT_SIZE);
+        &mut self.font_size
+    }
+
+    pub fn font_weight(&self) -> Weight {
+        self.font_weight
+    }
+
+    pub fn font_weight_mut(&mut self) -> &mut Weight {
+        self.dirty_flags.insert(StyleFlags::FONT_WEIGHT);
+        &mut self.font_weight
+    }
+
+    pub fn font_style(&self) -> FontStyle {
+        self.font_style
+    }
+
+    pub fn font_style_mut(&mut self) -> &mut FontStyle {
+        self.dirty_flags.insert(StyleFlags::FONT_STYLE);
+        &mut self.font_style
+    }
+
+    pub fn overflow(&self) -> [Overflow; 2] {
+        self.overflow
+    }
+
+    pub fn overflow_mut(&mut self) -> &mut [Overflow; 2] {
+        self.dirty_flags.insert(StyleFlags::OVERFLOW);
+        &mut self.overflow
+    }
+
+    pub fn border_color(&self) -> [Color; 4] {
+        self.border_color
+    }
+
+    pub fn border_color_mut(&mut self) -> &mut [Color; 4] {
+        self.dirty_flags.insert(StyleFlags::BORDER_COLOR);
+        &mut self.border_color
+    }
+
+    pub fn border_width(&self) -> [Unit; 4] {
+        self.border_width
+    }
+
+    pub fn border_width_mut(&mut self) -> &mut [Unit; 4] {
+        self.dirty_flags.insert(StyleFlags::BORDER_WIDTH);
+        &mut self.border_width
+    }
+
+    pub fn border_radius(&self) -> [(f32, f32); 4] {
+        self.border_radius
+    }
+
+    pub fn border_radius_mut(&mut self) -> &mut [(f32, f32); 4] {
+        self.dirty_flags.insert(StyleFlags::BORDER_RADIUS);
+        &mut self.border_radius
+    }
+
 }
+

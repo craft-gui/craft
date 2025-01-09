@@ -131,15 +131,15 @@ impl Component for DevToolsComponent {
             }
 
             if let Some(selected_element) = selected_element {
-                styles_window = styles_window.push(Text::new(format!("Margin Top: {}", selected_element.style().margin[0].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Right: {}", selected_element.style().margin[1].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", selected_element.style().margin[2].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Left: {}", selected_element.style().margin[3].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Margin Top: {}", selected_element.style().margin()[0].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Margin Right: {}", selected_element.style().margin()[1].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", selected_element.style().margin()[2].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Margin Left: {}", selected_element.style().margin()[3].to_string()).as_str()).color(Color::WHITE));
 
-                styles_window = styles_window.push(Text::new(format!("Padding Top: {}", selected_element.style().padding[0].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Right: {}", selected_element.style().padding[1].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", selected_element.style().padding[2].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Left: {}", selected_element.style().padding[3].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Padding Top: {}", selected_element.style().padding()[0].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Padding Right: {}", selected_element.style().padding()[1].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", selected_element.style().padding()[2].to_string()).as_str()).color(Color::WHITE));
+                styles_window = styles_window.push(Text::new(format!("Padding Left: {}", selected_element.style().padding()[3].to_string()).as_str()).color(Color::WHITE));
             }
         }
 

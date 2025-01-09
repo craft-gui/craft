@@ -75,7 +75,7 @@ impl Element for DevTools {
 
         self.draw_borders(renderer);
 
-        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
+        if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
         }
 
@@ -84,7 +84,7 @@ impl Element for DevTools {
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state, pointer);
         }
 
-        if self.common_element_data.style.overflow[1] == Overflow::Scroll {
+        if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
             renderer.pop_layer();
         }
 
@@ -234,14 +234,14 @@ impl Element for DevTools {
     fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let dev_tools_state = self.get_state_mut(element_state);
 
-        if self.style().overflow[1] == taffy::Overflow::Scroll {
+        if self.style().overflow()[1] == taffy::Overflow::Scroll {
             match message {
                 OkuMessage::MouseWheelEvent(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
                         MouseScrollDelta::LineDelta(_x, y) => y,
                         MouseScrollDelta::PixelDelta(y) => y.y as f32,
                     };
-                    let delta = -delta * self.common_element_data.style.font_size.max(12.0) * 1.2;
+                    let delta = -delta * self.common_element_data.style.font_size().max(12.0) * 1.2;
                     let max_scroll_y = self.common_element_data.max_scroll_y;
 
                     dev_tools_state.scroll_y = (dev_tools_state.scroll_y + delta).clamp(0.0, max_scroll_y);

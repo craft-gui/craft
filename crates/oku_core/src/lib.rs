@@ -804,24 +804,24 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
-    root.style_mut().width = Unit::Px(root_size.width);
-    root.style_mut().wrap = Wrap::Wrap;
-    root.style_mut().display = Display::Block;
+    *root.style_mut().width_mut() = Unit::Px(root_size.width);
+    *root.style_mut().wrap_mut() = Wrap::Wrap;
+    *root.style_mut().display_mut() = Display::Block;
 
     let is_user_root_height_auto = {
         let root_children = root.children_mut();
-        root_children[0].internal.style().height.is_auto()
+        root_children[0].internal.style().height().is_auto()
     };
 
-    root.style_mut().width = Unit::Px(root_size.width);
-    root.style_mut().wrap = Wrap::Wrap;
-    root.style_mut().display = Display::Block;
+    *root.style_mut().width_mut() = Unit::Px(root_size.width);
+    *root.style_mut().wrap_mut() = Wrap::Wrap;
+    *root.style_mut().display_mut() = Display::Block;
 
     if is_user_root_height_auto {
-        root.style_mut().height = Unit::Auto;
+        *root.style_mut().height_mut() = Unit::Auto;
     } else {
-        root.style_mut().height = Unit::Px(root_size.height);
-        root.style_mut().height = Unit::Px(root_size.height);
+        *root.style_mut().height_mut() = Unit::Px(root_size.height);
+        *root.style_mut().height_mut() = Unit::Px(root_size.height);
     }
 }
 

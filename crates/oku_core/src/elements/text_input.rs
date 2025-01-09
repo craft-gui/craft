@@ -181,9 +181,9 @@ impl TextInput {
     pub fn new(text: &str) -> Self {
         let mut common_element_data = CommonElementData::default();
         const BORDER_COLOR: Color = Color::rgba(199, 199, 206, 255);
-        common_element_data.style.border_color = [BORDER_COLOR; 4];
-        common_element_data.style.border_width = [Unit::Px(1.0); 4];
-        common_element_data.style.border_radius = [(5.0, 5.0); 4];
+        *common_element_data.style.border_color_mut() = [BORDER_COLOR; 4];
+        *common_element_data.style.border_width_mut() = [Unit::Px(1.0); 4];
+        *common_element_data.style.border_radius_mut() = [(5.0, 5.0); 4];
 
         Self {
             text: text.to_string(),
@@ -233,7 +233,7 @@ impl Element for TextInput {
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color,
+            self.common_element_data.style.color(),
         );
     }
 
@@ -245,7 +245,7 @@ impl Element for TextInput {
         scale_factor: f64,
     ) -> Option<NodeId> {
         let font_size = PhysicalPosition::from_logical(
-            LogicalPosition::new(self.common_element_data.style.font_size, self.common_element_data.style.font_size),
+            LogicalPosition::new(self.common_element_data.style.font_size(), self.common_element_data.style.font_size()),
             scale_factor,
         )
         .x;
@@ -436,7 +436,7 @@ impl Element for TextInput {
     }
 
     fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
-        let font_size = self.common_element_data.style.font_size;
+        let font_size = self.common_element_data.style.font_size();
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
@@ -448,7 +448,7 @@ impl Element for TextInput {
             attributes.family = Family::Name(family);
         }
 
-        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
 
         let buffer = Buffer::new(font_system, metrics);
         let mut editor = Editor::new(buffer);
@@ -468,8 +468,8 @@ impl Element for TextInput {
             editor,
             self.text.clone(),
             text_hash,
-            self.common_element_data.style.font_family_length,
-            self.common_element_data.style.font_family,
+            self.common_element_data.style.font_family_length(),
+            self.common_element_data.style.font_family_raw(),
             attributes.weight,
         );
 
@@ -485,7 +485,7 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        let font_size = self.common_element_data.style.font_size;
+        let font_size = self.common_element_data.style.font_size();
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
@@ -495,7 +495,7 @@ impl Element for TextInput {
 
         let mut attributes = Attrs::new();
 
-        attributes.weight = Weight(self.common_element_data.style.font_weight.0);
+        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
 
         let new_font_family = self.common_element_data().style.font_family();
 
@@ -508,8 +508,8 @@ impl Element for TextInput {
             || reload_fonts
             || attributes.weight != state.weight
         {
-            state.font_family_length = self.common_element_data.style.font_family_length;
-            state.font_family = self.common_element_data.style.font_family;
+            state.font_family_length = self.common_element_data.style.font_family_length();
+            state.font_family = self.common_element_data.style.font_family_raw();
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
             state.text = self.text.clone();
