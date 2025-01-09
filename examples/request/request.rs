@@ -39,7 +39,7 @@ impl Component for AniList {
             .overflow(Overflow::Scroll)
             .background(Color::rgba(230, 230, 230, 255))
             .gap("40px")
-            .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Percentage(10.0))
+            .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Px(20.0))
             .push(Container::new()
                 .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
                 .push(Text::new("Get Data").id("get_data"))

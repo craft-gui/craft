@@ -1,6 +1,6 @@
 mod style;
 mod taffy_conversions;
-mod style_flags;
+pub(crate) mod style_flags;
 
 pub use style::*;
 use crate::geometry::Rectangle;

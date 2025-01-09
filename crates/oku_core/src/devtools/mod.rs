@@ -11,6 +11,7 @@ use crate::style::Display::Flex;
 use crate::style::{AlignItems, Display, FlexDirection, Unit};
 use taffy::Overflow;
 use winit::event::{ElementState, MouseButton};
+use crate::style::style_flags::StyleFlags;
 
 pub(crate) struct DevToolsComponent {
     pub width: Unit,
@@ -131,16 +132,185 @@ impl Component for DevToolsComponent {
             }
 
             if let Some(selected_element) = selected_element {
-                styles_window = styles_window.push(Text::new(format!("Margin Top: {}", selected_element.style().margin()[0].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Right: {}", selected_element.style().margin()[1].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", selected_element.style().margin()[2].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Margin Left: {}", selected_element.style().margin()[3].to_string()).as_str()).color(Color::WHITE));
+                let style = selected_element.style();
+                let white_color = Color::WHITE;
 
-                styles_window = styles_window.push(Text::new(format!("Padding Top: {}", selected_element.style().padding()[0].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Right: {}", selected_element.style().padding()[1].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", selected_element.style().padding()[2].to_string()).as_str()).color(Color::WHITE));
-                styles_window = styles_window.push(Text::new(format!("Padding Left: {}", selected_element.style().padding()[3].to_string()).as_str()).color(Color::WHITE));
+                // Font Family
+                if style.dirty_flags.contains(StyleFlags::FONT_FAMILY) && style.font_family().is_some() {
+                    styles_window = styles_window.push(Text::new(format!("Font Family: {}", style.font_family().unwrap()).as_str()).color(white_color));
+                }
+
+                // Box Sizing
+                if style.dirty_flags.contains(StyleFlags::BOX_SIZING) {
+                    styles_window = styles_window.push(Text::new(format!("Box Sizing: {:?}", style.box_sizing()).as_str()).color(white_color));
+                }
+
+                // Scrollbar Width
+                if style.dirty_flags.contains(StyleFlags::SCROLLBAR_WIDTH) {
+                    styles_window = styles_window.push(Text::new(format!("Scrollbar Width: {}", style.scrollbar_width()).as_str()).color(white_color));
+                }
+
+                // Position
+                if style.dirty_flags.contains(StyleFlags::POSITION) {
+                    styles_window = styles_window.push(Text::new(format!("Position: {:?}", style.position()).as_str()).color(white_color));
+                }
+
+                // Margin
+                if style.dirty_flags.contains(StyleFlags::MARGIN) {
+                    styles_window = styles_window.push(Text::new(format!("Margin Top: {}", style.margin()[0].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Right: {}", style.margin()[1].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Bottom: {}", style.margin()[2].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Margin Left: {}", style.margin()[3].to_string()).as_str()).color(white_color));
+                }
+
+                // Padding
+                if style.dirty_flags.contains(StyleFlags::PADDING) {
+                    styles_window = styles_window.push(Text::new(format!("Padding Top: {}", style.padding()[0].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Right: {}", style.padding()[1].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Bottom: {}", style.padding()[2].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Padding Left: {}", style.padding()[3].to_string()).as_str()).color(white_color));
+                }
+
+                // Gap
+                if style.dirty_flags.contains(StyleFlags::GAP) {
+                    styles_window = styles_window.push(Text::new(format!("Gap: {:?}", style.gap()).as_str()).color(white_color));
+                }
+
+                // Inset
+                if style.dirty_flags.contains(StyleFlags::INSET) {
+                    styles_window = styles_window.push(Text::new(format!("Inset Top: {}", style.inset()[0].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Right: {}", style.inset()[1].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Bottom: {}", style.inset()[2].to_string()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Inset Left: {}", style.inset()[3].to_string()).as_str()).color(white_color));
+                }
+
+                // Width
+                if style.dirty_flags.contains(StyleFlags::WIDTH) {
+                    styles_window = styles_window.push(Text::new(format!("Width: {}", style.width().to_string()).as_str()).color(white_color));
+                }
+
+                // Height
+                if style.dirty_flags.contains(StyleFlags::HEIGHT) {
+                    styles_window = styles_window.push(Text::new(format!("Height: {}", style.height().to_string()).as_str()).color(white_color));
+                }
+
+                // Max Width
+                if style.dirty_flags.contains(StyleFlags::MAX_WIDTH) {
+                    styles_window = styles_window.push(Text::new(format!("Max Width: {}", style.max_width().to_string()).as_str()).color(white_color));
+                }
+
+                // Max Height
+                if style.dirty_flags.contains(StyleFlags::MAX_HEIGHT) {
+                    styles_window = styles_window.push(Text::new(format!("Max Height: {}", style.max_height().to_string()).as_str()).color(white_color));
+                }
+
+                // Min Width
+                if style.dirty_flags.contains(StyleFlags::MIN_WIDTH) {
+                    styles_window = styles_window.push(Text::new(format!("Min Width: {}", style.min_width().to_string()).as_str()).color(white_color));
+                }
+
+                // Min Height
+                if style.dirty_flags.contains(StyleFlags::MIN_HEIGHT) {
+                    styles_window = styles_window.push(Text::new(format!("Min Height: {}", style.min_height().to_string()).as_str()).color(white_color));
+                }
+
+                // X
+                if style.dirty_flags.contains(StyleFlags::X) {
+                    styles_window = styles_window.push(Text::new(format!("X: {}", style.x()).as_str()).color(white_color));
+                }
+
+                // Y
+                if style.dirty_flags.contains(StyleFlags::Y) {
+                    styles_window = styles_window.push(Text::new(format!("Y: {}", style.y()).as_str()).color(white_color));
+                }
+
+                // Display
+                if style.dirty_flags.contains(StyleFlags::DISPLAY) {
+                    styles_window = styles_window.push(Text::new(format!("Display: {:?}", style.display()).as_str()).color(white_color));
+                }
+
+                // Wrap
+                if style.dirty_flags.contains(StyleFlags::WRAP) {
+                    styles_window = styles_window.push(Text::new(format!("Wrap: {:?}", style.wrap()).as_str()).color(white_color));
+                }
+
+                // Align Items
+                if style.dirty_flags.contains(StyleFlags::ALIGN_ITEMS) {
+                    styles_window = styles_window.push(Text::new(format!("Align Items: {:?}", style.align_items()).as_str()).color(white_color));
+                }
+
+                // Justify Content
+                if style.dirty_flags.contains(StyleFlags::JUSTIFY_CONTENT) {
+                    styles_window = styles_window.push(Text::new(format!("Justify Content: {:?}", style.justify_content()).as_str()).color(white_color));
+                }
+
+                // Flex Direction
+                if style.dirty_flags.contains(StyleFlags::FLEX_DIRECTION) {
+                    styles_window = styles_window.push(Text::new(format!("Flex Direction: {:?}", style.flex_direction()).as_str()).color(white_color));
+                }
+
+                // Flex Grow
+                if style.dirty_flags.contains(StyleFlags::FLEX_GROW) {
+                    styles_window = styles_window.push(Text::new(format!("Flex Grow: {}", style.flex_grow()).as_str()).color(white_color));
+                }
+
+                // Flex Shrink
+                if style.dirty_flags.contains(StyleFlags::FLEX_SHRINK) {
+                    styles_window = styles_window.push(Text::new(format!("Flex Shrink: {}", style.flex_shrink()).as_str()).color(white_color));
+                }
+
+                // Flex Basis
+                if style.dirty_flags.contains(StyleFlags::FLEX_BASIS) {
+                    styles_window = styles_window.push(Text::new(format!("Flex Basis: {}", style.flex_basis().to_string()).as_str()).color(white_color));
+                }
+
+                // Color
+                if style.dirty_flags.contains(StyleFlags::COLOR) {
+                    styles_window = styles_window.push(Text::new(format!("Color: {:?}", style.color()).as_str()).color(white_color));
+                }
+
+                // Background Color
+                if style.dirty_flags.contains(StyleFlags::BACKGROUND) {
+                    styles_window = styles_window.push(Text::new(format!("Background: {:?}", style.background()).as_str()).color(white_color));
+                }
+
+                // Font Size
+                if style.dirty_flags.contains(StyleFlags::FONT_SIZE) {
+                    styles_window = styles_window.push(Text::new(format!("Font Size: {}", style.font_size()).as_str()).color(white_color));
+                }
+
+                // Font Weight
+                if style.dirty_flags.contains(StyleFlags::FONT_WEIGHT) {
+                    styles_window = styles_window.push(Text::new(format!("Font Weight: {:?}", style.font_weight()).as_str()).color(white_color));
+                }
+
+                // Font Style
+                if style.dirty_flags.contains(StyleFlags::FONT_STYLE) {
+                    styles_window = styles_window.push(Text::new(format!("Font Style: {:?}", style.font_style()).as_str()).color(white_color));
+                }
+
+                // Overflow
+                if style.dirty_flags.contains(StyleFlags::OVERFLOW) {
+                    styles_window = styles_window.push(Text::new(format!("Overflow: {:?}", style.overflow()).as_str()).color(white_color));
+                }
+
+                // Border Color
+                if style.dirty_flags.contains(StyleFlags::BORDER_COLOR) {
+                    styles_window = styles_window.push(Text::new(format!("Border Color: {:?}", style.border_color()).as_str()).color(white_color));
+                }
+
+                // Border Width
+                if style.dirty_flags.contains(StyleFlags::BORDER_WIDTH) {
+                    styles_window = styles_window.push(Text::new(format!("Border Width: {:?}", style.border_width()).as_str()).color(white_color));
+                }
+
+                // Border Radius
+                if style.dirty_flags.contains(StyleFlags::BORDER_RADIUS) {
+                    styles_window = styles_window.push(Text::new(format!("Border Radius: {:?}", style.border_radius()).as_str()).color(white_color));
+                }
             }
+
+
         }
 
         DevTools::new()

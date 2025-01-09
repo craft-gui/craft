@@ -3,6 +3,7 @@ use oku::components::ComponentSpecification;
 use oku::elements::{Container, ElementStyles, Image, Text};
 use oku::resource_manager::ResourceIdentifier;
 use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
+use oku_core::style::Unit;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AniListResponse {
@@ -80,8 +81,9 @@ pub fn anime_view(media: &Media) -> ComponentSpecification {
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
-        .gap("20px")
-        .push(Image::new(ResourceIdentifier::Url(media.cover_image.large.clone())))
-        .push(Text::new(title))
+        .column_gap("20px")
+        .push(Image::new(ResourceIdentifier::Url(media.cover_image.large.clone())).max_width(Unit::Percentage(100.0)))
+        .push(Text::new(title).max_width(Unit::Percentage(100.0)))
+        .width(Unit::Px(230.0))
         .component()
 }
