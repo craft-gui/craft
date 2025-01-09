@@ -131,6 +131,10 @@ impl Component for DevToolsComponent {
                 break;
             }
 
+            fn format_option<T: std::fmt::Debug>(option: Option<T>) -> String {
+                option.map_or("None".to_string(), |value| format!("{:?}", value))
+            }
+
             if let Some(selected_element) = selected_element {
                 let style = selected_element.style();
                 let white_color = Color::WHITE;
@@ -173,7 +177,8 @@ impl Component for DevToolsComponent {
 
                 // Gap
                 if style.dirty_flags.contains(StyleFlags::GAP) {
-                    styles_window = styles_window.push(Text::new(format!("Gap: {:?}", style.gap()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Row Gap: {}", style.gap()[0]).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Column Gap: {}", style.gap()[1]).as_str()).color(white_color));
                 }
 
                 // Inset
@@ -236,12 +241,12 @@ impl Component for DevToolsComponent {
 
                 // Align Items
                 if style.dirty_flags.contains(StyleFlags::ALIGN_ITEMS) {
-                    styles_window = styles_window.push(Text::new(format!("Align Items: {:?}", style.align_items()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Align Items: {}", format_option(style.align_items())).as_str()).color(white_color));
                 }
 
                 // Justify Content
                 if style.dirty_flags.contains(StyleFlags::JUSTIFY_CONTENT) {
-                    styles_window = styles_window.push(Text::new(format!("Justify Content: {:?}", style.justify_content()).as_str()).color(white_color));
+                    styles_window = styles_window.push(Text::new(format!("Justify Content: {}", format_option(style.justify_content())).as_str()).color(white_color));
                 }
 
                 // Flex Direction
