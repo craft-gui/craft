@@ -1,35 +1,33 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::props::Props;
 use crate::components::{ComponentId, UpdateResult};
-use crate::elements::element::{Element};
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
-use crate::geometry::{Point, Size};
+use crate::geometry::Point;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
-use taffy::{NodeId, Overflow, TaffyTree};
-use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
-use crate::elements::common_element_data::CommonElementData;
+use taffy::{NodeId, TaffyTree};
 
-/// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
 pub struct DevTools {
     pub common_element_data: CommonElementData,
     /// The tree to inspect.
     pub(crate) debug_inspector_tree: Option<Box<dyn Element>>,
+    /// The selected element in the inspector tree.
     pub(crate) selected_inspector_element: Option<ComponentId>,
+    /// The hovered element in the inspector tree.
     pub(crate) hovered_inspector_element: Option<ComponentId>,
 }
 
 #[derive(Clone, Copy, Default)]
 pub struct DevToolsState {
-    pub(crate) scroll_y: f32,
-    pub(crate) scroll_click: Option<(f32, f32)>
 }
 
 impl DevTools {
@@ -70,40 +68,12 @@ impl Element for DevTools {
         pointer: Option<Point>,
     ) {
         // background
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
-        let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
-
         self.draw_borders(renderer);
-
-        if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
-            renderer.push_layer(padding_rectangle);
-        }
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
             child.internal.draw(renderer, font_system, taffy_tree, child2, element_state, pointer);
         }
-
-        if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
-            renderer.pop_layer();
-        }
-
-        // scrollbar
-        let scroll_track_color = Color::rgba(100, 100, 100, 255);
-
-        // track
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_track,
-            scroll_track_color,
-        );
-
-        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
-
-        // thumb
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
-        );
         
         if let Some(hovered_inspector_element) = self.hovered_inspector_element {
 
@@ -185,20 +155,6 @@ impl Element for DevTools {
         
         self.finalize_borders();
 
-        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<DevToolsState>()
-        {
-            container_state.scroll_y
-        } else {
-            0.0
-        };
-
-        self.finalize_scrollbar(scroll_y);
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
-
         for child in self.common_element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
             if taffy_child_node_id.is_none() {
@@ -211,7 +167,7 @@ impl Element for DevTools {
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
                 z_index,
-                transform * child_transform,
+                transform,
                 font_system,
                 element_state,
                 pointer,
@@ -223,91 +179,10 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
-        let dev_tools_state = self.get_state_mut(element_state);
-
-        if self.style().overflow()[1] == taffy::Overflow::Scroll {
-            match message {
-                OkuMessage::MouseWheelEvent(mouse_wheel) => {
-                    let delta = match mouse_wheel.delta {
-                        MouseScrollDelta::LineDelta(_x, y) => y,
-                        MouseScrollDelta::PixelDelta(y) => y.y as f32,
-                    };
-                    let delta = -delta * self.common_element_data.style.font_size().max(12.0) * 1.2;
-                    let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                    dev_tools_state.scroll_y = (dev_tools_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-
-                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                }
-                OkuMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == MouseButton::Left {
-
-                        // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
-                        if let ButtonSource::Touch { .. } = pointer_button.button {
-                            let container_rectangle = self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle();
-
-                            let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position);
-
-                            if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
-                                dev_tools_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
-                                return UpdateResult::new().prevent_propagate().prevent_defaults();
-                            }
-                        }
-
-                        match pointer_button.state {
-                            ElementState::Pressed => {
-                                if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
-                                    dev_tools_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else if self.common_element_data.computed_scroll_track.contains(&pointer_button.position) {
-                                    let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
-
-                                    let percent = offset_y / self.common_element_data.computed_scroll_track.height;
-                                    let scroll_y = percent * self.common_element_data.max_scroll_y;
-
-                                    dev_tools_state.scroll_y = scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
-
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else {
-                                    UpdateResult::new()
-                                }
-                            }
-                            ElementState::Released => {
-                                dev_tools_state.scroll_click = None;
-                                UpdateResult::new().prevent_propagate().prevent_defaults()
-                            }
-                        }
-                    } else {
-                        UpdateResult::new()
-                    }
-                },
-                OkuMessage::PointerMovedEvent(pointer_motion) => {
-                    if let Some((click_x, click_y)) = dev_tools_state.scroll_click {
-                        // Todo: Translate scroll wheel pixel to scroll position for diff.
-                        let delta = pointer_motion.position.y as f32 - click_y;
-
-                        let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                        let mut delta = max_scroll_y * (delta / (self.common_element_data.computed_scroll_track.height - self.common_element_data.computed_scroll_thumb.height));
-
-                        // DEVICE(TOUCH): Reverse the direction on touch based input devices.
-                        if let PointerSource::Touch {..} = pointer_motion.source {
-                            delta = -delta;
-                        }
-
-                        dev_tools_state.scroll_y = (dev_tools_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-                        dev_tools_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
-                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                    } else {
-                        UpdateResult::new()
-                    }
-                },
-                _ => UpdateResult::new(),
-            }
-        } else {
-            UpdateResult::new()
-        }
+    fn on_event(&self, _message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+        let _dev_tools_state = self.get_state_mut(element_state);
+        
+        UpdateResult::default()
     }
 
     fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {

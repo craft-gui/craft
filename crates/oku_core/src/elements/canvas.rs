@@ -1,24 +1,19 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::UpdateResult;
-use crate::elements::element::{Element};
+use crate::components::props::Props;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
+use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
-use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderCommand};
+use crate::geometry::{Point, Rectangle};
 use crate::reactive::state_store::StateStore;
-use crate::style::{Style};
+use crate::renderer::color::Color;
+use crate::renderer::renderer::RenderCommand;
+use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta};
-use crate::elements::element_styles::ElementStyles;
-use crate::events::{Message, OkuMessage};
-use crate::events::OkuMessage::PointerButtonEvent;
-use crate::components::props::Props;
-use crate::elements::common_element_data::CommonElementData;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
 
-/// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
 pub struct Canvas {
     pub common_element_data: CommonElementData,
@@ -27,8 +22,6 @@ pub struct Canvas {
 
 #[derive(Clone, Copy, Default)]
 pub struct CanvasState {
-    pub(crate) scroll_y: f32,
-    pub(crate) scroll_click: Option<(f32, f32)>
 }
 
 impl Element for Canvas {
@@ -47,17 +40,16 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
-        element_state: &StateStore,
-        pointer: Option<Point>,
+        _font_system: &mut FontSystem,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        _element_state: &StateStore,
+        _pointer: Option<Point>,
     ) {
-        let border_color: Color = self.style().border_color()[0];
-
+        let _border_color: Color = self.style().border_color()[0];
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
-        let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
+        let _border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
+        let _content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         
         // background
         let computed_x_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.x;
@@ -82,7 +74,7 @@ impl Element for Canvas {
 
         for render_command in self.render_commands.iter() {
             match render_command {
-                RenderCommand::DrawRect(mut rectangle, color) => {
+                RenderCommand::DrawRect(rectangle, color) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
@@ -137,23 +129,6 @@ impl Element for Canvas {
         }
 
         renderer.pop_layer();
-
-        // scrollbar
-        let scroll_track_color = Color::rgba(100, 100, 100, 255);
-        
-        // track
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_track,
-            scroll_track_color,
-        );
-
-        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
-        
-        // thumb
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
-        );
     }
 
     fn compute_layout(
@@ -192,22 +167,7 @@ impl Element for Canvas {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(x, y, transform, result, z_index);
-        
         self.finalize_borders();
-        
-        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<CanvasState>()
-        {
-            container_state.scroll_y
-        } else {
-            0.0
-        };
-
-        self.finalize_scrollbar(scroll_y);
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
         
         for child in self.common_element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -221,7 +181,7 @@ impl Element for Canvas {
                 self.common_element_data.computed_layered_rectangle.position.x,
                 self.common_element_data.computed_layered_rectangle.position.y,
                 z_index,
-                transform * child_transform,
+                transform,
                 font_system,
                 element_state,
                 pointer,

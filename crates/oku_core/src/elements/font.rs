@@ -47,36 +47,36 @@ impl Element for Font {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
-        element_state: &StateStore,
-        pointer: Option<Point>,
+        _renderer: &mut RendererBox,
+        _font_system: &mut FontSystem,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        _element_state: &StateStore,
+        _pointer: Option<Point>,
     ) {
     }
 
     fn compute_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
         _element_state: &mut StateStore,
-        scale_factor: f64,
+        _scale_factor: f64,
     ) -> Option<NodeId> {
         None
     }
 
     fn finalize_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
-        x: f32,
-        y: f32,
-        z_index: &mut u32,
-        transform: glam::Mat4,
-        font_system: &mut FontSystem,
-        element_state: &mut StateStore,
-        pointer: Option<Point>,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        _x: f32,
+        _y: f32,
+        _z_index: &mut u32,
+        _transform: glam::Mat4,
+        _font_system: &mut FontSystem,
+        _element_state: &mut StateStore,
+        _pointer: Option<Point>,
     ) {
     }
 

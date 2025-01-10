@@ -52,7 +52,7 @@ impl Element for Container {
         pointer: Option<Point>,
     ) {
         // background
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
         self.draw_borders(renderer);
@@ -106,7 +106,7 @@ impl Element for Container {
                 child_nodes.push(child_node);   
             }
         }
-
+        
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
