@@ -90,7 +90,7 @@ impl Component for AniList {
             boxed
         });
 
-        if clicked(event.message) && Some("get_data") == event.target.as_deref() {
+        if clicked(&event.message) && Some("get_data") == event.target.as_deref() {
             return UpdateResult::default().future(get_ani_list_data);
         }
 

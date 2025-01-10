@@ -44,7 +44,7 @@ impl Component for Counter {
     }
 
     fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
-        if clicked(event.message) && event.target.is_some() {
+        if clicked(&event.message) && event.target.is_some() {
             match event.target.as_deref().unwrap() {
                 "increment" => state.count += 1,
                 "decrement" => state.count -= 1,

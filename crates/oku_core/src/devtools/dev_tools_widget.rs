@@ -20,9 +20,10 @@ use crate::elements::common_element_data::CommonElementData;
 #[derive(Clone, Default, Debug)]
 pub struct DevTools {
     pub common_element_data: CommonElementData,
+    /// The tree to inspect.
     pub(crate) debug_inspector_tree: Option<Box<dyn Element>>,
-    pub(crate) element_to_inspect: Option<ComponentId>,
-    pub(crate) inspector_hovered_element: Option<ComponentId>,
+    pub(crate) selected_inspector_element: Option<ComponentId>,
+    pub(crate) hovered_inspector_element: Option<ComponentId>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -32,16 +33,16 @@ pub struct DevToolsState {
 }
 
 impl DevTools {
-    pub fn push_inspector_root_element(mut self, root: &Box<dyn Element>) -> Self {
+    pub fn push_debug_inspector_tree(mut self, root: &Box<dyn Element>) -> Self {
         self.debug_inspector_tree = Some(root.clone());
         self
     }
-    pub fn push_element_to_inspect(mut self, element: Option<ComponentId>) -> Self {
-        self.element_to_inspect = element;
+    pub fn push_selected_inspector_element(mut self, element: Option<ComponentId>) -> Self {
+        self.selected_inspector_element = element;
         self
     }
-    pub fn push_inspector_hovered_element(mut self, element: Option<ComponentId>) -> Self {
-        self.inspector_hovered_element = element;
+    pub fn push_hovered_inspector_element(mut self, element: Option<ComponentId>) -> Self {
+        self.hovered_inspector_element = element;
         self
     }
 }
@@ -69,8 +70,7 @@ impl Element for DevTools {
         pointer: Option<Point>,
     ) {
         // background
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
 
         self.draw_borders(renderer);
@@ -104,27 +104,25 @@ impl Element for DevTools {
             self.common_element_data.computed_scroll_thumb,
             scrollthumb_color,
         );
-
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
-        );
         
-        if let Some(hovered_element) = self.inspector_hovered_element {
+        if let Some(hovered_inspector_element) = self.hovered_inspector_element {
 
-            let mut selected_element: Option<&dyn Element> = None;
-            let mut root = self.debug_inspector_tree.as_ref().unwrap();
+            let mut selected_inspector_element: Option<&dyn Element> = None;
+            let root = self.debug_inspector_tree.as_ref().unwrap();
 
+            // Find the hovered inspector element.
             for element in root.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
-                if element.component_id() != hovered_element {
+                if element.component_id() != hovered_inspector_element {
                     continue;
                 }
 
-                selected_element = Some(*Box::new(<&dyn Element>::clone(element)));
+                selected_inspector_element = Some(*Box::new(<&dyn Element>::clone(element)));
                 break;
             }
 
-            if let Some(selected_element) = selected_element {
+            // Highlight the selected element and draw their margin, padding, and content box.
+            if let Some(selected_element) = selected_inspector_element {
+                // FIXME: Make use of layers, so that the boxes only mix with the element's colors.
                 let content_box_highlight_color = Color::rgba(184, 226, 243, 125);
                 let padding_box_highlight_color = Color::rgba(102, 87, 166, 125);
                 let margin_box_highlight_color = Color::rgba(115, 118, 240, 50);
@@ -145,13 +143,7 @@ impl Element for DevTools {
                 renderer.pop_layer();
             }
         }
-
-
-        // thumb
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
-        );
+        
     }
 
     fn compute_layout(
@@ -337,8 +329,8 @@ impl DevTools {
         DevTools {
             debug_inspector_tree: None,
             common_element_data: Default::default(),
-            element_to_inspect: None,
-            inspector_hovered_element: None,
+            selected_inspector_element: None,
+            hovered_inspector_element: None,
         }
     }
 

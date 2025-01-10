@@ -42,7 +42,7 @@ impl Component for Accordion {
             return UpdateResult::default();
         }
 
-        if clicked(event.message) {
+        if clicked(&event.message) {
             state.show_content = !state.show_content
         }
 

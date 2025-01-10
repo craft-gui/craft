@@ -54,7 +54,7 @@ impl Component for EventsExample {
         event: Event,
     ) -> UpdateResult {
         
-        if clicked(event.message) {
+        if clicked(&event.message) {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }
 

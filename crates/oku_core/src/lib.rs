@@ -172,9 +172,7 @@ pub fn oku_wasm_init() {
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
-use crate::devtools::dev_tools_view;
-use crate::elements::{ElementStyles, Text};
-use crate::elements::element::ElementBox;
+use crate::devtools::dev_tools_component::dev_tools_view;
 use crate::geometry::{Point, Size};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;

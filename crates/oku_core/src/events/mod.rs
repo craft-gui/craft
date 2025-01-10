@@ -63,7 +63,7 @@ pub enum Message {
     UserMessage(Box<dyn Any>),
 }
 
-pub fn clicked(message: Message) -> bool {
+pub fn clicked(message: &Message) -> bool {
     if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message {
         if pointer_button.button.mouse_button() == MouseButton::Left
             && pointer_button.state == ElementState::Released
