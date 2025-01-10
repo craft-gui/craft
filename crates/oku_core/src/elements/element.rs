@@ -150,6 +150,21 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
     }
 
+    fn draw_children(&mut self, renderer: &mut RendererBox,
+                     font_system: &mut FontSystem,
+                     taffy_tree: &mut TaffyTree<LayoutContext>,
+                     element_state: &StateStore,
+                     pointer: Option<Point>) {
+        for child in self.common_element_data_mut().children.iter_mut() {
+            let taffy_child_node_id = child.internal.taffy_node_id();
+            // Skip non-visual elements.
+            if taffy_child_node_id.is_none() {
+                continue;
+            }
+            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
+        }
+    }
+    
     fn draw_borders(&self, renderer: &mut RendererBox) {
         let common_element_data = self.common_element_data();
         let computed_border_spec = &common_element_data.computed_border;

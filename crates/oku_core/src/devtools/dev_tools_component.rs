@@ -1,7 +1,7 @@
 use crate::components::props::Props;
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
-use crate::devtools::dev_tools_widget::DevTools;
+use crate::devtools::dev_tools_element::DevTools;
 use crate::devtools::element_tree_view::element_tree_view;
 use crate::devtools::style_window::styles_window_view;
 use crate::elements::element::Element;

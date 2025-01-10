@@ -15,7 +15,6 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
-use crate::elements::element_states::ElementState;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -27,6 +26,27 @@ pub struct Container {
 pub struct ContainerState {
     pub(crate) scroll_y: f32,
     pub(crate) scroll_click: Option<(f32, f32)>,
+}
+
+impl Container {
+    pub fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
+        // scrollbar
+        let scroll_track_color = Color::rgba(100, 100, 100, 255);
+
+        // track
+        renderer.draw_rect(
+            self.common_element_data.computed_scroll_track,
+            scroll_track_color,
+        );
+
+        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
+
+        // thumb
+        renderer.draw_rect(
+            self.common_element_data.computed_scroll_thumb,
+            scrollthumb_color,
+        );
+    }
 }
 
 impl Element for Container {
@@ -51,44 +71,19 @@ impl Element for Container {
         element_state: &StateStore,
         pointer: Option<Point>,
     ) {
-        // background
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
         self.draw_borders(renderer);
-        
         if self.common_element_data.current_style().overflow()[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
         }
-
-        for child in self.common_element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.taffy_node_id();
-            if taffy_child_node_id.is_none() {
-                continue;
-            }
-            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
-        }
-        
+       self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
         if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
             renderer.pop_layer();
         }
-
-        // scrollbar
-        let scroll_track_color = Color::rgba(100, 100, 100, 255);
         
-        // track
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_track,
-            scroll_track_color,
-        );
-
-        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
-        
-        // thumb
-        renderer.draw_rect(
-            self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
-        );
+        self.draw_scrollbar(renderer);
     }
 
     fn compute_layout(
@@ -242,7 +237,7 @@ impl Element for Container {
                         }
                         
                         container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-                        container_state.scroll_click = Some((click_x, pointer_motion.position.y as f32));
+                        container_state.scroll_click = Some((click_x, pointer_motion.position.y));
                         UpdateResult::new().prevent_propagate().prevent_defaults()
                     } else {
                         UpdateResult::new()

@@ -1,4 +1,4 @@
-mod dev_tools_widget;
+mod dev_tools_element;
 mod style_window;
 mod dev_tools_colors;
 mod element_tree_view;

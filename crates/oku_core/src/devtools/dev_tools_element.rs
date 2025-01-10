@@ -63,35 +63,31 @@ impl Element for DevTools {
         renderer: &mut RendererBox,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
+        _root_node: NodeId,
         element_state: &StateStore,
         pointer: Option<Point>,
     ) {
-        // background
         self.draw_borders(renderer);
-
-        for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
-            let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state, pointer);
-        }
+        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
         
-        if let Some(hovered_inspector_element) = self.hovered_inspector_element {
+        // Find the element we are hovering over and draw an overlay. 
+        if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
 
-            let mut selected_inspector_element: Option<&dyn Element> = None;
+            let mut hovered_inspector_element: Option<&dyn Element> = None;
             let root = self.debug_inspector_tree.as_ref().unwrap();
 
             // Find the hovered inspector element.
             for element in root.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
-                if element.component_id() != hovered_inspector_element {
+                if element.component_id() != hovered_inspector_element_component_id {
                     continue;
                 }
 
-                selected_inspector_element = Some(*Box::new(<&dyn Element>::clone(element)));
+                hovered_inspector_element = Some(*Box::new(<&dyn Element>::clone(element)));
                 break;
             }
 
-            // Highlight the selected element and draw their margin, padding, and content box.
-            if let Some(selected_element) = selected_inspector_element {
+            // Highlight the hovered element and draw their margin, padding, and content box.
+            if let Some(selected_element) = hovered_inspector_element {
                 // FIXME: Make use of layers, so that the boxes only mix with the element's colors.
                 let content_box_highlight_color = Color::rgba(184, 226, 243, 125);
                 let padding_box_highlight_color = Color::rgba(102, 87, 166, 125);
