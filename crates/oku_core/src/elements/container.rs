@@ -7,7 +7,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
-use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
@@ -68,7 +68,7 @@ impl Element for Container {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
@@ -90,7 +90,7 @@ impl Element for Container {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
@@ -117,7 +117,7 @@ impl Element for Container {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -129,7 +129,7 @@ impl Element for Container {
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
         let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.common_element_data.component_id).unwrap().downcast_ref::<ContainerState>()
+            element_state.storage.get(&self.common_element_data.component_id).unwrap().data.downcast_ref::<ContainerState>()
         {
             container_state.scroll_y
         } else {
@@ -163,7 +163,7 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let container_state = self.get_state_mut(element_state);
 
         if self.style().overflow()[1] == taffy::Overflow::Scroll {
@@ -250,19 +250,22 @@ impl Element for Container {
         }
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
-        Box::new(ContainerState::default())
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(ContainerState::default())
+        }
     }
 }
 
 impl Container {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a &ContainerState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &ContainerState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut ContainerState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ContainerState {
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> Container {

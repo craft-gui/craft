@@ -1,10 +1,10 @@
-use cosmic_text::FontSystem;
-use crate::components::ComponentSpecification;
-use crate::elements::{Container, Text};
 use crate::elements::element::ElementBox;
+use crate::elements::{Container, Text};
 use crate::reactive::element_id::reset_unique_element_id;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
+use cosmic_text::FontSystem;
+use crate::reactive::element_state_store::ElementStateStore;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
@@ -18,7 +18,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
     let root_element: ElementBox = Container::new().into();
 
     let mut user_state = StateStore::default();
-    let mut element_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
 
     let initial_tree = diff_trees(
         initial_view,
@@ -59,7 +59,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
 
     let root_element: ElementBox = Container::new().into();
     let mut user_state = StateStore::default();
-    let mut element_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
 
     let tree_1 = diff_trees(
         root_node_1,
@@ -100,7 +100,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
 
     let root_element: ElementBox = Container::new().into();
     let mut user_state = StateStore::default();
-    let mut element_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
 
     let tree_1 = diff_trees(
         root_node_1,

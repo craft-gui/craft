@@ -1,12 +1,12 @@
-use cosmic_text::FontSystem;
-use peniko::kurbo::BezPath;
-use tokio::sync::RwLockReadGuard;
 use crate::components::ComponentId;
 use crate::geometry::Rectangle;
-use crate::reactive::state_store::StateStore;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Renderer;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use cosmic_text::FontSystem;
+use peniko::kurbo::BezPath;
+use tokio::sync::RwLockReadGuard;
 
 pub struct BlankRenderer;
 
@@ -49,7 +49,7 @@ impl Renderer for BlankRenderer {
     fn pop_layer(&mut self) {
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
     }
 
     fn submit(&mut self) {

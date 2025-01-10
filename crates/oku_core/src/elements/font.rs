@@ -1,17 +1,15 @@
 use crate::components::component::ComponentSpecification;
-use crate::elements::element::{Element};
-use crate::elements::layout_context::{ImageContext, LayoutContext};
-use crate::renderer::color::Color;
-use crate::resource_manager::ResourceIdentifier;
-use crate::reactive::state_store::StateStore;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit, Weight};
-use crate::{generate_component_methods_no_children, RendererBox};
 use crate::components::props::Props;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
+use crate::elements::layout_context::LayoutContext;
+use crate::geometry::Point;
+use crate::reactive::element_state_store::ElementStateStore;
+use crate::resource_manager::ResourceIdentifier;
+use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use crate::elements::common_element_data::CommonElementData;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
 
 #[derive(Clone, Debug)]
 pub struct Font {
@@ -51,7 +49,7 @@ impl Element for Font {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &StateStore,
+        _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
     }
@@ -60,7 +58,7 @@ impl Element for Font {
         &mut self,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _scale_factor: f64,
     ) -> Option<NodeId> {
         None
@@ -75,7 +73,7 @@ impl Element for Font {
         _z_index: &mut u32,
         _transform: glam::Mat4,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
     }

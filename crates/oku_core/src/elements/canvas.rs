@@ -5,7 +5,7 @@ use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
-use crate::reactive::state_store::StateStore;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::RenderCommand;
 use crate::style::Style;
@@ -43,7 +43,7 @@ impl Element for Canvas {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &StateStore,
+        _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
         let _border_color: Color = self.style().border_color()[0];
@@ -135,7 +135,7 @@ impl Element for Canvas {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
@@ -162,7 +162,7 @@ impl Element for Canvas {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -196,12 +196,12 @@ impl Element for Canvas {
 
 impl Canvas {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a &CanvasState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &CanvasState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut CanvasState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut CanvasState {
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> Canvas {

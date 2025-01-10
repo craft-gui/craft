@@ -16,6 +16,7 @@ pub mod resource_manager;
 pub mod geometry;
 mod view_introspection;
 
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 
 pub use oku_runtime::OkuRuntime;
@@ -98,7 +99,7 @@ struct ReactiveTree {
     component_tree: Option<ComponentTreeNode>,
     update_queue: VecDeque<UpdateQueueEntry>,
     user_state: StateStore,
-    element_state: StateStore,
+    element_state: ElementStateStore,
 }
 
 
@@ -824,7 +825,7 @@ fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
 }
 
 fn layout<'a>(
-    element_state: &mut StateStore,
+    element_state: &mut ElementStateStore,
     _window_width: f32,
     _window_height: f32,
     font_system: &mut FontSystem,

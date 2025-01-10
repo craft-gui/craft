@@ -59,7 +59,7 @@ pub struct CommonElementData {
 }
 
 impl CommonElementData {
-    
+
     pub(crate) fn current_style_mut(&mut self) -> &mut Style {
         match self.current_state {
             ElementState::Normal => &mut self.style,

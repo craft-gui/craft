@@ -7,7 +7,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
-use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
@@ -64,7 +64,7 @@ impl Element for DevTools {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         self.draw_borders(renderer);
@@ -116,7 +116,7 @@ impl Element for DevTools {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
@@ -143,7 +143,7 @@ impl Element for DevTools {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -175,25 +175,28 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
         
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
-        Box::new(DevToolsState::default())
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(DevToolsState::default())
+        }
     }
 }
 
 impl DevTools {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a &DevToolsState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &DevToolsState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut DevToolsState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut DevToolsState {
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> DevTools {

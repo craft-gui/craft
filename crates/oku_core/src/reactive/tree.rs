@@ -1,3 +1,4 @@
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult};
 use crate::components::props::Props;
 use crate::elements::container::ContainerState;
@@ -72,7 +73,7 @@ pub(crate) fn diff_trees(
     mut root_element: ElementBox,
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut StateStore,
-    element_state: &mut StateStore,
+    element_state: &mut ElementStateStore,
     font_system: &mut FontSystem,
     reload_fonts: bool,
 ) -> (ComponentTreeNode, ElementBox) {
@@ -93,7 +94,10 @@ pub(crate) fn diff_trees(
         // Make sure to set a default state for the root.
         element_state.storage.insert(
             0,
-            Box::new(ContainerState::default()),
+            ElementStateStoreItem {
+                base: Default::default(),
+                data: Box::new(ContainerState::default())
+            },
         );
 
         let mut old_component_tree_as_ptr = old_component_tree.map(|old_root| old_root as *const ComponentTreeNode);
@@ -165,12 +169,18 @@ pub(crate) fn diff_trees(
                         if !element_state.storage.contains_key(&id) {
                             element_state.storage.insert(
                                 id,
-                                Box::new(ContainerState::default()),
+                                ElementStateStoreItem {
+                                    base: Default::default(),
+                                    data: Box::new(ContainerState::default())
+                                },
                             );
                         }
                     } else {
                         if !element_state.storage.contains_key(&id) {
-                            element_state.storage.insert(id, Box::new(()));
+                            element_state.storage.insert(id, ElementStateStoreItem {
+                                base: Default::default(),
+                                data: Box::new(())
+                            });
                         }
                     }
 

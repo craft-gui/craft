@@ -38,6 +38,7 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use cosmic_text::FontSystem;
+    use crate::reactive::element_state_store::ElementStateStore;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
@@ -54,7 +55,7 @@ mod tests {
         let root_element: ElementBox = Container::new().id("0").into();
 
         let mut user_state = StateStore::default();
-        let mut element_state = StateStore::default();
+        let mut element_state = ElementStateStore::default();
 
         let initial_tree =
             diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state, &mut font_system, false);

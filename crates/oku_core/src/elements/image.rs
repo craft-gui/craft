@@ -1,18 +1,17 @@
 use crate::components::component::ComponentSpecification;
-use crate::elements::element::{Element};
-use crate::elements::layout_context::{ImageContext, LayoutContext};
-use crate::renderer::color::Color;
-use crate::resource_manager::ResourceIdentifier;
-use crate::reactive::state_store::StateStore;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Weight};
-use crate::{generate_component_methods_no_children, RendererBox};
 use crate::components::props::Props;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
+use crate::elements::layout_context::{ImageContext, LayoutContext};
+use crate::elements::ElementStyles;
+use crate::geometry::Point;
+use crate::reactive::element_state_store::ElementStateStore;
+use crate::resource_manager::ResourceIdentifier;
+use crate::style::Style;
+use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use crate::elements::common_element_data::CommonElementData;
-use crate::elements::ElementStyles;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
 
 #[derive(Clone, Debug)]
 pub struct Image {
@@ -52,7 +51,7 @@ impl Element for Image {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &StateStore,
+        _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
         
@@ -71,7 +70,7 @@ impl Element for Image {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
@@ -97,7 +96,7 @@ impl Element for Image {
         z_index: &mut u32,
         transform: glam::Mat4,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();

@@ -1,23 +1,16 @@
-use crate::resource_manager::resource::Resource;
-use std::collections::HashMap;
-use cosmic_text::{Buffer, BufferRef, CacheKey, Edit, FontSystem, SwashCache};
-use cosmic_text::fontdb::ID;
-use image::{ColorType, DynamicImage, GenericImage, GrayImage, Luma};
-use tokio::sync::RwLockReadGuard;
-use wgpu::{MultisampleState, RenderPass};
-use wgpu::util::DeviceExt;
-use crate::components::ComponentId;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderCommand};
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::image::pipeline::{ImagePipeline, ImagePipelineConfig, DEFAULT_IMAGE_PIPELINE_CONFIG};
 use crate::renderer::wgpu::image::vertex::ImageVertex;
-use crate::renderer::wgpu::rectangle::{ImagePerFrameData, PerFrameData};
-use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
+use crate::renderer::wgpu::rectangle::ImagePerFrameData;
 use crate::renderer::wgpu::texture::Texture;
+use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
+use std::collections::HashMap;
+use tokio::sync::RwLockReadGuard;
+use wgpu::util::DeviceExt;
+use wgpu::RenderPass;
 
 pub struct ImageBatch {
     texture_path: Option<ResourceIdentifier>,

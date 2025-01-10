@@ -1,5 +1,6 @@
 mod text;
 
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
@@ -7,14 +8,12 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
-use cosmic_text::{Edit, FontSystem};
+use cosmic_text::{FontSystem};
 use std::collections::HashMap;
 use std::sync::Arc;
 use peniko::Font;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
-use unicode_segmentation::UnicodeSegmentation;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
@@ -213,7 +212,7 @@ impl Renderer for VelloRenderer<'_> {
         }
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
 
         for command in self.render_commands.drain(..) {
             match command {
@@ -248,7 +247,7 @@ impl Renderer for VelloRenderer<'_> {
                     let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
 
                     if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
                         let buffer_glyphs = text::create_glyphs_for_editor(editor,
@@ -293,7 +292,7 @@ impl Renderer for VelloRenderer<'_> {
                             }
                         }
                     } else if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>()
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
                         let buffer = &text_context.buffer;
                         let buffer_glyphs = text::create_glyphs(buffer, fill_color.into(), None);

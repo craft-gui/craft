@@ -1,10 +1,11 @@
+use std::any::Any;
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
-use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, FontSystem, Metrics, Motion, Shaping};
+use cosmic_text::{FontSystem, Metrics};
 use taffy::Size;
 use tokio::sync::RwLockReadGuard;
 
@@ -97,7 +98,7 @@ pub(crate) enum LayoutContext {
 }
 
 pub fn measure_content(
-    element_state: &mut StateStore,
+    element_state: &mut ElementStateStore,
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
@@ -112,7 +113,7 @@ pub fn measure_content(
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().downcast_mut().unwrap();
+            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
             text_state.measure(
                 known_dimensions,
@@ -128,7 +129,7 @@ pub fn measure_content(
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().downcast_mut().unwrap();
+            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
             text_input_state.measure(
                 known_dimensions,

@@ -8,21 +8,20 @@ mod image;
 pub(crate) mod texture;
 
 use crate::components::component::ComponentId;
+use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::renderer::wgpu::camera::Camera;
-use crate::renderer::wgpu::context::{ create_surface_config, request_adapter, request_device_and_queue, Context };
+use crate::renderer::wgpu::context::{create_surface_config, request_adapter, request_device_and_queue, Context};
+use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
+use crate::renderer::wgpu::image::image::ImageRenderer;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
-use std::sync::Arc;
 use peniko::kurbo::BezPath;
+use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
 use winit::window::Window;
-use crate::geometry::Rectangle;
-use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
-use crate::renderer::wgpu::image::image::ImageRenderer;
 
 use crate::renderer::wgpu::rectangle::RectangleRenderer;
 use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
@@ -150,7 +149,7 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
 
         let render_commands_len = self.render_commands.len();
 
@@ -256,7 +255,7 @@ fn draw(
         context: &mut Context,
         render_pass: &mut RenderPass,
         font_system: &mut FontSystem,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         resource_manager: &RwLockReadGuard<ResourceManager>,
         rectangle_renderer: &mut RectangleRenderer,
         text_renderer: &mut TextRenderer,

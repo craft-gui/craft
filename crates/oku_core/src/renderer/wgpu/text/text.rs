@@ -2,7 +2,6 @@ use crate::components::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
-use crate::reactive::state_store::StateStore;
 use crate::renderer::color::Color;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::rectangle::PerFrameData;
@@ -57,7 +56,7 @@ impl TextRenderer {
         });
     }
 
-    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &StateStore) -> PerFrameData {
+    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> PerFrameData {
 
         for text_area in self.text_areas.iter() { 
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {

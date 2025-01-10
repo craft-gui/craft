@@ -13,6 +13,7 @@ pub(crate) mod element_styles;
 pub(crate) mod font;
 pub(crate) mod element_states;
 pub(crate) mod common_element_data;
+pub(crate) mod base_element_state;
 
 pub use crate::elements::container::Container;
 pub use crate::elements::image::Image;

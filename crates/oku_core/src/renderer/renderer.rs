@@ -1,11 +1,11 @@
 use crate::components::component::ComponentId;
+use crate::geometry::Rectangle;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use crate::reactive::state_store::StateStore;
 use cosmic_text::FontSystem;
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
-use crate::geometry::Rectangle;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -53,7 +53,7 @@ pub trait Renderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
     );
     
     fn submit(&mut self);

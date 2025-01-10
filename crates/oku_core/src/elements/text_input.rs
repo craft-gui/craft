@@ -1,19 +1,20 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::components::props::Props;
 use crate::components::UpdateResult;
+use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{
     AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
 };
-use crate::elements::text::{TextHashValue, TextState};
+use crate::elements::text::TextHashValue;
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
-use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::geometry::Point;
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
-use crate::style::{FontStyle, Style, Unit};
+use crate::style::{Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Action, Buffer, Cursor, Motion, Selection, Shaping};
+use cosmic_text::{Action, Buffer, Motion, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
 use cosmic_text::{Edit, Family, Weight};
 use rustc_hash::FxHasher;
@@ -22,9 +23,7 @@ use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
-use winit::event::KeyEvent;
 use winit::keyboard::{Key, NamedKey};
-use crate::elements::common_element_data::CommonElementData;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -192,8 +191,8 @@ impl TextInput {
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a TextInputState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextInputState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 }
 
@@ -220,7 +219,7 @@ impl Element for TextInput {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
@@ -241,7 +240,7 @@ impl Element for TextInput {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let font_size = PhysicalPosition::from_logical(
@@ -274,13 +273,14 @@ impl Element for TextInput {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
+            .data
             .as_mut()
             .downcast_mut()
             .unwrap();
@@ -314,13 +314,14 @@ impl Element for TextInput {
     fn on_event(
         &self,
         message: OkuMessage,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
+            .data
             .as_mut()
             .downcast_mut()
             .unwrap();
@@ -435,7 +436,7 @@ impl Element for TextInput {
         res
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
+    fn initialize_state(&self, font_system: &mut FontSystem) -> ElementStateStoreItem {
         let font_size = self.common_element_data.style.font_size();
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
@@ -473,14 +474,18 @@ impl Element for TextInput {
             attributes.weight,
         );
 
-        Box::new(cosmic_text_content)
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(cosmic_text_content)
+        }
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore, reload_fonts: bool) {
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
             .unwrap()
+            .data
             .as_mut()
             .downcast_mut()
             .unwrap();

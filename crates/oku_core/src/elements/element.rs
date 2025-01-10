@@ -1,20 +1,19 @@
-use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
-use crate::components::props::Props;
+use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::UpdateResult;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_states::ElementState;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
-use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use crate::geometry::borders::BorderSpec;
 use crate::geometry::side::Side;
 use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
-use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, TaffyTree};
-use crate::elements::common_element_data::CommonElementData;
-use crate::elements::element_states::ElementState;
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -80,7 +79,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         pointer: Option<Point>,
     );
 
@@ -88,7 +87,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId>;
 
@@ -105,7 +104,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     );
 
@@ -114,7 +113,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn on_event(
         &self,
         _message: OkuMessage,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _font_system: &mut FontSystem,
     ) -> UpdateResult {
         UpdateResult::default()
@@ -153,7 +152,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw_children(&mut self, renderer: &mut RendererBox,
                      font_system: &mut FontSystem,
                      taffy_tree: &mut TaffyTree<LayoutContext>,
-                     element_state: &StateStore,
+                     element_state: &ElementStateStore,
                      pointer: Option<Point>) {
         for child in self.common_element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -187,19 +186,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         renderer.fill_bez_path(border_right_path, right.color);
         renderer.fill_bez_path(border_bottom_path, bottom.color);
         renderer.fill_bez_path(border_left_path, left.color);
-    }
-
-    fn finalize_state(&mut self, pointer: Option<Point>) {
-        let common_element_data = self.common_element_data_mut();
-        common_element_data.current_state = ElementState::Normal;
-        
-        let border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
-
-        if let Some(pointer) = pointer {
-            if border_rectangle.contains(&pointer) {
-                common_element_data.current_state = ElementState::Hovered;
-            }
-        }
     }
 
     fn finalize_borders(&mut self) {
@@ -268,12 +254,33 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called when the element is assigned a unique component id.
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
-        Box::new(())
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(())
+        }
+    }
+
+    fn finalize_state<'a>(&mut self, element_state: &'a mut ElementStateStore, pointer: Option<Point>) {
+        let common_element_data = self.common_element_data_mut();
+        let element_state = element_state.storage.get_mut(&common_element_data.component_id).unwrap();
+        element_state.base.current_state = ElementState::Normal;
+
+        let border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+
+        if let Some(pointer) = pointer {
+            if border_rectangle.contains(&pointer) {
+                element_state.base.current_state = ElementState::Hovered;
+            }
+        }
+    }
+    
+    fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
+        element_state.storage.get_mut(&self.common_element_data().component_id).unwrap()
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut StateStore, reload_fonts: bool) {}
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, reload_fonts: bool) {}
 }
 
 impl<T: Element> From<T> for ElementBox {

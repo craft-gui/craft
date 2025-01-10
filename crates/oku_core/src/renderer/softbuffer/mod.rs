@@ -2,14 +2,12 @@ use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
-use crate::reactive::state_store::StateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::{FontSystem, SwashCache};
 use image::EncodableLayout;
-use log::info;
 use peniko::kurbo::BezPath;
 use softbuffer::Buffer;
 use std::num::NonZeroU32;
@@ -182,7 +180,7 @@ impl Renderer for SoftwareRenderer {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &StateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
         let framebuffer = self.framebuffer.last_mut().unwrap();
         let framebuffer = &mut framebuffer.0;
 

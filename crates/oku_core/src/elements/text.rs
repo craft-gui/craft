@@ -2,7 +2,7 @@ use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
 use crate::elements::ElementStyles;
-use crate::reactive::state_store::{StateStore, StateStoreItem};
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight};
@@ -15,7 +15,7 @@ use winit::dpi::{LogicalPosition, PhysicalPosition};
 
 use crate::components::props::Props;
 use crate::elements::common_element_data::CommonElementData;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Size};
+use crate::geometry::Point;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -173,12 +173,12 @@ impl Text {
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a StateStore) -> &'a TextState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().as_ref().downcast_ref().unwrap()
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut StateStore) -> &'a mut TextState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().as_mut().downcast_mut().unwrap()
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut TextState {
+        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 }
 
@@ -205,7 +205,7 @@ impl Element for Text {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &StateStore,
+        element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
@@ -226,7 +226,7 @@ impl Element for Text {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
@@ -260,7 +260,7 @@ impl Element for Text {
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
-        element_state: &mut StateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
         let text_context = self.get_state_mut(element_state);
@@ -288,7 +288,7 @@ impl Element for Text {
         self
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem) -> Box<StateStoreItem> {
+    fn initialize_state(&self, font_system: &mut FontSystem) -> ElementStateStoreItem {
         let metrics = Metrics::new(12.0, 12.0);
 
         let mut attributes = Attrs::new();
@@ -317,10 +317,13 @@ impl Element for Text {
             attributes.weight,
         );
 
-        Box::new(state)
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(state)
+        }
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut StateStore, reload_fonts: bool) {
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
 
         let mut text_hasher = FxHasher::default();

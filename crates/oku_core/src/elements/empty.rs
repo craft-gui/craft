@@ -1,12 +1,12 @@
-use crate::elements::element::{Element};
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::Element;
 use crate::elements::layout_context::LayoutContext;
-use crate::reactive::state_store::StateStore;
+use crate::geometry::Point;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use crate::elements::common_element_data::CommonElementData;
-use crate::geometry::Point;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -41,7 +41,7 @@ impl Element for Empty {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &StateStore,
+        _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
     }
@@ -50,7 +50,7 @@ impl Element for Empty {
         &mut self,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _scale_factor: f64,
     ) -> Option<NodeId> {
         None
@@ -65,7 +65,7 @@ impl Element for Empty {
         _z_index: &mut u32,
         _transform: glam::Mat4,
         _font_system: &mut FontSystem,
-        _element_state: &mut StateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
     }
