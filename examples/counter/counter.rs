@@ -1,6 +1,7 @@
 #[path = "../util.rs"]
 mod util;
 
+use crate::util::setup_logging;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
 use oku::oku_main_with_options;
@@ -87,7 +88,7 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
 
 #[cfg(not(target_os = "android"))]
 fn main() {
-    crate::request::util::setup_logging;
+    setup_logging;
 
     oku_main_with_options(
         Counter::component(),

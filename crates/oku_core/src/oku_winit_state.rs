@@ -30,9 +30,6 @@ use crate::renderer::softbuffer::SoftwareRenderer;
 use crate::renderer::wgpu::WgpuRenderer;
 
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
-use futures::channel::mpsc::{Receiver, Sender};
-use futures::SinkExt;
-use futures::StreamExt;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
@@ -42,6 +39,9 @@ use winit::window::{Window, WindowId};
 
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
+
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Sender;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
@@ -262,7 +262,7 @@ impl OkuWinitState {
             self.runtime.borrow_tokio_runtime().block_on(async {
                 self.app_sender.send(app_message).await.expect("send failed");
                 if blocking {
-                    if let Some(response) = self.winit_receiver.next().await {
+                    if let Some(response) = self.winit_receiver.recv().await {
                         if let InternalMessage::Confirmation = response.data {
                             assert_eq!(response.id, self.id, "Expected response message with id {}", self.id);
                         } else {

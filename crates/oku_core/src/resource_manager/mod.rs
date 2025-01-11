@@ -14,14 +14,12 @@ use crate::resource_manager::resource_data::ResourceData;
 use crate::resource_manager::resource_type::ResourceType;
 use ::image::ImageReader;
 use cosmic_text::fontdb;
-use futures::channel::mpsc::Sender;
-use futures::SinkExt;
 use std::any::Any;
 use std::collections::{HashMap, VecDeque};
-use std::fs;
 use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
+use tokio::sync::mpsc::Sender;
 use oku_logging::info;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;

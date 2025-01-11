@@ -9,7 +9,6 @@ resolver = "2"
 
 oku_logging = { path = "../oku_logger" }
 
-futures = {version = "0.3.31", default-features = false, features = ["std", "async-await"]}
 winit = { git = "https://github.com/rust-windowing/winit", rev="6896de5b73817a51c2e9311a52a571b400411602" }
 taffy = { version = "0.7.5", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 

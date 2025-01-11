@@ -35,10 +35,6 @@ use events::Message;
 use renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
 
-use futures::channel::mpsc::channel;
-use futures::channel::mpsc::Receiver;
-use futures::channel::mpsc::Sender;
-
 #[cfg(target_arch = "wasm32")]
 use {std::cell::RefCell, web_time as time};
 
@@ -55,7 +51,6 @@ use std::time;
 use cfg_if::cfg_if;
 use components::component::{ComponentId, ComponentSpecification};
 use cosmic_text::FontSystem;
-use futures::{SinkExt, StreamExt};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::VecDeque;
@@ -65,7 +60,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::sync::{RwLock, RwLockReadGuard};
-
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use reactive::element_id::reset_unique_element_id;
 use reactive::fiber_node::FiberNode;
 use winit::dpi::PhysicalSize;
@@ -269,7 +264,7 @@ async fn async_main(
 
     info!("starting main event loop");
     loop {
-        if let Some(app_message) = app_receiver.next().await {
+        if let Some(app_message) = app_receiver.recv().await {
             let mut dummy_message = AppMessage::new(app_message.id, InternalMessage::Confirmation);
             dummy_message.blocking = app_message.blocking;
 
