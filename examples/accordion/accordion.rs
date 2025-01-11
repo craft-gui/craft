@@ -1,8 +1,9 @@
+#[path = "../util.rs"]
+mod util;
+
 use oku::components::ComponentSpecification;
 use oku::elements::{Container, Text};
-
 use oku::{oku_main_with_options, OkuOptions};
-
 use oku::components::{Component, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::events::Event;
@@ -10,6 +11,7 @@ use oku::style::FlexDirection;
 use oku::style::Unit;
 use oku::events::clicked;
 use oku::RendererType;
+use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -51,9 +53,7 @@ impl Component for Accordion {
 }
 
 fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO) // Set the maximum log level you want to capture
-        .init();
+    setup_logging();
 
     oku_main_with_options(
         Container::new().push_children(vec![Accordion::component(), Accordion::component()]).component(),

@@ -33,7 +33,6 @@ use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::SinkExt;
 use futures::StreamExt;
-use log::info;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
@@ -46,6 +45,7 @@ use web_time as time;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use oku_logging::info;
 use crate::geometry::Size;
 use crate::RendererType::Blank;
 
@@ -96,7 +96,7 @@ impl ApplicationHandler for OkuWinitState {
         info!("Created window");
 
         self.window = Some(window.clone());
-        info!("started Created renderer");
+        info!("Creating renderer");
         info!("Using {} renderer.", self.oku_options.renderer);
         #[cfg(target_arch = "wasm32")]
         {

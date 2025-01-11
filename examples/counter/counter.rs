@@ -1,13 +1,16 @@
+#[path = "../util.rs"]
+mod util;
+
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
 use oku::oku_main_with_options;
 use oku::style::{AlignItems, FlexDirection, JustifyContent};
 use oku::OkuOptions;
 use oku::events::{clicked, Event};
-
 use oku::elements::ElementStyles;
 use oku::style::Display;
 use oku::renderer::color::Color;
+use oku::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -84,8 +87,7 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
 
 #[cfg(not(target_os = "android"))]
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    crate::request::util::setup_logging;
 
     oku_main_with_options(
         Counter::component(),
@@ -98,14 +100,12 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku::RendererType;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    setup_logging();
 
     oku_main_with_options(
         Counter::component(),

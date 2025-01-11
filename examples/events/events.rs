@@ -1,5 +1,7 @@
-use oku::elements::ElementStyles;
+#[path = "../util.rs"]
+mod util;
 
+use oku::elements::ElementStyles;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
 use oku::oku_main_with_options;
@@ -10,6 +12,7 @@ use oku::events::Event;
 use oku::events::clicked;
 use oku::renderer::color::Color;
 use oku::RendererType;
+use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {
@@ -63,8 +66,7 @@ impl Component for EventsExample {
 }
 
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    setup_logging();
 
     oku_main_with_options(
         EventsExample::component(),

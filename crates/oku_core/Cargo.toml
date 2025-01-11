@@ -7,6 +7,8 @@ resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 
+oku_logging = { path = "../oku_logger" }
+
 futures = {version = "0.3.31", default-features = false, features = ["std", "async-await"]}
 winit = { git = "https://github.com/rust-windowing/winit", rev="6896de5b73817a51c2e9311a52a571b400411602" }
 taffy = { version = "0.7.5", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
@@ -29,7 +31,6 @@ peniko = "0.3.0"
 
 cfg-if = "1.0.0"
 chrono = "0.4.39"
-log = "0.4.22"
 bitflags = "2.7.0"
 
 [dependencies.cosmic-text]
@@ -59,7 +60,6 @@ optional = true
 accesskit_winit = { version = "0.23.1" }
 web-time = "1.1.0"
 getrandom = { version = "0.2", features = ["js"] }
-console_error_panic_hook = "0.1.7"
 wasm-bindgen = "0.2.99"
 wasm-bindgen-futures = "0.4.49"
 web-sys = { version = "0.3.76", features = [
@@ -67,13 +67,10 @@ web-sys = { version = "0.3.76", features = [
     "Window",
     "Element",
 ] }
-
-console_log = "1.0"
 tokio = { version = "1.42.0", default-features = false, features = ["sync"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.42.0", default-features = false, features = ["rt-multi-thread", "sync"] }
-tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes"] }
 
 
 [target.'cfg(not(target_os = "android"))'.dependencies.softbuffer]

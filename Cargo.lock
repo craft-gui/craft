@@ -672,16 +672,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "console_log"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be8aed40e4edbf4d3b4431ab260b63fdc40f5780a4766824329ea0f1eefe3c0f"
-dependencies = [
- "log",
- "web-sys",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2285,7 +2275,7 @@ dependencies = [
 name = "oku"
 version = "0.1.0"
 dependencies = [
- "log",
+ "console_error_panic_hook",
  "oku",
  "oku_core",
  "oku_dylib",
@@ -2294,6 +2284,8 @@ dependencies = [
  "serde_json",
  "tracing",
  "tracing-subscriber",
+ "tracing-web",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2305,14 +2297,12 @@ dependencies = [
  "bytemuck",
  "cfg-if",
  "chrono",
- "console_error_panic_hook",
- "console_log",
  "cosmic-text",
  "futures",
  "getrandom",
  "glam",
  "image",
- "log",
+ "oku_logging",
  "peniko",
  "reqwest",
  "rustc-hash 2.1.0",
@@ -2320,7 +2310,6 @@ dependencies = [
  "taffy",
  "tiny-skia 0.11.4 (git+https://github.com/RazrFalcon/tiny-skia?rev=cf6530d4b58ebb059684b446f54794b91ccc96a1)",
  "tokio",
- "tracing",
  "unicode-segmentation",
  "vello",
  "wasm-bindgen",
@@ -2336,6 +2325,13 @@ name = "oku_dylib"
 version = "0.1.0"
 dependencies = [
  "oku_core",
+]
+
+[[package]]
+name = "oku_logging"
+version = "0.1.0"
+dependencies = [
+ "tracing",
 ]
 
 [[package]]
@@ -3605,6 +3601,19 @@ dependencies = [
  "thread_local",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tracing-web"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e6a141feebd51f8d91ebfd785af50fca223c570b86852166caa3b141defe7c"
+dependencies = [
+ "js-sys",
+ "tracing-core",
+ "tracing-subscriber",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

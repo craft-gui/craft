@@ -1,3 +1,6 @@
+#[path = "../util.rs"]
+mod util;
+
 use oku::components::ComponentSpecification;
 use oku::components::{Component, UpdateResult};
 use oku::elements::text_input::TextInput;
@@ -10,6 +13,7 @@ use oku::events::Message;
 use oku::events::{Event, OkuMessage};
 use oku::RendererType;
 use oku::resource_manager::ResourceIdentifier;
+use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -41,8 +45,7 @@ impl Component for TextState {
 }
 
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    setup_logging();
 
     oku_main_with_options(
         TextState::component(),

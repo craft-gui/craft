@@ -1,5 +1,12 @@
 mod ani_list;
 
+#[path = "../util.rs"]
+mod util;
+
+use crate::util::setup_logging;
+use crate::ani_list::{anime_view, AniListResponse, QUERY};
+use crate::AniListMessage::StateChange;
+
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
 use oku::events::{Event, Message};
@@ -7,11 +14,12 @@ use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::{PinnedFutureAny, RendererType};
-
-use reqwest::Client;
-
 use oku::elements::ElementStyles;
 use oku::style::{Display, Overflow, Unit, Wrap};
+use oku::events::clicked;
+use oku::Color;
+
+use reqwest::Client;
 use serde_json::json;
 
 use std::any::Any;
@@ -127,8 +135,7 @@ impl Component for AniList {
 
 #[cfg(not(target_os = "android"))]
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    setup_logging();
 
     oku_main_with_options(
         AniList::component(),
@@ -139,19 +146,14 @@ fn main() {
     );
 }
 
-use crate::ani_list::{anime_view, AniListResponse, QUERY};
-use crate::AniListMessage::StateChange;
-use oku::events::clicked;
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku::Color;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    #[cfg(not(target_arch = "wasm32"))]
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    setup_logging();
 
     oku_main_with_options(
         AniList::component(),

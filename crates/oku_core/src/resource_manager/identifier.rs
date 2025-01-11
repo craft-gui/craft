@@ -7,7 +7,6 @@ use crate::resource_manager::ResourceIdentifier::{File};
 use crate::resource_manager::ResourceIdentifier::{Url};
 
 use image::ImageReader;
-use log::{info, warn};
 use std::{fmt, fs};
 use std::fmt::Display;
 use std::path::{Path, PathBuf};

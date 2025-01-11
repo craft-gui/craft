@@ -40,7 +40,7 @@ use futures::channel::mpsc::Receiver;
 use futures::channel::mpsc::Sender;
 
 #[cfg(target_arch = "wasm32")]
-use {log::info, std::cell::RefCell, web_time as time};
+use {std::cell::RefCell, web_time as time};
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
@@ -66,9 +66,6 @@ use std::time::Instant;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::sync::{RwLock, RwLockReadGuard};
 
-#[cfg(not(target_arch = "wasm32"))]
-use tracing::info;
-
 use reactive::element_id::reset_unique_element_id;
 use reactive::fiber_node::FiberNode;
 use winit::dpi::PhysicalSize;
@@ -87,6 +84,7 @@ use events::internal::InternalMessage;
 
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
+use oku_logging::info;
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
@@ -155,9 +153,6 @@ impl App {
 
 #[cfg(target_os = "android")]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>, app: AndroidApp) {
-    #[cfg(target_arch = "wasm32")]
-    oku_wasm_init();
-
     info!("Oku started");
 
     info!("Created winit event loop");
@@ -165,12 +160,6 @@ pub fn oku_main_with_options(application: ComponentSpecification, options: Optio
     let event_loop =
         EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
     oku_main_with_options_2(event_loop, application, options)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn oku_wasm_init() {
-    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-    console_log::init().expect("could not initialize logger");
 }
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
@@ -182,9 +171,6 @@ use crate::view_introspection::scan_view_for_resources;
 
 #[cfg(not(target_os = "android"))]
 pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
-    #[cfg(target_arch = "wasm32")]
-    oku_wasm_init();
-
     info!("Oku started");
 
     info!("Creating winit event loop.");
@@ -293,7 +279,8 @@ async fn async_main(
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Close => {
-                    info!("Closing");
+                    info!("Oku Closing");
+
                     send_response(dummy_message, &mut app.winit_sender).await;
                     break;
                 }

@@ -191,7 +191,7 @@ impl Default for Style {
             font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: if cfg!(any(taros = "android", taros = "ios")) {
+            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
                 0.0
             } else {
                 15.0
