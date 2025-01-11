@@ -9,8 +9,7 @@ resolver = "2"
 
 futures = {version = "0.3.31", default-features = false, features = ["std", "async-await"]}
 winit = { git = "https://github.com/rust-windowing/winit", rev="6896de5b73817a51c2e9311a52a571b400411602" }
-cosmic-text = { version = "0.12.1", default-features = false, features = ["std", "fontconfig"] }
-taffy = { version = "0.7.1", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
+taffy = { version = "0.7.5", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
 # Add at the next stable release.
 #accesskit = "0.17.1"
@@ -31,7 +30,13 @@ peniko = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.39"
 log = "0.4.22"
-bitflags = "1.3.2"
+bitflags = "2.7.0"
+
+[dependencies.cosmic-text]
+git = "https://github.com/pop-os/cosmic-text"
+rev = "166b59f560c551dab391a864f7c1f503c1e18446"
+default-features = false
+features = ["std", "fontconfig"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello"

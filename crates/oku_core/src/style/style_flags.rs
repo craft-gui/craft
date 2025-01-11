@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 
 bitflags! {
+    #[derive(Clone, Copy, Debug)]
     pub struct StyleFlags: u128 {
         const FONT_FAMILY_LENGTH = 1 << 0;
         const FONT_FAMILY = 1 << 1;
