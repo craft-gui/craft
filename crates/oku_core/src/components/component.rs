@@ -26,22 +26,22 @@ pub struct UpdateResult {
 impl UpdateResult {
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn AsyncResult<T: Send + 'static>(t: T) -> Box<dyn Any + Send + 'static> {
+    pub fn async_result<T: Send + 'static>(t: T) -> Box<dyn Any + Send + 'static> {
         Box::new(t)
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn AsyncResult<T: 'static>(t: T) -> Box<dyn Any + 'static> {
+    pub fn async_result<T: 'static>(t: T) -> Box<dyn Any + 'static> {
         Box::new(t)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn AsyncNoResult() -> Box<dyn Any + Send + 'static> {
+    pub fn async_no_result() -> Box<dyn Any + Send + 'static> {
         Box::new(())
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn AsyncNoResult() -> Box<dyn Any + 'static> {
+    pub fn async_no_result() -> Box<dyn Any + 'static> {
         Box::new(())
     }
 

@@ -101,19 +101,19 @@ impl Component for AniList {
 
             if let Err(response) = response {
                 tracing::error!("Error fetching data: {:?}", response);
-                return UpdateResult::AsyncResult(StateChange(State::Error));
+                return UpdateResult::async_result(StateChange(State::Error));
             }
 
             let result: Result<AniListResponse, reqwest::Error> = response.unwrap().json().await;
 
             if let Err(response) = &result {
                 tracing::error!("Error parsing data: {:?}", response);
-                return UpdateResult::AsyncResult(StateChange(State::Error));
+                return UpdateResult::async_result(StateChange(State::Error));
             }
 
             let result = result.unwrap();
             tracing::info!("Loaded data: ");
-            UpdateResult::AsyncResult(StateChange(State::Loaded(result)))
+            UpdateResult::async_result(StateChange(State::Loaded(result)))
         };
 
         if state.state != State::Loading && clicked(&event.message) && Some("get_data") == event.target.as_deref() {
