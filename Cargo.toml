@@ -17,10 +17,10 @@ tinyskia_renderer = ["oku_core/tinyskia_renderer"]
 vello_renderer = ["oku_core/vello_renderer"]
 wgpu_renderer = ["oku_core/wgpu_renderer"]
 
+
 [dependencies]
 oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = true, version = "0.1.0"  }
 oku_core = { path = "crates/oku_core", default-features = false, version = "0.1.0" }
-wasm-bindgen = "0.2.99"
 
 [dev-dependencies]
 oku = { path = ".", version = "0.1.0" }
