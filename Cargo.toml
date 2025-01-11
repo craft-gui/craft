@@ -32,7 +32,7 @@ log = "0.4.22"
 [dev-dependencies.reqwest]
 version = "0.12.9"
 default-features = false
-features = ["rustls-tls"]
+features = ["rustls-tls", "json"]
 
 [workspace]
 resolver = "2"

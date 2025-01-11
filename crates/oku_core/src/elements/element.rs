@@ -451,6 +451,15 @@ macro_rules! generate_component_methods {
 
             self
         }
+        
+        pub fn extend_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
+
+            self
+        }
 
         pub fn normal(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;

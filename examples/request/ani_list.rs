@@ -5,23 +5,23 @@ use oku::resource_manager::ResourceIdentifier;
 use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
 use oku_core::style::Unit;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct AniListResponse {
     pub data: Data,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Data {
     #[serde(rename(deserialize = "Page"))]
     pub page: Page,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Page {
     pub media: Vec<Media>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Media {
     pub id: u32,
     pub title: Title,
@@ -29,14 +29,14 @@ pub struct Media {
     pub cover_image: CoverImage,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Title {
     pub english: Option<String>,
     pub native: Option<String>,
     pub romaji: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct CoverImage {
     pub large: String,
 }

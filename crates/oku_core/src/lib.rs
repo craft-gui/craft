@@ -88,11 +88,13 @@ use events::internal::InternalMessage;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
-#[cfg(not(target_arch = "wasm32"))]
-pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any + Send>> + Send>>;
 #[cfg(target_arch = "wasm32")]
-pub type PinnedFutureAny = Pin<Box<dyn Future<Output = Box<dyn Any>> + 'static>>;
+pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub type FutureAny = dyn Future<Output = Box<dyn Any + Send>> + 'static + Send;
+
+pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
 struct ReactiveTree {
     element_tree: Option<Box<dyn Element>>,

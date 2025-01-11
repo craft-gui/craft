@@ -2,8 +2,9 @@ use crate::components::props::Props;
 use crate::elements::element::{Element, ElementBox};
 use crate::events::{Event, OkuMessage};
 use crate::reactive::state_store::StateStoreItem;
-use crate::PinnedFutureAny;
+use crate::{FutureAny, PinnedFutureAny};
 use std::any::{Any, TypeId};
+use std::future::Future;
 use std::ops::Deref;
 
 /// A Component's view function.
@@ -22,6 +23,30 @@ pub struct UpdateResult {
     pub(crate) result_message: Option<OkuMessage>,
 }
 
+impl UpdateResult {
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn AsyncResult<T: Send + 'static>(t: T) -> Box<dyn Any + Send + 'static> {
+        Box::new(t)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn AsyncResult<T: 'static>(t: T) -> Box<dyn Any + 'static> {
+        Box::new(t)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn AsyncNoResult() -> Box<dyn Any + Send + 'static> {
+        Box::new(())
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn AsyncNoResult() -> Box<dyn Any + 'static> {
+        Box::new(())
+    }
+
+}
+
 impl Default for UpdateResult {
     fn default() -> Self {
         UpdateResult {
@@ -38,8 +63,20 @@ impl UpdateResult {
         UpdateResult::default()
     }
 
-    pub fn future(mut self, future: PinnedFutureAny) -> Self {
+    pub fn pinned_future(mut self, future: PinnedFutureAny) -> Self {
         self.future = Some(future);
+        self
+    }
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn future<F: Future<Output = Box<dyn Any + Send>> + 'static + Send>(mut self, future: F) -> Self {
+        self.future = Some(Box::pin(future));
+        self
+    }
+    
+    #[cfg(target_arch = "wasm32")]
+    pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(mut self, future: F) -> Self {
+        self.future = Some(Box::pin(future));
         self
     }
 

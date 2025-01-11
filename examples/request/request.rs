@@ -13,25 +13,33 @@ use reqwest::Client;
 use oku::elements::ElementStyles;
 use oku::style::{Display, Overflow, Unit, Wrap};
 use serde_json::json;
+
 use std::any::Any;
+use std::result::Result;
+
+#[derive(Debug, Clone, Default)]
+#[derive(PartialEq)]
+enum State {
+    #[default]
+    Initial,
+    Loading,
+    Loaded(AniListResponse),
+    Error,
+}
+
+enum AniListMessage {
+    StateChange(State),
+}
 
 #[derive(Default, Clone)]
 pub struct AniList {
-    pub(crate) response_data: Option<AniListResponse>,
+    state: State,
 }
 
 impl Component for AniList {
     type Props = ();
 
     fn view(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
-
-        let mut anime_views = Vec::new();
-        if let Some(response) = &state.response_data {
-            for media in response.data.page.media.clone() {
-                anime_views.push(anime_view(&media));
-            }
-        }
-
         let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
@@ -40,16 +48,29 @@ impl Component for AniList {
             .background(Color::rgba(230, 230, 230, 255))
             .gap("40px")
             .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Px(20.0))
-            .push(Container::new()
-                .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
-                .push(Text::new("Get Data").id("get_data"))
-                .width("100%")
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Column)
+            .push(
+                Container::new()
+                    .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
+                    .push(Text::new("Get Data").id("get_data"))
+                    .width("100%")
+                    .display(Display::Flex)
+                    .flex_direction(FlexDirection::Column),
             );
 
-        for anime_view in anime_views {
-            root = root.push(anime_view);
+        match &state.state {
+            State::Initial => {}
+            State::Loading => {
+                root = root.push(Text::new("Loading...").font_size(24.0));
+            }
+            State::Loaded(response) => {
+                let mut anime_views = Vec::new();
+                anime_views.extend(response.data.page.media.iter().map(|media| anime_view(media)));
+
+                root = root.extend_children(anime_views);
+            }
+            State::Error => {
+                root = root.push(Text::new("Error loading data").font_size(24.0));
+            }
         }
 
         root.component()
@@ -59,38 +80,44 @@ impl Component for AniList {
         match event.message {
             Message::OkuMessage(_) => {}
             Message::UserMessage(msg) => {
-                if let Some(response) = msg.downcast_ref::<AniListResponse>() {
-                    state.response_data = Some(response.clone());
+                if let Some(StateChange(new_state)) = msg.downcast_ref::<AniListMessage>() {
+                    state.state = new_state.clone();
                 }
                 return UpdateResult::default();
             }
         }
 
-        let get_ani_list_data: PinnedFutureAny = Box::pin(async {
+        let get_ani_list_data = async {
             let client = Client::new();
             let json = json!({"query": QUERY});
 
-            let response = client.post("https://graphql.anilist.co/")
+            let response = client
+                .post("https://graphql.anilist.co/")
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .body(json.to_string())
                 .send()
-                .await
-                .unwrap()
-                .text()
                 .await;
 
-            let result: AniListResponse = serde_json::from_str(&response.unwrap()).unwrap();
+            if let Err(response) = response {
+                tracing::error!("Error fetching data: {:?}", response);
+                return UpdateResult::AsyncResult(StateChange(State::Error));
+            }
 
-            #[cfg(not(target_arch = "wasm32"))]
-            let boxed: Box<dyn Any + Send> = Box::new(result);
-            #[cfg(target_arch = "wasm32")]
-            let boxed: Box<dyn Any> = Box::new(result.clone());
+            let result: Result<AniListResponse, reqwest::Error> = response.unwrap().json().await;
 
-            boxed
-        });
+            if let Err(response) = &result {
+                tracing::error!("Error parsing data: {:?}", response);
+                return UpdateResult::AsyncResult(StateChange(State::Error));
+            }
 
-        if clicked(&event.message) && Some("get_data") == event.target.as_deref() {
+            let result = result.unwrap();
+            tracing::info!("Loaded data: ");
+            UpdateResult::AsyncResult(StateChange(State::Loaded(result)))
+        };
+
+        if state.state != State::Loading && clicked(&event.message) && Some("get_data") == event.target.as_deref() {
+            state.state = State::Loading;
             return UpdateResult::default().future(get_ani_list_data);
         }
 
@@ -113,10 +140,11 @@ fn main() {
 }
 
 use crate::ani_list::{anime_view, AniListResponse, QUERY};
+use crate::AniListMessage::StateChange;
+use oku::events::clicked;
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
 use oku::Color;
-use oku::events::clicked;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
@@ -129,7 +157,7 @@ fn android_main(app: AndroidApp) {
         AniList::component(),
         Some(OkuOptions {
             renderer: RendererType::default(),
-            window_title: "Counter".to_string(),
+            window_title: "Ani List".to_string(),
         }),
         app,
     );
