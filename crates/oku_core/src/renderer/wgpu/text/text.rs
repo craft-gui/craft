@@ -12,6 +12,7 @@ use cosmic_text::{BufferRef, Edit, FontSystem, SwashCache};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;
+use crate::reactive::element_state_store::ElementStateStore;
 
 pub struct TextRenderInfo {
     pub(crate) element_id: ComponentId,
@@ -59,13 +60,13 @@ impl TextRenderer {
     pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> PerFrameData {
 
         for text_area in self.text_areas.iter() { 
-            if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextInputState>() {
+            if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
                 let text_buffer = match text_context.editor.buffer_ref() {
                     BufferRef::Owned(buffer) => buffer,
                     BufferRef::Borrowed(_) => panic!("Editor must own buffer."),
                     BufferRef::Arc(_) => panic!("Editor must own buffer."),
                 };
-            } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().downcast_ref::<TextState>() {
+            } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextState>() {
                 for run in text_context.buffer.layout_runs() {
                     for glyph in run.glyphs.iter() {
                         let physical_glyph = glyph.physical((0., 0.), 1.0);

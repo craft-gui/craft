@@ -6,18 +6,27 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::{FontSystem, SwashCache};
-use image::EncodableLayout;
-use peniko::kurbo::BezPath;
-use softbuffer::Buffer;
-use std::num::NonZeroU32;
-use std::ops::{Deref, DerefMut};
-use std::sync::Arc;
+use crate::reactive::element_state_store::ElementStateStore;
+
 use tiny_skia::{
     ColorSpace, FillRule, Mask, MaskType, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform,
 };
+
+use cosmic_text::{FontSystem, SwashCache};
+
+use image::EncodableLayout;
+
+use peniko::kurbo::BezPath;
+
+use softbuffer::Buffer;
+
 use tokio::sync::RwLockReadGuard;
+
 use winit::window::Window;
+
+use std::num::NonZeroU32;
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -223,7 +232,7 @@ impl Renderer for SoftwareRenderer {
                     let mut paint = Paint::default();
                     paint.colorspace = ColorSpace::Linear;
                     if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextInputState>()
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
                         editor.draw(
@@ -244,7 +253,7 @@ impl Renderer for SoftwareRenderer {
                             },
                         );
                     } else if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().downcast_ref::<TextState>()
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
                         let buffer = &text_context.buffer;
 
