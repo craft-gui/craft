@@ -1,9 +1,9 @@
 #[cfg(target_arch = "wasm32")]
 use std::cell::RefCell;
-
+use std::future::Future;
 #[cfg(target_arch = "wasm32")]
 use std::ops::AddAssign;
-
+use std::pin::Pin;
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
 
@@ -43,10 +43,10 @@ use web_time as time;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
+use crate::geometry::Size;
+use oku_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use oku_logging::info;
-use crate::geometry::Size;
 
 /// Stores state relate to Winit.
 ///
@@ -97,23 +97,29 @@ impl ApplicationHandler for OkuWinitState {
         self.window = Some(window.clone());
         info!("Creating renderer");
         info!("Using {} renderer.", self.oku_options.renderer);
+
+        let renderer_type = self.oku_options.renderer;
+        let window_copy = window.clone();
+
+        let renderer_future: Pin<Box<dyn Future<Output = Box<dyn Renderer + Send>>>> = Box::pin(async move {
+            let renderer: Box<dyn Renderer + Send> = match renderer_type {
+                #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
+                RendererType::Software => Box::new(SoftwareRenderer::new(window_copy)),
+                #[cfg(feature = "wgpu_renderer")]
+                RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
+                #[cfg(feature = "vello_renderer")]
+                RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                RendererType::Blank => Box::new(BlankRenderer),
+            };
+
+            renderer
+        });
+
         #[cfg(target_arch = "wasm32")]
         {
             let mut tx = self.app_sender.clone();
-            let renderer = self.oku_options.renderer.clone();
-            let window_copy = window.clone();
             wasm_bindgen_futures::spawn_local(async move {
-                let renderer: Box<dyn Renderer + Send> = match renderer {
-                    #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-                    RendererType::Software => Box::new(SoftwareRenderer::new(window_copy)),
-                    #[cfg(feature = "wgpu_renderer")]
-                    RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
-                    #[cfg(feature = "vello_renderer")]
-                    RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
-                    RendererType::Blank => {
-                        Box::new(BlankRenderer)
-                    }
-                };
+                let renderer = renderer_future.await;
 
                 info!("Created renderer");
                 tx.send(AppMessage::new(0, InternalMessage::Resume(window.clone(), Some(renderer))))
@@ -124,33 +130,15 @@ impl ApplicationHandler for OkuWinitState {
         }
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let renderer: Box<dyn Renderer + Send> = match self.oku_options.renderer {
-                #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-                RendererType::Software => Box::new(SoftwareRenderer::new(window.clone())),
-                #[cfg(feature = "wgpu_renderer")]
-                RendererType::Wgpu => Box::new({
-                    self.runtime.borrow_tokio_runtime().block_on(async { WgpuRenderer::new(window.clone()).await })
-                }),
-                #[cfg(feature = "vello_renderer")]
-                RendererType::Vello => Box::new({
-                    self.runtime.borrow_tokio_runtime().block_on(async { VelloRenderer::new(window.clone()).await })
-                }),
-                RendererType::Blank => {
-                    Box::new(BlankRenderer)
-                }
-            };
+            let renderer = self.runtime.borrow_tokio_runtime().block_on(renderer_future);
             info!("Created renderer");
-
             self.send_message(InternalMessage::Resume(window, Some(renderer)), true);
         }
     }
 
     fn window_event(&mut self, _event_loop: &dyn ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
-        
         match event {
-            WindowEvent::ScaleFactorChanged{..} => {
-                
-            }
+            WindowEvent::ScaleFactorChanged { .. } => {}
             WindowEvent::CloseRequested => {
                 self.send_message(InternalMessage::Close, true);
                 self.close_requested = true;
@@ -203,7 +191,7 @@ impl ApplicationHandler for OkuWinitState {
                 let window = self.window.clone().unwrap();
                 let scale_factor = window.scale_factor();
                 let surface_size = Size::new(window.surface_size().width as f32, window.surface_size().height as f32);
-                
+
                 self.send_message(InternalMessage::RequestRedraw(scale_factor, surface_size), true);
                 window.pre_present_notify();
             }
