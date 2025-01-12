@@ -19,7 +19,7 @@ Updates are performed by handling messages from a Component.
 * ✅ Image Support
 * ✅ DPI Scaling Support
 * ⬜️ Transform (Rotation, Skew, Scale) Support
-* ⬜️ Mac
+* ✅ Mac
 * ⬜️ iOS
 * ✅ Text Input (Basic)
 * ⬜️ Animations
