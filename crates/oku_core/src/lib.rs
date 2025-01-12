@@ -124,7 +124,7 @@ impl App {
         if self.font_system.is_none() {
             #[allow(unused_mut)]
             let mut font_system = FontSystem::new();
-            
+
             #[cfg(target_arch = "wasm32")]
             {
                 font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
@@ -833,7 +833,7 @@ fn layout<'a>(
     let transform = glam::Mat4::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.finalize_layout(&mut taffy_tree, root_node, origin.x, origin.y, &mut layout_order, transform, font_system, element_state, pointer);
+    root_element.finalize_layout(&mut taffy_tree, root_node, origin, &mut layout_order, transform, font_system, element_state, pointer);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

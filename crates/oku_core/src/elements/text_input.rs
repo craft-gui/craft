@@ -267,8 +267,7 @@ impl Element for TextInput {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        x: f32,
-        y: f32,
+        position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
@@ -301,7 +300,7 @@ impl Element for TextInput {
         });
 
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        self.resolve_layer_rectangle(position, transform, result, z_index);
         
         self.finalize_borders();
     }

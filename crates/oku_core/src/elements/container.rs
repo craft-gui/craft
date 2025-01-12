@@ -111,8 +111,7 @@ impl Element for Container {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        x: f32,
-        y: f32,
+        position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
@@ -120,7 +119,7 @@ impl Element for Container {
         pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        self.resolve_layer_rectangle(position, transform, result, z_index);
         
         self.finalize_borders();
         
@@ -147,8 +146,7 @@ impl Element for Container {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.common_element_data.computed_layered_rectangle.position.x,
-                self.common_element_data.computed_layered_rectangle.position.y,
+                self.common_element_data.computed_layered_rectangle.position,
                 z_index,
                 transform * child_transform,
                 font_system,

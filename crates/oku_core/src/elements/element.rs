@@ -99,8 +99,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        x: f32,
-        y: f32,
+        position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
@@ -121,8 +120,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn resolve_layer_rectangle(
         &mut self,
-        relative_x: f32,
-        relative_y: f32,
+        relative_position: Point,
         scroll_transform: glam::Mat4,
         result: &taffy::Layout,
         layout_order: &mut u32,
@@ -132,8 +130,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         *layout_order += 1;
 
         let position = match common_element_data_mut.style.position() {
-            taffy::Position::Relative => Point::new(relative_x + result.location.x, relative_y + result.location.y),
-            taffy::Position::Absolute => Point::new(result.location.x, result.location.y),
+            taffy::Position::Relative => relative_position + result.location.into(),
+            taffy::Position::Absolute => result.location.into(),
         };
 
         common_element_data_mut.computed_border_rectangle_overflow_size =

@@ -52,3 +52,9 @@ impl From<PhysicalPosition<f64>> for Point {
         Point::new(position.x as f32, position.y as f32)
     }
 }
+
+impl From<taffy::Point<f32>> for Point {
+    fn from(point: taffy::Point<f32>) -> Self {
+        Point::new(point.x, point.y)
+    }
+}

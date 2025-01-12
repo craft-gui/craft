@@ -10,7 +10,7 @@ use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use taffy::{NodeId, TaffyTree};
+use taffy::{NodeId, Position, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 
 use crate::components::props::Props;
@@ -254,8 +254,7 @@ impl Element for Text {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        x: f32,
-        y: f32,
+        position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
         font_system: &mut FontSystem,
@@ -278,7 +277,7 @@ impl Element for Text {
         text_context.buffer.shape_until_scroll(font_system, true);
 
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(x, y, transform, result, z_index);
+        self.resolve_layer_rectangle(position, transform, result, z_index);
         
         self.finalize_borders();
     }
