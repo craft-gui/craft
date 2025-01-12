@@ -7,10 +7,10 @@ use crate::elements::Container;
 use crate::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::{create_unique_element_id};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
+
 use cosmic_text::FontSystem;
+
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -27,7 +27,7 @@ pub(crate) struct ComponentTreeNode {
 
 #[derive(Clone)]
 struct TreeVisitorNode {
-    component_specification: Rc<RefCell<ComponentSpecification>>,
+    component_specification: ComponentSpecification,
     parent_element_ptr: *mut dyn Element,
     parent_component_node: *mut ComponentTreeNode,
     old_component_node: Option<*const ComponentTreeNode>,
@@ -78,7 +78,6 @@ pub(crate) fn diff_trees(
     font_system: &mut FontSystem,
     reload_fonts: bool,
 ) -> (ComponentTreeNode, ElementBox) {
-    //println!("-----------------------------------------");
     unsafe {
         let mut component_tree = ComponentTreeNode {
             is_element: false,
@@ -111,19 +110,19 @@ pub(crate) fn diff_trees(
         }
 
         let component_root: *mut ComponentTreeNode = &mut component_tree as *mut ComponentTreeNode;
-        
+
         let root_spec = ComponentSpecification {
             component: ComponentOrElement::Element(root_element.clone()),
             key: None,
             props: None,
             children: vec![
-                component_specification.clone()
+                component_specification
             ],
         };
 
         let mut to_visit: Vec<TreeVisitorNode> = vec![
             TreeVisitorNode {
-                component_specification: Rc::new(RefCell::new(root_spec.children[0].clone())),
+                component_specification: root_spec.children[0].clone(),
                 parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
                 parent_component_node: component_root,
                 old_component_node: old_component_tree_as_ptr,
@@ -131,18 +130,16 @@ pub(crate) fn diff_trees(
         ];
 
         while let Some(tree_node) = to_visit.pop() {
-            let key = tree_node.component_specification.borrow().key.clone();
-            let children = tree_node.component_specification.borrow().children.clone();
-            let props = tree_node.component_specification.borrow().props.clone();
-
-            let old_tag = tree_node.old_component_node.map(|old_node| (*old_node).tag.clone());
+            let old_tag = tree_node.old_component_node.map(|old_node| (*old_node).tag.as_str());
             let mut parent_element_ptr = tree_node.parent_element_ptr;
             let parent_component_ptr = tree_node.parent_component_node;
 
-            match &mut tree_node.component_specification.borrow_mut().component {
+            let new_spec = tree_node.component_specification;
+
+            match new_spec.component {
                 ComponentOrElement::Element(element) => {
                     // Create the new element node.
-                    let mut element = element.clone();
+                    let mut element = element;
 
                     // Store the new tag, i.e. the element's name.
                     let new_tag = element.internal.name().to_string();
@@ -158,7 +155,7 @@ pub(crate) fn diff_trees(
                         }
                     };
                     element.internal.set_component_id(id);
-                    
+
                     if should_update {
                         element.internal.update_state(font_system, element_state, reload_fonts);
                     } else {
@@ -199,7 +196,7 @@ pub(crate) fn diff_trees(
 
                     let new_component_node = ComponentTreeNode {
                         is_element: true,
-                        key,
+                        key: new_spec.key,
                         tag: new_tag,
                         update: dummy_update,
                         children: vec![],
@@ -224,17 +221,17 @@ pub(crate) fn diff_trees(
 
                     let mut new_to_visits: Vec<TreeVisitorNode> = vec![];
                     // Add the children of the new element to the to visit list.
-                    for (index, child) in children.into_iter().enumerate() {
+                    for (index, child) in new_spec.children.into_iter().enumerate() {
                         // Find old child by key and if no key is found, find by index.
-                        let key = child.key.clone();
+                        let key = &child.key;
 
                         let mut index = index;
 
                         for (old_index, old_child) in olds.iter().enumerate() {
-                            let old_key = (*(*old_child)).key.clone();
+                            let old_key = (*(*old_child)).key.as_deref();
 
-                            if old_key == key {
-                                if old_key.is_none() || child.key.is_none() {
+                            if old_key == key.as_deref() {
+                                if old_key.is_none() || key.is_none() {
                                     continue;
                                 }
                                 index = old_index;
@@ -243,7 +240,7 @@ pub(crate) fn diff_trees(
                         }
 
                         new_to_visits.push(TreeVisitorNode {
-                            component_specification: Rc::new(RefCell::new(child)),
+                            component_specification: child,
                             parent_element_ptr,
                             parent_component_node: new_component_pointer,
                             old_component_node: olds.get(index).copied(),
@@ -254,13 +251,13 @@ pub(crate) fn diff_trees(
                 }
                 ComponentOrElement::ComponentSpec(component_data) => {
                     let children_keys = (*parent_component_ptr).children_keys.clone();
-                    let props = props.unwrap_or((component_data.default_props)());
+                    let props = new_spec.props.unwrap_or((component_data.default_props)());
 
                     let mut should_update = false;
-                    let id: ComponentId = if key.is_some() && children_keys.contains_key(&key.clone().unwrap()) {
-                        *(children_keys.get(&key.clone().unwrap()).unwrap())
+                    let id: ComponentId = if new_spec.key.is_some() && children_keys.contains_key(new_spec.key.as_deref().unwrap()) {
+                        *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
                     } else if let Some(old_tag) = old_tag {
-                        if *component_data.tag == old_tag {
+                        if component_data.tag.as_str() == old_tag {
                             // If the old tag is the same as the new tag, we can reuse the old id.
                             should_update = true;
                             (*tree_node.old_component_node.unwrap()).id
@@ -270,12 +267,12 @@ pub(crate) fn diff_trees(
                     } else {
                         create_unique_element_id()
                     };
-                    
+
                     if !should_update {
                         let default_state = (component_data.default_state)();
                         user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
-                        
+
                         (component_data.update_fn)(
                             state_mut,
                             props.clone(),
@@ -285,12 +282,17 @@ pub(crate) fn diff_trees(
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, props.clone(), children);
+                    let new_component = (component_data.view_fn)(state, props.clone(), new_spec.children);
+
+                    // Add the current child id to the children_keys hashmap in the parent.
+                    if let Some(key) = new_spec.key.clone() {
+                        parent_component_ptr.as_mut().unwrap().children_keys.insert(key, id);
+                    }
 
                     let new_component_node = ComponentTreeNode {
                         is_element: false,
-                        key: key.clone(),
-                        tag: component_data.tag.clone(),
+                        key: new_spec.key,
+                        tag: component_data.tag,
                         update: component_data.update_fn,
                         children: vec![],
                         children_keys: HashMap::new(),
@@ -299,16 +301,11 @@ pub(crate) fn diff_trees(
                         props,
                     };
 
-                    // Add the current child id to the children_keys hashmap in the parent.
-                    if let Some(key) = key.clone() {
-                        parent_component_ptr.as_mut().unwrap().children_keys.insert(key, id);
-                    }
-
                     // Add the new component node to the tree and get a pointer to it.
                     parent_component_ptr.as_mut().unwrap().children.push(new_component_node);
                     let new_component_pointer: *mut ComponentTreeNode =
                         (*tree_node.parent_component_node).children.last_mut().unwrap();
-                    
+
                     // Get the old component node or none.
                     // NOTE: ComponentSpecs can only have one child.
                     let old_component_tree = tree_node
@@ -319,7 +316,7 @@ pub(crate) fn diff_trees(
 
                     // Add the computed component spec to the to visit list.
                     to_visit.push(TreeVisitorNode {
-                        component_specification: Rc::new(RefCell::new(new_component)),
+                        component_specification: new_component,
                         parent_element_ptr,
                         parent_component_node: new_component_pointer,
                         old_component_node: old_component_tree,
@@ -327,16 +324,6 @@ pub(crate) fn diff_trees(
                 }
             };
         }
-        /*println!("-----------------------------------------");
-        println!("-----------------------------------------");
-        println!("old");
-        if let Some(old_component_tree) = old_component_tree {
-            old_component_tree.print_tree()
-        }
-        println!("new");
-        component_tree.print_tree();
-        println!("-----------------------------------------");
-        println!("-----------------------------------------");*/
 
         (component_tree, root_element)
     }
