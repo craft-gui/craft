@@ -54,8 +54,6 @@ thread_local! {
 
 type RendererBox = dyn Renderer;
 
-use cfg_if::cfg_if;
-
 use cosmic_text::FontSystem;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 

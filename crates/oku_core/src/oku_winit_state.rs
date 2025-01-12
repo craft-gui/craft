@@ -1,27 +1,25 @@
 #[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-use std::future::Future;
-#[cfg(target_arch = "wasm32")]
-use std::ops::AddAssign;
-use std::pin::Pin;
-#[cfg(target_arch = "wasm32")]
-use std::rc::Rc;
+use {
+    winit::platform::web::WindowAttributesExtWeb,
+    
+    wasm_bindgen::JsCast,
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
-
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowAttributesExtWeb;
-
-use crate::renderer::blank_renderer::BlankRenderer;
+    std::rc::Rc,
+    std::ops::AddAssign,
+    std::cell::RefCell,
+};
 
 #[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
 
+use crate::renderer::blank_renderer::BlankRenderer;
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::renderer::renderer::Renderer;
+use crate::geometry::Size;
+use oku_logging::info;
+use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 
 #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
 use crate::renderer::softbuffer::SoftwareRenderer;
@@ -29,8 +27,6 @@ use crate::renderer::softbuffer::SoftwareRenderer;
 #[cfg(feature = "wgpu_renderer")]
 use crate::renderer::wgpu::WgpuRenderer;
 
-use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
-use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
@@ -43,10 +39,11 @@ use web_time as time;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
-use crate::geometry::Size;
-use oku_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use std::sync::Arc;
+use std::pin::Pin;
+use std::future::Future;
 
 /// Stores state relate to Winit.
 ///
