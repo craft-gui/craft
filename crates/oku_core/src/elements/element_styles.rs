@@ -207,6 +207,13 @@ where
         self.styles_mut().gap_mut()[1] = column_gap.into();
         self
     }
+
+    fn scrollbar_color(mut self, scroll_thumb_color: Color, scroll_track_color: Color) -> Self {
+        let colors = self.styles_mut().scrollbar_color_mut();
+        colors.thumb_color = scroll_thumb_color;
+        colors.track_color = scroll_track_color;
+        self
+    }
 }
 
 impl From<&str> for Unit {

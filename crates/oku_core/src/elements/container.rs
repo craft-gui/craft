@@ -30,13 +30,12 @@ pub struct ContainerState {
 
 impl Container {
     pub fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
-        // scrollbar
-        let scroll_track_color = Color::rgba(100, 100, 100, 255);
+        let scrollbar_color = self.common_element_data.current_style().scrollbar_color();
 
         // track
         renderer.draw_rect(
             self.common_element_data.computed_scroll_track,
-            scroll_track_color,
+            scrollbar_color.track_color,
         );
 
         let scrollthumb_color = Color::rgba(150, 150, 150, 255);
@@ -44,7 +43,7 @@ impl Container {
         // thumb
         renderer.draw_rect(
             self.common_element_data.computed_scroll_thumb,
-            scrollthumb_color,
+            scrollbar_color.thumb_color,
         );
     }
 }

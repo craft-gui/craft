@@ -74,6 +74,12 @@ pub enum FlexDirection {
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Hash)]
 pub struct Weight(pub u16);
 
+#[derive(Clone, Copy, Debug)]
+pub struct ScrollbarColor {
+    pub thumb_color: Color,
+    pub track_color: Color,
+}
+
 impl Weight {
     /// Thin weight (100), the thinnest value.
     pub const THIN: Weight = Weight(100);
@@ -178,6 +184,7 @@ pub struct Style {
     border_color: [Color; 4],
     border_width: [Unit; 4],
     border_radius: [(f32, f32); 4],
+    scrollbar_color: ScrollbarColor,
 
     pub dirty_flags: StyleFlags
 }
@@ -225,6 +232,10 @@ impl Default for Style {
             font_style: Default::default(),
             overflow: [Overflow::default(), Overflow::default()],
             border_radius: [(0.0, 0.0); 4],
+            scrollbar_color: ScrollbarColor {
+                thumb_color: Color::rgba(150, 150, 150, 255),
+                track_color: Color::rgba(100, 100, 100, 255),
+            },
             dirty_flags: StyleFlags::empty(),
         }
     }
@@ -551,6 +562,15 @@ impl Style {
     pub fn border_radius_mut(&mut self) -> &mut [(f32, f32); 4] {
         self.dirty_flags.insert(StyleFlags::BORDER_RADIUS);
         &mut self.border_radius
+    }
+
+    pub fn scrollbar_color(&self) -> ScrollbarColor {
+        self.scrollbar_color
+    }
+
+    pub fn scrollbar_color_mut(&mut self) -> &mut ScrollbarColor {
+        self.dirty_flags.insert(StyleFlags::SCROLLBAR_COLOR);
+        &mut self.scrollbar_color
     }
 
 }
