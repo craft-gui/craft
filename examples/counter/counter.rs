@@ -88,7 +88,7 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
 
 #[cfg(not(target_os = "android"))]
 fn main() {
-    setup_logging;
+    setup_logging();
 
     oku_main_with_options(
         Counter::component(),
