@@ -38,8 +38,6 @@ impl Container {
             scrollbar_color.track_color,
         );
 
-        let scrollthumb_color = Color::rgba(150, 150, 150, 255);
-
         // thumb
         renderer.draw_rect(
             self.common_element_data.computed_scroll_thumb,

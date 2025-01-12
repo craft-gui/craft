@@ -1,3 +1,5 @@
+use tracing_subscriber::fmt::format::FmtSpan;
+
 #[allow(dead_code)]
 fn main() {
 }
@@ -31,8 +33,8 @@ pub fn setup_logging() {
     #[cfg(not(target_arch = "wasm32"))]
     {
         tracing_subscriber::fmt()
-            .without_time()
             .with_max_level(tracing::Level::INFO)
+            .with_span_events(FmtSpan::CLOSE)
             .init();
     }
 }

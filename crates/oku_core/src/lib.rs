@@ -78,7 +78,7 @@ use std::time;
 
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
-use oku_logging::info;
+use oku_logging::{info, span, Level};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
@@ -159,9 +159,11 @@ pub fn oku_main_with_options(application: ComponentSpecification, options: Optio
     oku_main_with_options_2(event_loop, application, options)
 }
 
+#[cfg(feature = "dev_tools")]
+use crate::devtools::dev_tools_component::dev_tools_view;
+
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
-use crate::devtools::dev_tools_component::dev_tools_view;
 use crate::geometry::{Point, Size};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
@@ -640,16 +642,20 @@ async fn update_reactive_tree(
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
-
-    let new_tree = diff_trees(
-        component_spec_to_generate_tree.clone(),
-        window_element,
-        old_component_tree,
-        &mut reactive_tree.user_state,
-        &mut reactive_tree.element_state,
-        font_system,
-        *should_reload_fonts
-    );
+    
+    let new_tree = {
+        let span = span!(Level::INFO, "reactive tree diffing");
+        let _enter = span.enter();
+        diff_trees(
+            component_spec_to_generate_tree.clone(),
+            window_element,
+            old_component_tree,
+            &mut reactive_tree.user_state,
+            &mut reactive_tree.element_state,
+            font_system,
+            *should_reload_fonts
+        )
+    };
 
     *should_reload_fonts = false;
 
@@ -684,21 +690,31 @@ async fn draw_reactive_tree(
     style_root_element(root, root_size);
 
     let resource_manager = resource_manager.read().await;
-    let (mut taffy_tree, taffy_root) = layout(
-        &mut reactive_tree.element_state,
-        root_size.width,
-        root_size.height,
-        font_system,
-        root.as_mut(),
-        origin,
-        &resource_manager,
-        scale_factor,
-        mouse_position
-    );
+    
+    let (mut taffy_tree, taffy_root) = {
+        let span = span!(Level::INFO, "layout");
+        let _enter = span.enter();
+        layout(
+            &mut reactive_tree.element_state,
+            root_size.width,
+            root_size.height,
+            font_system,
+            root.as_mut(),
+            origin,
+            &resource_manager,
+            scale_factor,
+            mouse_position
+        )
+    };
 
     let renderer = renderer.as_mut();
-    root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
-    renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
+
+    {
+        let span = span!(Level::INFO, "render");
+        let _enter = span.enter();
+        root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
+        renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
+    }
 }
 
 async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size) {
@@ -730,7 +746,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
             root_size.width -= dev_tools_size.width;
         }
     }
-
+    
+    
     draw_reactive_tree(
         &mut app.user_tree,
         app.resource_manager.clone(),
