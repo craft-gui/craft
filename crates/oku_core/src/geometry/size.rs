@@ -1,5 +1,3 @@
-use crate::geometry::Point;
-
 /// A structure representing the size of a 2D object.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Size {

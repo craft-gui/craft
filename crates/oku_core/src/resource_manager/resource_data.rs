@@ -2,11 +2,11 @@ use crate::resource_manager::identifier::ResourceIdentifier;
 use chrono::{DateTime, Utc};
 use crate::resource_manager::resource_type::ResourceType;
 
+#[allow(dead_code)]
 pub struct ResourceData {
     pub(crate) resource_identifier: ResourceIdentifier,
     pub(crate) data: Option<Vec<u8>>,
     pub(crate) resource_type: ResourceType,
-    #[allow(dead_code)]
     expiration_time: Option<DateTime<Utc>>,
 }
 

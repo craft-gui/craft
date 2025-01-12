@@ -1,7 +1,4 @@
-use tracing_subscriber::Layer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-
+#[allow(dead_code)]
 fn main() {
 }
 
@@ -13,6 +10,9 @@ pub fn setup_logging() {
         use tracing_web::{MakeWebConsoleWriter, performance_layer};
         use tracing_subscriber::fmt::format::Pretty;
         use tracing::level_filters::LevelFilter;
+        use tracing_subscriber::util::SubscriberInitExt;
+        use tracing_subscriber::layer::SubscriberExt;
+        use tracing_subscriber::Layer;
 
         let fmt_layer = tracing_subscriber::fmt::layer()
             .with_ansi(true)

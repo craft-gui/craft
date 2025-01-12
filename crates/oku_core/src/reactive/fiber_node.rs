@@ -86,6 +86,7 @@ impl<'a> Iterator for FiberNodePreOrderIterator<'a> {
 }
 
 impl<'a> FiberNode<'a> {
+    #[allow(dead_code)]
     pub fn pre_order_iter(&'a self) -> FiberNodePreOrderIterator<'a> {
         FiberNodePreOrderIterator::new(self)
     }

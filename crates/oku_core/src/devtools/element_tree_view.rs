@@ -18,7 +18,7 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
     let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(root_element.as_ref(), 0, true)];
     let mut element_count = 0;
 
-    while let Some((element, indent, is_last)) = elements.pop() {
+    while let Some((element, indent, _is_last)) = elements.pop() {
 
         let row_color = if selected_element.is_some() && selected_element.unwrap() == element.component_id() {
             SELECTED_ROW_BACKGROUND_COLOR
@@ -30,7 +30,7 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
 
         let id = element.component_id().to_string();
 
-        let mut row_name = element.name().to_string();
+        let row_name = element.name().to_string();
 
         let mut row =  Container::new()
             .push(

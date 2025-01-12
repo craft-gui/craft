@@ -1,18 +1,20 @@
 mod text;
 
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
+use crate::geometry::Rectangle;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
+use crate::renderer::vello::text::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::{FontSystem};
+use cosmic_text::FontSystem;
+use peniko::kurbo::BezPath;
+use peniko::Font;
 use std::collections::HashMap;
 use std::sync::Arc;
-use peniko::Font;
-use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -20,8 +22,6 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
-use crate::geometry::Rectangle;
-use crate::renderer::vello::text::CosmicFontBlobAdapter;
 
 impl From<Color> for peniko::Color {
     fn from(color: Color) -> Self {
@@ -37,8 +37,7 @@ pub struct ActiveRenderState<'s> {
 
 enum RenderState<'a> {
     Active(ActiveRenderState<'a>),
-    // Cache a window so that it can be reused when the app is resumed after being suspended
-    Suspended(Option<Arc<dyn Window>>),
+    Suspended,
 }
 
 pub struct VelloRenderer<'a> {
@@ -69,7 +68,7 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
             surface_format: Some(surface.format),
             use_cpu: false,
             // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
-            antialiasing_support:  if cfg!(any(target_os = "android", target_os = "ios")) {
+            antialiasing_support: if cfg!(any(target_os = "android", target_os = "ios")) {
                 vello::AaSupport {
                     area: true,
                     msaa8: false,
@@ -85,19 +84,16 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
             num_init_threads: None,
         },
     )
-        .expect("Couldn't create renderer")
+    .expect("Couldn't create renderer")
 }
 
-
 impl<'a> VelloRenderer<'a> {
-
     pub(crate) async fn new(window: Arc<dyn Window>) -> VelloRenderer<'a> {
-
         let mut vello_renderer = VelloRenderer {
             render_commands: vec![],
             context: RenderContext::new(),
             renderers: vec![],
-            state: RenderState::Suspended(None),
+            state: RenderState::Suspended,
             scene: Scene::new(),
             surface_clear_color: Color::rgba(255, 255, 255, 255),
             vello_fonts: HashMap::new(),
@@ -106,12 +102,16 @@ impl<'a> VelloRenderer<'a> {
         // Create a vello Surface
         let surface_size = window.surface_size();
 
-        let surface = vello_renderer.context.create_surface(
-            window.clone(),
-            surface_size.width,
-            surface_size.height,
-            vello::wgpu::PresentMode::AutoVsync,
-        ).await.unwrap();
+        let surface = vello_renderer
+            .context
+            .create_surface(
+                window.clone(),
+                surface_size.width,
+                surface_size.height,
+                vello::wgpu::PresentMode::AutoVsync,
+            )
+            .await
+            .unwrap();
 
         // Create a vello Renderer for the surface (using its device id)
         vello_renderer.renderers.resize_with(vello_renderer.context.devices.len(), || None);
@@ -129,10 +129,11 @@ fn to_vello_rgba_f32_color(color: Color) -> vello::peniko::Color {
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
-
-    let rect = Rect::new(rectangle.x as f64, rectangle.y as f64,
-                         (rectangle.x + rectangle.width) as f64,
-                         (rectangle.y + rectangle.height) as f64
+    let rect = Rect::new(
+        rectangle.x as f64,
+        rectangle.y as f64,
+        (rectangle.x + rectangle.width) as f64,
+        (rectangle.y + rectangle.height) as f64,
     );
     scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(fill_color), None, &rect);
 }
@@ -140,23 +141,15 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 impl Renderer for VelloRenderer<'_> {
     fn surface_width(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => {
-                active_render_state.window.surface_size().width as f32
-            }
-            RenderState::Suspended(_) => {
-                0.0
-            }
+            RenderState::Active(active_render_state) => active_render_state.window.surface_size().width as f32,
+            RenderState::Suspended => 0.0,
         }
     }
 
     fn surface_height(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => {
-                active_render_state.window.surface_size().height as f32
-            }
-            RenderState::Suspended(_) => {
-                0.0
-            }
+            RenderState::Active(active_render_state) => active_render_state.window.surface_size().height as f32,
+            RenderState::Suspended => 0.0,
         }
     }
 
@@ -165,7 +158,6 @@ impl Renderer for VelloRenderer<'_> {
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
-
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
             _ => return,
@@ -178,12 +170,11 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {}
+    fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
@@ -202,7 +193,8 @@ impl Renderer for VelloRenderer<'_> {
     }
 
     fn load_font(&mut self, font_system: &mut FontSystem) {
-        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> = font_system.db().faces().map(|face| (face.id, face.index)).collect();
+        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> =
+            font_system.db().faces().map(|face| (face.id, face.index)).collect();
         for (font_id, index) in font_faces {
             if let Some(font) = font_system.get_font(font_id) {
                 let font_blob = Blob::new(Arc::new(CosmicFontBlobAdapter::new(font)));
@@ -212,14 +204,18 @@ impl Renderer for VelloRenderer<'_> {
         }
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
-
+    fn prepare(
+        &mut self,
+        resource_manager: RwLockReadGuard<ResourceManager>,
+        _font_system: &mut FontSystem,
+        element_state: &ElementStateStore,
+    ) {
         for command in self.render_commands.drain(..) {
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(&mut self.scene, rectangle, fill_color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
+                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
                     // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
@@ -229,32 +225,37 @@ impl Renderer for VelloRenderer<'_> {
                         let image = &resource.image;
                         let data = Arc::new(image.clone().into_raw().to_vec());
                         let blob = Blob::new(data);
-                        let vello_image = peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width() as u32, image.height() as u32);
+                        let vello_image = peniko::Image::new(
+                            blob,
+                            peniko::ImageFormat::Rgba8,
+                            image.width() as u32,
+                            image.height() as u32,
+                        );
 
-                        let mut transform= Affine::IDENTITY;
-                        transform = transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                        let mut transform = Affine::IDENTITY;
+                        transform =
+                            transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             rectangle.width as f64 / image.width() as f64,
                             rectangle.height as f64 / image.height() as f64,
                         );
 
                         self.scene.draw_image(&vello_image, transform);
-
                     }
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
-                    let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
 
                     if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
-                        let buffer_glyphs = text::create_glyphs_for_editor(editor,
-                                                                           fill_color.into(),
-                                                                           peniko::Color::from_rgba8(0, 0, 0, 255),
-                                                                           peniko::Color::from_rgba8(0, 120, 215, 255),
-                                                                           peniko::Color::from_rgba8(255, 255, 255, 255)
+                        let buffer_glyphs = text::create_glyphs_for_editor(
+                            editor,
+                            fill_color.into(),
+                            peniko::Color::from_rgba8(0, 0, 0, 255),
+                            peniko::Color::from_rgba8(0, 120, 215, 255),
+                            peniko::Color::from_rgba8(255, 255, 255, 255),
                         );
 
                         // Draw the Glyphs
@@ -298,7 +299,6 @@ impl Renderer for VelloRenderer<'_> {
                         let buffer_glyphs = text::create_glyphs(buffer, fill_color.into(), None);
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {
-
                             for glyph_run in &buffer_line.glyph_runs {
                                 let font = self.vello_fonts.get(&glyph_run.font).unwrap();
                                 let glyph_color = glyph_run.glyph_color;
@@ -314,7 +314,7 @@ impl Renderer for VelloRenderer<'_> {
                     } else {
                         panic!("Unknown state provided to the renderer!");
                     };
-                },
+                }
                 /*RenderCommand::PushTransform(transform) => {
                     self.scene.push_transform(transform);
                 },
@@ -322,12 +322,17 @@ impl Renderer for VelloRenderer<'_> {
                     self.scene.pop_transform();
                 },*/
                 RenderCommand::PushLayer(rect) => {
-                    let clip = Rect::new(rect.x as f64, rect.y as f64, (rect.x + rect.width) as f64, (rect.y + rect.height) as f64);
+                    let clip = Rect::new(
+                        rect.x as f64,
+                        rect.y as f64,
+                        (rect.x + rect.width) as f64,
+                        (rect.y + rect.height) as f64,
+                    );
                     self.scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
-                },
+                }
                 RenderCommand::PopLayer => {
                     self.scene.pop_layer();
-                },
+                }
                 RenderCommand::FillBezPath(path, color) => {
                     self.scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(color), None, &path);
                 }
@@ -340,7 +345,7 @@ impl Renderer for VelloRenderer<'_> {
             RenderState::Active(state) => state,
             _ => panic!("!!!"),
         };
-        
+
         // Get the RenderSurface (surface + config)
         let surface = &render_state.surface;
 
@@ -352,10 +357,7 @@ impl Renderer for VelloRenderer<'_> {
         let device_handle = &self.context.devices[surface.dev_id];
 
         // Get the surface's texture
-        let surface_texture = surface
-            .surface
-            .get_current_texture()
-            .expect("failed to get surface texture");
+        let surface_texture = surface.surface.get_current_texture().expect("failed to get surface texture");
 
         // Render to the surface's texture
         self.renderers[surface.dev_id]

@@ -1,15 +1,11 @@
-use crate::resource_manager::image::ImageResource;
-use crate::resource_manager::resource::Resource;
-use crate::resource_manager::resource_data::ResourceData;
-use crate::resource_manager::ResourceIdentifier::{File};
+use crate::resource_manager::ResourceIdentifier::File;
 
 #[cfg(feature = "http_client")]
-use crate::resource_manager::ResourceIdentifier::{Url};
+use crate::resource_manager::ResourceIdentifier::Url;
 
-use image::ImageReader;
-use std::{fmt, fs};
 use std::fmt::Display;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::{fmt, fs};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ResourceIdentifier {

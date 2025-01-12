@@ -10,14 +10,13 @@ pub mod style;
 mod tests;
 pub mod renderer;
 pub mod events;
+
+#[cfg(feature = "dev_tools")]
 pub(crate) mod devtools;
 pub mod app_message;
 pub mod resource_manager;
 pub mod geometry;
 mod view_introspection;
-
-use crate::reactive::element_state_store::ElementStateStore;
-use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 
 pub use oku_runtime::OkuRuntime;
 pub use renderer::color::Color;
@@ -26,6 +25,10 @@ pub use options::OkuOptions;
 #[cfg(all(feature = "android", target_os = "android"))]
 pub use winit::platform::android::activity::*;
 
+use crate::reactive::element_state_store::ElementStateStore;
+use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
+use reactive::element_id::reset_unique_element_id;
+use reactive::fiber_node::FiberNode;
 use events::update_queue_entry::UpdateQueueEntry;
 use crate::style::{Display, Unit, Wrap};
 use elements::container::Container;
@@ -34,6 +37,12 @@ use elements::layout_context::{measure_content, LayoutContext};
 use events::Message;
 use renderer::renderer::Renderer;
 use reactive::tree::{diff_trees, ComponentTreeNode};
+use components::component::{ComponentId, ComponentSpecification};
+use app_message::AppMessage;
+use events::resource_event::ResourceEvent;
+pub use crate::options::RendererType;
+use resource_manager::ResourceManager;
+use events::internal::InternalMessage;
 
 #[cfg(target_arch = "wasm32")]
 use {std::cell::RefCell, web_time as time};
@@ -45,41 +54,35 @@ thread_local! {
 
 type RendererBox = dyn Renderer;
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
-
 use cfg_if::cfg_if;
-use components::component::{ComponentId, ComponentSpecification};
+
 use cosmic_text::FontSystem;
-use std::any::Any;
-use std::cmp::PartialEq;
-use std::collections::VecDeque;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::time::Instant;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
+
 use tokio::sync::{RwLock, RwLockReadGuard};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use reactive::element_id::reset_unique_element_id;
-use reactive::fiber_node::FiberNode;
+
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::keyboard::{Key, NamedKey};
 
-const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
-use app_message::AppMessage;
-use events::resource_event::ResourceEvent;
-pub use crate::options::RendererType;
-use resource_manager::ResourceManager;
-use elements::image::Image;
-use events::internal::InternalMessage;
+
+use std::any::Any;
+use std::collections::VecDeque;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
 
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 use oku_logging::info;
+
+const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
@@ -121,8 +124,9 @@ impl App {
 
     fn setup_font_system(&mut self) {
         if self.font_system.is_none() {
+            #[allow(unused_mut)]
             let mut font_system = FontSystem::new();
-
+            
             #[cfg(target_arch = "wasm32")]
             {
                 font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
@@ -317,7 +321,7 @@ async fn async_main(
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
                     match resource_event {
-                        ResourceEvent::Added((_resource_identifier, resource_type)) => {
+                        ResourceEvent::Loaded(_resource_identifier, resource_type) => {
                             if resource_type == ResourceType::Font {
                                 if let Some(renderer) = app.renderer.as_mut() {
                                     renderer.load_font(app.font_system.as_mut().unwrap());
@@ -330,7 +334,6 @@ async fn async_main(
                                 app.window.as_ref().unwrap().request_redraw();
                             }
                         }
-                        ResourceEvent::Loaded(_) => {}
                         ResourceEvent::UnLoaded(_) => {}
                     }
                 }
@@ -349,7 +352,7 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
     }
 
     for event in reactive_tree.update_queue.drain(..) {
-        let mut app_sender_copy = app_sender.clone();
+        let app_sender_copy = app_sender.clone();
         let window_clone = window.clone().unwrap();
         let f = async move {
             let update_result = event.update_result.future.unwrap();
@@ -506,7 +509,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
             break;
         }
 
-        let (current_target_component_id, current_target_element_id, layout_order) = current_target.clone();
+        let (current_target_component_id, current_target_element_id, _layout_order) = current_target.clone();
 
         // Get the element's component tree node.
         let current_target_component =
@@ -674,7 +677,6 @@ async fn update_reactive_tree(
 }
 
 async fn draw_reactive_tree(
-    window: Arc<dyn Window>,
     reactive_tree: &mut ReactiveTree,
     resource_manager: Arc<RwLock<ResourceManager>>,
     renderer: &mut Box<dyn Renderer + Send>,
@@ -747,7 +749,6 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     }
 
     draw_reactive_tree(
-        app.window.clone().unwrap(),
         &mut app.user_tree,
         app.resource_manager.clone(),
         renderer,
@@ -769,7 +770,6 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
 
         if app.is_dev_tools_open {
             draw_reactive_tree(
-                app.window.clone().unwrap(),
                 &mut app.dev_tree,
                 app.resource_manager.clone(),
                 renderer,

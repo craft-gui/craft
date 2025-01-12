@@ -1,8 +1,9 @@
 use crate::components::props::Props;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{ElementBox};
 use crate::events::{Event, OkuMessage};
 use crate::reactive::state_store::StateStoreItem;
-use crate::{FutureAny, PinnedFutureAny};
+use crate::PinnedFutureAny;
+
 use std::any::{Any, TypeId};
 use std::future::Future;
 use std::ops::Deref;
@@ -67,13 +68,13 @@ impl UpdateResult {
         self.future = Some(future);
         self
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn future<F: Future<Output = Box<dyn Any + Send>> + 'static + Send>(mut self, future: F) -> Self {
         self.future = Some(Box::pin(future));
         self
     }
-    
+
     #[cfg(target_arch = "wasm32")]
     pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(mut self, future: F) -> Self {
         self.future = Some(Box::pin(future));

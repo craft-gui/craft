@@ -13,7 +13,7 @@ use oku::events::{Event, Message};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
-use oku::{PinnedFutureAny, RendererType};
+use oku::{RendererType};
 use oku::elements::ElementStyles;
 use oku::style::{Display, Overflow, Unit, Wrap};
 use oku::events::clicked;
@@ -22,7 +22,6 @@ use oku::Color;
 use reqwest::Client;
 use serde_json::json;
 
-use std::any::Any;
 use std::result::Result;
 
 #[derive(Debug, Clone, Default)]

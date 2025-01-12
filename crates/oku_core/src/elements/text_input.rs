@@ -216,15 +216,14 @@ impl Element for TextInput {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
-        element_state: &ElementStateStore,
-        pointer: Option<Point>,
+        _font_system: &mut FontSystem,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        _element_state: &ElementStateStore,
+        _pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
             self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -240,7 +239,7 @@ impl Element for TextInput {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _font_system: &mut FontSystem,
-        element_state: &mut ElementStateStore,
+        _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let font_size = PhysicalPosition::from_logical(
@@ -274,7 +273,7 @@ impl Element for TextInput {
         transform: glam::Mat4,
         font_system: &mut FontSystem,
         element_state: &mut ElementStateStore,
-        pointer: Option<Point>,
+        _pointer: Option<Point>,
     ) {
         let state: &mut TextInputState = element_state
             .storage
@@ -489,10 +488,6 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-
-        let font_size = self.common_element_data.style.font_size();
-        let font_line_height = font_size * 1.2;
-        let metrics = Metrics::new(font_size, font_line_height);
 
         let mut text_hasher = FxHasher::default();
         text_hasher.write(self.text.as_ref());

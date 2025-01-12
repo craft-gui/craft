@@ -33,7 +33,7 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
     
-    fn load_font(&mut self, font_system: &mut FontSystem) {
+    fn load_font(&mut self, _font_system: &mut FontSystem) {
         
     }
 

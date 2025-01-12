@@ -12,20 +12,22 @@ use crate::resource_manager::image::ImageResource;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::resource_data::ResourceData;
 use crate::resource_manager::resource_type::ResourceType;
+use oku_logging::info;
+
 use ::image::ImageReader;
+
 use cosmic_text::fontdb;
+use tokio::sync::mpsc::Sender;
+
 use std::any::Any;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap};
 use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
-use tokio::sync::mpsc::Sender;
-use oku_logging::info;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
 pub struct ResourceManager {
-    pub(crate) resource_jobs: VecDeque<ResourceFuture>,
     pub(crate) resources: HashMap<ResourceIdentifier, Resource>,
     pub(crate) app_sender: Sender<AppMessage>,
 }
@@ -33,7 +35,6 @@ pub struct ResourceManager {
 impl ResourceManager {
     pub(crate) fn new(app_sender: Sender<AppMessage>) -> Self {
         Self {
-            resource_jobs: VecDeque::new(),
             resources: HashMap::new(),
             app_sender,
         }
@@ -67,7 +68,7 @@ impl ResourceManager {
                         self.app_sender
                             .send(AppMessage::new(
                                 0,
-                                InternalMessage::ResourceEvent(ResourceEvent::Added((resource_copy, resource_type))),
+                                InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_copy, resource_type)),
                             ))
                             .await
                             .expect("Failed to send added resource event");
@@ -84,7 +85,7 @@ impl ResourceManager {
                     }
 
                     self.app_sender
-                        .send(AppMessage::new(0, InternalMessage::ResourceEvent(ResourceEvent::Added((resource_copy, resource_type)))))
+                        .send(AppMessage::new(0, InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_copy, resource_type))))
                         .await
                         .expect("Failed to send added resource event");
                 }

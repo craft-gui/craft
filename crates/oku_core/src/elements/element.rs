@@ -261,7 +261,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
 
-    fn finalize_state<'a>(&mut self, element_state: &'a mut ElementStateStore, pointer: Option<Point>) {
+    #[allow(dead_code)]
+    fn finalize_state(&mut self, element_state: &mut ElementStateStore, pointer: Option<Point>) {
         let common_element_data = self.common_element_data_mut();
         let element_state = element_state.storage.get_mut(&common_element_data.component_id).unwrap();
         element_state.base.current_state = ElementState::Normal;
@@ -275,12 +276,13 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
     
+    #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.common_element_data().component_id).unwrap()
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, reload_fonts: bool) {}
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
 }
 
 impl<T: Element> From<T> for ElementBox {
@@ -335,6 +337,7 @@ where
 }
 
 impl dyn Element {
+    #[allow(dead_code)]
     pub fn print_tree(&self) {
         let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(self, 0, true)];
         while let Some((element, indent, is_last)) = elements.pop() {
@@ -386,42 +389,50 @@ impl Clone for Box<dyn Element> {
 #[macro_export]
 macro_rules! generate_component_methods_no_children {
     () => {
+        #[allow(dead_code)]
         pub fn component(self) -> ComponentSpecification {
             ComponentSpecification::new(self.into())
         }
 
+        #[allow(dead_code)]
         pub fn key(mut self, key: &str) -> Self {
             self.common_element_data.key = Some(key.to_string());
 
             self
         }
 
+        #[allow(dead_code)]
         pub fn props(mut self, props: Props) -> Self {
             self.common_element_data.props = Some(props);
 
             self
         }
 
+        #[allow(dead_code)]
         pub fn id(mut self, id: &str) -> Self {
             self.common_element_data.id = Some(id.to_string());
             self
         }
         
+        #[allow(dead_code)]
         pub fn hovered(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Hovered;
             self
         }
 
+        #[allow(dead_code)]
         pub fn pressed(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Pressed;
             self
         }
 
+        #[allow(dead_code)]
         pub fn disabled(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Disabled;
             self
         }
 
+        #[allow(dead_code)]
         pub fn focused(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Focused;
             self
@@ -434,6 +445,7 @@ macro_rules! generate_component_methods {
     () => {
         crate::generate_component_methods_no_children!();
         
+        #[allow(dead_code)]
         pub fn push<T>(mut self, component_specification: T) -> Self
         where
             T: Into<ComponentSpecification>,
@@ -443,6 +455,7 @@ macro_rules! generate_component_methods {
             self
         }
 
+        #[allow(dead_code)]
         pub fn push_children<T>(mut self, children: Vec<T>) -> Self
         where
             T: Into<ComponentSpecification>,
@@ -452,6 +465,7 @@ macro_rules! generate_component_methods {
             self
         }
         
+        #[allow(dead_code)]
         pub fn extend_children<T>(mut self, children: Vec<T>) -> Self
         where
             T: Into<ComponentSpecification>,
@@ -461,6 +475,7 @@ macro_rules! generate_component_methods {
             self
         }
 
+        #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
             self

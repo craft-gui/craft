@@ -3,7 +3,7 @@ use crate::resource_manager::ResourceIdentifier;
 
 #[derive(Debug)]
 pub enum ResourceEvent {
-    Added((ResourceIdentifier, ResourceType)),
-    Loaded(ResourceIdentifier),
+    Loaded(ResourceIdentifier, ResourceType),
+    #[allow(dead_code)]
     UnLoaded(ResourceIdentifier),
 }

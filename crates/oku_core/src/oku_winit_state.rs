@@ -47,7 +47,6 @@ use tokio::sync::mpsc::Sender;
 use std::time;
 use oku_logging::info;
 use crate::geometry::Size;
-use crate::RendererType::Blank;
 
 /// Stores state relate to Winit.
 ///
@@ -277,7 +276,6 @@ impl OkuWinitState {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            let id = self.id.clone();
             let mut tx = self.app_sender.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 tx.send(app_message).await.expect("send failed");

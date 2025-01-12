@@ -34,6 +34,7 @@ struct TreeVisitorNode {
 }
 
 impl ComponentTreeNode {
+    #[allow(dead_code)]
     pub fn print_tree(&self) {
         let mut elements: Vec<(&ComponentTreeNode, usize, bool)> = vec![(self, 0, true)];
         while let Some((element, indent, is_last)) = elements.pop() {

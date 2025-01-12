@@ -202,15 +202,14 @@ impl Element for Text {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
-        element_state: &ElementStateStore,
-        pointer: Option<Point>,
+        _font_system: &mut FontSystem,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        _element_state: &ElementStateStore,
+        _pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
             self.common_element_data.computed_layered_rectangle_transformed.clone();
-        let border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);

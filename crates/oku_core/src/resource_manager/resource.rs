@@ -1,4 +1,3 @@
-use crate::resource_manager::identifier::ResourceIdentifier;
 use crate::resource_manager::image::ImageResource;
 
 pub enum Resource {
