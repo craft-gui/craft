@@ -197,17 +197,9 @@ fn oku_main_with_options_2(
     let app_sender_copy = app_sender.clone();
     let resource_manager_copy = resource_manager.clone();
 
-    let future = async move {
-        async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy).await;
-    };
+    let future = async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy);
 
-    cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-           runtime.runtime_spawn(future);
-        } else {
-            runtime.runtime_spawn(future);
-        }
-    }
+    runtime.runtime_spawn(future);
 
     let mut app = OkuWinitState::new(runtime, winit_receiver, app_sender, oku_options);
 
@@ -366,14 +358,7 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
                 .expect("send failed");
             window_clone.request_redraw();
         };
-        #[cfg(target_arch = "wasm32")]
-        {
-            wasm_bindgen_futures::spawn_local(f);
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            tokio::spawn(f);
-        }
+        OkuRuntime::native_spawn(f);
     }
 }
 

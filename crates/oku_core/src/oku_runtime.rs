@@ -36,7 +36,7 @@ impl OkuRuntime {
     #[cfg(target_arch = "wasm32")]
     pub fn spawn<F>(future: F)
     where
-        F: Future<Output = ()> + 'static + Send,
+        F: Future<Output = ()> + 'static,
     {
         wasm_bindgen_futures::spawn_local(future)
     }
@@ -70,5 +70,24 @@ impl OkuRuntime {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn borrow_tokio_runtime(&mut self) -> &mut tokio::runtime::Runtime {
         &mut self.tokio_runtime
+    }
+
+    /// Match the underlying runtime's type.
+    #[allow(dead_code)]
+    #[cfg(target_arch = "wasm32")]
+    pub fn native_spawn<F>(future: F)
+    where
+        F: Future<Output = ()> + 'static,
+    {
+        wasm_bindgen_futures::spawn_local(future)
+    }
+
+    #[allow(dead_code)]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn native_spawn<F>(future: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        tokio::spawn(future);
     }
 }
