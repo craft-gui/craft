@@ -201,6 +201,12 @@ impl ApplicationHandler for OkuWinitState {
             //self.window.as_ref().unwrap().request_redraw();
         }
 
+        #[cfg(not(target_arch = "wasm32"))] {
+            self.runtime.borrow_tokio_runtime().block_on(async {
+                tokio::task::yield_now().await;
+            })
+        }
+
         self.send_message(InternalMessage::ProcessUserEvents, false);
 
         if !self.wait_cancelled {

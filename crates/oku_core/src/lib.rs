@@ -80,7 +80,7 @@ use std::time;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 use oku_logging::{info, span, Level};
 
-const WAIT_TIME: time::Duration = time::Duration::from_millis(100);
+const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
