@@ -760,15 +760,15 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     ).await;
 
     #[cfg(feature = "dev_tools")] {
-        update_reactive_tree(
-            dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
-            &mut app.dev_tree,
-            app.resource_manager.clone(),
-            font_system,
-            &mut app.reload_fonts
-        ).await;
-
         if app.is_dev_tools_open {
+            update_reactive_tree(
+                dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
+                &mut app.dev_tree,
+                app.resource_manager.clone(),
+                font_system,
+                &mut app.reload_fonts
+            ).await;
+            
             draw_reactive_tree(
                 &mut app.dev_tree,
                 app.resource_manager.clone(),
