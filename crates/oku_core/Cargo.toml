@@ -39,8 +39,7 @@ default-features = false
 features = ["std", "fontconfig"]
 
 [dependencies.vello]
-git = "https://github.com/linebender/vello"
-rev="8a84a4abf7aaabdb7de82e3d9d86ed427ad21638"
+version = "0.4.0"
 optional = true
 
 [dependencies.wgpu]
