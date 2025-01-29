@@ -10,7 +10,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use cosmic_text::FontSystem;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -70,6 +70,8 @@ fn dummy_update(
 pub struct DiffTreesResult {
     pub(crate) component_tree: ComponentTreeNode,
     pub(crate) element_tree: ElementBox,
+    pub(crate) component_ids: HashSet<ComponentId>,
+    pub(crate) element_ids: HashSet<ComponentId>,
 }
 
 /// Creates a new Component tree and Element tree from a ComponentSpecification.
@@ -124,7 +126,10 @@ pub(crate) fn diff_trees(
                 component_specification
             ],
         };
-
+        
+        let mut new_component_ids: HashSet<ComponentId> = HashSet::new();
+        let mut new_element_ids: HashSet<ComponentId> = HashSet::new();
+        
         let mut to_visit: Vec<TreeVisitorNode> = vec![
             TreeVisitorNode {
                 component_specification: root_spec.children[0].clone(),
@@ -160,7 +165,9 @@ pub(crate) fn diff_trees(
                         }
                     };
                     element.internal.set_component_id(id);
-
+                    // Collect the element id for later use.
+                    new_element_ids.insert(id);
+                    
                     if should_update {
                         element.internal.update_state(font_system, element_state, reload_fonts);
                     } else {
@@ -272,6 +279,9 @@ pub(crate) fn diff_trees(
                     } else {
                         create_unique_element_id()
                     };
+                    
+                    // Collect the component id for later use.
+                    new_component_ids.insert(id);
 
                     if !should_update {
                         let default_state = (component_data.default_state)();
@@ -333,6 +343,8 @@ pub(crate) fn diff_trees(
         DiffTreesResult {
             component_tree,
             element_tree: root_element,
+            element_ids: new_element_ids,
+            component_ids: new_component_ids
         }
     }
 }

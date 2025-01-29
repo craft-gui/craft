@@ -68,7 +68,7 @@ use winit::keyboard::{Key, NamedKey};
 
 
 use std::any::Any;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -90,9 +90,12 @@ pub type FutureAny = dyn Future<Output = Box<dyn Any + Send>> + 'static + Send;
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
+#[derive(Default)]
 struct ReactiveTree {
     element_tree: Option<Box<dyn Element>>,
     component_tree: Option<ComponentTreeNode>,
+    element_ids: HashSet<ComponentId>,
+    component_ids: HashSet<ComponentId>,
     update_queue: VecDeque<UpdateQueueEntry>,
     user_state: StateStore,
     element_state: ElementStateStore,
@@ -240,6 +243,8 @@ async fn async_main(
         user_tree: ReactiveTree {
             element_tree: None,
             component_tree: None,
+            element_ids: Default::default(),
+            component_ids: Default::default(),
             update_queue: VecDeque::new(),
             user_state: user_state,
             element_state: Default::default(),
@@ -255,6 +260,8 @@ async fn async_main(
             update_queue: VecDeque::new(),
             user_state: dev_tools_user_state,
             element_state: Default::default(),
+            element_ids: Default::default(),
+            component_ids: Default::default(),
         },
     });
 
@@ -638,7 +645,7 @@ async fn update_reactive_tree(
     reactive_tree: &mut ReactiveTree,
     resource_manager: Arc<RwLock<ResourceManager>>,
     font_system: &mut FontSystem,
-    should_reload_fonts: &mut bool,
+    should_reload_fonts: &mut bool
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
@@ -663,6 +670,8 @@ async fn update_reactive_tree(
     scan_view_for_resources(new_tree.element_tree.internal.as_ref(), &new_tree.component_tree, resource_manager.clone(), font_system).await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
     reactive_tree.component_tree = Some(new_tree.component_tree);
+    reactive_tree.component_ids = new_tree.component_ids;
+    reactive_tree.element_ids = new_tree.element_ids;
 }
 
 async fn draw_reactive_tree(
@@ -723,6 +732,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     }
     let font_system = app.font_system.as_mut().unwrap();
 
+    let old_element_ids = app.user_tree.element_ids.clone();
+    let old_component_ids = app.user_tree.component_ids.clone();
     update_reactive_tree(
         app.app.clone(),
         &mut app.user_tree,
@@ -730,6 +741,10 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         font_system,
         &mut app.reload_fonts
     ).await;
+
+    // Cleanup unmounted components and elements.
+    app.user_tree.user_state.remove_unused_state(&old_component_ids, &app.user_tree.component_ids);
+    app.user_tree.element_state.remove_unused_state(&old_element_ids, &app.user_tree.element_ids);
 
     if app.renderer.is_none() {
         return;
