@@ -660,9 +660,9 @@ async fn update_reactive_tree(
     *should_reload_fonts = false;
 
 
-    scan_view_for_resources(new_tree.1.internal.as_ref(), &new_tree.0, resource_manager.clone(), font_system).await;
-    reactive_tree.component_tree = Some(new_tree.0);
-    reactive_tree.element_tree = Some(new_tree.1.internal);
+    scan_view_for_resources(new_tree.element_tree.internal.as_ref(), &new_tree.component_tree, resource_manager.clone(), font_system).await;
+    reactive_tree.element_tree = Some(new_tree.element_tree.internal);
+    reactive_tree.component_tree = Some(new_tree.component_tree);
 }
 
 async fn draw_reactive_tree(

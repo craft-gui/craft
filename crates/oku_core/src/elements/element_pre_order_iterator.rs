@@ -60,10 +60,10 @@ mod tests {
         let initial_tree =
             diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut element_state, &mut font_system, false);
 
-        initial_tree.0.print_tree();
-        initial_tree.1.internal.print_tree();
+        initial_tree.component_tree.print_tree();
+        initial_tree.element_tree.internal.print_tree();
 
-        let mut iter = initial_tree.1.internal.pre_order_iter();
+        let mut iter = initial_tree.element_tree.internal.pre_order_iter();
         assert_eq!(iter.next().unwrap().get_id().clone(), Some("0".to_string()));
         assert_eq!(iter.next().unwrap().get_id().clone(), Some("1".to_string()));
         assert_eq!(iter.next().unwrap().get_id().clone(), Some("2".to_string()));

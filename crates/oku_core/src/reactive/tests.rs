@@ -33,15 +33,15 @@ fn diff_trees_same_tag_same_id_are_equal() {
     let updated_tree = diff_trees(
         updated_view,
         root_element.clone(),
-        Some(&initial_tree.0),
+        Some(&initial_tree.component_tree),
         &mut user_state,
         &mut element_state,
         &mut font_system,
         false
     );
 
-    let initial_id = &initial_tree.0.children[0].children[0].id;
-    let updated_id = &updated_tree.0.children[0].children[0].id;
+    let initial_id = &initial_tree.component_tree.children[0].children[0].id;
+    let updated_id = &updated_tree.component_tree.children[0].children[0].id;
 
     assert_eq!(initial_id, updated_id, "Elements with identical content tags and positions have the same id.");
 }
@@ -74,15 +74,15 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.0),
+        Some(&tree_1.component_tree),
         &mut user_state,
         &mut element_state,
         &mut font_system,
         false
     );
 
-    let initial_id = &tree_1.0.children[0].children[0].id;
-    let updated_id = &tree_2.0.children[0].children[1].id;
+    let initial_id = &tree_1.component_tree.children[0].children[0].id;
+    let updated_id = &tree_2.component_tree.children[0].children[1].id;
 
     assert_ne!(initial_id, updated_id, "Elements in different positions should have different ids.");
 }
@@ -115,15 +115,15 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.0),
+        Some(&tree_1.component_tree),
         &mut user_state,
         &mut element_state,
         &mut font_system,
         false
     );
 
-    let initial_id = &tree_1.0.children[0].children[0].id;
-    let updated_id = &tree_2.0.children[0].children[1].id;
+    let initial_id = &tree_1.component_tree.children[0].children[0].id;
+    let updated_id = &tree_2.component_tree.children[0].children[1].id;
 
     assert_eq!(initial_id, updated_id, "Elements in different positions with the same key, should have the same id.");
 }

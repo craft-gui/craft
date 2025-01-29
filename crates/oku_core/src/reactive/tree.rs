@@ -67,6 +67,11 @@ fn dummy_update(
     UpdateResult::new()
 }
 
+pub struct DiffTreesResult {
+    pub(crate) component_tree: ComponentTreeNode,
+    pub(crate) element_tree: ElementBox,
+}
+
 /// Creates a new Component tree and Element tree from a ComponentSpecification.
 /// The ids of the Component tree are stable across renders.
 pub(crate) fn diff_trees(
@@ -77,7 +82,7 @@ pub(crate) fn diff_trees(
     element_state: &mut ElementStateStore,
     font_system: &mut FontSystem,
     reload_fonts: bool,
-) -> (ComponentTreeNode, ElementBox) {
+) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
             is_element: false,
@@ -325,6 +330,9 @@ pub(crate) fn diff_trees(
             };
         }
 
-        (component_tree, root_element)
+        DiffTreesResult {
+            component_tree,
+            element_tree: root_element,
+        }
     }
 }
