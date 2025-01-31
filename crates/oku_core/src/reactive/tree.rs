@@ -175,25 +175,6 @@ pub(crate) fn diff_trees(
                         element_state.storage.insert(id, state);
                     }
 
-                    if let Some(_container) = element.internal.as_any().downcast_ref::<Container>() {
-                        if !element_state.storage.contains_key(&id) {
-                            element_state.storage.insert(
-                                id,
-                                ElementStateStoreItem {
-                                    base: Default::default(),
-                                    data: Box::new(ContainerState::default())
-                                },
-                            );
-                        }
-                    } else {
-                        if !element_state.storage.contains_key(&id) {
-                            element_state.storage.insert(id, ElementStateStoreItem {
-                                base: Default::default(),
-                                data: Box::new(())
-                            });
-                        }
-                    }
-
                     // Move the new element into it's parent and set the parent element to be the new element.
                     tree_node.parent_element_ptr.as_mut().unwrap().children_mut().push(element);
                     parent_element_ptr = tree_node
