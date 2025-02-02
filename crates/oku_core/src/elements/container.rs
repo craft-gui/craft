@@ -185,7 +185,7 @@ impl Element for Container {
                             let in_scroll_bar = self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position);
 
                             if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
-                                container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                container_state.scroll_click = Some((pointer_button.position.x, pointer_button.position.y));
                                 return UpdateResult::new().prevent_propagate().prevent_defaults();
                             }
                         }
@@ -193,10 +193,10 @@ impl Element for Container {
                         match pointer_button.state {
                             WinitElementState::Pressed => {
                                 if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
-                                    container_state.scroll_click = Some((pointer_button.position.x as f32, pointer_button.position.y as f32));
+                                    container_state.scroll_click = Some((pointer_button.position.x, pointer_button.position.y));
                                     UpdateResult::new().prevent_propagate().prevent_defaults()
                                 } else if self.common_element_data.computed_scroll_track.contains(&pointer_button.position) {
-                                    let offset_y = pointer_button.position.y as f32 - self.common_element_data.computed_scroll_track.y;
+                                    let offset_y = pointer_button.position.y - self.common_element_data.computed_scroll_track.y;
 
                                     let percent = offset_y / self.common_element_data.computed_scroll_track.height;
                                     let scroll_y = percent * self.common_element_data.max_scroll_y;
@@ -220,7 +220,7 @@ impl Element for Container {
                 OkuMessage::PointerMovedEvent(pointer_motion) => {
                     if let Some((click_x, click_y)) = container_state.scroll_click {
                         // Todo: Translate scroll wheel pixel to scroll position for diff.
-                        let delta = pointer_motion.position.y as f32 - click_y;
+                        let delta = pointer_motion.position.y - click_y;
 
                         let max_scroll_y = self.common_element_data.max_scroll_y;
 
