@@ -157,14 +157,14 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
 struct DummyComponent {
 }
 
-impl Component for DummyComponent {
+impl Component<()> for DummyComponent {
     type Props = ();
 
-    fn view(state: &Self, global_state: &GlobalState, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, global_state: &(), props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Text::new("dummy").component()
     }
 
-    fn update(_state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, _message: Event) -> UpdateResult {
+    fn update(_state: &mut Self, global_state: &mut (), _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::default()
     }
 }

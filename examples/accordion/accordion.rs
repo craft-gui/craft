@@ -19,10 +19,10 @@ pub struct Accordion {
     show_content: bool,
 }
 
-impl Component for Accordion {
+impl Component<()> for Accordion {
     type Props = ();
 
-    fn view(state: &Self, global_state: &GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let accordion_content =
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
 
@@ -39,7 +39,7 @@ impl Component for Accordion {
             .push(accordion_content)
     }
 
-    fn update(state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
         println!("target: {:?}", event.target);
         if event.target.as_deref() != Some("accordion_header") {
             return UpdateResult::default();

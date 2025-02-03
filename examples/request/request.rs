@@ -44,10 +44,10 @@ pub struct AniList {
     state: State,
 }
 
-impl Component for AniList {
+impl Component<()> for AniList {
     type Props = ();
 
-    fn view(state: &Self, global_state: &GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
@@ -84,7 +84,7 @@ impl Component for AniList {
         root.component()
     }
 
-    fn update(state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
         match event.message {
             Message::OkuMessage(_) => {}
             Message::UserMessage(msg) => {
