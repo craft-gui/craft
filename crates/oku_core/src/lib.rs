@@ -104,6 +104,7 @@ struct ReactiveTree {
 
 struct App {
     app: ComponentSpecification,
+    global_state: GlobalState,
     window: Option<Arc<dyn Window>>,
     font_system: Option<FontSystem>,
     renderer: Option<Box<dyn Renderer + Send>>,
@@ -152,14 +153,14 @@ impl App {
 }
 
 #[cfg(target_os = "android")]
-pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>, app: AndroidApp) {
+pub fn internal_oku_main_with_options(application: ComponentSpecification, global_state: Box<dyn Any>, options: Option<OkuOptions>, app: AndroidApp) {
     info!("Oku started");
 
     info!("Created winit event loop");
 
     let event_loop =
         EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
-    oku_main_with_options_2(event_loop, application, options)
+    oku_main_with_options_2(event_loop, application, global_state, options)
 }
 
 #[cfg(feature = "dev_tools")]
@@ -171,8 +172,14 @@ use crate::geometry::{Point, Size};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 
+pub type GlobalState = Box<dyn Any + Send + 'static>;
+
+pub fn oku_main_with_options<T: Send + 'static>(application: ComponentSpecification, global_state: Box<T>, options: Option<OkuOptions>) {
+    internal_oku_main_with_options(application, global_state, options);
+}
+
 #[cfg(not(target_os = "android"))]
-pub fn oku_main_with_options(application: ComponentSpecification, options: Option<OkuOptions>) {
+pub fn internal_oku_main_with_options(application: ComponentSpecification, global_state: GlobalState, options: Option<OkuOptions>) {
     info!("Oku started");
 
     info!("Creating winit event loop.");
@@ -180,12 +187,13 @@ pub fn oku_main_with_options(application: ComponentSpecification, options: Optio
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
-    oku_main_with_options_2(event_loop, application, options)
+    oku_main_with_options_2(event_loop, application, global_state, options)
 }
 
 fn oku_main_with_options_2(
     event_loop: EventLoop,
     application: ComponentSpecification,
+    global_state: GlobalState,
     oku_options: Option<OkuOptions>,
 ) {
     let oku_options = oku_options.unwrap_or_default();
@@ -200,7 +208,7 @@ fn oku_main_with_options_2(
     let app_sender_copy = app_sender.clone();
     let resource_manager_copy = resource_manager.clone();
 
-    let future = async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy);
+    let future = async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy, global_state);
 
     runtime.runtime_spawn(future);
 
@@ -217,11 +225,12 @@ async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>)
 }
 
 async fn async_main(
-    application: ComponentSpecification,
+    component_spec_application: ComponentSpecification,
     mut app_receiver: Receiver<AppMessage>,
     winit_sender: Sender<AppMessage>,
     mut app_sender: Sender<AppMessage>,
     resource_manager: Arc<RwLock<ResourceManager>>,
+    global_state: GlobalState
 ) {
     let mut user_state = StateStore::default();
 
@@ -232,7 +241,8 @@ async fn async_main(
     dev_tools_user_state.storage.insert(0, Box::new(()));
 
     let mut app = Box::new(App {
-        app: application,
+        app: component_spec_application,
+        global_state,
         window: None,
         font_system: None,
         renderer: None,
@@ -315,7 +325,7 @@ async fn async_main(
                     let message = message.2;
 
                     let state = app.user_tree.user_state.storage.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, props, Event::new(Message::UserMessage(message)));
+                    update_fn(state, &mut app.global_state, props, Event::new(Message::UserMessage(message)));
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -371,10 +381,10 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -384,10 +394,10 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -395,10 +405,10 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let keyboard_event = OkuMessage::KeyboardInputEvent(keyboard_input.clone());
 
-    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")] {
-        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
+        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
         let logical_key = keyboard_input.event.logical_key;
         let key_state = keyboard_input.event.state;
@@ -424,7 +434,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree) {
+async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree, global_state: &mut GlobalState) {
     let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -539,6 +549,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
             let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
+                global_state,
                 node.props.clone(),
                 Event::new(Message::OkuMessage(event.clone()))
                     .current_target(current_target_element_id.clone())
@@ -592,6 +603,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
             let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
             let res = (node.update)(
                 state,
+                global_state,
                 node.props.clone(),
                 Event::new(Message::OkuMessage(event.clone())).current_target(target_element_id.clone()),
             );
@@ -608,10 +620,10 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -643,6 +655,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
 async fn update_reactive_tree(
     component_spec_to_generate_tree: ComponentSpecification,
     reactive_tree: &mut ReactiveTree,
+    global_state: &mut GlobalState,
     resource_manager: Arc<RwLock<ResourceManager>>,
     font_system: &mut FontSystem,
     should_reload_fonts: &mut bool
@@ -658,6 +671,7 @@ async fn update_reactive_tree(
             window_element,
             old_component_tree,
             &mut reactive_tree.user_state,
+            global_state,
             &mut reactive_tree.element_state,
             font_system,
             *should_reload_fonts
@@ -737,6 +751,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     update_reactive_tree(
         app.app.clone(),
         &mut app.user_tree,
+        &mut app.global_state,
         app.resource_manager.clone(),
         font_system,
         &mut app.reload_fonts
@@ -779,6 +794,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
             update_reactive_tree(
                 dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
                 &mut app.dev_tree,
+                &mut app.global_state,
                 app.resource_manager.clone(),
                 font_system,
                 &mut app.reload_fonts

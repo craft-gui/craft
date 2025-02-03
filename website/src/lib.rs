@@ -12,6 +12,7 @@ use oku::renderer::color::Color;
 fn main() {
     oku_main_with_options(
         create_layout(),
+        Box::new(()),
         Some(OkuOptions {
             renderer: RendererType::default(),
             ..Default::default()

@@ -16,10 +16,14 @@ pub(crate) struct DevToolsComponent {
     pub inspector_hovered_element: Option<ComponentId>,
 }
 
-impl Component for DevToolsComponent {
+impl Component<()> for DevToolsComponent {
     type Props = Option<Box<dyn Element>>;
 
-    fn view(state: &Self, props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, _global_state: &(), props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+        Self::view_with_no_global_state(state, props, children)
+    }
+    
+    fn view_with_no_global_state(state: &Self, props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(&root, state.selected_element);
 
@@ -53,7 +57,11 @@ impl Component for DevToolsComponent {
             .component()
     }
 
-    fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
+        Self::update_with_no_global_state(state, props, event)
+    }
+
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         if let Some(id) = event.target {
 
             // Set the selected element in the element tree inspector.

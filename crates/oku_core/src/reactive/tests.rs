@@ -9,7 +9,7 @@ use crate::components::{Component, ComponentId, ComponentSpecification, UpdateRe
 use crate::components::component::ComponentOrElement;
 use crate::events::Event;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::ReactiveTree;
+use crate::{GlobalState, ReactiveTree};
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
@@ -24,12 +24,14 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-
+    let mut global_state = GlobalState::from(Box::new(()));
+    
     let initial_tree = diff_trees(
         initial_view,
         root_element.clone(),
         None,
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
@@ -40,6 +42,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         root_element.clone(),
         Some(&initial_tree.component_tree),
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
@@ -65,12 +68,14 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let root_element: ElementBox = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
+    let mut global_state = GlobalState::from(Box::new(()));
 
     let tree_1 = diff_trees(
         root_node_1,
         root_element.clone(),
         None,
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
@@ -81,6 +86,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         root_element.clone(),
         Some(&tree_1.component_tree),
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
@@ -102,12 +108,14 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
     let root_element: ElementBox = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
-
+    let mut global_state = GlobalState::from(Box::new(()));
+    
     let tree_1 = diff_trees(
         root_component_1,
         root_element.clone(),
         None,
         &mut reactive_tree.user_state,
+        &mut global_state,
         &mut reactive_tree.element_state,
         &mut font_system,
         false
@@ -127,6 +135,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         root_element.clone(),
         Some(reactive_tree.component_tree.as_ref().unwrap()),
         &mut reactive_tree.user_state,
+        &mut global_state,
         &mut reactive_tree.element_state,
         &mut font_system,
         false
@@ -148,14 +157,14 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
 struct DummyComponent {
 }
 
-impl Component for DummyComponent {
+impl Component<()> for DummyComponent {
     type Props = ();
 
-    fn view(state: &Self, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, global_state: &(), props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Text::new("dummy").component()
     }
 
-    fn update(_state: &mut Self, _props: &Self::Props, _message: Event) -> UpdateResult {
+    fn update(_state: &mut Self, global_state: &mut (), _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::default()
     }
 }
@@ -173,12 +182,14 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
     let root_element: ElementBox = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
-
+    let mut global_state = GlobalState::from(Box::new(()));
+    
     let tree_1 = diff_trees(
         root_component_1,
         root_element.clone(),
         None,
         &mut reactive_tree.user_state,
+        &mut global_state,
         &mut reactive_tree.element_state,
         &mut font_system,
         false
@@ -198,6 +209,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         root_element.clone(),
         Some(reactive_tree.component_tree.as_ref().unwrap()),
         &mut reactive_tree.user_state,
+        &mut global_state,
         &mut reactive_tree.element_state,
         &mut font_system,
         false
@@ -229,12 +241,14 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let root_element: ElementBox = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-
+    let mut global_state = GlobalState::from(Box::new(()));
+    
     let tree_1 = diff_trees(
         root_node_1,
         root_element.clone(),
         None,
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
@@ -245,6 +259,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         root_element.clone(),
         Some(&tree_1.component_tree),
         &mut user_state,
+        &mut global_state,
         &mut element_state,
         &mut font_system,
         false
