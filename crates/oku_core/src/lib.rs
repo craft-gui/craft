@@ -370,7 +370,7 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 }
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
-    app.mouse_position = Some(Point::new(mouse_moved.position.x as f32, mouse_moved.position.y as f32));
+    app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
     dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     #[cfg(feature = "dev_tools")]
@@ -607,7 +607,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
-    app.mouse_position = Some(Point::new(pointer_button.position.x as f32, pointer_button.position.y as f32));
+    app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
     dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree).await;
 
     #[cfg(feature = "dev_tools")]

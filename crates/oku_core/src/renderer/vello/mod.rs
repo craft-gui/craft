@@ -215,12 +215,8 @@ impl Renderer for VelloRenderer<'_> {
                         let image = &resource.image;
                         let data = Arc::new(image.clone().into_raw().to_vec());
                         let blob = Blob::new(data);
-                        let vello_image = peniko::Image::new(
-                            blob,
-                            peniko::ImageFormat::Rgba8,
-                            image.width() as u32,
-                            image.height() as u32,
-                        );
+                        let vello_image =
+                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
                         let mut transform = Affine::IDENTITY;
                         transform =
