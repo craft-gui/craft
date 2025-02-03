@@ -2,7 +2,7 @@ use crate::components::props::Props;
 use crate::elements::element::{ElementBox};
 use crate::events::{Event, OkuMessage};
 use crate::reactive::state_store::StateStoreItem;
-use crate::PinnedFutureAny;
+use crate::{GlobalState, PinnedFutureAny};
 
 use std::any::{Any, TypeId};
 use std::future::Future;
@@ -10,7 +10,7 @@ use std::ops::Deref;
 
 /// A Component's view function.
 pub type ViewFn =
-    fn(data: &StateStoreItem, props: Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
+    fn(data: &StateStoreItem, global_state: &GlobalState, props: Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
 
 /// The result of an update.
 pub struct UpdateResult {
@@ -98,7 +98,7 @@ impl UpdateResult {
 }
 
 /// A Component's update function.
-pub type UpdateFn = fn(state: &mut StateStoreItem, props: Props, message: Event) -> UpdateResult;
+pub type UpdateFn = fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult;
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -190,17 +190,18 @@ where
 {
     type Props: Send + Sync + Default;
 
-    fn view(state: &Self, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
+    fn view(state: &Self, global_state: &GlobalState, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
 
     fn generic_view(
         state: &StateStoreItem,
+        global_state: &GlobalState,
         props: Props,
         children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        Self::view(casted_state, props, children)
+        Self::view(casted_state, global_state, props, children)
     }
 
     fn default_state() -> Box<StateStoreItem> {
@@ -211,15 +212,15 @@ where
         Props::new(Self::Props::default())
     }
 
-    fn update(_state: &mut Self, _props: &Self::Props, _message: Event) -> UpdateResult {
+    fn update(_state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::new()
     }
 
-    fn generic_update(state: &mut StateStoreItem, props: Props, message: Event) -> UpdateResult {
+    fn generic_update(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        Self::update(casted_state, props, message)
+        Self::update(casted_state, global_state, props, message)
     }
 
     fn component() -> ComponentSpecification {

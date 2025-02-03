@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult};
 use crate::components::props::Props;
@@ -11,6 +12,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use cosmic_text::FontSystem;
 
 use std::collections::{HashMap, HashSet};
+use crate::GlobalState;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -61,6 +63,7 @@ impl ComponentTreeNode {
 }
 fn dummy_update(
     _state: &mut StateStoreItem,
+    _global_state: &mut GlobalState,
     _props: Props,
     _message: Event,
 ) -> UpdateResult {
@@ -81,6 +84,7 @@ pub(crate) fn diff_trees(
     mut root_element: ElementBox,
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut StateStore,
+    global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
     font_system: &mut FontSystem,
     reload_fonts: bool,
@@ -271,6 +275,7 @@ pub(crate) fn diff_trees(
 
                         (component_data.update_fn)(
                             state_mut,
+                            global_state,
                             props.clone(),
                             Event::new(Message::OkuMessage(OkuMessage::Initialized)),
                         );
@@ -278,7 +283,7 @@ pub(crate) fn diff_trees(
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, props.clone(), new_spec.children);
+                    let new_component = (component_data.view_fn)(state, global_state, props.clone(), new_spec.children);
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {

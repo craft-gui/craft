@@ -13,6 +13,7 @@ use oku::renderer::color::palette;
 use oku::style::Unit;
 use oku::style::Position;
 use oku::RendererType;
+use oku_core::GlobalState;
 use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
@@ -24,6 +25,7 @@ impl Component for EventsExample {
 
     fn view(
         _state: &Self,
+        _global_state: &GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
@@ -54,6 +56,7 @@ impl Component for EventsExample {
 
     fn update(
         _state: &mut Self,
+        _global_state: &mut GlobalState,
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {
@@ -71,6 +74,7 @@ fn main() {
 
     oku_main_with_options(
         EventsExample::component(),
+        Box::new(()),
         Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "events".to_string(),

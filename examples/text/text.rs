@@ -13,6 +13,7 @@ use oku::events::Message;
 use oku::events::{Event, OkuMessage};
 use oku::RendererType;
 use oku::resource_manager::ResourceIdentifier;
+use oku_core::GlobalState;
 use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
@@ -24,7 +25,7 @@ const FONT: &str =
 impl Component for TextState {
     type Props = ();
 
-    fn view(_state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(_state: &Self, global_state: &GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Container::new()
             .flex_direction(FlexDirection::Column)
             .push(Text::new("Hello, World!").id("hello_text"))
@@ -34,7 +35,7 @@ impl Component for TextState {
             .component()
     }
 
-    fn update(_state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(_state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
         println!("Source: {:?}", event.target);
         if let Message::OkuMessage(OkuMessage::TextInputChanged(new_val)) = event.message {
             println!("new text: {}", new_val);
@@ -49,6 +50,7 @@ fn main() {
 
     oku_main_with_options(
         TextState::component(),
+        Box::new(()),
         Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "text".to_string(),

@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::components::props::Props;
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
@@ -7,6 +8,7 @@ use crate::devtools::style_window::styles_window_view;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
 use crate::events::{clicked, Event, Message, OkuMessage};
+use crate::GlobalState;
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
 
@@ -19,7 +21,7 @@ pub(crate) struct DevToolsComponent {
 impl Component for DevToolsComponent {
     type Props = Option<Box<dyn Element>>;
 
-    fn view(state: &Self, props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(state: &Self, global_state: &GlobalState, props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(&root, state.selected_element);
 
@@ -53,7 +55,7 @@ impl Component for DevToolsComponent {
             .component()
     }
 
-    fn update(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
         if let Some(id) = event.target {
 
             // Set the selected element in the element tree inspector.
