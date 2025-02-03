@@ -23,12 +23,6 @@ use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
 
-impl From<Color> for peniko::Color {
-    fn from(color: Color) -> Self {
-        to_vello_rgba_f32_color(color)
-    }
-}
-
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
@@ -95,7 +89,7 @@ impl<'a> VelloRenderer<'a> {
             renderers: vec![],
             state: RenderState::Suspended,
             scene: Scene::new(),
-            surface_clear_color: Color::rgba(255, 255, 255, 255),
+            surface_clear_color: Color::WHITE,
             vello_fonts: HashMap::new(),
         };
 
@@ -124,10 +118,6 @@ impl<'a> VelloRenderer<'a> {
     }
 }
 
-fn to_vello_rgba_f32_color(color: Color) -> vello::peniko::Color {
-    peniko::Color::new([color.r / 255.0, color.g / 255.0, color.b / 255.0, color.a / 255.0])
-}
-
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
     let rect = Rect::new(
         rectangle.x as f64,
@@ -135,7 +125,7 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
         (rectangle.x + rectangle.width) as f64,
         (rectangle.y + rectangle.height) as f64,
     );
-    scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(fill_color), None, &rect);
+    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
 }
 
 impl Renderer for VelloRenderer<'_> {
@@ -253,9 +243,9 @@ impl Renderer for VelloRenderer<'_> {
                         let buffer_glyphs = text::create_glyphs_for_editor(
                             editor,
                             fill_color.into(),
-                            peniko::Color::from_rgba8(0, 0, 0, 255),
-                            peniko::Color::from_rgba8(0, 120, 215, 255),
-                            peniko::Color::from_rgba8(255, 255, 255, 255),
+                            peniko::Color::from_rgb8(0, 0, 0),
+                            peniko::Color::from_rgb8(0, 120, 215),
+                            peniko::Color::from_rgb8(255, 255, 255),
                         );
 
                         // Draw the Glyphs
@@ -334,7 +324,7 @@ impl Renderer for VelloRenderer<'_> {
                     self.scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, color) => {
-                    self.scene.fill(Fill::NonZero, Affine::IDENTITY, to_vello_rgba_f32_color(color), None, &path);
+                    self.scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 }
             }
         }

@@ -752,8 +752,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
 
     let renderer = app.renderer.as_mut().unwrap();
     let mut root_size = surface_size;
-    
-    renderer.surface_set_clear_color(Color::rgba(255, 255, 255, 255));
+
+    renderer.surface_set_clear_color(Color::WHITE);
 
     #[cfg(feature = "dev_tools")] {
         if app.is_dev_tools_open {

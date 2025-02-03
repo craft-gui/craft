@@ -54,7 +54,6 @@ impl RectangleRenderer {
         let top_right = glam::vec4(x + width, y, 0.0, 1.0);
         let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
-        let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
         let mut border_color =[
             [0.0, 0.0, 0.0, 255.0],
             [0.0, 0.0, 0.0, 255.0],
@@ -70,7 +69,7 @@ impl RectangleRenderer {
             RectangleVertex {
                 position: [top_left.x, top_left.y, top_left.z],
                 size: [rectangle.width, rectangle.height],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
                 border_color,
                 border_radius,
                 border_thickness,
@@ -79,7 +78,7 @@ impl RectangleRenderer {
             RectangleVertex {
                 position: [bottom_left.x, bottom_left.y, bottom_left.z],
                 size: [rectangle.width, rectangle.height],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
                 border_color,
                 border_radius,
                 border_thickness,
@@ -88,7 +87,7 @@ impl RectangleRenderer {
             RectangleVertex {
                 position: [top_right.x, top_right.y, top_right.z],
                 size: [rectangle.width, rectangle.height],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
                 border_color,
                 border_radius,
                 border_thickness,
@@ -97,7 +96,7 @@ impl RectangleRenderer {
             RectangleVertex {
                 position: [bottom_right.x, bottom_right.y, bottom_right.z],
                 size: [rectangle.width, rectangle.height],
-                background_color: [color[0], color[1], color[2], color[3]],
+                background_color: fill_color.components,
                 border_color,
                 border_radius,
                 border_thickness,

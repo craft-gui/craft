@@ -224,8 +224,8 @@ impl Default for Style {
             flex_grow: 0.0,
             flex_shrink: 1.0,
             flex_basis: Unit::Auto,
-            color: Color::rgba(0, 0, 0, 255),
-            background: Color::rgba(0, 0, 0, 0),
+            color: Color::BLACK,
+            background: Color::TRANSPARENT,
             border_color: [Color::BLACK; 4],
             font_size: 16.0,
             font_weight: Default::default(),
@@ -233,8 +233,8 @@ impl Default for Style {
             overflow: [Overflow::default(), Overflow::default()],
             border_radius: [(0.0, 0.0); 4],
             scrollbar_color: ScrollbarColor {
-                thumb_color: Color::rgba(150, 150, 150, 255),
-                track_color: Color::rgba(100, 100, 100, 255),
+                thumb_color: Color::from_rgb8(150, 150, 150),
+                track_color: Color::from_rgb8(100, 100, 100),
             },
             dirty_flags: StyleFlags::empty(),
         }

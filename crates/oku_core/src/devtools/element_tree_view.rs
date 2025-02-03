@@ -51,7 +51,7 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
             .width("100%");
 
         if let Some(custom_id) = element.get_id() {
-            let user_id_color = Color::rgba(68, 147, 248, 255);
+            let user_id_color = Color::from_rgb8(68, 147, 248);
             row = row.push(Container::new()
                 .push(Text::new(custom_id.as_str()).color(Color::WHITE).margin("2.5px", "10px", "2.5px", "10px").id(id.as_str()))
                 .id(id.as_str())

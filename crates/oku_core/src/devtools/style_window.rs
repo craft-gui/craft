@@ -31,7 +31,7 @@ pub(crate) fn styles_window_view(selected_element: Option<Box<&dyn Element>>) ->
         .background(ROW_BACKGROUND_COLOR)
         .push(Container::new()
             .border_width("2px", "0px", "2px", "0px").border_color(BORDER_COLOR)
-            .push(Text::new("Styles Window").color(Color::rgba(230, 230, 230, 255)).padding("10px", "0px", "10px", "10px"))
+            .push(Text::new("Styles Window").color(Color::from_rgb8(230, 230, 230)).padding("10px", "0px", "10px", "10px"))
         )
         .component();
     

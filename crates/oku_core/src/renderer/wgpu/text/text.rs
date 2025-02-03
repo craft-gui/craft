@@ -72,7 +72,7 @@ impl TextRenderer {
                         let physical_glyph = glyph.physical((0., 0.), 1.0);
 
                         let glyph_color = match glyph.color_opt {
-                            Some(some) => Color::rgba(some.r(), some.g(), some.b(), some.a()),
+                            Some(some) => Color::from_rgba8(some.r(), some.g(), some.b(), some.a()),
                             None => text_area.fill_color,
                         };
 
@@ -199,8 +199,6 @@ pub(crate) fn build_glyph_rectangle(
     let top_right = glam::vec4(x + width, y, 0.0, 1.0);
     let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
 
-    let color = [fill_color.r, fill_color.g, fill_color.b, fill_color.a];
-    
     let left_text_corod = glyph_info.texture_coordinate_x as f32 / text_atlas_texture_width as f32;
     let top_tex_coord = glyph_info.texture_coordinate_y as f32 / text_atlas_texture_height as f32;
     
@@ -208,28 +206,28 @@ pub(crate) fn build_glyph_rectangle(
         TextVertex {
             position: [top_left.x, top_left.y, top_left.z],
             uv: [left_text_corod, top_tex_coord],
-            background_color: [color[0], color[1], color[2], color[3]],
+            background_color: fill_color.components,
             content_type: glyph_info.content_type
         },
 
         TextVertex {
             position: [bottom_left.x, bottom_left.y, bottom_left.z],
             uv: [left_text_corod, top_tex_coord + (rectangle.height / text_atlas_texture_height as f32)],
-            background_color: [color[0], color[1], color[2], color[3]],
+            background_color: fill_color.components,
             content_type: glyph_info.content_type
         },
 
         TextVertex {
             position: [top_right.x, top_right.y, top_right.z],
             uv: [left_text_corod + (rectangle.width / text_atlas_texture_width as f32), top_tex_coord],
-            background_color: [color[0], color[1], color[2], color[3]],
+            background_color: fill_color.components,
             content_type: glyph_info.content_type
         },
 
         TextVertex {
             position: [bottom_right.x, bottom_right.y, bottom_right.z],
             uv: [left_text_corod + (rectangle.width / text_atlas_texture_width as f32), top_tex_coord + (rectangle.height / text_atlas_texture_height as f32)],
-            background_color: [color[0], color[1], color[2], color[3]],
+            background_color: fill_color.components,
             content_type: glyph_info.content_type
         },
     ]);
