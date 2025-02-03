@@ -18,33 +18,10 @@ pub struct Counter {
     count: i64,
 }
 
-#[derive(Default, Clone)]
-pub struct AppState {
-    pub action: String,
-}
-
-#[derive(Default)]
-struct DummyComponent;
-
-impl Component for DummyComponent {
+impl Component<()> for Counter {
     type Props = ();
 
-    fn view(state: &Self, global_state: &GlobalState, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
-        let global_state: &AppState = global_state.as_ref().downcast_ref::<AppState>().unwrap();
-        Text::new(&global_state.action).component()
-    }
-
-    fn update(_state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, _message: Event) -> UpdateResult {
-        UpdateResult::default()
-    }
-}
-
-impl Component for Counter {
-    type Props = ();
-
-    fn view(state: &Self, global_state: &GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
-        let global_state = global_state.as_ref().downcast_ref::<AppState>().unwrap();
-        
+    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
@@ -54,7 +31,6 @@ impl Component for Counter {
             .height("100%")
             .background(Color::from_rgb8(250, 250, 250))
             .gap("20px")
-            .push(Text::new(format!("Last Action: {}", &global_state.action.as_str()).as_str()))
             .push(
                 Text::new(format!("{}", state.count).as_str())
                     .font_size(72.0)
@@ -71,16 +47,13 @@ impl Component for Counter {
             .component()
     }
 
-    fn update(state: &mut Self, global_state: &mut GlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
-        let global_state = global_state.as_mut().downcast_mut::<AppState>().unwrap();
+    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
         if clicked(&event.message) && event.target.is_some() {
             match event.target.as_deref().unwrap() {
                 "increment" => {
-                    global_state.action = "increment".to_string();
                     state.count += 1
                 }
                 "decrement" => {
-                    global_state.action = "decrement".to_string();
                     state.count -= 1
                 },
                 _ => return UpdateResult::default(),
@@ -123,7 +96,7 @@ fn main() {
 
     oku_main_with_options(
         Counter::component(),
-        Box::new(AppState::default()),
+        Box::new(()),
         Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),
