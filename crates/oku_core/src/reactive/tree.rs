@@ -12,6 +12,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use cosmic_text::FontSystem;
 
 use std::collections::{HashMap, HashSet};
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::GlobalState;
 
 #[derive(Clone)]
@@ -75,6 +76,7 @@ pub struct DiffTreesResult {
     pub(crate) element_tree: ElementBox,
     pub(crate) component_ids: HashSet<ComponentId>,
     pub(crate) element_ids: HashSet<ComponentId>,
+    pub(crate) pointer_captures: HashMap<i64, ComponentId>,
 }
 
 /// Creates a new Component tree and Element tree from a ComponentSpecification.
@@ -133,7 +135,8 @@ pub(crate) fn diff_trees(
         
         let mut new_component_ids: HashSet<ComponentId> = HashSet::new();
         let mut new_element_ids: HashSet<ComponentId> = HashSet::new();
-        
+        let mut pointer_captures: HashMap<i64, ComponentId> = HashMap::new();
+
         let mut to_visit: Vec<TreeVisitorNode> = vec![
             TreeVisitorNode {
                 component_specification: root_spec.children[0].clone(),
@@ -173,6 +176,15 @@ pub(crate) fn diff_trees(
                     new_element_ids.insert(id);
                     
                     if should_update {
+                        // Collect the pointer captures.
+                        let base_state = element.internal.get_base_state(element_state);
+                        // FIXME: Collect pointer captures with the correct device id. 
+                        for (device_id, is_captured) in &base_state.base.pointer_capture {
+                            if *is_captured {
+                                pointer_captures.insert(DUMMY_DEVICE_ID/*device_id*/, id);
+                            }
+                        }
+
                         element.internal.update_state(font_system, element_state, reload_fonts);
                     } else {
                         let state = element.internal.initialize_state(font_system);
@@ -330,7 +342,8 @@ pub(crate) fn diff_trees(
             component_tree,
             element_tree: root_element,
             element_ids: new_element_ids,
-            component_ids: new_component_ids
+            component_ids: new_component_ids,
+            pointer_captures
         }
     }
 }

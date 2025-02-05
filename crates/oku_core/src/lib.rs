@@ -68,14 +68,14 @@ use winit::keyboard::{Key, NamedKey};
 
 
 use std::any::Any;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-
+use winit::event::DeviceId;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 use oku_logging::{info, span, Level};
@@ -96,6 +96,8 @@ struct ReactiveTree {
     component_tree: Option<ComponentTreeNode>,
     element_ids: HashSet<ComponentId>,
     component_ids: HashSet<ComponentId>,
+    /// Stores a pointer device id and their pointer captured element. 
+    pointer_captures: HashMap<i64, ComponentId>,
     update_queue: VecDeque<UpdateQueueEntry>,
     user_state: StateStore,
     element_state: ElementStateStore,
@@ -168,6 +170,7 @@ use crate::devtools::dev_tools_component::dev_tools_view;
 
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use oku_winit_state::OkuWinitState;
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::geometry::{Point, Size};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
@@ -255,6 +258,7 @@ async fn async_main(
             component_tree: None,
             element_ids: Default::default(),
             component_ids: Default::default(),
+            pointer_captures: Default::default(),
             update_queue: VecDeque::new(),
             user_state: user_state,
             element_state: Default::default(),
@@ -272,6 +276,7 @@ async fn async_main(
             element_state: Default::default(),
             element_ids: Default::default(),
             component_ids: Default::default(),
+            pointer_captures: Default::default(),
         },
     });
 
@@ -446,19 +451,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
         component: Some(reactive_tree.component_tree.as_ref().unwrap()),
     };
 
-    // Dispatch some events globally to elements.
-    // This is needed for things like scrolling while the mouse is not over an element.
-    if matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_)) {
-        for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter_mut().rev() {
-            if let Some(element) = fiber_node.element {
-                let res = element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
-
-                if !res.propagate {
-                    break;
-                }
-            }
-        }
-    }
+    let is_pointer_event = matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_));
 
     let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
     let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
@@ -482,7 +475,18 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
             let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
-            if in_bounds {
+            let mut should_pass_hit_test = in_bounds;
+            
+            // Bypass the hit test result if pointer capture is turned on for the current element.
+            if is_pointer_event {
+                if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
+                    if *element_id == element.component_id() {
+                        should_pass_hit_test = true;
+                    }
+                }
+            }
+            
+            if should_pass_hit_test {
                 targets.push_back((element.component_id(), element.get_id().clone(), element.common_element_data().layout_order))
             } else {
                 //println!("Not in bounds, Element: {:?}", element.get_id());
@@ -686,6 +690,7 @@ async fn update_reactive_tree(
     reactive_tree.component_tree = Some(new_tree.component_tree);
     reactive_tree.component_ids = new_tree.component_ids;
     reactive_tree.element_ids = new_tree.element_ids;
+    reactive_tree.pointer_captures = new_tree.pointer_captures;
 }
 
 async fn draw_reactive_tree(

@@ -273,6 +273,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             }
         }
     }
+
+    fn get_base_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ElementStateStoreItem {
+        element_state.storage.get(&self.common_element_data().component_id).unwrap()
+    }
     
     #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {

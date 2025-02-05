@@ -14,6 +14,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 
 /// A stateless element that stores other elements.
 #[derive(Clone, Default, Debug)]
@@ -158,8 +159,9 @@ impl Element for Container {
     }
 
     fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
-        let container_state = self.get_state_mut(element_state);
-
+        let base_state = self.get_base_state_mut(element_state);
+        let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
+        
         if self.style().overflow()[1] == taffy::Overflow::Scroll {
             match message {
                 OkuMessage::MouseWheelEvent(mouse_wheel) => {
@@ -193,6 +195,9 @@ impl Element for Container {
                             WinitElementState::Pressed => {
                                 if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
                                     container_state.scroll_click = Some((pointer_button.position.x, pointer_button.position.y));
+                                    // FIXME: Turn pointer capture on with the correct device id. 
+                                    base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                                    
                                     UpdateResult::new().prevent_propagate().prevent_defaults()
                                 } else if self.common_element_data.computed_scroll_track.contains(&pointer_button.position) {
                                     let offset_y = pointer_button.position.y - self.common_element_data.computed_scroll_track.y;
@@ -209,6 +214,8 @@ impl Element for Container {
                             }
                             WinitElementState::Released => {
                                 container_state.scroll_click = None;
+                                // FIXME: Turn pointer capture off with the correct device id. 
+                                base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, false);
                                 UpdateResult::new().prevent_propagate().prevent_defaults()
                             }
                         }
