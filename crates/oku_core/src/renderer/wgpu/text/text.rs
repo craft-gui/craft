@@ -57,7 +57,7 @@ impl TextRenderer {
         });
     }
 
-    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> PerFrameData {
+    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> Option<PerFrameData> {
 
         for text_area in self.text_areas.iter() { 
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
@@ -106,8 +106,13 @@ impl TextRenderer {
                 panic!("Unknown state provided to the renderer!");
             }
         }
+        
+        if self.indices.is_empty() {
+            self.text_areas.clear();
+            return None;
+        }
 
-
+        let indices = self.indices.len();
         let vertex_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&self.vertices),
@@ -119,17 +124,19 @@ impl TextRenderer {
             contents: bytemuck::cast_slice(&self.indices),
             usage: wgpu::BufferUsages::INDEX,
         });
+        
+        self.vertices.clear();
+        self.indices.clear();
+        self.text_areas.clear();
 
-        PerFrameData {
+        Some(PerFrameData {
             vertex_buffer,
-            index_buffer
-        }
+            index_buffer,
+            indices
+        })
     }
     
     pub(crate) fn draw(&mut self, context: &mut Context, render_pass: &mut RenderPass, per_frame_data: &PerFrameData) {
-        if self.vertices.is_empty() {
-            return;
-        }
         let text_pipeline = self.cached_pipelines.get(&DEFAULT_TEXT_PIPELINE_CONFIG).unwrap();
 
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -174,10 +181,7 @@ impl TextRenderer {
         render_pass.set_bind_group(1, Some(&context.global_buffer.bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));
         render_pass.set_index_buffer(per_frame_data.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..(self.indices.len() as u32), 0, 0..1);
-        self.vertices.clear();
-        self.indices.clear();
-        self.text_areas.clear();
+        render_pass.draw_indexed(0..(per_frame_data.indices as u32), 0, 0..1);
     }
 }
 

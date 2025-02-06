@@ -816,9 +816,10 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 app.mouse_position
             ).await;
         }
-    }
-
-    renderer.submit();
+    }   
+    
+    let resource_manager = app.resource_manager.as_ref().read().await;
+    renderer.submit(resource_manager);
 
 }
 

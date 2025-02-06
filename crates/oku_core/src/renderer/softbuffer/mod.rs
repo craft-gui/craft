@@ -384,7 +384,7 @@ impl Renderer for SoftwareRenderer {
         }
     }
     
-    fn submit(&mut self) {
+    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
         let buffer = self.copy_skia_buffer_to_softbuffer(self.surface_width, self.surface_height);
         buffer.present().unwrap();
     }

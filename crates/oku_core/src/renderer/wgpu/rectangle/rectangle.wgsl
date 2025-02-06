@@ -112,15 +112,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // On the border.
     if is_top_border {
-        return in.v_border_top_color / 255.0;
+        return in.v_border_top_color;
     } else if is_right_border {
-        return in.v_border_right_color / 255.0;
+        return in.v_border_right_color;
     } else if is_bottom_border {
-        return in.v_border_bottom_color / 255.0;
+        return in.v_border_bottom_color;
     } else if is_left_border {
-        return in.v_border_left_color / 255.0;
+        return in.v_border_left_color;
     } else if sdf < 0.0 { // Inside the shape.
-        return in.v_background_color / 255.0;
+        return in.v_background_color;
     } else { // Outside the shape.
         discard;
         // return vec4(1.0, 0.0, 1.0, 1.0);

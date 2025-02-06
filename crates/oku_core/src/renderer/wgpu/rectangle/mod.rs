@@ -17,15 +17,10 @@ pub struct RectangleRenderer {
     pub(crate) indices: Vec<u32>,
 }
 
-pub struct ImagePerFrameData {
-    pub(crate) vertex_buffers: Vec<wgpu::Buffer>,
-    pub(crate) index_buffers: Vec<wgpu::Buffer>,
-    pub resource_identifiers: Vec<Option<ResourceIdentifier>>,
-}
-
 pub struct PerFrameData {
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,
+    pub(crate) indices: usize,
 }
 
 impl RectangleRenderer {
@@ -115,7 +110,13 @@ impl RectangleRenderer {
     }
 
     
-    pub fn prepare(&self, context: &Context) -> PerFrameData {
+    pub fn prepare(&mut self, context: &Context) -> Option<PerFrameData> {
+        let indices = self.indices.len();
+        
+        if indices == 0 {
+            return None;
+        }
+        
         let vertex_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&self.vertices),
@@ -128,29 +129,28 @@ impl RectangleRenderer {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        PerFrameData {
+        self.vertices.clear();
+        self.indices.clear();
+
+        Some(PerFrameData {
             vertex_buffer,
-            index_buffer
-        }
+            index_buffer,
+            indices
+        })
     }
 
     pub fn draw(
         &mut self,
         context: &Context,
         render_pass: &mut RenderPass,
-        per_frame_data: PerFrameData
+        per_frame_data: &PerFrameData
     ) {
-        if self.vertices.is_empty() {
-            return;
-        }
         let rectangle_pipeline = self.cached_pipelines.get(&DEFAULT_RECTANGLE_PIPELINE_CONFIG).unwrap();
         render_pass.set_pipeline(&rectangle_pipeline.pipeline);
         render_pass.set_bind_group(0, Some(&context.global_buffer.bind_group), &[]);
         render_pass.set_vertex_buffer(0, per_frame_data.vertex_buffer.slice(..));
         render_pass.set_index_buffer(per_frame_data.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..(self.indices.len() as u32), 0, 0..1);
-        self.vertices.clear();
-        self.indices.clear();
+        render_pass.draw_indexed(0..(per_frame_data.indices as u32), 0, 0..1);
     }
 }
 

@@ -47,5 +47,5 @@ impl Renderer for BlankRenderer {
     ) {
     }
 
-    fn submit(&mut self) {}
+    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {}
 }

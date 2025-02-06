@@ -326,7 +326,7 @@ impl Renderer for VelloRenderer<'_> {
         }
     }
 
-    fn submit(&mut self) {
+    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
             _ => panic!("!!!"),

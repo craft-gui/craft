@@ -45,7 +45,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     switch (in.content_type) {
         // Content Type: Mask
         case 0u: {
-            var color = in.color / 255.0;
+            var color = in.color;
             var sampled_color = textureSample(texture_view, texture_sampler, in.texture_coordinates);
             return vec4(color.rgb, color.a * sampled_color.a);
         }

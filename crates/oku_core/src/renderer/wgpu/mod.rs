@@ -14,7 +14,7 @@ use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::{create_surface_config, request_adapter, request_device_and_queue, Context};
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
-use crate::renderer::wgpu::image::image::ImageRenderer;
+use crate::renderer::wgpu::image::image::{ImagePerFrameData, ImageRenderer};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
@@ -23,7 +23,7 @@ use tokio::sync::RwLockReadGuard;
 use wgpu::RenderPass;
 use winit::window::Window;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::wgpu::rectangle::RectangleRenderer;
+use crate::renderer::wgpu::rectangle::{PerFrameData, RectangleRenderer};
 use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::renderer::wgpu::text::text::TextRenderer;
 
@@ -33,7 +33,15 @@ pub struct WgpuRenderer<'a> {
     rectangle_renderer: RectangleRenderer,
     text_renderer: TextRenderer,
     image_renderer: ImageRenderer,
-    render_commands: Vec<RenderCommand>
+    render_commands: Vec<RenderCommand>,
+    render_snapshots: Vec<RenderSnapshot>,
+}
+
+pub struct RenderSnapshot {
+    rectangle_per_frame_data: Option<PerFrameData>,
+    text_per_frame_data: Option<PerFrameData>,
+    image_per_frame_data: Option<ImagePerFrameData>,
+    clip_rectangle: Rectangle,
 }
 
 impl<'a> WgpuRenderer<'a> {
@@ -84,6 +92,7 @@ impl<'a> WgpuRenderer<'a> {
             text_renderer,
             image_renderer,
             render_commands: vec![],
+            render_snapshots: vec![],
         }
     }
 }
@@ -149,7 +158,7 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
+    fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
 
         let render_commands_len = self.render_commands.len();
 
@@ -157,6 +166,64 @@ impl Renderer for WgpuRenderer<'_> {
             return;
         }
 
+        
+        let render_commands = self.render_commands.drain(..);
+
+        let viewport_clip_rect = Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: self.context.surface_config.width as f32,
+            height: self.context.surface_config.height as f32
+        };
+
+        let mut render_groups: Vec<RenderGroup> = Vec::new();
+        render_groups.push(RenderGroup {
+            clip_rectangle: viewport_clip_rect,
+        });
+
+        for (index, command) in render_commands.enumerate() {
+            let mut should_submit = index == render_commands_len - 1;
+
+            match command {
+                RenderCommand::PushLayer(clip_rectangle) => {
+                    let parent_clip_rectangle = render_groups.last().unwrap().clip_rectangle;
+                    let constrained_clip_rectangle = clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
+                    render_groups.push(RenderGroup {
+                        clip_rectangle: constrained_clip_rectangle
+                    });
+
+                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
+                    self.render_snapshots.push(snapshot);
+                }
+                RenderCommand::PopLayer => {
+                    should_submit = true;
+                }
+                RenderCommand::DrawRect(rectangle, fill_color) => {
+                    self.rectangle_renderer.build(rectangle, fill_color);
+                }
+                RenderCommand::DrawRectOutline(_, _) => {}
+                RenderCommand::DrawImage(rectangle, resource_identifier) => {
+                    self.image_renderer.build(rectangle, resource_identifier, Color::WHITE);
+                }
+                RenderCommand::DrawText(rectangle, component_id, color) => {
+                    self.text_renderer.build(rectangle, component_id, color);
+                }
+                RenderCommand::FillBezPath(_, _) => {
+
+                }
+            }
+
+            if should_submit {
+                let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
+                let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
+                self.render_snapshots.push(snapshot);
+            }
+
+        }
+    }
+
+
+    fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>) {
         let mut encoder = self.context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
@@ -186,92 +253,61 @@ impl Renderer for WgpuRenderer<'_> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-
-            let render_commands = self.render_commands.drain(..);
-
-            let viewport_clip_rect = Rectangle {
-                x: 0.0,
-                y: 0.0,
-                width: self.context.surface_config.width as f32,
-                height: self.context.surface_config.height as f32
-            };
-
-            let mut render_groups: Vec<RenderGroup> = Vec::new();
-            render_groups.push(RenderGroup {
-                clip_rectangle: viewport_clip_rect,
-            });
-
-            for (index, command) in render_commands.enumerate() {
-                let mut should_submit = index == render_commands_len - 1;
-
-                match command {
-                    RenderCommand::PushLayer(clip_rectangle) => {
-                        let parent_clip_rectangle = render_groups.last().unwrap().clip_rectangle;
-                        let constrained_clip_rectangle = clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
-                        render_groups.push(RenderGroup {
-                            clip_rectangle: constrained_clip_rectangle
-                        });
-
-                        draw(&mut self.context, &mut render_pass, font_system, element_state, &resource_manager, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
-                    }
-                    RenderCommand::PopLayer => {
-                        should_submit = true;
-                    }
-                    RenderCommand::DrawRect(rectangle, fill_color) => {
-                        self.rectangle_renderer.build(rectangle, fill_color);
-                    }
-                    RenderCommand::DrawRectOutline(_, _) => {}
-                    RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                        self.image_renderer.build(rectangle, resource_identifier, Color::WHITE);
-                    }
-                    RenderCommand::DrawText(rectangle, component_id, color) => {
-                        self.text_renderer.build(rectangle, component_id, color);
-                    }
-                    RenderCommand::FillBezPath(_, _) => {
-
-                    }
+            
+            for snapshot in &self.render_snapshots {
+                
+                let clip_rectangle = ClipRectangle::constrain_to_clip_rectangle(&snapshot.clip_rectangle, &ClipRectangle {
+                    x: 0.0,
+                    y: 0.0,
+                    width: output.texture.width() as f32,
+                    height: output.texture.height() as f32,
+                });
+                render_pass.set_scissor_rect(
+                    clip_rectangle.x as u32,
+                    clip_rectangle.y as u32,
+                    clip_rectangle.width as u32,
+                    clip_rectangle.height as u32,
+                );
+                
+                if let Some(rectangle_per_frame_data) = snapshot.rectangle_per_frame_data.as_ref() {
+                    self.rectangle_renderer.draw(&self.context, &mut render_pass, rectangle_per_frame_data);    
                 }
 
-                if should_submit {
-                    let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                    draw(&mut self.context, &mut render_pass, font_system, element_state, &resource_manager, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
+                if let Some(text_per_frame_data) = snapshot.text_per_frame_data.as_ref() {
+                    self.text_renderer.draw(&mut self.context, &mut render_pass, text_per_frame_data);
                 }
 
+                if let Some(image_per_frame_data) = snapshot.image_per_frame_data.as_ref() {
+                    self.image_renderer.draw(&mut self.context, &resource_manager, &mut render_pass, image_per_frame_data);
+                }
+                
             }
         }
+
         self.context.queue.submit(std::iter::once(encoder.finish()));
-        output.present(); 
-    }
-
-
-    fn submit(&mut self) {
-        
+        output.present();
+        self.render_snapshots.clear();
     }
 }
 
-fn draw(
+fn assemble_render_snapshot(
         context: &mut Context,
-        render_pass: &mut RenderPass,
         font_system: &mut FontSystem,
         element_state: &ElementStateStore,
-        resource_manager: &RwLockReadGuard<ResourceManager>,
         rectangle_renderer: &mut RectangleRenderer,
         text_renderer: &mut TextRenderer,
         image_renderer: &mut ImageRenderer,
         clip_rectangle: ClipRectangle
-) {
-    render_pass.set_scissor_rect(
-        clip_rectangle.x as u32,
-        clip_rectangle.y as u32,
-        clip_rectangle.width as u32,
-        clip_rectangle.height as u32,
-    );
+) -> RenderSnapshot {
 
     let rectangle_renderer_per_frame_data = rectangle_renderer.prepare(context);
     let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
     let image_renderer_per_frame_data = image_renderer.prepare(context);
-
-    rectangle_renderer.draw(context, render_pass, rectangle_renderer_per_frame_data);
-    text_renderer.draw(context, render_pass, &text_renderer_per_frame_data);
-    image_renderer.draw(context, resource_manager, render_pass, &image_renderer_per_frame_data);
+    
+    RenderSnapshot {
+        rectangle_per_frame_data: rectangle_renderer_per_frame_data,
+        text_per_frame_data: text_renderer_per_frame_data,
+        image_per_frame_data: image_renderer_per_frame_data,
+        clip_rectangle,
+    }
 }

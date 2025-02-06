@@ -56,5 +56,5 @@ pub trait Renderer {
         element_state: &ElementStateStore,
     );
     
-    fn submit(&mut self);
+    fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);
 }
