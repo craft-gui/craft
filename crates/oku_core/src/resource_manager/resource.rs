@@ -1,8 +1,9 @@
+use std::sync::Arc;
 use crate::resource_manager::image::ImageResource;
 
 #[derive(Debug)]
 pub enum Resource {
-    Image(ImageResource),
+    Image(Arc<ImageResource>),
     Font(Vec<u8>),
 }
 

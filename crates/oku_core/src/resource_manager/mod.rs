@@ -1,5 +1,5 @@
 mod identifier;
-mod image;
+pub(crate) mod image;
 pub mod resource;
 pub mod resource_data;
 pub mod resource_type;
@@ -24,6 +24,7 @@ use std::collections::{HashMap};
 use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
+use std::sync::Arc;
 use crate::OkuRuntime;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
@@ -48,7 +49,7 @@ impl ResourceManager {
                 ResourceType::Image => {
                     let generic_resource = ResourceData::new(resource_identifier.clone(), None, None, ResourceType::Image);
                     self.resources
-                        .insert(resource_identifier.clone(), Resource::Image(ImageResource::new(0, 0, generic_resource)));
+                        .insert(resource_identifier.clone(), Resource::Image(Arc::new(ImageResource::new(0, 0, generic_resource))));
                 }
                 ResourceType::Font => {
                     self.resources.insert(resource_identifier.clone(), Resource::Font(vec![]));
@@ -84,7 +85,7 @@ impl ResourceManager {
                                 let generic_resource = ResourceData::new(resource_identifier.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
                                 info!("Image downloaded");
 
-                                let resource = Resource::Image(ImageResource::new(size.0, size.1, generic_resource));
+                                let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
                                 app_sender_copy
                                     .send(AppMessage::new(
                                         0,

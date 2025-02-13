@@ -1,4 +1,5 @@
 mod text;
+mod image_adapter;
 
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
@@ -22,6 +23,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
+use crate::renderer::vello::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -213,7 +215,7 @@ impl Renderer for VelloRenderer<'_> {
 
                     if let Some(Resource::Image(resource)) = resource {
                         let image = &resource.image;
-                        let data = Arc::new(image.clone().into_raw().to_vec());
+                        let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
                         let vello_image =
                             peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
