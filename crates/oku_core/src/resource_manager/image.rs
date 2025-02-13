@@ -1,6 +1,7 @@
 use crate::resource_manager::resource_data::ResourceData;
 use image::RgbaImage;
 
+#[derive(Debug)]
 pub struct ImageResource {
     pub common_data: ResourceData,
     pub width: u32,
@@ -10,15 +11,28 @@ pub struct ImageResource {
 
 impl ImageResource {
     pub(crate) fn new(width: u32, height: u32, mut data: ResourceData) -> Self {
-        let image = image::load_from_memory(data.data.as_ref().unwrap()).unwrap();
-        let image = image.to_rgba8();
-        data.data = None;
+        
+        if let Some(image_data) = data.data.as_ref() {
+            let image = image::load_from_memory(image_data).unwrap();
+            let image = image.to_rgba8();
+            data.data = None;
 
-        ImageResource {
-            common_data: data,
-            image,
-            width,
-            height,
+            ImageResource {
+                common_data: data,
+                image,
+                width,
+                height,
+            }   
+        } else {
+            let empty_image = RgbaImage::new(0, 0);
+            data.data = None;
+
+            ImageResource {
+                common_data: data,
+                image: empty_image,
+                width,
+                height,
+            }
         }
     }
 }

@@ -37,13 +37,16 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
             if image_resource.is_some() || font_resource.is_some() {
                 let mut resource_manager = resource_manager.write().await;
                 
+                
                 if let Some(image_resource) = image_resource {
-                    resource_manager.add(image_resource.clone(), ResourceType::Image, None).await;
+                    resource_manager.async_download_resource_and_send_message_on_finish(image_resource.clone(), ResourceType::Image, None);
+                    resource_manager.add_temporary_resource(image_resource.clone(), ResourceType::Image);
                 }
                 
                 if let Some(font_resource) = font_resource {
                     let font_db = font_system.db_mut();
-                    resource_manager.add(font_resource.clone(), ResourceType::Font, Some(font_db)).await;
+                    resource_manager.async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, Some(font_db));
+                    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
                 }
             }
             

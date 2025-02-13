@@ -1,5 +1,6 @@
 use crate::resource_manager::image::ImageResource;
 
+#[derive(Debug)]
 pub enum Resource {
     Image(ImageResource),
     Font(Vec<u8>),

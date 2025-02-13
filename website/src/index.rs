@@ -29,6 +29,7 @@ fn hero_intro() -> ComponentSpecification {
                         .color(palette::css::WHITE),
                 )
         )
+        .push(Container::new().width("40%").height("500px").margin("0%", "5%", "0%", "0%"))
         // .push(Image::new(ResourceIdentifier::File(PathBuf::from("Intro Hero Image.png"))).width("40%").margin("0%", "5%", "0%", "0%"))
         .component()
 }

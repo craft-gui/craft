@@ -334,17 +334,29 @@ async fn async_main(
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
+
+                    let mut resource_manager = app.resource_manager.write().await;
+                    
                     match resource_event {
-                        ResourceEvent::Loaded(_resource_identifier, resource_type) => {
+                        ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                             if resource_type == ResourceType::Font {
+                                
+                                    
+                                if let Some(font_system) = app.font_system.as_mut() {
+                                    if resource.data().is_some() {
+                                        font_system.db_mut().load_font_data(resource.data().unwrap().to_vec());
+                                        resource_manager.resources.insert(resource_identifier.clone(), resource);
+                                    }
+                                }
+                                
                                 if let Some(renderer) = app.renderer.as_mut() {
                                     renderer.load_font(app.font_system.as_mut().unwrap());
                                 }
+                                
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
-                            }
-
-                            if resource_type == ResourceType::Image {
+                            } else if resource_type == ResourceType::Image {
+                                resource_manager.resources.insert(resource_identifier, resource);
                                 app.window.as_ref().unwrap().request_redraw();
                             }
                         }
