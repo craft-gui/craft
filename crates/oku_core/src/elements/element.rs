@@ -208,13 +208,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
 
         let computed_layered_rectangle_transformed = common_element_data.computed_layered_rectangle_transformed.clone();
-        let content_rectangle = computed_layered_rectangle_transformed.content_rectangle();
+        let padding_rectangle = computed_layered_rectangle_transformed.padding_rectangle();
 
         let computed_content_height = common_element_data.computed_border_rectangle_overflow_size.height;
 
-        let client_height = content_rectangle.height
-            - computed_layered_rectangle_transformed.border.top
-            - computed_layered_rectangle_transformed.border.bottom;
+        let client_height = padding_rectangle.height;
         let scroll_height = computed_content_height - computed_layered_rectangle_transformed.border.top;
 
         let scrolltrack_width = common_element_data.scrollbar_size.width;
