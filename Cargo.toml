@@ -71,3 +71,10 @@ path = "examples/text/text.rs"
 [[example]]
 name = "events"
 path = "examples/events/events.rs"
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+strip = true
+debug = false
