@@ -72,6 +72,10 @@ impl Element for Container {
         let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
         
         self.draw_borders(renderer);
+        
+        #[cfg(feature = "wgpu_renderer")]
+        renderer.draw_rect(padding_rectangle, self.style().background());
+        
         if self.common_element_data.current_style().overflow()[1] == Overflow::Scroll {
             renderer.push_layer(padding_rectangle);
         }
@@ -120,7 +124,7 @@ impl Element for Container {
         self.resolve_layer_rectangle(position, transform, result, z_index);
         
         self.finalize_borders();
-        
+
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 

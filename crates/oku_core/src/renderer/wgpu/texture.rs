@@ -27,6 +27,12 @@ impl Texture {
             height: dimensions.1,
             depth_or_array_layers: 1,
         };
+        
+        // Wgpu will panic when creating the texture if the width or height is 0.
+        if size.width == 0 || size.height == 0 {
+            return None;
+        }
+        
         let format = wgpu::TextureFormat::Rgba8UnormSrgb;
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label,
@@ -73,7 +79,7 @@ impl Texture {
         })
     }
 
-    pub(crate) fn generate_default_white_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+    pub fn generate_default_white_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let white_pixel = image::Rgba([255, 255, 255, 255]);
         let image_buffer = image::ImageBuffer::from_pixel(1, 1, white_pixel);
 

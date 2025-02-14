@@ -51,6 +51,7 @@ impl Component for AniList {
         let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
+            .width("100%")
             .height("100%")
             .overflow(Overflow::Scroll)
             .background(Color::from_rgb8(230, 230, 230))

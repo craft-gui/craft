@@ -20,12 +20,12 @@ use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
-use wgpu::RenderPass;
 use winit::window::Window;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::wgpu::rectangle::{PerFrameData, RectangleRenderer};
 use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::renderer::wgpu::text::text::TextRenderer;
+use crate::renderer::wgpu::texture::Texture;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
@@ -71,6 +71,8 @@ impl<'a> WgpuRenderer<'a> {
 
         let global_buffer = GlobalBuffer::new(&device, &global_buffer_uniform);
 
+        let default_texture = Texture::generate_default_white_texture(&device, &queue);
+        
         let context = Context {
             camera,
             device,
@@ -81,6 +83,7 @@ impl<'a> WgpuRenderer<'a> {
             surface_config,
             surface_clear_color: Color::WHITE,
             is_srgba_format: false,
+            default_texture
         };
         let rectangle_renderer = RectangleRenderer::new(&context);
         let text_renderer = TextRenderer::new(&context);

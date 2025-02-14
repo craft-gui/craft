@@ -124,17 +124,22 @@ impl ImageRenderer {
                             &context.queue,
                             &resource.image,
                             Some(label.as_str()),
-                        ).unwrap();
-                        self.cached_textures.insert(texture_path.clone(), texture);
-                        self.cached_textures.get(&texture_path.clone()).unwrap()
+                        );
+                        
+                        if texture.is_none() {
+                            &context.default_texture
+                        } else {
+                            self.cached_textures.insert(texture_path.clone(), texture.unwrap());
+                            self.cached_textures.get(&texture_path.clone()).unwrap()   
+                        }
                     } else {
-                        panic!("Handle invalid textures");
+                        &context.default_texture
                     };
 
                     texture
                 }
             } else {
-                panic!("Handle invalid textures");
+                &context.default_texture
             };
 
             render_pass.set_pipeline(&image_pipeline.pipeline);
