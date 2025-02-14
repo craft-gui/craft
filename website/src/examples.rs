@@ -1,5 +1,12 @@
-use crate::counter::counter::Counter;
-use crate::text::text::TextState;
+#[path = "../../examples/counter/counter.rs"]
+mod counter;
+
+#[path = "../../examples/text/text.rs"]
+mod text;
+
+#[path = "../../examples/request/request.rs"]
+mod request;
+
 use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
@@ -8,6 +15,10 @@ use oku::events::{clicked, Event};
 use oku::renderer::color::palette;
 use oku::style::Display::Flex;
 use oku::style::{Display, FlexDirection};
+
+use crate::examples::text::TextState;
+use crate::examples::counter::Counter;
+use crate::examples::request::AniList;
 
 pub(crate) struct Examples {
     pub(crate) example_to_show: String,
@@ -39,6 +50,7 @@ fn examples_sidebar() -> ComponentSpecification {
         .push(Text::new("Examples").color(palette::css::WHITE).font_size(24.0).component())
         .push(create_examples_link("Counter", "example_counter"))
         .push(create_examples_link("Text", "example_text_state"))
+        .push(create_examples_link("Request", "example_request"))
         .component()
 }
 
@@ -59,6 +71,7 @@ impl Component<WebsiteGlobalState> for Examples {
                 .background(palette::css::WHITE)
                 .push(match state.example_to_show.as_str() {
                     "text_state" => TextState::component().key("example_text_state"),
+                    "request" => AniList::component().key("example_request"),
                     "counter" | &_ => Counter::component().key("example_counter"),
                 })
         )

@@ -3,7 +3,7 @@ use oku::components::ComponentSpecification;
 use oku::elements::{Container, ElementStyles, Image, Text};
 use oku::resource_manager::ResourceIdentifier;
 use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
-use oku_core::style::Unit;
+use oku::style::Unit;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct AniListResponse {

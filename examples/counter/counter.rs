@@ -1,7 +1,6 @@
 #[path = "../util.rs"]
 mod util;
 
-use crate::util::setup_logging;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
 use oku::oku_main_with_options;
@@ -18,10 +17,10 @@ pub struct Counter {
     count: i64,
 }
 
-impl Component<()> for Counter {
+impl Component for Counter {
     type Props = ();
 
-    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view_with_no_global_state(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
@@ -47,7 +46,7 @@ impl Component<()> for Counter {
             .component()
     }
 
-    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         if clicked(&event.message) && event.target.is_some() {
             match event.target.as_deref().unwrap() {
                 "increment" => {
@@ -58,7 +57,7 @@ impl Component<()> for Counter {
                 },
                 _ => return UpdateResult::default(),
             };
-            
+
             return UpdateResult::new().prevent_propagate();
         }
 
@@ -106,7 +105,9 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku_core::GlobalState;
+use oku::GlobalState;
+
+use util::setup_logging;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

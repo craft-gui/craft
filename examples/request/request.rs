@@ -4,9 +4,9 @@ mod ani_list;
 mod util;
 
 use std::any::Any;
-use crate::util::setup_logging;
-use crate::ani_list::{anime_view, AniListResponse, QUERY};
-use crate::AniListMessage::StateChange;
+use util::setup_logging;
+use ani_list::{anime_view, AniListResponse, QUERY};
+use AniListMessage::StateChange;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, Text};
@@ -44,10 +44,10 @@ pub struct AniList {
     state: State,
 }
 
-impl Component<()> for AniList {
+impl Component for AniList {
     type Props = ();
 
-    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view_with_no_global_state(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
@@ -84,7 +84,7 @@ impl Component<()> for AniList {
         root.component()
     }
 
-    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         match event.message {
             Message::OkuMessage(_) => {}
             Message::UserMessage(msg) => {
@@ -145,7 +145,8 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-use oku_core::GlobalState;
+
+use oku::GlobalState;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

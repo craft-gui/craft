@@ -2,27 +2,20 @@ mod index;
 mod examples;
 mod about;
 mod navbar;
-mod counter;
-mod text;
 mod theme;
 
-use std::fmt::format;
-use oku::elements::Container;
-use oku::elements::ElementStyles;
-use oku::elements::Text;
-use oku::style::{Display, JustifyContent};
-use oku::style::FlexDirection;
-use oku::style::Overflow;
-use oku::style::Unit;
-use oku::{oku_main_with_options, OkuOptions, RendererType};
-use oku::components::{Component, ComponentSpecification, UpdateResult};
-use oku::events::Event;
-use oku::renderer::color::Color;
 use crate::about::About;
 use crate::examples::Examples;
 use crate::index::index_page;
-use crate::navbar::{Navbar};
+use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
+use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::elements::Container;
+use oku::elements::ElementStyles;
+use oku::events::Event;
+use oku::style::FlexDirection;
+use oku::style::Display;
+use oku::{oku_main_with_options, OkuOptions, RendererType};
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.

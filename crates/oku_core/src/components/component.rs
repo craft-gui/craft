@@ -185,7 +185,7 @@ macro_rules! component {
     };
 }
 
-pub trait Component<T>
+pub trait Component<T = ()>
 where
     Self: 'static + Default + Send,
     T: 'static + Default + Send
@@ -200,7 +200,9 @@ where
         UpdateResult::default()
     }
     
-    fn view(state: &Self, global_state: &T, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
+    fn view(state: &Self, global_state: &T, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+        Self::view_with_no_global_state(state, props, children)
+    }
 
     fn generic_view(
         state: &StateStoreItem,
@@ -226,8 +228,8 @@ where
         Props::new(Self::Props::default())
     }
 
-    fn update(_state: &mut Self, global_state: &mut T, _props: &Self::Props, _message: Event) -> UpdateResult {
-        UpdateResult::new()
+    fn update(state: &mut Self, _global_state: &mut T, props: &Self::Props, message: Event) -> UpdateResult {
+        Self::update_with_no_global_state(state, props, message)
     }
 
     fn generic_update(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult {
