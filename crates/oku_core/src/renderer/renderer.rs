@@ -13,6 +13,8 @@ pub enum RenderCommand {
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawText(Rectangle, ComponentId, Color),
+    PushOverlay(),
+    PopOverlay(),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
@@ -48,6 +50,10 @@ pub trait Renderer {
     fn push_layer(&mut self, rect: Rectangle);
     
     fn pop_layer(&mut self);
+
+    fn push_overlay(&mut self);
+
+    fn pop_overlay(&mut self);
 
     fn prepare(
         &mut self,

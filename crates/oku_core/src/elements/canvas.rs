@@ -46,6 +46,7 @@ impl Element for Canvas {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
+        self.try_start_overlay(renderer);
         let _border_color: Color = self.style().border_color()[0];
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
         let _border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
@@ -124,11 +125,18 @@ impl Element for Canvas {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     renderer.fill_bez_path(path.clone(), *color);
+                },
+                RenderCommand::PushOverlay() => {
+                    renderer.push_overlay();
+                },
+                RenderCommand::PopOverlay() => {
+                    renderer.pop_overlay();
                 }
             }
         }
 
         renderer.pop_layer();
+        self.try_end_overlay(renderer);
     }
 
     fn compute_layout(

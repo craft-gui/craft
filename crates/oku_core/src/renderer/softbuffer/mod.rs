@@ -191,6 +191,12 @@ impl Renderer for SoftwareRenderer {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
+    fn push_overlay(&mut self) {
+    }
+
+    fn pop_overlay(&mut self) {
+    }
+
     fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
         let framebuffer = self.framebuffer.last_mut().unwrap();
         let framebuffer = &mut framebuffer.0;
@@ -379,7 +385,8 @@ impl Renderer for SoftwareRenderer {
                         continue;
                     }
                     framebuffer.fill_path(&path, &paint, FillRule::EvenOdd, Transform::identity(), None);
-                }
+                },
+                RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {}
             }
         }
     }

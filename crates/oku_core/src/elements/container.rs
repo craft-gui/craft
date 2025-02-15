@@ -68,18 +68,20 @@ impl Element for Container {
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
+        self.try_start_overlay(renderer);
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         #[cfg(feature = "wgpu_renderer")]
         renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
-        
+       
         self.try_start_layer(renderer);
         {
             self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);   
         }
         self.try_end_layer(renderer);
-        
+       
         self.draw_scrollbar(renderer);
+        self.try_end_overlay(renderer);
     }
 
     fn compute_layout(

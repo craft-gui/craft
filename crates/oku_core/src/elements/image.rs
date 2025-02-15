@@ -54,7 +54,7 @@ impl Element for Image {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        
+        self.try_start_overlay(renderer);
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         
@@ -64,6 +64,7 @@ impl Element for Image {
         );
 
         self.draw_borders(renderer);
+        self.try_end_overlay(renderer);
     }
 
     fn compute_layout(

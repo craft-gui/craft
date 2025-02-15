@@ -33,8 +33,10 @@ pub struct WgpuRenderer<'a> {
     rectangle_renderer: RectangleRenderer,
     text_renderer: TextRenderer,
     image_renderer: ImageRenderer,
+    overlay_render_commands: Vec<RenderCommand>,
     render_commands: Vec<RenderCommand>,
     render_snapshots: Vec<RenderSnapshot>,
+    overlay_count: u64,
 }
 
 pub struct RenderSnapshot {
@@ -94,10 +96,17 @@ impl<'a> WgpuRenderer<'a> {
             rectangle_renderer,
             text_renderer,
             image_renderer,
+            overlay_render_commands: vec![],
             render_commands: vec![],
             render_snapshots: vec![],
+            overlay_count: 0,
         }
     }
+
+    fn overlay_active(&self) -> bool {
+        self.overlay_count > 0
+    }
+    
 }
 
 impl Renderer for WgpuRenderer<'_> {
@@ -134,7 +143,11 @@ impl Renderer for WgpuRenderer<'_> {
     }
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
+        } else {
+            self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
+        }
     }
 
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
@@ -142,88 +155,119 @@ impl Renderer for WgpuRenderer<'_> {
     }
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::FillBezPath(path, color));
+        } else {
+            self.render_commands.push(RenderCommand::FillBezPath(path, color));
+        }
     }
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+        } else {
+            self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+        }
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
+        } else {
+            self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
+        }
     }
 
     fn push_layer(&mut self, clip_rect: Rectangle) {
-        self.render_commands.push(RenderCommand::PushLayer(clip_rect));
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::PushLayer(clip_rect));    
+        } else {
+            self.render_commands.push(RenderCommand::PushLayer(clip_rect));
+        }
+        
     }
 
     fn pop_layer(&mut self) {
-        self.render_commands.push(RenderCommand::PopLayer);
+        if self.overlay_active() {
+            self.overlay_render_commands.push(RenderCommand::PopLayer);
+        } else {
+            self.render_commands.push(RenderCommand::PopLayer);
+        }
+    }
+
+    fn push_overlay(&mut self) {
+        self.overlay_count += 1;
+    }
+
+    fn pop_overlay(&mut self) {
+        self.overlay_count -= 1;
     }
 
     fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
 
-        let render_commands_len = self.render_commands.len();
+        let mut collect_render_snapshots = |render_commands: &mut Vec<RenderCommand>| {
+            let render_commands_len = render_commands.len();
+            
+            if render_commands_len == 0 {
+                return;
+            }
+            
+            let viewport_clip_rect = Rectangle {
+                x: 0.0,
+                y: 0.0,
+                width: self.context.surface_config.width as f32,
+                height: self.context.surface_config.height as f32
+            };
 
-        if render_commands_len == 0 {
-            return;
-        }
+            let mut render_groups: Vec<RenderGroup> = Vec::new();
+            render_groups.push(RenderGroup {
+                clip_rectangle: viewport_clip_rect,
+            });
+            
+            
+            for (index, command) in render_commands.drain(..).enumerate() {
+                let mut should_submit = index == render_commands_len - 1;
 
-        
-        let render_commands = self.render_commands.drain(..);
+                match command {
+                    RenderCommand::PushLayer(clip_rectangle) => {
+                        let parent_clip_rectangle = render_groups.last().unwrap().clip_rectangle;
+                        let constrained_clip_rectangle = clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
+                        render_groups.push(RenderGroup {
+                            clip_rectangle: constrained_clip_rectangle
+                        });
 
-        let viewport_clip_rect = Rectangle {
-            x: 0.0,
-            y: 0.0,
-            width: self.context.surface_config.width as f32,
-            height: self.context.surface_config.height as f32
-        };
+                        let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
+                        self.render_snapshots.push(snapshot);
+                    }
+                    RenderCommand::PopLayer => {
+                        should_submit = true;
+                    }
+                    RenderCommand::DrawRect(rectangle, fill_color) => {
+                        self.rectangle_renderer.build(rectangle, fill_color);
+                    }
+                    RenderCommand::DrawRectOutline(_, _) => {}
+                    RenderCommand::DrawImage(rectangle, resource_identifier) => {
+                        self.image_renderer.build(rectangle, resource_identifier.clone(), Color::WHITE);
+                    }
+                    RenderCommand::DrawText(rectangle, component_id, color) => {
+                        self.text_renderer.build(rectangle, component_id, color);
+                    }
+                    RenderCommand::FillBezPath(_, _) => {},
+                    RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {}
+                }
 
-        let mut render_groups: Vec<RenderGroup> = Vec::new();
-        render_groups.push(RenderGroup {
-            clip_rectangle: viewport_clip_rect,
-        });
-
-        for (index, command) in render_commands.enumerate() {
-            let mut should_submit = index == render_commands_len - 1;
-
-            match command {
-                RenderCommand::PushLayer(clip_rectangle) => {
-                    let parent_clip_rectangle = render_groups.last().unwrap().clip_rectangle;
-                    let constrained_clip_rectangle = clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
-                    render_groups.push(RenderGroup {
-                        clip_rectangle: constrained_clip_rectangle
-                    });
-
-                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
+                if should_submit {
+                    let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
+                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
                     self.render_snapshots.push(snapshot);
                 }
-                RenderCommand::PopLayer => {
-                    should_submit = true;
-                }
-                RenderCommand::DrawRect(rectangle, fill_color) => {
-                    self.rectangle_renderer.build(rectangle, fill_color);
-                }
-                RenderCommand::DrawRectOutline(_, _) => {}
-                RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    self.image_renderer.build(rectangle, resource_identifier, Color::WHITE);
-                }
-                RenderCommand::DrawText(rectangle, component_id, color) => {
-                    self.text_renderer.build(rectangle, component_id, color);
-                }
-                RenderCommand::FillBezPath(_, _) => {
-
-                }
-            }
-
-            if should_submit {
-                let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
-                self.render_snapshots.push(snapshot);
-            }
-
-        }
+            };
+        };
+      
+        collect_render_snapshots(&mut self.render_commands);
+        collect_render_snapshots(&mut self.overlay_render_commands);
     }
+    
 
 
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>) {

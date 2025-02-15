@@ -189,7 +189,19 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn should_start_new_layer(&self) -> bool {
         let common_data = self.common_element_data();
 
-       common_data.current_style().overflow()[1] == Overflow::Scroll || common_data.current_style().overlay()
+       common_data.current_style().overflow()[1] == Overflow::Scroll
+    }
+    
+    fn try_start_overlay(&self, renderer: &mut RendererBox) {
+        if self.common_element_data().current_style().overlay() {
+            renderer.push_overlay();
+        }
+    }
+
+    fn try_end_overlay(&self, renderer: &mut RendererBox) {
+        if self.common_element_data().current_style().overlay() {
+            renderer.pop_overlay();
+        }
     }
     
     fn try_start_layer(&self, renderer: &mut RendererBox) {
