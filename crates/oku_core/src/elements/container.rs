@@ -68,21 +68,16 @@ impl Element for Container {
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
-        let padding_rectangle = computed_layer_rectangle_transformed.padding_rectangle();
-        
+        // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
-        
         #[cfg(feature = "wgpu_renderer")]
-        renderer.draw_rect(padding_rectangle, self.style().background());
+        renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
         
-        if self.common_element_data.current_style().overflow()[1] == Overflow::Scroll {
-            renderer.push_layer(padding_rectangle);
+        self.try_start_layer(renderer);
+        {
+            self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);   
         }
-       self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
-        if self.common_element_data.style.overflow()[1] == Overflow::Scroll {
-            renderer.pop_layer();
-        }
+        self.try_end_layer(renderer);
         
         self.draw_scrollbar(renderer);
     }

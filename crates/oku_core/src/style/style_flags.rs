@@ -38,5 +38,6 @@ bitflags! {
         const BORDER_WIDTH = 1 << 32;
         const BORDER_RADIUS = 1 << 33;
         const SCROLLBAR_COLOR = 1 << 34;
+        const OVERLAY = 1 << 35;
     }
 }

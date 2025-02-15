@@ -214,6 +214,12 @@ where
         colors.track_color = scroll_track_color;
         self
     }
+
+    fn overlay(mut self, should_start_overlay: bool) -> Self {
+        let overlay = self.styles_mut().overlay_mut();
+        *overlay = should_start_overlay;
+        self
+    }
 }
 
 impl From<&str> for Unit {

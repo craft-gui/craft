@@ -13,7 +13,7 @@ use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
-use taffy::{NodeId, TaffyTree};
+use taffy::{NodeId, Overflow, TaffyTree};
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -185,7 +185,28 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         renderer.fill_bez_path(border_bottom_path, bottom.color);
         renderer.fill_bez_path(border_left_path, left.color);
     }
+    
+    fn should_start_new_layer(&self) -> bool {
+        let common_data = self.common_element_data();
 
+       common_data.current_style().overflow()[1] == Overflow::Scroll || common_data.current_style().overlay()
+    }
+    
+    fn try_start_layer(&self, renderer: &mut RendererBox) {
+        let common_data = self.common_element_data();
+        let padding_rectangle = common_data.computed_layered_rectangle_transformed.padding_rectangle();
+        
+        if self.should_start_new_layer() {
+            renderer.push_layer(padding_rectangle);
+        }
+    }
+    
+    fn try_end_layer(&self, renderer: &mut RendererBox) {
+        if self.should_start_new_layer() {
+            renderer.pop_layer();
+        }
+    }
+    
     fn finalize_borders(&mut self) {
         let common_element_data = self.common_element_data_mut();
 

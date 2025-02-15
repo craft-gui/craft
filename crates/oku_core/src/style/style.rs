@@ -185,6 +185,8 @@ pub struct Style {
     border_width: [Unit; 4],
     border_radius: [(f32, f32); 4],
     scrollbar_color: ScrollbarColor,
+    
+    overlay: bool,
 
     pub dirty_flags: StyleFlags
 }
@@ -236,6 +238,7 @@ impl Default for Style {
                 thumb_color: Color::from_rgb8(150, 150, 150),
                 track_color: Color::from_rgb8(100, 100, 100),
             },
+            overlay: false,
             dirty_flags: StyleFlags::empty(),
         }
     }
@@ -571,6 +574,15 @@ impl Style {
     pub fn scrollbar_color_mut(&mut self) -> &mut ScrollbarColor {
         self.dirty_flags.insert(StyleFlags::SCROLLBAR_COLOR);
         &mut self.scrollbar_color
+    }
+
+    pub fn overlay(&self) -> bool {
+        self.overlay
+    }
+
+    pub fn overlay_mut(&mut self) -> &mut bool {
+        self.dirty_flags.insert(StyleFlags::OVERLAY);
+        &mut self.overlay
     }
 
 }
