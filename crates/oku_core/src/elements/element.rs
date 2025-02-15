@@ -131,7 +131,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let position = match common_element_data_mut.style.position() {
             taffy::Position::Relative => relative_position + result.location.into(),
-            taffy::Position::Absolute => result.location.into(),
+            taffy::Position::Absolute => relative_position + result.location.into(),
         };
 
         common_element_data_mut.computed_border_rectangle_overflow_size =
@@ -147,6 +147,22 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
     }
 
+    fn draw_first_child(&mut self, renderer: &mut RendererBox,
+                     font_system: &mut FontSystem,
+                     taffy_tree: &mut TaffyTree<LayoutContext>,
+                     element_state: &ElementStateStore,
+                     pointer: Option<Point>) {
+        for child in self.common_element_data_mut().children.iter_mut() {
+            let taffy_child_node_id = child.internal.taffy_node_id();
+            // Skip non-visual elements.
+            if taffy_child_node_id.is_none() {
+                continue;
+            }
+            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
+            break;
+        }
+    }
+    
     fn draw_children(&mut self, renderer: &mut RendererBox,
                      font_system: &mut FontSystem,
                      taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -191,7 +207,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
        common_data.current_style().overflow()[1] == Overflow::Scroll
     }
-    
+
     fn try_start_overlay(&self, renderer: &mut RendererBox) {
         if self.common_element_data().current_style().overlay() {
             renderer.push_overlay();
@@ -203,7 +219,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             renderer.pop_overlay();
         }
     }
-    
+
     fn try_start_layer(&self, renderer: &mut RendererBox) {
         let common_data = self.common_element_data();
         let padding_rectangle = common_data.computed_layered_rectangle_transformed.padding_rectangle();
@@ -470,11 +486,17 @@ macro_rules! generate_component_methods_no_children {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Focused;
             self
         }
+        
+        #[allow(dead_code)]
+        pub fn normal(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+            self
+        }
     };
 }
 
 #[macro_export]
-macro_rules! generate_component_methods {
+macro_rules! generate_component_methods_with_generic_push {
     () => {
         crate::generate_component_methods_no_children!();
         
@@ -508,9 +530,42 @@ macro_rules! generate_component_methods {
             self
         }
 
+        
+    };
+}
+
+#[macro_export]
+macro_rules! generate_component_methods_with_private_push {
+    () => {
+        crate::generate_component_methods_no_children!();
+        
         #[allow(dead_code)]
-        pub fn normal(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+        fn push<T>(mut self, component_specification: T) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.push(component_specification.into());
+
+            self
+        }
+
+        #[allow(dead_code)]
+        fn push_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
+
+            self
+        }
+        
+        #[allow(dead_code)]
+        fn extend_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
+
             self
         }
 

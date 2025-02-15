@@ -56,7 +56,7 @@ pub struct VelloRenderer<'a> {
     scene: Scene,
     surface_clear_color: Color,
     vello_fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font>,
-    
+
     // If > 0, push to the overlay command list.
     overlay_count: u64,
 }
@@ -124,7 +124,7 @@ impl<'a> VelloRenderer<'a> {
 
         vello_renderer
     }
-    
+
     fn overlay_active(&self) -> bool {
         self.overlay_count > 0
     }
@@ -310,7 +310,7 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));   
+            self.overlay_render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
         } else {
             self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
         }
@@ -336,7 +336,7 @@ impl Renderer for VelloRenderer<'_> {
 
     fn push_layer(&mut self, rect: Rectangle) {
         if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PushLayer(rect));   
+            self.overlay_render_commands.push(RenderCommand::PushLayer(rect));
         } else {
             self.render_commands.push(RenderCommand::PushLayer(rect));
         }
@@ -344,11 +344,11 @@ impl Renderer for VelloRenderer<'_> {
 
     fn pop_layer(&mut self) {
         if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PopLayer);    
+            self.overlay_render_commands.push(RenderCommand::PopLayer);
         } else {
             self.render_commands.push(RenderCommand::PopLayer);
         }
-        
+
     }
 
     fn push_overlay(&mut self) {
@@ -358,7 +358,7 @@ impl Renderer for VelloRenderer<'_> {
     fn pop_overlay(&mut self) {
         self.overlay_count -= 1;
     }
-    
+
     fn load_font(&mut self, font_system: &mut FontSystem) {
         let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> =
             font_system.db().faces().map(|face| (face.id, face.index)).collect();

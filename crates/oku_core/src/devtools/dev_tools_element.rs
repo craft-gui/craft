@@ -10,7 +10,7 @@ use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
-use crate::{generate_component_methods, RendererBox};
+use crate::{generate_component_methods_with_generic_push, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
@@ -206,7 +206,7 @@ impl DevTools {
         }
     }
 
-    generate_component_methods!();
+    generate_component_methods_with_generic_push!();
 }
 
 impl ElementStyles for DevTools {

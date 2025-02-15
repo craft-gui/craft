@@ -343,7 +343,7 @@ impl DevTools {
         self
     }
 
-    generate_component_methods!();
+    generate_component_methods_with_generic_push!();
 }
 
 impl ElementStyles for DevTools {

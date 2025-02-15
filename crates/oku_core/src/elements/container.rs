@@ -9,7 +9,7 @@ use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
-use crate::{generate_component_methods, RendererBox};
+use crate::{generate_component_methods_with_generic_push, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
@@ -262,7 +262,7 @@ impl Element for Container {
 
 impl Container {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &ContainerState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ContainerState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
@@ -276,7 +276,7 @@ impl Container {
         }
     }
     
-    generate_component_methods!();
+    generate_component_methods_with_generic_push!();
 }
 
 impl ElementStyles for Container {

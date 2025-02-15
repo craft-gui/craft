@@ -4,6 +4,7 @@ pub(crate) mod empty;
 pub(crate) mod image;
 pub(crate) mod layout_context;
 pub(crate) mod text;
+pub(crate) mod dropdown;
 
 pub(crate) mod canvas;
 
@@ -16,6 +17,7 @@ pub(crate) mod common_element_data;
 pub(crate) mod base_element_state;
 
 pub use crate::elements::container::Container;
+pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::image::Image;
 pub use crate::elements::text::Text;
 pub use crate::elements::text_input::TextInput;
