@@ -3,6 +3,16 @@ use std::path::Path;
 use cosmic_text::{CacheKey, Placement, SwashContent, SwashImage};
 use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat};
 
+#[repr(u8)]
+#[derive(Clone)]
+pub enum ContentType {
+    Mask = 0,
+    // This is for emojis.
+    Color = 1, 
+    // For the cursor and highlights.
+    Rectangle = 2,
+}
+
 #[derive(Clone)]
 pub struct GlyphInfo {
     pub(crate) texture_coordinate_x: u32,
@@ -10,7 +20,7 @@ pub struct GlyphInfo {
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub swash_image_placement: Placement,
-    pub(crate) content_type: u32
+    pub(crate) content_type: ContentType
 }
 
 pub struct TextAtlas {
@@ -114,7 +124,7 @@ impl TextAtlas {
         
         let data = match swash_image.content {
             SwashContent::Mask => {
-                content_type = 0;
+                content_type = ContentType::Mask;
                 
                 let mut data_i = 0;
                 for y in 0..glyph_height {
@@ -131,7 +141,7 @@ impl TextAtlas {
                 data.as_slice()
             }
             SwashContent::Color => {
-                content_type = 1;
+                content_type = ContentType::Color;
                 &swash_image.data
             }
             SwashContent::SubpixelMask => {
@@ -174,27 +184,5 @@ impl TextAtlas {
         
         // Update the x_offset for the next glyph.
         self.x_offset += glyph_width;
-    }
-
-    fn save_atlas_to_file(&self, file_path: &Path) {
-        /*
-        
-        
-        let mut new_image = DynamicImage::new( image.placement.width, image.placement.height, image::ColorType::Rgba8);
-
-            // Place the glyph into the text_atlas
-            for y in 0..glyph_height {
-                for x in 0..glyph_width {
-                    let alpha = image.data[(y as usize * image.placement.width as usize) + x as usize];
-                    self.text_atlas.put_pixel(x + self.x_offset, y + self.y_offset, image::Rgba([alpha, alpha, alpha, alpha]));
-                    new_image.put_pixel(x, y, image::Rgba([alpha, alpha, alpha, alpha]));
-                }
-            }
-
-
-            println!("x offset {} y offset {}, glyph id: {}", self.x_offset, self.y_offset, glyph.glyph_id);
-
-            new_image.save(format!("text_atlas{}-{},{}.png",glyph.glyph_id, image.placement.left, image.placement.top)).unwrap();
-        */
     }
 }

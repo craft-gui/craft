@@ -54,6 +54,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         case 1u: {
             return textureSample(texture_view, texture_sampler, in.texture_coordinates);
         }
+        // Content Type: Rectangle
+        // For drawing the cursor and highlights.
+        case 2u: {
+            var color = in.color;
+            return vec4(color.rgb, color.a);
+        }
         default: {
             return vec4(1.0, 1.0, 1.0, 0.0);
         }
