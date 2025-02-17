@@ -18,6 +18,7 @@ pub enum RenderCommand {
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
+    FillLyonPath(lyon::path::Path, Color),
 }
 
 pub trait Surface {
@@ -43,6 +44,7 @@ pub trait Renderer {
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
     fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
+    fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);

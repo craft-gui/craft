@@ -131,6 +131,9 @@ impl Element for Canvas {
                 },
                 RenderCommand::PopOverlay() => {
                     renderer.pop_overlay();
+                },
+                RenderCommand::FillLyonPath(path, color) => { 
+                    renderer.fill_lyon_path(path, *color);
                 }
             }
         }

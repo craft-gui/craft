@@ -1,11 +1,11 @@
 mod camera;
 mod context;
 mod globals;
-mod rectangle;
 mod text;
 mod render_group;
 mod image;
 pub(crate) mod texture;
+mod path;
 
 use crate::components::component::ComponentId;
 use crate::geometry::Rectangle;
@@ -19,10 +19,14 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
+use lyon::geom::{point, Box2D};
+use lyon::path::{Path, Winding};
+use peniko::color::palette;
 use tokio::sync::RwLockReadGuard;
+use vello::kurbo;
 use winit::window::Window;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::wgpu::rectangle::{PerFrameData, RectangleRenderer};
+use crate::renderer::wgpu::path::PathRenderer;
 use crate::renderer::wgpu::render_group::{ClipRectangle, RenderGroup};
 use crate::renderer::wgpu::text::text::TextRenderer;
 use crate::renderer::wgpu::texture::Texture;
@@ -30,19 +34,25 @@ use crate::renderer::wgpu::texture::Texture;
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
     // pipeline2d: Pipeline2D,
-    rectangle_renderer: RectangleRenderer,
     text_renderer: TextRenderer,
     image_renderer: ImageRenderer,
+    path_renderer: PathRenderer,
     overlay_render_commands: Vec<RenderCommand>,
     render_commands: Vec<RenderCommand>,
     render_snapshots: Vec<RenderSnapshot>,
     overlay_count: u64,
 }
 
+pub struct PerFrameData {
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) index_buffer: wgpu::Buffer,
+    pub(crate) indices: usize,
+}
+
 pub struct RenderSnapshot {
-    rectangle_per_frame_data: Option<PerFrameData>,
     text_per_frame_data: Option<PerFrameData>,
     image_per_frame_data: Option<ImagePerFrameData>,
+    path_per_frame_data: Option<PerFrameData>,
     clip_rectangle: Rectangle,
 }
 
@@ -87,15 +97,15 @@ impl<'a> WgpuRenderer<'a> {
             is_srgba_format: false,
             default_texture
         };
-        let rectangle_renderer = RectangleRenderer::new(&context);
         let text_renderer = TextRenderer::new(&context);
         let image_renderer = ImageRenderer::new(&context);
+        let path_renderer = PathRenderer::new(&context);
 
         WgpuRenderer {
             context,
-            rectangle_renderer,
             text_renderer,
             image_renderer,
+            path_renderer,
             overlay_render_commands: vec![],
             render_commands: vec![],
             render_snapshots: vec![],
@@ -162,6 +172,9 @@ impl Renderer for WgpuRenderer<'_> {
         }
     }
 
+    fn fill_lyon_path(&mut self, path: &Path, color: Color) {
+    }
+
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         if self.overlay_active() {
             self.overlay_render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
@@ -224,7 +237,6 @@ impl Renderer for WgpuRenderer<'_> {
                 clip_rectangle: viewport_clip_rect,
             });
             
-            
             for (index, command) in render_commands.drain(..).enumerate() {
                 let mut should_submit = index == render_commands_len - 1;
 
@@ -236,14 +248,14 @@ impl Renderer for WgpuRenderer<'_> {
                             clip_rectangle: constrained_clip_rectangle
                         });
 
-                        let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, parent_clip_rectangle);
+                        let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, parent_clip_rectangle);
                         self.render_snapshots.push(snapshot);
                     }
                     RenderCommand::PopLayer => {
                         should_submit = true;
                     }
                     RenderCommand::DrawRect(rectangle, fill_color) => {
-                        self.rectangle_renderer.build(rectangle, fill_color);
+                        self.path_renderer.build_rectangle(rectangle, fill_color);
                     }
                     RenderCommand::DrawRectOutline(_, _) => {}
                     RenderCommand::DrawImage(rectangle, resource_identifier) => {
@@ -252,13 +264,47 @@ impl Renderer for WgpuRenderer<'_> {
                     RenderCommand::DrawText(rectangle, component_id, color) => {
                         self.text_renderer.build(rectangle, component_id, color);
                     }
-                    RenderCommand::FillBezPath(_, _) => {},
-                    RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {}
+                    RenderCommand::FillBezPath(bez_path, color) => {
+                        let mut builder = lyon::path::Path::builder();
+                        for element in bez_path.iter() {
+                            match element {
+                                kurbo::PathEl::MoveTo(p) => {
+                                    builder.begin(lyon::geom::euclid::Point2D::new(p.x as f32, p.y as f32));
+                                }
+                                kurbo::PathEl::LineTo(p) => {
+                                    builder.line_to(lyon::geom::euclid::Point2D::new(p.x as f32, p.y as f32));
+                                }
+                                kurbo::PathEl::QuadTo(ctrl, to) => {
+                                    builder.quadratic_bezier_to(
+                                        lyon::geom::euclid::Point2D::new(ctrl.x as f32, ctrl.y as f32),
+                                        lyon::geom::euclid::Point2D::new(to.x as f32, to.y as f32),
+                                    );
+                                }
+                                kurbo::PathEl::CurveTo(ctrl1, ctrl2, to) => {
+                                    builder.cubic_bezier_to(
+                                        lyon::geom::euclid::Point2D::new(ctrl1.x as f32, ctrl1.y as f32),
+                                        lyon::geom::euclid::Point2D::new(ctrl2.x as f32, ctrl2.y as f32),
+                                        lyon::geom::euclid::Point2D::new(to.x as f32, to.y as f32),
+                                    );
+                                }
+                                kurbo::PathEl::ClosePath => {
+                                    builder.end(true);
+                                }
+                            }
+                        }
+
+                        let path = builder.build();
+                        self.path_renderer.build(path, color);
+                    },
+                    RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {},
+                    RenderCommand::FillLyonPath(path, color) => {
+                        self.path_renderer.build(path, color);
+                    }
                 }
 
                 if should_submit {
                     let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.rectangle_renderer, &mut self.text_renderer, &mut self.image_renderer, current_clip_rectangle);
+                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, current_clip_rectangle);
                     self.render_snapshots.push(snapshot);
                 }
             };
@@ -315,11 +361,11 @@ impl Renderer for WgpuRenderer<'_> {
                     clip_rectangle.width as u32,
                     clip_rectangle.height as u32,
                 );
-                
-                if let Some(rectangle_per_frame_data) = snapshot.rectangle_per_frame_data.as_ref() {
-                    self.rectangle_renderer.draw(&self.context, &mut render_pass, rectangle_per_frame_data);    
-                }
 
+                if let Some(path_per_frame_data) = snapshot.path_per_frame_data.as_ref() {
+                    self.path_renderer.draw(&mut self.context, &mut render_pass, path_per_frame_data);
+                }
+                
                 if let Some(text_per_frame_data) = snapshot.text_per_frame_data.as_ref() {
                     self.text_renderer.draw(&mut self.context, &mut render_pass, text_per_frame_data);
                 }
@@ -341,20 +387,19 @@ fn assemble_render_snapshot(
         context: &mut Context,
         font_system: &mut FontSystem,
         element_state: &ElementStateStore,
-        rectangle_renderer: &mut RectangleRenderer,
         text_renderer: &mut TextRenderer,
         image_renderer: &mut ImageRenderer,
+        path_renderer: &mut PathRenderer,
         clip_rectangle: ClipRectangle
 ) -> RenderSnapshot {
-
-    let rectangle_renderer_per_frame_data = rectangle_renderer.prepare(context);
     let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
     let image_renderer_per_frame_data = image_renderer.prepare(context);
-    
+    let path_renderer_per_frame_data = path_renderer.prepare(context);
+
     RenderSnapshot {
-        rectangle_per_frame_data: rectangle_renderer_per_frame_data,
         text_per_frame_data: text_renderer_per_frame_data,
         image_per_frame_data: image_renderer_per_frame_data,
+        path_per_frame_data: path_renderer_per_frame_data,
         clip_rectangle,
     }
 }

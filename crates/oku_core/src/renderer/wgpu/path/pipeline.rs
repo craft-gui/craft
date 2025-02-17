@@ -1,11 +1,8 @@
-use wgpu::util::DeviceExt;
-use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::Context;
-use crate::renderer::wgpu::rectangle::vertex::RectangleVertex;
-use crate::renderer::wgpu::globals::GlobalUniform;
+use crate::renderer::wgpu::path::vertex::PathVertex;
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
-pub struct RectanglePipelineConfig {
+pub struct PathPipelineConfig {
     pub(crate) blend_state: wgpu::BlendState,
 }
 
@@ -22,32 +19,32 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
     },
 };
 
-pub(crate) const DEFAULT_RECTANGLE_PIPELINE_CONFIG: RectanglePipelineConfig = RectanglePipelineConfig {
+pub(crate) const DEFAULT_PATH_PIPELINE_CONFIG: PathPipelineConfig = PathPipelineConfig {
     blend_state: DEFAULT_BLEND_STATE
 };
 
-pub struct RectanglePipeline {
+pub struct PathPipeline {
     pub(crate) pipeline: wgpu::RenderPipeline,
 }
 
-impl RectanglePipeline {
-    pub fn new_pipeline_with_configuration(context: &Context, config: RectanglePipelineConfig) -> Self {
+impl PathPipeline {
+    pub fn new_pipeline_with_configuration(context: &Context, config: PathPipelineConfig) -> Self {
 
-        let shader = context.device.create_shader_module(wgpu::include_wgsl!("./rectangle.wgsl"));
+        let shader = context.device.create_shader_module(wgpu::include_wgsl!("./path.wgsl"));
         let render_pipeline_layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Rectangle Render Pipeline Layout"),
+            label: Some("Path Render Pipeline Layout"),
             bind_group_layouts: &[&context.global_buffer.bind_group_layout],
             push_constant_ranges: &[],
         });
 
         let render_pipeline = context.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Rectangle Render Pipeline"),
+            label: Some("Path Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
                 compilation_options: Default::default(),
-                buffers: &[RectangleVertex::description()],
+                buffers: &[PathVertex::description()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,

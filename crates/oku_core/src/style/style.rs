@@ -584,6 +584,12 @@ impl Style {
         self.dirty_flags.insert(StyleFlags::OVERLAY);
         &mut self.overlay
     }
+    
+    pub fn has_border(&self) -> bool {
+        self.dirty_flags.contains(StyleFlags::BORDER_WIDTH) ||
+        self.dirty_flags.contains(StyleFlags::BORDER_RADIUS) ||
+        self.dirty_flags.contains(StyleFlags::BORDER_COLOR)
+    }
 
 }
 

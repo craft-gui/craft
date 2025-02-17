@@ -32,6 +32,9 @@ cfg-if = "1.0.0"
 chrono = "0.4.39"
 bitflags = "2.8.0"
 
+lyon = { git = "https://github.com/nical/lyon.git", rev="54169fb867a5aa8d9b56c207d42621cb880349a1" }
+usvg = "0.44.0"
+
 [dependencies.cosmic-text]
 git = "https://github.com/pop-os/cosmic-text"
 rev = "9125dd48b771e9aa7833d106a9850e935f71eaa6"

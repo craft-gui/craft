@@ -16,6 +16,7 @@ use peniko::kurbo::BezPath;
 use peniko::Font;
 use std::collections::HashMap;
 use std::sync::Arc;
+use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -260,7 +261,8 @@ impl<'a> VelloRenderer<'a> {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 },
                 RenderCommand::PushOverlay() => {},
-                RenderCommand::PopOverlay() => {}
+                RenderCommand::PopOverlay() => {},
+                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -430,5 +432,8 @@ impl Renderer for VelloRenderer<'_> {
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    }
+
+    fn fill_lyon_path(&mut self, path: &Path, color: Color) {
     }
 }

@@ -14,6 +14,7 @@ use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, Overflow, TaffyTree};
+use crate::style::style_flags::StyleFlags;
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -164,10 +165,18 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     
     fn draw_borders(&self, renderer: &mut RendererBox) {
         let common_element_data = self.common_element_data();
+        let current_style = common_element_data.current_style();
+        let background_color = current_style.background();
+        
+        // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
+        if !current_style.has_border() {
+            renderer.draw_rect(common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), background_color);
+            return;
+        }
+        
         let computed_border_spec = &common_element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
-        let background_color = common_element_data.current_style().background();
         renderer.fill_bez_path(background_path, background_color);
 
         let top = computed_border_spec.get_side(Side::Top);
@@ -222,6 +231,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn finalize_borders(&mut self) {
         let common_element_data = self.common_element_data_mut();
 
+        // OPTIMIZATION: Don't compute the border if no border style values have been modified.
+        if !common_element_data.current_style().has_border() {
+            return;
+        }
+        
         let element_rect = common_element_data.computed_layered_rectangle_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(

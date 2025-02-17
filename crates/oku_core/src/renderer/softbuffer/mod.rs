@@ -27,6 +27,7 @@ use winit::window::Window;
 use std::num::NonZeroU32;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use lyon::path::Path;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -173,6 +174,9 @@ impl Renderer for SoftwareRenderer {
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    }
+
+    fn fill_lyon_path(&mut self, path: &Path, color: Color) {
     }
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
@@ -386,7 +390,8 @@ impl Renderer for SoftwareRenderer {
                     }
                     framebuffer.fill_path(&path, &paint, FillRule::EvenOdd, Transform::identity(), None);
                 },
-                RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {}
+                RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {},
+                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }

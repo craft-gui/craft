@@ -4,7 +4,7 @@ use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::wgpu::context::Context;
-use crate::renderer::wgpu::rectangle::PerFrameData;
+use crate::renderer::wgpu::PerFrameData;
 use crate::renderer::wgpu::text::caching::{GlyphInfo, TextAtlas};
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
 use crate::renderer::wgpu::text::vertex::TextVertex;

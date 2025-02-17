@@ -71,8 +71,8 @@ impl Element for Container {
         self.try_start_overlay(renderer);
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
-        #[cfg(feature = "wgpu_renderer")]
-        renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
+        // #[cfg(feature = "wgpu_renderer")]
+        // renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
        
         self.try_start_layer(renderer);
         {
