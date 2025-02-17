@@ -12,14 +12,14 @@ struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) texture_coordinates: vec2<f32>,
     @location(2) color: vec4<f32>,
-    @location(3) content_type: u32,
+    @location(3) @interpolate(flat) content_type: u32,
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) texture_coordinates: vec2<f32>,
-    @location(2) content_type: u32,
+    @location(2) @interpolate(flat) content_type: u32,
 };
 
 @vertex
