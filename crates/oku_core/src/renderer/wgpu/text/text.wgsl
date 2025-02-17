@@ -41,28 +41,26 @@ var texture_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // Always sample the texture unconditionally
+    let sampled_color = textureSample(texture_view, texture_sampler, in.texture_coordinates);
+
+    var result: vec4<f32>;
 
     switch (in.content_type) {
-        // Content Type: Mask
-        case 0u: {
-            var color = in.color;
-            var sampled_color = textureSample(texture_view, texture_sampler, in.texture_coordinates);
-            return vec4(color.rgb, color.a * sampled_color.a);
+        case 0u: { // Mask
+            result = vec4(in.color.rgb, in.color.a * sampled_color.a);
         }
-        // Content Type: Color
-        // This is for emojis.
-        case 1u: {
-            return textureSample(texture_view, texture_sampler, in.texture_coordinates);
+        case 1u: { // Emoji (Color)
+            result = sampled_color;
         }
-        // Content Type: Rectangle
-        // For drawing the cursor and highlights.
-        case 2u: {
-            var color = in.color;
-            return vec4(color.rgb, color.a);
+        case 2u: { // Rectangle (Cursor & Highlights)
+            result = vec4(in.color.rgb, in.color.a);
         }
         default: {
-            return vec4(1.0, 1.0, 1.0, 0.0);
+            result = vec4(1.0, 1.0, 1.0, 0.0);
         }
     }
 
+    return result;
 }
+
