@@ -66,6 +66,41 @@ impl TextRenderer {
                     BufferRef::Borrowed(_) => panic!("Editor must own buffer."),
                     BufferRef::Arc(_) => panic!("Editor must own buffer."),
                 };
+
+                for run in text_buffer.layout_runs() {
+                    for glyph in run.glyphs.iter() {
+                        let physical_glyph = glyph.physical((0., 0.), 1.0);
+
+                        let glyph_color = match glyph.color_opt {
+                            Some(some) => Color::from_rgba8(some.r(), some.g(), some.b(), some.a()),
+                            None => text_area.fill_color,
+                        };
+
+                        // Check if the image is available in the cache
+                        let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
+                            Some(glyph_info)
+                        } else if let Some(image) = self.swash_cache.get_image(font_system, physical_glyph.cache_key) {
+                            self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
+
+                            self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
+                        } else {
+                            None
+                        };
+
+                        if let Some(glyph_info) = glyph_info {
+                            let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
+                            let rel_gylh_y = run.line_y as i32 + physical_glyph.y + (-glyph_info.swash_image_placement.top);
+                            build_glyph_rectangle(self.text_atlas.texture_width, self.text_atlas.texture_height, glyph_info.clone(), Rectangle {
+                                x: text_area.rectangle.x + rel_gylh_x as f32,
+                                y: text_area.rectangle.y + rel_gylh_y as f32,
+                                width: glyph_info.width as f32,
+                                height: glyph_info.height as f32,
+                            }, glyph_color, &mut self.vertices, &mut self.indices);
+                        }
+
+                    }
+                }
+                
             } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextState>() {
                 for run in text_context.buffer.layout_runs() {
                     for glyph in run.glyphs.iter() {
