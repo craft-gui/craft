@@ -42,10 +42,6 @@ impl Renderer for BlankRenderer {
 
     fn pop_layer(&mut self) {}
 
-    fn push_overlay(&mut self) {}
-
-    fn pop_overlay(&mut self) { }
-
     fn prepare(
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,

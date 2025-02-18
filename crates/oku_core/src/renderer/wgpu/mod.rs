@@ -33,14 +33,11 @@ use crate::renderer::wgpu::texture::Texture;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
-    // pipeline2d: Pipeline2D,
     text_renderer: TextRenderer,
     image_renderer: ImageRenderer,
     path_renderer: PathRenderer,
-    overlay_render_commands: Vec<RenderCommand>,
     render_commands: Vec<RenderCommand>,
     render_snapshots: Vec<RenderSnapshot>,
-    overlay_count: u64,
 }
 
 pub struct PerFrameData {
@@ -106,17 +103,10 @@ impl<'a> WgpuRenderer<'a> {
             text_renderer,
             image_renderer,
             path_renderer,
-            overlay_render_commands: vec![],
             render_commands: vec![],
             render_snapshots: vec![],
-            overlay_count: 0,
         }
     }
-
-    fn overlay_active(&self) -> bool {
-        self.overlay_count > 0
-    }
-    
 }
 
 impl Renderer for WgpuRenderer<'_> {
@@ -153,11 +143,7 @@ impl Renderer for WgpuRenderer<'_> {
     }
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-        } else {
-            self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-        }
+        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
@@ -165,55 +151,26 @@ impl Renderer for WgpuRenderer<'_> {
     }
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::FillBezPath(path, color));
-        } else {
-            self.render_commands.push(RenderCommand::FillBezPath(path, color));
-        }
+        self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 
     fn fill_lyon_path(&mut self, path: &Path, color: Color) {
     }
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
-        } else {
-            self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
-        }
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-        } else {
-            self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-        }
+        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
     fn push_layer(&mut self, clip_rect: Rectangle) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PushLayer(clip_rect));    
-        } else {
-            self.render_commands.push(RenderCommand::PushLayer(clip_rect));
-        }
-        
+        self.render_commands.push(RenderCommand::PushLayer(clip_rect));
     }
 
     fn pop_layer(&mut self) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PopLayer);
-        } else {
-            self.render_commands.push(RenderCommand::PopLayer);
-        }
-    }
-
-    fn push_overlay(&mut self) {
-        self.overlay_count += 1;
-    }
-
-    fn pop_overlay(&mut self) {
-        self.overlay_count -= 1;
+        self.render_commands.push(RenderCommand::PopLayer);
     }
 
     fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
@@ -296,7 +253,6 @@ impl Renderer for WgpuRenderer<'_> {
                         let path = builder.build();
                         self.path_renderer.build(path, color);
                     },
-                    RenderCommand::PushOverlay() | RenderCommand::PopOverlay() => {},
                     RenderCommand::FillLyonPath(path, color) => {
                         self.path_renderer.build(path, color);
                     }
@@ -311,7 +267,6 @@ impl Renderer for WgpuRenderer<'_> {
         };
       
         collect_render_snapshots(&mut self.render_commands);
-        collect_render_snapshots(&mut self.overlay_render_commands);
     }
     
 

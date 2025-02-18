@@ -39,7 +39,6 @@ enum RenderState<'a> {
 
 pub struct VelloRenderer<'a> {
     render_commands: Vec<RenderCommand>,
-    overlay_render_commands: Vec<RenderCommand>,
 
     // The vello RenderContext which is a global context that lasts for the
     // lifetime of the application
@@ -57,9 +56,6 @@ pub struct VelloRenderer<'a> {
     scene: Scene,
     surface_clear_color: Color,
     vello_fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font>,
-    
-    // If > 0, push to the overlay command list.
-    overlay_count: u64,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> vello::Renderer {
@@ -92,14 +88,12 @@ impl<'a> VelloRenderer<'a> {
     pub(crate) async fn new(window: Arc<dyn Window>) -> VelloRenderer<'a> {
         let mut vello_renderer = VelloRenderer {
             render_commands: vec![],
-            overlay_render_commands: vec![],
             context: RenderContext::new(),
             renderers: vec![],
             state: RenderState::Suspended,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             vello_fonts: HashMap::new(),
-            overlay_count: 0,
         };
 
         // Create a vello Surface
@@ -124,10 +118,6 @@ impl<'a> VelloRenderer<'a> {
         vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface });
 
         vello_renderer
-    }
-    
-    fn overlay_active(&self) -> bool {
-        self.overlay_count > 0
     }
 
     fn prepare_with_render_commands(
@@ -260,8 +250,6 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 },
-                RenderCommand::PushOverlay() => {},
-                RenderCommand::PopOverlay() => {},
                 RenderCommand::FillLyonPath(_, _) => {}
             }
         }
@@ -311,54 +299,25 @@ impl Renderer for VelloRenderer<'_> {
     }
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));   
-        } else {
-            self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-        }
+        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
-        } else {
-            self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
-        }
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-        } else {
-            self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-        }
+        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
     fn push_layer(&mut self, rect: Rectangle) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PushLayer(rect));   
-        } else {
-            self.render_commands.push(RenderCommand::PushLayer(rect));
-        }
+        self.render_commands.push(RenderCommand::PushLayer(rect));
     }
 
     fn pop_layer(&mut self) {
-        if self.overlay_active() {
-            self.overlay_render_commands.push(RenderCommand::PopLayer);    
-        } else {
-            self.render_commands.push(RenderCommand::PopLayer);
-        }
-        
-    }
-
-    fn push_overlay(&mut self) {
-        self.overlay_count += 1;
-    }
-
-    fn pop_overlay(&mut self) {
-        self.overlay_count -= 1;
+        self.render_commands.push(RenderCommand::PopLayer);
     }
     
     fn load_font(&mut self, font_system: &mut FontSystem) {
@@ -379,7 +338,6 @@ impl Renderer for VelloRenderer<'_> {
         _font_system: &mut FontSystem,
         element_state: &ElementStateStore) {
         VelloRenderer::prepare_with_render_commands(&self.vello_fonts, &mut self.scene, &resource_manager, _font_system, element_state, &mut self.render_commands);
-        VelloRenderer::prepare_with_render_commands(&self.vello_fonts, &mut self.scene, &resource_manager, _font_system, element_state, &mut self.overlay_render_commands);
     }
 
     fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {

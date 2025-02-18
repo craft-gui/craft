@@ -68,7 +68,6 @@ impl Element for Container {
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
-        self.try_start_overlay(renderer);
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         // #[cfg(feature = "wgpu_renderer")]
@@ -81,7 +80,6 @@ impl Element for Container {
         self.try_end_layer(renderer);
        
         self.draw_scrollbar(renderer);
-        self.try_end_overlay(renderer);
     }
 
     fn compute_layout(
