@@ -73,11 +73,11 @@ impl Element for Container {
         // #[cfg(feature = "wgpu_renderer")]
         // renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
        
-        self.try_start_layer(renderer);
+        self.maybe_start_layer(renderer);
         {
             self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);   
         }
-        self.try_end_layer(renderer);
+        self.maybe_end_layer(renderer);
        
         self.draw_scrollbar(renderer);
     }
