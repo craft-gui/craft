@@ -3,14 +3,12 @@ use crate::renderer::color::Color;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::path::pipeline::{PathPipeline, PathPipelineConfig, DEFAULT_PATH_PIPELINE_CONFIG};
 use crate::renderer::wgpu::path::vertex::PathVertex;
-use std::collections::HashMap;
-use lyon::geom::point;
+use crate::renderer::wgpu::PerFrameData;
 use lyon::path::Path;
-use peniko::color::Srgb;
-use vello::kurbo;
+use peniko::color::ColorSpace;
+use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;
-use crate::renderer::wgpu::PerFrameData;
 
 pub(crate) mod pipeline;
 mod vertex;
@@ -47,8 +45,8 @@ impl PathRenderer {
         let bottom_left = glam::vec4(x, y + height, 0.0, 1.0);
         let top_right = glam::vec4(x + width, y, 0.0, 1.0);
         let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
-
-        let color = color.convert::<Srgb>().components;
+        
+        let color = color.components;
         let next_starting_index: u32 = self.vertices.len() as u32;
         
         self.vertices.extend(vec![
@@ -89,7 +87,7 @@ impl PathRenderer {
                 &lyon::tessellation::FillOptions::default(),
                 &mut lyon::tessellation::BuffersBuilder::new(&mut geometry, |vertex: lyon::tessellation::FillVertex| {
                     let position = vertex.position();
-                    let color = fill_color.convert::<Srgb>().components;
+                    let color = fill_color.components;
                     PathVertex {
                         position: [position.x, position.y, 0.0],
                         color,

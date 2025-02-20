@@ -9,6 +9,8 @@ pub struct Texture {
 }
 
 impl Texture {
+    pub(crate) const DEFAULT_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
+ 
     pub fn from_bytes(device: &wgpu::Device, queue: &wgpu::Queue, bytes: &[u8], label: Option<&str>) -> Option<Self> {
         let image = image::load_from_memory(bytes).unwrap().to_rgba8();
         Self::from_image(device, queue, &image, label)
@@ -33,14 +35,13 @@ impl Texture {
             return None;
         }
         
-        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label,
             size,
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format,
+            format: Self::DEFAULT_FORMAT,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });

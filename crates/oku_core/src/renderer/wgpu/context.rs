@@ -1,8 +1,9 @@
 use crate::renderer::color::Color;
-use wgpu::{CompositeAlphaMode, PresentMode};
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::texture::Texture;
+use wgpu::{CompositeAlphaMode, PresentMode};
+use oku_logging::info;
 
 pub struct Context<'a> {
     pub(crate) camera: Camera,
@@ -13,7 +14,7 @@ pub struct Context<'a> {
     pub(crate) surface: wgpu::Surface<'a>,
     pub(crate) surface_clear_color: Color,
     pub(crate) surface_config: wgpu::SurfaceConfiguration,
-    pub(crate) is_srgba_format: bool,
+    pub(crate) is_surface_srgba_format: bool,
     pub(crate) default_texture: Texture,
 }
 
@@ -54,19 +55,24 @@ pub fn create_surface_config(
 ) -> wgpu::SurfaceConfiguration {
     let surface_caps = surface.get_capabilities(adapter);
 
-    // Prefer the Rgba8Unorm format if available
-    let preferred_format = wgpu::TextureFormat::Rgba8Unorm;
-
-    let surface_format = if surface_caps.formats.contains(&preferred_format) {
-        preferred_format
-    } else {
-        // If Rgba8Unorm is not available, find the best sRGB format available
-        surface_caps.formats.iter().copied().find(|format| format.is_srgb()).unwrap_or_else(|| {
-            // Fallback to the first available format if none are found
-            surface_caps.formats[0]
-        })
-    };
-
+    // Try to find any available sRGB format first:
+    let surface_format = surface_caps
+        .formats
+        .iter()
+        .copied()
+        .find(|format| format.is_srgb())
+        // If no sRGB formats are available, then fall back to Rgba8Unorm.
+        .unwrap_or_else(|| {
+            if surface_caps.formats.contains(&wgpu::TextureFormat::Rgba8Unorm) {
+                wgpu::TextureFormat::Rgba8Unorm
+            } else {
+                // Guaranteed to be available in Wgpu.
+                wgpu::TextureFormat::Bgra8Unorm
+            }
+        });
+    
+    info!("Surface format: {:?}", surface_format);
+    
     wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: surface_format,

@@ -4,7 +4,7 @@ use crate::renderer::wgpu::camera::Camera;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GlobalUniform {
-    pub is_srgb_format: u32,
+    pub is_surface_srgb_format: u32,
     // wgpu requires that buffer bindings be padded to a multiple of 16 bytes, so we need to add 12 extra bytes here.
     pub _padding: [u32; 3],
     pub view_proj: [[f32; 4]; 4],
@@ -13,14 +13,14 @@ pub struct GlobalUniform {
 impl GlobalUniform {
     pub(crate) fn new() -> Self {
         Self {
-            view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),
-            is_srgb_format: 0,
+            is_surface_srgb_format: 0,
             _padding: [0, 0, 0],
+            view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),
         }
     }
     
-    pub(crate) fn set_is_srgb_format(&mut self, is_srgb_format: bool) {
-        self.is_srgb_format = is_srgb_format as u32;
+    pub(crate) fn set_is_surface_srgb_format(&mut self, is_surface_srgb_format: bool) {
+        self.is_surface_srgb_format = is_surface_srgb_format as u32;
     }
 
     pub(crate) fn set_view_proj_with_camera(&mut self, camera: &Camera) {
@@ -51,7 +51,7 @@ impl GlobalBuffer {
         let global_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -82,7 +82,7 @@ impl GlobalBuffer {
         queue.write_buffer(
             &self.buffer,
             0,
-            bytemuck::cast_slice(&[global_uniform.view_proj]),
+            bytemuck::cast_slice(&[*global_uniform]),
         );
     }
 }

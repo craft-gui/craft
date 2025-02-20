@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::path::Path;
+use crate::renderer::wgpu::texture::Texture;
 use cosmic_text::{CacheKey, Placement, SwashContent, SwashImage};
-use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat};
+use std::collections::HashMap;
+use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect};
 
 #[repr(u8)]
 #[derive(Clone)]
@@ -38,9 +38,6 @@ pub struct TextAtlas {
 impl TextAtlas {
 
     pub(crate) fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
-        
-        // FIXME: Do not hardcode this.
-        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
         let max_texture_size = device.limits().max_texture_dimension_2d;
         let texture_width = u32::clamp(width, 1, max_texture_size);
         let texture_height = u32::clamp(height, 1, max_texture_size);
@@ -56,7 +53,7 @@ impl TextAtlas {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format,
+            format: Texture::DEFAULT_FORMAT,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });

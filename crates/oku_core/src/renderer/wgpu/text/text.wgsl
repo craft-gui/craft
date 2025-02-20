@@ -1,8 +1,8 @@
 // Vertex shader
 
 struct GlobalUniform {
+    is_surface_srgb_format: u32,
     view_proj: mat4x4<f32>,
-    is_srgb_format: u32,
 };
 
 @group(1) @binding(0)
@@ -39,6 +39,21 @@ var texture_view: texture_2d<f32>;
 @group(0) @binding(1)
 var texture_sampler: sampler;
 
+
+fn to_srgb(linear_color: vec3<f32>) -> vec3<f32> {
+    let cutoff = 0.0031308;
+    let linear_portion = linear_color * 12.92;
+    let gamma_portion = 1.055 * pow(linear_color, vec3<f32>(1.0 / 2.4)) - 0.055;
+    return select(gamma_portion, linear_portion, linear_color < vec3<f32>(cutoff));
+}
+
+fn to_linear_from_srgb(srgb: vec3<f32>) -> vec3<f32> {
+    let cutoff = 0.04045;
+    let linear_portion = srgb / 12.92;
+    let gamma_portion = pow((srgb + 0.055) / 1.055, vec3<f32>(2.4));
+    return select(gamma_portion, linear_portion, srgb < vec3<f32>(cutoff));
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Always sample the texture unconditionally
@@ -51,7 +66,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             result = vec4(in.color.rgb, in.color.a * sampled_color.a);
         }
         case 1u: { // Emoji (Color)
-            result = sampled_color;
+             // Convert our sampled linear color to sRGB.
+             // We will convert it here to be consistent, because our vertex color is in sRGB.
+             result = vec4(to_srgb(sampled_color.rgb), sampled_color.a);
         }
         case 2u: { // Rectangle (Cursor & Highlights)
             result = vec4(in.color.rgb, in.color.a);
@@ -61,6 +78,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
     }
 
-    return result;
+    // Vertex Input Color: sRGB.
+    if (global.is_surface_srgb_format == 1) {
+        // Convert to a linear color, the surface will convert this back to sRGB later.
+        return vec4(to_linear_from_srgb(result.rgb), result.a);
+    } else {
+        // If the surface is linear, do nothing this is already a sRGB color.
+        return result.rgba;
+    }
 }
 

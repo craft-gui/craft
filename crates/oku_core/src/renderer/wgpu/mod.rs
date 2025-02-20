@@ -68,6 +68,7 @@ impl<'a> WgpuRenderer<'a> {
         let surface_config =
             create_surface_config(&surface, surface_size.width, surface_size.height, &device, &adapter);
         surface.configure(&device, &surface_config);
+        let is_surface_srgb_format = surface_config.format.is_srgb();
 
         let camera = Camera {
             width: surface_config.width as f32,
@@ -76,6 +77,7 @@ impl<'a> WgpuRenderer<'a> {
             z_far: 100.0,
         };
         let mut global_buffer_uniform = GlobalUniform::new();
+        global_buffer_uniform.set_is_surface_srgb_format(is_surface_srgb_format);
         global_buffer_uniform.set_view_proj_with_camera(&camera);
 
         let global_buffer = GlobalBuffer::new(&device, &global_buffer_uniform);
@@ -91,7 +93,7 @@ impl<'a> WgpuRenderer<'a> {
             surface,
             surface_config,
             surface_clear_color: Color::WHITE,
-            is_srgba_format: false,
+            is_surface_srgba_format: is_surface_srgb_format,
             default_texture
         };
         let text_renderer = TextRenderer::new(&context);
