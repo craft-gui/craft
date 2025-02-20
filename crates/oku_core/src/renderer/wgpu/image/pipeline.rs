@@ -34,13 +34,6 @@ pub struct ImagePipeline {
 impl ImagePipeline {
     pub fn new_pipeline_with_configuration(context: &Context, config: ImagePipelineConfig) -> Self {
 
-        let camera = Camera {
-            width: context.surface_config.width as f32,
-            height: context.surface_config.height as f32,
-            z_near: 0.0,
-            z_far: 100.0,
-        };
-
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {

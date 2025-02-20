@@ -1,7 +1,7 @@
 use crate::renderer::wgpu::texture::Texture;
 use cosmic_text::{CacheKey, Placement, SwashContent, SwashImage};
 use std::collections::HashMap;
-use wgpu::{Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect};
+use wgpu::{BindGroup, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect};
 
 #[repr(u8)]
 #[derive(Clone)]
@@ -27,6 +27,7 @@ pub struct TextAtlas {
     texture: wgpu::Texture,
     pub(crate) texture_view: wgpu::TextureView,
     pub(crate) texture_sampler: wgpu::Sampler,
+    pub(crate) texture_bind_group: BindGroup,
     pub(crate) texture_width: u32,
     pub(crate) texture_height: u32,
     glyph_cache: HashMap<CacheKey, GlyphInfo>,
@@ -68,11 +69,49 @@ impl TextAtlas {
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
+
+        let texture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+
+        let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+            label: Some("oku_bind_group"),
+        });
         
         TextAtlas {
             texture,
             texture_view: view,
             texture_sampler: sampler,
+            texture_bind_group,
             texture_width,
             texture_height,
             glyph_cache: Default::default(),
