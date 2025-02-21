@@ -70,53 +70,47 @@ impl ResourceManager {
 
             match &resource_type_copy {
                 ResourceType::Image => {
+                    let resource_identifier = resource_identifier.clone();
+                    let app_sender_copy = self.app_sender.clone();
+                    let f = async move {
+                        let image = resource_identifier.fetch_data_from_resource_identifier().await;
 
-                    let f = || {
-                        let resource_identifier = resource_identifier.clone();
-                        let app_sender_copy = self.app_sender.clone();
-                        async move {
-                            let image = resource_identifier.fetch_data_from_resource_identifier().await;
+                        if let Some(image_resource) = &image {
+                            let bytes = image_resource;
+                            let cursor = Cursor::new(&bytes);
+                            let reader = ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
+                            let size = reader.into_dimensions().unwrap_or_default();
+                            let generic_resource = ResourceData::new(resource_identifier.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
+                            info!("Image downloaded");
 
-                            if let Some(image_resource) = &image {
-                                let bytes = image_resource;
-                                let cursor = Cursor::new(&bytes);
-                                let reader = ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
-                                let size = reader.into_dimensions().unwrap_or_default();
-                                let generic_resource = ResourceData::new(resource_identifier.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
-                                info!("Image downloaded");
-
-                                let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
-                                app_sender_copy
-                                    .send(AppMessage::new(
-                                        0,
-                                        InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Image, resource)),
-                                    ))
-                                    .await
-                                    .expect("Failed to send added resource event");
-                            }
+                            let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
+                            app_sender_copy
+                                .send(AppMessage::new(
+                                    0,
+                                    InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Image, resource)),
+                                ))
+                                .await
+                                .expect("Failed to send added resource event");
                         }
                     };
-                    OkuRuntime::native_spawn(f());
+                    OkuRuntime::native_spawn(f);
                 }
                 ResourceType::Font => {
-                    
-                    let f = || {
                     let resource = resource_identifier.clone();
-                              let app_sender_copy = self.app_sender.clone();
-                        async move {
-                            let bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                    let app_sender_copy = self.app_sender.clone();
+                    let f = async move {
+                        let bytes = resource.clone().fetch_data_from_resource_identifier().await;
 
-                            if let Some(font_bytes) = bytes {
-                                let resource = Resource::Font(font_bytes);
+                        if let Some(font_bytes) = bytes {
+                            let resource = Resource::Font(font_bytes);
 
-                                app_sender_copy
-                                    .send(AppMessage::new(0, InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Font, resource))))
-                                    .await
-                                    .expect("Failed to send added resource event");
-                            }
+                            app_sender_copy
+                                .send(AppMessage::new(0, InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Font, resource))))
+                                .await
+                                .expect("Failed to send added resource event");
                         }
                     };
-                    OkuRuntime::native_spawn(f());
+                    OkuRuntime::native_spawn(f);
                 }
             }
         }
