@@ -1,6 +1,6 @@
 [package]
 name = "oku"
-edition = "2024"
+edition = "2021"
 publish = true
 version = "0.1.0"
 
