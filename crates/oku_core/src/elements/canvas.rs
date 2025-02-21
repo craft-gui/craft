@@ -10,7 +10,7 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::RenderCommand;
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
@@ -40,7 +40,7 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -137,14 +137,14 @@ impl Element for Canvas {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
@@ -163,7 +163,7 @@ impl Element for Canvas {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
@@ -183,7 +183,7 @@ impl Element for Canvas {
                 self.common_element_data.computed_layered_rectangle.position,
                 z_index,
                 transform,
-                font_system,
+                font_context,
                 element_state,
                 pointer,
             );

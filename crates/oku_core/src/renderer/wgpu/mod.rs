@@ -16,7 +16,7 @@ use crate::renderer::wgpu::context::{create_surface_config, request_adapter, req
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::image::image::{ImagePerFrameData, ImageRenderer};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use lyon::geom::{point, Box2D};
@@ -175,7 +175,7 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
+    fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_context: &mut FontContext, element_state: &ElementStateStore) {
 
         let mut collect_render_snapshots = |render_commands: &mut Vec<RenderCommand>| {
             let render_commands_len = render_commands.len();
@@ -207,7 +207,7 @@ impl Renderer for WgpuRenderer<'_> {
                             clip_rectangle: constrained_clip_rectangle
                         });
 
-                        let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, parent_clip_rectangle);
+                        let snapshot = assemble_render_snapshot(&mut self.context, font_context, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, parent_clip_rectangle);
                         self.render_snapshots.push(snapshot);
                     }
                     RenderCommand::PopLayer => {
@@ -262,7 +262,7 @@ impl Renderer for WgpuRenderer<'_> {
 
                 if should_submit {
                     let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, current_clip_rectangle);
+                    let snapshot = assemble_render_snapshot(&mut self.context, font_context, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, current_clip_rectangle);
                     self.render_snapshots.push(snapshot);
                 }
             };
@@ -342,14 +342,14 @@ impl Renderer for WgpuRenderer<'_> {
 
 fn assemble_render_snapshot(
         context: &mut Context,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &ElementStateStore,
         text_renderer: &mut TextRenderer,
         image_renderer: &mut ImageRenderer,
         path_renderer: &mut PathRenderer,
         clip_rectangle: ClipRectangle
 ) -> RenderSnapshot {
-    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
+    let text_renderer_per_frame_data = text_renderer.prepare(context, font_context, element_state);
     let image_renderer_per_frame_data = image_renderer.prepare(context);
     let path_renderer_per_frame_data = path_renderer.prepare(context);
 

@@ -10,7 +10,7 @@ use crate::renderer::wgpu::text::editor::create_glyphs_for_editor;
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
 use crate::renderer::wgpu::text::vertex::TextVertex;
 use crate::renderer::wgpu::PerFrameData;
-use cosmic_text::{FontSystem, SwashCache};
+use cosmic_text::{FontContext, SwashCache};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;
@@ -58,7 +58,7 @@ impl TextRenderer {
         });
     }
 
-    pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> Option<PerFrameData> {
+    pub(crate) fn prepare(&mut self, context: &Context, font_context: &mut FontContext, element_state: &ElementStateStore) -> Option<PerFrameData> {
 
         for text_area in self.text_areas.iter() { 
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
@@ -110,7 +110,7 @@ impl TextRenderer {
                             // Check if the image is available in the cache
                             let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
                                 Some(glyph_info)
-                            } else if let Some(image) = self.swash_cache.get_image(font_system, physical_glyph.cache_key) {
+                            } else if let Some(image) = self.swash_cache.get_image(font_context, physical_glyph.cache_key) {
                                 self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
 
                                 self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
@@ -146,7 +146,7 @@ impl TextRenderer {
                         // Check if the image is available in the cache
                         let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
                             Some(glyph_info)
-                        } else if let Some(image) = self.swash_cache.get_image(font_system, physical_glyph.cache_key) {
+                        } else if let Some(image) = self.swash_cache.get_image(font_context, physical_glyph.cache_key) {
                             self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
 
                             self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)

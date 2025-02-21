@@ -54,7 +54,7 @@ thread_local! {
 
 type RendererBox = dyn Renderer;
 
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use tokio::sync::{RwLock, RwLockReadGuard};
@@ -108,7 +108,7 @@ struct App {
     app: ComponentSpecification,
     global_state: GlobalState,
     window: Option<Arc<dyn Window>>,
-    font_system: Option<FontSystem>,
+    font_context: Option<FontContext>,
     renderer: Option<Box<dyn Renderer + Send>>,
     mouse_position: Option<Point>,
     reload_fonts: bool,
@@ -126,29 +126,29 @@ struct App {
 
 impl App {
 
-    fn setup_font_system(&mut self) {
-        if self.font_system.is_none() {
+    fn setup_font_context(&mut self) {
+        if self.font_context.is_none() {
             #[allow(unused_mut)]
-            let mut font_system = FontSystem::new();
+            let mut font_context = FontContext::new();
 
             #[cfg(target_arch = "wasm32")]
             {
-                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-                font_system.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
             }
 
             #[cfg(target_os = "android")]
             {
-                font_system.db_mut().load_fonts_dir("/system/fonts");
-                font_system.db_mut().set_sans_serif_family("Roboto");
-                font_system.db_mut().set_serif_family("Noto Serif");
-                font_system.db_mut().set_monospace_family("Droid Sans Mono"); // Cutive Mono looks more printer-like
-                font_system.db_mut().set_cursive_family("Dancing Script");
-                font_system.db_mut().set_fantasy_family("Dancing Script");
+                font_context.db_mut().load_fonts_dir("/system/fonts");
+                font_context.db_mut().set_sans_serif_family("Roboto");
+                font_context.db_mut().set_serif_family("Noto Serif");
+                font_context.db_mut().set_monospace_family("Droid Sans Mono"); // Cutive Mono looks more printer-like
+                font_context.db_mut().set_cursive_family("Dancing Script");
+                font_context.db_mut().set_fantasy_family("Dancing Script");
             }
 
-            self.font_system = Some(font_system);
+            self.font_context = Some(font_context);
         }
     }
 
@@ -247,7 +247,7 @@ async fn async_main(
         app: component_spec_application,
         global_state,
         window: None,
-        font_system: None,
+        font_context: None,
         renderer: None,
         mouse_position: None,
         resource_manager,
@@ -342,15 +342,15 @@ async fn async_main(
                             if resource_type == ResourceType::Font {
                                 
                                     
-                                if let Some(font_system) = app.font_system.as_mut() {
+                                if let Some(font_context) = app.font_context.as_mut() {
                                     if resource.data().is_some() {
-                                        font_system.db_mut().load_font_data(resource.data().unwrap().to_vec());
+                                        //font_context.db_mut().load_font_data(resource.data().unwrap().to_vec());
                                         resource_manager.resources.insert(resource_identifier.clone(), resource);
                                     }
                                 }
                                 
                                 if let Some(renderer) = app.renderer.as_mut() {
-                                    renderer.load_font(app.font_system.as_mut().unwrap());
+                                    renderer.load_font(app.font_context.as_mut().unwrap());
                                 }
                                 
                                 app.reload_fonts = true;
@@ -398,10 +398,10 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -411,10 +411,10 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -422,10 +422,10 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let keyboard_event = OkuMessage::KeyboardInputEvent(keyboard_input.clone());
 
-    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")] {
-        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
         let logical_key = keyboard_input.event.logical_key;
         let key_state = keyboard_input.event.state;
@@ -451,7 +451,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_system: &mut Option<FontSystem>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree, global_state: &mut GlobalState) {
+async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_context: &mut Option<FontContext>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree, global_state: &mut GlobalState) {
     let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -595,7 +595,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
                 }
                 if element.component_id() == target_component_id {
                     let res =
-                        element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
+                        element.on_event(event.clone(), &mut reactive_tree.element_state, font_context.as_mut().unwrap());
 
                     if let Some(result_message) = res.result_message {
                         element_events.push_back((result_message, element.get_id().clone()));
@@ -636,10 +636,10 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_system, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -651,10 +651,10 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
         //app.element_tree = Some(new_view);
     }
 
-    app.setup_font_system();
+    app.setup_font_context();
     if renderer.is_some() {
         app.renderer = renderer;
-        app.renderer.as_mut().unwrap().load_font(app.font_system.as_mut().unwrap());
+        app.renderer.as_mut().unwrap().load_font(app.font_context.as_mut().unwrap());
 
         // We can't guarantee the order of events on wasm.
         // This ensures a resize is not missed if the renderer was not finished creating when resize is called.
@@ -673,7 +673,7 @@ async fn update_reactive_tree(
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
     resource_manager: Arc<RwLock<ResourceManager>>,
-    font_system: &mut FontSystem,
+    font_context: &mut FontContext,
     should_reload_fonts: &mut bool
 ) {
     let window_element = Container::new().into();
@@ -689,7 +689,7 @@ async fn update_reactive_tree(
             &mut reactive_tree.user_state,
             global_state,
             &mut reactive_tree.element_state,
-            font_system,
+            font_context,
             *should_reload_fonts
         )
     };
@@ -697,7 +697,7 @@ async fn update_reactive_tree(
     *should_reload_fonts = false;
 
 
-    scan_view_for_resources(new_tree.element_tree.internal.as_ref(), &new_tree.component_tree, resource_manager.clone(), font_system).await;
+    scan_view_for_resources(new_tree.element_tree.internal.as_ref(), &new_tree.component_tree, resource_manager.clone(), font_context).await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
     reactive_tree.component_tree = Some(new_tree.component_tree);
     reactive_tree.component_ids = new_tree.component_ids;
@@ -711,7 +711,7 @@ async fn draw_reactive_tree(
     renderer: &mut Box<dyn Renderer + Send>,
     viewport_size: Size,
     origin: Point,
-    font_system: &mut FontSystem,
+    font_context: &mut FontContext,
     scale_factor: f64,
     mouse_position: Option<Point>,
 ) {
@@ -738,7 +738,7 @@ async fn draw_reactive_tree(
             &mut reactive_tree.element_state,
             root_size.width,
             root_size.height,
-            font_system,
+            font_context,
             root.as_mut(),
             origin,
             &resource_manager,
@@ -752,16 +752,16 @@ async fn draw_reactive_tree(
     {
         let span = span!(Level::INFO, "render");
         let _enter = span.enter();
-        root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
-        renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
+        root.draw(renderer, font_context, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
+        renderer.prepare(resource_manager, font_context, &reactive_tree.element_state);
     }
 }
 
 async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size) {
-    if app.font_system.is_none() {
-        app.setup_font_system();
+    if app.font_context.is_none() {
+        app.setup_font_context();
     }
-    let font_system = app.font_system.as_mut().unwrap();
+    let font_context = app.font_context.as_mut().unwrap();
 
     let old_element_ids = app.user_tree.element_ids.clone();
     let old_component_ids = app.user_tree.component_ids.clone();
@@ -770,7 +770,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         &mut app.user_tree,
         &mut app.global_state,
         app.resource_manager.clone(),
-        font_system,
+        font_context,
         &mut app.reload_fonts
     ).await;
 
@@ -801,7 +801,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         renderer,
         root_size,
         Point::new(0.0, 0.0),
-        font_system,
+        font_context,
         scale_factor,
         app.mouse_position
     ).await;
@@ -813,7 +813,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 &mut app.dev_tree,
                 &mut app.global_state,
                 app.resource_manager.clone(),
-                font_system,
+                font_context,
                 &mut app.reload_fonts
             ).await;
             
@@ -823,7 +823,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 renderer,
                 Size::new(surface_size.width - root_size.width, root_size.height),
                 Point::new(root_size.width, 0.0),
-                font_system,
+                font_context,
                 scale_factor,
                 app.mouse_position
             ).await;
@@ -861,7 +861,7 @@ fn layout<'a>(
     element_state: &mut ElementStateStore,
     _window_width: f32,
     _window_height: f32,
-    font_system: &mut FontSystem,
+    font_context: &mut FontContext,
     root_element: &mut dyn Element,
     origin: Point,
     resource_manager: &RwLockReadGuard<ResourceManager>,
@@ -869,7 +869,7 @@ fn layout<'a>(
     pointer: Option<Point>,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, font_system, element_state, scale_factor).unwrap();
+    let root_node = root_element.compute_layout(&mut taffy_tree, font_context, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),
@@ -886,7 +886,7 @@ fn layout<'a>(
                     known_dimensions,
                     available_space,
                     node_context,
-                    font_system,
+                    font_context,
                     resource_manager,
                     style
                 )
@@ -899,7 +899,7 @@ fn layout<'a>(
     let transform = glam::Mat4::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.finalize_layout(&mut taffy_tree, root_node, origin, &mut layout_order, transform, font_system, element_state, pointer);
+    root_element.finalize_layout(&mut taffy_tree, root_node, origin, &mut layout_order, transform, font_context, element_state, pointer);
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

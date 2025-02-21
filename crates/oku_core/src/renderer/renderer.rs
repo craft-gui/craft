@@ -3,7 +3,7 @@ use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
 
@@ -34,7 +34,7 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
     
-    fn load_font(&mut self, _font_system: &mut FontSystem) {
+    fn load_font(&mut self, _font_context: &mut FontContext) {
         
     }
 
@@ -54,7 +54,7 @@ pub trait Renderer {
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &ElementStateStore,
     );
     

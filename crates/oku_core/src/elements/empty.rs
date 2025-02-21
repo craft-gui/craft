@@ -4,7 +4,7 @@ use crate::elements::layout_context::LayoutContext;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::RendererBox;
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
@@ -38,7 +38,7 @@ impl Element for Empty {
     fn draw(
         &mut self,
         _renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -49,7 +49,7 @@ impl Element for Empty {
     fn compute_layout(
         &mut self,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _scale_factor: f64,
     ) -> Option<NodeId> {
@@ -63,7 +63,7 @@ impl Element for Empty {
         _position: Point,
         _z_index: &mut u32,
         _transform: glam::Mat4,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {

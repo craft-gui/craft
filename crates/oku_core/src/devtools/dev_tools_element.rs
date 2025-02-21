@@ -11,7 +11,7 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
@@ -61,14 +61,14 @@ impl Element for DevTools {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         self.draw_borders(renderer);
-        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
+        self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
         
         // Find the element we are hovering over and draw an overlay. 
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
@@ -115,14 +115,14 @@ impl Element for DevTools {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
@@ -141,7 +141,7 @@ impl Element for DevTools {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
@@ -162,7 +162,7 @@ impl Element for DevTools {
                 self.common_element_data.computed_layered_rectangle.position,
                 z_index,
                 transform,
-                font_system,
+                font_context,
                 element_state,
                 pointer,
             );
@@ -173,13 +173,13 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_context: &mut FontContext) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
         
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DevToolsState::default())

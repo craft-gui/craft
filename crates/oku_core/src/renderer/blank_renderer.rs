@@ -4,7 +4,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Renderer;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
@@ -45,7 +45,7 @@ impl Renderer for BlankRenderer {
     fn prepare(
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _element_state: &ElementStateStore,
     ) {
     }

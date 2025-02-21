@@ -5,7 +5,7 @@ use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
 use crate::resource_manager::{ResourceManager};
 
-use cosmic_text::FontSystem;
+use parley::FontContext;
 
 use tokio::sync::RwLock;
 
@@ -14,7 +14,7 @@ use std::sync::{Arc};
 /// Introspect the view.
 
 // Scans through the component tree and diffs it for resources that need to be updated.
-pub async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTreeNode, resource_manager: Arc<RwLock<ResourceManager>>, font_system: &mut FontSystem) {
+pub async fn scan_view_for_resources(element: &dyn Element, component: &ComponentTreeNode, resource_manager: Arc<RwLock<ResourceManager>>, font_context: &mut FontContext) {
     let fiber: FiberNode = FiberNode {
         element: Some(element),
         component: Some(component),
@@ -39,15 +39,15 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
                 
                 
                 if let Some(image_resource) = image_resource {
-                    resource_manager.async_download_resource_and_send_message_on_finish(image_resource.clone(), ResourceType::Image, None);
+                    resource_manager.async_download_resource_and_send_message_on_finish(image_resource.clone(), ResourceType::Image);
                     resource_manager.add_temporary_resource(image_resource.clone(), ResourceType::Image);
                 }
                 
-                if let Some(font_resource) = font_resource {
-                    let font_db = font_system.db_mut();
-                    resource_manager.async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, Some(font_db));
-                    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
-                }
+                //if let Some(font_resource) = font_resource {
+                //    let font_db = font_context.db_mut();
+                //    resource_manager.async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, Some(font_db));
+                //    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
+                //}
             }
             
         }

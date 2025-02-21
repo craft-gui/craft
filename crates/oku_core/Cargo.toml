@@ -35,11 +35,9 @@ bitflags = "2.8.0"
 lyon = { git = "https://github.com/nical/lyon.git", rev="54169fb867a5aa8d9b56c207d42621cb880349a1" }
 usvg = "0.44.0"
 
-[dependencies.cosmic-text]
-git = "https://github.com/pop-os/cosmic-text"
-rev = "9125dd48b771e9aa7833d106a9850e935f71eaa6"
-default-features = false
-features = ["std", "fontconfig"]
+[dependencies.parley]
+git = "https://github.com/linebender/parley"
+rev = "7c8983cf61bd25903c2be1ca6de4ab4835e4f503"
 
 [dependencies.vello]
 version = "0.4.0"
@@ -93,8 +91,8 @@ dev_tools = []
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 
-wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm"]
-tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer", "cosmic-text/swash"]
+wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm"]
+tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 

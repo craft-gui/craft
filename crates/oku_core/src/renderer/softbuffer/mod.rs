@@ -12,7 +12,7 @@ use tiny_skia::{
     ColorSpace, FillRule, Mask, MaskType, Paint, PathBuilder, Pixmap, PixmapPaint, PixmapRef, Rect, Stroke, Transform,
 };
 
-use cosmic_text::{FontSystem, SwashCache};
+use cosmic_text::{FontContext, SwashCache};
 
 use image::EncodableLayout;
 
@@ -195,7 +195,7 @@ impl Renderer for SoftwareRenderer {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, font_context: &mut FontContext, element_state: &ElementStateStore) {
         let framebuffer = self.framebuffer.last_mut().unwrap();
         let framebuffer = &mut framebuffer.0;
 
@@ -238,7 +238,7 @@ impl Renderer for SoftwareRenderer {
                     {
                         let editor = &text_context.editor;
                         editor.draw(
-                            font_system,
+                            font_context,
                             &mut self.cache,
                             cosmic_text::Color::rgba(0, 0, 0, 255),
                             cosmic_text::Color::rgba(0, 0, 0, 100),
@@ -264,7 +264,7 @@ impl Renderer for SoftwareRenderer {
                             cosmic_text::Color::rgba(r, g, b, a)
                         };
                         buffer.draw(
-                            font_system,
+                            font_context,
                             &mut self.cache,
                             fc,
                             |x, y, w, h, color| {

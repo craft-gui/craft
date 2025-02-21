@@ -10,7 +10,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState, MouseButton, MouseScrollDelta, PointerSource};
@@ -61,7 +61,7 @@ impl Element for DevTools {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &StateStore,
@@ -79,7 +79,7 @@ impl Element for DevTools {
 
         for (index, child) in self.common_element_data.children.iter_mut().enumerate() {
             let child2 = taffy_tree.child_at_index(root_node, index).unwrap();
-            child.internal.draw(renderer, font_system, taffy_tree, child2, element_state);
+            child.internal.draw(renderer, font_context, taffy_tree, child2, element_state);
         }
 
         if self.common_element_data.style.overflow[1] == Overflow::Scroll {
@@ -155,14 +155,14 @@ impl Element for DevTools {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut StateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
@@ -182,7 +182,7 @@ impl Element for DevTools {
         y: f32,
         layout_order: &mut u32,
         transform: glam::Mat4,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut StateStore,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -217,7 +217,7 @@ impl Element for DevTools {
                 self.common_element_data.computed_layered_rectangle.position.y,
                 layout_order,
                 transform * child_transform,
-                font_system,
+                font_context,
                 element_state,
             );
         }
@@ -227,7 +227,7 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut StateStore, _font_context: &mut FontContext) -> UpdateResult {
         let dev_tools_state = self.get_state_mut(element_state);
 
         if self.style().overflow[1] == taffy::Overflow::Scroll {
@@ -314,7 +314,7 @@ impl Element for DevTools {
         }
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> Box<StateStoreItem> {
+    fn initialize_state(&self, _font_context: &mut FontContext) -> Box<StateStoreItem> {
         Box::new(DevToolsState::default())
     }
 }

@@ -10,7 +10,7 @@ use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangl
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, Overflow, TaffyTree};
@@ -77,7 +77,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &ElementStateStore,
@@ -87,7 +87,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId>;
@@ -103,7 +103,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     );
@@ -114,7 +114,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self,
         _message: OkuMessage,
         _element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
     ) -> UpdateResult {
         UpdateResult::default()
     }
@@ -149,7 +149,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn draw_children(&mut self, renderer: &mut RendererBox,
-                     font_system: &mut FontSystem,
+                     font_context: &mut FontContext,
                      taffy_tree: &mut TaffyTree<LayoutContext>,
                      element_state: &ElementStateStore,
                      pointer: Option<Point>) {
@@ -159,7 +159,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            child.internal.draw(renderer, font_system, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
+            child.internal.draw(renderer, font_context, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
         }
     }
     
@@ -285,7 +285,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called when the element is assigned a unique component id.
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(())
@@ -317,7 +317,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+    fn update_state(&self, _font_context: &mut FontContext, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
 }
 
 impl<T: Element> From<T> for ElementBox {

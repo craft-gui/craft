@@ -4,7 +4,7 @@ use crate::elements::{Container, Text};
 use crate::reactive::element_id::reset_unique_element_id;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use crate::components::component::ComponentOrElement;
 use crate::events::Event;
@@ -15,7 +15,7 @@ use crate::{GlobalState, ReactiveTree};
 fn diff_trees_same_tag_same_id_are_equal() {
     reset_unique_element_id();
     
-    let mut font_system = FontSystem::new();
+    let mut font_context = FontContext::new();
 
     let initial_view = Container::new().component().push(Text::new("Foo").component());
     let updated_view = Container::new().component().push(Text::new("Foo").component());
@@ -33,7 +33,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -44,7 +44,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -56,7 +56,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
 #[test]
 fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
-    let mut font_system = FontSystem::new();
+    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component());
@@ -77,7 +77,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -88,7 +88,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -100,7 +100,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
 
 #[test]
 fn remove_unused_element_state_after_removal_is_state_deleted() {
-    let mut font_system = FontSystem::new();
+    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_component_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -117,7 +117,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -137,7 +137,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -171,7 +171,7 @@ impl Component<()> for DummyComponent {
 
 #[test]
 fn remove_unused_component_state_after_removal_is_state_deleted() {
-    let mut font_system = FontSystem::new();
+    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_component_1 = Container::new().component()
@@ -191,7 +191,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -211,7 +211,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -229,7 +229,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
 
 #[test]
 fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
-    let mut font_system = FontSystem::new();
+    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -250,7 +250,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
@@ -261,7 +261,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_system,
+        &mut font_context,
         false
     );
 
