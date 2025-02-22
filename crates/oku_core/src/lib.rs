@@ -75,6 +75,9 @@ use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use image::Rgba;
+use peniko::Brush;
+use peniko::color::palette;
 use winit::event::DeviceId;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
@@ -103,12 +106,12 @@ struct ReactiveTree {
     element_state: ElementStateStore,
 }
 
-
 struct App {
     app: ComponentSpecification,
     global_state: GlobalState,
     window: Option<Arc<dyn Window>>,
     font_context: Option<FontContext>,
+    font_layout_context: Option<parley::LayoutContext<Brush>>,
     renderer: Option<Box<dyn Renderer + Send>>,
     mouse_position: Option<Point>,
     reload_fonts: bool,
@@ -130,25 +133,8 @@ impl App {
         if self.font_context.is_none() {
             #[allow(unused_mut)]
             let mut font_context = FontContext::new();
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-                font_context.db_mut().load_font_data(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
-            }
-
-            #[cfg(target_os = "android")]
-            {
-                font_context.db_mut().load_fonts_dir("/system/fonts");
-                font_context.db_mut().set_sans_serif_family("Roboto");
-                font_context.db_mut().set_serif_family("Noto Serif");
-                font_context.db_mut().set_monospace_family("Droid Sans Mono"); // Cutive Mono looks more printer-like
-                font_context.db_mut().set_cursive_family("Dancing Script");
-                font_context.db_mut().set_fantasy_family("Dancing Script");
-            }
-
             self.font_context = Some(font_context);
+            self.font_layout_context = Some(parley::LayoutContext::new());
         }
     }
 
@@ -248,6 +234,7 @@ async fn async_main(
         global_state,
         window: None,
         font_context: None,
+        font_layout_context: None,
         renderer: None,
         mouse_position: None,
         resource_manager,
@@ -674,6 +661,7 @@ async fn update_reactive_tree(
     global_state: &mut GlobalState,
     resource_manager: Arc<RwLock<ResourceManager>>,
     font_context: &mut FontContext,
+    font_layout_context: &mut parley::LayoutContext<Brush>,
     should_reload_fonts: &mut bool
 ) {
     let window_element = Container::new().into();
@@ -712,6 +700,7 @@ async fn draw_reactive_tree(
     viewport_size: Size,
     origin: Point,
     font_context: &mut FontContext,
+    font_layout_context: &mut parley::LayoutContext<Brush>,
     scale_factor: f64,
     mouse_position: Option<Point>,
 ) {
@@ -739,6 +728,7 @@ async fn draw_reactive_tree(
             root_size.width,
             root_size.height,
             font_context,
+            font_layout_context,
             root.as_mut(),
             origin,
             &resource_manager,
@@ -762,6 +752,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         app.setup_font_context();
     }
     let font_context = app.font_context.as_mut().unwrap();
+    let font_layout_context = app.font_layout_context.as_mut().unwrap();
 
     let old_element_ids = app.user_tree.element_ids.clone();
     let old_component_ids = app.user_tree.component_ids.clone();
@@ -771,6 +762,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         &mut app.global_state,
         app.resource_manager.clone(),
         font_context,
+        font_layout_context,
         &mut app.reload_fonts
     ).await;
 
@@ -802,6 +794,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         root_size,
         Point::new(0.0, 0.0),
         font_context,
+        font_layout_context,
         scale_factor,
         app.mouse_position
     ).await;
@@ -814,6 +807,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 &mut app.global_state,
                 app.resource_manager.clone(),
                 font_context,
+                font_layout_context,
                 &mut app.reload_fonts
             ).await;
             
@@ -824,6 +818,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 Size::new(surface_size.width - root_size.width, root_size.height),
                 Point::new(root_size.width, 0.0),
                 font_context,
+                font_layout_context,
                 scale_factor,
                 app.mouse_position
             ).await;
@@ -862,6 +857,7 @@ fn layout<'a>(
     _window_width: f32,
     _window_height: f32,
     font_context: &mut FontContext,
+    font_layout_context: &mut parley::LayoutContext<Brush>,
     root_element: &mut dyn Element,
     origin: Point,
     resource_manager: &RwLockReadGuard<ResourceManager>,
@@ -887,6 +883,7 @@ fn layout<'a>(
                     available_space,
                     node_context,
                     font_context,
+                    font_layout_context,
                     resource_manager,
                     style
                 )

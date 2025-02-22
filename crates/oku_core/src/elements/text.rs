@@ -9,7 +9,8 @@ use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use parley::FontContext;
+use parley::{FontContext, Layout};
+use peniko::Brush;
 use taffy::{NodeId, Position, TaffyTree};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 
@@ -33,6 +34,8 @@ pub struct TextHashValue {
 pub struct TextState {
     #[allow(dead_code)]
     pub id: ComponentId,
+    pub text: String,
+    pub layout: Layout<Brush>,
 }
 
 impl TextState {
@@ -41,6 +44,8 @@ impl TextState {
     ) -> Self {
         Self {
             id,
+            text: "".to_string(),
+            layout: Default::default(),
         }
     }
 
@@ -149,6 +154,9 @@ impl Element for Text {
         scale_factor: f64,
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        
+        let state = self.get_state_mut(_element_state);
+        state.text = self.text.clone();
         
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(

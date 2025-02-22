@@ -1,6 +1,7 @@
 use crate::renderer::wgpu::texture::Texture;
-use cosmic_text::{CacheKey, Placement, SwashContent, SwashImage};
 use std::collections::HashMap;
+use parley::swash;
+use parley::swash::CacheKey;
 use wgpu::{BindGroup, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, TextureAspect};
 
 #[repr(u8)]
@@ -19,7 +20,7 @@ pub struct GlyphInfo {
     pub(crate) texture_coordinate_y: u32,
     pub(crate) width: u32,
     pub(crate) height: u32,
-    pub swash_image_placement: Placement,
+    pub swash_image_placement: parley::swash::Placement,
     pub(crate) content_type: ContentType
 }
 
@@ -159,7 +160,7 @@ impl TextAtlas {
         let mut content_type;
         
         let data = match swash_image.content {
-            SwashContent::Mask => {
+            swash::SwashContent::Mask => {
                 content_type = ContentType::Mask;
                 
                 let mut data_i = 0;

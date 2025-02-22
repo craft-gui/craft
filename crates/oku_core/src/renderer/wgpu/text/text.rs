@@ -1,6 +1,5 @@
 use crate::components::ComponentId;
 use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
@@ -10,7 +9,6 @@ use crate::renderer::wgpu::text::editor::create_glyphs_for_editor;
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
 use crate::renderer::wgpu::text::vertex::TextVertex;
 use crate::renderer::wgpu::PerFrameData;
-use cosmic_text::{FontContext, SwashCache};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;

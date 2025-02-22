@@ -1,4 +1,7 @@
-use parley::FontContext;
+use image::Rgba;
+use parley::{Alignment, AlignmentOptions, FontContext, FontStack, FontWeight, InlineBox, Layout, StyleProperty, TextStyle, TreeBuilder};
+use peniko::Brush;
+use peniko::color::palette;
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::reactive::element_state_store::ElementStateStore;
@@ -91,7 +94,6 @@ impl ImageContext {
 
 pub(crate) enum LayoutContext {
     Text(TaffyTextContext),
-    TextInput(TaffyTextInputContext),
     Image(ImageContext),
 }
 
@@ -101,6 +103,7 @@ pub fn measure_content(
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
     font_context: &mut FontContext,
+    font_layout_context: &mut parley::LayoutContext<Brush>,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
@@ -109,36 +112,65 @@ pub fn measure_content(
     }
 
     match node_context {
-        None | _ => Size::ZERO,
-       /* Some(LayoutContext::Text(taffy_text_context)) => {
+        None => Size::ZERO,
+        Some(LayoutContext::Text(taffy_text_context)) => {
             let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.measure(
-                known_dimensions,
-                available_space,
-                font_context,
-                text_state.text_hash,
-                taffy_text_context.metrics,
-                text_state.font_family_length,
-                text_state.font_family,
-            )
+            // Set width constraint
+            let width_constraint = known_dimensions.width.or(match available_space.width {
+                taffy::AvailableSpace::MinContent => Some(0.0),
+                taffy::AvailableSpace::MaxContent => None,
+                taffy::AvailableSpace::Definite(width) => Some(width),
+            });
+
+            let height_constraint = known_dimensions.height;
+
+            let available_space_width_u32: AvailableSpace = match available_space.width {
+                taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
+            };
+            let available_space_height_u32: AvailableSpace = match available_space.height {
+                taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
+            };
+            
+            // Colours for rendering
+            let text_brush = Brush::Solid(palette::css::BLACK);
+            let font_stack = FontStack::from("system-ui");
+            
+            let root_style = TextStyle {
+                brush: text_brush,
+                font_stack,
+                line_height: 1.3,
+                font_size: 16.0,
+                ..Default::default()
+            };
+
+            let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
+            
+            builder.push_text(&text_state.text);
+            
+            // Build the builder into a Layout
+            let (mut layout, _text): (Layout<Brush>, String) = builder.build();
+            layout.break_all_lines(width_constraint);
+            layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
+            
+            let width = layout.width().ceil() as u32;
+            let height = layout.height().ceil() as u32;
+
+            text_state.layout = layout;
+            
+            Size {
+                width: width as f32,
+                height: height as f32,
+            }
+            
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }
-        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
-
-            text_input_state.measure(
-                known_dimensions,
-                available_space,
-                font_context,
-                text_input_state.text_hash,
-                taffy_text_input_context.metrics,
-                text_input_state.font_family_length,
-                text_input_state.font_family,
-            )
-        }*/
     }
 }
 
