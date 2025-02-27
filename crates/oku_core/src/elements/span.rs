@@ -20,25 +20,25 @@ use crate::geometry::Point;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
-pub struct Text {
+pub struct Span {
     text: String,
     common_element_data: CommonElementData,
 }
 
 #[derive(Copy, Clone)]
-pub struct TextHashValue {
+pub struct SpanTextHashValue {
     pub computed_width: f32,
     pub computed_height: f32,
 }
 
-pub struct TextState {
+pub struct SpanState {
     #[allow(dead_code)]
     pub id: ComponentId,
     pub text: String,
     pub layout: Layout<Brush>,
 }
 
-impl TextState {
+impl SpanState {
     pub(crate) fn new(
         id: ComponentId,
     ) -> Self {
@@ -89,25 +89,25 @@ impl TextState {
     }
 }
 
-impl Text {
-    pub fn new(text: &str) -> Text {
-        Text {
+impl Span {
+    pub fn new(text: &str) -> Span {
+        Span {
             text: text.to_string(),
             common_element_data: Default::default(),
         }
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SpanState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut TextState {
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut SpanState {
         element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 }
 
-impl Element for Text {
+impl Element for Span {
     fn common_element_data(&self) -> &CommonElementData {
         &self.common_element_data
     }
@@ -121,7 +121,7 @@ impl Element for Text {
     }
 
     fn name(&self) -> &'static str {
-        "Text"
+        "Span"
     }
 
     fn draw(
@@ -191,7 +191,7 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let state = TextState::new(
+        let state = SpanState::new(
             self.common_element_data.component_id,
         );
 
@@ -213,12 +213,12 @@ impl Element for Text {
     }
 }
 
-impl Text {
+impl Span {
 
     generate_component_methods_no_children!();
 }
 
-impl ElementStyles for Text {
+impl ElementStyles for Span {
     fn styles_mut(&mut self) -> &mut Style {
         self.common_element_data.current_style_mut()
     }
