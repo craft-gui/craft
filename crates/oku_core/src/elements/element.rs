@@ -476,6 +476,49 @@ macro_rules! generate_component_methods_no_children {
 }
 
 #[macro_export]
+macro_rules! generate_component_methods_private_push {
+    () => {
+        crate::generate_component_methods_no_children!();
+        
+        #[allow(dead_code)]
+        fn push<T>(mut self, component_specification: T) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.push(component_specification.into());
+
+            self
+        }
+
+        #[allow(dead_code)]
+        fn push_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
+
+            self
+        }
+        
+        #[allow(dead_code)]
+        fn extend_children<T>(mut self, children: Vec<T>) -> Self
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.common_element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
+
+            self
+        }
+
+        #[allow(dead_code)]
+        fn normal(mut self) -> Self {
+            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+            self
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! generate_component_methods {
     () => {
         crate::generate_component_methods_no_children!();

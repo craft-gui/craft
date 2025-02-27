@@ -1,10 +1,10 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
-use crate::elements::{ElementStyles, Span};
+use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
-use crate::{generate_component_methods_no_children, generate_component_methods_private_push, RendererBox};
+use crate::{generate_component_methods_no_children, RendererBox};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -19,101 +19,52 @@ use crate::elements::common_element_data::CommonElementData;
 use crate::geometry::Point;
 
 #[derive(Clone, Debug)]
-pub enum TextFragment {
+pub enum SpanFragment {
     String(String),
-    Span(Span),
+    //InlineComponentSpecification(ComponentSpecification),
 }
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
-pub struct Text {
-    fragments: Vec<TextFragment>,
+pub struct Span {
+    fragments: Vec<SpanFragment>,
     common_element_data: CommonElementData,
 }
 
-#[derive(Copy, Clone)]
-pub struct TextHashValue {
-    pub computed_width: f32,
-    pub computed_height: f32,
-}
-
-pub struct TextState {
+pub struct SpanState {
     #[allow(dead_code)]
     pub id: ComponentId,
-    pub text: Vec<String>,
-    pub layout: Layout<Brush>,
 }
 
-impl TextState {
+impl SpanState {
     pub(crate) fn new(
         id: ComponentId,
     ) -> Self {
         Self {
             id,
-            text: Vec::new(),
-            layout: Default::default(),
-        }
-    }
-
-    pub fn font_family(&self) -> Option<&str> {
-        None
-    }
-
-    pub(crate) fn measure(
-        &mut self,
-        known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<taffy::AvailableSpace>,
-        font_context: &mut FontContext,
-        text_hash: u64,
-        font_family_length: u8,
-        font_family: [u8; 64],
-    ) -> taffy::Size<f32> {
-        // Set width constraint
-        let width_constraint = known_dimensions.width.or(match available_space.width {
-            taffy::AvailableSpace::MinContent => Some(0.0),
-            taffy::AvailableSpace::MaxContent => None,
-            taffy::AvailableSpace::Definite(width) => Some(width),
-        });
-
-        let height_constraint = known_dimensions.height;
-
-        let available_space_width_u32: AvailableSpace = match available_space.width {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
-        };
-        let available_space_height_u32: AvailableSpace = match available_space.height {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
-        };
-        
-        taffy::Size {
-            width: 100.0,
-            height: 50.0,
         }
     }
 }
 
-impl Text {
-    pub fn new(text: &str) -> Text {
-        Text {
-            fragments: vec![TextFragment::String(text.to_string())],
+impl Span {
+    pub fn new(text: &str) -> Span {
+        Span {
+            fragments: Vec::new(),
             common_element_data: Default::default(),
         }
     }
 
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SpanState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut TextState {
+    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut SpanState {
         element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 }
 
-impl Element for Text {
+impl Element for Span {
     fn common_element_data(&self) -> &CommonElementData {
         &self.common_element_data
     }
@@ -127,7 +78,7 @@ impl Element for Text {
     }
 
     fn name(&self) -> &'static str {
-        "Text"
+        "Span"
     }
 
     fn draw(
@@ -197,7 +148,7 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let state = TextState::new(
+        let state = SpanState::new(
             self.common_element_data.component_id,
         );
 
@@ -209,30 +160,18 @@ impl Element for Text {
 
     fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
-
-        let mut text_hasher = FxHasher::default();
-        //text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
-
-        let new_font_family = self.common_element_data.style.font_family();
     }
 }
 
-impl Text {
-    generate_component_methods_private_push!();
+impl Span {
+    generate_component_methods_no_children!();
 
-    fn push_text(self, text: String) -> Text {
-        self
-        //self.push(span)
-    }
-
-    fn push_span(self, span: Span) -> Text {
-        self.push(span)
+    pub fn push_text(&mut self, text: &str) {
+        
     }
 }
 
-impl ElementStyles for Text {
+impl ElementStyles for Span {
     fn styles_mut(&mut self) -> &mut Style {
         self.common_element_data.current_style_mut()
     }

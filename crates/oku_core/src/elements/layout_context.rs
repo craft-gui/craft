@@ -150,7 +150,7 @@ pub fn measure_content(
 
             let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
             
-            builder.push_text(&text_state.text);
+            builder.push_text(&text_state.text.get(0).unwrap_or(&"".to_string()));
             
             // Build the builder into a Layout
             let (mut layout, _text): (Layout<Brush>, String) = builder.build();
