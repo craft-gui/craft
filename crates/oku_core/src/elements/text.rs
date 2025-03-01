@@ -1,18 +1,14 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
+use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextContext};
 use crate::elements::{ElementStyles, Span};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
-use crate::{generate_component_methods_no_children, generate_component_methods_private_push, RendererBox};
-use rustc_hash::FxHasher;
-use std::any::Any;
-use std::collections::HashMap;
-use std::hash::Hasher;
+use crate::{generate_component_methods_private_push, RendererBox};
 use parley::{FontContext, Layout};
 use peniko::Brush;
-use taffy::{NodeId, Position, TaffyTree};
-use winit::dpi::{LogicalPosition, PhysicalPosition};
+use std::any::Any;
+use taffy::{NodeId, TaffyTree};
 
 use crate::components::props::Props;
 use crate::elements::common_element_data::CommonElementData;
@@ -21,7 +17,8 @@ use crate::geometry::Point;
 #[derive(Clone, Debug)]
 pub enum TextFragment {
     String(String),
-    Span(Span),
+    Span(u32),
+    InlineComponentSpecification(u32),
 }
 
 // A stateful element that shows text.
@@ -38,9 +35,10 @@ pub struct TextHashValue {
 }
 
 pub struct TextState {
-    #[allow(dead_code)]
     pub id: ComponentId,
-    pub text: Vec<String>,
+    pub fragments: Vec<TextFragment>,
+    pub children: Vec<ComponentSpecification>,
+    pub style: Style,
     pub layout: Layout<Brush>,
 }
 
@@ -50,8 +48,10 @@ impl TextState {
     ) -> Self {
         Self {
             id,
-            text: Vec::new(),
-            layout: Default::default(),
+            fragments: Vec::new(),
+            children: Vec::new(),
+            style: Default::default(),
+            layout: Layout::default()
         }
     }
 
@@ -159,18 +159,15 @@ impl Element for Text {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
-
-        for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
-            if let Some(child_node) = child_node {
-                child_nodes.push(child_node);
-            }
-        }
-
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
+            .new_leaf_with_context(
+                style,
+                LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id)),
+            )
+            .unwrap());
+
         self.common_element_data().taffy_node_id
     }
 
@@ -197,9 +194,11 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let state = TextState::new(
+        let mut state = TextState::new(
             self.common_element_data.component_id,
         );
+
+        self.update_state_fragments(&mut state);
 
         ElementStateStoreItem {
             base: Default::default(),
@@ -209,26 +208,35 @@ impl Element for Text {
 
     fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
-
-        let mut text_hasher = FxHasher::default();
-        //text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
-
-        let new_font_family = self.common_element_data.style.font_family();
+        self.update_state_fragments(state);
     }
 }
 
 impl Text {
     generate_component_methods_private_push!();
 
-    fn push_text(self, text: String) -> Text {
-        self
-        //self.push(span)
+    fn update_state_fragments(&self, state: &mut TextState) {
+        state.id = self.common_element_data.component_id;
+        state.fragments = self.fragments.clone();
+        state.children = self.common_element_data.child_specs.clone();
+        state.style = self.style().clone();
     }
 
-    fn push_span(self, span: Span) -> Text {
-        self.push(span)
+    pub fn push_text(mut self, text: String) -> Self {
+        self.fragments.push(TextFragment::String(text));
+        self
+    }
+
+    pub fn push_span(mut self, span: Span) -> Self {
+        self = self.push(span);
+        self.fragments.push(TextFragment::Span(self.common_element_data().child_specs.len() as u32 - 1));
+        self
+    }
+
+    pub fn push_inline(mut self, inline_component: ComponentSpecification) -> Self {
+        self = self.push(inline_component);
+        self.fragments.push(TextFragment::InlineComponentSpecification(self.common_element_data().child_specs.len() as u32 - 1));
+        self
     }
 }
 

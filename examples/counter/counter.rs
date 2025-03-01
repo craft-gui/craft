@@ -31,9 +31,14 @@ impl Component for Counter {
             .background(Color::from_rgb8(250, 250, 250))
             .gap("20px")
             .push(
-                Text::new(format!("{}", state.count).as_str())
+                Text::new("Count: ")
                     .font_size(72.0)
-                    .color(Color::from_rgb8(50, 50, 50)),
+                    .color(Color::from_rgb8(50, 50, 50))
+                    .push_span(
+                        Span::new(format!("{}", state.count).as_str()) 
+                            .color(Color::from_rgb8(50, 50, 240))
+                            .font_size(72.0)
+                    )
             )
             .push(
                 Container::new()
@@ -106,7 +111,7 @@ fn main() {
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
 use oku::GlobalState;
-
+use oku_core::elements::Span;
 use util::setup_logging;
 
 #[allow(dead_code)]

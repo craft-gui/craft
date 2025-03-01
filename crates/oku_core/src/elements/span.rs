@@ -18,16 +18,16 @@ use crate::components::props::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::geometry::Point;
 
-#[derive(Clone, Debug)]
+/*#[derive(Clone, Debug)]
 pub enum SpanFragment {
     String(String),
-    //InlineComponentSpecification(ComponentSpecification),
-}
+    ElementIndex(u32),
+}*/
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
 pub struct Span {
-    fragments: Vec<SpanFragment>,
+    pub(crate) text: String,
     common_element_data: CommonElementData,
 }
 
@@ -41,7 +41,7 @@ impl SpanState {
         id: ComponentId,
     ) -> Self {
         Self {
-            id,
+            id
         }
     }
 }
@@ -49,7 +49,7 @@ impl SpanState {
 impl Span {
     pub fn new(text: &str) -> Span {
         Span {
-            fragments: Vec::new(),
+            text: text.to_string(),
             common_element_data: Default::default(),
         }
     }
@@ -112,6 +112,9 @@ impl Element for Span {
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
+        let state = self.get_state_mut(element_state);
+        
+        
         for child in self.common_element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
@@ -120,7 +123,7 @@ impl Element for Span {
         }
 
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-
+        
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.common_element_data().taffy_node_id
     }
@@ -166,9 +169,16 @@ impl Element for Span {
 impl Span {
     generate_component_methods_no_children!();
 
-    pub fn push_text(&mut self, text: &str) {
-        
-    }
+    // pub fn push_text(mut self, text: &str) -> Self {
+    //     self.fragments.push(SpanFragment::String(text.to_string()));
+    //     self
+    // }
+    // 
+    // pub fn push_inline(mut self, element: ComponentSpecification) -> Self {
+    //     self = self.push(element);
+    //     self.fragments.push(SpanFragment::ElementIndex(self.common_element_data().children.len() as u32 - 1));
+    //     self
+    // }
 }
 
 impl ElementStyles for Span {
