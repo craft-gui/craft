@@ -117,84 +117,14 @@ pub fn measure_content(
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
+            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            // Set width constraint
-            let width_constraint = known_dimensions.width.or(match available_space.width {
-                taffy::AvailableSpace::MinContent => Some(0.0),
-                taffy::AvailableSpace::MaxContent => None,
-                taffy::AvailableSpace::Definite(width) => Some(width),
-            });
-
-            let height_constraint = known_dimensions.height;
-
-            let available_space_width_u32: AvailableSpace = match available_space.width {
-                taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
-            };
-            let available_space_height_u32: AvailableSpace = match available_space.height {
-                taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-                taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-                taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
-            };
-
-            fn style_to_parley_style<'a>(style: &Style) -> TextStyle<'a, Brush> {
-                let text_brush = Brush::Solid(style.color());
-                let font_stack = FontStack::from("system-ui");
-                TextStyle {
-                    brush: text_brush,
-                    font_stack,
-                    line_height: 1.3,
-                    font_size: style.font_size(),
-                    ..Default::default()
-                }
-            }
-
-            let root_style = style_to_parley_style(&state.style);
-            let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
-
-            for fragment in state.fragments.iter() {
-                match fragment {
-                    TextFragment::String(str) => {
-                        builder.push_text(str);
-                    }
-                    TextFragment::Span(span_index) => {
-                        let span = state.children.get(*span_index as usize).unwrap();
-
-                        match &span.component {
-                            ComponentOrElement::Element(ele) => {
-                                let ele = &*ele.internal;
-
-                                if let Some(span) = ele.as_any().downcast_ref::<Span>() {
-                                    builder.push_style_span(style_to_parley_style(span.style()));
-                                    builder.push_text(&span.text);
-                                    builder.pop_style_span();
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                    TextFragment::InlineComponentSpecification(inline) => {}
-                }
-            }
-            
-            
-            // Build the builder into a Layout
-            let (mut layout, _text): (Layout<Brush>, String) = builder.build();
-            layout.break_all_lines(width_constraint);
-            layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
-
-            let width = layout.width().ceil() as u32;
-            let height = layout.height().ceil() as u32;
-
-            state.layout = layout;
-            
-            Size {
-                width: width as f32,
-                height: height as f32,
-            }
-            
+            text_state.measure(
+                known_dimensions,
+                available_space,
+                font_context,
+                font_layout_context
+            )
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)

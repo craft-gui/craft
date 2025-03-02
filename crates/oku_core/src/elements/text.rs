@@ -1,11 +1,11 @@
-use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextContext};
 use crate::elements::{ElementStyles, Span};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_private_push, RendererBox};
-use parley::{FontContext, Layout};
+use parley::{Alignment, AlignmentOptions, FontContext, FontStack, Layout, TextStyle, TreeBuilder};
 use peniko::Brush;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
@@ -64,9 +64,7 @@ impl TextState {
         known_dimensions: taffy::Size<Option<f32>>,
         available_space: taffy::Size<taffy::AvailableSpace>,
         font_context: &mut FontContext,
-        text_hash: u64,
-        font_family_length: u8,
-        font_family: [u8; 64],
+        font_layout_context: &mut parley::LayoutContext<Brush>,
     ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -87,10 +85,61 @@ impl TextState {
             taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
             taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
         };
-        
+
+        fn style_to_parley_style<'a>(style: &Style) -> TextStyle<'a, Brush> {
+            let text_brush = Brush::Solid(style.color());
+            let font_stack = FontStack::from("system-ui");
+            TextStyle {
+                brush: text_brush,
+                font_stack,
+                line_height: 1.3,
+                font_size: style.font_size(),
+                ..Default::default()
+            }
+        }
+
+        let root_style = style_to_parley_style(&self.style);
+        let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
+
+        for fragment in self.fragments.iter() {
+            match fragment {
+                TextFragment::String(str) => {
+                    builder.push_text(str);
+                }
+                TextFragment::Span(span_index) => {
+                    let span = self.children.get(*span_index as usize).unwrap();
+
+                    match &span.component {
+                        ComponentOrElement::Element(ele) => {
+                            let ele = &*ele.internal;
+
+                            if let Some(span) = ele.as_any().downcast_ref::<Span>() {
+                                builder.push_style_span(style_to_parley_style(span.style()));
+                                builder.push_text(&span.text);
+                                builder.pop_style_span();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                TextFragment::InlineComponentSpecification(inline) => {}
+            }
+        }
+
+
+        // Build the builder into a Layout
+        let (mut layout, _text): (Layout<Brush>, String) = builder.build();
+        layout.break_all_lines(width_constraint);
+        layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
+
+        let width = layout.width().ceil() as u32;
+        let height = layout.height().ceil() as u32;
+
+        self.layout = layout;
+
         taffy::Size {
-            width: 100.0,
-            height: 50.0,
+            width: width as f32,
+            height: height as f32,
         }
     }
 }
