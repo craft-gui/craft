@@ -1,28 +1,17 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsDummy, TaffyTextContext, TextHashKey};
+use crate::elements::layout_context::LayoutContext;
 use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use rustc_hash::FxHasher;
+use parley::FontContext;
 use std::any::Any;
-use std::collections::HashMap;
-use std::hash::Hasher;
-use parley::{FontContext, Layout};
-use peniko::Brush;
-use taffy::{NodeId, Position, TaffyTree};
-use winit::dpi::{LogicalPosition, PhysicalPosition};
+use taffy::{NodeId, TaffyTree};
 
 use crate::components::props::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::geometry::Point;
-
-/*#[derive(Clone, Debug)]
-pub enum SpanFragment {
-    String(String),
-    ElementIndex(u32),
-}*/
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -168,17 +157,6 @@ impl Element for Span {
 
 impl Span {
     generate_component_methods_no_children!();
-
-    // pub fn push_text(mut self, text: &str) -> Self {
-    //     self.fragments.push(SpanFragment::String(text.to_string()));
-    //     self
-    // }
-    // 
-    // pub fn push_inline(mut self, element: ComponentSpecification) -> Self {
-    //     self = self.push(element);
-    //     self.fragments.push(SpanFragment::ElementIndex(self.common_element_data().children.len() as u32 - 1));
-    //     self
-    // }
 }
 
 impl ElementStyles for Span {

@@ -5,9 +5,12 @@ use crate::elements::{ElementStyles, Span};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_private_push, RendererBox};
-use parley::{Alignment, AlignmentOptions, FontContext, FontStack, Layout, TextStyle, TreeBuilder};
+use parley::{Alignment, AlignmentOptions, FontContext, FontSettings, FontStack, Layout, TextStyle, TreeBuilder};
 use peniko::Brush;
 use std::any::Any;
+use std::collections::HashMap;
+use std::hash::Hasher;
+use rustc_hash::FxHasher;
 use taffy::{NodeId, TaffyTree};
 
 use crate::components::props::Props;
@@ -34,12 +37,32 @@ pub struct TextHashValue {
     pub computed_height: f32,
 }
 
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
+pub struct FontSettingsHash {
+    pub font_family_length: u8,
+    pub font_family: [u8; 64]
+}
+
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
+pub struct TextHashKey {
+    pub text_hash: u64,
+    pub font_settings: Vec<FontSettingsHash>,
+    
+    // Layout Related Keys
+    pub width_constraint: Option<u32>,
+    pub height_constraint: Option<u32>,
+    pub available_space_width: AvailableSpace,
+    pub available_space_height: AvailableSpace,
+}
+
 pub struct TextState {
     pub id: ComponentId,
     pub fragments: Vec<TextFragment>,
     pub children: Vec<ComponentSpecification>,
     pub style: Style,
     pub layout: Layout<Brush>,
+    pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
+    pub last_text_hash: Option<u64>,
 }
 
 impl TextState {
@@ -51,7 +74,9 @@ impl TextState {
             fragments: Vec::new(),
             children: Vec::new(),
             style: Default::default(),
-            layout: Layout::default()
+            layout: Layout::default(),
+            cached_text_layout: Default::default(),
+            last_text_hash: None,
         }
     }
 
@@ -92,15 +117,71 @@ impl TextState {
             TextStyle {
                 brush: text_brush,
                 font_stack,
-                line_height: 1.3,
+                line_height: 1.5,
                 font_size: style.font_size(),
                 ..Default::default()
             }
         }
 
+        let mut text_hasher = FxHasher::default();
+        let mut font_settings: Vec<FontSettingsHash> = Vec::new();
+
+        for fragment in self.fragments.iter() {
+            match fragment {
+                TextFragment::String(str) => {
+                    text_hasher.write(str.as_bytes());
+                    font_settings.push(FontSettingsHash {
+                        font_family_length: 0,
+                        font_family: [0u8; 64],
+                    });
+                }
+                TextFragment::Span(span_index) => {
+                    let span = self.children.get(*span_index as usize).unwrap();
+
+                    match &span.component {
+                        ComponentOrElement::Element(ele) => {
+                            let ele = &*ele.internal;
+
+                            if let Some(span) = ele.as_any().downcast_ref::<Span>() {
+                                text_hasher.write(span.text.as_bytes());
+                                font_settings.push(FontSettingsHash {
+                                    font_family_length: 0,
+                                    font_family: [0u8; 64],
+                                });
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                TextFragment::InlineComponentSpecification(inline) => {}
+            }
+        }
+
+        let text_hash = text_hasher.finish();
+        
+        let cache_key = TextHashKey {
+            text_hash,
+            font_settings,
+            width_constraint: width_constraint.map(|w| w.to_bits()),
+            height_constraint: height_constraint.map(|h| h.to_bits()),
+            available_space_width: available_space_width_u32,
+            available_space_height: available_space_height_u32,
+        };
+        
+        
+        let text_changed = Some(cache_key.text_hash) != self.last_text_hash;
+        if self.cached_text_layout.contains_key(&cache_key) && !text_changed {
+            let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
+            self.last_text_hash = Some(cache_key.text_hash);
+            
+            return taffy::Size {
+                width: computed_size.computed_width,
+                height: computed_size.computed_height,
+            };
+        };
+
         let root_style = style_to_parley_style(&self.style);
         let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
-
         for fragment in self.fragments.iter() {
             match fragment {
                 TextFragment::String(str) => {
@@ -134,12 +215,21 @@ impl TextState {
 
         let width = layout.width().ceil() as u32;
         let height = layout.height().ceil() as u32;
-
         self.layout = layout;
+        
+        println!("{:?}", height);
 
+        let computed_size = TextHashValue {
+            computed_width: width as f32,
+            computed_height: height as f32,
+        };
+        
+        self.cached_text_layout.insert(cache_key.clone(), computed_size);
+        self.last_text_hash = Some(cache_key.text_hash);
+        
         taffy::Size {
-            width: width as f32,
-            height: height as f32,
+            width: computed_size.computed_width,
+            height: computed_size.computed_height,
         }
     }
 }

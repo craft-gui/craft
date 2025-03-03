@@ -1,19 +1,14 @@
-use crate::components::component::{ComponentId, ComponentOrElement};
-use crate::elements::text::{TextFragment, TextState};
+use crate::components::component::ComponentId;
+use crate::elements::text::TextState;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use parley::{Alignment, AlignmentOptions, FontContext, FontStack, Layout, TextStyle, TreeBuilder};
-use peniko::color::palette;
+use parley::FontContext;
 use peniko::Brush;
 
 use taffy::Size;
 
-use crate::elements::Span;
 use tokio::sync::RwLockReadGuard;
-use crate::elements;
-use crate::elements::element::Element;
-use crate::style::Style;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
@@ -26,26 +21,13 @@ impl<'a> TaffyTextContext {
         }
     }
 }
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+/*#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct MetricsDummy {
     /// Font size in pixels
     pub font_size: u32,
     /// Line height in pixels
     pub line_height: u32,
-}
-
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
-pub struct TextHashKey {
-    pub text_hash: u64,
-    pub width_constraint: Option<u32>,
-    pub height_constraint: Option<u32>,
-    pub available_space_width: AvailableSpace,
-    pub available_space_height: AvailableSpace,
-    pub metrics: MetricsDummy,
-    
-    pub font_family_length: u8,
-    pub font_family: [u8; 64]
-}
+}*/
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AvailableSpace {
