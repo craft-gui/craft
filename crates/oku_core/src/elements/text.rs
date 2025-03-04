@@ -32,6 +32,7 @@ pub struct Text {
 }
 
 #[derive(Copy, Clone)]
+#[derive(Debug)]
 pub struct TextHashValue {
     pub computed_width: f32,
     pub computed_height: f32,
@@ -40,7 +41,8 @@ pub struct TextHashValue {
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
 pub struct FontSettingsHash {
     pub font_family_length: u8,
-    pub font_family: [u8; 64]
+    pub font_family: [u8; 64],
+    pub font_size: u32,
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
@@ -62,7 +64,7 @@ pub struct TextState {
     pub style: Style,
     pub layout: Layout<Brush>,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
-    pub last_text_hash: Option<u64>,
+    pub last_cache_key: Option<TextHashKey>,
 }
 
 impl TextState {
@@ -76,7 +78,7 @@ impl TextState {
             style: Default::default(),
             layout: Layout::default(),
             cached_text_layout: Default::default(),
-            last_text_hash: None,
+            last_cache_key: None,
         }
     }
 
@@ -91,6 +93,7 @@ impl TextState {
         font_context: &mut FontContext,
         font_layout_context: &mut parley::LayoutContext<Brush>,
     ) -> taffy::Size<f32> {
+
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -125,7 +128,7 @@ impl TextState {
 
         let mut text_hasher = FxHasher::default();
         let mut font_settings: Vec<FontSettingsHash> = Vec::new();
-
+        let root_style = style_to_parley_style(&self.style);
         for fragment in self.fragments.iter() {
             match fragment {
                 TextFragment::String(str) => {
@@ -133,6 +136,7 @@ impl TextState {
                     font_settings.push(FontSettingsHash {
                         font_family_length: 0,
                         font_family: [0u8; 64],
+                        font_size: root_style.font_size.to_bits(),
                     });
                 }
                 TextFragment::Span(span_index) => {
@@ -147,6 +151,7 @@ impl TextState {
                                 font_settings.push(FontSettingsHash {
                                     font_family_length: 0,
                                     font_family: [0u8; 64],
+                                    font_size: span.style().font_size().to_bits(),
                                 });
                             }
                         }
@@ -168,69 +173,71 @@ impl TextState {
             available_space_height: available_space_height_u32,
         };
         
-        
-        let text_changed = Some(cache_key.text_hash) != self.last_text_hash;
-        if self.cached_text_layout.contains_key(&cache_key) && !text_changed {
-            let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
-            self.last_text_hash = Some(cache_key.text_hash);
-            
-            return taffy::Size {
-                width: computed_size.computed_width,
-                height: computed_size.computed_height,
-            };
-        };
-
-        let root_style = style_to_parley_style(&self.style);
-        let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
-        for fragment in self.fragments.iter() {
-            match fragment {
-                TextFragment::String(str) => {
-                    builder.push_text(str);
-                }
-                TextFragment::Span(span_index) => {
-                    let span = self.children.get(*span_index as usize).unwrap();
-
-                    match &span.component {
-                        ComponentOrElement::Element(ele) => {
-                            let ele = &*ele.internal;
-
-                            if let Some(span) = ele.as_any().downcast_ref::<Span>() {
-                                builder.push_style_span(style_to_parley_style(span.style()));
-                                builder.push_text(&span.text);
-                                builder.pop_style_span();
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                TextFragment::InlineComponentSpecification(inline) => {}
+        let mut text_changed = true;
+        if let Some(last_cache_key) = &self.last_cache_key {
+            if last_cache_key.text_hash == cache_key.text_hash {
+                text_changed = false;
             }
         }
+        self.last_cache_key = Some(cache_key.clone());
+
+        if self.cached_text_layout.contains_key(&cache_key) && !text_changed {
+            let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
+
+            taffy::Size {
+                width: computed_size.computed_width,
+                height: computed_size.computed_height,
+            }
+        } else {
+            let mut builder: TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
+            for fragment in self.fragments.iter() {
+                match fragment {
+                    TextFragment::String(str) => {
+                        builder.push_text(str);
+                    }
+                    TextFragment::Span(span_index) => {
+                        let span = self.children.get(*span_index as usize).unwrap();
+
+                        match &span.component {
+                            ComponentOrElement::Element(ele) => {
+                                let ele = &*ele.internal;
+
+                                if let Some(span) = ele.as_any().downcast_ref::<Span>() {
+                                    builder.push_style_span(style_to_parley_style(span.style()));
+                                    builder.push_text(&span.text);
+                                    builder.pop_style_span();
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    TextFragment::InlineComponentSpecification(inline) => {}
+                }
+            }
 
 
-        // Build the builder into a Layout
-        let (mut layout, _text): (Layout<Brush>, String) = builder.build();
-        layout.break_all_lines(width_constraint);
-        layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
+            // Build the builder into a Layout
+            let (mut layout, _text): (Layout<Brush>, String) = builder.build();
+            layout.break_all_lines(width_constraint);
+            layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
 
-        let width = layout.width().ceil() as u32;
-        let height = layout.height().ceil() as u32;
-        self.layout = layout;
-        
-        println!("{:?}", height);
+            let width = layout.width().ceil();
+            let height = layout.height().ceil();
+            self.layout = layout;
 
-        let computed_size = TextHashValue {
-            computed_width: width as f32,
-            computed_height: height as f32,
-        };
-        
-        self.cached_text_layout.insert(cache_key.clone(), computed_size);
-        self.last_text_hash = Some(cache_key.text_hash);
-        
-        taffy::Size {
-            width: computed_size.computed_width,
-            height: computed_size.computed_height,
+            let computed_size = TextHashValue {
+                computed_width: width,
+                computed_height: height,
+            };
+
+            self.cached_text_layout.insert(cache_key.clone(), computed_size);
+
+            taffy::Size {
+                width: computed_size.computed_width,
+                height: computed_size.computed_height,
+            }
         }
+        
     }
 }
 
@@ -321,6 +328,12 @@ impl Element for Text {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
+        let state = self.get_state_mut(element_state);
+        if let Some(last_cache_key) = &state.last_cache_key {
+            let width = last_cache_key.width_constraint.map(|w| f32::from_bits(w));
+            state.layout.break_all_lines(width);
+            state.layout.align(width, Alignment::Start, AlignmentOptions::default());
+        }
 
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);

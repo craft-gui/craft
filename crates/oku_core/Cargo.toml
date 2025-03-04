@@ -36,8 +36,7 @@ lyon = { git = "https://github.com/nical/lyon.git", rev="54169fb867a5aa8d9b56c20
 usvg = "0.44.0"
 
 [dependencies.parley]
-git = "https://github.com/linebender/parley"
-rev = "7c8983cf61bd25903c2be1ca6de4ab4835e4f503"
+version = "0.3.0"
 
 swash = { workspace = true, default-features = true }
 
