@@ -125,6 +125,7 @@ impl Element for Canvas {
                 RenderCommand::FillBezPath(path, color) => {
                     renderer.fill_bez_path(path.clone(), *color);
                 },
+                #[cfg(feature = "wgpu_renderer")]
                 RenderCommand::FillLyonPath(path, color) => { 
                     renderer.fill_lyon_path(path, *color);
                 }

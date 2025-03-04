@@ -1388,7 +1388,8 @@ checksum = "04cbf5b083de1c7e0222a7a51dbfdba1cbe1c6ab0b15e29fff3f6c077fd9cd9f"
 [[package]]
 name = "lyon"
 version = "1.0.1"
-source = "git+https://github.com/nical/lyon.git?rev=54169fb867a5aa8d9b56c207d42621cb880349a1#54169fb867a5aa8d9b56c207d42621cb880349a1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91e7f9cda98b5430809e63ca5197b06c7d191bf7e26dfc467d5a3f0290e2a74f"
 dependencies = [
  "lyon_algorithms",
  "lyon_tessellation",
@@ -1397,7 +1398,8 @@ dependencies = [
 [[package]]
 name = "lyon_algorithms"
 version = "1.0.5"
-source = "git+https://github.com/nical/lyon.git?rev=54169fb867a5aa8d9b56c207d42621cb880349a1#54169fb867a5aa8d9b56c207d42621cb880349a1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f13c9be19d257c7d37e70608ed858e8eab4b2afcea2e3c9a622e892acbf43c08"
 dependencies = [
  "lyon_path",
  "num-traits",
@@ -1406,7 +1408,8 @@ dependencies = [
 [[package]]
 name = "lyon_geom"
 version = "1.0.6"
-source = "git+https://github.com/nical/lyon.git?rev=54169fb867a5aa8d9b56c207d42621cb880349a1#54169fb867a5aa8d9b56c207d42621cb880349a1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8af69edc087272df438b3ee436c4bb6d7c04aa8af665cfd398feae627dbd8570"
 dependencies = [
  "arrayvec",
  "euclid",
@@ -1415,8 +1418,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_path"
-version = "1.0.6"
-source = "git+https://github.com/nical/lyon.git?rev=54169fb867a5aa8d9b56c207d42621cb880349a1#54169fb867a5aa8d9b56c207d42621cb880349a1"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0047f508cd7a85ad6bad9518f68cce7b1bf6b943fb71f6da0ee3bc1e8cb75f25"
 dependencies = [
  "lyon_geom",
  "num-traits",
@@ -1425,7 +1429,8 @@ dependencies = [
 [[package]]
 name = "lyon_tessellation"
 version = "1.0.15"
-source = "git+https://github.com/nical/lyon.git?rev=54169fb867a5aa8d9b56c207d42621cb880349a1#54169fb867a5aa8d9b56c207d42621cb880349a1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "579d42360a4b09846eff2feef28f538696c7d6c7439bfa65874ff3cbe0951b2c"
 dependencies = [
  "float_next_after",
  "lyon_path",

@@ -32,7 +32,7 @@ cfg-if = "1.0.0"
 chrono = "0.4.39"
 bitflags = "2.8.0"
 
-lyon = { git = "https://github.com/nical/lyon.git", rev="54169fb867a5aa8d9b56c207d42621cb880349a1" }
+lyon = { version = "1.0.1", optional = true }
 
 [dependencies.parley]
 version = "0.3.0"
@@ -91,7 +91,7 @@ dev_tools = []
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 
-wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm"]
+wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
