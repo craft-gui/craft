@@ -39,6 +39,9 @@ version = "0.3.0"
 
 swash = { workspace = true, default-features = true }
 
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
+clipboard-rs = "0.2.4"
+
 [dependencies.vello]
 version = "0.4.0"
 optional = true

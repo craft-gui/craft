@@ -1,7 +1,7 @@
 mod image_adapter;
 
 use crate::components::component::ComponentId;
-use crate::elements::text::TextState;
+use crate::elements::text::text::TextState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
