@@ -180,13 +180,24 @@ impl TextState {
             }
         }
         
+        let previous_cache_key = self.last_cache_key.clone();
         // Update the current cache key.
         self.last_cache_key = Some(cache_key.clone());
 
         // Use the cached size if possible and if the text/font settings haven't changed.
         if self.cached_text_layout.contains_key(&cache_key) && !text_changed {
             let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
+            
+            let previous_cache_key = previous_cache_key.unwrap();
+            let same_available_space = previous_cache_key.available_space_width == cache_key.available_space_width && previous_cache_key.available_space_height == cache_key.available_space_height;
+            let same_constraints = previous_cache_key.width_constraint == cache_key.width_constraint && previous_cache_key.height_constraint == cache_key.height_constraint;
 
+            // The layout gets updated for each new cache entry, so we may need to recompute the final text layout in Text::finalize_layout.
+            // We need to recompute the final layout if the constraints or available space have changed since the last layout pass.
+            if !same_constraints || !same_available_space {
+                self.should_recompute_final_text_layout = true;
+            }
+            
             taffy::Size {
                 width: computed_size.computed_width,
                 height: computed_size.computed_height,
@@ -210,6 +221,7 @@ impl TextState {
             // Update the cache.
             self.layout = layout;
             self.cached_text_layout.insert(cache_key.clone(), computed_size);
+            self.should_recompute_final_text_layout = false;
 
             taffy::Size {
                 width: computed_size.computed_width,

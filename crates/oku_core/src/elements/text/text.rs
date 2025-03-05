@@ -5,7 +5,7 @@ use crate::elements::{ElementStyles, Span};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_private_push, RendererBox};
-use parley::{Alignment, AlignmentOptions, FontContext, Layout};
+use parley::{FontContext, Layout};
 use peniko::Brush;
 use std::any::Any;
 use std::collections::HashMap;
@@ -38,6 +38,11 @@ pub struct TextState {
     pub layout: Layout<Brush>,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_cache_key: Option<TextHashKey>,
+    /// We need to update the text layout in finalize_layout if the constraints or available space have changed since the last layout pass 
+    /// AND the last layout operation was a text size cache hit. 
+    /// 
+    /// This may be true because the cached text size that we retrieve does not map to the current layout which is computed during the last cache miss.
+    pub should_recompute_final_text_layout: bool,
 }
 
 impl TextState {
@@ -52,6 +57,7 @@ impl TextState {
             layout: Layout::default(),
             cached_text_layout: Default::default(),
             last_cache_key: None,
+            should_recompute_final_text_layout: false,
         }
     }
 
@@ -148,10 +154,14 @@ impl Element for Text {
         _pointer: Option<Point>,
     ) {
         let state = self.get_state_mut(element_state);
-        if let Some(last_cache_key) = &state.last_cache_key {
-            recompute_layout_from_cache_key(&mut state.layout, last_cache_key);
+        
+        // We may need to recompute the final text layout, read the documentation for should_recompute_final_text_layout to find out more.
+        if state.should_recompute_final_text_layout {
+            if let Some(last_cache_key) = &state.last_cache_key {
+                recompute_layout_from_cache_key(&mut state.layout, last_cache_key);
+            }
         }
-
+        
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         
