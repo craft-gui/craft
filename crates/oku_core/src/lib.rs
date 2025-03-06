@@ -327,11 +327,9 @@ async fn async_main(
                     match resource_event {
                         ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                             if resource_type == ResourceType::Font {
-                                
-                                    
                                 if let Some(font_context) = app.font_context.as_mut() {
-                                    if resource.data().is_some() {
-                                        //font_context.db_mut().load_font_data(resource.data().unwrap().to_vec());
+                                    if resource.data().is_some() { 
+                                        font_context.collection.register_fonts(resource.data().unwrap().to_vec());
                                         resource_manager.resources.insert(resource_identifier.clone(), resource);
                                     }
                                 }

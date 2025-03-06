@@ -1,5 +1,5 @@
 use std::hash::Hasher;
-use parley::{FontContext, FontStack, Layout, TextStyle};
+use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout, TextStyle};
 use peniko::Brush;
 use rustc_hash::FxHasher;
 use crate::components::component::ComponentOrElement;
@@ -31,9 +31,8 @@ pub struct TextHashKey {
 }
 
 /// Generate a parley TextStyle from our oku::Style struct.
-fn style_to_parley_style<'a>(style: &Style) -> TextStyle<'a, Brush> {
+fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextStyle<'a, Brush> {
     let text_brush = Brush::Solid(style.color());
-    let font_stack = FontStack::from("system-ui");
 
     TextStyle {
         brush: text_brush,
@@ -107,7 +106,19 @@ fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_con
                         let ele = &*ele.internal;
 
                         if let Some(span) = ele.as_any().downcast_ref::<Span>() {
-                            builder.push_style_span(style_to_parley_style(span.style()));
+                            // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
+                            let mut font_families = vec![];
+                            let font_stack = if let Some(font_family) = span.style().font_family() {
+                                if let Some(font_family) = FontFamily::parse(font_family) {
+                                    font_families.push(font_family);
+                                    font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
+                                }
+                                FontStack::from(font_families.as_slice())
+                            } else {
+                                FontStack::from("system-ui")
+                            };
+                            
+                            builder.push_style_span(style_to_parley_style(span.style(), font_stack));
                             builder.push_text(&span.text);
                             builder.pop_style_span();
                         }
@@ -179,13 +190,13 @@ impl TextState {
                 text_changed = false;
             }
         }
-        
+
         let previous_cache_key = self.last_cache_key.clone();
         // Update the current cache key.
         self.last_cache_key = Some(cache_key.clone());
 
         // Use the cached size if possible and if the text/font settings haven't changed.
-        if self.cached_text_layout.contains_key(&cache_key) && !text_changed {
+        if !self.reload_fonts && self.cached_text_layout.contains_key(&cache_key) && !text_changed {
             let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
             
             let previous_cache_key = previous_cache_key.unwrap();
@@ -203,7 +214,19 @@ impl TextState {
                 height: computed_size.computed_height,
             }
         } else { // Cache is not available or the text/font settings have changed, so we need to recompute the size.
-            let root_style = style_to_parley_style(&self.style);
+
+            // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
+            let mut font_families = vec![];
+            let font_stack = if let Some(font_family) = self.style.font_family() {
+                if let Some(font_family) = FontFamily::parse(font_family) {
+                    font_families.push(font_family);
+                    font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
+                }
+                FontStack::from(font_families.as_slice())
+            } else {
+                FontStack::from("system-ui")
+            };
+            let root_style = style_to_parley_style(&self.style, font_stack);
             
             
             let mut builder = build_text_layout_tree(font_context, font_layout_context, &root_style, &self.children, &self.fragments);

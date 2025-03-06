@@ -5,7 +5,7 @@ use util::setup_logging;
 
 use oku::components::ComponentSpecification;
 use oku::components::{Component, UpdateResult};
-use oku::elements::text_input::TextInput;
+//use oku::elements::text_input::TextInput;
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Font, Text};
 use oku::events::Message;
@@ -31,7 +31,7 @@ impl Component for TextState {
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
-            .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
+           // .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
             .component()
     }
 

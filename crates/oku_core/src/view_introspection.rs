@@ -43,11 +43,10 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
                     resource_manager.add_temporary_resource(image_resource.clone(), ResourceType::Image);
                 }
                 
-                //if let Some(font_resource) = font_resource {
-                //    let font_db = font_context.db_mut();
-                //    resource_manager.async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, Some(font_db));
-                //    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
-                //}
+                if let Some(font_resource) = font_resource {
+                    resource_manager.async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font);
+                    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
+                }
             }
             
         }

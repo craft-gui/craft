@@ -43,6 +43,7 @@ pub struct TextState {
     /// 
     /// This may be true because the cached text size that we retrieve does not map to the current layout which is computed during the last cache miss.
     pub should_recompute_final_text_layout: bool,
+    pub reload_fonts: bool,
 }
 
 impl TextState {
@@ -58,6 +59,7 @@ impl TextState {
             cached_text_layout: Default::default(),
             last_cache_key: None,
             should_recompute_final_text_layout: false,
+            reload_fonts: false,
         }
     }
 
@@ -164,8 +166,9 @@ impl Element for Text {
         
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
-        
         self.finalize_borders();
+        
+        state.reload_fonts = false;
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -188,6 +191,7 @@ impl Element for Text {
     fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
+        state.reload_fonts = reload_fonts;
     }
 }
 
