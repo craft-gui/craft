@@ -73,16 +73,6 @@ tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.43.0", default-features = false, features = ["rt-multi-thread", "sync"] }
 
-
-[target.'cfg(not(target_os = "android"))'.dependencies.softbuffer]
-version = "0.4.6"
-optional = true
-
-[target.'cfg(not(target_os = "android"))'.dependencies.tiny-skia]
-git = "https://github.com/RazrFalcon/tiny-skia"
-rev = "cf6530d4b58ebb059684b446f54794b91ccc96a1"
-optional = true
-
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
 version = "0.12.9"
 default-features = false
@@ -95,7 +85,6 @@ dynamic_linking = []
 android = ["winit/android-native-activity"]
 
 wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
-tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 

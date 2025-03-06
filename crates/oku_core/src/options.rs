@@ -16,8 +16,6 @@ impl Default for OkuOptions {
 
 #[derive(Copy, Clone, Debug)]
 pub enum RendererType {
-    #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-    Software,
     #[cfg(feature = "wgpu_renderer")]
     Wgpu,
     #[cfg(feature = "vello_renderer")]
@@ -28,9 +26,7 @@ pub enum RendererType {
 impl Default for RendererType {
     fn default() -> Self {
         cfg_if::cfg_if!  {
-            if #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))] {
-                RendererType::Software
-            } else if #[cfg(feature = "wgpu_renderer")] {
+           if #[cfg(feature = "wgpu_renderer")] {
                 RendererType::Wgpu
             } else if #[cfg(feature = "vello_renderer")] {
                 RendererType::Vello
@@ -44,8 +40,6 @@ impl Default for RendererType {
 impl Display for RendererType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-            RendererType::Software => write!(f, "software(tiny-skia)"),
             #[cfg(feature = "wgpu_renderer")]
             RendererType::Wgpu => write!(f, "wgpu"),
             #[cfg(feature = "vello_renderer")]

@@ -21,9 +21,6 @@ use crate::geometry::Size;
 use oku_logging::info;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 
-#[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-use crate::renderer::softbuffer::SoftwareRenderer;
-
 #[cfg(feature = "wgpu_renderer")]
 use crate::renderer::wgpu::WgpuRenderer;
 
@@ -100,8 +97,6 @@ impl ApplicationHandler for OkuWinitState {
 
         let renderer_future: Pin<Box<dyn Future<Output = Box<dyn Renderer + Send>>>> = Box::pin(async move {
             let renderer: Box<dyn Renderer + Send> = match renderer_type {
-                #[cfg(all(not(target_os = "android"), feature = "tinyskia_renderer"))]
-                RendererType::Software => Box::new(SoftwareRenderer::new(window_copy)),
                 #[cfg(feature = "wgpu_renderer")]
                 RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
                 #[cfg(feature = "vello_renderer")]
