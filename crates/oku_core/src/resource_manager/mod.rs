@@ -15,8 +15,6 @@ use crate::resource_manager::resource_type::ResourceType;
 use oku_logging::info;
 
 use ::image::ImageReader;
-
-use cosmic_text::fontdb;
 use tokio::sync::mpsc::Sender;
 
 use std::any::Any;
@@ -62,7 +60,6 @@ impl ResourceManager {
         &self,
         resource_identifier: ResourceIdentifier,
         resource_type: ResourceType,
-        font_db: Option<&mut fontdb::Database>,
     ) {
         if !self.resources.contains_key(&resource_identifier) {
             let resource_identifier_copy = resource_identifier.clone();

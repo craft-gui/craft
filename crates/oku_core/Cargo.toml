@@ -10,19 +10,18 @@ resolver = "2"
 oku_logging = { path = "../oku_logger" }
 
 winit = { git = "https://github.com/rust-windowing/winit", rev="a6998af997b4d78aa31393fe5e1ade9c88490adc" }
-taffy = { version = "0.7.5", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
+taffy = { version = "0.7.6", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
 # Add at the next stable release.
 #accesskit = "0.17.1"
 #accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 
-rustc-hash = { version = "2.1.0", default-features = false }
+rustc-hash = { version = "2.1.1", default-features = false }
 unicode-segmentation = "1.12.0"
 
 # https://crates.io/crates/glam
 # SSE2 is enabled by default on x86_64 targets.
-glam = { version = "0.29.2" }
-bytemuck = { version = "1.21.0", features = ["derive"] }
+glam = { version = "0.30.0" }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
 
 
@@ -32,14 +31,10 @@ cfg-if = "1.0.0"
 chrono = "0.4.39"
 bitflags = "2.8.0"
 
-lyon = { git = "https://github.com/nical/lyon.git", rev="54169fb867a5aa8d9b56c207d42621cb880349a1" }
-usvg = "0.44.0"
+[dependencies.parley]
+version = "0.3.0"
 
-[dependencies.cosmic-text]
-git = "https://github.com/pop-os/cosmic-text"
-rev = "9125dd48b771e9aa7833d106a9850e935f71eaa6"
-default-features = false
-features = ["std", "fontconfig"]
+swash = { workspace = true, default-features = true }
 
 [dependencies.vello]
 version = "0.4.0"
@@ -72,18 +67,8 @@ tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.43.0", default-features = false, features = ["rt-multi-thread", "sync"] }
 
-
-[target.'cfg(not(target_os = "android"))'.dependencies.softbuffer]
-version = "0.4.6"
-optional = true
-
-[target.'cfg(not(target_os = "android"))'.dependencies.tiny-skia]
-git = "https://github.com/RazrFalcon/tiny-skia"
-rev = "cf6530d4b58ebb059684b446f54794b91ccc96a1"
-optional = true
-
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
-version = "0.12.9"
+version = "0.12.12"
 default-features = false
 features = ["rustls-tls"]
 optional = true
@@ -93,8 +78,6 @@ dev_tools = []
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 
-wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm"]
-tinyskia_renderer = ["dep:tiny-skia", "dep:softbuffer", "cosmic-text/swash"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 

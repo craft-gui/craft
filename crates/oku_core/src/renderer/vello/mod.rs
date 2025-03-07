@@ -1,22 +1,17 @@
-mod text;
 mod image_adapter;
 
 use crate::components::component::ComponentId;
-use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
+use crate::elements::text::text::TextState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
-use crate::renderer::vello::text::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
-use peniko::kurbo::BezPath;
+use parley::{FontContext, Line, PositionedLayoutItem};
+use peniko::kurbo::{BezPath, Stroke};
 use peniko::Font;
-use std::collections::HashMap;
 use std::sync::Arc;
-use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -55,7 +50,6 @@ pub struct VelloRenderer<'a> {
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
-    vello_fonts: HashMap<cosmic_text::fontdb::ID, peniko::Font>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> vello::Renderer {
@@ -93,7 +87,6 @@ impl<'a> VelloRenderer<'a> {
             state: RenderState::Suspended,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
-            vello_fonts: HashMap::new(),
         };
 
         // Create a vello Surface
@@ -121,10 +114,9 @@ impl<'a> VelloRenderer<'a> {
     }
 
     fn prepare_with_render_commands(
-        vello_fonts: &HashMap<cosmic_text::fontdb::ID, peniko::Font>,
         scene: &mut Scene,
         resource_manager: &RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         element_state: &ElementStateStore,
         render_commands: &mut Vec<RenderCommand>,
     ) {
@@ -159,76 +151,113 @@ impl<'a> VelloRenderer<'a> {
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                    
+                    
+                    
+                    if let Some(text_state) = element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>() {
+                        for line in text_state.layout.lines() {
+                            for item in line.items() {
+                                let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                                    continue;
+                                };
+                                let style = glyph_run.style();
+                                // We draw underlines under the text, then the strikethrough on top, following:
+                                // https://drafts.csswg.org/css-text-decor/#painting-order
+                                if let Some(underline) = &style.underline {
+                                    let underline_brush = &style.brush;
+                                    let run_metrics = glyph_run.run().metrics();
+                                    let offset = match underline.offset {
+                                        Some(offset) => offset,
+                                        None => run_metrics.underline_offset,
+                                    };
+                                    let width = match underline.size {
+                                        Some(size) => size,
+                                        None => run_metrics.underline_size,
+                                    };
+                                    // The `offset` is the distance from the baseline to the top of the underline
+                                    // so we move the line down by half the width
+                                    // Remember that we are using a y-down coordinate system
+                                    // If there's a custom width, because this is an underline, we want the custom
+                                    // width to go down from the default expectation
+                                    let y = glyph_run.baseline() - offset + width / 2.;
 
-                    if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
-                    {
-                        let editor = &text_context.editor;
-                        let buffer_glyphs = text::create_glyphs_for_editor(
-                            editor,
-                            fill_color.into(),
-                            peniko::Color::from_rgb8(0, 0, 0),
-                            peniko::Color::from_rgb8(0, 120, 215),
-                            peniko::Color::from_rgb8(255, 255, 255),
-                        );
-
-                        // Draw the Glyphs
-                        for buffer_line in &buffer_glyphs.buffer_lines {
-                            for glyph_highlight in &buffer_line.glyph_highlights {
-                                scene.fill(
-                                    Fill::NonZero,
-                                    text_transform,
-                                    buffer_glyphs.glyph_highlight_color,
-                                    None,
-                                    glyph_highlight,
-                                );
-                            }
-
-                            if let Some(cursor) = &buffer_line.cursor {
-                                scene.fill(
-                                    Fill::NonZero,
-                                    text_transform,
-                                    buffer_glyphs.cursor_color,
-                                    None,
-                                    cursor,
-                                );
-                            }
-
-                            for glyph_run in &buffer_line.glyph_runs {
-                                let font = vello_fonts.get(&glyph_run.font).unwrap();
-                                let glyph_color = glyph_run.glyph_color;
-                                let glyphs = glyph_run.glyphs.clone();
+                                    let line = kurbo::Line::new(
+                                        (glyph_run.offset() as f64, y as f64),
+                                        ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
+                                    );
+                                    scene.stroke(
+                                        &Stroke::new(width.into()),
+                                        text_transform,
+                                        underline_brush,
+                                        None,
+                                        &line,
+                                    );
+                                }
+                                let mut x = glyph_run.offset();
+                                let y = glyph_run.baseline();
+                                let run = glyph_run.run();
+                                let font = run.font();
+                                let font_size = run.font_size();
+                                let synthesis = run.synthesis();
+                                let glyph_xform = synthesis
+                                    .skew()
+                                    .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
                                 scene
                                     .draw_glyphs(font)
-                                    .font_size(buffer_glyphs.font_size)
-                                    .brush(glyph_color)
+                                    .brush(&style.brush)
+                                    .hint(true)
                                     .transform(text_transform)
-                                    .draw(Fill::NonZero, glyphs.into_iter());
+                                    .glyph_transform(glyph_xform)
+                                    .font_size(font_size)
+                                    .normalized_coords(run.normalized_coords())
+                                    .draw(
+                                        Fill::NonZero,
+                                        glyph_run.glyphs().map(|glyph| {
+                                            let gx = x + glyph.x;
+                                            let gy = y - glyph.y;
+                                            x += glyph.advance;
+                                            vello::Glyph {
+                                                id: glyph.id as _,
+                                                x: gx,
+                                                y: gy,
+                                            }
+                                        }),
+                                    );
+                                if let Some(strikethrough) = &style.strikethrough {
+                                    let strikethrough_brush = &style.brush;
+                                    let run_metrics = glyph_run.run().metrics();
+                                    let offset = match strikethrough.offset {
+                                        Some(offset) => offset,
+                                        None => run_metrics.strikethrough_offset,
+                                    };
+                                    let width = match strikethrough.size {
+                                        Some(size) => size,
+                                        None => run_metrics.strikethrough_size,
+                                    };
+                                    // The `offset` is the distance from the baseline to the *top* of the strikethrough
+                                    // so we calculate the middle y-position of the strikethrough based on the font's
+                                    // standard strikethrough width.
+                                    // Remember that we are using a y-down coordinate system
+                                    let y = glyph_run.baseline() - offset + run_metrics.strikethrough_size / 2.;
+
+                                    let line = kurbo::Line::new(
+                                        (glyph_run.offset() as f64, y as f64),
+                                        ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
+                                    );
+                                    scene.stroke(
+                                        &Stroke::new(width.into()),
+                                        text_transform,
+                                        strikethrough_brush,
+                                        None,
+                                        &line,
+                                    );
+                                }
                             }
                         }
-                    } else if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
-                    {
-                        let buffer = &text_context.buffer;
-                        let buffer_glyphs = text::create_glyphs(buffer, fill_color.into(), None);
-                        // Draw the Glyphs
-                        for buffer_line in &buffer_glyphs.buffer_lines {
-                            for glyph_run in &buffer_line.glyph_runs {
-                                let font = vello_fonts.get(&glyph_run.font).unwrap();
-                                let glyph_color = glyph_run.glyph_color;
-                                let glyphs = glyph_run.glyphs.clone();
-                                scene
-                                    .draw_glyphs(font)
-                                    .font_size(buffer_glyphs.font_size)
-                                    .brush(glyph_color)
-                                    .transform(text_transform)
-                                    .draw(Fill::NonZero, glyphs.into_iter());
-                            }
-                        }
-                    } else {
-                        panic!("Unknown state provided to the renderer!");
-                    };
-                }
+                    }
+                    
+                    
+                },
                 /*RenderCommand::PushTransform(transform) => {
                     self.scene.push_transform(transform);
                 },
@@ -250,7 +279,6 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 },
-                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -320,24 +348,16 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
     
-    fn load_font(&mut self, font_system: &mut FontSystem) {
-        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> =
-            font_system.db().faces().map(|face| (face.id, face.index)).collect();
-        for (font_id, index) in font_faces {
-            if let Some(font) = font_system.get_font(font_id) {
-                let font_blob = Blob::new(Arc::new(CosmicFontBlobAdapter::new(font)));
-                let vello_font = Font::new(font_blob, index);
-                self.vello_fonts.insert(font_id, vello_font);
-            }
-        }
+    fn load_font(&mut self, font_context: &mut FontContext) {
+    
     }
 
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         element_state: &ElementStateStore) {
-        VelloRenderer::prepare_with_render_commands(&self.vello_fonts, &mut self.scene, &resource_manager, _font_system, element_state, &mut self.render_commands);
+        VelloRenderer::prepare_with_render_commands(&mut self.scene, &resource_manager, _font_context, element_state, &mut self.render_commands);
     }
 
     fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
@@ -390,8 +410,5 @@ impl Renderer for VelloRenderer<'_> {
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
-    }
-
-    fn fill_lyon_path(&mut self, path: &Path, color: Color) {
     }
 }

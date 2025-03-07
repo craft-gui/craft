@@ -9,7 +9,7 @@ use crate::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::{create_unique_element_id};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
-use cosmic_text::FontSystem;
+use parley::FontContext;
 
 use std::collections::{HashMap, HashSet};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
@@ -88,7 +88,7 @@ pub(crate) fn diff_trees(
     user_state: &mut StateStore,
     global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
-    font_system: &mut FontSystem,
+    font_context: &mut FontContext,
     reload_fonts: bool,
 ) -> DiffTreesResult {
     unsafe {
@@ -185,9 +185,9 @@ pub(crate) fn diff_trees(
                             }
                         }
 
-                        element.internal.update_state(font_system, element_state, reload_fonts);
+                        element.internal.update_state(font_context, element_state, reload_fonts);
                     } else {
-                        let state = element.internal.initialize_state(font_system);
+                        let state = element.internal.initialize_state(font_context);
                         element_state.storage.insert(id, state);
                     }
 

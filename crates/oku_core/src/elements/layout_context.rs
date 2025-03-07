@@ -1,11 +1,10 @@
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-
-use cosmic_text::{FontSystem, Metrics};
+use parley::FontContext;
+use peniko::Brush;
 
 use taffy::Size;
 
@@ -13,37 +12,22 @@ use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
-    pub metrics: Metrics,
 }
 
 impl<'a> TaffyTextContext {
-    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+    pub fn new(id: ComponentId) -> Self {
         Self {
             id,
-            metrics
         }
     }
 }
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+/*#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct MetricsDummy {
     /// Font size in pixels
     pub font_size: u32,
     /// Line height in pixels
     pub line_height: u32,
-}
-
-#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
-pub struct TextHashKey {
-    pub text_hash: u64,
-    pub width_constraint: Option<u32>,
-    pub height_constraint: Option<u32>,
-    pub available_space_width: AvailableSpace,
-    pub available_space_height: AvailableSpace,
-    pub metrics: MetricsDummy,
-    
-    pub font_family_length: u8,
-    pub font_family: [u8; 64]
-}
+}*/
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AvailableSpace {
@@ -95,7 +79,6 @@ impl ImageContext {
 
 pub(crate) enum LayoutContext {
     Text(TaffyTextContext),
-    TextInput(TaffyTextInputContext),
     Image(ImageContext),
 }
 
@@ -104,7 +87,8 @@ pub fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
-    font_system: &mut FontSystem,
+    font_context: &mut FontContext,
+    font_layout_context: &mut parley::LayoutContext<Brush>,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
@@ -120,28 +104,12 @@ pub fn measure_content(
             text_state.measure(
                 known_dimensions,
                 available_space,
-                font_system,
-                text_state.text_hash,
-                taffy_text_context.metrics,
-                text_state.font_family_length,
-                text_state.font_family,
+                font_context,
+                font_layout_context
             )
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
-        }
-        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
-
-            text_input_state.measure(
-                known_dimensions,
-                available_space,
-                font_system,
-                text_input_state.text_hash,
-                taffy_text_input_context.metrics,
-                text_input_state.font_family_length,
-                text_input_state.font_family,
-            )
         }
     }
 }
@@ -150,14 +118,12 @@ pub fn measure_content(
 
 pub struct TaffyTextInputContext {
     pub id: ComponentId,
-    metrics: Metrics,
 }
 
 impl<'a> TaffyTextInputContext {
-    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+    pub fn new(id: ComponentId) -> Self {
         Self {
             id,
-            metrics,
         }
     }
 }

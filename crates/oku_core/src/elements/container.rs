@@ -10,7 +10,7 @@ use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
@@ -62,7 +62,7 @@ impl Element for Container {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &ElementStateStore,
@@ -70,12 +70,9 @@ impl Element for Container {
     ) {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
-        // #[cfg(feature = "wgpu_renderer")]
-        // renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
-       
         self.maybe_start_layer(renderer);
         {
-            self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);   
+            self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
         }
         self.maybe_end_layer(renderer);
        
@@ -85,14 +82,14 @@ impl Element for Container {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_system, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);   
             }
@@ -111,7 +108,7 @@ impl Element for Container {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
@@ -146,7 +143,7 @@ impl Element for Container {
                 self.common_element_data.computed_layered_rectangle.position,
                 z_index,
                 transform * child_transform,
-                font_system,
+                font_context,
                 element_state,
                 pointer,
             );
@@ -157,7 +154,7 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_context: &mut FontContext) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
         
@@ -250,7 +247,7 @@ impl Element for Container {
         }
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(ContainerState::default())

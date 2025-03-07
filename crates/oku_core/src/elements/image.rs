@@ -9,7 +9,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::ResourceIdentifier;
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
@@ -48,7 +48,7 @@ impl Element for Image {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -68,7 +68,7 @@ impl Element for Image {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
@@ -93,7 +93,7 @@ impl Element for Image {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        _font_system: &mut FontSystem,
+        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {

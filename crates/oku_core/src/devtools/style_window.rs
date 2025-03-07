@@ -2,7 +2,7 @@ use taffy::Overflow;
 use crate::Color;
 use crate::components::ComponentSpecification;
 use crate::devtools::dev_tools_colors::{BORDER_COLOR, FIELD_NAME_COLOR, FIELD_VALUE_COLOR, ROW_BACKGROUND_COLOR};
-use crate::elements::{Container, ElementStyles, Text};
+use crate::elements::{Container, ElementStyles, Span, Text};
 use crate::elements::element::Element;
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
@@ -14,8 +14,13 @@ fn format_option<T: std::fmt::Debug>(option: Option<T>) -> String {
 
 fn field_row(field_name: &str, field_name_color: Color, field_value: &str, field_value_color: Color) -> ComponentSpecification {
     Container::new()
-        .push(Text::new(field_name.to_lowercase().as_str()).color(field_name_color))
-        .push(Text::new(field_value.to_lowercase().as_str()).color(field_value_color))
+        .push(
+            Text::new(field_name.to_lowercase().as_str())
+                .color(field_name_color)
+                .push_span(
+                    Span::new(field_value.to_lowercase().as_str()).color(field_value_color)
+                )
+        )
         .padding("0px", "10px", "0px", "10px")
         .component()
 }

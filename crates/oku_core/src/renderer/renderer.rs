@@ -3,7 +3,7 @@ use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
+use parley::FontContext;
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
 
@@ -16,7 +16,6 @@ pub enum RenderCommand {
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
-    FillLyonPath(lyon::path::Path, Color),
 }
 
 pub trait Surface {
@@ -34,7 +33,7 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
     
-    fn load_font(&mut self, _font_system: &mut FontSystem) {
+    fn load_font(&mut self, _font_context: &mut FontContext) {
         
     }
 
@@ -42,7 +41,6 @@ pub trait Renderer {
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
     fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
-    fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
@@ -54,7 +52,7 @@ pub trait Renderer {
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
+        font_context: &mut FontContext,
         element_state: &ElementStateStore,
     );
     
