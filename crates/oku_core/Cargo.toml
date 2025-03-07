@@ -10,19 +10,18 @@ resolver = "2"
 oku_logging = { path = "../oku_logger" }
 
 winit = { git = "https://github.com/rust-windowing/winit", rev="a6998af997b4d78aa31393fe5e1ade9c88490adc" }
-taffy = { version = "0.7.5", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
+taffy = { version = "0.7.6", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
 # Add at the next stable release.
 #accesskit = "0.17.1"
 #accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 
-rustc-hash = { version = "2.1.0", default-features = false }
+rustc-hash = { version = "2.1.1", default-features = false }
 unicode-segmentation = "1.12.0"
 
 # https://crates.io/crates/glam
 # SSE2 is enabled by default on x86_64 targets.
-glam = { version = "0.29.2" }
-bytemuck = { version = "1.21.0", features = ["derive"] }
+glam = { version = "0.30.0" }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
 
 
@@ -32,15 +31,10 @@ cfg-if = "1.0.0"
 chrono = "0.4.39"
 bitflags = "2.8.0"
 
-lyon = { version = "1.0.1", optional = true }
-
 [dependencies.parley]
 version = "0.3.0"
 
 swash = { workspace = true, default-features = true }
-
-[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies]
-clipboard-rs = "0.2.4"
 
 [dependencies.vello]
 version = "0.4.0"
@@ -74,7 +68,7 @@ tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
 tokio = { version = "1.43.0", default-features = false, features = ["rt-multi-thread", "sync"] }
 
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
-version = "0.12.9"
+version = "0.12.12"
 default-features = false
 features = ["rustls-tls"]
 optional = true
