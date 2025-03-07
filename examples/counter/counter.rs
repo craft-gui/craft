@@ -111,7 +111,7 @@ fn main() {
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
 use oku::GlobalState;
-use oku_core::elements::Span;
+use oku::elements::Span;
 use util::setup_logging;
 
 #[allow(dead_code)]

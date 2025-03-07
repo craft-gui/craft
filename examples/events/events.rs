@@ -1,20 +1,17 @@
 #[path = "../util.rs"]
 mod util;
 
-use oku::elements::ElementStyles;
+use crate::util::setup_logging;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
-use oku_core::events::{ButtonSource, ElementState, Message, MouseButton};
-use oku::oku_main_with_options;
-use oku::OkuOptions;
+use oku::elements::ElementStyles;
 use oku::events::{clicked, Event};
-use oku::events::OkuMessage::PointerButtonEvent;
+use oku::oku_main_with_options;
 use oku::renderer::color::palette;
-use oku::style::Unit;
 use oku::style::Position;
+use oku::style::Unit;
+use oku::OkuOptions;
 use oku::RendererType;
-use oku_core::GlobalState;
-use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {

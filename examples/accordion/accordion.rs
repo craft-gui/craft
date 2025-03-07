@@ -11,7 +11,7 @@ use oku::style::FlexDirection;
 use oku::style::Unit;
 use oku::events::clicked;
 use oku::RendererType;
-use oku_core::GlobalState;
+use oku::GlobalState;
 use crate::util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
