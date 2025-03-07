@@ -12,8 +12,6 @@ use parley::{FontContext, Line, PositionedLayoutItem};
 use peniko::kurbo::{BezPath, Stroke};
 use peniko::Font;
 use std::sync::Arc;
-#[cfg(feature = "wgpu_renderer")]
-use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -281,8 +279,6 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 },
-                #[cfg(feature = "wgpu_renderer")]
-                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -414,9 +410,5 @@ impl Renderer for VelloRenderer<'_> {
 
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
-    }
-
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, path: &Path, color: Color) {
     }
 }

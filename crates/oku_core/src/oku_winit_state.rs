@@ -21,9 +21,6 @@ use crate::geometry::Size;
 use oku_logging::info;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
 
-#[cfg(feature = "wgpu_renderer")]
-use crate::renderer::wgpu::WgpuRenderer;
-
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
@@ -97,8 +94,6 @@ impl ApplicationHandler for OkuWinitState {
 
         let renderer_future: Pin<Box<dyn Future<Output = Box<dyn Renderer + Send>>>> = Box::pin(async move {
             let renderer: Box<dyn Renderer + Send> = match renderer_type {
-                #[cfg(feature = "wgpu_renderer")]
-                RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
                 #[cfg(feature = "vello_renderer")]
                 RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
                 RendererType::Blank => Box::new(BlankRenderer),

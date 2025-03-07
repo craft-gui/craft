@@ -84,7 +84,6 @@ dev_tools = []
 dynamic_linking = []
 android = ["winit/android-native-activity"]
 
-wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 

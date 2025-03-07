@@ -70,9 +70,6 @@ impl Element for Container {
     ) {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
-        // #[cfg(feature = "wgpu_renderer")]
-        // renderer.draw_rect(self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), self.style().background());
-       
         self.maybe_start_layer(renderer);
         {
             self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);

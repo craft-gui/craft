@@ -14,7 +14,6 @@ http_client = ["oku_core/http_client"]
 default = ["oku_core/vello_renderer", "oku_core/http_client", "oku_core/dev_tools"]
 
 vello_renderer = ["oku_core/vello_renderer"]
-wgpu_renderer = ["oku_core/wgpu_renderer"]
 
 
 [dependencies]
