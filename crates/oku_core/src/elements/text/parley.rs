@@ -1,5 +1,6 @@
 use std::hash::Hasher;
 use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout, TextStyle};
+use parley::fontique::FamilyId;
 use peniko::Brush;
 use rustc_hash::FxHasher;
 use crate::components::component::ComponentOrElement;
@@ -9,6 +10,7 @@ use crate::elements::layout_context::AvailableSpace;
 use crate::elements::Span;
 use crate::elements::text::text::TextFragment;
 use crate::elements::text::TextState;
+use crate::OKU_FALLBACK_FONT_KEY;
 use crate::style::Style;
 
 #[derive(Copy, Clone)]
@@ -39,6 +41,7 @@ fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextSt
         font_stack,
         line_height: 1.5,
         font_size: style.font_size(),
+        font_weight: parley::FontWeight::new(style.font_weight().0 as f32),
         ..Default::default()
     }
 }
@@ -52,6 +55,7 @@ fn hash_text_and_font_settings_from_text_fragments(root_style: &Style, children:
         font_settings_hasher.write_u8(style.font_family_length());
         font_settings_hasher.write(&style.font_family_raw());
         font_settings_hasher.write_u32(style.font_size().to_bits());
+        font_settings_hasher.write_u16(style.font_weight().0);
     };
     
     for fragment in fragments.iter() {
@@ -90,7 +94,8 @@ fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_con
                           root_style: &'a TextStyle<'a, Brush>,
                           children: &'a Vec<ComponentSpecification>,
                           fragments: &'a Vec<TextFragment>) -> parley::TreeBuilder<'a, Brush> {
-    
+
+    let family_names = get_fallback_font_families(font_context);
     let mut builder: parley::TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
     for fragment in fragments.iter() {
         match fragment {
@@ -101,29 +106,35 @@ fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_con
                 let span = children.get(*span_index as usize).unwrap();
 
                 // Add the span text and their style.
-                match &span.component {
-                    ComponentOrElement::Element(ele) => {
-                        let ele = &*ele.internal;
+                if let ComponentOrElement::Element(ele) = &span.component {
+                    let ele = &*ele.internal;
 
-                        if let Some(span) = ele.as_any().downcast_ref::<Span>() {
-                            // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
-                            let mut font_families = vec![];
-                            let font_stack = if let Some(font_family) = span.style().font_family() {
-                                if let Some(font_family) = FontFamily::parse(font_family) {
-                                    font_families.push(font_family);
-                                    font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
-                                }
-                                FontStack::from(font_families.as_slice())
-                            } else {
-                                FontStack::from("system-ui")
-                            };
-                            
-                            builder.push_style_span(style_to_parley_style(span.style(), font_stack));
-                            builder.push_text(&span.text);
-                            builder.pop_style_span();
+                    if let Some(span) = ele.as_any().downcast_ref::<Span>() {
+                        // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
+                        let mut font_families = vec![];
+
+                        // Append the element's font family.
+                        if let Some(font_family) = span.style().font_family() {
+                            if let Some(font_family) = FontFamily::parse(font_family) {
+                                font_families.push(font_family);
+                            }
+                        };
+                        
+                        // Append the system font
+                        font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
+                        
+                        // Append the fallback fonts.
+                        {
+                            for family_name in &family_names {
+                                font_families.push(FontFamily::parse(family_name).unwrap());
+                            }
                         }
+                     
+                        let font_stack = FontStack::from(font_families.as_slice());
+                        builder.push_style_span(style_to_parley_style(span.style(), font_stack));
+                        builder.push_text(&span.text);
+                        builder.pop_style_span();
                     }
-                    _ => {}
                 }
             }
             TextFragment::InlineComponentSpecification(inline) => {}
@@ -137,6 +148,25 @@ pub(crate) fn recompute_layout_from_cache_key(layout: &mut Layout<Brush>, cache_
     let width_constraint = cache_key.width_constraint.map(|w| f32::from_bits(w));
     layout.break_all_lines(width_constraint);
     layout.align(width_constraint, parley::Alignment::Start, parley::AlignmentOptions::default());
+}
+
+pub(crate) fn get_fallback_font_families(font_context: &mut FontContext) -> Vec<String> {
+    let mut family_names: Vec<String> = vec![];
+    
+    let mut fallback_ids: Vec<FamilyId> = vec![];
+    for fallback in font_context.collection.fallback_families(OKU_FALLBACK_FONT_KEY) {
+        fallback_ids.push(fallback);
+    }
+    for fallback_id in fallback_ids {
+        let family_name = font_context.collection.family_name(fallback_id);
+        if let Some(family_name) = family_name {
+            if let Some(family_name) = FontFamily::parse(family_name) {
+                family_names.push(family_name.to_string());
+            }
+        }
+    }
+    
+    family_names
 }
 
 impl TextState {
@@ -217,21 +247,32 @@ impl TextState {
 
             // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
             let mut font_families = vec![];
-            let font_stack = if let Some(font_family) = self.style.font_family() {
+            let family_names = get_fallback_font_families(font_context);
+            
+            // Append the element's font family.
+            if let Some(font_family) = self.style.font_family() {
                 if let Some(font_family) = FontFamily::parse(font_family) {
                     font_families.push(font_family);
-                    font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
                 }
-                FontStack::from(font_families.as_slice())
-            } else {
-                FontStack::from("system-ui")
             };
+
+            // Append the system font
+            font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
+
+            // Append the fallback fonts.
+            {
+                for family_name in &family_names {
+                    font_families.push(FontFamily::parse(family_name).unwrap());
+                }
+            }
+            
+            let font_stack =  FontStack::from(font_families.as_slice());
             let root_style = style_to_parley_style(&self.style, font_stack);
             
             
             let mut builder = build_text_layout_tree(font_context, font_layout_context, &root_style, &self.children, &self.fragments);
             let (mut layout, _text): (Layout<Brush>, String) = builder.build();
-            recompute_layout_from_cache_key(&mut layout, &self.last_cache_key.as_ref().unwrap());
+            recompute_layout_from_cache_key(&mut layout, self.last_cache_key.as_ref().unwrap());
 
             let width = layout.width().ceil();
             let height = layout.height().ceil();

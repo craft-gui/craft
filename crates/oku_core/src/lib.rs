@@ -76,6 +76,7 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use image::Rgba;
+use parley::fontique::{FallbackKey, FamilyId, FontInfo};
 use peniko::Brush;
 use peniko::color::palette;
 use winit::event::DeviceId;
@@ -84,6 +85,7 @@ use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBui
 use oku_logging::{info, span, Level};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
+pub(crate) const OKU_FALLBACK_FONT_KEY: &str = "OKU_FALLBACK";
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
@@ -133,6 +135,26 @@ impl App {
         if self.font_context.is_none() {
             #[allow(unused_mut)]
             let mut font_context = FontContext::new();
+
+            let mut fallback_family_ids: Vec<FamilyId> = Vec::new();
+            let mut append_fallback_family_ids = |font_info: Vec<(FamilyId, Vec<FontInfo>)>| {
+                for f in font_info {
+                    fallback_family_ids.push(f.0);
+                }
+            };
+            
+            #[cfg(target_arch = "wasm32")]
+            {
+                let fira_regular = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+                let fira_bold = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+                let fira_italic = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+
+                append_fallback_family_ids(fira_regular);
+                append_fallback_family_ids(fira_bold);
+                append_fallback_family_ids(fira_italic);
+            }
+            font_context.collection.append_fallbacks(FallbackKey::from(OKU_FALLBACK_FONT_KEY), fallback_family_ids.iter().copied());
+
             self.font_context = Some(font_context);
             self.font_layout_context = Some(parley::LayoutContext::new());
         }
