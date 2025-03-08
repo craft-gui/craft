@@ -872,7 +872,7 @@ fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
     }
 }
 
-fn layout<'a>(
+fn layout(
     element_state: &mut ElementStateStore,
     _window_width: f32,
     _window_height: f32,
