@@ -96,7 +96,7 @@ fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_con
                           fragments: &'a Vec<TextFragment>) -> parley::TreeBuilder<'a, Brush> {
 
     let family_names = get_fallback_font_families(font_context);
-    let mut builder: parley::TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
+    let mut builder: parley::TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, root_style);
     for fragment in fragments.iter() {
         match fragment {
             TextFragment::String(str) => {
