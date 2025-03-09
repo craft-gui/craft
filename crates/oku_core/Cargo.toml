@@ -4,34 +4,64 @@ version = "0.1.0"
 edition = "2024"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+dev_tools = []
+dynamic_linking = []
+android = ["winit/android-native-activity"]
+
+vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+http_client = ["dep:reqwest"]
+
+default = ["vello_renderer", "http_client"]
+
+
 [dependencies]
 
 oku_logging = { path = "../oku_logger" }
-
-winit = { git = "https://github.com/rust-windowing/winit", rev="a6998af997b4d78aa31393fe5e1ade9c88490adc" }
-taffy = { version = "0.7.6", default-features = false, features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"] }
 
 # Add at the next stable release.
 #accesskit = "0.17.1"
 #accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 
-rustc-hash = { version = "2.1.1", default-features = false }
-
-# https://crates.io/crates/glam
-# SSE2 is enabled by default on x86_64 targets.
-glam = { version = "0.30.0" }
-image = { version = "0.25.5", default-features = false, features = ["jpeg", "png"] }
-
-
-peniko = "0.3.1"
-
 cfg-if = "1.0.0"
-bitflags = "2.8.0"
+
+[dependencies.bitflags]
+version = "2.9.0"
+features = ["std"]
+
+[dependencies.peniko]
+version = "0.3.1"
+default-features = false
+features = ["std"]
+
+[dependencies.glam]
+version = "0.30.0"
+default-features = false
+features = ["std"]
+
+[dependencies.rustc-hash]
+version = "2.1.1"
+default-features = false
+features = ["std"]
+
+[dependencies.winit]
+git = "https://github.com/rust-windowing/winit"
+rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
+
+[dependencies.image]
+version = "0.25.5"
+default-features = false
+features = ["jpeg", "png"]
+
+[dependencies.taffy]
+version = "0.7.7"
+default-features = false
+features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"]
 
 [dependencies.chrono]
-version = "0.4.39"
+version = "0.4.40"
 default-features = false
+features = ["std"]
 
 [dependencies.vello]
 version = "0.4.0"
@@ -55,9 +85,6 @@ version = "0.3.0"
 features = ["std"]
 default-features = false
 
-
-swash = { workspace = true, default-features = true }
-
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.12"
 default-features = false
@@ -66,31 +93,41 @@ optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 #accesskit_winit = { version = "0.23.1" }
-web-time = "1.1.0"
-wasm-bindgen = "0.2.100"
 wasm-bindgen-futures = "0.4.50"
-web-sys = { version = "0.3.77", features = [
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-time]
+version = "1.1.0"
+default-features = false
+features = []
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
+version = "0.2.100"
+default-features = false
+features = ["std", "msrv"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
+version = "0.3.77"
+default-features = false
+features = [
     "Document",
     "Window",
     "Element",
-] }
-tokio = { version = "1.43.0", default-features = false, features = ["sync"] }
+]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies.tokio]
+version = "1.44.0"
+default-features = false
+features = ["sync"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.43.0", default-features = false, features = ["rt-multi-thread", "sync"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
+version = "1.44.0"
+default-features = false
+features = ["rt-multi-thread", "sync"]
 
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
 version = "0.12.12"
 default-features = false
 features = ["rustls-tls"]
 optional = true
-
-[features]
-dev_tools = []
-dynamic_linking = []
-android = ["winit/android-native-activity"]
-
-vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
-http_client = ["dep:reqwest"]
-
-default = ["vello_renderer", "http_client"]
