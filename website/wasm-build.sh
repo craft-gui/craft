@@ -5,7 +5,7 @@ set -e
 #cargo install -f wasm-bindgen-cli
 #cargo install simple-http-server
 
-cargo build --target wasm32-unknown-unknown
+cargo build --target wasm32-unknown-unknown --release
 
 wasm-bindgen ../target/wasm32-unknown-unknown/debug/website.wasm --target web --no-typescript --out-dir dist --out-name website
 cp index.html dist/index.html

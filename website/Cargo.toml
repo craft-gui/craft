@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 
-oku = { path = "../" }
+oku = { path = "../", default-features = false, features = ["vello_renderer", "devtools", "http_client"] }
 
 tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
@@ -22,6 +22,12 @@ version = "0.12.12"
 default-features = false
 features = ["rustls-tls", "json"]
 
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+debug = false
 
 # binary
 [[bin]]

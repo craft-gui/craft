@@ -10,10 +10,9 @@ dynamic_linking = ["dep:oku_dylib", "oku_core/dynamic_linking"]
 devtools = ["oku_core/dev_tools"]
 android = ["oku_core/android"]
 http_client = ["oku_core/http_client"]
+vello_renderer = ["oku_core/vello_renderer"]
 
 default = ["oku_core/vello_renderer", "oku_core/http_client", "oku_core/dev_tools"]
-
-vello_renderer = ["oku_core/vello_renderer"]
 
 
 [dependencies]
@@ -21,7 +20,6 @@ oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = tr
 oku_core = { path = "crates/oku_core", default-features = false, version = "0.1.0" }
 
 [dev-dependencies]
-oku = { path = ".", version = "0.1.0" }
 
 serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.133"
@@ -42,7 +40,10 @@ resolver = "2"
 
 members = [
     "crates/oku_core",
-    "crates/oku_dylib", "crates/oku_logger", "website",
+    "crates/oku_dylib",
+    "crates/oku_logger",
+    "website",
+    "counter"
 ]
 
 [[example]]
@@ -71,7 +72,7 @@ name = "events"
 path = "examples/events/events.rs"
 
 [profile.release]
-opt-level = 'z'
+opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true

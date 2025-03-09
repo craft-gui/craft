@@ -1,0 +1,24 @@
+[package]
+name = "counter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+tracing-subscriber = { version = "0.3.19", default-features = false }
+
+[dependencies.oku]
+path = "../"
+default-features = false
+features = ["vello_renderer"]
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+strip = true
+debug = false
+
+[[bin]]
+name = "counter"
+path = "src/main.rs"

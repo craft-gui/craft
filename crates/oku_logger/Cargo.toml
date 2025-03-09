@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies.tracing]
 version = "0.1.40"
 default-features = false
-features = ["std", "attributes"]
+features = ["std"]
