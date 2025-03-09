@@ -151,7 +151,7 @@ fn build_text_layout_tree<'a>(
 }
 
 pub(crate) fn recompute_layout_from_cache_key(layout: &mut Layout<Brush>, cache_key: &TextHashKey) {
-    let width_constraint = cache_key.width_constraint.map(|w| f32::from_bits(w));
+    let width_constraint = cache_key.width_constraint.map(f32::from_bits);
     layout.break_all_lines(width_constraint);
     layout.align(width_constraint, parley::Alignment::Start, parley::AlignmentOptions::default());
 }
