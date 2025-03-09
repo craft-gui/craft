@@ -269,7 +269,7 @@ async fn async_main(
             component_ids: Default::default(),
             pointer_captures: Default::default(),
             update_queue: VecDeque::new(),
-            user_state: user_state,
+            user_state,
             element_state: Default::default(),
         },
 
