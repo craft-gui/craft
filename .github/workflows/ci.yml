@@ -10,6 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_STABLE_VER: "1.85" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
 
 jobs:
   build-linux:
@@ -17,6 +18,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Oku
         run: cargo build --verbose
       - name: Build Counter Example
@@ -31,6 +36,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Oku
         run: cargo build --verbose
       - name: Build Counter Example
@@ -41,6 +50,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Oku
         run: cargo build --verbose
       - name: Build Counter Example
@@ -51,6 +64,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          targets: aarch64-linux-android
 
       - name: Install Dependencies
         run: |
@@ -68,9 +87,6 @@ jobs:
         with:
           packages: 'platforms;android-30 ndk;27.2.12479018'
 
-      - name: Install Android Toolchain in Rust
-        run: rustup target add aarch64-linux-android
-
       - name: Install cargo APK
         run: cargo install cargo-apk
 
@@ -82,8 +98,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Install iOS Toolchain
-        run: rustup target add aarch64-apple-ios
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
         run: cargo build --target aarch64-apple-ios --example counter
 
@@ -92,6 +111,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Unit Tests
         run: cargo test --workspace --no-run
       - name: Run Unit Tests
