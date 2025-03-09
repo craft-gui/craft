@@ -113,7 +113,7 @@ impl Element for Text {
         _pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
-            self.common_element_data.computed_layered_rectangle_transformed.clone();
+            self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -202,7 +202,7 @@ impl Text {
         state.id = self.common_element_data.component_id;
         state.fragments = self.fragments.clone();
         state.children = self.common_element_data.child_specs.clone();
-        state.style = self.style().clone();
+        state.style = *self.style();
     }
 
     pub fn push_text(mut self, text: String) -> Self {

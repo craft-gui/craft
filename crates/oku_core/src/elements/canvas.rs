@@ -47,7 +47,7 @@ impl Element for Canvas {
         _pointer: Option<Point>,
     ) {
         let _border_color: Color = self.style().border_color()[0];
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let _border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let _content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         

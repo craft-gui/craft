@@ -242,7 +242,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             return;
         }
 
-        let computed_layered_rectangle_transformed = common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layered_rectangle_transformed = common_element_data.computed_layered_rectangle_transformed;
         let padding_rectangle = computed_layered_rectangle_transformed.padding_rectangle();
 
         let computed_content_height = common_element_data.computed_border_rectangle_overflow_size.height;
