@@ -14,7 +14,6 @@ use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
 use taffy::{NodeId, Overflow, TaffyTree};
-use crate::style::style_flags::StyleFlags;
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {

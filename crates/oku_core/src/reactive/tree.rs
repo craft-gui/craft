@@ -1,10 +1,8 @@
-use std::any::Any;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult};
 use crate::components::props::Props;
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::Container;
 use crate::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::{create_unique_element_id};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
