@@ -14,7 +14,7 @@ pub struct TaffyTextContext {
     pub id: ComponentId,
 }
 
-impl<'a> TaffyTextContext {
+impl TaffyTextContext {
     pub fn new(id: ComponentId) -> Self {
         Self {
             id,
@@ -120,7 +120,7 @@ pub struct TaffyTextInputContext {
     pub id: ComponentId,
 }
 
-impl<'a> TaffyTextInputContext {
+impl TaffyTextInputContext {
     pub fn new(id: ComponentId) -> Self {
         Self {
             id,

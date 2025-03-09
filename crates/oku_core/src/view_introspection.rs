@@ -22,17 +22,15 @@ pub async fn scan_view_for_resources(element: &dyn Element, component: &Componen
     
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
-            let image_resource = if let Some(image) = element.as_any().downcast_ref::<Image>() {
-                Some(image.resource_identifier.clone())
-            } else {
-                None
-            };
-            
-            let font_resource = if let Some(font) = element.as_any().downcast_ref::<Font>() {
-                Some(font.resource_identifier.clone())
-            } else {
-                None
-            };
+            let image_resource = element
+                .as_any()
+                .downcast_ref::<Image>()
+                .map(|image| image.resource_identifier.clone());
+
+            let font_resource = element
+                .as_any()
+                .downcast_ref::<Font>()
+                .map(|font| font.resource_identifier.clone());
 
             if image_resource.is_some() || font_resource.is_some() {
                 let mut resource_manager = resource_manager.write().await;

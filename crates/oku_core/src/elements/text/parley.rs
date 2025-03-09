@@ -47,7 +47,11 @@ fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextSt
 }
 
 /// Hash our text and font settings from the children and fragments of a Text element.
-fn hash_text_and_font_settings_from_text_fragments(root_style: &Style, children: &Vec<ComponentSpecification>, fragments: &Vec<TextFragment>) -> (u64, u64) {
+fn hash_text_and_font_settings_from_text_fragments(
+    root_style: &Style,
+    children: &[ComponentSpecification],
+    fragments: &[TextFragment],
+) -> (u64, u64) {
     let mut text_hasher = FxHasher::default();
     let mut font_settings_hasher = FxHasher::default();
     
@@ -90,13 +94,15 @@ fn hash_text_and_font_settings_from_text_fragments(root_style: &Style, children:
 }
 
 /// Build a parley text layout tree from the children and fragments of a Text element.
-fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_context: &'a mut parley::LayoutContext<Brush>,
-                          root_style: &'a TextStyle<'a, Brush>,
-                          children: &'a Vec<ComponentSpecification>,
-                          fragments: &'a Vec<TextFragment>) -> parley::TreeBuilder<'a, Brush> {
-
+fn build_text_layout_tree<'a>(
+    font_context: &'a mut FontContext,
+    font_layout_context: &'a mut parley::LayoutContext<Brush>,
+    root_style: &'a TextStyle<'a, Brush>,
+    children: &'a [ComponentSpecification],
+    fragments: &'a [TextFragment],
+) -> parley::TreeBuilder<'a, Brush> {
     let family_names = get_fallback_font_families(font_context);
-    let mut builder: parley::TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, &root_style);
+    let mut builder: parley::TreeBuilder<Brush> = font_layout_context.tree_builder(font_context, 1.0, root_style);
     for fragment in fragments.iter() {
         match fragment {
             TextFragment::String(str) => {
@@ -145,7 +151,7 @@ fn build_text_layout_tree<'a>(font_context: &'a mut FontContext, font_layout_con
 }
 
 pub(crate) fn recompute_layout_from_cache_key(layout: &mut Layout<Brush>, cache_key: &TextHashKey) {
-    let width_constraint = cache_key.width_constraint.map(|w| f32::from_bits(w));
+    let width_constraint = cache_key.width_constraint.map(f32::from_bits);
     layout.break_all_lines(width_constraint);
     layout.align(width_constraint, parley::Alignment::Start, parley::AlignmentOptions::default());
 }

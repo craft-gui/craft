@@ -67,7 +67,7 @@ impl CommonElementData {
                 if let Some(ref mut hover_style) = self.hover_style {
                     hover_style
                 } else {
-                    self.hover_style = Some(Box::new(self.style.clone()));
+                    self.hover_style = Some(Box::new(self.style));
                     self.hover_style.as_mut().unwrap()
                 }
             },
@@ -75,7 +75,7 @@ impl CommonElementData {
                 if let Some(ref mut pressed_style) = self.pressed_style {
                     pressed_style
                 } else {
-                    self.pressed_style = Some(Box::new(self.style.clone()));
+                    self.pressed_style = Some(Box::new(self.style));
                     self.pressed_style.as_mut().unwrap()
                 }
             },
@@ -83,7 +83,7 @@ impl CommonElementData {
                 if let Some(ref mut disabled_style) = self.disabled_style {
                     disabled_style
                 } else {
-                    self.disabled_style = Some(Box::new(self.style.clone()));
+                    self.disabled_style = Some(Box::new(self.style));
                     self.disabled_style.as_mut().unwrap()
                 }
             },
@@ -91,7 +91,7 @@ impl CommonElementData {
                 if let Some(ref mut focused_style) = self.focused_style {
                     focused_style
                 } else {
-                    self.focused_style = Some(Box::new(self.style.clone()));
+                    self.focused_style = Some(Box::new(self.style));
                     self.focused_style.as_mut().unwrap()
                 }
             },

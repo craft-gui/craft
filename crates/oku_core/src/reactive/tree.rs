@@ -163,7 +163,7 @@ pub(crate) fn diff_trees(
 
                     let mut should_update = false;
                     let id = match old_tag {
-                        Some(ref old_tag) if new_tag == *old_tag => {
+                        Some(old_tag) if new_tag == old_tag => {
                             should_update = true;
                             (*tree_node.old_component_node.unwrap()).id
                         }

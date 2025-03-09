@@ -389,7 +389,7 @@ impl Renderer for VelloRenderer<'_> {
                 &self.scene,
                 &surface_texture,
                 &vello::RenderParams {
-                    base_color: self.surface_clear_color.into(),
+                    base_color: self.surface_clear_color,
                     width,
                     height,
                     // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.

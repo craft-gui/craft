@@ -54,7 +54,7 @@ impl Element for Image {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed.clone();
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
         
         renderer.draw_image(
