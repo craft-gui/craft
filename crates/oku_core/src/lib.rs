@@ -75,11 +75,8 @@ use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use image::Rgba;
 use parley::fontique::{FallbackKey, FamilyId, FontInfo};
 use peniko::Brush;
-use peniko::color::palette;
-use winit::event::DeviceId;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 use oku_logging::{info, span, Level};

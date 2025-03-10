@@ -12,7 +12,7 @@ use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
-use taffy::{NodeId, Overflow, TaffyTree};
+use taffy::{NodeId, TaffyTree};
 use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 
