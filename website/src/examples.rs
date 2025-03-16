@@ -63,8 +63,7 @@ impl Component<WebsiteGlobalState> for Examples {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
-        let wrapper =
-            Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
+        let wrapper = Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
         wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
             match state.example_to_show.as_str() {

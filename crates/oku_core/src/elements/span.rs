@@ -76,10 +76,7 @@ impl Element for Span {
 
         self.draw_borders(renderer);
 
-        renderer.draw_text(
-            self.common_element_data.component_id,
-            content_rectangle,
-        );
+        renderer.draw_text(self.common_element_data.component_id, content_rectangle);
     }
 
     fn compute_layout(

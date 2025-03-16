@@ -66,10 +66,7 @@ impl TextInputState {
         let width = self.editor.editor.layout.width();
         let height = self.editor.editor.layout.height();
 
-        taffy::Size {
-            width,
-            height,
-        }
+        taffy::Size { width, height }
     }
 }
 
@@ -134,10 +131,7 @@ impl Element for TextInput {
 
         self.draw_borders(renderer);
 
-        renderer.draw_text(
-            self.common_element_data.component_id,
-            content_rectangle,
-        );
+        renderer.draw_text(self.common_element_data.component_id, content_rectangle);
     }
 
     fn compute_layout(
@@ -179,11 +173,7 @@ impl Element for TextInput {
         self
     }
 
-    fn on_event(
-        &self,
-        message: OkuMessage,
-        element_state: &mut ElementStateStore,
-    ) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
         let state = self.get_state_mut(element_state);
 
         let text_y: f32 = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle().y;

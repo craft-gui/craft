@@ -5,28 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-        }
+      body, html {
+        margin: 0;
+        padding: 0;
+      }
 
-        * {
-            box-sizing: border-box;
-        }
+      * {
+        box-sizing: border-box;
+      }
 
-        #canvas {
-            width: 100vw;
-            height: 100vh;
-            display: block;
-            border: none;
-        }
+      #canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        border: none;
+      }
     </style>
 </head>
 
 <body>
 <canvas class="main-canvas" id="canvas"></canvas>
 <script type="module">
-   import init from './target/generated/request.js';
+    import init from './target/generated/request.js';
 
     async function run() {
         await init();

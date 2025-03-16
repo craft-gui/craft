@@ -89,7 +89,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId>;
-    
+
     /// Finalizes the layout of the element.
     ///
     /// The majority of the layout computation is done in the `compute_layout` method.
@@ -108,11 +108,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(
-        &self,
-        _message: OkuMessage,
-        _element_state: &mut ElementStateStore,
-    ) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, _element_state: &mut ElementStateStore) -> UpdateResult {
         UpdateResult::default()
     }
 
@@ -327,12 +323,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(
-        &self,
-        _element_state: &mut ElementStateStore,
-        _reload_fonts: bool,
-    ) {
-    }
+    fn update_state(&self, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
 }
 
 impl<T: Element> From<T> for ElementBox {

@@ -96,12 +96,7 @@ impl<'a> VelloRenderer<'a> {
 
         let surface = vello_renderer
             .context
-            .create_surface(
-                window.clone(),
-                surface_size.width,
-                surface_size.height,
-                wgpu::PresentMode::AutoVsync,
-            )
+            .create_surface(window.clone(), surface_size.width, surface_size.height, wgpu::PresentMode::AutoVsync)
             .await
             .unwrap();
 

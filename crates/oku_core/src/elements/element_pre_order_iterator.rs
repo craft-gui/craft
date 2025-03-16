@@ -39,7 +39,6 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use crate::GlobalState;
-    use parley::FontContext;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {

@@ -16,7 +16,7 @@ default = ["oku_core/vello_renderer", "oku_core/http_client", "oku_core/dev_tool
 
 
 [dependencies]
-oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = true, version = "0.1.0"  }
+oku_dylib = { path = "crates/oku_dylib", default-features = false, optional = true, version = "0.1.0" }
 oku_core = { path = "crates/oku_core", default-features = false, version = "0.1.0" }
 
 [dev-dependencies]

@@ -1,8 +1,10 @@
 # Oku
+
 Oku is a reactive GUI. Views are created using Components and Elements.
 Updates are performed by handling messages from a Component.
 
 ## Goals
+
 * Reactive
 * Components
 * Pure Rust without procedural macros
@@ -10,6 +12,7 @@ Updates are performed by handling messages from a Component.
 * Cross Platform
 
 # Features
+
 * ✅ Reactive Components
 * ✅ Async Updates
 * ✅ Text Rendering

@@ -8,7 +8,7 @@ use winit::{
 };
 
 use crate::elements::text_input::driver::PlainEditorDriver;
-use crate::elements::text_input::plain_text_editor::{PlainEditor};
+use crate::elements::text_input::plain_text_editor::PlainEditor;
 use crate::events::OkuMessage;
 use crate::style::Style;
 use parley::{FontContext, LayoutContext};

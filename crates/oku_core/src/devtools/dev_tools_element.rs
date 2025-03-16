@@ -170,11 +170,7 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(
-        &self,
-        _message: OkuMessage,
-        element_state: &mut ElementStateStore,
-    ) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 
         UpdateResult::default()
