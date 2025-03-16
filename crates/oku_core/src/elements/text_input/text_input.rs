@@ -87,8 +87,8 @@ impl TextInputState {
 
         self.editor.editor.set_width(width_constraint);
         self.editor.editor.update_layout(font_context, font_layout_context);
-        let width = self.editor.editor.width.unwrap_or(0.0);
-        let height = self.editor.editor.width.unwrap_or(0.0);
+        let width = self.editor.editor.layout.width();
+        let height = self.editor.editor.layout.height();
 
         taffy::Size {
             width: width,
