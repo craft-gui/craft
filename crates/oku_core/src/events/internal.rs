@@ -6,6 +6,7 @@ use crate::renderer::renderer::Renderer;
 use std::any::Any;
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
+use winit::event::Ime;
 use winit::window::Window;
 use crate::components::ComponentId;
 use crate::geometry::Size;
@@ -20,6 +21,7 @@ pub(crate) enum InternalMessage {
     PointerMoved(PointerMoved),
     MouseWheel(MouseWheel),
     KeyboardInput(KeyboardInput),
+    Ime(Ime),
     ProcessUserEvents,
     #[cfg(not(target_arch = "wasm32"))]
     GotUserMessage((UpdateFn, ComponentId, Box<dyn Any + Send + 'static>, Props)),

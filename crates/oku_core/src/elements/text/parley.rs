@@ -33,7 +33,7 @@ pub struct TextHashKey {
 }
 
 /// Generate a parley TextStyle from our oku::Style struct.
-fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextStyle<'a, Brush> {
+pub(crate) fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextStyle<'a, Brush> {
     let text_brush = Brush::Solid(style.color());
 
     TextStyle {

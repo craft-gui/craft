@@ -15,6 +15,7 @@ pub use winit::event::ButtonSource;
 pub use winit::event::ElementState;
 
 use std::any::Any;
+use winit::event::Ime;
 pub use winit::event::MouseButton;
 use crate::events::OkuMessage::PointerButtonEvent;
 
@@ -55,6 +56,7 @@ pub enum OkuMessage {
     KeyboardInputEvent(KeyboardInput),
     PointerMovedEvent(PointerMoved),
     MouseWheelEvent(MouseWheel),
+    ImeEvent(Ime),
     TextInputChanged(String),
 }
 

@@ -43,7 +43,7 @@ impl Renderer for BlankRenderer {
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,
         _font_context: &mut FontContext,
-        _element_state: &ElementStateStore,
+        _element_state: &mut ElementStateStore,
     ) {
     }
 

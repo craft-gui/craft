@@ -1,10 +1,11 @@
 mod image_adapter;
+pub(crate) mod text;
 
 use crate::components::component::ComponentId;
 use crate::elements::text::text::TextState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::color::Color;
+use crate::renderer::color::{palette, Color};
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
@@ -18,7 +19,9 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
+use crate::elements::text_input::text_input::TextInputState;
 use crate::renderer::vello::image_adapter::ImageAdapter;
+use crate::renderer::vello::text::{draw_cursor, draw_glyphs, draw_selection, draw_strikethrough, draw_underline};
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -116,7 +119,7 @@ impl<'a> VelloRenderer<'a> {
         scene: &mut Scene,
         resource_manager: &RwLockReadGuard<ResourceManager>,
         _font_context: &mut FontContext,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         render_commands: &mut Vec<RenderCommand>,
     ) {
         for command in render_commands.drain(..) {
@@ -151,8 +154,6 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     
-                    
-                    
                     if let Some(text_state) = element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>() {
                         for line in text_state.layout.lines() {
                             for item in line.items() {
@@ -160,97 +161,27 @@ impl<'a> VelloRenderer<'a> {
                                     continue;
                                 };
                                 let style = glyph_run.style();
-                                // We draw underlines under the text, then the strikethrough on top, following:
-                                // https://drafts.csswg.org/css-text-decor/#painting-order
-                                if let Some(underline) = &style.underline {
-                                    let underline_brush = &style.brush;
-                                    let run_metrics = glyph_run.run().metrics();
-                                    let offset = match underline.offset {
-                                        Some(offset) => offset,
-                                        None => run_metrics.underline_offset,
-                                    };
-                                    let width = match underline.size {
-                                        Some(size) => size,
-                                        None => run_metrics.underline_size,
-                                    };
-                                    // The `offset` is the distance from the baseline to the top of the underline
-                                    // so we move the line down by half the width
-                                    // Remember that we are using a y-down coordinate system
-                                    // If there's a custom width, because this is an underline, we want the custom
-                                    // width to go down from the default expectation
-                                    let y = glyph_run.baseline() - offset + width / 2.;
 
-                                    let line = kurbo::Line::new(
-                                        (glyph_run.offset() as f64, y as f64),
-                                        ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
-                                    );
-                                    scene.stroke(
-                                        &Stroke::new(width.into()),
-                                        text_transform,
-                                        underline_brush,
-                                        None,
-                                        &line,
-                                    );
-                                }
-                                let mut x = glyph_run.offset();
-                                let y = glyph_run.baseline();
-                                let run = glyph_run.run();
-                                let font = run.font();
-                                let font_size = run.font_size();
-                                let synthesis = run.synthesis();
-                                let glyph_xform = synthesis
-                                    .skew()
-                                    .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
-                                scene
-                                    .draw_glyphs(font)
-                                    .brush(&style.brush)
-                                    .hint(true)
-                                    .transform(text_transform)
-                                    .glyph_transform(glyph_xform)
-                                    .font_size(font_size)
-                                    .normalized_coords(run.normalized_coords())
-                                    .draw(
-                                        Fill::NonZero,
-                                        glyph_run.glyphs().map(|glyph| {
-                                            let gx = x + glyph.x;
-                                            let gy = y - glyph.y;
-                                            x += glyph.advance;
-                                            vello::Glyph {
-                                                id: glyph.id as _,
-                                                x: gx,
-                                                y: gy,
-                                            }
-                                        }),
-                                    );
-                                if let Some(strikethrough) = &style.strikethrough {
-                                    let strikethrough_brush = &style.brush;
-                                    let run_metrics = glyph_run.run().metrics();
-                                    let offset = match strikethrough.offset {
-                                        Some(offset) => offset,
-                                        None => run_metrics.strikethrough_offset,
-                                    };
-                                    let width = match strikethrough.size {
-                                        Some(size) => size,
-                                        None => run_metrics.strikethrough_size,
-                                    };
-                                    // The `offset` is the distance from the baseline to the *top* of the strikethrough
-                                    // so we calculate the middle y-position of the strikethrough based on the font's
-                                    // standard strikethrough width.
-                                    // Remember that we are using a y-down coordinate system
-                                    let y = glyph_run.baseline() - offset + run_metrics.strikethrough_size / 2.;
+                                draw_underline(scene, &text_transform, &glyph_run, style);
+                                draw_glyphs(scene, &text_transform, &glyph_run, style);
+                                draw_strikethrough(scene, &text_transform, &glyph_run, style);
+                            }
+                        }
+                    } else if let Some(text_input_state) = element_state.storage.get_mut(&component_id).unwrap().data.downcast_mut::<TextInputState>() {
+                        draw_selection(scene, &text_transform, &text_input_state.editor.editor);
+                        draw_cursor(scene, &text_transform, &text_input_state.editor);
+                        
+                        let layout = text_input_state.editor.editor.layout(&mut text_input_state.editor.font_cx, &mut text_input_state.editor.layout_cx);
+                        for line in layout.lines() {
+                            for item in line.items() {
+                                let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                                    continue;
+                                };
+                                let style = glyph_run.style();
 
-                                    let line = kurbo::Line::new(
-                                        (glyph_run.offset() as f64, y as f64),
-                                        ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
-                                    );
-                                    scene.stroke(
-                                        &Stroke::new(width.into()),
-                                        text_transform,
-                                        strikethrough_brush,
-                                        None,
-                                        &line,
-                                    );
-                                }
+                                draw_underline(scene, &text_transform, &glyph_run, style);
+                                draw_glyphs(scene, &text_transform, &glyph_run, style);
+                                draw_strikethrough(scene, &text_transform, &glyph_run, style);
                             }
                         }
                     }
@@ -355,7 +286,7 @@ impl Renderer for VelloRenderer<'_> {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         _font_context: &mut FontContext,
-        element_state: &ElementStateStore) {
+        element_state: &mut ElementStateStore) {
         VelloRenderer::prepare_with_render_commands(&mut self.scene, &resource_manager, _font_context, element_state, &mut self.render_commands);
     }
 

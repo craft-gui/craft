@@ -9,8 +9,12 @@ use peniko::Brush;
 use taffy::Size;
 
 use tokio::sync::RwLockReadGuard;
+use crate::elements::text_input::text_input::TextInputState;
 
 pub struct TaffyTextContext {
+    pub id: ComponentId,
+}
+pub struct TaffyTextInputContext {
     pub id: ComponentId,
 }
 
@@ -21,6 +25,15 @@ impl TaffyTextContext {
         }
     }
 }
+
+impl TaffyTextInputContext {
+    pub fn new(id: ComponentId) -> Self {
+        Self {
+            id,
+        }
+    }
+}
+
 /*#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct MetricsDummy {
     /// Font size in pixels
@@ -79,6 +92,7 @@ impl ImageContext {
 
 pub(crate) enum LayoutContext {
     Text(TaffyTextContext),
+    TextInput(TaffyTextInputContext),
     Image(ImageContext),
 }
 
@@ -108,22 +122,18 @@ pub fn measure_content(
                 font_layout_context
             )
         }
+        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
+            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
+
+            text_input_state.measure(
+                known_dimensions,
+                available_space,
+                font_context,
+                font_layout_context
+            )
+        }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
-        }
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-pub struct TaffyTextInputContext {
-    pub id: ComponentId,
-}
-
-impl TaffyTextInputContext {
-    pub fn new(id: ComponentId) -> Self {
-        Self {
-            id,
         }
     }
 }

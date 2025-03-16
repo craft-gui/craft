@@ -85,6 +85,8 @@ impl ApplicationHandler for OkuWinitState {
             Arc::from(event_loop.create_window(window_attributes).expect("Failed to create window."));
         info!("Created window");
 
+        window.set_ime_allowed(true);
+
         self.window = Some(window.clone());
         info!("Creating renderer");
         info!("Using {} renderer.", self.oku_options.renderer);
@@ -171,6 +173,9 @@ impl ApplicationHandler for OkuWinitState {
                     InternalMessage::KeyboardInput(KeyboardInput::new(device_id, event, is_synthetic)),
                     true,
                 );
+            }
+            WindowEvent::Ime(Ime) => {
+                self.send_message(InternalMessage::Ime(Ime), true);
             }
             WindowEvent::RedrawRequested => {
                 // We want to do any window operations within the main thread.

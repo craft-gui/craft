@@ -53,7 +53,7 @@ pub trait Renderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_context: &mut FontContext,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
     );
     
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);

@@ -77,6 +77,7 @@ use std::sync::Arc;
 use std::time;
 use parley::fontique::{FallbackKey, FamilyId, FontInfo};
 use peniko::Brush;
+use winit::event::Ime;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 use oku_logging::{info, span, Level};
@@ -324,6 +325,10 @@ async fn async_main(
                     on_pointer_moved(&mut app, pointer_moved.clone()).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
+                InternalMessage::Ime(ime) => {
+                    on_ime(&mut app, ime.clone()).await;
+                    send_response(dummy_message, &mut app.winit_sender).await;
+                }
                 InternalMessage::ProcessUserEvents => {
                     on_process_user_events(app.window.clone(), &mut app_sender, &mut app.user_tree);
                     #[cfg(feature = "dev_tools")]
@@ -414,6 +419,17 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
+
+    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+
+    #[cfg(feature = "dev_tools")]
+    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+
+    app.window.as_ref().unwrap().request_redraw();
+}
+
+async fn on_ime(app: &mut Box<App>, ime: Ime) {
+    let event = OkuMessage::ImeEvent(ime);
 
     dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
 
@@ -760,7 +776,7 @@ async fn draw_reactive_tree(
         let span = span!(Level::INFO, "render");
         let _enter = span.enter();
         root.draw(renderer, font_context, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
-        renderer.prepare(resource_manager, font_context, &reactive_tree.element_state);
+        renderer.prepare(resource_manager, font_context, &mut reactive_tree.element_state);
     }
 }
 
