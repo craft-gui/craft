@@ -75,7 +75,7 @@ impl Component for AniList {
             }
             State::Loaded(response) => {
                 let mut anime_views = Vec::new();
-                anime_views.extend(response.data.page.media.iter().map(|media| anime_view(media)));
+                anime_views.extend(response.data.page.media.iter().map(anime_view));
 
                 root = root.extend_children(anime_views);
             }
@@ -136,6 +136,7 @@ impl Component for AniList {
     }
 }
 
+#[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn main() {
     setup_logging();

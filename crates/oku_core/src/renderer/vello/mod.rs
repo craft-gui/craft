@@ -100,7 +100,7 @@ impl<'a> VelloRenderer<'a> {
                 window.clone(),
                 surface_size.width,
                 surface_size.height,
-                vello::wgpu::PresentMode::AutoVsync,
+                wgpu::PresentMode::AutoVsync,
             )
             .await
             .unwrap();
@@ -261,11 +261,17 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
+    fn load_font(&mut self, _font_context: &mut FontContext) {}
+
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
+
+    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    }
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id));
@@ -282,8 +288,6 @@ impl Renderer for VelloRenderer<'_> {
     fn pop_layer(&mut self) {
         self.render_commands.push(RenderCommand::PopLayer);
     }
-
-    fn load_font(&mut self, _font_context: &mut FontContext) {}
 
     fn prepare(
         &mut self,
@@ -346,9 +350,5 @@ impl Renderer for VelloRenderer<'_> {
         surface_texture.present();
 
         self.scene.reset();
-    }
-
-    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 }

@@ -85,6 +85,7 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
         .component()
 }
 
+#[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn main() {
     setup_logging();

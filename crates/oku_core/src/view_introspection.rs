@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 use std::sync::Arc;
 
 /// Introspect the view.
-
+///
 // Scans through the component tree and diffs it for resources that need to be updated.
 pub async fn scan_view_for_resources(
     element: &dyn Element,

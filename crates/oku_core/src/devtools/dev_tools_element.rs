@@ -30,7 +30,7 @@ pub struct DevTools {
 pub struct DevToolsState {}
 
 impl DevTools {
-    pub fn push_debug_inspector_tree(mut self, root: &Box<dyn Element>) -> Self {
+    pub fn push_debug_inspector_tree(mut self, root: Box<dyn Element>) -> Self {
         self.debug_inspector_tree = Some(root.clone());
         self
     }
@@ -174,7 +174,6 @@ impl Element for DevTools {
         &self,
         _message: OkuMessage,
         element_state: &mut ElementStateStore,
-        _font_context: &mut FontContext,
     ) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 

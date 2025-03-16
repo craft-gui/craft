@@ -51,6 +51,7 @@ impl Component for TextState {
     }
 }
 
+#[allow(dead_code)]
 fn main() {
     setup_logging();
 

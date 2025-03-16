@@ -1,5 +1,5 @@
 use core::default::Default;
-use parley::{FontFamily, GenericFamily, StyleProperty};
+use parley::{GenericFamily, StyleProperty};
 use std::time::{Duration, Instant};
 use vello::peniko::Brush;
 use winit::{
@@ -34,19 +34,14 @@ impl Editor {
         editor.set_scale(1.0);
 
         let text_brush = Brush::Solid(style.color());
-
-        // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
-        let mut font_families = vec![];
-
+        
         //// Append the element's font family.
         //if let Some(font_family) = style.font_family() {
         //    if let Some(font_family) = FontFamily::parse(font_family) {
         //        font_families.push(font_family);
         //    }
         //};
-
-        // Append the system font
-        font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
+        
         // let family_names = get_fallback_font_families(font_context);
         // // Append the fallback fonts.
         // {
@@ -328,7 +323,7 @@ impl Editor {
             OkuMessage::PointerMovedEvent(pointer_moved) => {
                 let prev_pos = self.cursor_pos;
                 // NOTE: Cursor position should be relative to the top left of the text box.
-                self.cursor_pos = (pointer_moved.position.x as f32, pointer_moved.position.y as f32 - text_y);
+                self.cursor_pos = (pointer_moved.position.x, pointer_moved.position.y - text_y);
                 // macOS seems to generate a spurious move after selecting word?
                 if self.pointer_down && prev_pos != self.cursor_pos && !self.editor.is_composing() {
                     self.cursor_reset();

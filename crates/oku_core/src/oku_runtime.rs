@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use std::future::Future;
 
 pub struct OkuRuntime {
@@ -6,6 +7,18 @@ pub struct OkuRuntime {
     #[cfg(target_arch = "wasm32")]
     #[allow(dead_code)]
     wasm_runtime: (),
+}
+
+impl Default for OkuRuntime {
+    fn default() -> Self {
+        cfg_if! {
+            if #[cfg(target_arch = "wasm32")] {
+                Self { wasm_runtime: () }
+            } else {
+                Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
+            }
+        }
+    }
 }
 
 /// A cross-platform runtime for executing asynchronous tasks.

@@ -112,9 +112,9 @@ where
     type Props: Send + Sync + Default;
 
     fn view_with_no_global_state(
-        state: &Self,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _state: &Self,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Container::new().component()
     }
@@ -125,7 +125,7 @@ where
 
     fn view(
         state: &Self,
-        global_state: &T,
+        _global_state: &T,
         props: &Self::Props,
         children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {

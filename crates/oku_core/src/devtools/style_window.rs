@@ -28,7 +28,7 @@ fn field_row(
         .component()
 }
 
-pub(crate) fn styles_window_view(selected_element: Option<Box<&dyn Element>>) -> ComponentSpecification {
+pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> ComponentSpecification {
     let mut styles_window = Container::new()
         .width(Unit::Percentage(100.0))
         .display(Flex)

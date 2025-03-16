@@ -142,7 +142,7 @@ fn build_text_layout_tree<'a>(
                     }
                 }
             }
-            TextFragment::InlineComponentSpecification(inline) => {}
+            TextFragment::InlineComponentSpecification(_inline) => {}
         }
     }
 

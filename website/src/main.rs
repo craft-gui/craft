@@ -53,7 +53,7 @@ impl Component<WebsiteGlobalState> for Website {
         match global_state.route.as_str() {
             "/examples" => wrapper.push(Examples::component().key("examples")).component(),
             "/about" => wrapper.push(About::component().key("about")).component(),
-            "/" | _ => wrapper.push(index_page().key("index")).component(),
+            _ => wrapper.push(index_page().key("index")).component(),
         }
     }
 

@@ -18,13 +18,6 @@ pub enum RenderCommand {
     FillBezPath(kurbo::BezPath, Color),
 }
 
-pub trait Surface {
-    fn width(&self) -> f32;
-    fn height(&self) -> f32;
-    fn present(&mut self);
-    fn resize(&mut self, width: u32, height: u32);
-}
-
 pub trait Renderer {
     // Surface Functions
     fn surface_width(&self) -> f32;

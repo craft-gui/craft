@@ -153,7 +153,6 @@ impl Element for Container {
         &self,
         message: OkuMessage,
         element_state: &mut ElementStateStore,
-        _font_context: &mut FontContext,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();

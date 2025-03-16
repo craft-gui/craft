@@ -9,7 +9,7 @@ use crate::Color;
 use taffy::Overflow;
 
 pub(crate) fn element_tree_view(
-    root_element: &Box<dyn Element>,
+    root_element: &dyn Element,
     selected_element: Option<ComponentId>,
 ) -> ComponentSpecification {
     let mut element_tree = Container::new()
@@ -20,7 +20,7 @@ pub(crate) fn element_tree_view(
         .padding("0px", "5px", "5px", "5px")
         .flex_direction(FlexDirection::Column);
 
-    let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(root_element.as_ref(), 0, true)];
+    let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(root_element, 0, true)];
     let mut element_count = 0;
 
     while let Some((element, indent, _is_last)) = elements.pop() {

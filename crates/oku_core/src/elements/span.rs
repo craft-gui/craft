@@ -43,17 +43,6 @@ impl Span {
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SpanState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
-
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut SpanState {
-        element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap()
-    }
 }
 
 impl Element for Span {
@@ -101,8 +90,6 @@ impl Element for Span {
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
-        let state = self.get_state_mut(element_state);
-
         for child in self.common_element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             if let Some(child_node) = child_node {
@@ -143,10 +130,6 @@ impl Element for Span {
             base: Default::default(),
             data: Box::new(state),
         }
-    }
-
-    fn update_state(&self, element_state: &mut ElementStateStore, reload_fonts: bool) {
-        let state = self.get_state_mut(element_state);
     }
 }
 

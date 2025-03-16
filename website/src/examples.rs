@@ -14,7 +14,7 @@ use oku::elements::{Container, ElementStyles, Text};
 use oku::events::{clicked, Event};
 use oku::palette;
 use oku::style::Display::Flex;
-use oku::style::{Display, FlexDirection};
+use oku::style::FlexDirection;
 
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
@@ -59,12 +59,12 @@ impl Component<WebsiteGlobalState> for Examples {
 
     fn view(
         state: &Self,
-        global_state: &WebsiteGlobalState,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _global_state: &WebsiteGlobalState,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         let wrapper =
-            Container::new().display(Display::Flex).width("100%").height("100%").push(examples_sidebar()).component();
+            Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
         wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
             match state.example_to_show.as_str() {

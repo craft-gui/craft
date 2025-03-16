@@ -142,13 +142,8 @@ impl Style {
             Unit::Auto => taffy::Dimension::Auto,
         };
 
-        fn overflow_to_taffy_overflow(overflow: Overflow) -> taffy::Overflow {
-            match overflow {
-                Overflow::Visible => taffy::Overflow::Visible,
-                Overflow::Clip => taffy::Overflow::Clip,
-                Overflow::Hidden => taffy::Overflow::Hidden,
-                Overflow::Scroll => taffy::Overflow::Scroll,
-            }
+        fn overflow_to_taffy_overflow(overflow: Overflow) -> Overflow {
+            overflow
         }
 
         let overflow_x = overflow_to_taffy_overflow(style.overflow()[0]);

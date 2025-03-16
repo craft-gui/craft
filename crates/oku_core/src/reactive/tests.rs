@@ -7,14 +7,11 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::{GlobalState, ReactiveTree};
-use parley::FontContext;
 use std::collections::HashSet;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
     reset_unique_element_id();
-
-    let mut font_context = FontContext::new();
 
     let initial_view = Container::new().component().push(Text::new("Foo").component());
     let updated_view = Container::new().component().push(Text::new("Foo").component());
@@ -53,7 +50,6 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
 #[test]
 fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
-    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component());
@@ -93,7 +89,6 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
 
 #[test]
 fn remove_unused_element_state_after_removal_is_state_deleted() {
-    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_component_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -152,22 +147,21 @@ impl Component<()> for DummyComponent {
     type Props = ();
 
     fn view(
-        state: &Self,
-        global_state: &(),
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _state: &Self,
+        _global_state: &(),
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Text::new("dummy").component()
     }
 
-    fn update(_state: &mut Self, global_state: &mut (), _props: &Self::Props, _message: Event) -> UpdateResult {
+    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::default()
     }
 }
 
 #[test]
 fn remove_unused_component_state_after_removal_is_state_deleted() {
-    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_component_1 =
@@ -222,7 +216,6 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
 
 #[test]
 fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
-    let mut font_context = FontContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));

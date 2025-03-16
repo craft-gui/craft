@@ -1,7 +1,9 @@
 pub(crate) mod color;
-pub mod renderer;
+pub(crate) mod renderer;
 
 #[cfg(feature = "vello_renderer")]
-pub mod vello;
+pub(crate) mod vello;
 
-pub mod blank_renderer;
+pub(crate) mod blank_renderer;
+
+pub use renderer::RenderCommand;

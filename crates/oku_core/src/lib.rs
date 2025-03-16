@@ -73,7 +73,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use oku_logging::{info, span, Level};
-use parley::fontique::{FallbackKey, FamilyId, FontInfo};
+use parley::fontique::{FallbackKey, FamilyId};
 use peniko::Brush;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
@@ -133,6 +133,8 @@ impl App {
             let mut font_context = FontContext::new();
 
             let mut fallback_family_ids: Vec<FamilyId> = Vec::new();
+
+            #[cfg(target_arch = "wasm32")]
             let mut append_fallback_family_ids = |font_info: Vec<(FamilyId, Vec<FontInfo>)>| {
                 for f in font_info {
                     fallback_family_ids.push(f.0);
@@ -448,7 +450,6 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     dispatch_event(
         OkuMessage::PointerMovedEvent(mouse_moved.clone()),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
@@ -459,7 +460,6 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     dispatch_event(
         OkuMessage::PointerMovedEvent(mouse_moved),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.dev_tree,
         &mut app.global_state,
@@ -477,7 +477,6 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     dispatch_event(
         event.clone(),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
@@ -488,7 +487,6 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     dispatch_event(
         event,
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.dev_tree,
         &mut app.global_state,
@@ -504,7 +502,6 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     dispatch_event(
         event.clone(),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
@@ -515,7 +512,6 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     dispatch_event(
         event,
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.dev_tree,
         &mut app.global_state,
@@ -531,7 +527,6 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     dispatch_event(
         keyboard_event.clone(),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
@@ -543,7 +538,6 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
         dispatch_event(
             keyboard_event.clone(),
             &mut app.resource_manager,
-            &mut app.font_context,
             app.mouse_position,
             &mut app.dev_tree,
             &mut app.global_state,
@@ -577,7 +571,6 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 async fn dispatch_event(
     event: OkuMessage,
     _resource_manager: &mut Arc<RwLock<ResourceManager>>,
-    font_context: &mut Option<FontContext>,
     mouse_position: Option<Point>,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
@@ -739,7 +732,6 @@ async fn dispatch_event(
                     let res = element.on_event(
                         event.clone(),
                         &mut reactive_tree.element_state,
-                        font_context.as_mut().unwrap(),
                     );
 
                     if let Some(result_message) = res.result_message {
@@ -789,7 +781,6 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     dispatch_event(
         event.clone(),
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
@@ -800,7 +791,6 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     dispatch_event(
         event,
         &mut app.resource_manager,
-        &mut app.font_context,
         app.mouse_position,
         &mut app.dev_tree,
         &mut app.global_state,
@@ -982,7 +972,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     {
         if app.is_dev_tools_open {
             update_reactive_tree(
-                dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
+                dev_tools_view(app.user_tree.element_tree.clone().unwrap()),
                 &mut app.dev_tree,
                 &mut app.global_state,
                 app.resource_manager.clone(),
@@ -1043,10 +1033,10 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
-    let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
+    let mut taffy_tree: TaffyTree<LayoutContext> = TaffyTree::new();
     let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
 
-    let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
+    let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),
         height: AvailableSpace::Definite(_window_height),
     };

@@ -43,7 +43,6 @@ mod tests {
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
-        let mut font_context = FontContext::new();
         reset_unique_element_id();
 
         let initial_view = Container::new().id("1").component().push(Text::new("Foo").id("2").component()).push(

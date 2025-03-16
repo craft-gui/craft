@@ -171,11 +171,9 @@ impl Element for TextInput {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        element_state: &mut ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        let state = self.get_state_mut(element_state);
-
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
@@ -183,6 +181,19 @@ impl Element for TextInput {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn on_event(
+        &self,
+        message: OkuMessage,
+        element_state: &mut ElementStateStore,
+    ) -> UpdateResult {
+        let state = self.get_state_mut(element_state);
+
+        let text_y: f32 = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle().y;
+        state.editor.handle_event(message, text_y);
+
+        UpdateResult::default()
     }
 
     fn initialize_state(&self) -> ElementStateStoreItem {
@@ -199,20 +210,6 @@ impl Element for TextInput {
     fn update_state(&self, element_state: &mut ElementStateStore, _reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
-    }
-
-    fn on_event(
-        &self,
-        message: OkuMessage,
-        element_state: &mut ElementStateStore,
-        font_context: &mut FontContext,
-    ) -> UpdateResult {
-        let state = self.get_state_mut(element_state);
-
-        let text_y: f32 = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle().y;
-        state.editor.handle_event(message, text_y);
-
-        UpdateResult::default()
     }
 }
 

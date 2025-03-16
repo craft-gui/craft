@@ -16,17 +16,8 @@ pub(crate) struct DevToolsComponent {
     pub inspector_hovered_element: Option<ComponentId>,
 }
 
-impl Component<()> for DevToolsComponent {
+impl Component for DevToolsComponent {
     type Props = Option<Box<dyn Element>>;
-
-    fn view(
-        state: &Self,
-        _global_state: &(),
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
-    ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children)
-    }
 
     fn view_with_no_global_state(
         state: &Self,
@@ -34,17 +25,17 @@ impl Component<()> for DevToolsComponent {
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
-        let element_tree = element_tree_view(&root, state.selected_element);
+        let element_tree = element_tree_view(root.as_ref(), state.selected_element);
 
         // Find the selected element in the element tree, so that we can inspect their style values.
-        let mut selected_element: Option<Box<&dyn Element>> = None;
+        let mut selected_element: Option<&dyn Element> = None;
         if state.selected_element.is_some() {
             for element in root.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
                 if element.component_id() != state.selected_element.unwrap() {
                     continue;
                 }
 
-                selected_element = Some(Box::new(<&dyn Element>::clone(element)));
+                selected_element = Some(*element);
                 break;
             }
         }
@@ -53,7 +44,7 @@ impl Component<()> for DevToolsComponent {
 
         DevTools::new()
             .display(Flex)
-            .push_debug_inspector_tree(&root)
+            .push_debug_inspector_tree(root)
             .push_selected_inspector_element(state.selected_element)
             .push_hovered_inspector_element(state.inspector_hovered_element)
             .flex_direction(FlexDirection::Column)
@@ -64,10 +55,6 @@ impl Component<()> for DevToolsComponent {
             .push(element_tree)
             .push(styles_window)
             .component()
-    }
-
-    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
-        Self::update_with_no_global_state(state, props, event)
     }
 
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
@@ -89,8 +76,21 @@ impl Component<()> for DevToolsComponent {
 
         UpdateResult::default()
     }
+
+    fn view(
+        state: &Self,
+        _global_state: &(),
+        props: &Self::Props,
+        children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
+        Self::view_with_no_global_state(state, props, children)
+    }
+
+    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
+        Self::update_with_no_global_state(state, props, event)
+    }
 }
 
-pub fn dev_tools_view(root: &Box<dyn Element>) -> ComponentSpecification {
-    DevToolsComponent::component().props(Props::new(Some(root.clone())))
+pub fn dev_tools_view(root: Box<dyn Element>) -> ComponentSpecification {
+    DevToolsComponent::component().props(Props::new(Some(root)))
 }

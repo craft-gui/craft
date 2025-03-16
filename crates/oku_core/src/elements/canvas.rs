@@ -6,7 +6,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::renderer::RenderCommand;
+use crate::renderer::RenderCommand;
 use crate::style::Style;
 use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};

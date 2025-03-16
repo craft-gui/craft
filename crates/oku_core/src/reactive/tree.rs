@@ -114,7 +114,7 @@ pub(crate) fn diff_trees(
         // This is because the root of the component tree is not a component, but a dummy node.
         if old_component_tree_as_ptr.is_some() {
             old_component_tree_as_ptr =
-                Some((*old_component_tree_as_ptr.unwrap()).children.get(0).unwrap() as *const ComponentTreeNode);
+                Some((*old_component_tree_as_ptr.unwrap()).children.first().unwrap() as *const ComponentTreeNode);
         }
 
         let component_root: *mut ComponentTreeNode = &mut component_tree as *mut ComponentTreeNode;
@@ -168,7 +168,7 @@ pub(crate) fn diff_trees(
                         // Collect the pointer captures.
                         let base_state = element.internal.get_base_state(element_state);
                         // FIXME: Collect pointer captures with the correct device id.
-                        for (_device_id, is_captured) in &base_state.base.pointer_capture {
+                        for is_captured in base_state.base.pointer_capture.values() {
                             if *is_captured {
                                 pointer_captures.insert(DUMMY_DEVICE_ID /*device_id*/, id);
                             }
@@ -312,7 +312,7 @@ pub(crate) fn diff_trees(
                     // Get the old component node or none.
                     // NOTE: ComponentSpecs can only have one child.
                     let old_component_tree = tree_node.old_component_node.and_then(|old_node| {
-                        (*old_node).children.get(0).map(|child| child as *const ComponentTreeNode)
+                        (*old_node).children.first().map(|child| child as *const ComponentTreeNode)
                     });
 
                     // Add the computed component spec to the to visit list.

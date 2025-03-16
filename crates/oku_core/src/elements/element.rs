@@ -111,7 +111,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self,
         _message: OkuMessage,
         _element_state: &mut ElementStateStore,
-        _font_context: &mut FontContext,
     ) -> UpdateResult {
         UpdateResult::default()
     }
@@ -248,7 +247,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
         let common_element_data = self.common_element_data_mut();
 
-        if common_element_data.style.overflow()[0] != taffy::Overflow::Scroll {
+        if common_element_data.style.overflow()[0] != Overflow::Scroll {
             return;
         }
 
@@ -466,7 +465,7 @@ macro_rules! generate_component_methods_no_children {
 
         #[allow(dead_code)]
         pub fn hovered(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Hovered;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Hovered;
             self
         }
 
@@ -493,7 +492,7 @@ macro_rules! generate_component_methods_no_children {
 #[macro_export]
 macro_rules! generate_component_methods_private_push {
     () => {
-        crate::generate_component_methods_no_children!();
+        $crate::generate_component_methods_no_children!();
 
         #[allow(dead_code)]
         fn push<T>(mut self, component_specification: T) -> Self

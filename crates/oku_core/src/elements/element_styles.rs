@@ -224,13 +224,13 @@ impl From<&str> for Unit {
         if s.eq_ignore_ascii_case("auto") {
             return Unit::Auto;
         }
-        if s.ends_with("px") {
-            match s[..s.len() - 2].trim().parse::<f32>() {
+        if let Some(stripped) = s.strip_suffix("px") {
+            match stripped.trim().parse::<f32>() {
                 Ok(value) => Unit::Px(value),
                 Err(_) => Unit::Auto,
             }
-        } else if s.ends_with('%') {
-            match s[..s.len() - 1].trim().parse::<f32>() {
+        } else if let Some(stripped) = s.strip_suffix('%') {
+            match stripped.trim().parse::<f32>() {
                 Ok(value) => Unit::Percentage(value),
                 Err(_) => Unit::Auto,
             }
