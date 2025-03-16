@@ -1,7 +1,7 @@
 use core::default::Default;
 use parley::{FontFamily, GenericFamily, StyleProperty};
 use std::time::{Duration, Instant};
-use vello::{peniko::Brush};
+use vello::peniko::Brush;
 use winit::{
     event::{Ime, Modifiers},
     keyboard::{Key, NamedKey},

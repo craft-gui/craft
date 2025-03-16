@@ -7,8 +7,6 @@ use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
-use parley::FontContext;
-
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::GlobalState;
 use std::collections::{HashMap, HashSet};

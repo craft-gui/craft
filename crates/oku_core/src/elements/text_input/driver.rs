@@ -1,7 +1,7 @@
-use std::fmt::Debug;
 // use accesskit::{Node, NodeId, TreeUpdate};
 use crate::elements::text_input::plain_text_editor::PlainEditor;
 use parley::{Affinity, Brush, Cursor, FontContext, Layout, LayoutContext, Selection};
+use std::fmt::Debug;
 
 /// A short-lived wrapper around [`PlainEditor`].
 ///

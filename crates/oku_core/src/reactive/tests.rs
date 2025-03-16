@@ -1,4 +1,3 @@
-use crate::components::component::ComponentOrElement;
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use crate::elements::element::ElementBox;
 use crate::elements::{Container, Text};
