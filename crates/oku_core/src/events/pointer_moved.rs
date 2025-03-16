@@ -1,6 +1,6 @@
+use crate::geometry::Point;
 use winit::dpi::PhysicalPosition;
 use winit::event::{DeviceId, PointerSource};
-use crate::geometry::Point;
 
 #[derive(Clone, Debug)]
 pub struct PointerMoved {

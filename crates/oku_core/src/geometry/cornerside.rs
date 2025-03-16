@@ -6,11 +6,7 @@ pub enum CornerSide {
 }
 
 impl CornerSide {
-
     pub(crate) fn next(self) -> Self {
-        unsafe {
-            std::mem::transmute((self as usize + 1) & 1)
-        }
+        unsafe { std::mem::transmute((self as usize + 1) & 1) }
     }
-
 }

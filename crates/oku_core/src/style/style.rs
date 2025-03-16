@@ -1,9 +1,9 @@
 use crate::renderer::color::Color;
 use crate::style::style_flags::StyleFlags;
 
-pub use taffy::Position;
 pub use taffy::BoxSizing;
 pub use taffy::Overflow;
+pub use taffy::Position;
 
 use std::fmt;
 
@@ -34,7 +34,7 @@ impl Unit {
 pub enum Display {
     Flex,
     Block,
-    None
+    None,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -186,22 +186,16 @@ pub struct Style {
     border_radius: [(f32, f32); 4],
     scrollbar_color: ScrollbarColor,
 
-    pub dirty_flags: StyleFlags
+    pub dirty_flags: StyleFlags,
 }
 
-
 impl Default for Style {
-    
     fn default() -> Self {
         Style {
             font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) {
-                0.0
-            } else {
-                15.0
-            },
+            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 15.0 },
             position: Position::Relative,
             margin: [Unit::Px(0.0); 4],
             padding: [Unit::Px(0.0); 4],
@@ -572,12 +566,10 @@ impl Style {
         self.dirty_flags.insert(StyleFlags::SCROLLBAR_COLOR);
         &mut self.scrollbar_color
     }
-    
+
     pub fn has_border(&self) -> bool {
-        self.dirty_flags.contains(StyleFlags::BORDER_WIDTH) ||
-        self.dirty_flags.contains(StyleFlags::BORDER_RADIUS) ||
-        self.dirty_flags.contains(StyleFlags::BORDER_COLOR)
+        self.dirty_flags.contains(StyleFlags::BORDER_WIDTH)
+            || self.dirty_flags.contains(StyleFlags::BORDER_RADIUS)
+            || self.dirty_flags.contains(StyleFlags::BORDER_COLOR)
     }
-
 }
-

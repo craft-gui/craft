@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use crate::resource_manager::image::ImageResource;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum Resource {
@@ -8,7 +8,6 @@ pub enum Resource {
 }
 
 impl Resource {
-
     pub fn data(&self) -> Option<&[u8]> {
         match self {
             Resource::Image(data) => data.common_data.data.as_deref(),

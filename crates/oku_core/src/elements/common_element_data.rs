@@ -1,11 +1,11 @@
-use taffy::NodeId;
+use crate::components::Props;
 use crate::components::{ComponentId, ComponentSpecification};
-use crate::components::props::Props;
 use crate::elements::element::ElementBox;
 use crate::elements::element_states::ElementState;
 use crate::geometry::borders::ComputedBorderSpec;
 use crate::geometry::{ElementRectangle, Rectangle, Size};
 use crate::style::Style;
+use taffy::NodeId;
 
 #[derive(Clone, Debug, Default)]
 pub struct CommonElementData {
@@ -59,7 +59,6 @@ pub struct CommonElementData {
 }
 
 impl CommonElementData {
-
     pub(crate) fn current_style_mut(&mut self) -> &mut Style {
         match self.current_state {
             ElementState::Normal => &mut self.style,
@@ -70,7 +69,7 @@ impl CommonElementData {
                     self.hover_style = Some(Box::new(self.style));
                     self.hover_style.as_mut().unwrap()
                 }
-            },
+            }
             ElementState::Pressed => {
                 if let Some(ref mut pressed_style) = self.pressed_style {
                     pressed_style
@@ -78,7 +77,7 @@ impl CommonElementData {
                     self.pressed_style = Some(Box::new(self.style));
                     self.pressed_style.as_mut().unwrap()
                 }
-            },
+            }
             ElementState::Disabled => {
                 if let Some(ref mut disabled_style) = self.disabled_style {
                     disabled_style
@@ -86,7 +85,7 @@ impl CommonElementData {
                     self.disabled_style = Some(Box::new(self.style));
                     self.disabled_style.as_mut().unwrap()
                 }
-            },
+            }
             ElementState::Focused => {
                 if let Some(ref mut focused_style) = self.focused_style {
                     focused_style
@@ -94,10 +93,10 @@ impl CommonElementData {
                     self.focused_style = Some(Box::new(self.style));
                     self.focused_style.as_mut().unwrap()
                 }
-            },
+            }
         }
     }
-    
+
     pub fn current_style(&self) -> &Style {
         match self.current_state {
             ElementState::Normal => &self.style,
@@ -107,29 +106,28 @@ impl CommonElementData {
                 } else {
                     &self.style
                 }
-            },
+            }
             ElementState::Pressed => {
                 if let Some(ref pressed_style) = self.pressed_style {
                     pressed_style
                 } else {
                     &self.style
                 }
-            },
+            }
             ElementState::Disabled => {
                 if let Some(ref disabled_style) = self.disabled_style {
                     disabled_style
                 } else {
                     &self.style
                 }
-            },
+            }
             ElementState::Focused => {
                 if let Some(ref focused_style) = self.focused_style {
                     focused_style
                 } else {
                     &self.style
                 }
-            },
+            }
         }
     }
-    
 }

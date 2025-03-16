@@ -7,15 +7,14 @@ use oku::elements::Container;
 use oku::elements::ElementStyles;
 use oku::events::{clicked, Event};
 use oku::oku_main_with_options;
-use oku::renderer::color::palette;
+use oku::palette;
 use oku::style::Position;
 use oku::style::Unit;
 use oku::OkuOptions;
 use oku::RendererType;
 
 #[derive(Default, Copy, Clone)]
-pub struct EventsExample {
-}
+pub struct EventsExample {}
 
 impl Component<()> for EventsExample {
     type Props = ();
@@ -48,16 +47,11 @@ impl Component<()> for EventsExample {
                             .height(Unit::Px(100.0))
                             .id("blue"),
                     ),
-            ).component()
+            )
+            .component()
     }
 
-    fn update(
-        _state: &mut Self,
-        _global_state: &mut (),
-        _props: &Self::Props,
-        event: Event,
-    ) -> UpdateResult {
-        
+    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
         if clicked(&event.message) {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }

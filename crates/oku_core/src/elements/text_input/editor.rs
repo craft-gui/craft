@@ -2,20 +2,17 @@
 use core::default::Default;
 use parley::{FontFamily, FontStack, GenericFamily, StyleProperty};
 use std::time::{Duration, Instant};
-use vello::{
-    peniko::color::palette,
-    peniko::Brush,
-};
+use vello::{peniko::color::palette, peniko::Brush};
 use winit::{
     event::{Ime, Modifiers, WindowEvent},
     keyboard::{Key, NamedKey},
 };
 
-use parley::{FontContext, LayoutContext};
 use crate::elements::text_input::driver::PlainEditorDriver;
 use crate::elements::text_input::plain_text_editor::{PlainEditor, SplitString};
 use crate::events::OkuMessage;
 use crate::style::Style;
+use parley::{FontContext, LayoutContext};
 
 pub struct Editor {
     pub(crate) font_cx: FontContext,
@@ -60,7 +57,7 @@ impl Editor {
         // }
 
         //let font_stack = FontStack::from(font_families.as_slice());
-        
+
         let styles = editor.edit_styles();
         styles.insert(StyleProperty::LineHeight(1.5));
         //styles.insert(StyleProperty::FontStack(font_stack));
@@ -68,7 +65,7 @@ impl Editor {
         styles.insert(StyleProperty::FontWeight(parley::FontWeight::new(style.font_weight().0 as f32)));
         styles.insert(GenericFamily::SystemUi.into());
         styles.insert(StyleProperty::Brush(text_brush));
-        
+
         Self {
             font_cx: Default::default(),
             layout_cx: Default::default(),
@@ -113,8 +110,7 @@ impl Editor {
 
             start_time
                 + Duration::from_nanos(
-                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1)
-                        * self.blink_period.as_nanos()) as u64,
+                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
                 )
         })
     }
@@ -338,8 +334,7 @@ impl Editor {
                 if self.pointer_down && prev_pos != self.cursor_pos && !self.editor.is_composing() {
                     self.cursor_reset();
                     let cursor_pos = self.cursor_pos;
-                    self.driver()
-                        .extend_selection_to_point(cursor_pos.0, cursor_pos.1);
+                    self.driver().extend_selection_to_point(cursor_pos.0, cursor_pos.1);
                 }
             }
             OkuMessage::ImeEvent(Ime::Disabled) => {

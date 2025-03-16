@@ -1,18 +1,17 @@
 #[path = "../util.rs"]
 mod util;
 
+use crate::util::setup_logging;
 use oku::components::ComponentSpecification;
-use oku::elements::{Container, Text};
-use oku::{oku_main_with_options, OkuOptions};
 use oku::components::{Component, UpdateResult};
 use oku::elements::ElementStyles;
+use oku::elements::{Container, Text};
+use oku::events::clicked;
 use oku::events::Event;
 use oku::style::FlexDirection;
 use oku::style::Unit;
-use oku::events::clicked;
 use oku::RendererType;
-use oku::GlobalState;
-use crate::util::setup_logging;
+use oku::{oku_main_with_options, OkuOptions};
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -22,7 +21,12 @@ pub struct Accordion {
 impl Component<()> for Accordion {
     type Props = ();
 
-    fn view(state: &Self, _global_state: &(), _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(
+        state: &Self,
+        _global_state: &(),
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         let accordion_content =
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
 

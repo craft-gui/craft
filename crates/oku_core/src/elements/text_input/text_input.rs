@@ -1,20 +1,18 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextContext, TaffyTextInputContext};
+use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextInputContext};
 use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Style, Unit};
 use crate::{generate_component_methods_private_push, RendererBox};
-use parley::{FontContext, FontFamily, FontStack, Layout};
-use std::any::Any;
+use parley::FontContext;
 use peniko::Brush;
+use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
-use crate::elements::text::parley::{recompute_layout_from_cache_key, style_to_parley_style, TextHashKey, TextHashValue};
-use crate::elements::text::TextState;
 use crate::elements::text_input::editor::Editor;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
@@ -36,11 +34,7 @@ pub struct TextInputState {
 }
 
 impl TextInputState {
-    pub(crate) fn new(
-        id: ComponentId,
-        text: &str,
-        style: Style,
-    ) -> Self {
+    pub(crate) fn new(id: ComponentId, text: &str, style: Style) -> Self {
         Self {
             id,
             text: String::new(),
@@ -56,7 +50,6 @@ impl TextInputState {
 }
 
 impl TextInputState {
-
     /// Measure the width and height of the text given layout constraints.
     pub(crate) fn measure(
         &mut self,
@@ -65,7 +58,6 @@ impl TextInputState {
         font_context: &mut FontContext,
         font_layout_context: &mut parley::LayoutContext<Brush>,
     ) -> taffy::Size<f32> {
-
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -95,7 +87,6 @@ impl TextInputState {
             width: width,
             height: height,
         }
-
     }
 }
 
@@ -118,7 +109,14 @@ impl TextInput {
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut TextInputState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
+        element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap()
     }
 }
 
@@ -148,8 +146,7 @@ impl Element for TextInput {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        let computed_layer_rectangle_transformed =
-            self.common_element_data.computed_layered_rectangle_transformed;
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -170,12 +167,14 @@ impl Element for TextInput {
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
-            .new_leaf_with_context(
-                style,
-                LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id)),
-            )
-            .unwrap());
+        self.common_element_data_mut().taffy_node_id = Some(
+            taffy_tree
+                .new_leaf_with_context(
+                    style,
+                    LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id)),
+                )
+                .unwrap(),
+        );
 
         self.common_element_data().taffy_node_id
     }
@@ -203,17 +202,13 @@ impl Element for TextInput {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let mut state = TextInputState::new(
-            self.common_element_data.component_id,
-            &self.text,
-            *self.style()
-        );
+        let mut state = TextInputState::new(self.common_element_data.component_id, &self.text, *self.style());
 
         self.update_state_fragments(&mut state);
-        
+
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(state)
+            data: Box::new(state),
         }
     }
 
@@ -222,9 +217,14 @@ impl Element for TextInput {
         self.update_state_fragments(state);
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, font_context: &mut FontContext) -> UpdateResult {
+    fn on_event(
+        &self,
+        message: OkuMessage,
+        element_state: &mut ElementStateStore,
+        font_context: &mut FontContext,
+    ) -> UpdateResult {
         let state = self.get_state_mut(element_state);
-        
+
         let text_y: f32 = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle().y;
         state.editor.handle_event(message, text_y);
 

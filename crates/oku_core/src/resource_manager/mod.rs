@@ -17,13 +17,13 @@ use oku_logging::info;
 use ::image::ImageReader;
 use tokio::sync::mpsc::Sender;
 
+use crate::OkuRuntime;
 use std::any::Any;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
 use std::sync::Arc;
-use crate::OkuRuntime;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
@@ -40,22 +40,24 @@ impl ResourceManager {
         }
     }
 
-    pub fn add_temporary_resource(&mut self, resource_identifier: ResourceIdentifier,
-                                  resource_type: ResourceType) {
+    pub fn add_temporary_resource(&mut self, resource_identifier: ResourceIdentifier, resource_type: ResourceType) {
         if !self.resources.contains_key(&resource_identifier) {
             match resource_type {
                 ResourceType::Image => {
-                    let generic_resource = ResourceData::new(resource_identifier.clone(), None, None, ResourceType::Image);
-                    self.resources
-                        .insert(resource_identifier.clone(), Resource::Image(Arc::new(ImageResource::new(0, 0, generic_resource))));
+                    let generic_resource =
+                        ResourceData::new(resource_identifier.clone(), None, None, ResourceType::Image);
+                    self.resources.insert(
+                        resource_identifier.clone(),
+                        Resource::Image(Arc::new(ImageResource::new(0, 0, generic_resource))),
+                    );
                 }
                 ResourceType::Font => {
                     self.resources.insert(resource_identifier.clone(), Resource::Font(vec![]));
                 }
-            }   
+            }
         }
     }
-    
+
     pub fn async_download_resource_and_send_message_on_finish(
         &self,
         resource_identifier: ResourceIdentifier,
@@ -75,16 +77,27 @@ impl ResourceManager {
                         if let Some(image_resource) = &image {
                             let bytes = image_resource;
                             let cursor = Cursor::new(&bytes);
-                            let reader = ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
+                            let reader =
+                                ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
                             let size = reader.into_dimensions().unwrap_or_default();
-                            let generic_resource = ResourceData::new(resource_identifier.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
+                            let generic_resource = ResourceData::new(
+                                resource_identifier.clone(),
+                                Some(bytes.to_vec()),
+                                None,
+                                ResourceType::Image,
+                            );
                             info!("Image downloaded");
 
-                            let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
+                            let resource =
+                                Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
                             app_sender_copy
                                 .send(AppMessage::new(
                                     0,
-                                    InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Image, resource)),
+                                    InternalMessage::ResourceEvent(ResourceEvent::Loaded(
+                                        resource_identifier_copy,
+                                        ResourceType::Image,
+                                        resource,
+                                    )),
                                 ))
                                 .await
                                 .expect("Failed to send added resource event");
@@ -102,7 +115,14 @@ impl ResourceManager {
                             let resource = Resource::Font(font_bytes);
 
                             app_sender_copy
-                                .send(AppMessage::new(0, InternalMessage::ResourceEvent(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Font, resource))))
+                                .send(AppMessage::new(
+                                    0,
+                                    InternalMessage::ResourceEvent(ResourceEvent::Loaded(
+                                        resource_identifier_copy,
+                                        ResourceType::Font,
+                                        resource,
+                                    )),
+                                ))
                                 .await
                                 .expect("Failed to send added resource event");
                         }

@@ -1,19 +1,18 @@
-
 pub(crate) mod borders;
 pub(crate) mod corner;
 pub(crate) mod cornerside;
-pub(crate) mod side;
-mod size;
+mod element_rectangle;
 mod point;
 mod rectangle;
+pub(crate) mod side;
+mod size;
 mod trblrectangle;
-mod element_rectangle;
 
-pub use rectangle::Rectangle;
+pub use element_rectangle::ElementRectangle;
 pub use point::Point;
+pub use rectangle::Rectangle;
 pub use size::Size;
 pub use trblrectangle::TrblRectangle;
-pub use element_rectangle::ElementRectangle;
 
 pub type Border = TrblRectangle;
 pub type Padding = TrblRectangle;

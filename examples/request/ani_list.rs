@@ -1,9 +1,9 @@
-use serde::Deserialize;
 use oku::components::ComponentSpecification;
 use oku::elements::{Container, ElementStyles, Image, Text};
 use oku::resource_manager::ResourceIdentifier;
-use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
 use oku::style::Unit;
+use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct AniListResponse {
@@ -59,7 +59,6 @@ query {
     }
 }
 ";
-
 
 pub fn anime_view(media: &Media) -> ComponentSpecification {
     let mut title: &str = "No Name";

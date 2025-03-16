@@ -1,10 +1,8 @@
 use oku::components::ComponentSpecification;
-use oku::elements::{Container, ElementStyles, Image, Text};
-use oku::renderer::color::palette;
-use oku::resource_manager::ResourceIdentifier;
+use oku::elements::{Container, ElementStyles, Text};
+use oku::palette;
 use oku::style::Wrap::WrapReverse;
 use oku::style::{AlignItems, Display, FlexDirection, Overflow, Unit, Weight};
-use std::path::PathBuf;
 
 fn hero_intro() -> ComponentSpecification {
     Container::new()
@@ -35,7 +33,6 @@ fn hero_intro() -> ComponentSpecification {
 }
 
 fn hero_features() -> ComponentSpecification {
-    
     fn hero_feature_item(title: &str, text: &str) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -44,14 +41,10 @@ fn hero_features() -> ComponentSpecification {
             .width("80%")
             .gap("20px")
             .push(Text::new(title).font_size(24.0).font_weight(Weight::SEMIBOLD).color(palette::css::WHITE))
-            .push(
-                Text::new(text)
-                    .font_size(18.0)
-                    .color(palette::css::WHITE),
-            )
+            .push(Text::new(text).font_size(18.0).color(palette::css::WHITE))
             .component()
     }
-    
+
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
@@ -79,7 +72,6 @@ pub(crate) fn index_page() -> ComponentSpecification {
         .flex_grow(1.0) // Take up remaining space
         .overflow(Overflow::Scroll) // Allow content overflow to scroll
         .padding(Unit::Px(20.0), Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0))
-
         .push(hero_intro())
         .push(hero_features())
         .component()

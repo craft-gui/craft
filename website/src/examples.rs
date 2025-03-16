@@ -12,13 +12,13 @@ use crate::WebsiteGlobalState;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, ElementStyles, Text};
 use oku::events::{clicked, Event};
-use oku::renderer::color::palette;
+use oku::palette;
 use oku::style::Display::Flex;
 use oku::style::{Display, FlexDirection};
 
-use crate::examples::text::TextState;
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
+use crate::examples::text::TextState;
 
 pub(crate) struct Examples {
     pub(crate) example_to_show: String,
@@ -57,35 +57,37 @@ fn examples_sidebar() -> ComponentSpecification {
 impl Component<WebsiteGlobalState> for Examples {
     type Props = ();
 
-    fn view(state: &Self, global_state: &WebsiteGlobalState, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
-        let wrapper = Container::new()
-            .display(Display::Flex)
-            .width("100%")
-            .height("100%")
-            .push(examples_sidebar()).component();
+    fn view(
+        state: &Self,
+        global_state: &WebsiteGlobalState,
+        props: &Self::Props,
+        children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
+        let wrapper =
+            Container::new().display(Display::Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
-        wrapper.push(
-            Container::new()
-                .width("100%")
-                .height("100%")
-                .background(palette::css::WHITE)
-                .push(match state.example_to_show.as_str() {
-                    "text_state" => TextState::component().key("example_text_state"),
-                    "request" => AniList::component().key("example_request"),
-                    "counter" | &_ => Counter::component().key("example_counter"),
-                })
-        )
+        wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
+            match state.example_to_show.as_str() {
+                "text_state" => TextState::component().key("example_text_state"),
+                "request" => AniList::component().key("example_request"),
+                "counter" | &_ => Counter::component().key("example_counter"),
+            },
+        ))
     }
 
-    fn update(state: &mut Self, _global_state: &mut WebsiteGlobalState, _props: &Self::Props, event: Event) -> UpdateResult {
-        
+    fn update(
+        state: &mut Self,
+        _global_state: &mut WebsiteGlobalState,
+        _props: &Self::Props,
+        event: Event,
+    ) -> UpdateResult {
         if clicked(&event.message) && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();
             if current_target.starts_with("example_") {
                 state.example_to_show = current_target.replace("example_", "").to_string();
             }
         }
-        
+
         UpdateResult::default()
     }
 }

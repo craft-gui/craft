@@ -1,25 +1,20 @@
 #[cfg(target_arch = "wasm32")]
 use {
+    std::cell::RefCell, std::ops::AddAssign, std::rc::Rc, wasm_bindgen::JsCast,
     winit::platform::web::WindowAttributesExtWeb,
-    
-    wasm_bindgen::JsCast,
-
-    std::rc::Rc,
-    std::ops::AddAssign,
-    std::cell::RefCell,
 };
 
 #[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
 
-use crate::renderer::blank_renderer::BlankRenderer;
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
-use crate::renderer::renderer::Renderer;
 use crate::geometry::Size;
-use oku_logging::info;
+use crate::renderer::blank_renderer::BlankRenderer;
+use crate::renderer::renderer::Renderer;
 use crate::{OkuOptions, OkuRuntime, RendererType, WAIT_TIME};
+use oku_logging::info;
 
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
@@ -33,11 +28,11 @@ use web_time as time;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use std::sync::Arc;
-use std::pin::Pin;
-use std::future::Future;
 
 /// Stores state relate to Winit.
 ///
@@ -196,7 +191,8 @@ impl ApplicationHandler for OkuWinitState {
             //self.window.as_ref().unwrap().request_redraw();
         }
 
-        #[cfg(not(target_arch = "wasm32"))] {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
             self.runtime.borrow_tokio_runtime().block_on(async {
                 tokio::task::yield_now().await;
             })

@@ -1,105 +1,25 @@
 use crate::components::props::Props;
 use crate::elements::element::ElementBox;
-use crate::events::{Event, OkuMessage};
+use crate::events::Event;
 use crate::reactive::state_store::StateStoreItem;
-use crate::{GlobalState, PinnedFutureAny};
+use crate::GlobalState;
 
+use crate::components::update_result::UpdateResult;
 use crate::elements::Container;
 use std::any::{Any, TypeId};
-use std::future::Future;
 use std::ops::Deref;
 
 /// A Component's view function.
-pub type ViewFn =
-    fn(data: &StateStoreItem, global_state: &GlobalState, props: Props, children: Vec<ComponentSpecification>) -> ComponentSpecification;
-
-/// The result of an update.
-pub struct UpdateResult {
-    /// Propagate oku_events to the next element. True by default.
-    pub propagate: bool,
-    /// A future that will produce a message when complete. The message will be sent to the origin component.
-    pub future: Option<PinnedFutureAny>,
-    /// Prevent default event handlers from running when an oku_event is not explicitly handled.
-    /// False by default.
-    pub prevent_defaults: bool,
-    pub(crate) result_message: Option<OkuMessage>,
-}
-
-impl UpdateResult {
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_result<T: Send + 'static>(t: T) -> Box<dyn Any + Send + 'static> {
-        Box::new(t)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn async_result<T: 'static>(t: T) -> Box<dyn Any + 'static> {
-        Box::new(t)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_no_result() -> Box<dyn Any + Send + 'static> {
-        Box::new(())
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn async_no_result() -> Box<dyn Any + 'static> {
-        Box::new(())
-    }
-
-}
-
-impl Default for UpdateResult {
-    fn default() -> Self {
-        UpdateResult {
-            propagate: true,
-            future: None,
-            prevent_defaults: false,
-            result_message: None,
-        }
-    }
-}
-
-impl UpdateResult {
-    pub fn new() -> UpdateResult {
-        UpdateResult::default()
-    }
-
-    pub fn pinned_future(mut self, future: PinnedFutureAny) -> Self {
-        self.future = Some(future);
-        self
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn future<F: Future<Output = Box<dyn Any + Send>> + 'static + Send>(mut self, future: F) -> Self {
-        self.future = Some(Box::pin(future));
-        self
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(mut self, future: F) -> Self {
-        self.future = Some(Box::pin(future));
-        self
-    }
-
-    pub fn prevent_defaults(mut self) -> Self {
-        self.prevent_defaults = true;
-        self
-    }
-
-    pub fn prevent_propagate(mut self) -> Self {
-        self.propagate = false;
-        self
-    }
-
-    pub(crate) fn result_message(mut self, message: OkuMessage) -> Self {
-        self.result_message = Some(message);
-        self
-    }
-}
+pub type ViewFn = fn(
+    data: &StateStoreItem,
+    global_state: &GlobalState,
+    props: Props,
+    children: Vec<ComponentSpecification>,
+) -> ComponentSpecification;
 
 /// A Component's update function.
-pub type UpdateFn = fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult;
+pub type UpdateFn =
+    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult;
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -125,25 +45,24 @@ pub enum ComponentOrElement {
 #[derive(Clone, Debug)]
 pub struct ComponentSpecification {
     pub component: ComponentOrElement,
+    /// Specify a key when the component position or type may change, but state should be retained.
     pub key: Option<String>,
+    /// A read only reference to the props of the component.
     pub props: Option<Props>,
+    /// The children of the component.
     pub children: Vec<ComponentSpecification>,
 }
 
 impl ComponentSpecification {
     pub fn new(component: ComponentOrElement) -> Self {
         match component {
-            ComponentOrElement::ComponentSpec(component_data) => {
-                ComponentSpecification {
-                    component: ComponentOrElement::ComponentSpec(component_data),
-                    key: None,
-                    props: None,
-                    children: vec![],
-                }
-            }
-            ComponentOrElement::Element(element) => {
-                element.into()
-            }
+            ComponentOrElement::ComponentSpec(component_data) => ComponentSpecification {
+                component: ComponentOrElement::ComponentSpec(component_data),
+                key: None,
+                props: None,
+                children: vec![],
+            },
+            ComponentOrElement::Element(element) => element.into(),
         }
     }
 
@@ -188,19 +107,28 @@ macro_rules! component {
 pub trait Component<T = ()>
 where
     Self: 'static + Default + Send,
-    T: 'static + Default + Send
+    T: 'static + Default + Send,
 {
     type Props: Send + Sync + Default;
-    
-    fn view_with_no_global_state(state: &Self, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+
+    fn view_with_no_global_state(
+        state: &Self,
+        props: &Self::Props,
+        children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         Container::new().component()
     }
 
     fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _message: Event) -> UpdateResult {
         UpdateResult::default()
     }
-    
-    fn view(state: &Self, global_state: &T, props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+
+    fn view(
+        state: &Self,
+        global_state: &T,
+        props: &Self::Props,
+        children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         Self::view_with_no_global_state(state, props, children)
     }
 
@@ -212,9 +140,9 @@ where
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
-        
+
         if let Some(global_state_casted) = global_state.downcast_ref::<T>() {
-            Self::view(casted_state, global_state_casted, props, children)   
+            Self::view(casted_state, global_state_casted, props, children)
         } else {
             Self::view_with_no_global_state(casted_state, props, children)
         }
@@ -232,10 +160,15 @@ where
         Self::update_with_no_global_state(state, props, message)
     }
 
-    fn generic_update(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult {
+    fn generic_update(
+        state: &mut StateStoreItem,
+        global_state: &mut GlobalState,
+        props: Props,
+        message: Event,
+    ) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
-        
+
         if let Some(global_state_casted) = global_state.downcast_mut::<T>() {
             Self::update(casted_state, global_state_casted, props, message)
         } else {

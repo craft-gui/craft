@@ -1,4 +1,4 @@
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
 use crate::devtools::dev_tools_element::DevTools;
@@ -19,11 +19,20 @@ pub(crate) struct DevToolsComponent {
 impl Component<()> for DevToolsComponent {
     type Props = Option<Box<dyn Element>>;
 
-    fn view(state: &Self, _global_state: &(), props: &Self::Props, children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view(
+        state: &Self,
+        _global_state: &(),
+        props: &Self::Props,
+        children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         Self::view_with_no_global_state(state, props, children)
     }
-    
-    fn view_with_no_global_state(state: &Self, props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+
+    fn view_with_no_global_state(
+        state: &Self,
+        props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(&root, state.selected_element);
 
@@ -63,7 +72,6 @@ impl Component<()> for DevToolsComponent {
 
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         if let Some(id) = event.target {
-
             // Set the selected element in the element tree inspector.
             if clicked(&event.message) {
                 let component_id: ComponentId = id.parse().unwrap();
@@ -75,7 +83,6 @@ impl Component<()> for DevToolsComponent {
                 let component_id: ComponentId = id.parse().unwrap();
                 state.inspector_hovered_element = Some(component_id);
             }
-
         } else {
             state.inspector_hovered_element = None;
         }

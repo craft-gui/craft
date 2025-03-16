@@ -1,48 +1,49 @@
 pub mod accessibility;
 pub mod components;
 pub mod elements;
+pub mod events;
 pub mod oku_runtime;
 mod oku_winit_state;
 mod options;
 pub mod reactive;
+pub mod renderer;
 pub mod style;
 #[cfg(test)]
 mod tests;
-pub mod renderer;
-pub mod events;
 
+pub mod app_message;
 #[cfg(feature = "dev_tools")]
 pub(crate) mod devtools;
-pub mod app_message;
-pub mod resource_manager;
 pub mod geometry;
+pub mod resource_manager;
 mod view_introspection;
 
 pub use oku_runtime::OkuRuntime;
-pub use renderer::color::Color;
 pub use options::OkuOptions;
+pub use renderer::color::palette;
+pub use renderer::color::Color;
 
 #[cfg(all(feature = "android", target_os = "android"))]
 pub use winit::platform::android::activity::*;
 
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
-use reactive::element_id::reset_unique_element_id;
-use reactive::fiber_node::FiberNode;
-use events::update_queue_entry::UpdateQueueEntry;
+pub use crate::options::RendererType;
+use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
+use app_message::AppMessage;
+use components::component::{ComponentId, ComponentSpecification};
 use elements::container::Container;
 use elements::element::Element;
 use elements::layout_context::{measure_content, LayoutContext};
-use events::Message;
-use renderer::renderer::Renderer;
-use reactive::tree::{diff_trees, ComponentTreeNode};
-use components::component::{ComponentId, ComponentSpecification};
-use app_message::AppMessage;
-use events::resource_event::ResourceEvent;
-pub use crate::options::RendererType;
-use resource_manager::ResourceManager;
 use events::internal::InternalMessage;
+use events::resource_event::ResourceEvent;
+use events::update_queue_entry::UpdateQueueEntry;
+use events::Message;
+use reactive::element_id::reset_unique_element_id;
+use reactive::fiber_node::FiberNode;
+use reactive::tree::{diff_trees, ComponentTreeNode};
+use renderer::renderer::Renderer;
+use resource_manager::ResourceManager;
 
 #[cfg(target_arch = "wasm32")]
 use {std::cell::RefCell, web_time as time};
@@ -57,15 +58,13 @@ type RendererBox = dyn Renderer;
 use parley::FontContext;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
-use tokio::sync::{RwLock, RwLockReadGuard};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
-use winit::window::Window;
 use winit::keyboard::{Key, NamedKey};
-
-
+use winit::window::Window;
 
 use std::any::Any;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -73,14 +72,14 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
+use oku_logging::{info, span, Level};
 use parley::fontique::{FallbackKey, FamilyId, FontInfo};
 use peniko::Brush;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
 use winit::event::Ime;
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
-use oku_logging::{info, span, Level};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 pub(crate) const OKU_FALLBACK_FONT_KEY: &str = "OKU_FALLBACK";
@@ -99,7 +98,7 @@ struct ReactiveTree {
     component_tree: Option<ComponentTreeNode>,
     element_ids: HashSet<ComponentId>,
     component_ids: HashSet<ComponentId>,
-    /// Stores a pointer device id and their pointer captured element. 
+    /// Stores a pointer device id and their pointer captured element.
     pointer_captures: HashMap<i64, ComponentId>,
     update_queue: VecDeque<UpdateQueueEntry>,
     user_state: StateStore,
@@ -128,7 +127,6 @@ struct App {
 }
 
 impl App {
-
     fn setup_font_context(&mut self) {
         if self.font_context.is_none() {
             #[allow(unused_mut)]
@@ -140,28 +138,39 @@ impl App {
                     fallback_family_ids.push(f.0);
                 }
             };
-            
+
             #[cfg(target_arch = "wasm32")]
             {
-                let fira_regular = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-                let fira_bold = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-                let fira_italic = font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+                let fira_regular = font_context
+                    .collection
+                    .register_fonts(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+                let fira_bold =
+                    font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+                let fira_italic = font_context
+                    .collection
+                    .register_fonts(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
 
                 append_fallback_family_ids(fira_regular);
                 append_fallback_family_ids(fira_bold);
                 append_fallback_family_ids(fira_italic);
             }
-            font_context.collection.append_fallbacks(FallbackKey::from(OKU_FALLBACK_FONT_KEY), fallback_family_ids.iter().copied());
+            font_context
+                .collection
+                .append_fallbacks(FallbackKey::from(OKU_FALLBACK_FONT_KEY), fallback_family_ids.iter().copied());
 
             self.font_context = Some(font_context);
             self.font_layout_context = Some(parley::LayoutContext::new());
         }
     }
-
 }
 
 #[cfg(target_os = "android")]
-pub fn internal_oku_main_with_options(application: ComponentSpecification, global_state: Box<dyn Any>, options: Option<OkuOptions>, app: AndroidApp) {
+pub fn internal_oku_main_with_options(
+    application: ComponentSpecification,
+    global_state: Box<dyn Any>,
+    options: Option<OkuOptions>,
+    app: AndroidApp,
+) {
     info!("Oku started");
 
     info!("Created winit event loop");
@@ -174,21 +183,46 @@ pub fn internal_oku_main_with_options(application: ComponentSpecification, globa
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 
-use crate::reactive::state_store::{StateStore, StateStoreItem};
-use oku_winit_state::OkuWinitState;
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::geometry::{Point, Size};
+use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
+use oku_winit_state::OkuWinitState;
 
-pub type GlobalState = Box<dyn Any + Send + 'static>;
+pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
-pub fn oku_main_with_options<T: Send + 'static>(application: ComponentSpecification, global_state: Box<T>, options: Option<OkuOptions>) {
+/// Starts the Oku application with the provided component specification, global state, and configuration options.
+///
+/// This function serves as the main entry point for launching an Oku application. It accepts a component
+/// specification, a boxed global state, and optional configuration options, then delegates to the internal
+/// launcher [`internal_oku_main_with_options`]. This abstraction allows users to configure their application
+/// behavior via [`OkuOptions`] without interacting directly with lower-level details.
+///
+/// # Type Parameters
+///
+/// * `GlobalState`: The type use for global state. It must implement [`Send`] and have a `'static` lifetime
+///   to ensure it can be safely transferred between threads.
+///
+/// # Parameters
+///
+/// * `application` - A [`ComponentSpecification`] that describes the structure and behavior of the application's components.
+/// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
+/// * `options` - An optional [`OkuOptions`] configuration. If `None` is provided, default options will be applied.
+pub fn oku_main_with_options<GlobalState: Send + 'static>(
+    application: ComponentSpecification,
+    global_state: Box<GlobalState>,
+    options: Option<OkuOptions>,
+) {
     internal_oku_main_with_options(application, global_state, options);
 }
 
 #[cfg(not(target_os = "android"))]
-pub fn internal_oku_main_with_options(application: ComponentSpecification, global_state: GlobalState, options: Option<OkuOptions>) {
+fn internal_oku_main_with_options(
+    application: ComponentSpecification,
+    global_state: GlobalState,
+    options: Option<OkuOptions>,
+) {
     info!("Oku started");
 
     info!("Creating winit event loop.");
@@ -217,7 +251,8 @@ fn oku_main_with_options_2(
     let app_sender_copy = app_sender.clone();
     let resource_manager_copy = resource_manager.clone();
 
-    let future = async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy, global_state);
+    let future =
+        async_main(application, app_receiver, winit_sender, app_sender_copy, resource_manager_copy, global_state);
 
     runtime.runtime_spawn(future);
 
@@ -239,7 +274,7 @@ async fn async_main(
     winit_sender: Sender<AppMessage>,
     mut app_sender: Sender<AppMessage>,
     resource_manager: Arc<RwLock<ResourceManager>>,
-    global_state: GlobalState
+    global_state: GlobalState,
 ) {
     let mut user_state = StateStore::default();
 
@@ -345,23 +380,22 @@ async fn async_main(
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
-
                     let mut resource_manager = app.resource_manager.write().await;
-                    
+
                     match resource_event {
                         ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                             if resource_type == ResourceType::Font {
                                 if let Some(font_context) = app.font_context.as_mut() {
-                                    if resource.data().is_some() { 
+                                    if resource.data().is_some() {
                                         font_context.collection.register_fonts(resource.data().unwrap().to_vec());
                                         resource_manager.resources.insert(resource_identifier.clone(), resource);
                                     }
                                 }
-                                
+
                                 if let Some(renderer) = app.renderer.as_mut() {
                                     renderer.load_font(app.font_context.as_mut().unwrap());
                                 }
-                                
+
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
                             } else if resource_type == ResourceType::Image {
@@ -381,7 +415,11 @@ async fn async_main(
     }
 }
 
-fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Sender<AppMessage>, reactive_tree: &mut ReactiveTree) {
+fn on_process_user_events(
+    window: Option<Arc<dyn Window>>,
+    app_sender: &mut Sender<AppMessage>,
+    reactive_tree: &mut ReactiveTree,
+) {
     if reactive_tree.update_queue.is_empty() {
         return;
     }
@@ -407,10 +445,26 @@ fn on_process_user_events(window: Option<Arc<dyn Window>>, app_sender: &mut Send
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved.clone()), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(
+        OkuMessage::PointerMovedEvent(mouse_moved.clone()),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(OkuMessage::PointerMovedEvent(mouse_moved), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(
+        OkuMessage::PointerMovedEvent(mouse_moved),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -420,10 +474,26 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
 
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(
+        event.clone(),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(
+        event,
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -431,10 +501,26 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
 async fn on_ime(app: &mut Box<App>, ime: Ime) {
     let event = OkuMessage::ImeEvent(ime);
 
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(
+        event.clone(),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(
+        event,
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -442,10 +528,27 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let keyboard_event = OkuMessage::KeyboardInputEvent(keyboard_input.clone());
 
-    dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(
+        keyboard_event.clone(),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    )
+    .await;
 
-    #[cfg(feature = "dev_tools")] {
-        dispatch_event(keyboard_event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    #[cfg(feature = "dev_tools")]
+    {
+        dispatch_event(
+            keyboard_event.clone(),
+            &mut app.resource_manager,
+            &mut app.font_context,
+            app.mouse_position,
+            &mut app.dev_tree,
+            &mut app.global_state,
+        )
+        .await;
 
         let logical_key = keyboard_input.event.logical_key;
         let key_state = keyboard_input.event.state;
@@ -471,7 +574,14 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<ResourceManager>>, font_context: &mut Option<FontContext>, mouse_position: Option<Point>, reactive_tree: &mut ReactiveTree, global_state: &mut GlobalState) {
+async fn dispatch_event(
+    event: OkuMessage,
+    _resource_manager: &mut Arc<RwLock<ResourceManager>>,
+    font_context: &mut Option<FontContext>,
+    mouse_position: Option<Point>,
+    reactive_tree: &mut ReactiveTree,
+    global_state: &mut GlobalState,
+) {
     let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -508,7 +618,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
         if let Some(element) = fiber_node.element {
             let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
             let mut should_pass_hit_test = in_bounds;
-            
+
             // Bypass the hit test result if pointer capture is turned on for the current element.
             if is_pointer_event {
                 if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
@@ -517,9 +627,13 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
                     }
                 }
             }
-            
+
             if should_pass_hit_test {
-                targets.push_back((element.component_id(), element.get_id().clone(), element.common_element_data().layout_order))
+                targets.push_back((
+                    element.component_id(),
+                    element.get_id().clone(),
+                    element.common_element_data().layout_order,
+                ))
             } else {
                 //println!("Not in bounds, Element: {:?}", element.get_id());
             }
@@ -550,8 +664,7 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
         let (current_target_component_id, current_target_element_id, _layout_order) = current_target.clone();
 
         // Get the element's component tree node.
-        let current_target_component =
-            reactive_tree
+        let current_target_component = reactive_tree
             .component_tree
             .as_ref()
             .unwrap()
@@ -572,8 +685,12 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
                     to_visit = None;
                 } else {
                     let parent_id = node.parent_id.unwrap();
-                    to_visit =
-                        reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
+                    to_visit = reactive_tree
+                        .component_tree
+                        .as_ref()
+                        .unwrap()
+                        .pre_order_iter()
+                        .find(|node2| node2.id == parent_id);
                 }
             }
         }
@@ -594,7 +711,12 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                    node.id,
+                    node.update,
+                    res,
+                    node.props.clone(),
+                ));
             }
         }
     }
@@ -614,8 +736,11 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
                     break;
                 }
                 if element.component_id() == target_component_id {
-                    let res =
-                        element.on_event(event.clone(), &mut reactive_tree.element_state, font_context.as_mut().unwrap());
+                    let res = element.on_event(
+                        event.clone(),
+                        &mut reactive_tree.element_state,
+                        font_context.as_mut().unwrap(),
+                    );
 
                     if let Some(result_message) = res.result_message {
                         element_events.push_back((result_message, element.get_id().clone()));
@@ -646,7 +771,12 @@ async fn dispatch_event(event: OkuMessage, _resource_manager: &mut Arc<RwLock<Re
             propagate = propagate && res.propagate;
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
-                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(node.id, node.update, res, node.props.clone()));
+                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                    node.id,
+                    node.update,
+                    res,
+                    node.props.clone(),
+                ));
             }
         }
     }
@@ -656,10 +786,26 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
 
     app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
-    dispatch_event(event.clone(), &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.user_tree, &mut app.global_state).await;
+    dispatch_event(
+        event.clone(),
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, &mut app.font_context, app.mouse_position, &mut app.dev_tree, &mut app.global_state).await;
+    dispatch_event(
+        event,
+        &mut app.resource_manager,
+        &mut app.font_context,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+    )
+    .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -695,11 +841,11 @@ async fn update_reactive_tree(
     resource_manager: Arc<RwLock<ResourceManager>>,
     font_context: &mut FontContext,
     font_layout_context: &mut parley::LayoutContext<Brush>,
-    should_reload_fonts: &mut bool
+    should_reload_fonts: &mut bool,
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
-    
+
     let new_tree = {
         let span = span!(Level::INFO, "reactive tree diffing");
         let _enter = span.enter();
@@ -711,14 +857,19 @@ async fn update_reactive_tree(
             global_state,
             &mut reactive_tree.element_state,
             font_context,
-            *should_reload_fonts
+            *should_reload_fonts,
         )
     };
 
     *should_reload_fonts = false;
 
-
-    scan_view_for_resources(new_tree.element_tree.internal.as_ref(), &new_tree.component_tree, resource_manager.clone(), font_context).await;
+    scan_view_for_resources(
+        new_tree.element_tree.internal.as_ref(),
+        &new_tree.component_tree,
+        resource_manager.clone(),
+        font_context,
+    )
+    .await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
     reactive_tree.component_tree = Some(new_tree.component_tree);
     reactive_tree.component_ids = new_tree.component_ids;
@@ -737,7 +888,6 @@ async fn draw_reactive_tree(
     scale_factor: f64,
     mouse_position: Option<Point>,
 ) {
-
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
     let mut root_size = viewport_size;
@@ -752,7 +902,7 @@ async fn draw_reactive_tree(
     style_root_element(root, root_size);
 
     let resource_manager = resource_manager.read().await;
-    
+
     let (mut taffy_tree, taffy_root) = {
         let span = span!(Level::INFO, "layout");
         let _enter = span.enter();
@@ -766,7 +916,7 @@ async fn draw_reactive_tree(
             origin,
             &resource_manager,
             scale_factor,
-            mouse_position
+            mouse_position,
         )
     };
 
@@ -796,8 +946,9 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         app.resource_manager.clone(),
         font_context,
         font_layout_context,
-        &mut app.reload_fonts
-    ).await;
+        &mut app.reload_fonts,
+    )
+    .await;
 
     // Cleanup unmounted components and elements.
     app.user_tree.user_state.remove_unused_state(&old_component_ids, &app.user_tree.component_ids);
@@ -812,14 +963,14 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
 
     renderer.surface_set_clear_color(Color::WHITE);
 
-    #[cfg(feature = "dev_tools")] {
+    #[cfg(feature = "dev_tools")]
+    {
         if app.is_dev_tools_open {
             let dev_tools_size = Size::new(350.0, root_size.height);
             root_size.width -= dev_tools_size.width;
         }
     }
-    
-    
+
     draw_reactive_tree(
         &mut app.user_tree,
         app.resource_manager.clone(),
@@ -829,10 +980,12 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         font_context,
         font_layout_context,
         scale_factor,
-        app.mouse_position
-    ).await;
+        app.mouse_position,
+    )
+    .await;
 
-    #[cfg(feature = "dev_tools")] {
+    #[cfg(feature = "dev_tools")]
+    {
         if app.is_dev_tools_open {
             update_reactive_tree(
                 dev_tools_view(app.user_tree.element_tree.as_ref().unwrap()),
@@ -841,9 +994,10 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 app.resource_manager.clone(),
                 font_context,
                 font_layout_context,
-                &mut app.reload_fonts
-            ).await;
-            
+                &mut app.reload_fonts,
+            )
+            .await;
+
             draw_reactive_tree(
                 &mut app.dev_tree,
                 app.resource_manager.clone(),
@@ -853,14 +1007,14 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 font_context,
                 font_layout_context,
                 scale_factor,
-                app.mouse_position
-            ).await;
+                app.mouse_position,
+            )
+            .await;
         }
-    }   
-    
+    }
+
     let resource_manager = app.resource_manager.as_ref().read().await;
     renderer.submit(resource_manager);
-
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
@@ -918,7 +1072,7 @@ fn layout(
                     font_context,
                     font_layout_context,
                     resource_manager,
-                    style
+                    style,
                 )
             },
         )
@@ -929,7 +1083,16 @@ fn layout(
     let transform = glam::Mat4::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.finalize_layout(&mut taffy_tree, root_node, origin, &mut layout_order, transform, font_context, element_state, pointer);
+    root_element.finalize_layout(
+        &mut taffy_tree,
+        root_node,
+        origin,
+        &mut layout_order,
+        transform,
+        font_context,
+        element_state,
+        pointer,
+    );
 
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);

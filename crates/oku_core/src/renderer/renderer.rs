@@ -32,10 +32,8 @@ pub trait Renderer {
     fn present_surface(&mut self);
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
-    
-    fn load_font(&mut self, _font_context: &mut FontContext) {
-        
-    }
+
+    fn load_font(&mut self, _font_context: &mut FontContext) {}
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
@@ -44,9 +42,9 @@ pub trait Renderer {
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
-    
+
     fn push_layer(&mut self, rect: Rectangle);
-    
+
     fn pop_layer(&mut self);
 
     fn prepare(
@@ -55,6 +53,6 @@ pub trait Renderer {
         font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
     );
-    
+
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);
 }

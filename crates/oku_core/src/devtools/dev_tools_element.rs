@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::components::{ComponentId, UpdateResult};
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::Element;
@@ -27,8 +27,7 @@ pub struct DevTools {
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct DevToolsState {
-}
+pub struct DevToolsState {}
 
 impl DevTools {
     pub fn push_debug_inspector_tree(mut self, root: &Box<dyn Element>) -> Self {
@@ -69,10 +68,9 @@ impl Element for DevTools {
     ) {
         self.draw_borders(renderer);
         self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
-        
-        // Find the element we are hovering over and draw an overlay. 
-        if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
 
+        // Find the element we are hovering over and draw an overlay.
+        if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
             let mut hovered_inspector_element: Option<&dyn Element> = None;
             let root = self.debug_inspector_tree.as_ref().unwrap();
 
@@ -92,24 +90,26 @@ impl Element for DevTools {
                 let content_box_highlight_color = Color::from_rgba8(184, 226, 243, 125);
                 let padding_box_highlight_color = Color::from_rgba8(102, 87, 166, 125);
                 let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
-                
-                let margin_rectangle = selected_element.common_element_data().computed_layered_rectangle_transformed.margin_rectangle();
+
+                let margin_rectangle =
+                    selected_element.common_element_data().computed_layered_rectangle_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
-                let padding_rectangle = selected_element.common_element_data().computed_layered_rectangle_transformed.padding_rectangle();
+                let padding_rectangle =
+                    selected_element.common_element_data().computed_layered_rectangle_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
-                
-                let content_rectangle = selected_element.common_element_data().computed_layered_rectangle_transformed.content_rectangle();
+
+                let content_rectangle =
+                    selected_element.common_element_data().computed_layered_rectangle_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
             }
         }
-        
     }
 
     fn compute_layout(
@@ -147,7 +147,7 @@ impl Element for DevTools {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
-        
+
         self.finalize_borders();
 
         for child in self.common_element_data.children.iter_mut() {
@@ -173,16 +173,21 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_context: &mut FontContext) -> UpdateResult {
+    fn on_event(
+        &self,
+        _message: OkuMessage,
+        element_state: &mut ElementStateStore,
+        _font_context: &mut FontContext,
+    ) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
-        
+
         UpdateResult::default()
     }
 
     fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(DevToolsState::default())
+            data: Box::new(DevToolsState::default()),
         }
     }
 }
@@ -194,7 +199,14 @@ impl DevTools {
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut DevToolsState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
+        element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap()
     }
 
     pub fn new() -> DevTools {

@@ -1,6 +1,6 @@
+use crate::geometry::Point;
 use winit::dpi::PhysicalPosition;
 use winit::event::{ButtonSource, DeviceId, ElementState};
-use crate::geometry::Point;
 
 #[derive(Clone, Copy, Debug)]
 pub struct PointerButton {

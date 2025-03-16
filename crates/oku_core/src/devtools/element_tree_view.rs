@@ -1,12 +1,17 @@
-use taffy::Overflow;
-use crate::Color;
 use crate::components::{ComponentId, ComponentSpecification};
-use crate::devtools::dev_tools_colors::{CONTAINER_BACKGROUND_COLOR, ROW_BACKGROUND_COLOR, SELECTED_ROW_BACKGROUND_COLOR};
-use crate::elements::{Container, ElementStyles, Text};
+use crate::devtools::dev_tools_colors::{
+    CONTAINER_BACKGROUND_COLOR, ROW_BACKGROUND_COLOR, SELECTED_ROW_BACKGROUND_COLOR,
+};
 use crate::elements::element::Element;
+use crate::elements::{Container, ElementStyles, Text};
 use crate::style::{AlignItems, Display, FlexDirection};
+use crate::Color;
+use taffy::Overflow;
 
-pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_element: Option<ComponentId>) -> ComponentSpecification {
+pub(crate) fn element_tree_view(
+    root_element: &Box<dyn Element>,
+    selected_element: Option<ComponentId>,
+) -> ComponentSpecification {
     let mut element_tree = Container::new()
         .width("100%")
         .height("50%")
@@ -19,7 +24,6 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
     let mut element_count = 0;
 
     while let Some((element, indent, _is_last)) = elements.pop() {
-
         let row_color = if selected_element.is_some() && selected_element.unwrap() == element.component_id() {
             SELECTED_ROW_BACKGROUND_COLOR
         } else if element_count % 2 == 0 {
@@ -32,13 +36,13 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
 
         let row_name = element.name().to_string();
 
-        let mut row =  Container::new()
+        let mut row = Container::new()
             .push(
                 Text::new(row_name.as_str())
                     .padding("0px", "0px", "0px", format!("{}px", indent * 10).as_str())
                     .color(Color::WHITE)
                     .id(id.as_str())
-                    .component()
+                    .component(),
             )
             .display(Display::Flex)
             .align_items(AlignItems::Center)
@@ -52,14 +56,20 @@ pub(crate) fn element_tree_view(root_element: &Box<dyn Element>, selected_elemen
 
         if let Some(custom_id) = element.get_id() {
             let user_id_color = Color::from_rgb8(68, 147, 248);
-            row = row.push(Container::new()
-                .push(Text::new(custom_id.as_str()).color(Color::WHITE).margin("2.5px", "10px", "2.5px", "10px").id(id.as_str()))
-                .id(id.as_str())
-                .border_width("2px", "2px", "2px", "2px")
-                .border_color(user_id_color)
-                .border_radius(100.0, 100.0, 100.0, 100.0)
-                .margin("0px", "0px", "0px", "5px")
-                .component()
+            row = row.push(
+                Container::new()
+                    .push(
+                        Text::new(custom_id.as_str())
+                            .color(Color::WHITE)
+                            .margin("2.5px", "10px", "2.5px", "10px")
+                            .id(id.as_str()),
+                    )
+                    .id(id.as_str())
+                    .border_width("2px", "2px", "2px", "2px")
+                    .border_color(user_id_color)
+                    .border_radius(100.0, 100.0, 100.0, 100.0)
+                    .margin("0px", "0px", "0px", "5px")
+                    .component(),
             );
         }
 

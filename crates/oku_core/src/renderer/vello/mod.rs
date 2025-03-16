@@ -3,10 +3,13 @@ pub(crate) mod text;
 
 use crate::components::component::ComponentId;
 use crate::elements::text::text::TextState;
+use crate::elements::text_input::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::{palette, Color};
 use crate::renderer::renderer::{RenderCommand, Renderer};
+use crate::renderer::vello::image_adapter::ImageAdapter;
+use crate::renderer::vello::text::{draw_cursor, draw_glyphs, draw_selection, draw_strikethrough, draw_underline};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use parley::{FontContext, PositionedLayoutItem};
@@ -19,9 +22,6 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
-use crate::elements::text_input::text_input::TextInputState;
-use crate::renderer::vello::image_adapter::ImageAdapter;
-use crate::renderer::vello::text::{draw_cursor, draw_glyphs, draw_selection, draw_strikethrough, draw_underline};
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -153,8 +153,10 @@ impl<'a> VelloRenderer<'a> {
                 }
                 RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
-                    
-                    if let Some(text_state) = element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>() {
+
+                    if let Some(text_state) =
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
+                    {
                         for line in text_state.layout.lines() {
                             for item in line.items() {
                                 let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
@@ -167,11 +169,16 @@ impl<'a> VelloRenderer<'a> {
                                 draw_strikethrough(scene, &text_transform, &glyph_run, style);
                             }
                         }
-                    } else if let Some(text_input_state) = element_state.storage.get_mut(&component_id).unwrap().data.downcast_mut::<TextInputState>() {
+                    } else if let Some(text_input_state) =
+                        element_state.storage.get_mut(&component_id).unwrap().data.downcast_mut::<TextInputState>()
+                    {
                         draw_selection(scene, &text_transform, &text_input_state.editor.editor);
                         draw_cursor(scene, &text_transform, &text_input_state.editor);
-                        
-                        let layout = text_input_state.editor.editor.layout(&mut text_input_state.editor.font_cx, &mut text_input_state.editor.layout_cx);
+
+                        let layout = text_input_state
+                            .editor
+                            .editor
+                            .layout(&mut text_input_state.editor.font_cx, &mut text_input_state.editor.layout_cx);
                         for line in layout.lines() {
                             for item in line.items() {
                                 let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
@@ -185,9 +192,7 @@ impl<'a> VelloRenderer<'a> {
                             }
                         }
                     }
-                    
-                    
-                },
+                }
                 /*RenderCommand::PushTransform(transform) => {
                     self.scene.push_transform(transform);
                 },
@@ -208,7 +213,7 @@ impl<'a> VelloRenderer<'a> {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
-                },
+                }
             }
         }
     }
@@ -277,17 +282,22 @@ impl Renderer for VelloRenderer<'_> {
     fn pop_layer(&mut self) {
         self.render_commands.push(RenderCommand::PopLayer);
     }
-    
-    fn load_font(&mut self, font_context: &mut FontContext) {
-    
-    }
+
+    fn load_font(&mut self, font_context: &mut FontContext) {}
 
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         _font_context: &mut FontContext,
-        element_state: &mut ElementStateStore) {
-        VelloRenderer::prepare_with_render_commands(&mut self.scene, &resource_manager, _font_context, element_state, &mut self.render_commands);
+        element_state: &mut ElementStateStore,
+    ) {
+        VelloRenderer::prepare_with_render_commands(
+            &mut self.scene,
+            &resource_manager,
+            _font_context,
+            element_state,
+            &mut self.render_commands,
+        );
     }
 
     fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {

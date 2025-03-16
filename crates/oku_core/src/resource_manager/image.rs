@@ -11,7 +11,6 @@ pub struct ImageResource {
 
 impl ImageResource {
     pub(crate) fn new(width: u32, height: u32, mut data: ResourceData) -> Self {
-        
         if let Some(image_data) = data.data.as_ref() {
             let image = image::load_from_memory(image_data).unwrap();
             let image = image.to_rgba8();
@@ -22,7 +21,7 @@ impl ImageResource {
                 image,
                 width,
                 height,
-            }   
+            }
         } else {
             let empty_image = RgbaImage::new(0, 0);
             data.data = None;

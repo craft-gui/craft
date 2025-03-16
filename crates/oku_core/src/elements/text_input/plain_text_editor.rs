@@ -10,8 +10,11 @@ use core::{
 // use parley::layout::LayoutAccessibility;
 //#[cfg(feature = "accesskit")]
 // use accesskit::{Node, NodeId, TreeUpdate};
-use parley::{Affinity, Alignment, AlignmentOptions, Brush, Cursor, FontContext, Layout, LayoutContext, Rect, Selection, StyleProperty, StyleSet};
 use crate::elements::text_input::driver::PlainEditorDriver;
+use parley::{
+    Affinity, Alignment, AlignmentOptions, Brush, Cursor, FontContext, Layout, LayoutContext, Rect, Selection,
+    StyleProperty, StyleSet,
+};
 
 /// A string which is potentially discontiguous in memory.
 ///
@@ -24,7 +27,7 @@ pub struct SplitString<'source>([&'source str; 2]);
 impl<'source> SplitString<'source> {
     /// Get the characters of this string.
     pub fn chars(self) -> impl Iterator<Item = char> + use<'source> {
-    self.into_iter().flat_map(str::chars)
+        self.into_iter().flat_map(str::chars)
     }
 }
 
@@ -167,8 +170,7 @@ where
     /// There is not always a caret. For example, the IME may have indicated the caret should be
     /// hidden.
     pub fn cursor_geometry(&self, size: f32) -> Option<Rect> {
-        self.show_cursor
-            .then(|| self.selection.focus().geometry(&self.layout, size))
+        self.show_cursor.then(|| self.selection.focus().geometry(&self.layout, size))
     }
 
     /// Get a rectangle bounding the text the user is currently editing.
@@ -178,10 +180,7 @@ where
     /// selection on the focused line.
     pub fn ime_cursor_area(&self) -> Rect {
         let (area, focus) = if let Some(preedit_range) = &self.compose {
-            let selection = Selection::new(
-                self.cursor_at(preedit_range.start),
-                self.cursor_at(preedit_range.end),
-            );
+            let selection = Selection::new(self.cursor_at(preedit_range.start), self.cursor_at(preedit_range.end));
 
             // Bound the entire preedit text.
             let mut area = None;
@@ -190,10 +189,7 @@ where
                 *area = area.union(rect);
             });
 
-            (
-                area.unwrap_or_else(|| selection.focus().geometry(&self.layout, 0.)),
-                selection.focus(),
-            )
+            (area.unwrap_or_else(|| selection.focus().geometry(&self.layout, 0.)), selection.focus())
         } else {
             // Bound the selected parts of the focused line only.
             let focus = self.selection.focus().geometry(&self.layout, 0.);
@@ -212,10 +208,7 @@ where
         // usually does not need to jump around when composing starts or the preedit is added to.
         let [upstream, downstream] = focus.logical_clusters(&self.layout);
         const DEFAULT_FONT_SIZE: f32 = 16.0;
-        let font_size = downstream
-            .or(upstream)
-            .map(|cluster| cluster.run().font_size())
-            .unwrap_or(DEFAULT_FONT_SIZE);
+        let font_size = downstream.or(upstream).map(|cluster| cluster.run().font_size()).unwrap_or(DEFAULT_FONT_SIZE);
         // Using 0.6 as an estimate of the average advance
         let inflate = 3. * 0.6 * font_size as f64;
         let editor_width = self.width.map(f64::from).unwrap_or(f64::INFINITY);
@@ -233,10 +226,7 @@ where
     /// excludes the IME preedit region.
     pub fn text(&self) -> SplitString<'_> {
         if let Some(preedit_range) = &self.compose {
-            SplitString([
-                &self.buffer[..preedit_range.start],
-                &self.buffer[preedit_range.end..],
-            ])
+            SplitString([&self.buffer[..preedit_range.start], &self.buffer[preedit_range.end..]])
         } else {
             SplitString([&self.buffer, ""])
         }
@@ -285,11 +275,7 @@ where
     /// If the required contexts are not available, then [`refresh_layout`](Self::refresh_layout) can
     /// be called in a scope when they are available, and [`try_layout`](Self::try_layout) can
     /// be used instead.
-    pub fn layout(
-        &mut self,
-        font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<T>,
-    ) -> &Layout<T> {
+    pub fn layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<T>) -> &Layout<T> {
         self.refresh_layout(font_cx, layout_cx);
         &self.layout
     }
@@ -357,12 +343,7 @@ where
         }
     }
 
-    pub(crate) fn replace_selection(
-        &mut self,
-        font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<T>,
-        s: &str,
-    ) {
+    pub(crate) fn replace_selection(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<T>, s: &str) {
         let range = self.selection.text_range();
         let start = range.start;
         if self.selection.is_collapsed() {
@@ -373,16 +354,12 @@ where
 
         self.update_layout(font_cx, layout_cx);
         let new_index = start.saturating_add(s.len());
-        let affinity = if s.ends_with("\n") {
-            Affinity::Downstream
-        } else {
-            Affinity::Upstream
-        };
+        let affinity = if s.ends_with("\n") { Affinity::Downstream } else { Affinity::Upstream };
         self.set_selection(Cursor::from_byte_index(&self.layout, new_index, affinity).into());
     }
 
     /// Update the selection, and nudge the `Generation` if something other than `h_pos` changed.
-    pub(crate)const fn set_selection(&mut self, new_sel: Selection) {
+    pub(crate) const fn set_selection(&mut self, new_sel: Selection) {
         // This debug code is quite useful when diagnosing selection problems.
         #[cfg(feature = "std")]
         #[allow(clippy::print_stderr)] // reason = "unreachable debug code"
@@ -399,17 +376,11 @@ where
             let cluster = focus.visual_clusters(&self.layout);
             let dbg = (
                 cluster[0].as_ref().map(|c| &self.buffer[c.text_range()]),
-                cluster[0]
-                    .as_ref()
-                    .map(|c| if c.is_word_boundary() { " W" } else { "" })
-                    .unwrap_or_default(),
+                cluster[0].as_ref().map(|c| if c.is_word_boundary() { " W" } else { "" }).unwrap_or_default(),
                 focus.index(),
                 focus.affinity(),
                 cluster[1].as_ref().map(|c| &self.buffer[c.text_range()]),
-                cluster[1]
-                    .as_ref()
-                    .map(|c| if c.is_word_boundary() { " W" } else { "" })
-                    .unwrap_or_default(),
+                cluster[1].as_ref().map(|c| if c.is_word_boundary() { " W" } else { "" }).unwrap_or_default(),
             );
             eprintln!(" | visual: {dbg:?}");
         }
@@ -426,8 +397,7 @@ where
         }
         self.layout = builder.build(&self.buffer);
         self.layout.break_all_lines(self.width);
-        self.layout
-            .align(self.width, self.alignment, AlignmentOptions::default());
+        self.layout.align(self.width, self.alignment, AlignmentOptions::default());
         self.selection = self.selection.refresh(&self.layout);
         self.layout_dirty = false;
     }

@@ -1,14 +1,14 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::color::Color;
 use crate::renderer::renderer::RenderCommand;
 use crate::style::Style;
+use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};
 use parley::FontContext;
 use std::any::Any;
@@ -21,8 +21,7 @@ pub struct Canvas {
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct CanvasState {
-}
+pub struct CanvasState {}
 
 impl Element for Canvas {
     fn common_element_data(&self) -> &CommonElementData {
@@ -50,14 +49,14 @@ impl Element for Canvas {
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let _border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
         let _content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
-        
+
         // background
         let computed_x_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.x;
         let computed_y_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.y;
 
         let computed_width = self.common_element_data.computed_layered_rectangle_transformed.size.width;
         let computed_height = self.common_element_data.computed_layered_rectangle_transformed.size.height;
-        
+
         let border_top = self.common_element_data.computed_layered_rectangle_transformed.border.top;
         let border_right = self.common_element_data.computed_layered_rectangle_transformed.border.right;
         let border_bottom = self.common_element_data.computed_layered_rectangle_transformed.border.bottom;
@@ -124,7 +123,7 @@ impl Element for Canvas {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     renderer.fill_bez_path(path.clone(), *color);
-                },
+                }
             }
         }
 
@@ -167,7 +166,7 @@ impl Element for Canvas {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
-        
+
         for child in self.common_element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
             if taffy_child_node_id.is_none() {
@@ -200,7 +199,14 @@ impl Canvas {
 
     #[allow(dead_code)]
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut CanvasState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
+        element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap()
     }
 
     pub fn new() -> Canvas {

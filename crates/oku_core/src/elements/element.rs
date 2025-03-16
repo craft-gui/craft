@@ -147,32 +147,45 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
     }
 
-    fn draw_children(&mut self, renderer: &mut RendererBox,
-                     font_context: &mut FontContext,
-                     taffy_tree: &mut TaffyTree<LayoutContext>,
-                     element_state: &ElementStateStore,
-                     pointer: Option<Point>) {
+    fn draw_children(
+        &mut self,
+        renderer: &mut RendererBox,
+        font_context: &mut FontContext,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        element_state: &ElementStateStore,
+        pointer: Option<Point>,
+    ) {
         for child in self.common_element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
             // Skip non-visual elements.
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            child.internal.draw(renderer, font_context, taffy_tree, taffy_child_node_id.unwrap(), element_state, pointer);
+            child.internal.draw(
+                renderer,
+                font_context,
+                taffy_tree,
+                taffy_child_node_id.unwrap(),
+                element_state,
+                pointer,
+            );
         }
     }
-    
+
     fn draw_borders(&self, renderer: &mut RendererBox) {
         let common_element_data = self.common_element_data();
         let current_style = common_element_data.current_style();
         let background_color = current_style.background();
-        
+
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         if !current_style.has_border() {
-            renderer.draw_rect(common_element_data.computed_layered_rectangle_transformed.padding_rectangle(), background_color);
+            renderer.draw_rect(
+                common_element_data.computed_layered_rectangle_transformed.padding_rectangle(),
+                background_color,
+            );
             return;
         }
-        
+
         let computed_border_spec = &common_element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
@@ -193,28 +206,28 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         renderer.fill_bez_path(border_bottom_path, bottom.color);
         renderer.fill_bez_path(border_left_path, left.color);
     }
-    
+
     fn should_start_new_layer(&self) -> bool {
         let common_data = self.common_element_data();
 
-       common_data.current_style().overflow()[1] == Overflow::Scroll
+        common_data.current_style().overflow()[1] == Overflow::Scroll
     }
-    
+
     fn maybe_start_layer(&self, renderer: &mut RendererBox) {
         let common_data = self.common_element_data();
         let padding_rectangle = common_data.computed_layered_rectangle_transformed.padding_rectangle();
-        
+
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
         }
     }
-    
+
     fn maybe_end_layer(&self, renderer: &mut RendererBox) {
         if self.should_start_new_layer() {
             renderer.pop_layer();
         }
     }
-    
+
     fn finalize_borders(&mut self) {
         let common_element_data = self.common_element_data_mut();
 
@@ -222,7 +235,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         if !common_element_data.current_style().has_border() {
             return;
         }
-        
+
         let element_rect = common_element_data.computed_layered_rectangle_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
@@ -287,7 +300,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(())
+            data: Box::new(()),
         }
     }
 
@@ -309,14 +322,20 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn get_base_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ElementStateStoreItem {
         element_state.storage.get(&self.common_element_data().component_id).unwrap()
     }
-    
+
     #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.common_element_data().component_id).unwrap()
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_context: &mut FontContext, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+    fn update_state(
+        &self,
+        _font_context: &mut FontContext,
+        _element_state: &mut ElementStateStore,
+        _reload_fonts: bool,
+    ) {
+    }
 }
 
 impl<T: Element> From<T> for ElementBox {
@@ -447,7 +466,7 @@ macro_rules! generate_component_methods_no_children {
             self.common_element_data.id = Some(id.to_string());
             self
         }
-        
+
         #[allow(dead_code)]
         pub fn hovered(mut self) -> Self {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Hovered;
@@ -478,7 +497,7 @@ macro_rules! generate_component_methods_no_children {
 macro_rules! generate_component_methods_private_push {
     () => {
         crate::generate_component_methods_no_children!();
-        
+
         #[allow(dead_code)]
         fn push<T>(mut self, component_specification: T) -> Self
         where
@@ -498,7 +517,7 @@ macro_rules! generate_component_methods_private_push {
 
             self
         }
-        
+
         #[allow(dead_code)]
         fn extend_children<T>(mut self, children: Vec<T>) -> Self
         where
@@ -514,14 +533,14 @@ macro_rules! generate_component_methods_private_push {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
             self
         }
-    }
+    };
 }
 
 #[macro_export]
 macro_rules! generate_component_methods {
     () => {
         crate::generate_component_methods_no_children!();
-        
+
         #[allow(dead_code)]
         pub fn push<T>(mut self, component_specification: T) -> Self
         where
@@ -541,7 +560,7 @@ macro_rules! generate_component_methods {
 
             self
         }
-        
+
         #[allow(dead_code)]
         pub fn extend_children<T>(mut self, children: Vec<T>) -> Self
         where
@@ -557,7 +576,5 @@ macro_rules! generate_component_methods {
             self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
             self
         }
-
-        
     };
 }

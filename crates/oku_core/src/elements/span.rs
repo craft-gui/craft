@@ -9,7 +9,7 @@ use parley::FontContext;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
 
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::geometry::Point;
 
@@ -26,12 +26,8 @@ pub struct SpanState {
 }
 
 impl SpanState {
-    pub(crate) fn new(
-        id: ComponentId,
-    ) -> Self {
-        Self {
-            id
-        }
+    pub(crate) fn new(id: ComponentId) -> Self {
+        Self { id }
     }
 }
 
@@ -49,7 +45,14 @@ impl Span {
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut SpanState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
+        element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap()
     }
 }
 
@@ -79,8 +82,7 @@ impl Element for Span {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        let computed_layer_rectangle_transformed =
-            self.common_element_data.computed_layered_rectangle_transformed;
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -102,8 +104,7 @@ impl Element for Span {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         let state = self.get_state_mut(element_state);
-        
-        
+
         for child in self.common_element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
             if let Some(child_node) = child_node {
@@ -112,7 +113,7 @@ impl Element for Span {
         }
 
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-        
+
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.common_element_data().taffy_node_id
     }
@@ -128,10 +129,9 @@ impl Element for Span {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
-
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
-        
+
         self.finalize_borders();
     }
 
@@ -140,13 +140,11 @@ impl Element for Span {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let state = SpanState::new(
-            self.common_element_data.component_id,
-        );
+        let state = SpanState::new(self.common_element_data.component_id);
 
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(state)
+            data: Box::new(state),
         }
     }
 

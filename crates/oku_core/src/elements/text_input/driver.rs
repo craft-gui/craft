@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 // use accesskit::{Node, NodeId, TreeUpdate};
-use parley::{Affinity, Brush, Cursor, FontContext, Layout, LayoutContext, Selection};
 use crate::elements::text_input::plain_text_editor::PlainEditor;
+use parley::{Affinity, Brush, Cursor, FontContext, Layout, LayoutContext, Selection};
 
 /// A short-lived wrapper around [`PlainEditor`].
 ///
@@ -25,8 +25,7 @@ where
     pub fn insert_or_replace_selection(&mut self, s: &str) {
         assert!(!self.editor.is_composing());
 
-        self.editor
-            .replace_selection(self.font_cx, self.layout_cx, s);
+        self.editor.replace_selection(self.font_cx, self.layout_cx, s);
     }
 
     /// Delete the selection.
@@ -42,11 +41,7 @@ where
 
         if self.editor.selection.is_collapsed() {
             // Upstream cluster range
-            if let Some(range) = self
-                .editor
-                .selection
-                .focus()
-                .logical_clusters(&self.editor.layout)[1]
+            if let Some(range) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[1]
                 .as_ref()
                 .map(|cluster| cluster.text_range())
                 .and_then(|range| (!range.is_empty()).then_some(range))
@@ -70,10 +65,8 @@ where
             if self.editor.buffer.get(start..end).is_some() {
                 self.editor.buffer.replace_range(start..end, "");
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -86,13 +79,7 @@ where
 
         if self.editor.selection.is_collapsed() {
             // Upstream cluster
-            if let Some(cluster) = self
-                .editor
-                .selection
-                .focus()
-                .logical_clusters(&self.editor.layout)[0]
-                .clone()
-            {
+            if let Some(cluster) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[0].clone() {
                 let range = cluster.text_range();
                 let end = range.end;
                 let start = if cluster.is_hard_line_break() || cluster.is_emoji() {
@@ -100,11 +87,7 @@ where
                     range.start
                 } else {
                     // Otherwise, delete the previous character
-                    let Some((start, _)) = self
-                        .editor
-                        .buffer
-                        .get(..end)
-                        .and_then(|str| str.char_indices().next_back())
+                    let Some((start, _)) = self.editor.buffer.get(..end).and_then(|str| str.char_indices().next_back())
                     else {
                         return;
                     };
@@ -112,10 +95,8 @@ where
                 };
                 self.editor.buffer.replace_range(start..end, "");
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -133,10 +114,8 @@ where
             if self.editor.buffer.get(start..end).is_some() {
                 self.editor.buffer.replace_range(start..end, "");
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -159,19 +138,13 @@ where
         debug_assert!(cursor.map(|cursor| cursor.1 <= text.len()).unwrap_or(true));
 
         let start = if let Some(preedit_range) = &self.editor.compose {
-            self.editor
-                .buffer
-                .replace_range(preedit_range.clone(), text);
+            self.editor.buffer.replace_range(preedit_range.clone(), text);
             preedit_range.start
         } else {
             if self.editor.selection.is_collapsed() {
-                self.editor
-                    .buffer
-                    .insert_str(self.editor.selection.text_range().start, text);
+                self.editor.buffer.insert_str(self.editor.selection.text_range().start, text);
             } else {
-                self.editor
-                    .buffer
-                    .replace_range(self.editor.selection.text_range(), text);
+                self.editor.buffer.replace_range(self.editor.selection.text_range(), text);
             }
             self.editor.selection.text_range().start
         };
@@ -198,8 +171,7 @@ where
             self.editor.show_cursor = true;
             self.update_layout();
 
-            self.editor
-                .set_selection(self.editor.cursor_at(preedit_range.start).into());
+            self.editor.set_selection(self.editor.cursor_at(preedit_range.start).into());
         }
     }
 
@@ -209,8 +181,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(Selection::from_point(&self.editor.layout, x, y));
+        self.editor.set_selection(Selection::from_point(&self.editor.layout, x, y));
     }
 
     /// Move the cursor to a byte index.
@@ -221,8 +192,7 @@ where
 
         if self.editor.buffer.is_char_boundary(index) {
             self.refresh_layout();
-            self.editor
-                .set_selection(self.editor.cursor_at(index).into());
+            self.editor.set_selection(self.editor.cursor_at(index).into());
         }
     }
 
@@ -231,11 +201,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MIN,
-            false,
-        ));
+        self.editor.set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, false));
     }
 
     /// Move the cursor to the start of the physical line.
@@ -243,8 +209,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.line_start(&self.editor.layout, false));
+        self.editor.set_selection(self.editor.selection.line_start(&self.editor.layout, false));
     }
 
     /// Move the cursor to the end of the buffer.
@@ -252,11 +217,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MAX,
-            false,
-        ));
+        self.editor.set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, false));
     }
 
     /// Move the cursor to the end of the physical line.
@@ -264,8 +225,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.line_end(&self.editor.layout, false));
+        self.editor.set_selection(self.editor.selection.line_end(&self.editor.layout, false));
     }
 
     /// Move up to the closest physical cluster boundary on the previous line, preserving the horizontal position for repeated movements.
@@ -273,11 +233,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_line(&self.editor.layout, false),
-        );
+        self.editor.set_selection(self.editor.selection.previous_line(&self.editor.layout, false));
     }
 
     /// Move down to the closest physical cluster boundary on the next line, preserving the horizontal position for repeated movements.
@@ -285,8 +241,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.next_line(&self.editor.layout, false));
+        self.editor.set_selection(self.editor.selection.next_line(&self.editor.layout, false));
     }
 
     /// Move to the next cluster left in visual order.
@@ -294,11 +249,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual(&self.editor.layout, false),
-        );
+        self.editor.set_selection(self.editor.selection.previous_visual(&self.editor.layout, false));
     }
 
     /// Move to the next cluster right in visual order.
@@ -306,11 +257,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual(&self.editor.layout, false),
-        );
+        self.editor.set_selection(self.editor.selection.next_visual(&self.editor.layout, false));
     }
 
     /// Move to the next word boundary left.
@@ -318,11 +265,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual_word(&self.editor.layout, false),
-        );
+        self.editor.set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, false));
     }
 
     /// Move to the next word boundary right.
@@ -330,11 +273,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual_word(&self.editor.layout, false),
-        );
+        self.editor.set_selection(self.editor.selection.next_visual_word(&self.editor.layout, false));
     }
 
     /// Select the whole buffer.
@@ -343,8 +282,11 @@ where
 
         self.refresh_layout();
         self.editor.set_selection(
-            Selection::from_byte_index(&self.editor.layout, 0_usize, Affinity::default())
-                .move_lines(&self.editor.layout, isize::MAX, true),
+            Selection::from_byte_index(&self.editor.layout, 0_usize, Affinity::default()).move_lines(
+                &self.editor.layout,
+                isize::MAX,
+                true,
+            ),
         );
     }
 
@@ -360,11 +302,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MIN,
-            true,
-        ));
+        self.editor.set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, true));
     }
 
     /// Move the selection focus point to the start of the physical line.
@@ -372,8 +310,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.line_start(&self.editor.layout, true));
+        self.editor.set_selection(self.editor.selection.line_start(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the end of the buffer.
@@ -381,11 +318,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MAX,
-            true,
-        ));
+        self.editor.set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, true));
     }
 
     /// Move the selection focus point to the end of the physical line.
@@ -393,8 +326,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.line_end(&self.editor.layout, true));
+        self.editor.set_selection(self.editor.selection.line_end(&self.editor.layout, true));
     }
 
     /// Move the selection focus point up to the nearest cluster boundary on the previous line, preserving the horizontal position for repeated movements.
@@ -402,11 +334,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_line(&self.editor.layout, true),
-        );
+        self.editor.set_selection(self.editor.selection.previous_line(&self.editor.layout, true));
     }
 
     /// Move the selection focus point down to the nearest cluster boundary on the next line, preserving the horizontal position for repeated movements.
@@ -414,8 +342,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.next_line(&self.editor.layout, true));
+        self.editor.set_selection(self.editor.selection.next_line(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next cluster left in visual order.
@@ -423,11 +350,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual(&self.editor.layout, true),
-        );
+        self.editor.set_selection(self.editor.selection.previous_visual(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next cluster right in visual order.
@@ -435,8 +358,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(self.editor.selection.next_visual(&self.editor.layout, true));
+        self.editor.set_selection(self.editor.selection.next_visual(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next word boundary left.
@@ -444,11 +366,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual_word(&self.editor.layout, true),
-        );
+        self.editor.set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next word boundary right.
@@ -456,11 +374,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual_word(&self.editor.layout, true),
-        );
+        self.editor.set_selection(self.editor.selection.next_visual_word(&self.editor.layout, true));
     }
 
     /// Select the word at the point.
@@ -468,8 +382,7 @@ where
         assert!(!self.editor.is_composing());
 
         self.refresh_layout();
-        self.editor
-            .set_selection(Selection::word_from_point(&self.editor.layout, x, y));
+        self.editor.set_selection(Selection::word_from_point(&self.editor.layout, x, y));
     }
 
     /// Select the physical line at the point.
@@ -487,11 +400,7 @@ where
 
         self.refresh_layout();
         // FIXME: This is usually the wrong way to handle selection extension for mouse moves, but not a regression.
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .extend_to_point(&self.editor.layout, x, y),
-        );
+        self.editor.set_selection(self.editor.selection.extend_to_point(&self.editor.layout, x, y));
     }
 
     /// Move the selection focus point to a byte index.
@@ -502,8 +411,7 @@ where
 
         if self.editor.buffer.is_char_boundary(index) {
             self.refresh_layout();
-            self.editor
-                .set_selection(self.editor.selection.extend(self.editor.cursor_at(index)));
+            self.editor.set_selection(self.editor.selection.extend(self.editor.cursor_at(index)));
         }
     }
 
@@ -515,10 +423,7 @@ where
 
         if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
             self.refresh_layout();
-            self.editor.set_selection(Selection::new(
-                self.editor.cursor_at(start),
-                self.editor.cursor_at(end),
-            ));
+            self.editor.set_selection(Selection::new(self.editor.cursor_at(start), self.editor.cursor_at(end)));
         }
     }
 
@@ -526,7 +431,7 @@ where
     /// Select inside the editor based on the selection provided by accesskit.
     // pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
     //     assert!(!self.editor.is_composing());
-    // 
+    //
     //     self.refresh_layout();
     //     if let Some(selection) = Selection::from_access_selection(
     //         selection,

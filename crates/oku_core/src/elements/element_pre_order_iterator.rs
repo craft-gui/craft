@@ -35,11 +35,11 @@ mod tests {
     use crate::elements::element::ElementBox;
     use crate::elements::{Container, Text};
     use crate::reactive::element_id::reset_unique_element_id;
+    use crate::reactive::element_state_store::ElementStateStore;
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
-    use parley::FontContext;
     use crate::GlobalState;
-    use crate::reactive::element_state_store::ElementStateStore;
+    use parley::FontContext;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
@@ -58,9 +58,17 @@ mod tests {
         let mut user_state = StateStore::default();
         let mut element_state = ElementStateStore::default();
         let mut global_state = GlobalState::from(Box::new(()));
-        
-        let initial_tree =
-            diff_trees(initial_view, root_element.clone(), None, &mut user_state, &mut global_state, &mut element_state, &mut font_context, false);
+
+        let initial_tree = diff_trees(
+            initial_view,
+            root_element.clone(),
+            None,
+            &mut user_state,
+            &mut global_state,
+            &mut element_state,
+            &mut font_context,
+            false,
+        );
 
         initial_tree.component_tree.print_tree();
         initial_tree.element_tree.internal.print_tree();

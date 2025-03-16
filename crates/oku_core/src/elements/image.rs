@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::Element;
 use crate::elements::layout_context::{ImageContext, LayoutContext};
@@ -56,11 +56,8 @@ impl Element for Image {
     ) {
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
-        
-        renderer.draw_image(
-            content_rectangle,
-            self.resource_identifier.clone(),
-        );
+
+        renderer.draw_image(content_rectangle, self.resource_identifier.clone());
 
         self.draw_borders(renderer);
     }
@@ -74,15 +71,17 @@ impl Element for Image {
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
-            .new_leaf_with_context(
-                style,
-                LayoutContext::Image(ImageContext {
-                    resource_identifier: self.resource_identifier.clone(),
-                }),
-            )
-            .unwrap());
-        
+        self.common_element_data_mut().taffy_node_id = Some(
+            taffy_tree
+                .new_leaf_with_context(
+                    style,
+                    LayoutContext::Image(ImageContext {
+                        resource_identifier: self.resource_identifier.clone(),
+                    }),
+                )
+                .unwrap(),
+        );
+
         self.common_element_data().taffy_node_id
     }
 
@@ -99,7 +98,7 @@ impl Element for Image {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
-        
+
         self.finalize_borders();
     }
 

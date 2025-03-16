@@ -1,6 +1,8 @@
-use taffy::Position;
 use crate::renderer::color::Color;
-use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap};
+use crate::style::{
+    AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap,
+};
+use taffy::Position;
 
 pub trait ElementStyles
 where
@@ -33,7 +35,7 @@ where
             (top.into(), top.into()),
             (right.into(), right.into()),
             (bottom.into(), bottom.into()),
-            (left.into(), left.into())
+            (left.into(), left.into()),
         ];
         self
     }

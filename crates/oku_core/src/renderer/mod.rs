@@ -1,4 +1,4 @@
-pub mod color;
+pub(crate) mod color;
 pub mod renderer;
 
 #[cfg(feature = "vello_renderer")]

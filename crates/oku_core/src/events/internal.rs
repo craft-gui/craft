@@ -1,15 +1,15 @@
 use crate::components::component::UpdateFn;
-use crate::components::props::Props;
+use crate::components::ComponentId;
+use crate::components::Props;
 use crate::events::resource_event::ResourceEvent;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
+use crate::geometry::Size;
 use crate::renderer::renderer::Renderer;
 use std::any::Any;
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::event::Ime;
 use winit::window::Window;
-use crate::components::ComponentId;
-use crate::geometry::Size;
 
 pub(crate) enum InternalMessage {
     RequestRedraw(f64, Size),

@@ -49,7 +49,7 @@ impl Rectangle {
             height,
         }
     }
-    
+
     /// Returns the position of the top-left corner of the rectangle.
     pub fn position(&self) -> Point {
         Point::new(self.x, self.y)

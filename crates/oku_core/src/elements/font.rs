@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::Element;
 use crate::elements::layout_context::LayoutContext;

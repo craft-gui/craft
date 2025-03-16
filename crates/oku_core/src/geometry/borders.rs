@@ -3,10 +3,10 @@ use crate::renderer::color::Color;
 
 use peniko::kurbo::{BezPath, PathEl, Point, Shape, Vec2};
 
-use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use crate::geometry::cornerside::CornerSide;
-use crate::geometry::Rectangle;
 use crate::geometry::side::Side;
+use crate::geometry::Rectangle;
+use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 pub struct BorderSpec {
     x1: f64,
@@ -34,7 +34,6 @@ pub struct BorderSpec {
 }
 
 impl BorderSpec {
-
     pub fn new(rect: Rectangle, widths: [f32; 4], radii: [(f32, f32); 4], colors: [Color; 4]) -> Self {
         Self {
             x1: rect.x as f64,
@@ -63,7 +62,6 @@ impl BorderSpec {
     pub fn compute_border_spec(&self) -> ComputedBorderSpec {
         ComputedBorderSpec::new(self)
     }
-
 }
 
 #[derive(Clone, Debug, Default)]
@@ -88,18 +86,12 @@ impl Default for SideData {
 }
 
 impl SideData {
-
     fn new(width: f64, color: Color) -> Self {
-        Self {
-            width,
-            color,
-        }
+        Self { width, color }
     }
-
 }
 
-#[derive(Clone, Debug)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 struct ComputedCorner {
     inner_transition_point: Point,
     outer_transition_point: Point,
@@ -127,12 +119,7 @@ impl ComputedCornerSide {
 }
 
 /// Calculate the angle of intersection between the quarter-ellipse and a line from the border point to the corner point.
-fn intersect_angle(
-    top_left_radius_x: f64,
-    top_left_radius_y: f64,
-    top_width: f64,
-    right_width: f64,
-) -> f64 {
+fn intersect_angle(top_left_radius_x: f64, top_left_radius_y: f64, top_width: f64, right_width: f64) -> f64 {
     // 1. Set up the equations and solve for the intersection point using the quadratic formula.
     // 2. To get the angle, we use the parametric equation of the ellipse, solving for the angle.
 
@@ -171,7 +158,6 @@ fn intersect_angle(
     PI - intersection_angle
 }
 
-
 fn extend_path_with_arc(path: &mut BezPath, arc_path: &BezPath) {
     let start = match arc_path.elements().first() {
         Some(PathEl::MoveTo(point)) => point,
@@ -182,7 +168,6 @@ fn extend_path_with_arc(path: &mut BezPath, arc_path: &BezPath) {
         path.push(*el);
     }
 }
-
 
 #[derive(Default, Clone)]
 struct CornerData {
@@ -199,7 +184,6 @@ struct CornerData {
 }
 
 impl CornerData {
-
     fn new(border_spec: &BorderSpec, radius_scale: f64, corner: Corner) -> Self {
         let radius_x = match corner {
             Corner::TopLeft => border_spec.top_left_radius_x,
@@ -248,10 +232,18 @@ impl CornerData {
         };
 
         let border_point = match corner {
-            Corner::TopLeft => Point::new(border_spec.x1 + border_spec.left_width, border_spec.y1 + border_spec.top_width),
-            Corner::TopRight => Point::new(border_spec.x2 - border_spec.right_width, border_spec.y1 + border_spec.top_width),
-            Corner::BottomRight => Point::new(border_spec.x2 - border_spec.right_width, border_spec.y2 - border_spec.bottom_width),
-            Corner::BottomLeft => Point::new(border_spec.x1 + border_spec.left_width, border_spec.y2 - border_spec.bottom_width),
+            Corner::TopLeft => {
+                Point::new(border_spec.x1 + border_spec.left_width, border_spec.y1 + border_spec.top_width)
+            }
+            Corner::TopRight => {
+                Point::new(border_spec.x2 - border_spec.right_width, border_spec.y1 + border_spec.top_width)
+            }
+            Corner::BottomRight => {
+                Point::new(border_spec.x2 - border_spec.right_width, border_spec.y2 - border_spec.bottom_width)
+            }
+            Corner::BottomLeft => {
+                Point::new(border_spec.x1 + border_spec.left_width, border_spec.y2 - border_spec.bottom_width)
+            }
         };
 
         let border_radius_point = match corner {
@@ -273,12 +265,9 @@ impl CornerData {
             corner_point,
         }
     }
-
 }
 
 impl ComputedBorderSpec {
-
-
     fn new(border_spec: &BorderSpec) -> Self {
         let box_width = (border_spec.x2 - border_spec.x1).max(0.0);
         let box_height = (border_spec.y2 - border_spec.y1).max(0.0);
@@ -291,7 +280,7 @@ impl ComputedBorderSpec {
 
         let f = f64::min(f64::min(f_top_x, f_left_y), f64::min(f_bottom_x, f_right_y));
 
-        let f = if f < 1.0 { f } else { 1.0};
+        let f = if f < 1.0 { f } else { 1.0 };
 
         //////////////////////////
 
@@ -302,7 +291,7 @@ impl ComputedBorderSpec {
             SideData::new(border_spec.left_width, border_spec.left_color),
         ];
 
-        let corners= [
+        let corners = [
             CornerData::new(border_spec, f, Corner::TopLeft),
             CornerData::new(border_spec, f, Corner::TopRight),
             CornerData::new(border_spec, f, Corner::BottomRight),
@@ -318,20 +307,15 @@ impl ComputedBorderSpec {
 
         ComputedBorderSpec {
             sides,
-            computed_corner
+            computed_corner,
         }
     }
-
 
     fn create_corner(corner: Corner, corners: &[CornerData; 4], sides: &[SideData; 4]) -> ComputedCorner {
         // The (start_angle, end_angle) for the inner curves.
         // The reverse of these angle pairs is used for the outer curves.
-        const INNER_ANGLES: [(f64, f64); 4] = [
-            (PI, FRAC_PI_2),
-            (FRAC_PI_2, 0.0),
-            (TAU, 3.0 * FRAC_PI_2),
-            (3.0 * FRAC_PI_2, PI),
-        ];
+        const INNER_ANGLES: [(f64, f64); 4] =
+            [(PI, FRAC_PI_2), (FRAC_PI_2, 0.0), (TAU, 3.0 * FRAC_PI_2), (3.0 * FRAC_PI_2, PI)];
 
         let corner_data = &corners[corner as usize];
         let primary_side = &sides[corner.get_primary_side() as usize];
@@ -380,19 +364,20 @@ impl ComputedBorderSpec {
         let outer_second_end_angle = outer_end_angle;
         let outer_second_sweep_angle = outer_second_end_angle - outer_second_start_angle;
 
-
         let mut inner_sides = [ComputedCornerSide::new(), ComputedCornerSide::new()];
         let mut outer_sides = [ComputedCornerSide::new(), ComputedCornerSide::new()];
 
-        let inner_transition_point = corner_data.border_radius_point + Vec2::new(
-            corner_data.inner_radius_x * f64::cos(inner_intersect_angle),
-            -corner_data.inner_radius_y * f64::sin(inner_intersect_angle),
-        );
+        let inner_transition_point = corner_data.border_radius_point
+            + Vec2::new(
+                corner_data.inner_radius_x * f64::cos(inner_intersect_angle),
+                -corner_data.inner_radius_y * f64::sin(inner_intersect_angle),
+            );
 
-        let outer_transition_point = corner_data.border_radius_point + Vec2::new(
-            corner_data.outer_radius_x * f64::cos(outer_intersect_angle),
-            -corner_data.outer_radius_y * f64::sin(outer_intersect_angle),
-        );
+        let outer_transition_point = corner_data.border_radius_point
+            + Vec2::new(
+                corner_data.outer_radius_x * f64::cos(outer_intersect_angle),
+                -corner_data.outer_radius_y * f64::sin(outer_intersect_angle),
+            );
 
         let inner_arc_first = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
@@ -400,7 +385,8 @@ impl ComputedBorderSpec {
             to_clockwise_angle(inner_first_start_angle),
             -inner_first_sweep_angle,
             0.0,
-        ).to_path(0.1);
+        )
+        .to_path(0.1);
 
         let inner_arc_second = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
@@ -408,7 +394,8 @@ impl ComputedBorderSpec {
             to_clockwise_angle(inner_second_start_angle),
             -inner_second_sweep_angle,
             0.0,
-        ).to_path(0.1);
+        )
+        .to_path(0.1);
 
         let outer_arc_first = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
@@ -416,7 +403,8 @@ impl ComputedBorderSpec {
             to_clockwise_angle(outer_first_start_angle),
             -outer_first_sweep_angle,
             0.0,
-        ).to_path(0.1);
+        )
+        .to_path(0.1);
 
         let outer_arc_second = peniko::kurbo::Arc::new(
             corner_data.border_radius_point,
@@ -424,7 +412,8 @@ impl ComputedBorderSpec {
             to_clockwise_angle(outer_second_start_angle),
             -outer_second_sweep_angle,
             0.0,
-        ).to_path(0.1);
+        )
+        .to_path(0.1);
 
         inner_sides[corner.get_inner_start_side() as usize].arc = inner_arc_first;
         inner_sides[corner.get_inner_start_side().next() as usize].arc = inner_arc_second;

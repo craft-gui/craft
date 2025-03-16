@@ -3,30 +3,29 @@ mod ani_list;
 #[path = "../util.rs"]
 mod util;
 
+use ani_list::{anime_view, AniListResponse, QUERY};
 use std::any::Any;
 use util::setup_logging;
-use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
 use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
+use oku::events::clicked;
 use oku::events::{Event, Message};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
-use oku::OkuOptions;
-use oku::{RendererType};
-use oku::elements::ElementStyles;
 use oku::style::{Display, Overflow, Unit, Wrap};
-use oku::events::clicked;
 use oku::Color;
+use oku::OkuOptions;
+use oku::RendererType;
 
 use reqwest::Client;
 use serde_json::json;
 
 use std::result::Result;
 
-#[derive(Debug, Clone, Default)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 enum State {
     #[default]
     Initial,
@@ -47,7 +46,11 @@ pub struct AniList {
 impl Component for AniList {
     type Props = ();
 
-    fn view_with_no_global_state(state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view_with_no_global_state(
+        state: &Self,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
             .wrap(Wrap::Wrap)
@@ -138,16 +141,18 @@ impl Component for AniList {
 fn main() {
     setup_logging();
 
-    oku_main_with_options(AniList::component(), Box::new(()), Some(OkuOptions {
+    oku_main_with_options(
+        AniList::component(),
+        Box::new(()),
+        Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "Ani List".to_string(),
-    }));
+        }),
+    );
 }
 
 #[cfg(target_os = "android")]
 use oku::AndroidApp;
-
-use oku::GlobalState;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

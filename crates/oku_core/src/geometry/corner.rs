@@ -1,6 +1,6 @@
-use std::f64::consts::{PI, TAU};
 use crate::geometry::cornerside::CornerSide;
 use crate::geometry::side::Side;
+use std::f64::consts::{PI, TAU};
 
 #[repr(usize)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -12,7 +12,6 @@ pub enum Corner {
 }
 
 impl Corner {
-
     pub(crate) const fn get_primary_side(self) -> Side {
         // 000 & 010 = 000
         // 001 & 010 = 000
@@ -33,7 +32,6 @@ impl Corner {
 
         unsafe { std::mem::transmute(side_val) }
     }
-
 
     pub(crate) fn get_inner_start_side(self) -> CornerSide {
         // 000 -> 010
@@ -59,7 +57,6 @@ impl Corner {
     }
 
     pub(crate) fn get_relative_angle(self, angle: f64) -> f64 {
-
         match self {
             Corner::TopRight => angle,
             Corner::TopLeft => PI - angle,
@@ -67,5 +64,4 @@ impl Corner {
             Corner::BottomRight => TAU - angle,
         }
     }
-
 }

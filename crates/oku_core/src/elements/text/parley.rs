@@ -1,20 +1,19 @@
-use std::hash::Hasher;
-use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout, TextStyle};
-use parley::fontique::FamilyId;
-use peniko::Brush;
-use rustc_hash::FxHasher;
 use crate::components::component::ComponentOrElement;
 use crate::components::ComponentSpecification;
 use crate::elements::element::Element;
 use crate::elements::layout_context::AvailableSpace;
-use crate::elements::Span;
 use crate::elements::text::text::TextFragment;
 use crate::elements::text::TextState;
-use crate::OKU_FALLBACK_FONT_KEY;
+use crate::elements::Span;
 use crate::style::Style;
+use crate::OKU_FALLBACK_FONT_KEY;
+use parley::fontique::FamilyId;
+use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout, TextStyle};
+use peniko::Brush;
+use rustc_hash::FxHasher;
+use std::hash::Hasher;
 
-#[derive(Copy, Clone)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct TextHashValue {
     pub computed_width: f32,
     pub computed_height: f32,
@@ -54,14 +53,14 @@ fn hash_text_and_font_settings_from_text_fragments(
 ) -> (u64, u64) {
     let mut text_hasher = FxHasher::default();
     let mut font_settings_hasher = FxHasher::default();
-    
+
     let mut hash_font_settings = |style: &Style| {
         font_settings_hasher.write_u8(style.font_family_length());
         font_settings_hasher.write(&style.font_family_raw());
         font_settings_hasher.write_u32(style.font_size().to_bits());
         font_settings_hasher.write_u16(style.font_weight().0);
     };
-    
+
     for fragment in fragments.iter() {
         match fragment {
             TextFragment::String(str) => {
@@ -125,17 +124,17 @@ fn build_text_layout_tree<'a>(
                                 font_families.push(font_family);
                             }
                         };
-                        
+
                         // Append the system font
                         font_families.push(FontFamily::Generic(GenericFamily::SystemUi));
-                        
+
                         // Append the fallback fonts.
                         {
                             for family_name in &family_names {
                                 font_families.push(FontFamily::parse(family_name).unwrap());
                             }
                         }
-                     
+
                         let font_stack = FontStack::from(font_families.as_slice());
                         builder.push_style_span(style_to_parley_style(span.style(), font_stack));
                         builder.push_text(&span.text);
@@ -146,7 +145,7 @@ fn build_text_layout_tree<'a>(
             TextFragment::InlineComponentSpecification(inline) => {}
         }
     }
-    
+
     builder
 }
 
@@ -158,7 +157,7 @@ pub(crate) fn recompute_layout_from_cache_key(layout: &mut Layout<Brush>, cache_
 
 pub(crate) fn get_fallback_font_families(font_context: &mut FontContext) -> Vec<String> {
     let mut family_names: Vec<String> = vec![];
-    
+
     let mut fallback_ids: Vec<FamilyId> = vec![];
     for fallback in font_context.collection.fallback_families(OKU_FALLBACK_FONT_KEY) {
         fallback_ids.push(fallback);
@@ -171,12 +170,11 @@ pub(crate) fn get_fallback_font_families(font_context: &mut FontContext) -> Vec<
             }
         }
     }
-    
+
     family_names
 }
 
 impl TextState {
-
     /// Measure the width and height of the text given layout constraints.
     pub(crate) fn measure(
         &mut self,
@@ -185,7 +183,6 @@ impl TextState {
         font_context: &mut FontContext,
         font_layout_context: &mut parley::LayoutContext<Brush>,
     ) -> taffy::Size<f32> {
-
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -205,9 +202,10 @@ impl TextState {
             taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
             taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
         };
-        
-        let (text_hash, font_settings_hash) = hash_text_and_font_settings_from_text_fragments(&self.style, &self.children, &self.fragments);
-        
+
+        let (text_hash, font_settings_hash) =
+            hash_text_and_font_settings_from_text_fragments(&self.style, &self.children, &self.fragments);
+
         let cache_key = TextHashKey {
             text_hash,
             font_settings_hash,
@@ -217,12 +215,12 @@ impl TextState {
             available_space_height: available_space_height_u32,
         };
 
-        
         // If the text or font settings have changed since the last cache, we have to recompute the size of our text.
         let mut text_changed = true;
         if let Some(last_cache_key) = &self.last_cache_key {
-            if last_cache_key.text_hash == cache_key.text_hash && 
-                last_cache_key.font_settings_hash == cache_key.font_settings_hash {
+            if last_cache_key.text_hash == cache_key.text_hash
+                && last_cache_key.font_settings_hash == cache_key.font_settings_hash
+            {
                 text_changed = false;
             }
         }
@@ -234,27 +232,30 @@ impl TextState {
         // Use the cached size if possible and if the text/font settings haven't changed.
         if !self.reload_fonts && self.cached_text_layout.contains_key(&cache_key) && !text_changed {
             let computed_size = self.cached_text_layout.get(&cache_key).unwrap();
-            
+
             let previous_cache_key = previous_cache_key.unwrap();
-            let same_available_space = previous_cache_key.available_space_width == cache_key.available_space_width && previous_cache_key.available_space_height == cache_key.available_space_height;
-            let same_constraints = previous_cache_key.width_constraint == cache_key.width_constraint && previous_cache_key.height_constraint == cache_key.height_constraint;
+            let same_available_space = previous_cache_key.available_space_width == cache_key.available_space_width
+                && previous_cache_key.available_space_height == cache_key.available_space_height;
+            let same_constraints = previous_cache_key.width_constraint == cache_key.width_constraint
+                && previous_cache_key.height_constraint == cache_key.height_constraint;
 
             // The layout gets updated for each new cache entry, so we may need to recompute the final text layout in Text::finalize_layout.
             // We need to recompute the final layout if the constraints or available space have changed since the last layout pass.
             if !same_constraints || !same_available_space {
                 self.should_recompute_final_text_layout = true;
             }
-            
+
             taffy::Size {
                 width: computed_size.computed_width,
                 height: computed_size.computed_height,
             }
-        } else { // Cache is not available or the text/font settings have changed, so we need to recompute the size.
+        } else {
+            // Cache is not available or the text/font settings have changed, so we need to recompute the size.
 
             // FIXME: Fix lifetime issues with FontStack to reduce duplicated code.
             let mut font_families = vec![];
             let family_names = get_fallback_font_families(font_context);
-            
+
             // Append the element's font family.
             if let Some(font_family) = self.style.font_family() {
                 if let Some(font_family) = FontFamily::parse(font_family) {
@@ -271,12 +272,12 @@ impl TextState {
                     font_families.push(FontFamily::parse(family_name).unwrap());
                 }
             }
-            
-            let font_stack =  FontStack::from(font_families.as_slice());
+
+            let font_stack = FontStack::from(font_families.as_slice());
             let root_style = style_to_parley_style(&self.style, font_stack);
-            
-            
-            let mut builder = build_text_layout_tree(font_context, font_layout_context, &root_style, &self.children, &self.fragments);
+
+            let mut builder =
+                build_text_layout_tree(font_context, font_layout_context, &root_style, &self.children, &self.fragments);
             let (mut layout, _text): (Layout<Brush>, String) = builder.build();
             recompute_layout_from_cache_key(&mut layout, self.last_cache_key.as_ref().unwrap());
 
@@ -298,6 +299,5 @@ impl TextState {
                 height: computed_size.computed_height,
             }
         }
-
     }
 }

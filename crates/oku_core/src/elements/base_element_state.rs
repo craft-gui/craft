@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::elements::element_states::ElementState;
+use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseElementState {
@@ -10,5 +10,5 @@ pub struct BaseElementState {
     pub(crate) pointer_capture: HashMap<i64, bool>,
 }
 
-// HACK: Remove this and all usages when pointer capture per device works. 
+// HACK: Remove this and all usages when pointer capture per device works.
 pub(crate) const DUMMY_DEVICE_ID: i64 = -1;

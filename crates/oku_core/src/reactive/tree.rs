@@ -1,17 +1,17 @@
-use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn, UpdateResult};
-use crate::components::props::Props;
+use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn};
+use crate::components::{Props, UpdateResult};
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBox};
 use crate::events::{Event, Message, OkuMessage};
-use crate::reactive::element_id::{create_unique_element_id};
+use crate::reactive::element_id::create_unique_element_id;
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use parley::FontContext;
 
-use std::collections::{HashMap, HashSet};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::GlobalState;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -107,7 +107,7 @@ pub(crate) fn diff_trees(
             0,
             ElementStateStoreItem {
                 base: Default::default(),
-                data: Box::new(ContainerState::default())
+                data: Box::new(ContainerState::default()),
             },
         );
 
@@ -126,23 +126,19 @@ pub(crate) fn diff_trees(
             component: ComponentOrElement::Element(root_element.clone()),
             key: None,
             props: None,
-            children: vec![
-                component_specification
-            ],
+            children: vec![component_specification],
         };
-        
+
         let mut new_component_ids: HashSet<ComponentId> = HashSet::new();
         let mut new_element_ids: HashSet<ComponentId> = HashSet::new();
         let mut pointer_captures: HashMap<i64, ComponentId> = HashMap::new();
 
-        let mut to_visit: Vec<TreeVisitorNode> = vec![
-            TreeVisitorNode {
-                component_specification: root_spec.children[0].clone(),
-                parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
-                parent_component_node: component_root,
-                old_component_node: old_component_tree_as_ptr,
-            }
-        ];
+        let mut to_visit: Vec<TreeVisitorNode> = vec![TreeVisitorNode {
+            component_specification: root_spec.children[0].clone(),
+            parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
+            parent_component_node: component_root,
+            old_component_node: old_component_tree_as_ptr,
+        }];
 
         while let Some(tree_node) = to_visit.pop() {
             let old_tag = tree_node.old_component_node.map(|old_node| (*old_node).tag.as_str());
@@ -165,21 +161,19 @@ pub(crate) fn diff_trees(
                             should_update = true;
                             (*tree_node.old_component_node.unwrap()).id
                         }
-                        _ => {
-                            create_unique_element_id()
-                        }
+                        _ => create_unique_element_id(),
                     };
                     element.internal.set_component_id(id);
                     // Collect the element id for later use.
                     new_element_ids.insert(id);
-                    
+
                     if should_update {
                         // Collect the pointer captures.
                         let base_state = element.internal.get_base_state(element_state);
-                        // FIXME: Collect pointer captures with the correct device id. 
+                        // FIXME: Collect pointer captures with the correct device id.
                         for (device_id, is_captured) in &base_state.base.pointer_capture {
                             if *is_captured {
-                                pointer_captures.insert(DUMMY_DEVICE_ID/*device_id*/, id);
+                                pointer_captures.insert(DUMMY_DEVICE_ID /*device_id*/, id);
                             }
                         }
 
@@ -261,20 +255,21 @@ pub(crate) fn diff_trees(
                     let props = new_spec.props.unwrap_or((component_data.default_props)());
 
                     let mut should_update = false;
-                    let id: ComponentId = if new_spec.key.is_some() && children_keys.contains_key(new_spec.key.as_deref().unwrap()) {
-                        *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
-                    } else if let Some(old_tag) = old_tag {
-                        if component_data.tag.as_str() == old_tag {
-                            // If the old tag is the same as the new tag, we can reuse the old id.
-                            should_update = true;
-                            (*tree_node.old_component_node.unwrap()).id
+                    let id: ComponentId =
+                        if new_spec.key.is_some() && children_keys.contains_key(new_spec.key.as_deref().unwrap()) {
+                            *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
+                        } else if let Some(old_tag) = old_tag {
+                            if component_data.tag.as_str() == old_tag {
+                                // If the old tag is the same as the new tag, we can reuse the old id.
+                                should_update = true;
+                                (*tree_node.old_component_node.unwrap()).id
+                            } else {
+                                create_unique_element_id()
+                            }
                         } else {
                             create_unique_element_id()
-                        }
-                    } else {
-                        create_unique_element_id()
-                    };
-                    
+                        };
+
                     // Collect the component id for later use.
                     new_component_ids.insert(id);
 
@@ -319,11 +314,9 @@ pub(crate) fn diff_trees(
 
                     // Get the old component node or none.
                     // NOTE: ComponentSpecs can only have one child.
-                    let old_component_tree = tree_node
-                        .old_component_node
-                        .and_then(|old_node| {
-                            (*old_node).children.get(0).map(|child| child as *const ComponentTreeNode)
-                        });
+                    let old_component_tree = tree_node.old_component_node.and_then(|old_node| {
+                        (*old_node).children.get(0).map(|child| child as *const ComponentTreeNode)
+                    });
 
                     // Add the computed component spec to the to visit list.
                     to_visit.push(TreeVisitorNode {
@@ -341,7 +334,7 @@ pub(crate) fn diff_trees(
             element_tree: root_element,
             element_ids: new_element_ids,
             component_ids: new_component_ids,
-            pointer_captures
+            pointer_captures,
         }
     }
 }

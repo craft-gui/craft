@@ -18,10 +18,7 @@ impl ElementRectangle {
     }
 
     pub fn margin_rectangle_position(&self) -> Point {
-        Point::new(
-            self.position.x - self.margin.left,
-            self.position.y - self.margin.top,
-        )
+        Point::new(self.position.x - self.margin.left, self.position.y - self.margin.top)
     }
 
     pub fn margin_rectangle_size(&self) -> Size {
@@ -53,10 +50,7 @@ impl ElementRectangle {
     }
 
     pub fn border_rectangle_position(&self) -> Point {
-        Point::new(
-            self.position.x,
-            self.position.y,
-        )
+        Point::new(self.position.x, self.position.y)
     }
 
     pub fn border_rectangle(&self) -> Rectangle {
@@ -83,10 +77,7 @@ impl ElementRectangle {
     pub fn padding_rectangle_position(&self) -> Point {
         let padding_x = self.position.x + self.border.left;
         let padding_y = self.position.y + self.border.top;
-        Point::new(
-            padding_x,
-            padding_y,
-        )
+        Point::new(padding_x, padding_y)
     }
 
     pub fn padding_rectangle(&self) -> Rectangle {
@@ -102,32 +93,23 @@ impl ElementRectangle {
     }
 
     pub fn content_rectangle_size(&self) -> Size {
-        let content_width = self.size.width - self.padding.left - self.padding.right - self.border.left - self.border.right;
-        let content_height = self.size.height - self.padding.top - self.padding.bottom - self.border.top - self.border.bottom;
-        Size::new(
-            content_width,
-            content_height,
-        )
+        let content_width =
+            self.size.width - self.padding.left - self.padding.right - self.border.left - self.border.right;
+        let content_height =
+            self.size.height - self.padding.top - self.padding.bottom - self.border.top - self.border.bottom;
+        Size::new(content_width, content_height)
     }
 
     pub fn content_rectangle_position(&self) -> Point {
         let content_x = self.position.x + self.border.left + self.padding.left;
         let content_y = self.position.y + self.border.top + self.padding.top;
-        Point::new(
-            content_x,
-            content_y,
-        )
+        Point::new(content_x, content_y)
     }
 
     pub fn content_rectangle(&self) -> Rectangle {
         let content_position = self.content_rectangle_position();
         let content_size = self.content_rectangle_size();
 
-        Rectangle::new(
-            content_position.x,
-            content_position.y,
-            content_size.width,
-            content_size.height,
-        )
+        Rectangle::new(content_position.x, content_position.y, content_size.width, content_size.height)
     }
 }

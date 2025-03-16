@@ -1,13 +1,13 @@
+use crate::elements::text_input::editor::Editor;
+use crate::elements::text_input::plain_text_editor::PlainEditor;
+use crate::renderer::color::palette;
+use parley::{GlyphRun, Style};
 use peniko::Brush;
 use vello::{
     kurbo::{Affine, Line, Stroke},
     peniko::Fill,
     Scene,
 };
-use parley::{GlyphRun, Style};
-use crate::elements::text_input::editor::Editor;
-use crate::elements::text_input::plain_text_editor::PlainEditor;
-use crate::renderer::color::palette;
 
 pub(crate) fn draw_cursor(scene: &mut Scene, transform: &Affine, editor: &Editor) {
     if editor.cursor_visible {
@@ -19,13 +19,7 @@ pub(crate) fn draw_cursor(scene: &mut Scene, transform: &Affine, editor: &Editor
 
 pub(crate) fn draw_selection(scene: &mut Scene, transform: &Affine, plain_editor: &PlainEditor<Brush>) {
     for rect in plain_editor.selection_geometry().iter() {
-        scene.fill(
-            Fill::NonZero,
-            *transform,
-            palette::css::STEEL_BLUE,
-            None,
-            &rect,
-        );
+        scene.fill(Fill::NonZero, *transform, palette::css::STEEL_BLUE, None, &rect);
     }
 }
 
@@ -54,17 +48,16 @@ pub(crate) fn draw_underline(scene: &mut Scene, transform: &Affine, glyph_run: &
             (glyph_run.offset() as f64, y as f64),
             ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
         );
-        scene.stroke(
-            &Stroke::new(width.into()),
-            *transform,
-            underline_brush,
-            None,
-            &line,
-        );
+        scene.stroke(&Stroke::new(width.into()), *transform, underline_brush, None, &line);
     }
 }
 
-pub(crate) fn draw_strikethrough(scene: &mut Scene, transform: &Affine, glyph_run: &GlyphRun<Brush>, style: &Style<Brush>) {
+pub(crate) fn draw_strikethrough(
+    scene: &mut Scene,
+    transform: &Affine,
+    glyph_run: &GlyphRun<Brush>,
+    style: &Style<Brush>,
+) {
     if let Some(strikethrough) = &style.strikethrough {
         let strikethrough_brush = &style.brush;
         let run_metrics = glyph_run.run().metrics();
@@ -86,13 +79,7 @@ pub(crate) fn draw_strikethrough(scene: &mut Scene, transform: &Affine, glyph_ru
             (glyph_run.offset() as f64, y as f64),
             ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
         );
-        scene.stroke(
-            &Stroke::new(width.into()),
-            *transform,
-            strikethrough_brush,
-            None,
-            &line,
-        );
+        scene.stroke(&Stroke::new(width.into()), *transform, strikethrough_brush, None, &line);
     }
 }
 
@@ -103,9 +90,7 @@ pub(crate) fn draw_glyphs(scene: &mut Scene, transform: &Affine, glyph_run: &Gly
     let font = run.font();
     let font_size = run.font_size();
     let synthesis = run.synthesis();
-    let glyph_xform = synthesis
-        .skew()
-        .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
+    let glyph_xform = synthesis.skew().map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
     scene
         .draw_glyphs(font)
         .brush(&style.brush)

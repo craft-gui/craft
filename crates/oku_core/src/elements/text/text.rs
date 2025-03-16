@@ -11,7 +11,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
 
-use crate::components::props::Props;
+use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::text::parley::{recompute_layout_from_cache_key, TextHashKey, TextHashValue};
 use crate::geometry::Point;
@@ -23,7 +23,9 @@ pub enum TextFragment {
     InlineComponentSpecification(u32),
 }
 
-// A stateful element that shows text.
+/// An element for displaying text.
+///
+/// Text may consist of strings, spans, or inline elements.
 #[derive(Clone, Default, Debug)]
 pub struct Text {
     fragments: Vec<TextFragment>,
@@ -38,18 +40,16 @@ pub struct TextState {
     pub layout: Layout<Brush>,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_cache_key: Option<TextHashKey>,
-    /// We need to update the text layout in finalize_layout if the constraints or available space have changed since the last layout pass 
-    /// AND the last layout operation was a text size cache hit. 
-    /// 
+    /// We need to update the text layout in finalize_layout if the constraints or available space have changed since the last layout pass
+    /// AND the last layout operation was a text size cache hit.
+    ///
     /// This may be true because the cached text size that we retrieve does not map to the current layout which is computed during the last cache miss.
     pub should_recompute_final_text_layout: bool,
     pub reload_fonts: bool,
 }
 
 impl TextState {
-    pub(crate) fn new(
-        id: ComponentId,
-    ) -> Self {
+    pub(crate) fn new(id: ComponentId) -> Self {
         Self {
             id,
             fragments: Vec::new(),
@@ -82,7 +82,14 @@ impl Text {
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut TextState {
-        element_state.storage.get_mut(&self.common_element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
+        element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap()
     }
 }
 
@@ -112,8 +119,7 @@ impl Element for Text {
         _element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
-        let computed_layer_rectangle_transformed =
-            self.common_element_data.computed_layered_rectangle_transformed;
+        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
         let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -134,12 +140,14 @@ impl Element for Text {
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
-            .new_leaf_with_context(
-                style,
-                LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id)),
-            )
-            .unwrap());
+        self.common_element_data_mut().taffy_node_id = Some(
+            taffy_tree
+                .new_leaf_with_context(
+                    style,
+                    LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id)),
+                )
+                .unwrap(),
+        );
 
         self.common_element_data().taffy_node_id
     }
@@ -156,18 +164,18 @@ impl Element for Text {
         _pointer: Option<Point>,
     ) {
         let state = self.get_state_mut(element_state);
-        
+
         // We may need to recompute the final text layout, read the documentation for should_recompute_final_text_layout to find out more.
         if state.should_recompute_final_text_layout {
             if let Some(last_cache_key) = &state.last_cache_key {
                 recompute_layout_from_cache_key(&mut state.layout, last_cache_key);
             }
         }
-        
+
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
-        
+
         state.reload_fonts = false;
     }
 
@@ -176,15 +184,13 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
-        let mut state = TextState::new(
-            self.common_element_data.component_id,
-        );
+        let mut state = TextState::new(self.common_element_data.component_id);
 
         self.update_state_fragments(&mut state);
 
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(state)
+            data: Box::new(state),
         }
     }
 
@@ -218,7 +224,8 @@ impl Text {
 
     pub fn push_inline(mut self, inline_component: ComponentSpecification) -> Self {
         self = self.push(inline_component);
-        self.fragments.push(TextFragment::InlineComponentSpecification(self.common_element_data().child_specs.len() as u32 - 1));
+        self.fragments
+            .push(TextFragment::InlineComponentSpecification(self.common_element_data().child_specs.len() as u32 - 1));
         self
     }
 }

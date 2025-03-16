@@ -1,6 +1,6 @@
 use crate::resource_manager::identifier::ResourceIdentifier;
-use chrono::{DateTime, Utc};
 use crate::resource_manager::resource_type::ResourceType;
+use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl ResourceData {
             resource_identifier,
             expiration_time,
             data,
-            resource_type
+            resource_type,
         }
     }
 }

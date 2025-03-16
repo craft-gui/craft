@@ -7,6 +7,7 @@ use oku::components::ComponentSpecification;
 use oku::components::{Component, UpdateResult};
 //use oku::elements::text_input::TextInput;
 use oku::elements::ElementStyles;
+use oku::elements::TextInput;
 use oku::elements::{Container, Font, Text};
 use oku::events::Message;
 use oku::events::{Event, OkuMessage};
@@ -15,7 +16,6 @@ use oku::resource_manager::ResourceIdentifier;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::RendererType;
-use oku::elements::TextInput;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -26,7 +26,11 @@ const FONT: &str =
 impl Component for TextState {
     type Props = ();
 
-    fn view_with_no_global_state(_state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
+    fn view_with_no_global_state(
+        _state: &Self,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
+    ) -> ComponentSpecification {
         Container::new()
             .flex_direction(FlexDirection::Row)
             .push(Text::new("Hello, World!").id("hello_text"))

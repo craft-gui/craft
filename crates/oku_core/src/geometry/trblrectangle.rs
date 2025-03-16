@@ -1,6 +1,5 @@
-
 #[derive(Copy, Clone, Debug, Default)]
-pub struct TrblRectangle{
+pub struct TrblRectangle {
     pub top: f32,
     pub right: f32,
     pub bottom: f32,

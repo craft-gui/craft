@@ -1,10 +1,12 @@
+use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Wrap};
 use taffy::{FlexWrap, Overflow};
 use winit::dpi::{LogicalPosition, PhysicalPosition};
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Wrap};
 
 fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::Dimension {
     match unit {
-        Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
+        Unit::Px(px) => taffy::Dimension::Length(
+            PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
+        ),
         Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
         Unit::Auto => taffy::Dimension::Auto,
     }
@@ -12,7 +14,9 @@ fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> t
 
 fn unit_to_taffy_lengthpercentageauto_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentageAuto {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentageAuto::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
+        Unit::Px(px) => taffy::LengthPercentageAuto::Length(
+            PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
+        ),
         Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
         Unit::Auto => taffy::LengthPercentageAuto::Auto,
     }
@@ -20,7 +24,9 @@ fn unit_to_taffy_lengthpercentageauto_with_scale_factor(unit: Unit, scale_factor
 
 fn unit_to_taffy_length_percentage_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentage {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentage::Length(PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x),
+        Unit::Px(px) => taffy::LengthPercentage::Length(
+            PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
+        ),
         Unit::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage / 100.0),
         Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
     }
@@ -84,7 +90,6 @@ impl Style {
             bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset()[2], scale_factor),
         };
 
-
         let align_items = match style.align_items() {
             None => None,
             Some(AlignItems::Start) => Some(taffy::AlignItems::Start),
@@ -122,10 +127,17 @@ impl Style {
             Wrap::WrapReverse => FlexWrap::WrapReverse,
         };
 
-        let flex_grow = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_grow(), style.flex_grow()), scale_factor).x;
-        let flex_shrink = PhysicalPosition::from_logical(LogicalPosition::new(style.flex_shrink(), style.flex_shrink()), scale_factor).x;
+        let flex_grow =
+            PhysicalPosition::from_logical(LogicalPosition::new(style.flex_grow(), style.flex_grow()), scale_factor).x;
+        let flex_shrink = PhysicalPosition::from_logical(
+            LogicalPosition::new(style.flex_shrink(), style.flex_shrink()),
+            scale_factor,
+        )
+        .x;
         let flex_basis: taffy::Dimension = match style.flex_basis() {
-            Unit::Px(px) => taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x),
+            Unit::Px(px) => {
+                taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x)
+            }
             Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
             Unit::Auto => taffy::Dimension::Auto,
         };
@@ -142,7 +154,11 @@ impl Style {
         let overflow_x = overflow_to_taffy_overflow(style.overflow()[0]);
         let overflow_y = overflow_to_taffy_overflow(style.overflow()[1]);
 
-        let scrollbar_width = PhysicalPosition::from_logical(LogicalPosition::new(style.scrollbar_width(), style.scrollbar_width()), scale_factor).x;
+        let scrollbar_width = PhysicalPosition::from_logical(
+            LogicalPosition::new(style.scrollbar_width(), style.scrollbar_width()),
+            scale_factor,
+        )
+        .x;
 
         let box_sizing = taffy::BoxSizing::BorderBox;
 

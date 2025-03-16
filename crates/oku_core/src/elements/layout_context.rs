@@ -8,8 +8,8 @@ use peniko::Brush;
 
 use taffy::Size;
 
-use tokio::sync::RwLockReadGuard;
 use crate::elements::text_input::text_input::TextInputState;
+use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
@@ -20,17 +20,13 @@ pub struct TaffyTextInputContext {
 
 impl TaffyTextContext {
     pub fn new(id: ComponentId) -> Self {
-        Self {
-            id,
-        }
+        Self { id }
     }
 }
 
 impl TaffyTextInputContext {
     pub fn new(id: ComponentId) -> Self {
-        Self {
-            id,
-        }
+        Self { id }
     }
 }
 
@@ -106,31 +102,27 @@ pub fn measure_content(
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
-    if let Size { width: Some(width), height: Some(height) } = known_dimensions {
+    if let Size {
+        width: Some(width),
+        height: Some(height),
+    } = known_dimensions
+    {
         return Size { width, height };
     }
 
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
+            let text_state: &mut TextState =
+                element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.measure(
-                known_dimensions,
-                available_space,
-                font_context,
-                font_layout_context
-            )
+            text_state.measure(known_dimensions, available_space, font_context, font_layout_context)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
+            let text_input_state: &mut TextInputState =
+                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_input_state.measure(
-                known_dimensions,
-                available_space,
-                font_context,
-                font_layout_context
-            )
+            text_input_state.measure(known_dimensions, available_space, font_context, font_layout_context)
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)

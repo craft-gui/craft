@@ -15,9 +15,7 @@ impl Side {
         // right -> bottom
         // bottom -> left
         // left -> top
-        unsafe {
-            std::mem::transmute(((self as usize) + 1) & 3)
-        }
+        unsafe { std::mem::transmute(((self as usize) + 1) & 3) }
     }
 
     pub(crate) fn as_corner(self) -> Corner {
