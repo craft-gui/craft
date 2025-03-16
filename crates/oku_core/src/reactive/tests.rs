@@ -33,7 +33,6 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 
@@ -44,7 +43,6 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 
@@ -75,7 +73,6 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 
@@ -86,7 +83,6 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 
@@ -115,7 +111,6 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_context,
         false,
     );
 
@@ -135,7 +130,6 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_context,
         false,
     );
 
@@ -192,7 +186,6 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_context,
         false,
     );
 
@@ -212,7 +205,6 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
-        &mut font_context,
         false,
     );
 
@@ -250,7 +242,6 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 
@@ -261,7 +252,6 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut user_state,
         &mut global_state,
         &mut element_state,
-        &mut font_context,
         false,
     );
 

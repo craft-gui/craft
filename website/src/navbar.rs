@@ -21,10 +21,10 @@ impl Component<WebsiteGlobalState> for Navbar {
     type Props = ();
 
     fn view(
-        state: &Self,
-        global_state: &WebsiteGlobalState,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _state: &Self,
+        _global_state: &WebsiteGlobalState,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)

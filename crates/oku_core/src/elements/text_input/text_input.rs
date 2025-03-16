@@ -1,6 +1,6 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextInputContext};
+use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Style, Unit};
@@ -65,27 +65,14 @@ impl TextInputState {
             taffy::AvailableSpace::Definite(width) => Some(width),
         });
 
-        let height_constraint = known_dimensions.height;
-
-        let available_space_width_u32: AvailableSpace = match available_space.width {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
-        };
-        let available_space_height_u32: AvailableSpace = match available_space.height {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
-        };
-
         self.editor.editor.set_width(width_constraint);
         self.editor.editor.update_layout(font_context, font_layout_context);
         let width = self.editor.editor.layout.width();
         let height = self.editor.editor.layout.height();
 
         taffy::Size {
-            width: width,
-            height: height,
+            width,
+            height,
         }
     }
 }
@@ -154,15 +141,14 @@ impl Element for TextInput {
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color(),
         );
     }
 
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_context: &mut FontContext,
-        element_state: &mut ElementStateStore,
+        _font_context: &mut FontContext,
+        _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
@@ -201,7 +187,7 @@ impl Element for TextInput {
         self
     }
 
-    fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
+    fn initialize_state(&self) -> ElementStateStoreItem {
         let mut state = TextInputState::new(self.common_element_data.component_id, &self.text, *self.style());
 
         self.update_state_fragments(&mut state);
@@ -212,7 +198,7 @@ impl Element for TextInput {
         }
     }
 
-    fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
+    fn update_state(&self, element_state: &mut ElementStateStore, _reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
     }

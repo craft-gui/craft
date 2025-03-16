@@ -66,7 +66,6 @@ mod tests {
             &mut user_state,
             &mut global_state,
             &mut element_state,
-            &mut font_context,
             false,
         );
 

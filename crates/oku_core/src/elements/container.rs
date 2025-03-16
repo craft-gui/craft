@@ -262,7 +262,7 @@ impl Element for Container {
         }
     }
 
-    fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
+    fn initialize_state(&self) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(ContainerState::default()),
@@ -274,17 +274,6 @@ impl Container {
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &ContainerState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ContainerState {
-        element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap()
     }
 
     pub fn new() -> Container {

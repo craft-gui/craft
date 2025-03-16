@@ -839,8 +839,6 @@ async fn update_reactive_tree(
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
     resource_manager: Arc<RwLock<ResourceManager>>,
-    font_context: &mut FontContext,
-    font_layout_context: &mut parley::LayoutContext<Brush>,
     should_reload_fonts: &mut bool,
 ) {
     let window_element = Container::new().into();
@@ -856,7 +854,6 @@ async fn update_reactive_tree(
             &mut reactive_tree.user_state,
             global_state,
             &mut reactive_tree.element_state,
-            font_context,
             *should_reload_fonts,
         )
     };
@@ -866,8 +863,7 @@ async fn update_reactive_tree(
     scan_view_for_resources(
         new_tree.element_tree.internal.as_ref(),
         &new_tree.component_tree,
-        resource_manager.clone(),
-        font_context,
+        resource_manager.clone()
     )
     .await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
@@ -944,8 +940,6 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         &mut app.user_tree,
         &mut app.global_state,
         app.resource_manager.clone(),
-        font_context,
-        font_layout_context,
         &mut app.reload_fonts,
     )
     .await;
@@ -992,8 +986,6 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 &mut app.dev_tree,
                 &mut app.global_state,
                 app.resource_manager.clone(),
-                font_context,
-                font_layout_context,
                 &mut app.reload_fonts,
             )
             .await;

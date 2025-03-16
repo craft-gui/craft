@@ -12,7 +12,7 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawText(Rectangle, ComponentId, Color),
+    DrawText(Rectangle, ComponentId),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
@@ -40,7 +40,7 @@ pub trait Renderer {
 
     fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
     fn push_layer(&mut self, rect: Rectangle);

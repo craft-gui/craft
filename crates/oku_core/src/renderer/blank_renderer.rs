@@ -31,7 +31,7 @@ impl Renderer for BlankRenderer {
 
     fn fill_bez_path(&mut self, _path: BezPath, _color: Color) {}
 
-    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle, _fill_color: Color) {}
+    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle) {}
 
     fn draw_image(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
 

@@ -184,7 +184,7 @@ impl Element for DevTools {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_context: &mut FontContext) -> ElementStateStoreItem {
+    fn initialize_state(&self) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DevToolsState::default()),

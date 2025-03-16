@@ -78,9 +78,4 @@ impl UpdateResult {
         self.propagate = false;
         self
     }
-
-    pub(crate) fn result_message(mut self, message: OkuMessage) -> Self {
-        self.result_message = Some(message);
-        self
-    }
 }

@@ -90,7 +90,6 @@ impl Element for Span {
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color(),
         );
     }
 
@@ -125,8 +124,8 @@ impl Element for Span {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_context: &mut FontContext,
-        element_state: &mut ElementStateStore,
+        _font_context: &mut FontContext,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -139,7 +138,7 @@ impl Element for Span {
         self
     }
 
-    fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
+    fn initialize_state(&self) -> ElementStateStoreItem {
         let state = SpanState::new(self.common_element_data.component_id);
 
         ElementStateStoreItem {
@@ -148,7 +147,7 @@ impl Element for Span {
         }
     }
 
-    fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
+    fn update_state(&self, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
     }
 }

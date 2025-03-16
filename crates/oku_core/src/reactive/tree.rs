@@ -86,7 +86,6 @@ pub(crate) fn diff_trees(
     user_state: &mut StateStore,
     global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
-    font_context: &mut FontContext,
     reload_fonts: bool,
 ) -> DiffTreesResult {
     unsafe {
@@ -171,15 +170,15 @@ pub(crate) fn diff_trees(
                         // Collect the pointer captures.
                         let base_state = element.internal.get_base_state(element_state);
                         // FIXME: Collect pointer captures with the correct device id.
-                        for (device_id, is_captured) in &base_state.base.pointer_capture {
+                        for (_device_id, is_captured) in &base_state.base.pointer_capture {
                             if *is_captured {
                                 pointer_captures.insert(DUMMY_DEVICE_ID /*device_id*/, id);
                             }
                         }
 
-                        element.internal.update_state(font_context, element_state, reload_fonts);
+                        element.internal.update_state(element_state, reload_fonts);
                     } else {
-                        let state = element.internal.initialize_state(font_context);
+                        let state = element.internal.initialize_state();
                         element_state.storage.insert(id, state);
                     }
 

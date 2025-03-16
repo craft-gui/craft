@@ -5,8 +5,6 @@ use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
 use crate::resource_manager::ResourceManager;
 
-use parley::FontContext;
-
 use tokio::sync::RwLock;
 
 use std::sync::Arc;
@@ -18,7 +16,6 @@ pub async fn scan_view_for_resources(
     element: &dyn Element,
     component: &ComponentTreeNode,
     resource_manager: Arc<RwLock<ResourceManager>>,
-    font_context: &mut FontContext,
 ) {
     let fiber: FiberNode = FiberNode {
         element: Some(element),

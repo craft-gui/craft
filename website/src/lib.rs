@@ -37,10 +37,10 @@ impl Component<WebsiteGlobalState> for Website {
     type Props = ();
 
     fn view(
-        state: &Self,
+        _state: &Self,
         global_state: &WebsiteGlobalState,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)
@@ -59,7 +59,7 @@ impl Component<WebsiteGlobalState> for Website {
 
     fn update(
         _state: &mut Self,
-        global_state: &mut WebsiteGlobalState,
+        _global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
         _message: Event,
     ) -> UpdateResult {

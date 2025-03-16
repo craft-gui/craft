@@ -12,10 +12,10 @@ impl Component<WebsiteGlobalState> for About {
     type Props = ();
 
     fn view(
-        state: &Self,
-        global_state: &WebsiteGlobalState,
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
+        _state: &Self,
+        _global_state: &WebsiteGlobalState,
+        _props: &Self::Props,
+        _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -34,10 +34,10 @@ impl Component<WebsiteGlobalState> for About {
     }
 
     fn update(
-        state: &mut Self,
+        _state: &mut Self,
         _global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
-        event: Event,
+        _event: Event,
     ) -> UpdateResult {
         UpdateResult::default()
     }

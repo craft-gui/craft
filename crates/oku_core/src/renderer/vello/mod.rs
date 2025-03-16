@@ -6,14 +6,14 @@ use crate::elements::text::text::TextState;
 use crate::elements::text_input::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::color::{palette, Color};
+use crate::renderer::color::{Color};
 use crate::renderer::renderer::{RenderCommand, Renderer};
 use crate::renderer::vello::image_adapter::ImageAdapter;
 use crate::renderer::vello::text::{draw_cursor, draw_glyphs, draw_selection, draw_strikethrough, draw_underline};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use parley::{FontContext, PositionedLayoutItem};
-use peniko::kurbo::{BezPath, Stroke};
+use peniko::kurbo::{BezPath};
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
@@ -151,7 +151,7 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id, fill_color) => {
+                RenderCommand::DrawText(rect, component_id) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
 
                     if let Some(text_state) =
@@ -267,8 +267,8 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -283,7 +283,7 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn load_font(&mut self, font_context: &mut FontContext) {}
+    fn load_font(&mut self, _font_context: &mut FontContext) {}
 
     fn prepare(
         &mut self,

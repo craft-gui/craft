@@ -127,15 +127,14 @@ impl Element for Text {
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color(),
         );
     }
 
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_context: &mut FontContext,
-        element_state: &mut ElementStateStore,
+        _font_context: &mut FontContext,
+        _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
@@ -183,7 +182,7 @@ impl Element for Text {
         self
     }
 
-    fn initialize_state(&self, font_context: &mut FontContext) -> ElementStateStoreItem {
+    fn initialize_state(&self) -> ElementStateStoreItem {
         let mut state = TextState::new(self.common_element_data.component_id);
 
         self.update_state_fragments(&mut state);
@@ -194,7 +193,7 @@ impl Element for Text {
         }
     }
 
-    fn update_state(&self, font_context: &mut FontContext, element_state: &mut ElementStateStore, reload_fonts: bool) {
+    fn update_state(&self, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
         state.reload_fonts = reload_fonts;

@@ -66,7 +66,7 @@ impl Component<()> for DevToolsComponent {
             .component()
     }
 
-    fn update(state: &mut Self, global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
         Self::update_with_no_global_state(state, props, event)
     }
 

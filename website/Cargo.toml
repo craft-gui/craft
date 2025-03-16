@@ -21,15 +21,3 @@ console_error_panic_hook = "0.1.7"
 version = "0.12.12"
 default-features = false
 features = ["rustls-tls", "json"]
-
-[profile.release]
-opt-level = "z"
-lto = true
-codegen-units = 1
-strip = true
-debug = false
-
-# binary
-[[bin]]
-name = "website"
-path = "src/lib.rs"

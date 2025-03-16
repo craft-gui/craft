@@ -1,10 +1,9 @@
-// use accesskit::{Node, TreeUpdate};
 use core::default::Default;
-use parley::{FontFamily, FontStack, GenericFamily, StyleProperty};
+use parley::{FontFamily, GenericFamily, StyleProperty};
 use std::time::{Duration, Instant};
-use vello::{peniko::color::palette, peniko::Brush};
+use vello::{peniko::Brush};
 use winit::{
-    event::{Ime, Modifiers, WindowEvent},
+    event::{Ime, Modifiers},
     keyboard::{Key, NamedKey},
 };
 

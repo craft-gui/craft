@@ -169,8 +169,8 @@ impl ApplicationHandler for OkuWinitState {
                     true,
                 );
             }
-            WindowEvent::Ime(Ime) => {
-                self.send_message(InternalMessage::Ime(Ime), true);
+            WindowEvent::Ime(ime) => {
+                self.send_message(InternalMessage::Ime(ime), true);
             }
             WindowEvent::RedrawRequested => {
                 // We want to do any window operations within the main thread.

@@ -4,7 +4,6 @@ mod ani_list;
 mod util;
 
 use ani_list::{anime_view, AniListResponse, QUERY};
-use std::any::Any;
 use util::setup_logging;
 use AniListMessage::StateChange;
 
