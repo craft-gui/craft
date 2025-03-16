@@ -15,7 +15,7 @@ use oku::resource_manager::ResourceIdentifier;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::RendererType;
-use oku_core::elements::TextInput;
+use oku::elements::TextInput;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -28,11 +28,12 @@ impl Component for TextState {
 
     fn view_with_no_global_state(_state: &Self, _props: &Self::Props, _children: Vec<ComponentSpecification>) -> ComponentSpecification {
         Container::new()
-            .flex_direction(FlexDirection::Column)
+            .flex_direction(FlexDirection::Row)
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
+            .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()
     }
 
