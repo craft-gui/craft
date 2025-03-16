@@ -11,8 +11,8 @@ use crate::renderer::color::palette;
 
 pub(crate) fn draw_cursor(scene: &mut Scene, transform: &Affine, editor: &Editor) {
     if editor.cursor_visible {
-        if let Some(cursor) = editor.editor.cursor_geometry(1.5) {
-            scene.fill(Fill::NonZero, *transform, palette::css::WHITE, None, &cursor);
+        if let Some(cursor) = editor.editor.cursor_geometry(1.0) {
+            scene.fill(Fill::NonZero, *transform, palette::css::BLACK, None, &cursor);
         }
     }
 }

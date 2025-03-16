@@ -15,6 +15,7 @@ use oku::resource_manager::ResourceIdentifier;
 use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::RendererType;
+use oku_core::elements::TextInput;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -31,7 +32,7 @@ impl Component for TextState {
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
-           // .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
+            .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
             .component()
     }
 

@@ -77,7 +77,7 @@ impl Editor {
             click_count: Default::default(),
             pointer_down: Default::default(),
             cursor_pos: Default::default(),
-            cursor_visible: Default::default(),
+            cursor_visible: true,
             modifiers: Default::default(),
             start_time: Default::default(),
             blink_period: Default::default(),
