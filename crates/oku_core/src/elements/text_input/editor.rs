@@ -8,7 +8,7 @@ use winit::{
 };
 
 use crate::elements::text_input::driver::PlainEditorDriver;
-use crate::elements::text_input::plain_text_editor::{PlainEditor, SplitString};
+use crate::elements::text_input::plain_text_editor::{PlainEditor};
 use crate::events::OkuMessage;
 use crate::style::Style;
 use parley::{FontContext, LayoutContext};
@@ -34,14 +34,14 @@ impl Editor {
         editor.set_scale(1.0);
 
         let text_brush = Brush::Solid(style.color());
-        
+
         //// Append the element's font family.
         //if let Some(font_family) = style.font_family() {
         //    if let Some(font_family) = FontFamily::parse(font_family) {
         //        font_families.push(font_family);
         //    }
         //};
-        
+
         // let family_names = get_fallback_font_families(font_context);
         // // Append the fallback fonts.
         // {
@@ -79,41 +79,11 @@ impl Editor {
         self.editor.driver(&mut self.font_cx, &mut self.layout_cx)
     }
 
-    pub fn editor(&mut self) -> &mut PlainEditor<Brush> {
-        &mut self.editor
-    }
-
-    pub fn text(&self) -> SplitString<'_> {
-        self.editor.text()
-    }
-
     pub fn cursor_reset(&mut self) {
         self.start_time = Some(Instant::now());
         // TODO: for real world use, this should be reading from the system settings
         self.blink_period = Duration::from_millis(500);
         self.cursor_visible = true;
-    }
-
-    pub fn disable_blink(&mut self) {
-        self.start_time = None;
-    }
-
-    pub fn next_blink_time(&self) -> Option<Instant> {
-        self.start_time.map(|start_time| {
-            let phase = Instant::now().duration_since(start_time);
-
-            start_time
-                + Duration::from_nanos(
-                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
-                )
-        })
-    }
-
-    pub fn cursor_blink(&mut self) {
-        self.cursor_visible = self.start_time.is_some_and(|start_time| {
-            let elapsed = Instant::now().duration_since(start_time);
-            (elapsed.as_millis() / self.blink_period.as_millis()) % 2 == 0
-        });
     }
 
     pub fn handle_event(&mut self, event: OkuMessage, text_y: f32) {

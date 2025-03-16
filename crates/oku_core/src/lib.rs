@@ -72,6 +72,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use cfg_if::cfg_if;
 use oku_logging::{info, span, Level};
 use parley::fontique::{FallbackKey, FamilyId};
 use peniko::Brush;
@@ -132,30 +133,33 @@ impl App {
             #[allow(unused_mut)]
             let mut font_context = FontContext::new();
 
-            let mut fallback_family_ids: Vec<FamilyId> = Vec::new();
+            cfg_if! {
+                if #[cfg(not(target_arch = "wasm32"))] {
+                    let fallback_family_ids: Vec<FamilyId> = Vec::new();
+                } else {
+                    let mut fallback_family_ids: Vec<FamilyId> = Vec::new();
 
-            #[cfg(target_arch = "wasm32")]
-            let mut append_fallback_family_ids = |font_info: Vec<(FamilyId, Vec<FontInfo>)>| {
-                for f in font_info {
-                    fallback_family_ids.push(f.0);
+                    let mut append_fallback_family_ids = |font_info: Vec<(FamilyId, Vec<FontInfo>)>| {
+                        for f in font_info {
+                            fallback_family_ids.push(f.0);
+                        }
+                    };
+
+                    let fira_regular = font_context
+                        .collection
+                        .register_fonts(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
+                    let fira_bold =
+                        font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
+                    let fira_italic = font_context
+                        .collection
+                        .register_fonts(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
+
+                    append_fallback_family_ids(fira_regular);
+                    append_fallback_family_ids(fira_bold);
+                    append_fallback_family_ids(fira_italic);
                 }
-            };
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                let fira_regular = font_context
-                    .collection
-                    .register_fonts(include_bytes!("../../../fonts/FiraSans-Regular.ttf").to_vec());
-                let fira_bold =
-                    font_context.collection.register_fonts(include_bytes!("../../../fonts/FiraSans-Bold.ttf").to_vec());
-                let fira_italic = font_context
-                    .collection
-                    .register_fonts(include_bytes!("../../../fonts/FiraSans-Italic.ttf").to_vec());
-
-                append_fallback_family_ids(fira_regular);
-                append_fallback_family_ids(fira_bold);
-                append_fallback_family_ids(fira_italic);
             }
+
             font_context
                 .collection
                 .append_fallbacks(FallbackKey::from(OKU_FALLBACK_FONT_KEY), fallback_family_ids.iter().copied());
@@ -484,14 +488,8 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(
-        event,
-        &mut app.resource_manager,
-        app.mouse_position,
-        &mut app.dev_tree,
-        &mut app.global_state,
-    )
-    .await;
+    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state)
+        .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -509,14 +507,8 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(
-        event,
-        &mut app.resource_manager,
-        app.mouse_position,
-        &mut app.dev_tree,
-        &mut app.global_state,
-    )
-    .await;
+    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state)
+        .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -673,18 +665,12 @@ async fn dispatch_event(
             if !to_visit.unwrap().is_element {
                 closest_ancestor_component = Some(node);
                 to_visit = None;
+            } else if node.parent_id.is_none() {
+                to_visit = None;
             } else {
-                if node.parent_id.is_none() {
-                    to_visit = None;
-                } else {
-                    let parent_id = node.parent_id.unwrap();
-                    to_visit = reactive_tree
-                        .component_tree
-                        .as_ref()
-                        .unwrap()
-                        .pre_order_iter()
-                        .find(|node2| node2.id == parent_id);
-                }
+                let parent_id = node.parent_id.unwrap();
+                to_visit =
+                    reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
             }
         }
 
@@ -729,10 +715,7 @@ async fn dispatch_event(
                     break;
                 }
                 if element.component_id() == target_component_id {
-                    let res = element.on_event(
-                        event.clone(),
-                        &mut reactive_tree.element_state,
-                    );
+                    let res = element.on_event(event.clone(), &mut reactive_tree.element_state);
 
                     if let Some(result_message) = res.result_message {
                         element_events.push_back((result_message, element.get_id().clone()));
@@ -788,14 +771,8 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     .await;
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(
-        event,
-        &mut app.resource_manager,
-        app.mouse_position,
-        &mut app.dev_tree,
-        &mut app.global_state,
-    )
-    .await;
+    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state)
+        .await;
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -853,7 +830,7 @@ async fn update_reactive_tree(
     scan_view_for_resources(
         new_tree.element_tree.internal.as_ref(),
         &new_tree.component_tree,
-        resource_manager.clone()
+        resource_manager.clone(),
     )
     .await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
@@ -863,6 +840,7 @@ async fn update_reactive_tree(
     reactive_tree.pointer_captures = new_tree.pointer_captures;
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn draw_reactive_tree(
     reactive_tree: &mut ReactiveTree,
     resource_manager: Arc<RwLock<ResourceManager>>,
@@ -1021,10 +999,11 @@ fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn layout(
     element_state: &mut ElementStateStore,
-    _window_width: f32,
-    _window_height: f32,
+    window_width: f32,
+    window_height: f32,
     font_context: &mut FontContext,
     font_layout_context: &mut parley::LayoutContext<Brush>,
     root_element: &mut dyn Element,
@@ -1037,8 +1016,8 @@ fn layout(
     let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
-        width: AvailableSpace::Definite(_window_width),
-        height: AvailableSpace::Definite(_window_height),
+        width: AvailableSpace::Definite(window_width),
+        height: AvailableSpace::Definite(window_height),
     };
 
     taffy_tree
@@ -1059,8 +1038,6 @@ fn layout(
             },
         )
         .unwrap();
-
-    //taffy_tree.print_tree(root_node);
 
     let transform = glam::Mat4::IDENTITY;
 

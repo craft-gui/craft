@@ -5,6 +5,8 @@ pub(crate) mod image;
 pub(crate) mod layout_context;
 pub(crate) mod span;
 pub(crate) mod text;
+
+#[allow(clippy::module_inception)]
 pub(crate) mod text_input;
 
 pub(crate) mod canvas;

@@ -23,14 +23,6 @@ use parley::{
 #[derive(Debug, Clone, Copy)]
 pub struct SplitString<'source>([&'source str; 2]);
 
-//noinspection ALL
-impl<'source> SplitString<'source> {
-    /// Get the characters of this string.
-    pub fn chars(self) -> impl Iterator<Item = char> + use<'source> {
-        self.into_iter().flat_map(str::chars)
-    }
-}
-
 impl PartialEq<&'_ str> for SplitString<'_> {
     fn eq(&self, other: &&'_ str) -> bool {
         let [a, b] = self.0;
@@ -145,19 +137,6 @@ where
         }
     }
 
-    /// If the current selection is not collapsed, returns the text content of
-    /// that selection.
-    pub fn selected_text(&self) -> Option<&str> {
-        if self.is_composing() {
-            return None;
-        }
-        if !self.selection.is_collapsed() {
-            self.buffer.get(self.selection.text_range())
-        } else {
-            None
-        }
-    }
-
     /// Get rectangles representing the selected portions of text.
     pub fn selection_geometry(&self) -> Vec<Rect> {
         // We do not check `self.show_cursor` here, as the IME handling code collapses the
@@ -173,65 +152,6 @@ where
         self.show_cursor.then(|| self.selection.focus().geometry(&self.layout, size))
     }
 
-    /// Get a rectangle bounding the text the user is currently editing.
-    ///
-    /// This is useful for suggesting an exclusion area to the platform for, e.g., IME candidate
-    /// box placement. This bounds the area of the preedit text if present, otherwise it bounds the
-    /// selection on the focused line.
-    pub fn ime_cursor_area(&self) -> Rect {
-        let (area, focus) = if let Some(preedit_range) = &self.compose {
-            let selection = Selection::new(self.cursor_at(preedit_range.start), self.cursor_at(preedit_range.end));
-
-            // Bound the entire preedit text.
-            let mut area = None;
-            selection.geometry_with(&self.layout, |rect| {
-                let area = area.get_or_insert(rect);
-                *area = area.union(rect);
-            });
-
-            (area.unwrap_or_else(|| selection.focus().geometry(&self.layout, 0.)), selection.focus())
-        } else {
-            // Bound the selected parts of the focused line only.
-            let focus = self.selection.focus().geometry(&self.layout, 0.);
-            let mut area = focus;
-            self.selection.geometry_with(&self.layout, |rect| {
-                if rect.y0 == focus.y0 {
-                    area = area.union(rect);
-                }
-            });
-
-            (area, self.selection.focus())
-        };
-
-        // Ensure some context is captured even for tiny or collapsed selections by including a
-        // region surrounding the selection. Doing this unconditionally, the IME candidate box
-        // usually does not need to jump around when composing starts or the preedit is added to.
-        let [upstream, downstream] = focus.logical_clusters(&self.layout);
-        const DEFAULT_FONT_SIZE: f32 = 16.0;
-        let font_size = downstream.or(upstream).map(|cluster| cluster.run().font_size()).unwrap_or(DEFAULT_FONT_SIZE);
-        // Using 0.6 as an estimate of the average advance
-        let inflate = 3. * 0.6 * font_size as f64;
-        let editor_width = self.width.map(f64::from).unwrap_or(f64::INFINITY);
-        Rect {
-            x0: (area.x0 - inflate).max(0.),
-            x1: (area.x1 + inflate).min(editor_width),
-            y0: area.y0,
-            y1: area.y1,
-        }
-    }
-
-    /// Borrow the text content of the buffer.
-    ///
-    /// The return value is a `SplitString` because it
-    /// excludes the IME preedit region.
-    pub fn text(&self) -> SplitString<'_> {
-        if let Some(preedit_range) = &self.compose {
-            SplitString([&self.buffer[..preedit_range.start], &self.buffer[preedit_range.end..]])
-        } else {
-            SplitString([&self.buffer, ""])
-        }
-    }
-
     /// Replace the whole text buffer.
     pub fn set_text(&mut self, is: &str) {
         assert!(!self.is_composing());
@@ -244,12 +164,6 @@ where
     /// Set the width of the layout.
     pub fn set_width(&mut self, width: Option<f32>) {
         self.width = width;
-        self.layout_dirty = true;
-    }
-
-    /// Set the alignment of the layout.
-    pub fn set_alignment(&mut self, alignment: Alignment) {
-        self.alignment = alignment;
         self.layout_dirty = true;
     }
 
@@ -279,46 +193,6 @@ where
         self.refresh_layout(font_cx, layout_cx);
         &self.layout
     }
-
-    // --- MARK: Raw APIs ---
-    /// Get the full read-only details from the layout, if valid.
-    ///
-    /// Returns `None` if the layout is not up-to-date.
-    /// You can call [`refresh_layout`](Self::refresh_layout) before using this method,
-    /// to ensure that the layout is up-to-date.
-    ///
-    /// The [`layout`](Self::layout) method should generally be preferred.
-    pub fn try_layout(&self) -> Option<&Layout<T>> {
-        if self.layout_dirty {
-            None
-        } else {
-            Some(&self.layout)
-        }
-    }
-
-    //#[cfg(feature = "accesskit")]
-    #[inline]
-    /// Perform an accessibility update if the layout is valid.
-    ///
-    /// Returns `None` if the layout is not up-to-date.
-    /// You can call [`refresh_layout`](Self::refresh_layout) before using this method,
-    /// to ensure that the layout is up-to-date.
-    /// The [`accessibility`](PlainEditorDriver::accessibility) method on the driver type
-    /// should be preferred if the contexts are available, which will do this automatically.
-    // pub fn try_accessibility(
-    //     &mut self,
-    //     update: &mut TreeUpdate,
-    //     node: &mut Node,
-    //     next_node_id: impl FnMut() -> NodeId,
-    //     x_offset: f64,
-    //     y_offset: f64,
-    // ) -> Option<()> {
-    //     if self.layout_dirty {
-    //         return None;
-    //     }
-    //     self.accessibility_unchecked(update, node, next_node_id, x_offset, y_offset);
-    //     Some(())
-    // }
 
     /// Update the layout if it is dirty.
     ///

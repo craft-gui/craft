@@ -62,10 +62,6 @@ impl TextState {
             reload_fonts: false,
         }
     }
-
-    pub fn font_family(&self) -> Option<&str> {
-        None
-    }
 }
 
 impl Text {

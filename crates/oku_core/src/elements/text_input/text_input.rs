@@ -43,10 +43,6 @@ impl TextInputState {
             style: Default::default(),
         }
     }
-
-    pub fn font_family(&self) -> Option<&str> {
-        None
-    }
 }
 
 impl TextInputState {

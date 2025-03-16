@@ -70,16 +70,13 @@ fn hash_text_and_font_settings_from_text_fragments(
             TextFragment::Span(span_index) => {
                 let span = children.get(*span_index as usize).unwrap();
 
-                match &span.component {
-                    ComponentOrElement::Element(ele) => {
-                        let ele = &*ele.internal;
+                if let ComponentOrElement::Element(ele) = &span.component {
+                    let ele = &*ele.internal;
 
-                        if let Some(span) = ele.as_any().downcast_ref::<Span>() {
-                            text_hasher.write(span.text.as_bytes());
-                            hash_font_settings(span.style());
-                        }
+                    if let Some(span) = ele.as_any().downcast_ref::<Span>() {
+                        text_hasher.write(span.text.as_bytes());
+                        hash_font_settings(span.style());
                     }
-                    _ => {}
                 }
             }
             TextFragment::InlineComponentSpecification(_inline) => {}

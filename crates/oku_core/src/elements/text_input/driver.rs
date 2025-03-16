@@ -1,6 +1,6 @@
 // use accesskit::{Node, NodeId, TreeUpdate};
 use crate::elements::text_input::plain_text_editor::PlainEditor;
-use parley::{Affinity, Brush, Cursor, FontContext, Layout, LayoutContext, Selection};
+use parley::{Affinity, Brush, Cursor, FontContext, LayoutContext, Selection};
 use std::fmt::Debug;
 
 /// A short-lived wrapper around [`PlainEditor`].
@@ -182,18 +182,6 @@ where
 
         self.refresh_layout();
         self.editor.set_selection(Selection::from_point(&self.editor.layout, x, y));
-    }
-
-    /// Move the cursor to a byte index.
-    ///
-    /// No-op if index is not a char boundary.
-    pub fn move_to_byte(&mut self, index: usize) {
-        assert!(!self.editor.is_composing());
-
-        if self.editor.buffer.is_char_boundary(index) {
-            self.refresh_layout();
-            self.editor.set_selection(self.editor.cursor_at(index).into());
-        }
     }
 
     /// Move the cursor to the start of the buffer.
@@ -403,66 +391,6 @@ where
         self.editor.set_selection(self.editor.selection.extend_to_point(&self.editor.layout, x, y));
     }
 
-    /// Move the selection focus point to a byte index.
-    ///
-    /// No-op if index is not a char boundary.
-    pub fn extend_selection_to_byte(&mut self, index: usize) {
-        assert!(!self.editor.is_composing());
-
-        if self.editor.buffer.is_char_boundary(index) {
-            self.refresh_layout();
-            self.editor.set_selection(self.editor.selection.extend(self.editor.cursor_at(index)));
-        }
-    }
-
-    /// Select a range of byte indices.
-    ///
-    /// No-op if either index is not a char boundary.
-    pub fn select_byte_range(&mut self, start: usize, end: usize) {
-        assert!(!self.editor.is_composing());
-
-        if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
-            self.refresh_layout();
-            self.editor.set_selection(Selection::new(self.editor.cursor_at(start), self.editor.cursor_at(end)));
-        }
-    }
-
-    //#[cfg(feature = "accesskit")]
-    /// Select inside the editor based on the selection provided by accesskit.
-    // pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
-    //     assert!(!self.editor.is_composing());
-    //
-    //     self.refresh_layout();
-    //     if let Some(selection) = Selection::from_access_selection(
-    //         selection,
-    //         &self.editor.layout,
-    //         &self.editor.layout_access,
-    //     ) {
-    //         self.editor.set_selection(selection);
-    //     }
-    // }
-
-    /// --- MARK: Rendering ---
-    //#[cfg(feature = "accesskit")]
-    /// Perform an accessibility update.
-    // pub fn accessibility(
-    //     &mut self,
-    //     update: &mut TreeUpdate,
-    //     node: &mut Node,
-    //     next_node_id: impl FnMut() -> NodeId,
-    //     x_offset: f64,
-    //     y_offset: f64,
-    // ) -> Option<()> {
-    //     self.refresh_layout();
-    //     self.editor
-    //         .accessibility_unchecked(update, node, next_node_id, x_offset, y_offset);
-    //     Some(())
-    // }
-
-    /// Get the up-to-date layout for this driver.
-    pub fn layout(&mut self) -> &Layout<T> {
-        self.editor.layout(self.font_cx, self.layout_cx)
-    }
     // --- MARK: Internal helpers---
     /// Update the layout if needed.
     pub fn refresh_layout(&mut self) {

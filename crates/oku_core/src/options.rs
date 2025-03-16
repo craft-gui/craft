@@ -38,6 +38,7 @@ pub enum RendererType {
     Blank,
 }
 
+#[allow(clippy::derivable_impls )]
 impl Default for RendererType {
     fn default() -> Self {
         cfg_if::cfg_if! {

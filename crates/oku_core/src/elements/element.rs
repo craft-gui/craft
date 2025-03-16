@@ -89,11 +89,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId>;
-
+    
     /// Finalizes the layout of the element.
     ///
     /// The majority of the layout computation is done in the `compute_layout` method.
     /// Store the computed values in the `common_element_data` struct.
+    #[allow(clippy::too_many_arguments)]
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -471,19 +472,19 @@ macro_rules! generate_component_methods_no_children {
 
         #[allow(dead_code)]
         pub fn pressed(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Pressed;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Pressed;
             self
         }
 
         #[allow(dead_code)]
         pub fn disabled(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Disabled;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Disabled;
             self
         }
 
         #[allow(dead_code)]
         pub fn focused(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Focused;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Focused;
             self
         }
     };
@@ -526,7 +527,7 @@ macro_rules! generate_component_methods_private_push {
 
         #[allow(dead_code)]
         fn normal(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Normal;
             self
         }
     };
@@ -535,7 +536,7 @@ macro_rules! generate_component_methods_private_push {
 #[macro_export]
 macro_rules! generate_component_methods {
     () => {
-        crate::generate_component_methods_no_children!();
+        $crate::generate_component_methods_no_children!();
 
         #[allow(dead_code)]
         pub fn push<T>(mut self, component_specification: T) -> Self
@@ -569,7 +570,7 @@ macro_rules! generate_component_methods {
 
         #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
-            self.common_element_data.current_state = crate::elements::element_states::ElementState::Normal;
+            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Normal;
             self
         }
     };

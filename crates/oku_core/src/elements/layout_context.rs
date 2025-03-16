@@ -92,6 +92,7 @@ pub(crate) enum LayoutContext {
     Image(ImageContext),
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn measure_content(
     element_state: &mut ElementStateStore,
     known_dimensions: Size<Option<f32>>,

@@ -1,4 +1,6 @@
 pub(crate) mod color;
+
+#[allow(clippy::module_inception)]
 pub(crate) mod renderer;
 
 #[cfg(feature = "vello_renderer")]
