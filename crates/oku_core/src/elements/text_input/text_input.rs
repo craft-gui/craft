@@ -3,7 +3,7 @@ use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{AvailableSpace, LayoutContext, TaffyTextContext, TaffyTextInputContext};
 use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::style::Style;
+use crate::style::{Style, Unit};
 use crate::{generate_component_methods_private_push, RendererBox};
 use parley::{FontContext, FontFamily, FontStack, Layout};
 use std::any::Any;
@@ -18,6 +18,7 @@ use crate::elements::text::TextState;
 use crate::elements::text_input::editor::Editor;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
+use crate::Color;
 
 // A stateful element that shows a text input.
 #[derive(Clone, Default, Debug)]
@@ -100,9 +101,14 @@ impl TextInputState {
 
 impl TextInput {
     pub fn new(text: &str) -> TextInput {
+        let mut common_element_data = CommonElementData::default();
+        const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
+        *common_element_data.style.border_color_mut() = [BORDER_COLOR; 4];
+        *common_element_data.style.border_width_mut() = [Unit::Px(1.0); 4];
+        *common_element_data.style.border_radius_mut() = [(5.0, 5.0); 4];
         TextInput {
             text: String::from(text),
-            common_element_data: Default::default(),
+            common_element_data,
         }
     }
 
