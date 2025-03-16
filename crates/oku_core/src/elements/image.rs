@@ -65,7 +65,6 @@ impl Element for Image {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
@@ -92,7 +91,6 @@ impl Element for Image {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {

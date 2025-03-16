@@ -96,7 +96,6 @@ impl Element for Span {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
@@ -105,7 +104,7 @@ impl Element for Span {
         let state = self.get_state_mut(element_state);
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
@@ -124,7 +123,6 @@ impl Element for Span {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {

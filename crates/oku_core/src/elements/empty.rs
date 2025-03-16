@@ -49,7 +49,6 @@ impl Element for Empty {
     fn compute_layout(
         &mut self,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _scale_factor: f64,
     ) -> Option<NodeId> {
@@ -63,7 +62,6 @@ impl Element for Empty {
         _position: Point,
         _z_index: &mut u32,
         _transform: glam::Mat4,
-        _font_context: &mut FontContext,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
     ) {

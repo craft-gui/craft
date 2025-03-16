@@ -76,14 +76,13 @@ impl Element for Container {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, font_context, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
@@ -102,7 +101,6 @@ impl Element for Container {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     ) {
@@ -141,7 +139,6 @@ impl Element for Container {
                 self.common_element_data.computed_layered_rectangle.position,
                 z_index,
                 transform * child_transform,
-                font_context,
                 element_state,
                 pointer,
             );

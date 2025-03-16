@@ -86,7 +86,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId>;
@@ -102,7 +101,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        font_context: &mut FontContext,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
     );

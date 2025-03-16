@@ -1044,7 +1044,7 @@ fn layout(
     pointer: Option<Point>,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
     let mut taffy_tree: taffy::TaffyTree<LayoutContext> = taffy::TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, font_context, element_state, scale_factor).unwrap();
+    let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<taffy::AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(_window_width),
@@ -1081,7 +1081,6 @@ fn layout(
         origin,
         &mut layout_order,
         transform,
-        font_context,
         element_state,
         pointer,
     );
