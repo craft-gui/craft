@@ -91,7 +91,7 @@ features = ["std"]
 default-features = false
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
-version = "0.12.12"
+version = "0.12.14"
 default-features = false
 features = ["native-tls"]
 optional = true
@@ -132,7 +132,7 @@ default-features = false
 features = ["rt-multi-thread", "sync"]
 
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
-version = "0.12.12"
+version = "0.12.14"
 default-features = false
 features = ["rustls-tls"]
 optional = true
