@@ -1,4 +1,4 @@
-use crate::components::component::{ComponentOrElement, ComponentSpecification};
+use crate::components::component::{ComponentSpecification};
 use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
@@ -6,15 +6,13 @@ use crate::elements::element::{Element, ElementBox};
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
-use crate::geometry::{Point, Size};
+use crate::geometry::{Point};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
-use std::ops::Add;
-use taffy::{Layout, NodeId, Position, TaffyTree, TraversePartialTree};
-use crate::elements::{Container, Text};
+use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
@@ -38,6 +36,27 @@ impl Element for Dropdown {
         &mut self.common_element_data
     }
 
+    fn children(&self) -> Vec<&dyn Element> {
+        self.common_element_data().children.iter().map(|x| x.internal.as_ref()).collect()
+    }
+
+    fn in_bounds(&self, point: Point) -> bool {
+        // Check the bounds of the dropdown selection.
+        let common_element_data = self.common_element_data();
+        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+        let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&point);
+
+        let mut dropdown_list_in_bounds = false;
+        for child in self.children() {
+            if child.in_bounds(point) {
+                dropdown_list_in_bounds = true;
+                break;
+            }
+        }
+
+        dropdown_selection_in_bounds || dropdown_list_in_bounds
+    }
+
     fn name(&self) -> &'static str {
         "Dropdown"
     }
@@ -56,9 +75,10 @@ impl Element for Dropdown {
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
         {
-            let dropdown_selection = self.dropdown_selection.as_mut().unwrap();
-            dropdown_selection.internal.draw(renderer, font_context, taffy_tree, dropdown_selection.internal.common_element_data().taffy_node_id.unwrap(), element_state, pointer);
-            
+            if let Some(dropdown_selection) = self.dropdown_selection.as_mut() {
+                dropdown_selection.internal.draw(renderer, font_context, taffy_tree, dropdown_selection.internal.common_element_data().taffy_node_id.unwrap(), element_state, pointer);
+            }
+
             if state.is_open {
                 self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
             }
@@ -75,31 +95,30 @@ impl Element for Dropdown {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
         let mut child_nodes: Vec<NodeId> = Vec::new();
-        
+
         let selected_child =  if let Some(selected_index) = state.selected_item {
             if let Some(selected_element) = self.children_mut().get(selected_index) {
-                selected_element.clone()
+                Some(selected_element.clone())
             } else {
-                self.children_mut().first().unwrap().clone()
+                self.children_mut().first().cloned()
             }
         } else {
-            self.children_mut().first().unwrap().clone()
+            self.children_mut().first().cloned()
         };
-        self.dropdown_selection = Some(selected_child);
-        let selected_node = self.dropdown_selection.as_mut().unwrap().internal.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
+        self.dropdown_selection = selected_child;
+
+        if let Some(selected_node) = self.dropdown_selection.as_mut() {
+            let selected_node = selected_node.internal.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
+            child_nodes.push(selected_node);
+        }
 
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-        
-        child_nodes.push(selected_node);
+
         if is_open {
-            let mut dropdown_list_child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
-            for child in self.children_mut().iter_mut() {
-                let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
-                if let Some(child_node) = child_node {
-                    dropdown_list_child_nodes.push(child_node);
-                }
-            }
-            
+            let dropdown_list_child_nodes: Vec<NodeId> = self.children_mut().iter_mut().filter_map(|child| { 
+                child.internal.compute_layout(taffy_tree, element_state, scale_factor)
+            }).collect();
+
             let mut dropdown_list_style = Style::default();
             *dropdown_list_style.display_mut() = Display::Flex;
             *dropdown_list_style.flex_direction_mut() = FlexDirection::Column;
@@ -109,7 +128,7 @@ impl Element for Dropdown {
             child_nodes.push(dropdown_list_node_id);
         }
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        
+
         self.common_element_data().taffy_node_id
     }
 
@@ -128,18 +147,20 @@ impl Element for Dropdown {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
-        
-        let dropdown_selection_taffy = self.dropdown_selection.as_mut().unwrap().internal.common_element_data().taffy_node_id.unwrap();
-        self.dropdown_selection.as_mut().unwrap().internal.finalize_layout(
-            taffy_tree,
-            dropdown_selection_taffy,
-            self.common_element_data.computed_layered_rectangle.position,
-            z_index,
-            transform,
-            element_state,
-            pointer,
-        );
-        
+
+        if let Some(dropdown_selection) = self.dropdown_selection.as_mut() {
+            let dropdown_selection_taffy = dropdown_selection.internal.common_element_data().taffy_node_id.unwrap();
+            dropdown_selection.internal.finalize_layout(
+                taffy_tree,
+                dropdown_selection_taffy,
+                self.common_element_data.computed_layered_rectangle.position,
+                z_index,
+                transform,
+                element_state,
+                pointer,
+            );
+        }
+
         if is_open {
             let dropdown_list = taffy_tree.get_child_id(self.common_element_data.taffy_node_id.unwrap(), 1);
             let dropdown_list_result = taffy_tree.layout(dropdown_list).unwrap();
@@ -162,29 +183,12 @@ impl Element for Dropdown {
                     element_state,
                     pointer,
                 );
-            }   
+            }
         }
     }
 
     fn as_any(&self) -> &dyn Any {
         self
-    }
-
-    fn in_bounds(&self, point: Point) -> bool {
-        // Check the bounds of the dropdown selection.
-        let common_element_data = self.common_element_data();
-        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
-        let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&point);
-
-        let mut dropdown_list_in_bounds = false;
-        for child in self.children() {
-            if child.in_bounds(point) {
-                dropdown_list_in_bounds = true;
-                break;
-            }
-        }
-
-        dropdown_selection_in_bounds || dropdown_list_in_bounds
     }
 
     fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
@@ -210,7 +214,7 @@ impl Element for Dropdown {
                     if dropdown_selection_in_bounds {
                         state.is_open = !state.is_open;
                     }
-                    
+
                 }
 
             }
@@ -230,10 +234,6 @@ impl Element for Dropdown {
             base: Default::default(),
             data: Box::new(DropdownState::default()),
         }
-    }
-
-    fn children(&self) -> Vec<&dyn Element> {
-        self.common_element_data().children.iter().map(|x| x.internal.as_ref()).collect()
     }
 }
 
