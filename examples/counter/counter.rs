@@ -4,7 +4,7 @@ mod util;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
-use oku::events::{clicked, Event};
+use oku::events::{Event};
 use oku::oku_main_with_options;
 use oku::style::Display;
 use oku::style::{AlignItems, FlexDirection, JustifyContent};
@@ -54,7 +54,7 @@ impl Component for Counter {
     }
 
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
-        if clicked(&event.message) && event.target.is_some() {
+        if event.message.clicked() && event.target.is_some() {
             match event.target.as_deref().unwrap() {
                 "increment" => state.count += 1,
                 "decrement" => state.count -= 1,

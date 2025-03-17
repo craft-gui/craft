@@ -60,17 +60,30 @@ pub enum OkuMessage {
     TextInputChanged(String),
 }
 
+impl OkuMessage {
+    pub fn clicked(&self) -> bool {
+        if let PointerButtonEvent(pointer_button) = self {
+            if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == ElementState::Released {
+                return true;
+            }
+        }
+
+        false
+    }
+
+}
+
 pub enum Message {
     OkuMessage(OkuMessage),
     UserMessage(Box<dyn Any>),
 }
 
-pub fn clicked(message: &Message) -> bool {
-    if let Message::OkuMessage(PointerButtonEvent(pointer_button)) = message {
-        if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == ElementState::Released {
-            return true;
+impl Message {
+    pub fn clicked(&self) -> bool {
+        if let Message::OkuMessage(message) = self {
+            return message.clicked();
         }
-    }
 
-    false
+        false
+    }
 }

@@ -2,7 +2,7 @@ use crate::theme::NAVBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, ElementStyles, Text};
-use oku::events::{clicked, Event};
+use oku::events::{Event};
 use oku::style::{AlignItems, Display, JustifyContent, Weight};
 use oku::Color;
 
@@ -58,7 +58,7 @@ impl Component<WebsiteGlobalState> for Navbar {
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {
-        if clicked(&event.message) && event.current_target.is_some() {
+        if event.message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();
             if current_target.starts_with("route_") {
                 global_state.route = current_target.replace("route_", "").to_string();

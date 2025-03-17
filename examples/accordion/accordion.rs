@@ -6,7 +6,6 @@ use oku::components::ComponentSpecification;
 use oku::components::{Component, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
-use oku::events::clicked;
 use oku::events::Event;
 use oku::style::FlexDirection;
 use oku::style::Unit;
@@ -49,7 +48,7 @@ impl Component<()> for Accordion {
             return UpdateResult::default();
         }
 
-        if clicked(&event.message) {
+        if event.message.clicked() {
             state.show_content = !state.show_content
         }
 

@@ -628,7 +628,7 @@ async fn dispatch_event(
     /////////////////////////////////////////
 
     // Collect all possible target elements in reverse order.
-    // Nodes added last are usually on top, so this elements in visual order.
+    // Nodes added last are usually on top, so these elements are in visual order.
     for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
         if let Some(element) = fiber_node.element {
             let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());

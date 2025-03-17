@@ -11,7 +11,7 @@ use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, ElementStyles, Text};
-use oku::events::{clicked, Event};
+use oku::events::{Event};
 use oku::palette;
 use oku::style::Display::Flex;
 use oku::style::FlexDirection;
@@ -80,7 +80,7 @@ impl Component<WebsiteGlobalState> for Examples {
         _props: &Self::Props,
         event: Event,
     ) -> UpdateResult {
-        if clicked(&event.message) && event.current_target.is_some() {
+        if event.message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();
             if current_target.starts_with("example_") {
                 state.example_to_show = current_target.replace("example_", "").to_string();

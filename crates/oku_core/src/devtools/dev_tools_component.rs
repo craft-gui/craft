@@ -6,7 +6,7 @@ use crate::devtools::element_tree_view::element_tree_view;
 use crate::devtools::style_window::styles_window_view;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
-use crate::events::{clicked, Event, Message, OkuMessage};
+use crate::events::{Event, Message, OkuMessage};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
 
@@ -60,7 +60,7 @@ impl Component for DevToolsComponent {
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         if let Some(id) = event.target {
             // Set the selected element in the element tree inspector.
-            if clicked(&event.message) {
+            if event.message.clicked() {
                 let component_id: ComponentId = id.parse().unwrap();
                 state.selected_element = Some(component_id);
             }

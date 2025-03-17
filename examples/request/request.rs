@@ -10,7 +10,6 @@ use AniListMessage::StateChange;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
-use oku::events::clicked;
 use oku::events::{Event, Message};
 use oku::oku_main_with_options;
 use oku::style::FlexDirection;
@@ -127,7 +126,7 @@ impl Component for AniList {
             UpdateResult::async_result(StateChange(State::Loaded(result)))
         };
 
-        if state.state != State::Loading && clicked(&event.message) && Some("get_data") == event.target.as_deref() {
+        if state.state != State::Loading && event.message.clicked() && Some("get_data") == event.target.as_deref() {
             state.state = State::Loading;
             return UpdateResult::default().future(get_ani_list_data);
         }

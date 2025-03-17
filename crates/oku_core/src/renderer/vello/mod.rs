@@ -48,7 +48,7 @@ pub struct VelloRenderer<'a> {
     state: RenderState<'a>,
 
     // A vello Scene which is a data structure which allows one to build up a
-    // description a scene to be drawn (with paths, fills, images, text, etc)
+    // description a scene to be drawn (with paths, fills, images, text, etc.)
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,

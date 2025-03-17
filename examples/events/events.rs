@@ -5,7 +5,7 @@ use crate::util::setup_logging;
 use oku::components::{Component, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
 use oku::elements::ElementStyles;
-use oku::events::{clicked, Event};
+use oku::events::{Event};
 use oku::oku_main_with_options;
 use oku::palette;
 use oku::style::Position;
@@ -52,7 +52,7 @@ impl Component<()> for EventsExample {
     }
 
     fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
-        if clicked(&event.message) {
+        if event.message.clicked() {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }
 
