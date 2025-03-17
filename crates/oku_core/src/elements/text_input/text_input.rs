@@ -176,8 +176,8 @@ impl Element for TextInput {
     fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
         let state = self.get_state_mut(element_state);
 
-        let text_y: f32 = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle().y;
-        state.editor.handle_event(message, text_y);
+        let text_position = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle();
+        state.editor.handle_event(message, text_position.x, text_position.y);
 
         UpdateResult::default()
     }

@@ -86,7 +86,7 @@ impl Editor {
         self.cursor_visible = true;
     }
 
-    pub fn handle_event(&mut self, event: OkuMessage, text_y: f32) {
+    pub fn handle_event(&mut self, event: OkuMessage, text_x: f32, text_y: f32) {
         match event {
             // WindowEvent::ModifiersChanged(modifiers) => {
             //     self.modifiers = Some(modifiers);
@@ -293,7 +293,7 @@ impl Editor {
             OkuMessage::PointerMovedEvent(pointer_moved) => {
                 let prev_pos = self.cursor_pos;
                 // NOTE: Cursor position should be relative to the top left of the text box.
-                self.cursor_pos = (pointer_moved.position.x, pointer_moved.position.y - text_y);
+                self.cursor_pos = (pointer_moved.position.x - text_x, pointer_moved.position.y - text_y);
                 // macOS seems to generate a spurious move after selecting word?
                 if self.pointer_down && prev_pos != self.cursor_pos && !self.editor.is_composing() {
                     self.cursor_reset();
