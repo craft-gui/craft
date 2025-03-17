@@ -188,12 +188,6 @@ impl<'a> VelloRenderer<'a> {
                         }
                     }
                 }
-                /*RenderCommand::PushTransform(transform) => {
-                    self.scene.push_transform(transform);
-                },
-                RenderCommand::PopTransform => {
-                    self.scene.pop_transform();
-                },*/
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
                         rect.x as f64,
@@ -237,10 +231,6 @@ impl Renderer for VelloRenderer<'_> {
             RenderState::Active(active_render_state) => active_render_state.window.surface_size().height as f32,
             RenderState::Suspended => 0.0,
         }
-    }
-
-    fn present_surface(&mut self) {
-        todo!()
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {

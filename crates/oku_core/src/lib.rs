@@ -234,7 +234,7 @@ pub fn oku_main_with_options<GlobalState: Send + 'static> (
 ///
 /// # Type Parameters
 ///
-/// * `GlobalState`: The type use for global state. It must implement [`Send`] and have a `'static` lifetime
+/// * `GlobalState`: The type used for global state. It must implement [`Send`] and have a `'static` lifetime
 ///   to ensure it can be safely transferred between threads.
 ///
 /// # Parameters

@@ -22,7 +22,6 @@ pub trait Renderer {
     // Surface Functions
     fn surface_width(&self) -> f32;
     fn surface_height(&self) -> f32;
-    fn present_surface(&mut self);
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
 

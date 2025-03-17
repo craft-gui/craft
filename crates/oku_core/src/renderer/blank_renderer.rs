@@ -19,8 +19,6 @@ impl Renderer for BlankRenderer {
         0.0
     }
 
-    fn present_surface(&mut self) {}
-
     fn resize_surface(&mut self, _width: f32, _height: f32) {}
 
     fn surface_set_clear_color(&mut self, _color: Color) {}

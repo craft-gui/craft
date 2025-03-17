@@ -34,7 +34,7 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-/// Stores state relate to Winit.
+/// Stores state related to Winit.
 ///
 /// Forwards most events to the main Oku Event Loop.
 pub(crate) struct OkuWinitState {

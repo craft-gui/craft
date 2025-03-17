@@ -5,7 +5,6 @@ use util::setup_logging;
 
 use oku::components::ComponentSpecification;
 use oku::components::{Component, UpdateResult};
-//use oku::elements::text_input::TextInput;
 use oku::elements::ElementStyles;
 use oku::elements::TextInput;
 use oku::elements::{Container, Font, Text};
