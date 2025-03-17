@@ -23,7 +23,7 @@ pub use options::OkuOptions;
 pub use renderer::color::palette;
 pub use renderer::color::Color;
 
-#[cfg(all(feature = "android", target_os = "android"))]
+#[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
 use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
@@ -174,7 +174,7 @@ impl App {
 #[cfg(target_os = "android")]
 pub fn internal_oku_main_with_options(
     application: ComponentSpecification,
-    global_state: Box<dyn Any>,
+    global_state: GlobalState,
     options: Option<OkuOptions>,
     app: AndroidApp,
 ) {
@@ -216,12 +216,41 @@ pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 /// * `application` - A [`ComponentSpecification`] that describes the structure and behavior of the application's components.
 /// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
 /// * `options` - An optional [`OkuOptions`] configuration. If `None` is provided, default options will be applied.
-pub fn oku_main_with_options<GlobalState: Send + 'static>(
+#[cfg(not(target_os = "android"))]
+pub fn oku_main_with_options<GlobalState: Send + 'static> (
     application: ComponentSpecification,
-    global_state: Box<GlobalState>,
+    global_state: GlobalState,
     options: Option<OkuOptions>,
 ) {
-    internal_oku_main_with_options(application, global_state, options);
+    internal_oku_main_with_options(application, Box::new(global_state), options);
+}
+
+/// Starts the Oku application with the provided component specification, global state, and configuration options.
+///
+/// This function serves as the main entry point for launching an Oku application. It accepts a component
+/// specification, a boxed global state, and optional configuration options, then delegates to the internal
+/// launcher [`internal_oku_main_with_options`]. This abstraction allows users to configure their application
+/// behavior via [`OkuOptions`] without interacting directly with lower-level details.
+///
+/// # Type Parameters
+///
+/// * `GlobalState`: The type use for global state. It must implement [`Send`] and have a `'static` lifetime
+///   to ensure it can be safely transferred between threads.
+///
+/// # Parameters
+///
+/// * `application` - A [`ComponentSpecification`] that describes the structure and behavior of the application's components.
+/// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
+/// * `options` - An optional [`OkuOptions`] configuration. If `None` is provided, default options will be applied.
+/// * `android_app` - The Android application instance.
+#[cfg(target_os = "android")]
+pub fn oku_main_with_options<GlobalState: Send + 'static>(
+    application: ComponentSpecification,
+    global_state: GlobalState,
+    options: Option<OkuOptions>,
+    android_app: AndroidApp,
+) {
+    internal_oku_main_with_options(application, Box::new(global_state), options, android_app);
 }
 
 #[cfg(not(target_os = "android"))]

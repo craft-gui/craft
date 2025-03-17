@@ -107,12 +107,13 @@ use util::setup_logging;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
     setup_logging();
 
     oku_main_with_options(
         Counter::component(),
+        Box::new(()),
         Some(OkuOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),

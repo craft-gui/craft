@@ -91,7 +91,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --example counter-lib --features oku_core/android
+        run: cargo apk build --example counter-lib
 
   build-ios:
     runs-on: macos-latest

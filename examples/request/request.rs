@@ -137,7 +137,6 @@ impl Component for AniList {
 }
 
 #[allow(dead_code)]
-#[cfg(not(target_os = "android"))]
 fn main() {
     setup_logging();
 
@@ -148,24 +147,5 @@ fn main() {
             renderer: RendererType::default(),
             window_title: "Ani List".to_string(),
         }),
-    );
-}
-
-#[cfg(target_os = "android")]
-use oku::AndroidApp;
-
-#[allow(dead_code)]
-#[cfg(target_os = "android")]
-#[no_mangle]
-fn android_main(app: AndroidApp) {
-    setup_logging();
-
-    oku_main_with_options(
-        AniList::component(),
-        Some(OkuOptions {
-            renderer: RendererType::default(),
-            window_title: "Ani List".to_string(),
-        }),
-        app,
     );
 }

@@ -7,7 +7,6 @@ resolver = "2"
 [features]
 dev_tools = []
 dynamic_linking = []
-android = ["winit/android-native-activity"]
 
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
@@ -44,10 +43,6 @@ version = "2.1.1"
 default-features = false
 features = ["std"]
 
-[dependencies.winit]
-git = "https://github.com/rust-windowing/winit"
-rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
-
 [dependencies.image]
 version = "0.25.5"
 default-features = false
@@ -74,6 +69,16 @@ version = "23.0.1"
 default-features = false
 features = ["wgsl"]
 optional = true
+
+[target.'cfg(not(target_os = "android"))'.dependencies.winit]
+git = "https://github.com/rust-windowing/winit"
+rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
+features = []
+
+[target.'cfg(target_os = "android")'.dependencies.winit]
+git = "https://github.com/rust-windowing/winit"
+rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
+features = ["android-native-activity"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.parley]
 version = "0.3.0"
