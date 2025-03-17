@@ -190,7 +190,7 @@ impl Element for Canvas {
 
 impl Canvas {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &CanvasState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a CanvasState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 

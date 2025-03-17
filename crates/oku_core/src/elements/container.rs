@@ -264,7 +264,7 @@ impl Element for Container {
 
 impl Container {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a &ContainerState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ContainerState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
