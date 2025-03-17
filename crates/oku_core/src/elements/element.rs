@@ -13,7 +13,7 @@ use crate::RendererBox;
 use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
-use taffy::{NodeId, Overflow, TaffyTree};
+use taffy::{NodeId, Overflow, Position, TaffyTree};
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -125,9 +125,14 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let position = match common_element_data_mut.style.position() {
             taffy::Position::Relative => relative_position + result.location.into(),
-            taffy::Position::Absolute => result.location.into(),
+            taffy::Position::Absolute => relative_position + result.location.into(),
         };
 
+        let mut size = result.size.into();
+        if common_element_data_mut.style.position() == Position::Absolute {
+            size = Size::new(result.content_size.width, result.content_size.height);
+        }
+        
         common_element_data_mut.computed_border_rectangle_overflow_size =
             Size::new(result.content_size.width, result.content_size.height);
         common_element_data_mut.computed_layered_rectangle = ElementRectangle {
@@ -135,7 +140,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
-            size: result.size.into(),
+            size,
         };
         common_element_data_mut.computed_layered_rectangle_transformed =
             common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
