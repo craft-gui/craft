@@ -329,6 +329,14 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     /// Called on sequential renders to update any state that the element may have.
     fn update_state(&self, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+    
+    fn default_style(&self) -> Style {
+        Style::default()
+    }
+    
+    fn merge_default_style(&mut self) {
+        self.common_element_data_mut().style = Style::merge(&self.default_style(), &self.common_element_data().style);
+    }
 }
 
 impl<T: Element> From<T> for ElementBox {

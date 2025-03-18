@@ -12,13 +12,17 @@ use crate::style::{Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
+use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
+use crate::elements::Container;
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
 pub struct Dropdown {
     pub common_element_data: CommonElementData,
     dropdown_selection: Option<ElementBox>,
+    dropdown_list_style: Style,
+    pseudo_dropdown_list_element: Container,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -80,6 +84,7 @@ impl Element for Dropdown {
             }
 
             if state.is_open {
+                self.pseudo_dropdown_list_element.draw(renderer, font_context, taffy_tree, self.pseudo_dropdown_list_element.common_element_data.taffy_node_id.unwrap(), element_state, pointer);
                 self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
             }
         }
@@ -92,6 +97,8 @@ impl Element for Dropdown {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
+        self.merge_default_style();
+
         let state = self.get_state(element_state);
         let is_open = state.is_open;
         let mut child_nodes: Vec<NodeId> = Vec::new();
@@ -118,13 +125,9 @@ impl Element for Dropdown {
             let dropdown_list_child_nodes: Vec<NodeId> = self.children_mut().iter_mut().filter_map(|child| { 
                 child.internal.compute_layout(taffy_tree, element_state, scale_factor)
             }).collect();
-
-            let mut dropdown_list_style = Style::default();
-            *dropdown_list_style.display_mut() = Display::Flex;
-            *dropdown_list_style.flex_direction_mut() = FlexDirection::Column;
-            *dropdown_list_style.position_mut() = Position::Absolute;
-            *dropdown_list_style.inset_mut() = [Unit::Percentage(100.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
-            let dropdown_list_node_id = taffy_tree.new_with_children(dropdown_list_style.to_taffy_style_with_scale_factor(scale_factor), &dropdown_list_child_nodes).unwrap();
+            self.pseudo_dropdown_list_element.common_element_data.style = Style::merge(&Self::default_dropdown_list_style(), &self.dropdown_list_style);
+            
+            let dropdown_list_node_id = taffy_tree.new_with_children(self.pseudo_dropdown_list_element.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor), &dropdown_list_child_nodes).unwrap();
             child_nodes.push(dropdown_list_node_id);
         }
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
@@ -167,6 +170,17 @@ impl Element for Dropdown {
             let mut dropdown_list_starting_point = dropdown_list_result.location;
             dropdown_list_starting_point.x += self.common_element_data.computed_layered_rectangle.position.x;
             dropdown_list_starting_point.y += self.common_element_data.computed_layered_rectangle.position.y;
+            
+            self.pseudo_dropdown_list_element.common_element_data.taffy_node_id = Some(dropdown_list);
+            self.pseudo_dropdown_list_element.finalize_layout(
+                taffy_tree,
+                dropdown_list,
+                self.common_element_data.computed_layered_rectangle.position,
+                z_index,
+                transform,
+                element_state,
+                pointer,
+            );
 
             for child in self.common_element_data.children.iter_mut() {
                 let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
@@ -235,9 +249,70 @@ impl Element for Dropdown {
             data: Box::new(DropdownState::default()),
         }
     }
+
+    fn default_style(&self) -> Style {
+        let mut default_style = Style::default();
+
+        let vertical_padding = Unit::Px(8.0);
+        let horizontal_padding = Unit::Px(12.0);
+        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        
+        *default_style.min_width_mut() = Unit::Px(140.0);
+        *default_style.min_height_mut() = Unit::Px(45.0);
+        *default_style.background_mut() = Color::from_rgb8(240, 240, 240);
+        
+        let border_color = Color::from_rgb8(180, 180, 180);
+        let border_radius = (6.0, 6.0);
+        let border_width = Unit::Px(1.0);
+        *default_style.border_radius_mut() = [border_radius, border_radius, border_radius, border_radius];
+        *default_style.border_color_mut() = [border_color, border_color, border_color, border_color];
+        *default_style.border_width_mut() = [border_width, border_width, border_width, border_width];
+    
+        default_style
+    }
 }
 
 impl Dropdown {
+    
+    pub fn dropdown_list_style(mut self, style: &Style) -> Self {
+        self.dropdown_list_style = *style;
+        self
+    }
+    
+    fn default_dropdown_list_style() -> Style {
+        let mut default_style = Style::default();
+
+        let vertical_padding = Unit::Px(8.0);
+        let horizontal_padding = Unit::Px(12.0);
+        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        *default_style.min_width_mut() = Unit::Px(140.0);
+        *default_style.min_height_mut() = Unit::Px(45.0);
+        
+        *default_style.background_mut() = Color::from_rgb8(220, 220, 220);
+
+        *default_style.border_radius_mut() = [(6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0)];
+        *default_style.border_color_mut() = [
+            Color::from_rgb8(160, 160, 160),
+            Color::from_rgb8(160, 160, 160),
+            Color::from_rgb8(160, 160, 160),
+            Color::from_rgb8(160, 160, 160),
+        ];
+        
+        *default_style.border_width_mut() = [
+            Unit::Px(1.0),
+            Unit::Px(1.0),
+            Unit::Px(1.0),
+            Unit::Px(1.0),
+        ];
+
+        *default_style.display_mut() = Display::Flex;
+        *default_style.flex_direction_mut() = FlexDirection::Column;
+        *default_style.position_mut() = Position::Absolute;
+        *default_style.inset_mut() = [Unit::Percentage(100.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
+        
+        default_style
+    }
+
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a DropdownState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
@@ -247,6 +322,8 @@ impl Dropdown {
         Dropdown {
             common_element_data: Default::default(),
             dropdown_selection: Default::default(),
+            dropdown_list_style: Self::default_dropdown_list_style(),
+            pseudo_dropdown_list_element: Default::default(),
         }
     }
 

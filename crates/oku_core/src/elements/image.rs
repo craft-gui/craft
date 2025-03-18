@@ -68,6 +68,7 @@ impl Element for Image {
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
+        self.merge_default_style();
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         self.common_element_data_mut().taffy_node_id = Some(

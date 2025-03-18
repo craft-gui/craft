@@ -136,6 +136,7 @@ impl Element for Canvas {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
+        self.merge_default_style();
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.common_element_data.children.iter_mut() {
