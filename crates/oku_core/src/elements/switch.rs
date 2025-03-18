@@ -4,7 +4,7 @@ use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::Container;
-use crate::events::{Message, OkuMessage};
+use crate::events::{OkuMessage};
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
@@ -70,10 +70,14 @@ impl Element for Switch {
 
         // FIXME: Use insets and position absolute after we fix a few Taffy bugs.
         self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.common_element_data_mut().style);
+        
         let default_toggled = self.default_toggled;
         let mut set_toggled_styles = || {
-            self.common_element_data_mut().style = Style::merge(&self.default_toggled_style(), &self.toggled_track_style);
-            self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.default_toggled_thumb_style(), &self.toggled_thumb_style);
+            self.common_element_data_mut().style = Style::merge(&self.common_element_data().style, &self.default_toggled_style());
+            self.common_element_data_mut().style = Style::merge(&self.common_element_data().style, &self.toggled_track_style);
+            
+            self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.pseudo_thumb.common_element_data().style, &self.default_toggled_thumb_style());
+            self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.pseudo_thumb.common_element_data().style, &self.toggled_thumb_style);
             *self.common_element_data_mut().style.justify_content_mut() = Some(JustifyContent::FlexEnd);
         };
         

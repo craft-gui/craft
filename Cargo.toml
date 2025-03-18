@@ -58,6 +58,10 @@ name = "accordion"
 path = "examples/accordion/accordion.rs"
 
 [[example]]
+name = "inputs"
+path = "examples/inputs/inputs.rs"
+
+[[example]]
 name = "request"
 path = "examples/request/request.rs"
 

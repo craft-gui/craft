@@ -2,7 +2,7 @@ use crate::elements::text_input::editor::Editor;
 use crate::elements::text_input::plain_text_editor::PlainEditor;
 use crate::renderer::color::palette;
 use parley::{GlyphRun, Style};
-use peniko::Brush;
+use peniko::{Brush, Color};
 use vello::{
     kurbo::{Affine, Line, Stroke},
     peniko::Fill,
@@ -19,7 +19,7 @@ pub(crate) fn draw_cursor(scene: &mut Scene, transform: &Affine, editor: &Editor
 
 pub(crate) fn draw_selection(scene: &mut Scene, transform: &Affine, plain_editor: &PlainEditor<Brush>) {
     for rect in plain_editor.selection_geometry().iter() {
-        scene.fill(Fill::NonZero, *transform, palette::css::STEEL_BLUE, None, &rect);
+        scene.fill(Fill::NonZero, *transform, Color::from_rgb8(0, 120, 215), None, &rect);
     }
 }
 

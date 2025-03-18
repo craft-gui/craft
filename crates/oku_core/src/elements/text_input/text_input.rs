@@ -72,14 +72,9 @@ impl TextInputState {
 
 impl TextInput {
     pub fn new(text: &str) -> TextInput {
-        let mut common_element_data = CommonElementData::default();
-        const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
-        *common_element_data.style.border_color_mut() = [BORDER_COLOR; 4];
-        *common_element_data.style.border_width_mut() = [Unit::Px(1.0); 4];
-        *common_element_data.style.border_radius_mut() = [(5.0, 5.0); 4];
         TextInput {
             text: String::from(text),
-            common_element_data,
+            common_element_data: Default::default(),
         }
     }
 
@@ -197,6 +192,20 @@ impl Element for TextInput {
     fn update_state(&self, element_state: &mut ElementStateStore, _reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
+    }
+
+    fn default_style(&self) -> Style {
+        let mut style= Style::default();
+
+        const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
+        *style.border_color_mut() = [BORDER_COLOR; 4];
+        *style.border_width_mut() = [Unit::Px(1.0); 4];
+        *style.border_radius_mut() = [(5.0, 5.0); 4];
+        let vertical_padding = Unit::Px(2.0);
+        let horizontal_padding = Unit::Px(8.0);
+        *style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        
+        style
     }
 }
 

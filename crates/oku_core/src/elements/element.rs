@@ -139,7 +139,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
         //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
         if common_element_data_mut.style.position() == Position::Absolute {
-            size = Size::new(result.content_size.width, result.content_size.height);
+            size = Size::new(f32::max(result.size.width, result.content_size.width), f32::max(result.size.height, result.content_size.height));
         }
         
         common_element_data_mut.computed_border_rectangle_overflow_size =
