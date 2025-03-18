@@ -13,7 +13,7 @@ use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
 use peniko::Color;
-use taffy::{NodeId, Overflow, Position, TaffyTree, TraversePartialTree};
+use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 use crate::elements::Container;
 
 /// The index of the dropdown list in the layout tree.
