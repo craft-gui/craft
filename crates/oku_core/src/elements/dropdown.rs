@@ -95,7 +95,7 @@ impl Element for Dropdown {
             }
 
             // Draw the dropdown list if it is open.
-            if state.is_open {
+            if state.is_open && !self.children().is_empty() {
                 self.pseudo_dropdown_list_element.draw(renderer, font_context, taffy_tree, self.pseudo_dropdown_list_element.common_element_data.taffy_node_id.unwrap(), element_state, pointer);
                 self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
             }
@@ -132,7 +132,7 @@ impl Element for Dropdown {
         }
 
         // Compute the layout of the pseudo dropdown list if open.
-        if is_open {
+        if is_open && !self.children().is_empty() {
             let dropdown_list_child_nodes: Vec<NodeId> = self.children_mut().iter_mut().filter_map(|child| { 
                 child.internal.compute_layout(taffy_tree, element_state, scale_factor)
             }).collect();
@@ -180,7 +180,7 @@ impl Element for Dropdown {
         }
 
         // Finalize the layout of the pseudo dropdown list element when the list is open.
-        if is_open {
+        if is_open && !self.children().is_empty() {
             let dropdown_list = taffy_tree.get_child_id(self.common_element_data.taffy_node_id.unwrap(), DROPDOWN_LIST_INDEX);
             self.pseudo_dropdown_list_element.common_element_data.taffy_node_id = Some(dropdown_list);
             self.pseudo_dropdown_list_element.finalize_layout(
