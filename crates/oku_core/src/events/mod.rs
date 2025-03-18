@@ -58,7 +58,10 @@ pub enum OkuMessage {
     MouseWheelEvent(MouseWheel),
     ImeEvent(Ime),
     TextInputChanged(String),
+    /// Generated when a dropdown is opened or closed. The boolean is the status of is_open after the event has occurred.
     DropdownToggled(bool),
+    /// The index of the item selected in the list.
+    /// For example, if you select the first item the index will be 0.
     DropdownItemSelected(usize),
 }
 

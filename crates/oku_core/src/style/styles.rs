@@ -573,6 +573,7 @@ impl Style {
             || self.dirty_flags.contains(StyleFlags::BORDER_COLOR)
     }
 
+    /// Take an old style and update it with the non-default values from the new style.
     pub fn merge(old: &Self, new: &Self) -> Self {
         let old_dirty_flags = old.dirty_flags;
         let new_dirty_flags = new.dirty_flags;
@@ -580,11 +581,11 @@ impl Style {
         if old_dirty_flags.is_empty() {
             return *new;
         }
-        
+
         if new_dirty_flags.is_empty() {
             return *old;
         }
-        
+
         let font_family_length = if new_dirty_flags.contains(StyleFlags::FONT_FAMILY_LENGTH) {
             new.font_family_length
         } else {
