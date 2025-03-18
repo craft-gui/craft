@@ -63,6 +63,8 @@ pub enum OkuMessage {
     /// The index of the item selected in the list.
     /// For example, if you select the first item the index will be 0.
     DropdownItemSelected(usize),
+    /// Generated when a switch is toggled. The boolean is the status of toggled after the event has occurred.
+    SwitchToggled(bool),
 }
 
 impl OkuMessage {

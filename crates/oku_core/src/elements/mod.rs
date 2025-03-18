@@ -6,6 +6,7 @@ pub(crate) mod layout_context;
 pub(crate) mod span;
 pub(crate) mod text;
 pub(crate) mod dropdown;
+pub(crate) mod switch;
 
 #[allow(clippy::module_inception)]
 pub(crate) mod text_input;
@@ -27,4 +28,5 @@ pub use crate::elements::image::Image;
 pub use crate::elements::span::Span;
 pub use crate::elements::text::Text;
 pub use crate::elements::dropdown::Dropdown;
+pub use crate::elements::switch::Switch;
 pub use crate::elements::text_input::text_input::TextInput;

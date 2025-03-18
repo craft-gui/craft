@@ -1,4 +1,4 @@
-pub(crate) mod color;
+pub mod color;
 
 #[allow(clippy::module_inception)]
 pub(crate) mod renderer;

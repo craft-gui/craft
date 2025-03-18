@@ -19,7 +19,7 @@ use crate::elements::Container;
 /// The index of the dropdown list in the layout tree.
 const DROPDOWN_LIST_INDEX: usize = 1;
 
-/// An element for storing related elements.
+/// An element for displaying a list of items in a dropdown. By default, the first list item will be shown, otherwise show the selected item. 
 #[derive(Clone, Default, Debug)]
 pub struct Dropdown {
     pub common_element_data: CommonElementData,
@@ -245,14 +245,8 @@ impl Element for Dropdown {
                 }
 
             }
-            OkuMessage::Initialized => {}
             OkuMessage::KeyboardInputEvent(_) => {}
-            OkuMessage::PointerMovedEvent(_) => {}
-            OkuMessage::MouseWheelEvent(_) => {}
-            OkuMessage::ImeEvent(_) => {}
-            OkuMessage::TextInputChanged(_) => {},
-            OkuMessage::DropdownToggled(_) => {},
-            OkuMessage::DropdownItemSelected(_) => {}
+            _ => {}
         }
 
         UpdateResult::default()
