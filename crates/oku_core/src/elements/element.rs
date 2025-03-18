@@ -13,7 +13,7 @@ use crate::RendererBox;
 use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
-use taffy::{NodeId, Overflow, TaffyTree};
+use taffy::{NodeId, Overflow, Position, TaffyTree};
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -125,9 +125,23 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         let position = match common_element_data_mut.style.position() {
             taffy::Position::Relative => relative_position + result.location.into(),
-            taffy::Position::Absolute => result.location.into(),
+            // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
+            taffy::Position::Absolute => relative_position + result.location.into(),
         };
 
+        let mut size = result.size.into();
+        // FIXME: Don't use the content size for position absolute containers.
+        // The following is a broken layout using result.size.
+        // └──  FLEX COL [x: 1    y: 44   w: 140  h: 45   content_w: 139  content_h: 142  border: l:1 r:1 t:1 b:1, padding: l:12 r:12 t:8 b:8] (NodeId(4294967303))
+        //     ├──  LEAF [x: 13   y: 9    w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967298))
+        //     ├──  LEAF [x: 13   y: 34   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967299))
+        //     ├──  LEAF [x: 13   y: 59   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967300))
+        //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
+        //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
+        if common_element_data_mut.style.position() == Position::Absolute {
+            size = Size::new(result.content_size.width, result.content_size.height);
+        }
+        
         common_element_data_mut.computed_border_rectangle_overflow_size =
             Size::new(result.content_size.width, result.content_size.height);
         common_element_data_mut.computed_layered_rectangle = ElementRectangle {
@@ -135,7 +149,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
-            size: result.size.into(),
+            size,
         };
         common_element_data_mut.computed_layered_rectangle_transformed =
             common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
@@ -324,6 +338,14 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     /// Called on sequential renders to update any state that the element may have.
     fn update_state(&self, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+
+    fn default_style(&self) -> Style {
+        Style::default()
+    }
+
+    fn merge_default_style(&mut self) {
+        self.common_element_data_mut().style = Style::merge(&self.default_style(), &self.common_element_data().style);
+    }
 }
 
 impl<T: Element> From<T> for ElementBox {

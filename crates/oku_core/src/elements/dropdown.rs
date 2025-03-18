@@ -1,0 +1,351 @@
+use crate::components::component::{ComponentSpecification};
+use crate::components::Props;
+use crate::components::UpdateResult;
+use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element::{Element, ElementBox};
+use crate::elements::element_styles::ElementStyles;
+use crate::elements::layout_context::LayoutContext;
+use crate::events::OkuMessage;
+use crate::geometry::{Point};
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::style::{Display, FlexDirection, Style, Unit};
+use crate::{generate_component_methods, RendererBox};
+use parley::FontContext;
+use std::any::Any;
+use peniko::Color;
+use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
+use crate::elements::Container;
+
+/// The index of the dropdown list in the layout tree.
+const DROPDOWN_LIST_INDEX: usize = 1;
+
+/// An element for storing related elements.
+#[derive(Clone, Default, Debug)]
+pub struct Dropdown {
+    pub common_element_data: CommonElementData,
+    /// A copy of the currently selected element, this is not stored in the user tree nor will it receive events.
+    /// This is copied, so that we can change the location and render it in the dropdown container.
+    pseudo_dropdown_selection: Option<ElementBox>,
+    /// An element not in the user tree. Created, so that we can utilize our existing functionality (like scrollbars).
+    pseudo_dropdown_list_element: Container,
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct DropdownState {
+    /// Whether the dropdown list is visible or not.
+    is_open: bool,
+    /// The index of the currently selected item in the dropdown list.
+    /// For example if you select the first item, `selected_item` will be 0.
+    selected_item: Option<usize>,
+}
+
+impl Element for Dropdown {
+    fn common_element_data(&self) -> &CommonElementData {
+        &self.common_element_data
+    }
+
+    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
+        &mut self.common_element_data
+    }
+
+    fn children(&self) -> Vec<&dyn Element> {
+        self.common_element_data().children.iter().map(|x| x.internal.as_ref()).collect()
+    }
+
+    /// Checks if a point is in the dropdown selection and/or list.
+    fn in_bounds(&self, point: Point) -> bool {
+        // Check the bounds of the dropdown selection.
+        let common_element_data = self.common_element_data();
+        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+        let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&point);
+
+        // Check the bounds of the dropdown list items.
+        let mut dropdown_list_in_bounds = false;
+        for child in self.children() {
+            if child.in_bounds(point) {
+                dropdown_list_in_bounds = true;
+                break;
+            }
+        }
+
+        dropdown_selection_in_bounds || dropdown_list_in_bounds
+    }
+
+    fn name(&self) -> &'static str {
+        "Dropdown"
+    }
+
+    fn draw(
+        &mut self,
+        renderer: &mut RendererBox,
+        font_context: &mut FontContext,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        _root_node: NodeId,
+        element_state: &ElementStateStore,
+        pointer: Option<Point>,
+    ) {
+        let state = self.get_state(element_state);
+        // We draw the borders before we start any layers, so that we don't clip the borders.
+        self.draw_borders(renderer);
+        self.maybe_start_layer(renderer);
+        {
+            // Draw the dropdown selection.
+            if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
+                pseudo_dropdown_selection.internal.draw(renderer, font_context, taffy_tree, pseudo_dropdown_selection.internal.common_element_data().taffy_node_id.unwrap(), element_state, pointer);
+            }
+
+            // Draw the dropdown list if it is open.
+            if state.is_open {
+                self.pseudo_dropdown_list_element.draw(renderer, font_context, taffy_tree, self.pseudo_dropdown_list_element.common_element_data.taffy_node_id.unwrap(), element_state, pointer);
+                self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
+            }
+        }
+        self.maybe_end_layer(renderer);
+    }
+
+    fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        element_state: &mut ElementStateStore,
+        scale_factor: f64,
+    ) -> Option<NodeId> {
+        self.merge_default_style();
+
+        let state = self.get_state(element_state);
+        let is_open = state.is_open;
+        let mut child_nodes: Vec<NodeId> = Vec::new();
+
+        // Find the `pseudo_dropdown_selection` element from the selected index.
+        self.pseudo_dropdown_selection = if let Some(selected_index) = state.selected_item {
+            if let Some(selected_element) = self.children_mut().get(selected_index) {
+                Some(selected_element.clone())
+            } else {
+                self.children_mut().first().cloned()
+            }
+        } else {
+            self.children_mut().first().cloned()
+        };
+
+        // Add the pseudo dropdown element to the Dropdown's layout tree.
+        if let Some(selected_node) = self.pseudo_dropdown_selection.as_mut() {
+            child_nodes.push(selected_node.internal.compute_layout(taffy_tree, element_state, scale_factor).unwrap());
+        }
+
+        // Compute the layout of the pseudo dropdown list if open.
+        if is_open {
+            let dropdown_list_child_nodes: Vec<NodeId> = self.children_mut().iter_mut().filter_map(|child| { 
+                child.internal.compute_layout(taffy_tree, element_state, scale_factor)
+            }).collect();
+            self.pseudo_dropdown_list_element.common_element_data.style = Style::merge(&Self::default_dropdown_list_style(), &self.pseudo_dropdown_list_element.common_element_data.style);
+            
+            let dropdown_list_node_id = taffy_tree.new_with_children(self.pseudo_dropdown_list_element.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor), &dropdown_list_child_nodes).unwrap();
+
+            // Add the pseudo dropdown list to the Dropdown's layout tree.
+            child_nodes.push(dropdown_list_node_id);
+        }
+
+        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
+        self.common_element_data().taffy_node_id
+    }
+
+    fn finalize_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        root_node: NodeId,
+        position: Point,
+        z_index: &mut u32,
+        transform: glam::Mat4,
+        element_state: &mut ElementStateStore,
+        pointer: Option<Point>,
+    ) {
+        let state = self.get_state(element_state);
+        let is_open = state.is_open;
+        let result = taffy_tree.layout(root_node).unwrap();
+        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.finalize_borders();
+
+        // Finalize the layout of the pseudo dropdown selection element.
+        if let Some(dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
+            let dropdown_selection_taffy = dropdown_selection.internal.common_element_data().taffy_node_id.unwrap();
+            dropdown_selection.internal.finalize_layout(
+                taffy_tree,
+                dropdown_selection_taffy,
+                self.common_element_data.computed_layered_rectangle.position,
+                z_index,
+                transform,
+                element_state,
+                pointer,
+            );
+        }
+
+        // Finalize the layout of the pseudo dropdown list element when the list is open.
+        if is_open {
+            let dropdown_list = taffy_tree.get_child_id(self.common_element_data.taffy_node_id.unwrap(), DROPDOWN_LIST_INDEX);
+            self.pseudo_dropdown_list_element.common_element_data.taffy_node_id = Some(dropdown_list);
+            self.pseudo_dropdown_list_element.finalize_layout(
+                taffy_tree,
+                dropdown_list,
+                self.common_element_data.computed_layered_rectangle.position,
+                z_index,
+                transform,
+                element_state,
+                pointer,
+            );
+
+            for child in self.common_element_data.children.iter_mut() {
+                let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
+                if taffy_child_node_id.is_none() {
+                    continue;
+                }
+
+                child.internal.finalize_layout(
+                    taffy_tree,
+                    taffy_child_node_id.unwrap(),
+                    // The location of where the dropdown list starts for the list items.
+                    self.pseudo_dropdown_list_element.common_element_data.computed_layered_rectangle.position,
+                    z_index,
+                    transform,
+                    element_state,
+                    pointer,
+                );
+            }
+        }
+    }
+
+    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
+        let base_state = self.get_base_state_mut(element_state);
+        let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
+
+        match message {
+            OkuMessage::PointerButtonEvent(pointer_button) => {
+                if !message.clicked() {
+                    return UpdateResult::default();
+                }
+
+                for child in self.children().iter().enumerate() {
+                    // Emit an event when a dropdown list item is selected and close the dropdown list.
+                    // The emission of this event implies a DropdownToggled(false) event.
+                    if child.1.in_bounds(pointer_button.position) {
+                        // We need to retain the index of the selected item to render the `pseudo_dropdown_selection` element.
+                        state.selected_item = Some(child.0);
+                        state.is_open = false;
+
+                        return UpdateResult::default().result_message(OkuMessage::DropdownItemSelected(state.selected_item.unwrap()))
+                    }
+                }
+
+                // Emit an event when the dropdown list is opened or closed.
+                let common_element_data = self.common_element_data();
+                let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+                let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
+                if dropdown_selection_in_bounds {
+                    state.is_open = !state.is_open;
+                    return UpdateResult::default().result_message(OkuMessage::DropdownToggled(state.is_open));
+                }
+
+            }
+            OkuMessage::Initialized => {}
+            OkuMessage::KeyboardInputEvent(_) => {}
+            OkuMessage::PointerMovedEvent(_) => {}
+            OkuMessage::MouseWheelEvent(_) => {}
+            OkuMessage::ImeEvent(_) => {}
+            OkuMessage::TextInputChanged(_) => {},
+            OkuMessage::DropdownToggled(_) => {},
+            OkuMessage::DropdownItemSelected(_) => {}
+        }
+
+        UpdateResult::default()
+    }
+
+    fn initialize_state(&self) -> ElementStateStoreItem {
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(DropdownState::default()),
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    /// The default style for the Dropdown container.
+    fn default_style(&self) -> Style {
+        let mut default_style = Style::default();
+
+        let vertical_padding = Unit::Px(8.0);
+        let horizontal_padding = Unit::Px(12.0);
+        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        
+        *default_style.min_width_mut() = Unit::Px(140.0);
+        *default_style.min_height_mut() = Unit::Px(45.0);
+        *default_style.background_mut() = Color::from_rgb8(240, 240, 240);
+        
+        let border_color = Color::from_rgb8(180, 180, 180);
+        let border_radius = (6.0, 6.0);
+        let border_width = Unit::Px(1.0);
+        *default_style.border_radius_mut() = [border_radius, border_radius, border_radius, border_radius];
+        *default_style.border_color_mut() = [border_color, border_color, border_color, border_color];
+        *default_style.border_width_mut() = [border_width, border_width, border_width, border_width];
+    
+        default_style
+    }
+}
+
+impl Dropdown {
+
+    /// Sets the style of a dropdown list.
+    pub fn dropdown_list_style(mut self, style: &Style) -> Self {
+        self.pseudo_dropdown_list_element.common_element_data.style = *style;
+        self
+    }
+
+    /// Returns the default style for a dropdown list.
+    fn default_dropdown_list_style() -> Style {
+        let mut default_style = Style::default();
+
+        let vertical_padding = Unit::Px(8.0);
+        let horizontal_padding = Unit::Px(12.0);
+        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        *default_style.min_width_mut() = Unit::Px(140.0);
+        *default_style.min_height_mut() = Unit::Px(45.0);
+        *default_style.background_mut() = Color::from_rgb8(220, 220, 220);
+
+
+        let border_color = Color::from_rgb8(160, 160, 160);
+        let border_radius = (6.0, 6.0);
+        let border_width = Unit::Px(1.0);
+        *default_style.border_radius_mut() = [border_radius, border_radius, border_radius, border_radius];
+        *default_style.border_color_mut() = [border_color, border_color, border_color, border_color];
+        *default_style.border_width_mut() = [border_width, border_width, border_width, border_width];
+
+        *default_style.display_mut() = Display::Flex;
+        *default_style.flex_direction_mut() = FlexDirection::Column;
+        *default_style.position_mut() = Position::Absolute;
+        // Position the dropdown list at the bottom of the dropdown.
+        *default_style.inset_mut() = [Unit::Percentage(100.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
+        
+        default_style
+    }
+
+    #[allow(dead_code)]
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a DropdownState {
+        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
+    }
+
+    pub fn new() -> Dropdown {
+        Dropdown {
+            common_element_data: Default::default(),
+            pseudo_dropdown_selection: Default::default(),
+            pseudo_dropdown_list_element: Default::default(),
+        }
+    }
+
+    generate_component_methods!();
+}
+
+impl ElementStyles for Dropdown {
+    fn styles_mut(&mut self) -> &mut Style {
+        self.common_element_data.current_style_mut()
+    }
+}

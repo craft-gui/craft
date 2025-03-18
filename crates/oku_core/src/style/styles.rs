@@ -195,7 +195,7 @@ impl Default for Style {
             font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 15.0 },
+            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 },
             position: Position::Relative,
             margin: [Unit::Px(0.0); 4],
             padding: [Unit::Px(0.0); 4],
@@ -571,5 +571,270 @@ impl Style {
         self.dirty_flags.contains(StyleFlags::BORDER_WIDTH)
             || self.dirty_flags.contains(StyleFlags::BORDER_RADIUS)
             || self.dirty_flags.contains(StyleFlags::BORDER_COLOR)
+    }
+
+    /// Take an old style and update it with the non-default values from the new style.
+    pub fn merge(old: &Self, new: &Self) -> Self {
+        let old_dirty_flags = old.dirty_flags;
+        let new_dirty_flags = new.dirty_flags;
+
+        if old_dirty_flags.is_empty() {
+            return *new;
+        }
+
+        if new_dirty_flags.is_empty() {
+            return *old;
+        }
+
+        let font_family_length = if new_dirty_flags.contains(StyleFlags::FONT_FAMILY_LENGTH) {
+            new.font_family_length
+        } else {
+            old.font_family_length
+        };
+
+        let font_family = if new_dirty_flags.contains(StyleFlags::FONT_FAMILY) {
+            new.font_family
+        } else {
+            old.font_family
+        };
+
+        let box_sizing = if new_dirty_flags.contains(StyleFlags::BOX_SIZING) {
+            new.box_sizing
+        } else {
+            old.box_sizing
+        };
+
+        let scrollbar_width = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_WIDTH) {
+            new.scrollbar_width
+        } else {
+            old.scrollbar_width
+        };
+
+        let position = if new_dirty_flags.contains(StyleFlags::POSITION) {
+            new.position
+        } else {
+            old.position
+        };
+
+        let margin = if new_dirty_flags.contains(StyleFlags::MARGIN) {
+            new.margin
+        } else {
+            old.margin
+        };
+
+        let padding = if new_dirty_flags.contains(StyleFlags::PADDING) {
+            new.padding
+        } else {
+            old.padding
+        };
+
+        let gap = if new_dirty_flags.contains(StyleFlags::GAP) {
+            new.gap
+        } else {
+            old.gap
+        };
+
+        let inset = if new_dirty_flags.contains(StyleFlags::INSET) {
+            new.inset
+        } else {
+            old.inset
+        };
+
+        let width = if new_dirty_flags.contains(StyleFlags::WIDTH) {
+            new.width
+        } else {
+            old.width
+        };
+
+        let height = if new_dirty_flags.contains(StyleFlags::HEIGHT) {
+            new.height
+        } else {
+            old.height
+        };
+
+        let max_width = if new_dirty_flags.contains(StyleFlags::MAX_WIDTH) {
+            new.max_width
+        } else {
+            old.max_width
+        };
+
+        let max_height = if new_dirty_flags.contains(StyleFlags::MAX_HEIGHT) {
+            new.max_height
+        } else {
+            old.max_height
+        };
+
+        let min_width = if new_dirty_flags.contains(StyleFlags::MIN_WIDTH) {
+            new.min_width
+        } else {
+            old.min_width
+        };
+
+        let min_height = if new_dirty_flags.contains(StyleFlags::MIN_HEIGHT) {
+            new.min_height
+        } else {
+            old.min_height
+        };
+
+        let x = if new_dirty_flags.contains(StyleFlags::X) {
+            new.x
+        } else {
+            old.x
+        };
+
+        let y = if new_dirty_flags.contains(StyleFlags::Y) {
+            new.y
+        } else {
+            old.y
+        };
+
+        let display = if new_dirty_flags.contains(StyleFlags::DISPLAY) {
+            new.display
+        } else {
+            old.display
+        };
+
+        let wrap = if new_dirty_flags.contains(StyleFlags::WRAP) {
+            new.wrap
+        } else {
+            old.wrap
+        };
+
+        let align_items = if new_dirty_flags.contains(StyleFlags::ALIGN_ITEMS) {
+            new.align_items
+        } else {
+            old.align_items
+        };
+
+        let justify_content = if new_dirty_flags.contains(StyleFlags::JUSTIFY_CONTENT) {
+            new.justify_content
+        } else {
+            old.justify_content
+        };
+
+        let flex_direction = if new_dirty_flags.contains(StyleFlags::FLEX_DIRECTION) {
+            new.flex_direction
+        } else {
+            old.flex_direction
+        };
+
+        let flex_grow = if new_dirty_flags.contains(StyleFlags::FLEX_GROW) {
+            new.flex_grow
+        } else {
+            old.flex_grow
+        };
+
+        let flex_shrink = if new_dirty_flags.contains(StyleFlags::FLEX_SHRINK) {
+            new.flex_shrink
+        } else {
+            old.flex_shrink
+        };
+
+        let flex_basis = if new_dirty_flags.contains(StyleFlags::FLEX_BASIS) {
+            new.flex_basis
+        } else {
+            old.flex_basis
+        };
+
+        let color = if new_dirty_flags.contains(StyleFlags::COLOR) {
+            new.color
+        } else {
+            old.color
+        };
+
+        let background = if new_dirty_flags.contains(StyleFlags::BACKGROUND) {
+            new.background
+        } else {
+            old.background
+        };
+
+        let font_size = if new_dirty_flags.contains(StyleFlags::FONT_SIZE) {
+            new.font_size
+        } else {
+            old.font_size
+        };
+
+        let font_weight = if new_dirty_flags.contains(StyleFlags::FONT_WEIGHT) {
+            new.font_weight
+        } else {
+            old.font_weight
+        };
+
+        let font_style = if new_dirty_flags.contains(StyleFlags::FONT_STYLE) {
+            new.font_style
+        } else {
+            old.font_style
+        };
+
+        let overflow = if new_dirty_flags.contains(StyleFlags::OVERFLOW) {
+            new.overflow
+        } else {
+            old.overflow
+        };
+
+        let border_color = if new_dirty_flags.contains(StyleFlags::BORDER_COLOR) {
+            new.border_color
+        } else {
+            old.border_color
+        };
+
+        let border_width = if new_dirty_flags.contains(StyleFlags::BORDER_WIDTH) {
+            new.border_width
+        } else {
+            old.border_width
+        };
+
+        let border_radius = if new_dirty_flags.contains(StyleFlags::BORDER_RADIUS) {
+            new.border_radius
+        } else {
+            old.border_radius
+        };
+
+        let scrollbar_color = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_COLOR) {
+            new.scrollbar_color
+        } else {
+            old.scrollbar_color
+        };
+
+        let dirty_flags = old_dirty_flags | new_dirty_flags;
+
+        Self {
+            font_family_length,
+            font_family,
+            box_sizing,
+            scrollbar_width,
+            position,
+            margin,
+            padding,
+            gap,
+            inset,
+            width,
+            height,
+            max_width,
+            max_height,
+            min_width,
+            min_height,
+            x,
+            y,
+            display,
+            wrap,
+            align_items,
+            justify_content,
+            flex_direction,
+            flex_grow,
+            flex_shrink,
+            flex_basis,
+            color,
+            background,
+            font_size,
+            font_weight,
+            font_style,
+            overflow,
+            border_color,
+            border_width,
+            border_radius,
+            scrollbar_color,
+            dirty_flags,
+        }
     }
 }
