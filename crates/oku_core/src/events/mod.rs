@@ -58,6 +58,8 @@ pub enum OkuMessage {
     MouseWheelEvent(MouseWheel),
     ImeEvent(Ime),
     TextInputChanged(String),
+    DropdownToggled(bool),
+    DropdownItemSelected(usize),
 }
 
 impl OkuMessage {

@@ -218,7 +218,8 @@ impl Element for Dropdown {
                         if child.1.in_bounds(pointer_button.position) {
                             state.selected_item = Some(child.0);
                             state.is_open = false;
-                            break;
+
+                            return UpdateResult::default().result_message(OkuMessage::DropdownItemSelected(state.selected_item.unwrap()))
                         }
                     }
 
@@ -227,6 +228,7 @@ impl Element for Dropdown {
                     let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
                     if dropdown_selection_in_bounds {
                         state.is_open = !state.is_open;
+                        return UpdateResult::default().result_message(OkuMessage::DropdownToggled(state.is_open));
                     }
 
                 }
@@ -237,7 +239,9 @@ impl Element for Dropdown {
             OkuMessage::PointerMovedEvent(_) => {}
             OkuMessage::MouseWheelEvent(_) => {}
             OkuMessage::ImeEvent(_) => {}
-            OkuMessage::TextInputChanged(_) => {}
+            OkuMessage::TextInputChanged(_) => {},
+            OkuMessage::DropdownToggled(_) => {},
+            OkuMessage::DropdownItemSelected(_) => {}
         }
 
         UpdateResult::default()
