@@ -127,6 +127,12 @@ impl ApplicationHandler for OkuWinitState {
                 self.send_message(InternalMessage::Close, true);
                 self.close_requested = true;
             }
+            WindowEvent::ModifiersChanged(modifiers) => {
+                self.send_message(
+                    InternalMessage::ModifiersChanged(modifiers),
+                    true,
+                );
+            }
             WindowEvent::PointerButton {
                 device_id,
                 state,

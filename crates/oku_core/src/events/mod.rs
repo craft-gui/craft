@@ -56,6 +56,7 @@ pub enum OkuMessage {
     KeyboardInputEvent(KeyboardInput),
     PointerMovedEvent(PointerMoved),
     MouseWheelEvent(MouseWheel),
+    ModifiersChangedEvent(winit::event::Modifiers),
     ImeEvent(Ime),
     TextInputChanged(String),
     /// Generated when a dropdown is opened or closed. The boolean is the status of is_open after the event has occurred.

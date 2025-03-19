@@ -88,9 +88,9 @@ impl Editor {
 
     pub fn handle_event(&mut self, event: OkuMessage, text_x: f32, text_y: f32) {
         match event {
-            // WindowEvent::ModifiersChanged(modifiers) => {
-            //     self.modifiers = Some(modifiers);
-            // }
+            OkuMessage::ModifiersChangedEvent(modifiers) => {
+                self.modifiers = Some(modifiers);
+            }
             OkuMessage::KeyboardInputEvent(keyboard_input) if !self.editor.is_composing() => {
                 if !keyboard_input.event.state.is_pressed() {
                     return;

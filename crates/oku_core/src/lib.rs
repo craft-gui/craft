@@ -79,7 +79,7 @@ use parley::fontique::{FallbackKey, FamilyId};
 use peniko::Brush;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use winit::event::Ime;
+use winit::event::{Ime, Modifiers};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
@@ -446,6 +446,10 @@ async fn async_main(
                     on_keyboard_input(&mut app, keyboard_input).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
+                InternalMessage::ModifiersChanged(modifiers) => {
+                    on_modifiers_input(&mut app, modifiers).await;
+                    send_response(dummy_message, &mut app.winit_sender).await;
+                }
             }
         }
     }
@@ -540,6 +544,30 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state)
         .await;
 
+    app.window.as_ref().unwrap().request_redraw();
+}
+
+async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
+    let modifiers_event = OkuMessage::ModifiersChangedEvent(modifiers);
+
+    dispatch_event(
+        modifiers_event.clone(),
+        &mut app.resource_manager,
+        app.mouse_position,
+        &mut app.user_tree,
+        &mut app.global_state,
+    ).await;
+
+    #[cfg(feature = "dev_tools")]
+    {
+        dispatch_event(
+            modifiers_event.clone(),
+            &mut app.resource_manager,
+            app.mouse_position,
+            &mut app.dev_tree,
+            &mut app.global_state,
+        ).await;
+    }
     app.window.as_ref().unwrap().request_redraw();
 }
 

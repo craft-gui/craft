@@ -21,6 +21,7 @@ pub(crate) enum InternalMessage {
     PointerMoved(PointerMoved),
     MouseWheel(MouseWheel),
     KeyboardInput(KeyboardInput),
+    ModifiersChanged(winit::event::Modifiers),
     Ime(Ime),
     ProcessUserEvents,
     #[cfg(not(target_arch = "wasm32"))]
