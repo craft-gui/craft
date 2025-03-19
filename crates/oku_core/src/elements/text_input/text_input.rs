@@ -173,9 +173,9 @@ impl Element for TextInput {
         let state = self.get_state_mut(element_state);
 
         let text_position = self.common_element_data().computed_layered_rectangle_transformed.content_rectangle();
-        state.editor.handle_event(message, text_position.x, text_position.y);
+        let update_result = state.editor.handle_event(message, text_position.x, text_position.y);
 
-        UpdateResult::default()
+        update_result.unwrap_or_default()
     }
 
     fn initialize_state(&self) -> ElementStateStoreItem {

@@ -12,6 +12,7 @@ use crate::elements::text_input::plain_text_editor::PlainEditor;
 use crate::events::OkuMessage;
 use crate::style::Style;
 use parley::{FontContext, LayoutContext};
+use crate::components::UpdateResult;
 
 pub struct Editor {
     pub(crate) font_cx: FontContext,
@@ -86,15 +87,16 @@ impl Editor {
         self.cursor_visible = true;
     }
 
-    pub fn handle_event(&mut self, event: OkuMessage, text_x: f32, text_y: f32) {
+    pub fn handle_event(&mut self, event: OkuMessage, text_x: f32, text_y: f32) -> Option<UpdateResult> {
         match event {
             OkuMessage::ModifiersChangedEvent(modifiers) => {
                 self.modifiers = Some(modifiers);
             }
             OkuMessage::KeyboardInputEvent(keyboard_input) if !self.editor.is_composing() => {
                 if !keyboard_input.event.state.is_pressed() {
-                    return;
+                    return None;
                 }
+                
                 self.cursor_reset();
                 let mut drv = self.editor.driver(&mut self.font_cx, &mut self.layout_cx);
                 #[allow(unused)]
@@ -239,6 +241,13 @@ impl Editor {
                     }
                     _ => (),
                 }
+
+                
+                // FIXME: This is more of a hack, we should be doing this somewhere else.
+                return Some(UpdateResult::new()
+                    .prevent_defaults()
+                    .prevent_propagate()
+                    .result_message(OkuMessage::TextInputChanged(self.editor.text())))
             }
             // WindowEvent::Touch(Touch {
             //     phase, location, ..
@@ -316,6 +325,9 @@ impl Editor {
             }
             _ => {}
         }
+        
+        
+        None
     }
 
     //pub fn handle_accesskit_action_request(&mut self, req: &accesskit::ActionRequest) {

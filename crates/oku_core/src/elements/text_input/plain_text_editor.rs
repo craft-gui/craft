@@ -151,7 +151,18 @@ where
     pub fn cursor_geometry(&self, size: f32) -> Option<Rect> {
         self.show_cursor.then(|| self.selection.focus().geometry(&self.layout, size))
     }
-
+    
+    pub fn text(&self) -> String {
+        if let Some(preedit_range) = &self.compose {
+            let mut s = String::new();
+            s += &self.buffer[..preedit_range.start];
+            s += &self.buffer[preedit_range.end..];
+            s
+        } else {
+            self.buffer.clone()
+        }
+    }
+    
     /// Replace the whole text buffer.
     pub fn set_text(&mut self, is: &str) {
         assert!(!self.is_composing());
