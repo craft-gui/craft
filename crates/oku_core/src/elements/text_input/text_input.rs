@@ -8,6 +8,8 @@ use crate::{generate_component_methods_private_push, RendererBox};
 use parley::FontContext;
 use peniko::Brush;
 use std::any::Any;
+use std::hash::Hasher;
+use rustc_hash::FxHasher;
 use taffy::{NodeId, TaffyTree};
 
 use crate::components::Props;
@@ -28,6 +30,7 @@ pub struct TextInput {
 pub struct TextInputState {
     pub id: ComponentId,
     pub text: String,
+    pub text_hash: u64,
     pub editor: Editor,
     pub children: Vec<ComponentSpecification>,
     pub style: Style,
@@ -37,7 +40,8 @@ impl TextInputState {
     pub(crate) fn new(id: ComponentId, text: &str, style: Style) -> Self {
         Self {
             id,
-            text: String::new(),
+            text: text.to_string(),
+            text_hash: 0,
             editor: Editor::new(text, style),
             children: Vec::new(),
             style: Default::default(),
@@ -192,6 +196,17 @@ impl Element for TextInput {
     fn update_state(&self, element_state: &mut ElementStateStore, _reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
         self.update_state_fragments(state);
+
+        // FIXME: We will need to rewrite this when we do text input caching, but for now we still need this here, so that we can detect default text changes from the user.
+        let mut hasher = FxHasher::default();
+        hasher.write(state.text.as_bytes());
+        let text_hash = hasher.finish();
+
+        if text_hash != state.text_hash {
+            state.editor.editor.set_text(&state.text);
+        }
+
+        state.text_hash = text_hash;
     }
 
     fn default_style(&self) -> Style {
