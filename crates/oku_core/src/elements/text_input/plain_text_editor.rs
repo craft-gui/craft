@@ -137,6 +137,19 @@ where
         }
     }
 
+    /// If the current selection is not collapsed, returns the text content of
+    /// that selection.
+    pub fn selected_text(&self) -> Option<&str> {
+        if self.is_composing() {
+            return None;
+        }
+        if !self.selection.is_collapsed() {
+            self.buffer.get(self.selection.text_range())
+        } else {
+            None
+        }
+    }
+
     /// Get rectangles representing the selected portions of text.
     pub fn selection_geometry(&self) -> Vec<Rect> {
         // We do not check `self.show_cursor` here, as the IME handling code collapses the
