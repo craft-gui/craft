@@ -5,13 +5,13 @@ use crate::elements::layout_context::AvailableSpace;
 use crate::elements::text::text::TextFragment;
 use crate::elements::text::TextState;
 use crate::elements::Span;
-use crate::style::Style;
+use crate::style::{FontStyle, Style};
 use crate::OKU_FALLBACK_FONT_KEY;
 use parley::fontique::FamilyId;
 use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout, TextStyle};
 use peniko::Brush;
 use rustc_hash::FxHasher;
-use std::hash::Hasher;
+use std::hash::{Hash, Hasher};
 
 #[derive(Copy, Clone, Debug)]
 pub struct TextHashValue {
@@ -35,12 +35,26 @@ pub struct TextHashKey {
 pub(crate) fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>) -> TextStyle<'a, Brush> {
     let text_brush = Brush::Solid(style.color());
 
+    let font_style = match style.font_style() {
+        FontStyle::Normal => {
+            parley::FontStyle::Normal
+        }
+        FontStyle::Italic => {
+            parley::FontStyle::Italic
+        }
+        FontStyle::Oblique => {
+            // FIXME: Add oblique angle parameter.
+            parley::FontStyle::Oblique(None)
+        }
+    };
+    
     TextStyle {
         brush: text_brush,
         font_stack,
         line_height: 1.5,
         font_size: style.font_size(),
         font_weight: parley::FontWeight::new(style.font_weight().0 as f32),
+        font_style,
         ..Default::default()
     }
 }
@@ -59,6 +73,7 @@ fn hash_text_and_font_settings_from_text_fragments(
         font_settings_hasher.write(&style.font_family_raw());
         font_settings_hasher.write_u32(style.font_size().to_bits());
         font_settings_hasher.write_u16(style.font_weight().0);
+        font_settings_hasher.write_usize(style.font_style() as usize);
     };
 
     for fragment in fragments.iter() {

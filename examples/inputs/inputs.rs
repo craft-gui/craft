@@ -47,7 +47,7 @@ impl Component for InputsExample {
             .component()
     }
 
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _event: Event) -> UpdateResult {
         UpdateResult::new()
     }
 }

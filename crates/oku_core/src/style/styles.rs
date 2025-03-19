@@ -132,7 +132,7 @@ impl Default for Weight {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FontStyle {
     Normal,
     Italic,
