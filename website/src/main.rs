@@ -70,7 +70,7 @@ impl Component<WebsiteGlobalState> for Website {
 fn main() {
     oku_main_with_options(
         Website::component(),
-        Box::new(WebsiteGlobalState::default()),
+        WebsiteGlobalState::default(),
         Some(OkuOptions {
             renderer: RendererType::default(),
             ..Default::default()
