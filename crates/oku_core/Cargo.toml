@@ -43,7 +43,7 @@ version = "2.1.1"
 default-features = false
 features = ["std"]
 
-[dependencies.clipboard-rs]
+[target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies.clipboard-rs]
 version = "0.2.4"
 
 [dependencies.image]
