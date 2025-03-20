@@ -1115,6 +1115,8 @@ fn layout(
         transform,
         element_state,
         pointer,
+        font_context,
+        font_layout_context,
     );
 
     // root_element.print_tree();

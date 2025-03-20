@@ -13,6 +13,7 @@ use crate::RendererBox;
 use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
+use peniko::Brush;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 
 #[derive(Clone, Debug)]
@@ -104,6 +105,8 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        font_context: &mut FontContext,
+        layout_context: &mut parley::LayoutContext<Brush>,
     );
 
     fn as_any(&self) -> &dyn Any;

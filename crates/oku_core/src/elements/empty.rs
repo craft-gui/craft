@@ -6,6 +6,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::RendererBox;
 use parley::FontContext;
 use std::any::Any;
+use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Default, Debug)]
@@ -64,6 +65,8 @@ impl Element for Empty {
         _transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _font_context: &mut FontContext,
+        _layout_context: &mut parley::LayoutContext<Brush>,
     ) {
     }
 

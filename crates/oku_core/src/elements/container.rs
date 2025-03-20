@@ -13,6 +13,7 @@ use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
+use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
 
@@ -104,6 +105,8 @@ impl Element for Container {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        font_context: &mut FontContext,
+        layout_context: &mut parley::LayoutContext<Brush>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -142,6 +145,8 @@ impl Element for Container {
                 transform * child_transform,
                 element_state,
                 pointer,
+                font_context,
+                layout_context
             );
         }
     }

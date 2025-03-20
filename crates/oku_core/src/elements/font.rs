@@ -9,6 +9,7 @@ use crate::resource_manager::ResourceIdentifier;
 use crate::{generate_component_methods_no_children, RendererBox};
 use parley::FontContext;
 use std::any::Any;
+use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Debug)]
@@ -72,6 +73,8 @@ impl Element for Font {
         _transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _font_context: &mut FontContext,
+        _layout_context: &mut parley::LayoutContext<Brush>,
     ) {
     }
 

@@ -11,6 +11,7 @@ use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
 use crate::{palette, RendererBox};
 use parley::FontContext;
 use std::any::Any;
+use peniko::Brush;
 use taffy::{NodeId, Position, TaffyTree};
 
 /// An element that represents an on or off state.
@@ -106,6 +107,8 @@ impl Element for Switch {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        font_context: &mut FontContext,
+        layout_context: &mut parley::LayoutContext<Brush>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -119,6 +122,8 @@ impl Element for Switch {
             transform,
             element_state,
             pointer,
+            font_context,
+            layout_context
         );
     }
 

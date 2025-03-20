@@ -12,7 +12,7 @@ use crate::style::{Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
 use parley::FontContext;
 use std::any::Any;
-use peniko::Color;
+use peniko::{Brush, Color};
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 use crate::elements::Container;
 
@@ -158,6 +158,8 @@ impl Element for Dropdown {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        font_context: &mut FontContext,
+        layout_context: &mut parley::LayoutContext<Brush>,
     ) {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
@@ -176,6 +178,8 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
+                font_context,
+                layout_context
             );
         }
 
@@ -191,6 +195,8 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
+                font_context,
+                layout_context
             );
 
             for child in self.common_element_data.children.iter_mut() {
@@ -208,6 +214,8 @@ impl Element for Dropdown {
                     transform,
                     element_state,
                     pointer,
+                    font_context,
+                    layout_context
                 );
             }
         }

@@ -153,6 +153,8 @@ impl Element for Text {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _font_context: &mut FontContext,
+        _layout_context: &mut parley::LayoutContext<Brush>,
     ) {
         let state = self.get_state_mut(element_state);
 

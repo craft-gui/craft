@@ -12,6 +12,7 @@ use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};
 use parley::FontContext;
 use std::any::Any;
+use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Default, Debug)]
@@ -161,6 +162,8 @@ impl Element for Canvas {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        font_context: &mut FontContext,
+        layout_context: &mut parley::LayoutContext<Brush>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -180,6 +183,8 @@ impl Element for Canvas {
                 transform,
                 element_state,
                 pointer,
+                font_context,
+                layout_context
             );
         }
     }
