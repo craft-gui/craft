@@ -13,20 +13,24 @@ use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
+    text_hash: u64,
+    font_settings_hash: u64
 }
 pub struct TaffyTextInputContext {
     pub id: ComponentId,
+    text_hash: u64,
+    font_settings_hash: u64
 }
 
 impl TaffyTextContext {
-    pub fn new(id: ComponentId) -> Self {
-        Self { id }
+    pub fn new(id: ComponentId, text_hash: u64, font_settings_hash: u64) -> Self {
+        Self { id, text_hash, font_settings_hash }
     }
 }
 
 impl TaffyTextInputContext {
-    pub fn new(id: ComponentId) -> Self {
-        Self { id }
+    pub fn new(id: ComponentId, text_hash: u64, font_settings_hash: u64) -> Self {
+        Self { id, text_hash, font_settings_hash }
     }
 }
 
@@ -117,13 +121,13 @@ pub fn measure_content(
             let text_state: &mut TextState =
                 element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.measure(known_dimensions, available_space, font_context, font_layout_context)
+            text_state.measure(known_dimensions, available_space, font_context, font_layout_context, taffy_text_context.text_hash, taffy_text_context.font_settings_hash)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let text_input_state: &mut TextInputState =
                 element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_input_state.measure(known_dimensions, available_space, font_context, font_layout_context)
+            text_input_state.measure(known_dimensions, available_space, font_context, font_layout_context, taffy_text_input_context.text_hash, taffy_text_input_context.font_settings_hash)
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)

@@ -60,7 +60,7 @@ pub(crate) fn style_to_parley_style<'a>(style: &Style, font_stack: FontStack<'a>
 }
 
 /// Hash our text and font settings from the children and fragments of a Text element.
-fn hash_text_and_font_settings_from_text_fragments(
+pub(crate) fn hash_text_and_font_settings_from_text_fragments(
     root_style: &Style,
     children: &[ComponentSpecification],
     fragments: &[TextFragment],
@@ -194,6 +194,8 @@ impl TextState {
         available_space: taffy::Size<taffy::AvailableSpace>,
         font_context: &mut FontContext,
         font_layout_context: &mut parley::LayoutContext<Brush>,
+        text_hash: u64,
+        font_settings_hash: u64,
     ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -214,9 +216,6 @@ impl TextState {
             taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
             taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
         };
-
-        let (text_hash, font_settings_hash) =
-            hash_text_and_font_settings_from_text_fragments(&self.style, &self.children, &self.fragments);
 
         let cache_key = TextHashKey {
             text_hash,

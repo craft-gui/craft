@@ -5,22 +5,22 @@ use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Style, Unit};
 use crate::{generate_component_methods_private_push, RendererBox};
-use parley::{FontContext, FontFamily, FontStack, GenericFamily, Layout};
+use parley::FontContext;
 use peniko::Brush;
+use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use rustc_hash::FxHasher;
 use taffy::{NodeId, TaffyTree};
 
 use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
+use crate::elements::text::parley::{TextHashKey, TextHashValue};
 use crate::elements::text_input::editor::Editor;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::Color;
-use crate::elements::text::parley::{get_fallback_font_families, recompute_layout_from_cache_key, style_to_parley_style, TextHashKey, TextHashValue};
 
 // A stateful element that shows a text input.
 #[derive(Clone, Default, Debug)]
@@ -71,6 +71,8 @@ impl TextInputState {
         available_space: taffy::Size<taffy::AvailableSpace>,
         font_context: &mut FontContext,
         font_layout_context: &mut parley::LayoutContext<Brush>,
+        text_hash: u64,
+        font_settings_hash: u64,
     ) -> taffy::Size<f32> {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
@@ -91,21 +93,6 @@ impl TextInputState {
             taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
             taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
         };
-
-        let mut font_settings_hasher = FxHasher::default();
-        let mut text_hasher = FxHasher::default();
-        let mut hash_font_settings = |style: &Style| {
-            font_settings_hasher.write_u8(style.font_family_length());
-            font_settings_hasher.write(&style.font_family_raw());
-            font_settings_hasher.write_u32(style.font_size().to_bits());
-            font_settings_hasher.write_u16(style.font_weight().0);
-            font_settings_hasher.write_usize(style.font_style() as usize);
-        };
-        text_hasher.write(self.editor.editor.buffer.as_bytes());
-        hash_font_settings(&self.style);
-        
-        let text_hash = text_hasher.finish();
-        let font_settings_hash = font_settings_hasher.finish();
 
         let cache_key = TextHashKey {
             text_hash,
@@ -152,9 +139,6 @@ impl TextInputState {
             }
         } else {
             // Cache is not available or the text/font settings have changed, so we need to recompute the size.
-            
-            println!("CACHE MISS");
-            
             self.editor.editor.set_width(width_constraint);
             self.editor.editor.update_layout(font_context, font_layout_context);
             let width = self.editor.editor.layout.width();
@@ -239,17 +223,33 @@ impl Element for TextInput {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
+        let state = self.get_state_mut(element_state);
+        let mut font_settings_hasher = FxHasher::default();
+        let mut text_hasher = FxHasher::default();
+        let mut hash_font_settings = |style: &Style| {
+            font_settings_hasher.write_u8(style.font_family_length());
+            font_settings_hasher.write(&style.font_family_raw());
+            font_settings_hasher.write_u32(style.font_size().to_bits());
+            font_settings_hasher.write_u16(style.font_weight().0);
+            font_settings_hasher.write_usize(style.font_style() as usize);
+        };
+        text_hasher.write(state.editor.editor.buffer.as_bytes());
+        hash_font_settings(&self.common_element_data.style);
+
+        let text_hash = text_hasher.finish();
+        let font_settings_hash = font_settings_hasher.finish();
+        
         self.common_element_data_mut().taffy_node_id = Some(
             taffy_tree
                 .new_leaf_with_context(
                     style,
-                    LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id)),
+                    LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id, text_hash, font_settings_hash)),
                 )
                 .unwrap(),
         );

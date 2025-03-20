@@ -13,7 +13,7 @@ use taffy::{NodeId, TaffyTree};
 
 use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
-use crate::elements::text::parley::{recompute_layout_from_cache_key, TextHashKey, TextHashValue};
+use crate::elements::text::parley::{hash_text_and_font_settings_from_text_fragments, recompute_layout_from_cache_key, TextHashKey, TextHashValue};
 use crate::geometry::Point;
 
 #[derive(Clone, Debug)]
@@ -132,11 +132,13 @@ impl Element for Text {
         self.merge_default_style();
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
+        let (text_hash, font_settings_hash) = hash_text_and_font_settings_from_text_fragments(&self.common_element_data.style, &self.common_element_data.child_specs, &self.fragments);
+        
         self.common_element_data_mut().taffy_node_id = Some(
             taffy_tree
                 .new_leaf_with_context(
                     style,
-                    LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id)),
+                    LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id, text_hash, font_settings_hash)),
                 )
                 .unwrap(),
         );
