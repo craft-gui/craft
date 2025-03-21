@@ -422,6 +422,8 @@ impl Element for TextInput {
         *style.border_color_mut() = [BORDER_COLOR; 4];
         *style.border_width_mut() = [Unit::Px(1.0); 4];
         *style.border_radius_mut() = [(5.0, 5.0); 4];
+        let padding = Unit::Px(4.0);
+        *style.padding_mut() = [padding, padding, padding, padding];
         
         style
     }

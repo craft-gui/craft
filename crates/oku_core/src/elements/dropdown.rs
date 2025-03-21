@@ -9,7 +9,7 @@ use crate::elements::Container;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::style::{Display, FlexDirection, Style, Unit};
+use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use peniko::Color;
@@ -271,6 +271,8 @@ impl Element for Dropdown {
     fn default_style(&self) -> Style {
         let mut default_style = Style::default();
 
+        *default_style.display_mut() = Display::Flex;
+        *default_style.align_items_mut() = Some(AlignItems::Center);
         let vertical_padding = Unit::Px(8.0);
         let horizontal_padding = Unit::Px(12.0);
         *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
