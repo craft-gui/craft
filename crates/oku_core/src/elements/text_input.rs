@@ -4,9 +4,9 @@ use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{
-    AvailableSpace, LayoutContext, MetricsDummy, TaffyTextInputContext, TextHashKey,
+    LayoutContext, TaffyTextInputContext, TextHashKey,
 };
-use crate::elements::text::TextHashValue;
+use crate::elements::text::{hash_text, make_attributes, TextHashValue};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
@@ -142,15 +142,9 @@ impl<'a> TextInputState<'a> {
 
 impl TextInput {
     pub fn new(text: &str) -> Self {
-        let mut common_element_data = CommonElementData::default();
-        const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
-        *common_element_data.style.border_color_mut() = [BORDER_COLOR; 4];
-        *common_element_data.style.border_width_mut() = [Unit::Px(1.0); 4];
-        *common_element_data.style.border_radius_mut() = [(5.0, 5.0); 4];
-
         Self {
             text: text.to_string(),
-            common_element_data,
+            common_element_data: CommonElementData::default(),
         }
     }
 
@@ -240,7 +234,6 @@ impl Element for TextInput {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
-        
         self.finalize_borders();
     }
 
@@ -373,25 +366,13 @@ impl Element for TextInput {
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
-        let new_font_family = self.common_element_data.style.font_family();
-
-        let mut attributes = Attrs::new();
-
-        if let Some(family) = new_font_family {
-            attributes.family = Family::Name(family);
-        }
-
-        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
-
         let buffer = Buffer::new(font_system, metrics);
         let mut editor = Editor::new(buffer);
         editor.borrow_with(font_system);
-
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
-        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced));
+        
+        let text_hash = hash_text(&self.text);
+        let new_attributes = make_attributes(&self.common_element_data.style);
+        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, new_attributes, Shaping::Advanced));
         editor.action(font_system, Action::Motion(Motion::End));
 
         let cosmic_text_content = TextInputState::new(
@@ -402,7 +383,7 @@ impl Element for TextInput {
             text_hash,
             self.common_element_data.style.font_family_length(),
             self.common_element_data.style.font_family_raw(),
-            attributes.weight,
+            new_attributes.weight,
         );
 
         ElementStateStoreItem {
@@ -420,34 +401,24 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
-        let mut attributes = Attrs::new();
-
-        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
-
-        let new_font_family = self.common_element_data().style.font_family();
-
-        if let Some(family) = new_font_family {
-            attributes.family = Family::Name(family);
-        }
-
+        
+        let text_hash = hash_text(&self.text);
+        let new_attributes = make_attributes(&self.common_element_data.style);
+        let new_font_family = self.common_element_data.style.font_family_raw();
+        
         if text_hash != state.original_text_hash
-            || state.font_family() != new_font_family
+            || new_font_family != state.font_family
             || reload_fonts
-            || attributes.weight != state.weight
+            || new_attributes.weight != state.weight
         {
             state.font_family_length = self.common_element_data.style.font_family_length();
             state.font_family = self.common_element_data.style.font_family_raw();
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
-            state.weight = attributes.weight;
+            state.weight = new_attributes.weight;
 
             state.editor.with_buffer_mut(|buffer| {
-                buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
+                buffer.set_text(font_system, &self.text, new_attributes, Shaping::Advanced);
             });
         }
     }
@@ -455,6 +426,11 @@ impl Element for TextInput {
     fn default_style(&self) -> Style {
         let mut style = Style::default();
         *style.display_mut() = Display::Block;
+        const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
+        *style.border_color_mut() = [BORDER_COLOR; 4];
+        *style.border_width_mut() = [Unit::Px(1.0); 4];
+        *style.border_radius_mut() = [(5.0, 5.0); 4];
+        
         style
     }
 }

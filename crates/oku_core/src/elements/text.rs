@@ -51,6 +51,22 @@ impl TextState {
     }
 }
 
+pub(crate) fn hash_text(text: &String) -> u64 {
+    let mut text_hasher = FxHasher::default();
+    text_hasher.write(text.as_ref());
+    text_hasher.finish()
+}
+
+pub(crate) fn make_attributes(style: &Style) -> Attrs {
+    let mut attributes = Attrs::new();
+    attributes.weight = Weight(style.font_weight().0);
+    let new_font_family = style.font_family();
+    if let Some(family) = new_font_family {
+        attributes.family = Family::Name(family);
+    }
+    attributes
+}
+
 impl TextState {
     pub(crate) fn new(
         id: ComponentId,
@@ -93,7 +109,7 @@ impl TextState {
     ) -> taffy::Size<f32> {
         let cache_key = TextHashKey::new(text_hash, font_family, font_family_length, known_dimensions, available_space, metrics);
         self.last_key = Some(cache_key);
-        
+
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
         self.text_hash = text_hash;
 
@@ -205,8 +221,6 @@ impl Element for Text {
         let font_line_height = font_size * 1.2;
         let metrics = Metrics::new(font_size, font_line_height);
 
-
-
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
@@ -240,23 +254,11 @@ impl Element for Text {
 
     fn initialize_state(&self, font_system: &mut FontSystem) -> ElementStateStoreItem {
         let metrics = Metrics::new(12.0, 12.0);
-
-        let mut attributes = Attrs::new();
-
-        let new_font_family = self.common_element_data.style.font_family();
-
-        if let Some(family) = new_font_family {
-            attributes.family = Family::Name(family);
-        }
-
-        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
-
+        let attributes = make_attributes(&self.common_element_data.style);
+        
         let mut buffer = Buffer::new(font_system, metrics);
         buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
-
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
+        let text_hash = hash_text(&self.text);
 
         let state = TextState::new(
             self.common_element_data.component_id,
@@ -276,31 +278,21 @@ impl Element for Text {
     fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool) {
         let state = self.get_state_mut(element_state);
 
-        let mut text_hasher = FxHasher::default();
-        text_hasher.write(self.text.as_ref());
-        let text_hash = text_hasher.finish();
-
-        let mut attributes = Attrs::new();
-
-        attributes.weight = Weight(self.common_element_data.style.font_weight().0);
-
-        let new_font_family = self.common_element_data.style.font_family();
-
-        if let Some(family) = new_font_family {
-            attributes.family = Family::Name(family);
-        }
+        let text_hash = hash_text(&self.text);
+        let new_attributes = make_attributes(&self.common_element_data.style);
+        let new_font_family = self.common_element_data.style.font_family_raw();
 
         if text_hash != state.text_hash
-            || state.font_family() != new_font_family
+            || new_font_family != state.font_family
             || reload_fonts
-            || attributes.weight != state.weight
+            || new_attributes.weight != state.weight
         {
             state.font_family_length = self.common_element_data.style.font_family_length();
             state.font_family = self.common_element_data.style.font_family_raw();
             state.text_hash = text_hash;
-            state.weight = attributes.weight;
+            state.weight = new_attributes.weight;
             
-            state.buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
+            state.buffer.set_text(font_system, &self.text, new_attributes, Shaping::Advanced);
         }
     }
 }

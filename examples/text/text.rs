@@ -31,11 +31,11 @@ impl Component for TextState {
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Container::new()
-            .flex_direction(FlexDirection::Row)
+            .flex_direction(FlexDirection::Column)
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
-            .push(TextInput::new("Test").flex_direction(FlexDirection::Column).id("text_input"))
+            .push(TextInput::new("Test").id("text_input"))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()
     }
