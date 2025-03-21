@@ -16,6 +16,7 @@ use peniko::kurbo::BezPath;
 use peniko::Font;
 use std::collections::HashMap;
 use std::sync::Arc;
+#[cfg(feature = "wgpu_renderer")]
 use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
@@ -165,7 +166,7 @@ impl<'a> VelloRenderer<'a> {
                     {
                         let editor = &text_context.editor;
                         let buffer = &text_context.get_last_cache_entry().buffer;
-                        
+
                         let buffer_glyphs = text::create_glyphs_for_editor(
                             buffer,
                             editor,
@@ -213,7 +214,7 @@ impl<'a> VelloRenderer<'a> {
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
                         let buffer = &text_context.get_last_cache_entry().buffer;
-                        
+
                         let buffer_glyphs = text::create_glyphs(buffer, fill_color, None);
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {
@@ -254,6 +255,7 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 },
+                #[cfg(feature = "wgpu_renderer")]
                 RenderCommand::FillLyonPath(_, _) => {}
             }
         }
@@ -320,8 +322,8 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {
-    }
+    #[cfg(feature = "wgpu_renderer")]
+    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) { }
 
     fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));

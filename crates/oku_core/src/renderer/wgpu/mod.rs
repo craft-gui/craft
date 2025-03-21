@@ -249,6 +249,7 @@ impl Renderer for WgpuRenderer<'_> {
                         let path = builder.build();
                         self.path_renderer.build(path, color);
                     },
+                    #[cfg(feature = "wgpu_renderer")]
                     RenderCommand::FillLyonPath(path, color) => {
                         self.path_renderer.build(path, color);
                     }
