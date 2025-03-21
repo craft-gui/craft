@@ -4,9 +4,8 @@ use crate::elements::layout_context::LayoutContext;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::RendererBox;
-use parley::FontContext;
+use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Default, Debug)]
@@ -39,7 +38,7 @@ impl Element for Empty {
     fn draw(
         &mut self,
         _renderer: &mut RendererBox,
-        _font_context: &mut FontContext,
+        _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -65,8 +64,7 @@ impl Element for Empty {
         _transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _font_context: &mut FontContext,
-        _layout_context: &mut parley::LayoutContext<Brush>,
+        _font_system: &mut FontSystem,
     ) {
     }
 

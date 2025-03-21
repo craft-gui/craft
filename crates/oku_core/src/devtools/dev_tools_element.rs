@@ -11,9 +11,8 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::color::Color;
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
-use parley::FontContext;
+use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Default, Debug)]
@@ -61,14 +60,14 @@ impl Element for DevTools {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_context: &mut FontContext,
+        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         self.draw_borders(renderer);
-        self.draw_children(renderer, font_context, taffy_tree, element_state, pointer);
+        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
 
         // Find the element we are hovering over and draw an overlay.
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
@@ -144,8 +143,7 @@ impl Element for DevTools {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_context: &mut FontContext,
-        layout_context: &mut parley::LayoutContext<Brush>,
+        font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -166,8 +164,7 @@ impl Element for DevTools {
                 transform,
                 element_state,
                 pointer,
-                font_context,
-                layout_context
+                font_system,
             );
         }
     }
@@ -176,13 +173,13 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 
         UpdateResult::default()
     }
 
-    fn initialize_state(&self) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DevToolsState::default()),

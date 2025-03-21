@@ -10,6 +10,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::GlobalState;
 use std::collections::{HashMap, HashSet};
+use cosmic_text::FontSystem;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -75,6 +76,7 @@ pub struct DiffTreesResult {
     pub(crate) pointer_captures: HashMap<i64, ComponentId>,
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Creates a new Component tree and Element tree from a ComponentSpecification.
 /// The ids of the Component tree are stable across renders.
 pub(crate) fn diff_trees(
@@ -85,6 +87,7 @@ pub(crate) fn diff_trees(
     global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
     reload_fonts: bool,
+    font_system: &mut FontSystem,
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -174,9 +177,9 @@ pub(crate) fn diff_trees(
                             }
                         }
 
-                        element.internal.update_state(element_state, reload_fonts);
+                        element.internal.update_state(font_system, element_state, reload_fonts);
                     } else {
-                        let state = element.internal.initialize_state();
+                        let state = element.internal.initialize_state(font_system);
                         element_state.storage.insert(id, state);
                     }
 

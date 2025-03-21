@@ -10,10 +10,9 @@ use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangl
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
-use parley::FontContext;
 use std::any::Any;
 use std::fmt::Debug;
-use peniko::Brush;
+use cosmic_text::FontSystem;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 
 #[derive(Clone, Debug)]
@@ -77,7 +76,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_context: &mut FontContext,
+        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &ElementStateStore,
@@ -105,13 +104,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_context: &mut FontContext,
-        layout_context: &mut parley::LayoutContext<Brush>,
+        font_system: &mut FontSystem,
     );
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, _message: OkuMessage, _element_state: &mut ElementStateStore) -> UpdateResult {
+    fn on_event(&self, _message: OkuMessage, _element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         UpdateResult::default()
     }
 
@@ -127,9 +125,9 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         *layout_order += 1;
 
         let position = match common_element_data_mut.style.position() {
-            taffy::Position::Relative => relative_position + result.location.into(),
+            Position::Relative => relative_position + result.location.into(),
             // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
-            taffy::Position::Absolute => relative_position + result.location.into(),
+            Position::Absolute => relative_position + result.location.into(),
         };
 
         let mut size = result.size.into();
@@ -161,7 +159,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw_children(
         &mut self,
         renderer: &mut RendererBox,
-        font_context: &mut FontContext,
+        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &ElementStateStore,
         pointer: Option<Point>,
@@ -174,7 +172,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             }
             child.internal.draw(
                 renderer,
-                font_context,
+                font_system,
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
                 element_state,
@@ -308,7 +306,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called when the element is assigned a unique component id.
-    fn initialize_state(&self) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(()),
@@ -340,7 +338,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
 
     fn default_style(&self) -> Style {
         Style::default()

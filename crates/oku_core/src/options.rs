@@ -35,6 +35,8 @@ impl Default for OkuOptions {
 pub enum RendererType {
     #[cfg(feature = "vello_renderer")]
     Vello,
+    #[cfg(feature = "wgpu_renderer")]
+    Wgpu,
     Blank,
 }
 
@@ -56,6 +58,8 @@ impl Display for RendererType {
         match self {
             #[cfg(feature = "vello_renderer")]
             RendererType::Vello => write!(f, "vello/wgpu"),
+            #[cfg(feature = "wgpu_renderer")]
+            RendererType::Wgpu => write!(f, "wgpu"),
             RendererType::Blank => write!(f, "blank"),
         }
     }

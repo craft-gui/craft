@@ -1,5 +1,5 @@
-use crate::resource_manager::image::ImageResource;
 use std::sync::Arc;
+use crate::resource_manager::image::ImageResource;
 
 pub struct ImageAdapter {
     image: Arc<ImageResource>,
@@ -7,7 +7,9 @@ pub struct ImageAdapter {
 
 impl ImageAdapter {
     pub fn new(image: Arc<ImageResource>) -> Self {
-        Self { image }
+        Self {
+            image,
+        }
     }
 }
 

@@ -10,9 +10,8 @@ use crate::renderer::RenderCommand;
 use crate::style::Style;
 use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};
-use parley::FontContext;
+use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Default, Debug)]
@@ -40,7 +39,7 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_context: &mut FontContext,
+        _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -101,14 +100,14 @@ impl Element for Canvas {
                     );
                     renderer.draw_image(translated_rectangle, resource_identifier.clone());
                 }
-                RenderCommand::DrawText(rectangle, component_id) => {
+                RenderCommand::DrawText(rectangle, component_id, color) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
                         rectangle.width,
                         rectangle.height,
                     );
-                    renderer.draw_text(*component_id, translated_rectangle);
+                    renderer.draw_text(*component_id, translated_rectangle, *color);
                 }
                 RenderCommand::PushLayer(rectangle) => {
                     let translated_rectangle = Rectangle::new(
@@ -124,7 +123,8 @@ impl Element for Canvas {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     renderer.fill_bez_path(path.clone(), *color);
-                }
+                },
+                _ => {}
             }
         }
 
@@ -162,8 +162,7 @@ impl Element for Canvas {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_context: &mut FontContext,
-        layout_context: &mut parley::LayoutContext<Brush>,
+        font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -183,8 +182,7 @@ impl Element for Canvas {
                 transform,
                 element_state,
                 pointer,
-                font_context,
-                layout_context
+                font_system,
             );
         }
     }

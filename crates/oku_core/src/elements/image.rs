@@ -9,9 +9,8 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::ResourceIdentifier;
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use parley::FontContext;
+use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::Brush;
 use taffy::{NodeId, TaffyTree};
 
 #[derive(Clone, Debug)]
@@ -49,7 +48,7 @@ impl Element for Image {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_context: &mut FontContext,
+        _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &ElementStateStore,
@@ -95,8 +94,7 @@ impl Element for Image {
         transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _font_context: &mut FontContext,
-        _layout_context: &mut parley::LayoutContext<Brush>,
+        _font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);

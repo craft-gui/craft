@@ -1,47 +1,9 @@
 use std::cmp;
-use std::sync::Arc;
-use cosmic_text::{Buffer, Cursor, Edit, Editor, LayoutRun};
+use cosmic_text::{Buffer, Cursor, Edit, Editor, LayoutGlyph, LayoutRun};
 use cosmic_text::fontdb::ID;
+use peniko::Color;
+use peniko::kurbo::{Point, Rect, Size};
 use unicode_segmentation::UnicodeSegmentation;
-use vello::Glyph;
-use vello::kurbo::{Point, Rect, Size};
-use vello::peniko::Color;
-
-pub(crate) struct CosmicFontBlobAdapter {
-    font: Arc<cosmic_text::Font>,
-}
-
-/// Adapter to allow `cosmic_text::Font` to be used as a Blob.
-impl CosmicFontBlobAdapter {
-    pub(crate) fn new(font: Arc<cosmic_text::Font>) -> Self {
-        Self { font }
-    }
-}
-
-impl AsRef<[u8]> for CosmicFontBlobAdapter {
-    fn as_ref(&self) -> &[u8] {
-        self.font.data()
-    }
-}
-
-pub(crate) struct BufferGlyphs {
-    pub(crate) font_size: f32,
-    pub(crate) glyph_highlight_color: Color,
-    pub(crate) cursor_color: Color,
-    pub(crate) buffer_lines: Vec<BufferLine>,
-}
-
-pub(crate) struct BufferLine {
-    pub(crate) glyph_highlights: Vec<Rect>,
-    pub(crate) cursor: Option<Rect>,
-    pub(crate) glyph_runs: Vec<BufferGlyphRun>,
-}
-
-pub(crate) struct BufferGlyphRun {
-    pub(crate) font: ID,
-    pub(crate) glyphs: Vec<Glyph>,
-    pub(crate) glyph_color: Color,
-}
 
 pub(crate) struct EditorInfo {
     cursor_color: Color,
@@ -68,6 +30,7 @@ impl EditorInfo {
     }
 }
 
+
 pub(crate) fn create_glyphs_for_editor(
     editor: &Editor,
     text_color: Color,
@@ -89,6 +52,25 @@ pub(crate) fn create_glyphs_for_editor(
     })
 }
 
+
+pub(crate) struct BufferGlyphs {
+    pub(crate) glyph_highlight_color: Color,
+    pub(crate) cursor_color: Color,
+    pub(crate) buffer_lines: Vec<BufferLine>,
+}
+
+pub(crate) struct BufferLine {
+    pub(crate) glyph_highlights: Vec<Rect>,
+    pub(crate) cursor: Option<Rect>,
+    pub(crate) glyph_runs: Vec<BufferGlyphRun>,
+}
+
+pub(crate) struct BufferGlyphRun {
+    pub(crate) glyphs: Vec<LayoutGlyph>,
+    pub(crate) glyph_color: Color,
+    pub(crate) line_y: f64,
+}
+
 pub(crate) fn create_glyphs(
     buffer: &Buffer,
     text_color: Color,
@@ -99,7 +81,6 @@ pub(crate) fn create_glyphs(
     let mut last_font: Option<(ID, Color)> = None;
 
     let mut buffer_glyphs = BufferGlyphs {
-        font_size: buffer.metrics().font_size,
         glyph_highlight_color: Color::WHITE,
         cursor_color: Color::BLACK,
         buffer_lines: vec![],
@@ -111,7 +92,7 @@ pub(crate) fn create_glyphs(
     }
 
     for layout_run in buffer.layout_runs() {
-        let mut current_glyphs: Vec<Glyph> = vec![];
+        let mut current_glyphs: Vec<LayoutGlyph> = vec![];
         let line_i = layout_run.line_i;
         let line_y = layout_run.line_y as f64;
         let line_top = layout_run.line_top as f64;
@@ -211,27 +192,23 @@ pub(crate) fn create_glyphs(
             if let Some((last_font, last_glyph_color)) = last_font {
                 if last_font != glyph.font_id || last_glyph_color != glyph_color {
                     buffer_line.glyph_runs.push(BufferGlyphRun {
-                        font: last_font,
                         glyphs: current_glyphs,
                         glyph_color: last_glyph_color,
+                        line_y,
                     });
                     current_glyphs = vec![];
                 }
             }
 
             last_font = Some((glyph.font_id, glyph_color));
-            current_glyphs.push(Glyph {
-                x: glyph.x,
-                y: glyph.y + line_y as f32,
-                id: glyph.glyph_id as u32,
-            });
+            current_glyphs.push(glyph.clone());
         }
         if !current_glyphs.is_empty() {
-            let (last_font, last_color) = last_font.unwrap();
+            let (_last_font, last_color) = last_font.unwrap();
             buffer_line.glyph_runs.push(BufferGlyphRun {
-                font: last_font,
                 glyphs: current_glyphs,
                 glyph_color: last_color,
+                line_y,
             });
         }
 

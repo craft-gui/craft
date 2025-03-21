@@ -9,6 +9,7 @@ dev_tools = []
 dynamic_linking = []
 
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 
 default = ["vello_renderer", "http_client"]
@@ -24,9 +25,16 @@ oku_logging = { path = "../oku_logger" }
 
 cfg-if = "1.0.0"
 
+bytemuck = { version = "1.21.0", features = ["derive"] }
+unicode-segmentation = "1.12.0"
+
+lyon = "1.0.1"
+
 [dependencies.bitflags]
 version = "2.9.0"
 features = ["std"]
+
+
 
 [dependencies.peniko]
 version = "0.3.1"
@@ -83,15 +91,11 @@ git = "https://github.com/rust-windowing/winit"
 rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies.parley]
-version = "0.3.0"
-features = ["std", "system"]
+[dependencies.cosmic-text]
+git = "https://github.com/pop-os/cosmic-text"
+rev = "9125dd48b771e9aa7833d106a9850e935f71eaa6"
 default-features = false
-
-[target.'cfg(target_arch = "wasm32")'.dependencies.parley]
-version = "0.3.0"
-features = ["std"]
-default-features = false
+features = ["std", "fontconfig"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.14"

@@ -1,46 +1,49 @@
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
+use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use parley::FontContext;
-use peniko::Brush;
+
+use cosmic_text::{FontSystem, Metrics};
 
 use taffy::Size;
 
-use crate::elements::text_input::text_input::TextInputState;
 use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
-    text_hash: u64,
-    font_settings_hash: u64
-}
-pub struct TaffyTextInputContext {
-    pub id: ComponentId,
-    text_hash: u64,
-    font_settings_hash: u64
+    pub metrics: Metrics,
 }
 
 impl TaffyTextContext {
-    pub fn new(id: ComponentId, text_hash: u64, font_settings_hash: u64) -> Self {
-        Self { id, text_hash, font_settings_hash }
+    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+        Self {
+            id,
+            metrics
+        }
     }
 }
-
-impl TaffyTextInputContext {
-    pub fn new(id: ComponentId, text_hash: u64, font_settings_hash: u64) -> Self {
-        Self { id, text_hash, font_settings_hash }
-    }
-}
-
-/*#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct MetricsDummy {
     /// Font size in pixels
     pub font_size: u32,
     /// Line height in pixels
     pub line_height: u32,
-}*/
+}
+
+#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
+pub struct TextHashKey {
+    pub text_hash: u64,
+    pub width_constraint: Option<u32>,
+    pub height_constraint: Option<u32>,
+    pub available_space_width: AvailableSpace,
+    pub available_space_height: AvailableSpace,
+    pub metrics: MetricsDummy,
+    
+    pub font_family_length: u8,
+    pub font_family: [u8; 64]
+}
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AvailableSpace {
@@ -96,41 +99,65 @@ pub(crate) enum LayoutContext {
     Image(ImageContext),
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn measure_content(
     element_state: &mut ElementStateStore,
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
-    font_context: &mut FontContext,
-    font_layout_context: &mut parley::LayoutContext<Brush>,
+    font_system: &mut FontSystem,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
-    if let Size {
-        width: Some(width),
-        height: Some(height),
-    } = known_dimensions
-    {
+    if let Size { width: Some(width), height: Some(height) } = known_dimensions {
         return Size { width, height };
     }
 
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let text_state: &mut TextState =
-                element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
+            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.measure(known_dimensions, available_space, font_context, font_layout_context, taffy_text_context.text_hash, taffy_text_context.font_settings_hash)
-        }
-        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState =
-                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
-
-            text_input_state.measure(known_dimensions, available_space, font_context, font_layout_context, taffy_text_input_context.text_hash, taffy_text_input_context.font_settings_hash)
+            text_state.measure(
+                known_dimensions,
+                available_space,
+                font_system,
+                text_state.text_hash,
+                taffy_text_context.metrics,
+                text_state.font_family_length,
+                text_state.font_family,
+            )
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
+        }
+        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
+            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
+
+            text_input_state.measure(
+                known_dimensions,
+                available_space,
+                font_system,
+                text_input_state.text_hash,
+                taffy_text_input_context.metrics,
+                text_input_state.font_family_length,
+                text_input_state.font_family,
+            )
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+pub struct TaffyTextInputContext {
+    pub id: ComponentId,
+    metrics: Metrics,
+}
+
+impl TaffyTextInputContext {
+    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+        Self {
+            id,
+            metrics,
         }
     }
 }

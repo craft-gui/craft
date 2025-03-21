@@ -4,14 +4,13 @@ use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::Container;
-use crate::events::{OkuMessage};
+use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
 use crate::{palette, RendererBox};
-use parley::FontContext;
+use cosmic_text::FontSystem;
 use std::any::Any;
-use peniko::Brush;
 use taffy::{NodeId, Position, TaffyTree};
 
 /// An element that represents an on or off state.
@@ -50,14 +49,14 @@ impl Element for Switch {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_context: &mut FontContext,
+        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &ElementStateStore,
         pointer: Option<Point>,
     ) {
         self.draw_borders(renderer);
-        self.pseudo_thumb.draw(renderer, font_context, taffy_tree, _root_node, element_state, pointer);
+        self.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer);
     }
 
     fn compute_layout(
@@ -107,8 +106,7 @@ impl Element for Switch {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_context: &mut FontContext,
-        layout_context: &mut parley::LayoutContext<Brush>,
+        font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
@@ -122,8 +120,7 @@ impl Element for Switch {
             transform,
             element_state,
             pointer,
-            font_context,
-            layout_context
+            font_system,
         );
     }
 
@@ -131,7 +128,7 @@ impl Element for Switch {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore) -> UpdateResult {
+    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
 
@@ -151,7 +148,7 @@ impl Element for Switch {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(SwitchState::default()),

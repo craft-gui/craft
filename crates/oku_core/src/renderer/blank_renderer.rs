@@ -4,7 +4,8 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::Renderer;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use parley::FontContext;
+use cosmic_text::FontSystem;
+use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 
@@ -29,7 +30,9 @@ impl Renderer for BlankRenderer {
 
     fn fill_bez_path(&mut self, _path: BezPath, _color: Color) {}
 
-    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle) {}
+    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
+
+    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle, _color: Color) {}
 
     fn draw_image(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
 
@@ -40,8 +43,8 @@ impl Renderer for BlankRenderer {
     fn prepare(
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_context: &mut FontContext,
-        _element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+        _element_state: &ElementStateStore,
     ) {
     }
 

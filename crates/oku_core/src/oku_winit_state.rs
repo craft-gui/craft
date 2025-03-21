@@ -7,6 +7,9 @@ use {
 #[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
 
+#[cfg(feature = "wgpu_renderer")]
+use crate::renderer::wgpu::WgpuRenderer;
+
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
@@ -93,6 +96,8 @@ impl ApplicationHandler for OkuWinitState {
             let renderer: Box<dyn Renderer + Send> = match renderer_type {
                 #[cfg(feature = "vello_renderer")]
                 RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                #[cfg(feature = "wgpu_renderer")]
+                RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
                 RendererType::Blank => Box::new(BlankRenderer),
             };
 

@@ -32,6 +32,7 @@ impl dyn Element {
 
 #[cfg(test)]
 mod tests {
+    use cosmic_text::FontSystem;
     use crate::elements::element::ElementBox;
     use crate::elements::{Container, Text};
     use crate::reactive::element_id::reset_unique_element_id;
@@ -42,6 +43,7 @@ mod tests {
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
+        let mut font_system = FontSystem::new();
         reset_unique_element_id();
 
         let initial_view = Container::new().id("1").component().push(Text::new("Foo").id("2").component()).push(
@@ -65,6 +67,7 @@ mod tests {
             &mut global_state,
             &mut element_state,
             false,
+            &mut font_system,
         );
 
         initial_tree.component_tree.print_tree();

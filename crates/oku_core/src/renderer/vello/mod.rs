@@ -1,20 +1,22 @@
+mod text;
 mod image_adapter;
-pub(crate) mod text;
 
 use crate::components::component::ComponentId;
-use crate::elements::text::text::TextState;
-use crate::elements::text_input::text_input::TextInputState;
+use crate::elements::text::TextState;
+use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer};
-use crate::renderer::vello::image_adapter::ImageAdapter;
-use crate::renderer::vello::text::{draw_cursor, draw_glyphs, draw_selection, draw_strikethrough, draw_underline};
+use crate::renderer::vello::text::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use parley::{FontContext, PositionedLayoutItem};
+use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
+use peniko::Font;
+use std::collections::HashMap;
 use std::sync::Arc;
+use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -22,6 +24,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::Scene;
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
+use crate::renderer::vello::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -48,10 +51,11 @@ pub struct VelloRenderer<'a> {
     state: RenderState<'a>,
 
     // A vello Scene which is a data structure which allows one to build up a
-    // description a scene to be drawn (with paths, fills, images, text, etc.)
+    // description a scene to be drawn (with paths, fills, images, text, etc)
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
+    vello_fonts: HashMap<cosmic_text::fontdb::ID, Font>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> vello::Renderer {
@@ -89,6 +93,7 @@ impl<'a> VelloRenderer<'a> {
             state: RenderState::Suspended,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
+            vello_fonts: HashMap::new(),
         };
 
         // Create a vello Surface
@@ -96,7 +101,12 @@ impl<'a> VelloRenderer<'a> {
 
         let surface = vello_renderer
             .context
-            .create_surface(window.clone(), surface_size.width, surface_size.height, wgpu::PresentMode::AutoVsync)
+            .create_surface(
+                window.clone(),
+                surface_size.width,
+                surface_size.height,
+                wgpu::PresentMode::AutoVsync,
+            )
             .await
             .unwrap();
 
@@ -111,10 +121,11 @@ impl<'a> VelloRenderer<'a> {
     }
 
     fn prepare_with_render_commands(
+        vello_fonts: &HashMap<cosmic_text::fontdb::ID, Font>,
         scene: &mut Scene,
         resource_manager: &RwLockReadGuard<ResourceManager>,
-        _font_context: &mut FontContext,
-        element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+        element_state: &ElementStateStore,
         render_commands: &mut Vec<RenderCommand>,
     ) {
         for command in render_commands.drain(..) {
@@ -146,46 +157,84 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id) => {
+                RenderCommand::DrawText(rect, component_id, fill_color) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
 
-                    if let Some(text_state) =
+                    if let Some(text_context) =
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
+                    {
+                        let editor = &text_context.editor;
+                        let buffer_glyphs = text::create_glyphs_for_editor(
+                            editor,
+                            fill_color,
+                            Color::from_rgb8(0, 0, 0),
+                            Color::from_rgb8(0, 120, 215),
+                            Color::from_rgb8(255, 255, 255),
+                        );
+
+                        // Draw the Glyphs
+                        for buffer_line in &buffer_glyphs.buffer_lines {
+                            for glyph_highlight in &buffer_line.glyph_highlights {
+                                scene.fill(
+                                    Fill::NonZero,
+                                    text_transform,
+                                    buffer_glyphs.glyph_highlight_color,
+                                    None,
+                                    glyph_highlight,
+                                );
+                            }
+
+                            if let Some(cursor) = &buffer_line.cursor {
+                                scene.fill(
+                                    Fill::NonZero,
+                                    text_transform,
+                                    buffer_glyphs.cursor_color,
+                                    None,
+                                    cursor,
+                                );
+                            }
+
+                            for glyph_run in &buffer_line.glyph_runs {
+                                let font = vello_fonts.get(&glyph_run.font).unwrap();
+                                let glyph_color = glyph_run.glyph_color;
+                                let glyphs = glyph_run.glyphs.clone();
+                                scene
+                                    .draw_glyphs(font)
+                                    .font_size(buffer_glyphs.font_size)
+                                    .brush(glyph_color)
+                                    .transform(text_transform)
+                                    .draw(Fill::NonZero, glyphs.into_iter());
+                            }
+                        }
+                    } else if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
-                        for line in text_state.layout.lines() {
-                            for item in line.items() {
-                                let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
-                                    continue;
-                                };
-                                let style = glyph_run.style();
-
-                                draw_underline(scene, &text_transform, &glyph_run, style);
-                                draw_glyphs(scene, &text_transform, &glyph_run, style);
-                                draw_strikethrough(scene, &text_transform, &glyph_run, style);
+                        let buffer = &text_context.buffer;
+                        let buffer_glyphs = text::create_glyphs(buffer, fill_color, None);
+                        // Draw the Glyphs
+                        for buffer_line in &buffer_glyphs.buffer_lines {
+                            for glyph_run in &buffer_line.glyph_runs {
+                                let font = vello_fonts.get(&glyph_run.font).unwrap();
+                                let glyph_color = glyph_run.glyph_color;
+                                let glyphs = glyph_run.glyphs.clone();
+                                scene
+                                    .draw_glyphs(font)
+                                    .font_size(buffer_glyphs.font_size)
+                                    .brush(glyph_color)
+                                    .transform(text_transform)
+                                    .draw(Fill::NonZero, glyphs.into_iter());
                             }
                         }
-                    } else if let Some(text_input_state) =
-                        element_state.storage.get_mut(&component_id).unwrap().data.downcast_mut::<TextInputState>()
-                    {
-                        draw_selection(scene, &text_transform, &text_input_state.editor.editor);
-                        draw_cursor(scene, &text_transform, &text_input_state.editor);
-
-                        let key = text_input_state.last_cache_key.clone().unwrap();
-                        let layout = &text_input_state.cached_text_layout[&key].layout;
-                        for line in layout.lines() {
-                            for item in line.items() {
-                                let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
-                                    continue;
-                                };
-                                let style = glyph_run.style();
-
-                                draw_underline(scene, &text_transform, &glyph_run, style);
-                                draw_glyphs(scene, &text_transform, &glyph_run, style);
-                                draw_strikethrough(scene, &text_transform, &glyph_run, style);
-                            }
-                        }
-                    }
+                    } else {
+                        panic!("Unknown state provided to the renderer!");
+                    };
                 }
+                /*RenderCommand::PushTransform(transform) => {
+                    self.scene.push_transform(transform);
+                },
+                RenderCommand::PopTransform => {
+                    self.scene.pop_transform();
+                },*/
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
                         rect.x as f64,
@@ -200,7 +249,8 @@ impl<'a> VelloRenderer<'a> {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
-                }
+                },
+                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -244,7 +294,17 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn load_font(&mut self, _font_context: &mut FontContext) {}
+    fn load_font(&mut self, font_system: &mut FontSystem) {
+        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> =
+            font_system.db().faces().map(|face| (face.id, face.index)).collect();
+        for (font_id, index) in font_faces {
+            if let Some(font) = font_system.get_font(font_id) {
+                let font_blob = Blob::new(Arc::new(CosmicFontBlobAdapter::new(font)));
+                let vello_font = Font::new(font_blob, index);
+                self.vello_fonts.insert(font_id, vello_font);
+            }
+        }
+    }
 
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
@@ -256,8 +316,11 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id));
+    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {
+    }
+
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -275,16 +338,9 @@ impl Renderer for VelloRenderer<'_> {
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_context: &mut FontContext,
-        element_state: &mut ElementStateStore,
-    ) {
-        VelloRenderer::prepare_with_render_commands(
-            &mut self.scene,
-            &resource_manager,
-            _font_context,
-            element_state,
-            &mut self.render_commands,
-        );
+        _font_system: &mut FontSystem,
+        element_state: &ElementStateStore) {
+        VelloRenderer::prepare_with_render_commands(&self.vello_fonts, &mut self.scene, &resource_manager, _font_system, element_state, &mut self.render_commands);
     }
 
     fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
