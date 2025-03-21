@@ -92,8 +92,7 @@ rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
 [dependencies.cosmic-text]
-git = "https://github.com/pop-os/cosmic-text"
-rev = "9125dd48b771e9aa7833d106a9850e935f71eaa6"
+version = "0.13.2"
 default-features = false
 features = ["std", "fontconfig"]
 
