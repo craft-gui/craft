@@ -33,7 +33,6 @@ pub struct TextInputState<'a> {
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: Option<TextHashKey>,
     pub editor: Editor<'a>,
-    pub original_text_hash: u64,
     pub dragging: bool,
     // Attributes
     pub(crate) attributes: AttributesRaw,
@@ -54,7 +53,6 @@ impl<'a> TextInputState<'a> {
         id: ComponentId,
         text_hash: u64,
         editor: Editor<'a>,
-        original_text_hash: u64,
         metrics: MetricsRaw,
         attributes_raw: AttributesRaw,
     ) -> Self {
@@ -64,7 +62,6 @@ impl<'a> TextInputState<'a> {
             cached_text_layout: Default::default(),
             last_key: None,
             editor,
-            original_text_hash,
             dragging: false,
             metrics,
             attributes: attributes_raw
@@ -84,7 +81,7 @@ impl<'a> TextInputState<'a> {
         if self.cached_text_layout.len() > 3 {
             self.cached_text_layout.clear();
         }
-        
+
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
 
         if let Some(cached_text_layout_value) = cached_text_layout_value {
@@ -94,7 +91,7 @@ impl<'a> TextInputState<'a> {
             }
         } else {
             self.editor.with_buffer_mut(|buffer| {
-                buffer.set_size(font_system, cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
+                buffer.set_metrics_and_size(font_system, self.metrics.to_metrics(), cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
             });
             self.editor.shape_as_needed(font_system, true);
 
@@ -313,7 +310,7 @@ impl Element for TextInput {
                 state.cached_text_layout.clear();
                 state.last_key = None;
                 state.editor.with_buffer(|buffer| {
-                    
+
                     let mut buffer_string: String = String::new();
                     let last_line = buffer.lines.len() - 1;
                     for (line_number, line) in buffer.lines.iter().enumerate() {
@@ -341,19 +338,18 @@ impl Element for TextInput {
         let buffer = Buffer::new(font_system, metrics.to_metrics());
         let mut editor = Editor::new(buffer);
         editor.borrow_with(font_system);
-        
+
         let text_hash = hash_text(&self.text);
-        let new_attributes = AttributesRaw::from(&self.common_element_data.style);
-        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, new_attributes.to_attrs(), Shaping::Advanced));
+        let attributes = AttributesRaw::from(&self.common_element_data.style);
+        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced));
         editor.action(font_system, Action::Motion(Motion::End));
 
         let cosmic_text_content = TextInputState::new(
             self.common_element_data.component_id,
             text_hash,
             editor,
-            text_hash,
             metrics,
-            new_attributes,
+            attributes,
         );
 
         ElementStateStoreItem {
@@ -371,47 +367,33 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-        
+
         let text_hash = hash_text(&self.text);
         let attributes = AttributesRaw::from(&self.common_element_data.style);
         let metrics = MetricsRaw::from(&self.common_element_data.style, scaling_factor);
-        
-        
-        let text_changed = text_hash != state.original_text_hash
+
+        let text_changed = text_hash != state.text_hash
             || reload_fonts
             || attributes != state.attributes;
         let size_changed = metrics != state.metrics;
-        
+
         if text_changed || size_changed {
             state.cached_text_layout.clear();
             state.last_key = None;
         }
-        
-        if text_changed && size_changed {
-            state.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics(font_system, metrics.to_metrics());
-                buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
-            });
 
+        if size_changed {
             state.metrics = metrics;
-            state.original_text_hash = text_hash;
-            state.text_hash = text_hash;
-            state.attributes = attributes;
-        } else if size_changed
-        {
-            state.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics(font_system, metrics.to_metrics());
-            });
-            
-            state.metrics = metrics;
-        } else if text_changed {
+        }
+        
+        
+        if text_changed {
             state.editor.with_buffer_mut(|buffer| {
                 buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
             });
             
-            state.original_text_hash = text_hash;
-            state.text_hash = text_hash;
             state.attributes = attributes;
+            state.text_hash = text_hash;
         }
     }
 
@@ -424,7 +406,7 @@ impl Element for TextInput {
         *style.border_radius_mut() = [(5.0, 5.0); 4];
         let padding = Unit::Px(4.0);
         *style.padding_mut() = [padding, padding, padding, padding];
-        
+
         style
     }
 }

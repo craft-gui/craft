@@ -42,7 +42,7 @@ impl AttributesRaw {
         let font_family = if style.font_family_length() == 0 {
             None
         } else {
-            Some(style.font_family_raw())            
+            Some(style.font_family_raw())
         };
         Self {
             font_family_length: style.font_family_length(),
@@ -50,7 +50,7 @@ impl AttributesRaw {
             weight: Weight(style.font_weight().0),
         }
     }
-    
+
     pub(crate) fn to_attrs(&self) -> Attrs {
         let mut attrs = Attrs::new();
         if let Some(font_family) = &self.font_family {
@@ -61,7 +61,7 @@ impl AttributesRaw {
         }
         attrs
     }
-    
+
 }
 
 pub struct TextState {
@@ -118,22 +118,22 @@ impl TextState {
     ) -> taffy::Size<f32> {
         let cache_key = TextHashKey::new(known_dimensions, available_space);
         self.last_key = Some(cache_key);
-        
+
         if self.cached_text_layout.len() > 3 {
             self.cached_text_layout.clear();
         }
-        
+
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
-        
+
         if let Some(cached_text_layout_value) = cached_text_layout_value {
             taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             }
         } else {
-            self.buffer.set_size(font_system, cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
+            self.buffer.set_metrics_and_size(font_system, self.metrics.to_metrics(), cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
             self.buffer.shape_until_scroll(font_system, true);
-            
+
             // Determine measured size of text
             let (width, total_lines) = self
                 .buffer
@@ -266,7 +266,7 @@ impl Element for Text {
     fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
         let metrics = MetricsRaw::from(&self.common_element_data.style, scaling_factor);
         let attributes = AttributesRaw::from(&self.common_element_data.style);
-        
+
         let mut buffer = Buffer::new(font_system, metrics.to_metrics());
         buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
         let text_hash = hash_text(&self.text);
@@ -291,7 +291,7 @@ impl Element for Text {
         let text_hash = hash_text(&self.text);
         let attributes = AttributesRaw::from(&self.common_element_data.style);
         let metrics = MetricsRaw::from(&self.common_element_data.style, scaling_factor);
-        
+
         let text_changed = text_hash != state.text_hash
             || reload_fonts
             || attributes != state.attributes;
@@ -302,24 +302,14 @@ impl Element for Text {
             state.last_key = None;
         }
 
-        if text_changed && size_changed {
-            state.buffer.set_metrics(font_system, metrics.to_metrics());
-            state.buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
-
+        if size_changed {
             state.metrics = metrics;
-            state.text_hash = text_hash;
-            state.text_hash = text_hash;
-            state.attributes = attributes;
-        } else if size_changed
-        {
-            state.buffer.set_metrics(font_system, metrics.to_metrics());
-            state.metrics = metrics;
-        } else if text_changed {
-            state.buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
+        }
 
-            state.text_hash = text_hash;
-            state.text_hash = text_hash;
+        if text_changed {
+            state.buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
             state.attributes = attributes;
+            state.text_hash = text_hash;
         }
     }
 }
