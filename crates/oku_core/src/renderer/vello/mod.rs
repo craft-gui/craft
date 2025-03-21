@@ -164,7 +164,10 @@ impl<'a> VelloRenderer<'a> {
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
                     {
                         let editor = &text_context.editor;
+                        let buffer = &text_context.get_last_cache_entry().buffer;
+                        
                         let buffer_glyphs = text::create_glyphs_for_editor(
+                            buffer,
                             editor,
                             fill_color,
                             Color::from_rgb8(0, 0, 0),
@@ -209,7 +212,8 @@ impl<'a> VelloRenderer<'a> {
                     } else if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
-                        let buffer = &text_context.buffer;
+                        let buffer = &text_context.get_last_cache_entry().buffer;
+                        
                         let buffer_glyphs = text::create_glyphs(buffer, fill_color, None);
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {

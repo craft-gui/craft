@@ -46,6 +46,13 @@ pub struct TextInputState<'a> {
     weight: Weight,
 }
 
+impl TextInputState<'_> {
+    pub(crate) fn get_last_cache_entry(&self) -> &TextHashValue {
+        let key = self.last_key;
+        &self.cached_text_layout[&key]
+    }
+}
+
 impl<'a> TextInputState<'a> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
@@ -160,14 +167,18 @@ impl<'a> TextInputState<'a> {
                 TextHashValue {
                     computed_width: width,
                     computed_height: height,
+                    buffer: buffer.clone(),
                 }
             });
 
-            self.cached_text_layout.insert(key, cached_text_layout_value);
-            taffy::Size {
+            let size = taffy::Size {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
-            }
+            };
+            
+            self.cached_text_layout.insert(key, cached_text_layout_value);
+            
+            size
         } else {
             let cached_text_layout_value = cached_text_layout_value.unwrap();
             taffy::Size {
@@ -271,35 +282,10 @@ impl Element for TextInput {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        element_state: &mut ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        _font_system: &mut FontSystem,
     ) {
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
-
-        let metrics = Metrics::new(
-            f32::from_bits(state.last_key.metrics.font_size),
-            f32::from_bits(state.last_key.metrics.line_height),
-        );
-
-        state.editor.with_buffer_mut(|buffer| {
-            buffer.set_metrics(font_system, metrics);
-
-            buffer.set_size(
-                font_system,
-                state.last_key.width_constraint.map(f32::from_bits),
-                state.last_key.height_constraint.map(f32::from_bits),
-            );
-            buffer.shape_until_scroll(font_system, true);
-        });
-
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         

@@ -24,16 +24,17 @@ pub struct Text {
     common_element_data: CommonElementData,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct TextHashValue {
     pub computed_width: f32,
     pub computed_height: f32,
+    pub buffer: Buffer,
 }
 
 pub struct TextState {
     #[allow(dead_code)]
     pub id: ComponentId,
-    pub buffer: Buffer,
+    buffer: Buffer,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
@@ -41,6 +42,13 @@ pub struct TextState {
     pub(crate) font_family_length: u8,
     pub(crate) font_family: [u8; 64],
     weight: Weight,
+}
+
+impl TextState {
+    pub(crate) fn get_last_cache_entry(&self) -> &TextHashValue {
+        let key = self.last_key;
+        &self.cached_text_layout[&key]
+    }
 }
 
 impl TextState {
@@ -148,13 +156,17 @@ impl TextState {
             let cached_text_layout_value = TextHashValue {
                 computed_width: width,
                 computed_height: height,
+                buffer: self.buffer.clone(),
+            };
+
+            let size = taffy::Size {
+                width: cached_text_layout_value.computed_width,
+                height: cached_text_layout_value.computed_height,
             };
 
             self.cached_text_layout.insert(key, cached_text_layout_value);
-            taffy::Size {
-                width: cached_text_layout_value.computed_width,
-                height: cached_text_layout_value.computed_height,
-            }
+
+            size
         } else {
             let cached_text_layout_value = cached_text_layout_value.unwrap();
             taffy::Size {
@@ -257,25 +269,10 @@ impl Element for Text {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        element_state: &mut ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        _font_system: &mut FontSystem,
     ) {
-        let text_context = self.get_state_mut(element_state);
-
-        let metrics = text_context.last_key;
-        let metrics =
-            Metrics::new(f32::from_bits(metrics.metrics.font_size), f32::from_bits(metrics.metrics.line_height));
-
-        text_context.buffer.set_metrics(font_system, metrics);
-
-        text_context.buffer.set_size(
-            font_system,
-            text_context.last_key.width_constraint.map(f32::from_bits),
-            text_context.last_key.height_constraint.map(f32::from_bits),
-        );
-        text_context.buffer.shape_until_scroll(font_system, true);
-
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         

@@ -69,24 +69,23 @@ impl EditorInfo {
 }
 
 pub(crate) fn create_glyphs_for_editor(
+    buffer: &Buffer,
     editor: &Editor,
     text_color: Color,
     cursor_color: Color,
     selection_color: Color,
     selected_text_color: Color,
 ) -> BufferGlyphs {
-    editor.with_buffer(|buffer| {
-        create_glyphs(
-            buffer,
-            text_color,
-            Some(EditorInfo::new(
-                editor,
-                cursor_color,
-                selection_color,
-                selected_text_color,
-            )),
-        )
-    })
+    create_glyphs(
+        buffer,
+        text_color,
+        Some(EditorInfo::new(
+            editor,
+            cursor_color,
+            selection_color,
+            selected_text_color,
+        )),
+    )
 }
 
 pub(crate) fn create_glyphs(

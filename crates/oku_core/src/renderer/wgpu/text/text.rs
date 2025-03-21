@@ -64,7 +64,10 @@ impl TextRenderer {
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
                 
                 let editor = &text_context.editor;
+                let buffer = &text_context.get_last_cache_entry().buffer;
+                
                 let buffer_glyphs = create_glyphs_for_editor(
+                    buffer,
                     editor,
                     text_area.fill_color,
                     Color::from_rgb8(0, 0, 0),
@@ -134,7 +137,9 @@ impl TextRenderer {
                 }
 
             } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextState>() {
-                for run in text_context.buffer.layout_runs() {
+                let buffer = &text_context.get_last_cache_entry().buffer;
+                
+                for run in buffer.layout_runs() {
                     for glyph in run.glyphs.iter() {
                         let physical_glyph = glyph.physical((0., 0.), 1.0);
 
