@@ -1,18 +1,17 @@
 use crate::components::component::{ComponentId, ComponentSpecification};
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{AvailableSpace, LayoutContext, MetricsRaw, TaffyTextContext, TextHashKey};
+use crate::elements::layout_context::{LayoutContext, MetricsRaw, TaffyTextContext, TextHashKey};
 use crate::elements::ElementStyles;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight};
+use cosmic_text::{Attrs, Buffer, Family, FontSystem, Shaping, Weight};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::hash::Hasher;
 use taffy::{NodeId, TaffyTree};
-use winit::dpi::{LogicalPosition, PhysicalPosition};
 
 use crate::components::Props;
 use crate::elements::common_element_data::CommonElementData;
@@ -119,8 +118,13 @@ impl TextState {
     ) -> taffy::Size<f32> {
         let cache_key = TextHashKey::new(known_dimensions, available_space);
         self.last_key = Some(cache_key);
+        
+        if self.cached_text_layout.len() > 3 {
+            self.cached_text_layout.clear();
+        }
+        
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
-
+        
         if let Some(cached_text_layout_value) = cached_text_layout_value {
             taffy::Size {
                 width: cached_text_layout_value.computed_width,

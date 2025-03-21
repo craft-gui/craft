@@ -3,10 +3,8 @@ use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{
-    LayoutContext, TaffyTextInputContext, TextHashKey,
-};
-use crate::elements::text::{hash_text, make_attributes, TextHashValue};
+use crate::elements::layout_context::{LayoutContext, MetricsRaw, TaffyTextInputContext, TextHashKey};
+use crate::elements::text::{hash_text, AttributesRaw, TextHashValue};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::geometry::Point;
@@ -15,14 +13,11 @@ use crate::renderer::color::Color;
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::{Action, Buffer, Motion, Shaping};
-use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
-use cosmic_text::{Edit, Family, Weight};
-use rustc_hash::FxHasher;
+use cosmic_text::Edit;
+use cosmic_text::{Editor, FontSystem};
 use std::any::Any;
 use std::collections::HashMap;
-use std::hash::Hasher;
 use taffy::{NodeId, TaffyTree};
-use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::keyboard::{Key, NamedKey};
 
 // A stateful element that shows text.
@@ -40,9 +35,10 @@ pub struct TextInputState<'a> {
     pub editor: Editor<'a>,
     pub original_text_hash: u64,
     pub dragging: bool,
-    pub(crate) font_family_length: u8,
-    pub(crate) font_family: [u8; 64],
-    weight: Weight,
+    // Attributes
+    pub(crate) attributes: AttributesRaw,
+    // Metrics
+    pub(crate) metrics: MetricsRaw,
 }
 
 impl TextInputState<'_> {
@@ -56,13 +52,11 @@ impl<'a> TextInputState<'a> {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         id: ComponentId,
-        metrics: Metrics,
         text_hash: u64,
         editor: Editor<'a>,
         original_text_hash: u64,
-        font_family_length: u8,
-        font_family: [u8; 64],
-        weight: Weight,
+        metrics: MetricsRaw,
+        attributes_raw: AttributesRaw,
     ) -> Self {
         Self {
             _id: id,
@@ -72,17 +66,8 @@ impl<'a> TextInputState<'a> {
             editor,
             original_text_hash,
             dragging: false,
-            font_family_length,
-            font_family,
-            weight,
-        }
-    }
-
-    pub fn font_family(&self) -> Option<&str> {
-        if self.font_family_length == 0 {
-            None
-        } else {
-            Some(std::str::from_utf8(&self.font_family[..self.font_family_length as usize]).unwrap())
+            metrics,
+            attributes: attributes_raw
         }
     }
 
@@ -92,16 +77,15 @@ impl<'a> TextInputState<'a> {
         known_dimensions: taffy::Size<Option<f32>>,
         available_space: taffy::Size<taffy::AvailableSpace>,
         font_system: &mut FontSystem,
-        text_hash: u64,
-        metrics: Metrics,
-        font_family_length: u8,
-        font_family: [u8; 64],
     ) -> taffy::Size<f32> {
-        let cache_key = TextHashKey::new(text_hash, font_family, font_family_length, known_dimensions, available_space, metrics);
+        let cache_key = TextHashKey::new(known_dimensions, available_space);
         self.last_key = Some(cache_key);
+
+        if self.cached_text_layout.len() > 3 {
+            self.cached_text_layout.clear();
+        }
         
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
-        self.text_hash = text_hash;
 
         if let Some(cached_text_layout_value) = cached_text_layout_value {
             taffy::Size {
@@ -110,7 +94,6 @@ impl<'a> TextInputState<'a> {
             }
         } else {
             self.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics(font_system, metrics);
                 buffer.set_size(font_system, cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
             });
             self.editor.shape_as_needed(font_system, true);
@@ -200,21 +183,12 @@ impl Element for TextInput {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let font_size = PhysicalPosition::from_logical(
-            LogicalPosition::new(self.common_element_data.style.font_size(), self.common_element_data.style.font_size()),
-            scale_factor,
-        )
-        .x;
-
-        let font_line_height = font_size * 1.2;
-        let metrics = Metrics::new(font_size, font_line_height);
-
         let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
         self.common_element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
-                LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id, metrics)),
+                LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id)),
             )
             .unwrap());
 
@@ -361,29 +335,25 @@ impl Element for TextInput {
         res
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem) -> ElementStateStoreItem {
-        let font_size = self.common_element_data.style.font_size();
-        let font_line_height = font_size * 1.2;
-        let metrics = Metrics::new(font_size, font_line_height);
+    fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
+        let metrics = MetricsRaw::from(&self.common_element_data().style, scaling_factor);
 
-        let buffer = Buffer::new(font_system, metrics);
+        let buffer = Buffer::new(font_system, metrics.to_metrics());
         let mut editor = Editor::new(buffer);
         editor.borrow_with(font_system);
         
         let text_hash = hash_text(&self.text);
-        let new_attributes = make_attributes(&self.common_element_data.style);
-        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, new_attributes, Shaping::Advanced));
+        let new_attributes = AttributesRaw::from(&self.common_element_data.style);
+        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, new_attributes.to_attrs(), Shaping::Advanced));
         editor.action(font_system, Action::Motion(Motion::End));
 
         let cosmic_text_content = TextInputState::new(
             self.common_element_data.component_id,
-            metrics,
             text_hash,
             editor,
             text_hash,
-            self.common_element_data.style.font_family_length(),
-            self.common_element_data.style.font_family_raw(),
-            new_attributes.weight,
+            metrics,
+            new_attributes,
         );
 
         ElementStateStoreItem {
@@ -392,7 +362,7 @@ impl Element for TextInput {
         }
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool) {
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.common_element_data.component_id)
@@ -403,23 +373,45 @@ impl Element for TextInput {
             .unwrap();
         
         let text_hash = hash_text(&self.text);
-        let new_attributes = make_attributes(&self.common_element_data.style);
-        let new_font_family = self.common_element_data.style.font_family_raw();
+        let attributes = AttributesRaw::from(&self.common_element_data.style);
+        let metrics = MetricsRaw::from(&self.common_element_data.style, scaling_factor);
         
-        if text_hash != state.original_text_hash
-            || new_font_family != state.font_family
+        
+        let text_changed = text_hash != state.original_text_hash
             || reload_fonts
-            || new_attributes.weight != state.weight
-        {
-            state.font_family_length = self.common_element_data.style.font_family_length();
-            state.font_family = self.common_element_data.style.font_family_raw();
+            || attributes != state.attributes;
+        let size_changed = metrics != state.metrics;
+        
+        if text_changed || size_changed {
+            state.cached_text_layout.clear();
+            state.last_key = None;
+        }
+        
+        if text_changed && size_changed {
+            state.editor.with_buffer_mut(|buffer| {
+                buffer.set_metrics(font_system, metrics.to_metrics());
+                buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
+            });
+
+            state.metrics = metrics;
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
-            state.weight = new_attributes.weight;
-
+            state.attributes = attributes;
+        } else if size_changed
+        {
             state.editor.with_buffer_mut(|buffer| {
-                buffer.set_text(font_system, &self.text, new_attributes, Shaping::Advanced);
+                buffer.set_metrics(font_system, metrics.to_metrics());
             });
+            
+            state.metrics = metrics;
+        } else if text_changed {
+            state.editor.with_buffer_mut(|buffer| {
+                buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
+            });
+            
+            state.original_text_hash = text_hash;
+            state.text_hash = text_hash;
+            state.attributes = attributes;
         }
     }
 

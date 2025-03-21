@@ -36,7 +36,7 @@ impl Component for InputsExample {
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Block)
             .push(Text::new("Common Input Elements:").font_size(24.0))
-            .push(TextInput::new(include_str!("../../Cargo.lock")).id("text_input").margin("10px", "0px", "0px", "0px"))
+            .push(TextInput::new("Hi").id("text_input").margin("10px", "0px", "0px", "0px"))
             .push(Switch::new().default_toggled(true).margin("10px", "0px", "0px", "0px"))
             .push(Dropdown::new()
                 .push(Text::new(Self::DROPDOWN_ITEMS[0]))
