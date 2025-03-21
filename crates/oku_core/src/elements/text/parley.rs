@@ -13,10 +13,11 @@ use peniko::Brush;
 use rustc_hash::FxHasher;
 use std::hash::{Hash, Hasher};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone)]
 pub struct TextHashValue {
     pub computed_width: f32,
     pub computed_height: f32,
+    pub layout: Layout<Brush>,
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, Debug)]
@@ -298,6 +299,12 @@ impl TextState {
             let computed_size = TextHashValue {
                 computed_width: width,
                 computed_height: height,
+                layout: layout.clone(),
+            };
+
+            let size = taffy::Size {
+                width: computed_size.computed_width,
+                height: computed_size.computed_height,
             };
 
             // Update the cache.
@@ -305,10 +312,7 @@ impl TextState {
             self.cached_text_layout.insert(cache_key.clone(), computed_size);
             self.should_recompute_final_text_layout = false;
 
-            taffy::Size {
-                width: computed_size.computed_width,
-                height: computed_size.computed_height,
-            }
+            size
         }
     }
 }

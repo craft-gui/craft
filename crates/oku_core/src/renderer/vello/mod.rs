@@ -170,10 +170,8 @@ impl<'a> VelloRenderer<'a> {
                         draw_selection(scene, &text_transform, &text_input_state.editor.editor);
                         draw_cursor(scene, &text_transform, &text_input_state.editor);
 
-                        let layout = text_input_state
-                            .editor
-                            .editor
-                            .layout(&mut text_input_state.editor.font_cx, &mut text_input_state.editor.layout_cx);
+                        let key = text_input_state.last_cache_key.clone().unwrap();
+                        let layout = &text_input_state.cached_text_layout[&key].layout;
                         for line in layout.lines() {
                             for item in line.items() {
                                 let PositionedLayoutItem::GlyphRun(glyph_run) = item else {

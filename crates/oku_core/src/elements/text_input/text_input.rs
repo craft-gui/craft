@@ -147,16 +147,19 @@ impl TextInputState {
             let computed_size = TextHashValue {
                 computed_width: width,
                 computed_height: height,
+                layout: self.editor.editor.layout.clone()
+            };
+
+            let size = taffy::Size {
+                width: computed_size.computed_width,
+                height: computed_size.computed_height,
             };
             
             // Update the cache.
             self.cached_text_layout.insert(cache_key.clone(), computed_size);
             self.should_recompute_final_text_layout = false;
 
-            taffy::Size {
-                width: computed_size.computed_width,
-                height: computed_size.computed_height,
-            }
+            size
         }
     }
 }
@@ -269,14 +272,6 @@ impl Element for TextInput {
         font_context: &mut FontContext,
         layout_context: &mut parley::LayoutContext<Brush>,
     ) {
-        let state = self.get_state_mut(element_state);
-        if state.should_recompute_final_text_layout {
-            if let Some(last_cache_key) = &state.last_cache_key {
-                state.editor.editor.set_width(last_cache_key.width_constraint.map(f32::from_bits));
-                state.editor.editor.update_layout(font_context, layout_context);
-            }
-        }
-        
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
