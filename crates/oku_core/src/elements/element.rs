@@ -306,7 +306,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called when the element is assigned a unique component id.
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(()),
@@ -338,7 +338,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool) {}
+    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool, _scaling_factor: f64) {}
 
     fn default_style(&self) -> Style {
         Style::default()

@@ -9,49 +9,56 @@ use cosmic_text::{FontSystem, Metrics};
 
 use taffy::Size;
 
+use crate::style::Style;
 use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
-    pub id: ComponentId,
-    pub metrics: Metrics,
+    pub id: ComponentId
 }
 
 impl TaffyTextContext {
-    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+    pub fn new(id: ComponentId) -> Self {
         Self {
-            id,
-            metrics
+            id
         }
     }
 }
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
-pub struct MetricsDummy {
+pub struct MetricsRaw {
     /// Font size in pixels
     pub font_size: u32,
     /// Line height in pixels
     pub line_height: u32,
+    pub scaling_factor: u64,
+}
+
+impl MetricsRaw {
+    pub(crate) fn from(style: &Style, scaling_factor: f64) -> Self {
+        Self {
+            font_size: (style.font_size() * scaling_factor as f32).to_bits(),
+            line_height: (style.font_size() * scaling_factor as f32).to_bits(),
+            scaling_factor: scaling_factor.to_bits(),
+        }
+    }
+
+    pub(crate) fn to_metrics(&self) -> Metrics {
+        Metrics {
+            font_size: f32::from_bits(self.font_size),
+            line_height: f32::from_bits(self.line_height),
+        }
+    }
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
 pub struct TextHashKey {
-    pub text_hash: u64,
     pub width_constraint: Option<u32>,
     pub height_constraint: Option<u32>,
     pub available_space_width: AvailableSpace,
     pub available_space_height: AvailableSpace,
-    pub metrics: MetricsDummy,
-    
-    pub font_family_length: u8,
-    pub font_family: [u8; 64]
 }
 
 impl TextHashKey {
-    pub(crate) fn new(text_hash: u64,
-                      font_family: [u8; 64], font_family_length: u8,
-                      known_dimensions: taffy::Size<Option<f32>>,
-                      available_space:  taffy::Size<taffy::AvailableSpace>,
-                      metrics: Metrics,
-    ) -> Self {
+    pub(crate) fn new(known_dimensions: taffy::Size<Option<f32>>, available_space:  taffy::Size<taffy::AvailableSpace>) -> Self {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -73,17 +80,10 @@ impl TextHashKey {
         };
 
         Self {
-            text_hash,
             width_constraint: width_constraint.map(|w| w.to_bits()),
             height_constraint: height_constraint.map(|h| h.to_bits()),
             available_space_width: available_space_width_u32,
             available_space_height: available_space_height_u32,
-            metrics: MetricsDummy {
-                font_size: metrics.font_size.to_bits(),
-                line_height: metrics.line_height.to_bits(),
-            },
-            font_family_length,
-            font_family,
         }
     }
 }
@@ -164,10 +164,6 @@ pub fn measure_content(
                 known_dimensions,
                 available_space,
                 font_system,
-                text_state.text_hash,
-                taffy_text_context.metrics,
-                text_state.font_family_length,
-                text_state.font_family,
             )
         }
         Some(LayoutContext::Image(image_context)) => {
@@ -175,15 +171,11 @@ pub fn measure_content(
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
-
+            
             text_input_state.measure(
                 known_dimensions,
                 available_space,
                 font_system,
-                text_input_state.text_hash,
-                taffy_text_input_context.metrics,
-                text_input_state.font_family_length,
-                text_input_state.font_family,
             )
         }
     }
@@ -193,14 +185,12 @@ pub fn measure_content(
 
 pub struct TaffyTextInputContext {
     pub id: ComponentId,
-    metrics: Metrics,
 }
 
 impl TaffyTextInputContext {
-    pub fn new(id: ComponentId, metrics: Metrics) -> Self {
+    pub fn new(id: ComponentId) -> Self {
         Self {
             id,
-            metrics,
         }
     }
 }

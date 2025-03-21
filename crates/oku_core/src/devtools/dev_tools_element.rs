@@ -179,7 +179,7 @@ impl Element for DevTools {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem) -> ElementStateStoreItem {
+    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DevToolsState::default()),

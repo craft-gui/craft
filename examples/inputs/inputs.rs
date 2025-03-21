@@ -14,6 +14,7 @@ use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::RendererType;
 use oku::elements::{Dropdown, Switch};
+use oku_core::style::Display;
 
 #[derive(Default, Copy, Clone)]
 pub struct InputsExample {
@@ -33,9 +34,9 @@ impl Component for InputsExample {
     ) -> ComponentSpecification {
         Container::new()
             .padding("20px", "20px", "20px", "20px")
-            .flex_direction(FlexDirection::Column)
+            .display(Display::Block)
             .push(Text::new("Common Input Elements:").font_size(24.0))
-            .push(TextInput::new("Test").id("text_input").margin("10px", "0px", "0px", "0px"))
+            .push(TextInput::new(include_str!("../../Cargo.lock")).id("text_input").margin("10px", "0px", "0px", "0px"))
             .push(Switch::new().default_toggled(true).margin("10px", "0px", "0px", "0px"))
             .push(Dropdown::new()
                 .push(Text::new(Self::DROPDOWN_ITEMS[0]))

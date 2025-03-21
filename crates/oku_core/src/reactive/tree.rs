@@ -88,6 +88,7 @@ pub(crate) fn diff_trees(
     element_state: &mut ElementStateStore,
     reload_fonts: bool,
     font_system: &mut FontSystem,
+    scaling_factor: f64
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -177,9 +178,9 @@ pub(crate) fn diff_trees(
                             }
                         }
 
-                        element.internal.update_state(font_system, element_state, reload_fonts);
+                        element.internal.update_state(font_system, element_state, reload_fonts, scaling_factor);
                     } else {
-                        let state = element.internal.initialize_state(font_system);
+                        let state = element.internal.initialize_state(font_system, scaling_factor);
                         element_state.storage.insert(id, state);
                     }
 
