@@ -38,7 +38,6 @@ pub struct TextInputState<'a> {
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
     pub last_key: TextHashKey,
     pub editor: Editor<'a>,
-    pub text: String,
     pub original_text_hash: u64,
     pub dragging: bool,
     pub(crate) font_family_length: u8,
@@ -60,7 +59,6 @@ impl<'a> TextInputState<'a> {
         metrics: Metrics,
         text_hash: u64,
         editor: Editor<'a>,
-        text: String,
         original_text_hash: u64,
         font_family_length: u8,
         font_family: [u8; 64],
@@ -84,7 +82,6 @@ impl<'a> TextInputState<'a> {
                 font_family,
             },
             editor,
-            text,
             original_text_hash,
             dragging: false,
             font_family_length,
@@ -407,7 +404,6 @@ impl Element for TextInput {
                     let text_hash = text_hasher.finish();
 
                     state.text_hash = text_hash;
-                    state.text = buffer_string.clone();
 
                     UpdateResult::new()
                         .prevent_defaults()
@@ -452,7 +448,6 @@ impl Element for TextInput {
             metrics,
             text_hash,
             editor,
-            self.text.clone(),
             text_hash,
             self.common_element_data.style.font_family_length(),
             self.common_element_data.style.font_family_raw(),
@@ -498,7 +493,6 @@ impl Element for TextInput {
             state.font_family = self.common_element_data.style.font_family_raw();
             state.original_text_hash = text_hash;
             state.text_hash = text_hash;
-            state.text = self.text.clone();
             state.weight = attributes.weight;
 
             state.editor.with_buffer_mut(|buffer| {
