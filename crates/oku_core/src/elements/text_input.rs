@@ -12,7 +12,7 @@ use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
-use crate::style::{Style, Unit};
+use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::{Action, Buffer, Motion, Shaping};
 use cosmic_text::{Attrs, Editor, FontSystem, Metrics};
@@ -36,7 +36,7 @@ pub struct TextInputState<'a> {
     pub _id: ComponentId,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
-    pub last_key: TextHashKey,
+    pub last_key: Option<TextHashKey>,
     pub editor: Editor<'a>,
     pub original_text_hash: u64,
     pub dragging: bool,
@@ -47,7 +47,7 @@ pub struct TextInputState<'a> {
 
 impl TextInputState<'_> {
     pub(crate) fn get_last_cache_entry(&self) -> &TextHashValue {
-        let key = self.last_key;
+        let key = self.last_key.unwrap();
         &self.cached_text_layout[&key]
     }
 }
@@ -68,19 +68,7 @@ impl<'a> TextInputState<'a> {
             _id: id,
             text_hash,
             cached_text_layout: Default::default(),
-            last_key: TextHashKey {
-                text_hash,
-                width_constraint: None,
-                height_constraint: None,
-                available_space_width: AvailableSpace::MinContent,
-                available_space_height: AvailableSpace::MinContent,
-                metrics: MetricsDummy {
-                    font_size: metrics.font_size.to_bits(),
-                    line_height: metrics.line_height.to_bits(),
-                },
-                font_family_length,
-                font_family,
-            },
+            last_key: None,
             editor,
             original_text_hash,
             dragging: false,
@@ -143,7 +131,7 @@ impl<'a> TextInputState<'a> {
             font_family,
         };
 
-        self.last_key = key;
+        self.last_key = Some(key);
         let cached_text_layout_value = self.cached_text_layout.get(&key);
         self.text_hash = text_hash;
 
@@ -251,6 +239,7 @@ impl Element for TextInput {
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
+        self.merge_default_style();
         let font_size = PhysicalPosition::from_logical(
             LogicalPosition::new(self.common_element_data.style.font_size(), self.common_element_data.style.font_size()),
             scale_factor,
@@ -388,7 +377,8 @@ impl Element for TextInput {
                     }
                 }
                 state.editor.shape_as_needed(font_system, true);
-
+                state.cached_text_layout.clear();
+                state.last_key = None;
                 state.editor.with_buffer(|buffer| {
                     let mut buffer_string: String = String::new();
                     let last_line = buffer.lines.len() - 1;
@@ -499,6 +489,12 @@ impl Element for TextInput {
                 buffer.set_text(font_system, &self.text, attributes, Shaping::Advanced);
             });
         }
+    }
+
+    fn default_style(&self) -> Style {
+        let mut style = Style::default();
+        *style.display_mut() = Display::Block;
+        style
     }
 }
 
