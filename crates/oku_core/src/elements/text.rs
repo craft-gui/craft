@@ -37,7 +37,7 @@ pub struct TextState {
     buffer: Buffer,
     pub text_hash: u64,
     pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
-    pub last_key: TextHashKey,
+    pub last_key: Option<TextHashKey>,
 
     pub(crate) font_family_length: u8,
     pub(crate) font_family: [u8; 64],
@@ -46,7 +46,7 @@ pub struct TextState {
 
 impl TextState {
     pub(crate) fn get_last_cache_entry(&self) -> &TextHashValue {
-        let key = self.last_key;
+        let key = self.last_key.unwrap();
         &self.cached_text_layout[&key]
     }
 }
@@ -65,19 +65,7 @@ impl TextState {
             buffer,
             text_hash,
             cached_text_layout: Default::default(),
-            last_key: TextHashKey {
-                text_hash,
-                width_constraint: None,
-                height_constraint: None,
-                available_space_width: AvailableSpace::MinContent,
-                available_space_height: AvailableSpace::MinContent,
-                metrics: MetricsDummy {
-                    font_size: 0,
-                    line_height: 0,
-                },
-                font_family_length,
-                font_family,
-            },
+            last_key: None,
             font_family_length,
             font_family,
             weight,
@@ -103,47 +91,20 @@ impl TextState {
         font_family_length: u8,
         font_family: [u8; 64],
     ) -> taffy::Size<f32> {
-        // Set width constraint
-        let width_constraint = known_dimensions.width.or(match available_space.width {
-            taffy::AvailableSpace::MinContent => Some(0.0),
-            taffy::AvailableSpace::MaxContent => None,
-            taffy::AvailableSpace::Definite(width) => Some(width),
-        });
-
-        let height_constraint = known_dimensions.height;
-
-        let available_space_width_u32: AvailableSpace = match available_space.width {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
-        };
-        let available_space_height_u32: AvailableSpace = match available_space.height {
-            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
-            taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
-        };
-
-        let key = TextHashKey {
-            text_hash,
-            width_constraint: width_constraint.map(|w| w.to_bits()),
-            height_constraint: height_constraint.map(|h| h.to_bits()),
-            available_space_width: available_space_width_u32,
-            available_space_height: available_space_height_u32,
-            metrics: MetricsDummy {
-                font_size: metrics.font_size.to_bits(),
-                line_height: metrics.line_height.to_bits(),
-            },
-            font_family_length,
-            font_family,
-        };
-
-        self.last_key = key;
-        let cached_text_layout_value = self.cached_text_layout.get(&key);
+        let cache_key = TextHashKey::new(text_hash, font_family, font_family_length, known_dimensions, available_space, metrics);
+        self.last_key = Some(cache_key);
+        
+        let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
         self.text_hash = text_hash;
 
-        if cached_text_layout_value.is_none() {
+        if let Some(cached_text_layout_value) = cached_text_layout_value {
+            taffy::Size {
+                width: cached_text_layout_value.computed_width,
+                height: cached_text_layout_value.computed_height,
+            }
+        } else {
             self.buffer.set_metrics(font_system, metrics);
-            self.buffer.set_size(font_system, width_constraint, height_constraint);
+            self.buffer.set_size(font_system, cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
             self.buffer.shape_until_scroll(font_system, true);
 
             // Determine measured size of text
@@ -164,15 +125,9 @@ impl TextState {
                 height: cached_text_layout_value.computed_height,
             };
 
-            self.cached_text_layout.insert(key, cached_text_layout_value);
+            self.cached_text_layout.insert(cache_key, cached_text_layout_value);
 
             size
-        } else {
-            let cached_text_layout_value = cached_text_layout_value.unwrap();
-            taffy::Size {
-                width: cached_text_layout_value.computed_width,
-                height: cached_text_layout_value.computed_height,
-            }
         }
     }
 }

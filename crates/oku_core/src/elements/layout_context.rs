@@ -45,6 +45,49 @@ pub struct TextHashKey {
     pub font_family: [u8; 64]
 }
 
+impl TextHashKey {
+    pub(crate) fn new(text_hash: u64,
+                      font_family: [u8; 64], font_family_length: u8,
+                      known_dimensions: taffy::Size<Option<f32>>,
+                      available_space:  taffy::Size<taffy::AvailableSpace>,
+                      metrics: Metrics,
+    ) -> Self {
+        // Set width constraint
+        let width_constraint = known_dimensions.width.or(match available_space.width {
+            taffy::AvailableSpace::MinContent => Some(0.0),
+            taffy::AvailableSpace::MaxContent => None,
+            taffy::AvailableSpace::Definite(width) => Some(width),
+        });
+
+        let height_constraint = known_dimensions.height;
+
+        let available_space_width_u32: AvailableSpace = match available_space.width {
+            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
+            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+            taffy::AvailableSpace::Definite(width) => AvailableSpace::Definite(width.to_bits()),
+        };
+        let available_space_height_u32: AvailableSpace = match available_space.height {
+            taffy::AvailableSpace::MinContent => AvailableSpace::MinContent,
+            taffy::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+            taffy::AvailableSpace::Definite(height) => AvailableSpace::Definite(height.to_bits()),
+        };
+
+        Self {
+            text_hash,
+            width_constraint: width_constraint.map(|w| w.to_bits()),
+            height_constraint: height_constraint.map(|h| h.to_bits()),
+            available_space_width: available_space_width_u32,
+            available_space_height: available_space_height_u32,
+            metrics: MetricsDummy {
+                font_size: metrics.font_size.to_bits(),
+                line_height: metrics.line_height.to_bits(),
+            },
+            font_family_length,
+            font_family,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AvailableSpace {
     /// The amount of space available is the specified number of pixels
