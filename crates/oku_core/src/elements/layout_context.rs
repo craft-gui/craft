@@ -58,7 +58,7 @@ pub struct TextHashKey {
 }
 
 impl TextHashKey {
-    pub(crate) fn new(known_dimensions: taffy::Size<Option<f32>>, available_space:  taffy::Size<taffy::AvailableSpace>) -> Self {
+    pub(crate) fn new(known_dimensions: Size<Option<f32>>, available_space:  Size<taffy::AvailableSpace>) -> Self {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -160,7 +160,7 @@ pub fn measure_content(
         Some(LayoutContext::Text(taffy_text_context)) => {
             let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.measure(
+            text_state.cached_editor.measure(
                 known_dimensions,
                 available_space,
                 font_system,
@@ -172,7 +172,7 @@ pub fn measure_content(
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
             
-            text_input_state.measure(
+            text_input_state.cached_editor.measure(
                 known_dimensions,
                 available_space,
                 font_system,

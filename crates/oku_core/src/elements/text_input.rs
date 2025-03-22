@@ -1,26 +1,25 @@
-use crate::components::component::{ComponentId, ComponentSpecification};
+use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
+use crate::elements::cached_editor::CachedEditor;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
-use crate::elements::layout_context::{LayoutContext, MetricsRaw, TaffyTextInputContext, TextHashKey};
-use crate::elements::scroll_state::ScrollState;
-use crate::elements::text::{hash_text, AttributesRaw, TextHashValue};
+use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
-use crate::renderer::renderer::TextScroll;
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::Edit;
-use cosmic_text::{Action, Buffer, Motion, Shaping};
-use cosmic_text::{Editor, FontSystem};
+use cosmic_text::{Action, Motion};
+use cosmic_text::FontSystem;
 use std::any::Any;
-use std::collections::HashMap;
 use taffy::{NodeId, TaffyTree};
 use winit::keyboard::{Key, NamedKey};
+use crate::elements::scroll_state::ScrollState;
+use crate::renderer::renderer::TextScroll;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -30,98 +29,9 @@ pub struct TextInput {
 }
 
 pub struct TextInputState<'a> {
-    pub _id: ComponentId,
-    pub text_hash: u64,
-    pub cached_text_layout: HashMap<TextHashKey, TextHashValue>,
-    pub last_key: Option<TextHashKey>,
-    pub editor: Editor<'a>,
+    pub cached_editor: CachedEditor<'a>,
     pub dragging: bool,
-    // Attributes
-    pub(crate) attributes: AttributesRaw,
-    // Metrics
-    pub(crate) metrics: MetricsRaw,
     pub(crate) scroll_state: ScrollState,
-}
-
-impl TextInputState<'_> {
-    pub(crate) fn get_last_cache_entry(&self) -> &TextHashValue {
-        let key = self.last_key.unwrap();
-        &self.cached_text_layout[&key]
-    }
-}
-
-impl<'a> TextInputState<'a> {
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        id: ComponentId,
-        text_hash: u64,
-        editor: Editor<'a>,
-        metrics: MetricsRaw,
-        attributes_raw: AttributesRaw,
-    ) -> Self {
-        Self {
-            _id: id,
-            text_hash,
-            cached_text_layout: Default::default(),
-            last_key: None,
-            editor,
-            dragging: false,
-            metrics,
-            attributes: attributes_raw,
-            scroll_state: ScrollState::default(),
-        }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn measure(
-        &mut self,
-        known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<taffy::AvailableSpace>,
-        font_system: &mut FontSystem,
-    ) -> taffy::Size<f32> {
-        let cache_key = TextHashKey::new(known_dimensions, available_space);
-        self.last_key = Some(cache_key);
-
-        if self.cached_text_layout.len() > 3 {
-            self.cached_text_layout.clear();
-        }
-
-        let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
-
-        if let Some(cached_text_layout_value) = cached_text_layout_value {
-            taffy::Size {
-                width: cached_text_layout_value.computed_width,
-                height: cached_text_layout_value.computed_height,
-            }
-        } else {
-            self.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics_and_size(font_system, self.metrics.to_metrics(), cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
-            });
-            self.editor.shape_as_needed(font_system, true);
-
-            // Determine measured size of text
-            let cached_text_layout_value = self.editor.with_buffer(|buffer| {
-                let (width, total_lines) = buffer
-                    .layout_runs()
-                    .fold((0.0, 0usize), |(width, total_lines), run| (run.line_w.max(width), total_lines + 1));
-                let height = total_lines as f32 * buffer.metrics().line_height;
-
-                TextHashValue {
-                    computed_width: width,
-                    computed_height: height,
-                    buffer: buffer.clone(),
-                }
-            });
-
-            let size = taffy::Size {
-                width: cached_text_layout_value.computed_width,
-                height: cached_text_layout_value.computed_height,
-            };
-
-            self.cached_text_layout.insert(cache_key, cached_text_layout_value);
-            size
-        }
-    }
 }
 
 impl TextInput {
@@ -265,40 +175,46 @@ impl Element for TextInput {
         font_system: &mut FontSystem,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
-        let text_input_state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
+        let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
 
-        let scroll_result = text_input_state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base);
+
+        let scroll_result = state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base);
+
         if !scroll_result.propagate {
             return scroll_result;
         }
 
-        let scroll_y = text_input_state.scroll_state.scroll_y;
+
+        let cached_editor = &mut state.cached_editor;
+
+        let scroll_y = state.scroll_state.scroll_y;
 
         let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
         let content_position = content_rect.position();
-        let res = match message {
+
+        match message {
             OkuMessage::PointerButtonEvent(pointer_button) => {
                 let pointer_position = pointer_button.position;
                 let pointer_content_position = pointer_position - content_position;
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    text_input_state.editor.action(
+                    cached_editor.editor.action(
                         font_system,
                         Action::Click {
                             x: pointer_content_position.x as i32,
                             y: (pointer_content_position.y + scroll_y) as i32,
                         },
                     );
-                    text_input_state.dragging = true;
+                    state.dragging = true;
                 } else {
-                    text_input_state.dragging = false;
+                    state.dragging = false;
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::PointerMovedEvent(moved) => {
-                if text_input_state.dragging {
+                if state.dragging {
                     let pointer_position = moved.position;
                     let pointer_content_position = pointer_position - content_position;
-                    text_input_state.editor.action(
+                    cached_editor.editor.action(
                         font_system,
                         Action::Drag {
                             x: pointer_content_position.x as i32,
@@ -315,37 +231,37 @@ impl Element for TextInput {
                 if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
-                            text_input_state.editor.action(font_system, Action::Motion(Motion::Left))
+                            cached_editor.editor.action(font_system, Action::Motion(Motion::Left))
                         }
                         Key::Named(NamedKey::ArrowRight) => {
-                            text_input_state.editor.action(font_system, Action::Motion(Motion::Right))
+                            cached_editor.editor.action(font_system, Action::Motion(Motion::Right))
                         }
-                        Key::Named(NamedKey::ArrowUp) => text_input_state.editor.action(font_system, Action::Motion(Motion::Up)),
+                        Key::Named(NamedKey::ArrowUp) => cached_editor.editor.action(font_system, Action::Motion(Motion::Up)),
                         Key::Named(NamedKey::ArrowDown) => {
-                            text_input_state.editor.action(font_system, Action::Motion(Motion::Down))
+                            cached_editor.editor.action(font_system, Action::Motion(Motion::Down))
                         }
-                        Key::Named(NamedKey::Home) => text_input_state.editor.action(font_system, Action::Motion(Motion::Home)),
-                        Key::Named(NamedKey::End) => text_input_state.editor.action(font_system, Action::Motion(Motion::End)),
+                        Key::Named(NamedKey::Home) => cached_editor.editor.action(font_system, Action::Motion(Motion::Home)),
+                        Key::Named(NamedKey::End) => cached_editor.editor.action(font_system, Action::Motion(Motion::End)),
                         Key::Named(NamedKey::PageUp) => {
-                            text_input_state.editor.action(font_system, Action::Motion(Motion::PageUp))
+                            cached_editor.editor.action(font_system, Action::Motion(Motion::PageUp))
                         }
                         Key::Named(NamedKey::PageDown) => {
-                            text_input_state.editor.action(font_system, Action::Motion(Motion::PageDown))
+                            cached_editor.editor.action(font_system, Action::Motion(Motion::PageDown))
                         }
-                        Key::Named(NamedKey::Escape) => text_input_state.editor.action(font_system, Action::Escape),
-                        Key::Named(NamedKey::Enter) => text_input_state.editor.action(font_system, Action::Enter),
-                        Key::Named(NamedKey::Backspace) => text_input_state.editor.action(font_system, Action::Backspace),
-                        Key::Named(NamedKey::Delete) => text_input_state.editor.action(font_system, Action::Delete),
+                        Key::Named(NamedKey::Escape) => cached_editor.editor.action(font_system, Action::Escape),
+                        Key::Named(NamedKey::Enter) => cached_editor.editor.action(font_system, Action::Enter),
+                        Key::Named(NamedKey::Backspace) => cached_editor.editor.action(font_system, Action::Backspace),
+                        Key::Named(NamedKey::Delete) => cached_editor.editor.action(font_system, Action::Delete),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
                                 for char in text.chars() {
-                                    text_input_state.editor.action(font_system, Action::Insert(char));
+                                    cached_editor.editor.action(font_system, Action::Insert(char));
                                 }
                             }
                         }
                         Key::Character(text) => {
                             for c in text.chars() {
-                                text_input_state.editor.action(font_system, Action::Insert(c));
+                                cached_editor.editor.action(font_system, Action::Insert(c));
 
                                 //text_context.editor.set_selection(Selection::Line(Cursor::new(0, 0)));
                             }
@@ -353,10 +269,10 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
-                text_input_state.editor.shape_as_needed(font_system, true);
-                text_input_state.cached_text_layout.clear();
-                text_input_state.last_key = None;
-                text_input_state.editor.with_buffer(|buffer| {
+                cached_editor.editor.shape_as_needed(font_system, true);
+                cached_editor.clear_cache();
+
+                cached_editor.editor.with_buffer(|buffer| {
 
                     let mut buffer_string: String = String::new();
                     let last_line = buffer.lines.len() - 1;
@@ -374,34 +290,20 @@ impl Element for TextInput {
                 })
             }
             _ => UpdateResult::new(),
-        };
-
-        res
+        }
     }
 
     fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let metrics = MetricsRaw::from(&self.common_element_data().style, scaling_factor);
-
-        let buffer = Buffer::new(font_system, metrics.to_metrics());
-        let mut editor = Editor::new(buffer);
-        editor.borrow_with(font_system);
-
-        let text_hash = hash_text(&self.text);
-        let attributes = AttributesRaw::from(&self.common_element_data.style);
-        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced));
-        editor.action(font_system, Action::Motion(Motion::End));
-
-        let cosmic_text_content = TextInputState::new(
-            self.common_element_data.component_id,
-            text_hash,
-            editor,
-            metrics,
-            attributes,
-        );
+        let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
+        let text_input_state = TextInputState {
+            cached_editor,
+            dragging: false,
+            scroll_state: ScrollState::default(),
+        };
 
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(cosmic_text_content)
+            data: Box::new(text_input_state)
         }
     }
 
@@ -415,33 +317,7 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        let text_hash = hash_text(&self.text);
-        let attributes = AttributesRaw::from(&self.common_element_data.style);
-        let metrics = MetricsRaw::from(&self.common_element_data.style, scaling_factor);
-
-        let text_changed = text_hash != state.text_hash
-            || reload_fonts
-            || attributes != state.attributes;
-        let size_changed = metrics != state.metrics;
-
-        if text_changed || size_changed {
-            state.cached_text_layout.clear();
-            state.last_key = None;
-        }
-
-        if size_changed {
-            state.metrics = metrics;
-        }
-        
-        
-        if text_changed {
-            state.editor.with_buffer_mut(|buffer| {
-                buffer.set_text(font_system, &self.text, attributes.to_attrs(), Shaping::Advanced);
-            });
-            
-            state.attributes = attributes;
-            state.text_hash = text_hash;
-        }
+        state.cached_editor.update_state(&self.text, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
     }
 
     fn default_style(&self) -> Style {
