@@ -18,6 +18,7 @@ mod element_pre_order_iterator;
 pub(crate) mod element_states;
 pub(crate) mod element_styles;
 pub(crate) mod font;
+mod cached_editor;
 
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;

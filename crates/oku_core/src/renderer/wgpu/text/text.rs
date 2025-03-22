@@ -61,11 +61,27 @@ impl TextRenderer {
     pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> Option<PerFrameData> {
 
         for text_area in self.text_areas.iter() { 
-            if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
-                
-                let editor = &text_context.editor;
-                let buffer = &text_context.get_last_cache_entry().buffer;
-                
+            
+            let mut draw_cursor = false;
+            let cached_editor = if let Some(text_context) = element_state.storage
+                .get(&text_area.element_id)
+                .unwrap()
+                .data.downcast_ref::<TextState>() {
+                Some(&text_context.cached_editor)
+            } else { 
+                draw_cursor = true;
+                element_state.storage
+                    .get(&text_area.element_id)
+                    .unwrap()
+                    .data.downcast_ref::<TextInputState>()
+                    .map(|text_context| &text_context.cached_editor) 
+            };
+            
+            
+            if let Some(cached_editor) = cached_editor {
+                let editor = &cached_editor.editor;
+                let buffer = &cached_editor.get_last_cache_entry().buffer;
+
                 let buffer_glyphs = create_glyphs_for_editor(
                     buffer,
                     editor,
@@ -77,30 +93,32 @@ impl TextRenderer {
 
                 // Draw the Glyphs
                 for buffer_line in &buffer_glyphs.buffer_lines {
-                    
+
                     // Draw the highlights
                     for glyph_highlight in &buffer_line.glyph_highlights {
 
                         let width = glyph_highlight.width() as f32;
                         let height = glyph_highlight.height() as f32;
-                        
+
                         build_rectangle(ContentType::Rectangle, Rectangle {
                             x: text_area.rectangle.x + glyph_highlight.x0 as f32,
                             y: text_area.rectangle.y + glyph_highlight.y0 as f32,
                             width,
                             height,
                         }, buffer_glyphs.glyph_highlight_color, &mut self.vertices, &mut self.indices);
-                        
+
                     }
 
-                    // Draw the cursor
-                    if let Some(cursor) = &buffer_line.cursor {
-                        build_rectangle(ContentType::Rectangle, Rectangle {
-                            x: text_area.rectangle.x + cursor.x0 as f32,
-                            y: text_area.rectangle.y + cursor.y0 as f32,
-                            width: cursor.width() as f32,
-                            height: cursor.height() as f32,
-                        }, buffer_glyphs.cursor_color, &mut self.vertices, &mut self.indices);
+                    if draw_cursor {
+                        // Draw the cursor
+                        if let Some(cursor) = &buffer_line.cursor {
+                            build_rectangle(ContentType::Rectangle, Rectangle {
+                                x: text_area.rectangle.x + cursor.x0 as f32,
+                                y: text_area.rectangle.y + cursor.y0 as f32,
+                                width: cursor.width() as f32,
+                                height: cursor.height() as f32,
+                            }, buffer_glyphs.cursor_color, &mut self.vertices, &mut self.indices);
+                        }   
                     }
 
                     // Draw the glyphs
@@ -135,48 +153,8 @@ impl TextRenderer {
                         }
                     }
                 }
-
-            } else if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextState>() {
-                let buffer = &text_context.get_last_cache_entry().buffer;
-                
-                for run in buffer.layout_runs() {
-                    for glyph in run.glyphs.iter() {
-                        let physical_glyph = glyph.physical((0., 0.), 1.0);
-
-                        let glyph_color = match glyph.color_opt {
-                            Some(some) => Color::from_rgba8(some.r(), some.g(), some.b(), some.a()),
-                            None => text_area.fill_color,
-                        };
-
-                        // Check if the image is available in the cache
-                        let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) = self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key) {
-                            Some(glyph_info)
-                        } else if let Some(image) = self.swash_cache.get_image(font_system, physical_glyph.cache_key) {
-                            self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
-
-                            self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
-                        } else {
-                            None
-                        };
-                        
-                        if let Some(glyph_info) = glyph_info {
-                            let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
-                            let rel_gylh_y = run.line_y as i32 + physical_glyph.y + (-glyph_info.swash_image_placement.top);
-                            build_glyph_rectangle(self.text_atlas.texture_width, self.text_atlas.texture_height, glyph_info.clone(), Rectangle {
-                                x: text_area.rectangle.x + rel_gylh_x as f32,
-                                y: text_area.rectangle.y + rel_gylh_y as f32,
-                                width: glyph_info.width as f32,
-                                height: glyph_info.height as f32,
-                            }, glyph_color, &mut self.vertices, &mut self.indices);   
-                        }
-
-                    }
-                }
-
-                
-            } else {
-                panic!("Unknown state provided to the renderer!");
             }
+            
         }
         
         if self.indices.is_empty() {
