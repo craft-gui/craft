@@ -221,6 +221,7 @@ impl Element for Text {
             self.common_element_data.component_id,
             content_rectangle,
             self.common_element_data.style.color(),
+            None,
         );
     }
 

@@ -10,5 +10,6 @@ pub mod wgpu;
 pub(crate) mod vello;
 
 pub(crate) mod blank_renderer;
+mod text;
 
 pub use renderer::RenderCommand;

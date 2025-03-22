@@ -59,6 +59,10 @@ pub struct CommonElementData {
 }
 
 impl CommonElementData {
+    pub fn is_scrollable(&self) -> bool {
+        self.style.overflow()[1] == taffy::Overflow::Scroll
+    }
+
     pub(crate) fn current_style_mut(&mut self) -> &mut Style {
         match self.current_state {
             ElementState::Normal => &mut self.style,

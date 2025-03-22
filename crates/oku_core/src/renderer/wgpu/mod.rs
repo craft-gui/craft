@@ -11,7 +11,7 @@ use crate::components::component::ComponentId;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderCommand, Renderer};
+use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::{create_surface_config, request_adapter, request_device_and_queue, Context};
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
@@ -26,7 +26,7 @@ use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
-use vello::kurbo;
+use peniko::kurbo;
 use winit::window::Window;
 
 pub struct WgpuRenderer<'a> {
@@ -153,8 +153,8 @@ impl Renderer for WgpuRenderer<'_> {
     fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {
     }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -214,8 +214,8 @@ impl Renderer for WgpuRenderer<'_> {
                     RenderCommand::DrawImage(rectangle, resource_identifier) => {
                         self.image_renderer.build(rectangle, resource_identifier.clone(), Color::WHITE);
                     }
-                    RenderCommand::DrawText(rectangle, component_id, color) => {
-                        self.text_renderer.build(rectangle, component_id, color);
+                    RenderCommand::DrawText(rectangle, component_id, color, text_scroll) => {
+                        self.text_renderer.build(rectangle, component_id, color, text_scroll);
                     }
                     RenderCommand::FillBezPath(bez_path, color) => {
                         let mut builder = Path::builder();

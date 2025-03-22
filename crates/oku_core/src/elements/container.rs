@@ -1,11 +1,11 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
+use crate::elements::scroll_state::ScrollState;
 use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
@@ -14,7 +14,6 @@ use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use taffy::{NodeId, TaffyTree};
-use winit::event::{ButtonSource, ElementState as WinitElementState, MouseButton, MouseScrollDelta, PointerSource};
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
@@ -24,20 +23,7 @@ pub struct Container {
 
 #[derive(Clone, Copy, Default)]
 pub struct ContainerState {
-    pub(crate) scroll_y: f32,
-    pub(crate) scroll_click: Option<(f32, f32)>,
-}
-
-impl Container {
-    pub fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
-        let scrollbar_color = self.common_element_data.current_style().scrollbar_color();
-
-        // track
-        renderer.draw_rect(self.common_element_data.computed_scroll_track, scrollbar_color.track_color);
-
-        // thumb
-        renderer.draw_rect(self.common_element_data.computed_scroll_thumb, scrollbar_color.thumb_color);
-    }
+    pub(crate) scroll_state: ScrollState,
 }
 
 impl Element for Container {
@@ -121,7 +107,7 @@ impl Element for Container {
             .data
             .downcast_ref::<ContainerState>()
         {
-            container_state.scroll_y
+            container_state.scroll_state.scroll_y
         } else {
             0.0
         };
@@ -156,105 +142,7 @@ impl Element for Container {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 
-        if self.style().overflow()[1] == taffy::Overflow::Scroll {
-            match message {
-                OkuMessage::MouseWheelEvent(mouse_wheel) => {
-                    let delta = match mouse_wheel.delta {
-                        MouseScrollDelta::LineDelta(_x, y) => y,
-                        MouseScrollDelta::PixelDelta(y) => y.y as f32,
-                    };
-                    let delta = -delta * self.common_element_data.style.font_size().max(12.0) * 1.2;
-                    let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                    container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-
-                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                }
-                OkuMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == MouseButton::Left {
-                        // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
-                        if let ButtonSource::Touch { .. } = pointer_button.button {
-                            let container_rectangle =
-                                self.common_element_data.computed_layered_rectangle_transformed.padding_rectangle();
-
-                            let in_scroll_bar =
-                                self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position);
-
-                            if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
-                                container_state.scroll_click =
-                                    Some((pointer_button.position.x, pointer_button.position.y));
-                                return UpdateResult::new().prevent_propagate().prevent_defaults();
-                            }
-                        }
-
-                        match pointer_button.state {
-                            WinitElementState::Pressed => {
-                                if self.common_element_data.computed_scroll_thumb.contains(&pointer_button.position) {
-                                    container_state.scroll_click =
-                                        Some((pointer_button.position.x, pointer_button.position.y));
-                                    // FIXME: Turn pointer capture on with the correct device id.
-                                    base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
-
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else if self
-                                    .common_element_data
-                                    .computed_scroll_track
-                                    .contains(&pointer_button.position)
-                                {
-                                    let offset_y =
-                                        pointer_button.position.y - self.common_element_data.computed_scroll_track.y;
-
-                                    let percent = offset_y / self.common_element_data.computed_scroll_track.height;
-                                    let scroll_y = percent * self.common_element_data.max_scroll_y;
-
-                                    container_state.scroll_y =
-                                        scroll_y.clamp(0.0, self.common_element_data.max_scroll_y);
-
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else {
-                                    UpdateResult::new()
-                                }
-                            }
-                            WinitElementState::Released => {
-                                container_state.scroll_click = None;
-                                // FIXME: Turn pointer capture off with the correct device id.
-                                base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, false);
-                                UpdateResult::new().prevent_propagate().prevent_defaults()
-                            }
-                        }
-                    } else {
-                        UpdateResult::new()
-                    }
-                }
-                OkuMessage::PointerMovedEvent(pointer_motion) => {
-                    if let Some((click_x, click_y)) = container_state.scroll_click {
-                        // Todo: Translate scroll wheel pixel to scroll position for diff.
-                        let delta = pointer_motion.position.y - click_y;
-
-                        let max_scroll_y = self.common_element_data.max_scroll_y;
-
-                        let mut delta = max_scroll_y
-                            * (delta
-                                / (self.common_element_data.computed_scroll_track.height
-                                    - self.common_element_data.computed_scroll_thumb.height));
-
-                        // DEVICE(TOUCH): Reverse the direction on touch based input devices.
-                        if let PointerSource::Touch { .. } = pointer_motion.source {
-                            delta = -delta;
-                        }
-
-                        container_state.scroll_y = (container_state.scroll_y + delta).clamp(0.0, max_scroll_y);
-                        container_state.scroll_click = Some((click_x, pointer_motion.position.y));
-                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                    } else {
-                        UpdateResult::new()
-                    }
-                }
-                _ => UpdateResult::new(),
-            }
-        } else {
-            UpdateResult::new()
-        }
+        container_state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base)
     }
 
     fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {

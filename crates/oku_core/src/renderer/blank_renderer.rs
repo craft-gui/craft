@@ -2,7 +2,7 @@ use crate::components::ComponentId;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::Renderer;
+use crate::renderer::renderer::{Renderer, TextScroll};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 #[cfg(feature = "wgpu_renderer")]
@@ -34,7 +34,7 @@ impl Renderer for BlankRenderer {
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
-    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle, _color: Color) {}
+    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle, _color: Color, _text_scroll: Option<TextScroll>) {}
 
     fn draw_image(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
 

@@ -256,6 +256,16 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         common_element_data.computed_border = border_spec.compute_border_spec();
     }
 
+    fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
+        let scrollbar_color = self.common_element_data().current_style().scrollbar_color();
+
+        // track
+        renderer.draw_rect(self.common_element_data_mut().computed_scroll_track, scrollbar_color.track_color);
+
+        // thumb
+        renderer.draw_rect(self.common_element_data_mut().computed_scroll_thumb, scrollbar_color.thumb_color);
+    }
+
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
         let common_element_data = self.common_element_data_mut();
 

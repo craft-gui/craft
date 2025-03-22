@@ -4,16 +4,18 @@ use crate::components::UpdateResult;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, MetricsRaw, TaffyTextInputContext, TextHashKey};
+use crate::elements::scroll_state::ScrollState;
 use crate::elements::text::{hash_text, AttributesRaw, TextHashValue};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
-use crate::geometry::Point;
+use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
+use crate::renderer::renderer::TextScroll;
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Action, Buffer, Motion, Shaping};
 use cosmic_text::Edit;
+use cosmic_text::{Action, Buffer, Motion, Shaping};
 use cosmic_text::{Editor, FontSystem};
 use std::any::Any;
 use std::collections::HashMap;
@@ -38,6 +40,7 @@ pub struct TextInputState<'a> {
     pub(crate) attributes: AttributesRaw,
     // Metrics
     pub(crate) metrics: MetricsRaw,
+    pub(crate) scroll_state: ScrollState,
 }
 
 impl TextInputState<'_> {
@@ -64,7 +67,8 @@ impl<'a> TextInputState<'a> {
             editor,
             dragging: false,
             metrics,
-            attributes: attributes_raw
+            attributes: attributes_raw,
+            scroll_state: ScrollState::default(),
         }
     }
 
@@ -157,7 +161,7 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &ElementStateStore,
+        element_state: &ElementStateStore,
         _pointer: Option<Point>,
     ) {
         let computed_layer_rectangle_transformed =
@@ -166,11 +170,36 @@ impl Element for TextInput {
 
         self.draw_borders(renderer);
 
+        let is_scrollable = self.common_element_data.is_scrollable();
+
+        if is_scrollable {
+            self.maybe_start_layer(renderer);
+        }
+
+        let scroll_y = if let Some(state) = element_state
+            .storage
+            .get(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_ref::<TextInputState>()
+        {
+            state.scroll_state.scroll_y
+        } else {
+            0.0
+        };
+
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
             self.common_element_data.style.color(),
-        ); 
+            Some(TextScroll::new(scroll_y, self.common_element_data.computed_scroll_track.height))
+        );
+
+        if is_scrollable {
+            self.maybe_end_layer(renderer);
+        }
+
+        self.draw_scrollbar(renderer);
     }
 
     fn compute_layout(
@@ -199,13 +228,30 @@ impl Element for TextInput {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_layer_rectangle(position, transform, result, z_index);
         self.finalize_borders();
+
+        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+
+        let scroll_y = if let Some(container_state) = element_state
+            .storage
+            .get(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_ref::<TextInputState>()
+        {
+            container_state.scroll_state.scroll_y
+        } else {
+            0.0
+        };
+
+        self.finalize_scrollbar(scroll_y);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -218,14 +264,15 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let base_state = self.get_base_state_mut(element_state);
+        let text_input_state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
+
+        let scroll_result = text_input_state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base);
+        if !scroll_result.propagate {
+            return scroll_result;
+        }
+
+        let scroll_y = text_input_state.scroll_state.scroll_y;
 
         let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
         let content_position = content_rect.position();
@@ -234,28 +281,28 @@ impl Element for TextInput {
                 let pointer_position = pointer_button.position;
                 let pointer_content_position = pointer_position - content_position;
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    state.editor.action(
+                    text_input_state.editor.action(
                         font_system,
                         Action::Click {
                             x: pointer_content_position.x as i32,
-                            y: pointer_content_position.y as i32,
+                            y: (pointer_content_position.y + scroll_y) as i32,
                         },
                     );
-                    state.dragging = true;
+                    text_input_state.dragging = true;
                 } else {
-                    state.dragging = false;
+                    text_input_state.dragging = false;
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::PointerMovedEvent(moved) => {
-                if state.dragging {
+                if text_input_state.dragging {
                     let pointer_position = moved.position;
                     let pointer_content_position = pointer_position - content_position;
-                    state.editor.action(
+                    text_input_state.editor.action(
                         font_system,
                         Action::Drag {
                             x: pointer_content_position.x as i32,
-                            y: pointer_content_position.y as i32,
+                            y: (pointer_content_position.y + scroll_y) as i32,
                         },
                     );
                 }
@@ -268,37 +315,37 @@ impl Element for TextInput {
                 if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
-                            state.editor.action(font_system, Action::Motion(Motion::Left))
+                            text_input_state.editor.action(font_system, Action::Motion(Motion::Left))
                         }
                         Key::Named(NamedKey::ArrowRight) => {
-                            state.editor.action(font_system, Action::Motion(Motion::Right))
+                            text_input_state.editor.action(font_system, Action::Motion(Motion::Right))
                         }
-                        Key::Named(NamedKey::ArrowUp) => state.editor.action(font_system, Action::Motion(Motion::Up)),
+                        Key::Named(NamedKey::ArrowUp) => text_input_state.editor.action(font_system, Action::Motion(Motion::Up)),
                         Key::Named(NamedKey::ArrowDown) => {
-                            state.editor.action(font_system, Action::Motion(Motion::Down))
+                            text_input_state.editor.action(font_system, Action::Motion(Motion::Down))
                         }
-                        Key::Named(NamedKey::Home) => state.editor.action(font_system, Action::Motion(Motion::Home)),
-                        Key::Named(NamedKey::End) => state.editor.action(font_system, Action::Motion(Motion::End)),
+                        Key::Named(NamedKey::Home) => text_input_state.editor.action(font_system, Action::Motion(Motion::Home)),
+                        Key::Named(NamedKey::End) => text_input_state.editor.action(font_system, Action::Motion(Motion::End)),
                         Key::Named(NamedKey::PageUp) => {
-                            state.editor.action(font_system, Action::Motion(Motion::PageUp))
+                            text_input_state.editor.action(font_system, Action::Motion(Motion::PageUp))
                         }
                         Key::Named(NamedKey::PageDown) => {
-                            state.editor.action(font_system, Action::Motion(Motion::PageDown))
+                            text_input_state.editor.action(font_system, Action::Motion(Motion::PageDown))
                         }
-                        Key::Named(NamedKey::Escape) => state.editor.action(font_system, Action::Escape),
-                        Key::Named(NamedKey::Enter) => state.editor.action(font_system, Action::Enter),
-                        Key::Named(NamedKey::Backspace) => state.editor.action(font_system, Action::Backspace),
-                        Key::Named(NamedKey::Delete) => state.editor.action(font_system, Action::Delete),
+                        Key::Named(NamedKey::Escape) => text_input_state.editor.action(font_system, Action::Escape),
+                        Key::Named(NamedKey::Enter) => text_input_state.editor.action(font_system, Action::Enter),
+                        Key::Named(NamedKey::Backspace) => text_input_state.editor.action(font_system, Action::Backspace),
+                        Key::Named(NamedKey::Delete) => text_input_state.editor.action(font_system, Action::Delete),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
                                 for char in text.chars() {
-                                    state.editor.action(font_system, Action::Insert(char));
+                                    text_input_state.editor.action(font_system, Action::Insert(char));
                                 }
                             }
                         }
                         Key::Character(text) => {
                             for c in text.chars() {
-                                state.editor.action(font_system, Action::Insert(c));
+                                text_input_state.editor.action(font_system, Action::Insert(c));
 
                                 //text_context.editor.set_selection(Selection::Line(Cursor::new(0, 0)));
                             }
@@ -306,10 +353,10 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
-                state.editor.shape_as_needed(font_system, true);
-                state.cached_text_layout.clear();
-                state.last_key = None;
-                state.editor.with_buffer(|buffer| {
+                text_input_state.editor.shape_as_needed(font_system, true);
+                text_input_state.cached_text_layout.clear();
+                text_input_state.last_key = None;
+                text_input_state.editor.with_buffer(|buffer| {
 
                     let mut buffer_string: String = String::new();
                     let last_line = buffer.lines.len() - 1;

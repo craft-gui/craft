@@ -41,7 +41,7 @@ impl MetricsRaw {
         }
     }
 
-    pub(crate) fn to_metrics(&self) -> Metrics {
+    pub(crate) fn to_metrics(self) -> Metrics {
         Metrics {
             font_size: f32::from_bits(self.font_size),
             line_height: f32::from_bits(self.line_height),

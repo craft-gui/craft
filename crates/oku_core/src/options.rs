@@ -44,9 +44,12 @@ pub enum RendererType {
 impl Default for RendererType {
     fn default() -> Self {
         cfg_if::cfg_if! {
-          if #[cfg(feature = "vello_renderer")] {
+            if #[cfg(feature = "vello_renderer")] {
                 RendererType::Vello
-            } else {
+            } else if #[cfg(feature = "wgpu_renderer")] {
+                RendererType::Wgpu
+            }
+            else {
                 RendererType::Blank
             }
         }

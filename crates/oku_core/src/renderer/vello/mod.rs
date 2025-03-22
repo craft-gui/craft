@@ -1,5 +1,5 @@
-mod text;
 mod image_adapter;
+mod cosmic_adapter;
 
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
@@ -7,8 +7,8 @@ use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderCommand, Renderer};
-use crate::renderer::vello::text::CosmicFontBlobAdapter;
+use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
+use crate::renderer::vello::cosmic_adapter::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -22,9 +22,10 @@ use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
-use vello::Scene;
+use vello::{Glyph, Scene};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
+use crate::renderer::text;
 use crate::renderer::vello::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState<'s> {
@@ -158,8 +159,11 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id, fill_color) => {
+                RenderCommand::DrawText(rect, component_id, fill_color, text_scroll) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                    let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
+                    let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+
 
                     if let Some(text_context) =
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextInputState>()
@@ -174,6 +178,7 @@ impl<'a> VelloRenderer<'a> {
                             Color::from_rgb8(0, 0, 0),
                             Color::from_rgb8(0, 120, 215),
                             Color::from_rgb8(255, 255, 255),
+                            text_scroll,
                         );
 
                         // Draw the Glyphs
@@ -207,7 +212,11 @@ impl<'a> VelloRenderer<'a> {
                                     .font_size(buffer_glyphs.font_size)
                                     .brush(glyph_color)
                                     .transform(text_transform)
-                                    .draw(Fill::NonZero, glyphs.into_iter());
+                                    .draw(Fill::NonZero, glyphs.into_iter().map(|glyph| Glyph {
+                                        id: glyph.glyph_id as u32,
+                                        x: glyph.x,
+                                        y: glyph.y + glyph_run.line_y,
+                                    }));
                             }
                         }
                     } else if let Some(text_context) =
@@ -215,7 +224,7 @@ impl<'a> VelloRenderer<'a> {
                     {
                         let buffer = &text_context.get_last_cache_entry().buffer;
 
-                        let buffer_glyphs = text::create_glyphs(buffer, fill_color, None);
+                        let buffer_glyphs = text::create_glyphs(buffer, fill_color, None, None);
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {
                             for glyph_run in &buffer_line.glyph_runs {
@@ -227,7 +236,11 @@ impl<'a> VelloRenderer<'a> {
                                     .font_size(buffer_glyphs.font_size)
                                     .brush(glyph_color)
                                     .transform(text_transform)
-                                    .draw(Fill::NonZero, glyphs.into_iter());
+                                    .draw(Fill::NonZero, glyphs.into_iter().map(|glyph| Glyph {
+                                        id: glyph.glyph_id as u32,
+                                        x: glyph.x,
+                                        y: glyph.y + glyph_run.line_y,
+                                    }));
                             }
                         }
                     } else {
@@ -325,8 +338,8 @@ impl Renderer for VelloRenderer<'_> {
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, _path: &Path, _color: Color) { }
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color));
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>) {
+        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {

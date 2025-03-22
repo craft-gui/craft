@@ -12,12 +12,27 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawText(Rectangle, ComponentId, Color),
+    DrawText(Rectangle, ComponentId, Color, Option<TextScroll>),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
     #[cfg(feature = "wgpu_renderer")]
     FillLyonPath(lyon::path::Path, Color),
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TextScroll {
+    pub scroll_y: f32,
+    pub scroll_height: f32,
+}
+
+impl TextScroll {
+    pub fn new(scroll_y: f32, scroll_height: f32) -> Self {
+        Self {
+            scroll_y,
+            scroll_height,
+        }
+    }
 }
 
 pub trait Renderer {
@@ -38,7 +53,7 @@ pub trait Renderer {
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color);
+    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>);
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
     fn push_layer(&mut self, rect: Rectangle);

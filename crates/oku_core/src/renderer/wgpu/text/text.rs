@@ -1,3 +1,4 @@
+use crate::renderer::text::create_glyphs_for_editor;
 use crate::components::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
@@ -6,7 +7,6 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::text::caching::{ContentType, GlyphInfo, TextAtlas};
-use crate::renderer::wgpu::text::editor::create_glyphs_for_editor;
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
 use crate::renderer::wgpu::text::vertex::TextVertex;
 use crate::renderer::wgpu::PerFrameData;
@@ -14,11 +14,13 @@ use cosmic_text::{FontSystem, SwashCache};
 use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;
+use crate::renderer::renderer::TextScroll;
 
 pub struct TextRenderInfo {
     pub(crate) element_id: ComponentId,
     pub(crate) rectangle: Rectangle,
     pub(crate) fill_color: Color,
+    pub(crate) text_scroll: Option<TextScroll>,
 }
 
 pub(crate) struct TextRenderer {
@@ -50,17 +52,18 @@ impl TextRenderer {
         renderer
     }
 
-    pub(crate) fn build(&mut self, rectangle: Rectangle, component_id: ComponentId, color: Color) {
+    pub(crate) fn build(&mut self, rectangle: Rectangle, component_id: ComponentId, color: Color, text_scroll: Option<TextScroll>) {
         self.text_areas.push(TextRenderInfo {
             element_id: component_id,
             rectangle,
             fill_color: color,
+            text_scroll,
         });
     }
 
     pub(crate) fn prepare(&mut self, context: &Context, font_system: &mut FontSystem, element_state: &ElementStateStore) -> Option<PerFrameData> {
 
-        for text_area in self.text_areas.iter() { 
+        for text_area in self.text_areas.iter() {
             if let Some(text_context) = element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextInputState>() {
                 
                 let editor = &text_context.editor;
@@ -73,7 +76,10 @@ impl TextRenderer {
                     Color::from_rgb8(0, 0, 0),
                     Color::from_rgb8(0, 120, 215),
                     Color::from_rgb8(255, 255, 255),
+                    text_area.text_scroll,
                 );
+                
+                let scroll_y = text_area.text_scroll.unwrap_or_default().scroll_y;
 
                 // Draw the Glyphs
                 for buffer_line in &buffer_glyphs.buffer_lines {
@@ -86,7 +92,7 @@ impl TextRenderer {
                         
                         build_rectangle(ContentType::Rectangle, Rectangle {
                             x: text_area.rectangle.x + glyph_highlight.x0 as f32,
-                            y: text_area.rectangle.y + glyph_highlight.y0 as f32,
+                            y: text_area.rectangle.y + glyph_highlight.y0 as f32 - scroll_y,
                             width,
                             height,
                         }, buffer_glyphs.glyph_highlight_color, &mut self.vertices, &mut self.indices);
@@ -97,7 +103,7 @@ impl TextRenderer {
                     if let Some(cursor) = &buffer_line.cursor {
                         build_rectangle(ContentType::Rectangle, Rectangle {
                             x: text_area.rectangle.x + cursor.x0 as f32,
-                            y: text_area.rectangle.y + cursor.y0 as f32,
+                            y: text_area.rectangle.y + cursor.y0 as f32 - scroll_y,
                             width: cursor.width() as f32,
                             height: cursor.height() as f32,
                         }, buffer_glyphs.cursor_color, &mut self.vertices, &mut self.indices);
@@ -126,7 +132,7 @@ impl TextRenderer {
                                 let rel_gylh_y = glyph_run.line_y as i32 + physical_glyph.y + (-glyph_info.swash_image_placement.top);
                                 build_glyph_rectangle(self.text_atlas.texture_width, self.text_atlas.texture_height, glyph_info.clone(), Rectangle {
                                     x: text_area.rectangle.x + rel_gylh_x as f32,
-                                    y: text_area.rectangle.y + rel_gylh_y as f32,
+                                    y: text_area.rectangle.y + rel_gylh_y as f32 - scroll_y,
                                     width: glyph_info.width as f32,
                                     height: glyph_info.height as f32,
                                 }, glyph_color, &mut self.vertices, &mut self.indices);

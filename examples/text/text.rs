@@ -8,11 +8,13 @@ use oku::components::{Component, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::TextInput;
 use oku::elements::{Container, Font, Text};
-use oku::events::Message;
-use oku::events::{Event, OkuMessage};
+use oku::events::Event;
 use oku::oku_main_with_options;
 use oku::resource_manager::ResourceIdentifier;
+use oku::style::Display::Block;
 use oku::style::FlexDirection;
+use oku::style::Overflow::Scroll;
+use oku::style::Unit;
 use oku::OkuOptions;
 use oku::RendererType;
 
@@ -31,21 +33,18 @@ impl Component for TextState {
         _children: Vec<ComponentSpecification>,
     ) -> ComponentSpecification {
         Container::new()
-            .flex_direction(FlexDirection::Column)
+            .height(Unit::Px(500.0))
+            .display(Block)
+            .flex_direction(FlexDirection::Row)
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
-            .push(TextInput::new("Test").id("text_input"))
+            .push(TextInput::new(include_str!("../../Cargo.lock")).height(Unit::Px(500.0)).display(Block).overflow(Scroll).id("text_input"))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()
     }
 
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
-        println!("Source: {:?}", event.target);
-        if let Message::OkuMessage(OkuMessage::TextInputChanged(new_val)) = event.message {
-            println!("new text: {}", new_val);
-        }
-
+    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _event: Event) -> UpdateResult {
         UpdateResult::new()
     }
 }
