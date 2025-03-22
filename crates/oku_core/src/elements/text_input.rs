@@ -97,12 +97,18 @@ impl Element for TextInput {
         } else {
             0.0
         };
+        
+        let text_scroll = if is_scrollable {
+            Some(TextScroll::new(scroll_y, self.common_element_data.computed_scroll_track.height))
+        } else {
+            None
+        };
 
         renderer.draw_text(
             self.common_element_data.component_id,
             content_rectangle,
             self.common_element_data.style.color(),
-            Some(TextScroll::new(scroll_y, self.common_element_data.computed_scroll_track.height))
+            text_scroll
         );
 
         if is_scrollable {
