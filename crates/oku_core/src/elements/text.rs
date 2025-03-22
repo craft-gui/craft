@@ -10,11 +10,8 @@ use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Action, Attrs, Buffer, Edit, Family, FontSystem, Weight};
-use rustc_hash::FxHasher;
+use cosmic_text::{Action, Edit, FontSystem};
 use std::any::Any;
-use std::cmp::PartialEq;
-use std::hash::Hasher;
 use taffy::{NodeId, TaffyTree};
 
 // A stateful element that shows text.
@@ -24,55 +21,9 @@ pub struct Text {
     common_element_data: CommonElementData,
 }
 
-#[derive(Clone)]
-pub struct TextHashValue {
-    pub computed_width: f32,
-    pub computed_height: f32,
-    pub buffer: Buffer,
-}
-
-pub struct AttributesRaw {
-    pub(crate) font_family_length: u8,
-    pub(crate) font_family: Option<[u8; 64]>,
-    weight: Weight,
-}
-
-impl AttributesRaw {
-    pub(crate) fn from(style: &Style) -> Self {
-        let font_family = if style.font_family_length() == 0 {
-            None
-        } else {
-            Some(style.font_family_raw())
-        };
-        Self {
-            font_family_length: style.font_family_length(),
-            font_family,
-            weight: Weight(style.font_weight().0),
-        }
-    }
-
-    pub(crate) fn to_attrs(&self) -> Attrs {
-        let mut attrs = Attrs::new();
-        if let Some(font_family) = &self.font_family {
-            attrs.family = Family::Name(
-                std::str::from_utf8(&font_family[..self.font_family_length as usize]).unwrap()
-            );
-            attrs.weight = self.weight;
-        }
-        attrs
-    }
-
-}
-
 pub struct TextState<'a> {
     pub cached_editor: CachedEditor<'a>,
     pub dragging: bool,
-}
-
-pub(crate) fn hash_text(text: &String) -> u64 {
-    let mut text_hasher = FxHasher::default();
-    text_hasher.write(text.as_ref());
-    text_hasher.finish()
 }
 
 impl Text {
@@ -86,14 +37,6 @@ impl Text {
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextState {
         element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-}
-
-impl PartialEq for AttributesRaw {
-    fn eq(&self, other: &Self) -> bool {
-        self.font_family == other.font_family &&
-            self.font_family_length == other.font_family_length &&
-            self.weight == other.weight
     }
 }
 
@@ -176,32 +119,6 @@ impl Element for Text {
         self
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
-        let text_state = TextState {
-            cached_editor,
-            dragging: false,
-        };
-
-        ElementStateStoreItem {
-            base: Default::default(),
-            data: Box::new(text_state)
-        }
-    }
-
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
-        let state: &mut TextState = element_state
-            .storage
-            .get_mut(&self.common_element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
-        
-        state.cached_editor.update_state(&self.text, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
-    }
-
     fn on_event(
         &self,
         message: OkuMessage,
@@ -256,6 +173,32 @@ impl Element for Text {
             }
             _ => UpdateResult::new(),
         }
+    }
+
+    fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
+        let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
+        let text_state = TextState {
+            cached_editor,
+            dragging: false,
+        };
+
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(text_state)
+        }
+    }
+
+    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
+        let state: &mut TextState = element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+        
+        state.cached_editor.update_state(&self.text, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
     }
 }
 
