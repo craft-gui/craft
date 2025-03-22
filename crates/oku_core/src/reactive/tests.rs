@@ -34,6 +34,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let updated_tree = diff_trees(
@@ -45,6 +46,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let initial_id = &initial_tree.component_tree.children[0].children[0].id;
@@ -76,6 +78,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let tree_2 = diff_trees(
@@ -87,6 +90,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let initial_id = &tree_1.component_tree.children[0].children[0].id;
@@ -116,6 +120,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let text_element_id = tree_1.component_tree.children[0].children[0].id;
@@ -136,6 +141,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut reactive_tree.element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     reactive_tree.component_tree = Some(tree_2.component_tree);
@@ -193,6 +199,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let dummy_component_id = tree_1.component_tree.children[0].children[1].id;
@@ -213,6 +220,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut reactive_tree.element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     reactive_tree.component_tree = Some(tree_2.component_tree);
@@ -251,6 +259,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let tree_2 = diff_trees(
@@ -262,6 +271,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut element_state,
         false,
         &mut font_system,
+        1.0,
     );
 
     let initial_id = &tree_1.component_tree.children[0].children[0].id;

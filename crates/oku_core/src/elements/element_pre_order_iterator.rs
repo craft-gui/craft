@@ -68,6 +68,7 @@ mod tests {
             &mut element_state,
             false,
             &mut font_system,
+            1.0,
         );
 
         initial_tree.component_tree.print_tree();
