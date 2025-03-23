@@ -178,6 +178,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 use oku_winit_state::OkuWinitState;
+use crate::components::PointerCapture;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
@@ -739,6 +740,17 @@ async fn dispatch_event(
                     .target(target_element_id.clone()),
             );
             propagate = propagate && res.propagate;
+            let element_state =
+                &mut reactive_tree.element_state.storage.get_mut(&current_target_component_id).unwrap().base;
+            match res.pointer_capture {
+                PointerCapture::None => {}
+                PointerCapture::Set => {
+                    element_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                }
+                PointerCapture::Unset => {
+                    element_state.pointer_capture.remove(&DUMMY_DEVICE_ID);
+                }
+            }
             prevent_defaults = prevent_defaults || res.prevent_defaults;
             if res.future.is_some() {
                 reactive_tree.update_queue.push_back(UpdateQueueEntry::new(

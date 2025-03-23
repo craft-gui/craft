@@ -2,6 +2,14 @@ use crate::events::OkuMessage;
 use crate::PinnedFutureAny;
 use std::any::Any;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum PointerCapture {
+    #[default]
+    None,
+    Set,
+    Unset,
+}
+
 /// The result of an update.
 pub struct UpdateResult {
     /// Propagate oku_events to the next element. True by default.
@@ -12,6 +20,8 @@ pub struct UpdateResult {
     /// False by default.
     pub prevent_defaults: bool,
     pub(crate) result_message: Option<OkuMessage>,
+    /// Redirect future pointer events to this component. None by default.
+    pub(crate) pointer_capture: PointerCapture,
 }
 
 impl UpdateResult {
@@ -43,6 +53,7 @@ impl Default for UpdateResult {
             future: None,
             prevent_defaults: false,
             result_message: None,
+            pointer_capture: Default::default(),
         }
     }
 }
@@ -81,6 +92,11 @@ impl UpdateResult {
 
     pub(crate) fn result_message(mut self, message: OkuMessage) -> Self {
         self.result_message = Some(message);
+        self
+    }
+
+    pub fn pointer_capture(mut self, pointer_capture: PointerCapture) -> Self {
+        self.pointer_capture = pointer_capture;
         self
     }
 }
