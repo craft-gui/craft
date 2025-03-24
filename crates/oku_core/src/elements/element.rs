@@ -12,8 +12,10 @@ use crate::style::Style;
 use crate::RendererBox;
 use std::any::Any;
 use std::fmt::Debug;
+use std::sync::Arc;
 use cosmic_text::FontSystem;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
+use winit::window::Window;
 
 #[derive(Clone, Debug)]
 pub struct ElementBox {
@@ -73,14 +75,16 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn name(&self) -> &'static str;
 
+    #[allow(clippy::too_many_arguments)]
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     );
 
     fn compute_layout(
@@ -161,8 +165,9 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         renderer: &mut RendererBox,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
         for child in self.common_element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -177,6 +182,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
                 taffy_child_node_id.unwrap(),
                 element_state,
                 pointer,
+                window.clone(),
             );
         }
     }

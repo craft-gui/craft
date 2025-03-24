@@ -13,7 +13,9 @@ use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::window::Window;
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
@@ -45,14 +47,15 @@ impl Element for Container {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
         {
-            self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
+            self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
         }
         self.maybe_end_layer(renderer);
 

@@ -14,7 +14,9 @@ use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
+use winit::window::Window;
 
 /// The index of the dropdown list in the layout tree.
 const DROPDOWN_LIST_INDEX: usize = 1;
@@ -81,23 +83,25 @@ impl Element for Dropdown {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
-        let state = self.get_state(element_state);
+        let is_open = self.get_state(element_state).is_open;
+        
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
         {
             // Draw the dropdown selection.
             if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
-                pseudo_dropdown_selection.internal.draw(renderer, font_system, taffy_tree, pseudo_dropdown_selection.internal.common_element_data().taffy_node_id.unwrap(), element_state, pointer);
+                pseudo_dropdown_selection.internal.draw(renderer, font_system, taffy_tree, pseudo_dropdown_selection.internal.common_element_data().taffy_node_id.unwrap(), element_state, pointer, window.clone());
             }
 
             // Draw the dropdown list if it is open.
-            if state.is_open && !self.children().is_empty() {
-                self.pseudo_dropdown_list_element.draw(renderer, font_system, taffy_tree, self.pseudo_dropdown_list_element.common_element_data.taffy_node_id.unwrap(), element_state, pointer);
-                self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
+            if is_open && !self.children().is_empty() {
+                self.pseudo_dropdown_list_element.draw(renderer, font_system, taffy_tree, self.pseudo_dropdown_list_element.common_element_data.taffy_node_id.unwrap(), element_state, pointer, window.clone());
+                self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window.clone());
             }
         }
         self.maybe_end_layer(renderer);

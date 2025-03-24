@@ -1,9 +1,9 @@
 use crate::elements::layout_context::{MetricsRaw, TextHashKey};
 use crate::style::Style;
 use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, Family, FontSystem, Motion, Shaping, Weight};
+use rustc_hash::FxHasher;
 use std::collections::HashMap;
 use std::hash::Hasher;
-use rustc_hash::FxHasher;
 
 #[derive(Clone)]
 pub struct TextHashValue {
@@ -190,5 +190,17 @@ impl CachedEditor<'_> {
     pub(crate) fn clear_cache(&mut self) {
         self.cached_text_layout.clear();
         self.last_key = None;
+    }
+
+    /// Get the current text, INCLUDING the IME pre-edit text.
+    pub(crate) fn get_text(&mut self) -> String {
+        self.editor.with_buffer(|buffer| {
+            let mut buffer_string: String = String::new();
+            for line in buffer.lines.iter() {
+                buffer_string.push_str(line.text());
+                buffer_string.push_str(line.ending().as_str());
+            }
+            buffer_string
+        })
     }
 }

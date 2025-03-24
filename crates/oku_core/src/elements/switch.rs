@@ -11,7 +11,9 @@ use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
 use crate::{palette, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, Position, TaffyTree};
+use winit::window::Window;
 
 /// An element that represents an on or off state.
 #[derive(Clone, Debug)]
@@ -52,11 +54,12 @@ impl Element for Switch {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
         self.draw_borders(renderer);
-        self.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer);
+        self.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
     }
 
     fn compute_layout(

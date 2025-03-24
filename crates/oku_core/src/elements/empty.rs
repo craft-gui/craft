@@ -6,7 +6,9 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::window::Window;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -41,8 +43,9 @@ impl Element for Empty {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _window: Option<Arc<dyn Window>>
     ) {
     }
 

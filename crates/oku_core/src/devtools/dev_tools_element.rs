@@ -13,7 +13,9 @@ use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::window::Window;
 
 #[derive(Clone, Default, Debug)]
 pub struct DevTools {
@@ -63,11 +65,12 @@ impl Element for DevTools {
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
         self.draw_borders(renderer);
-        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer);
+        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
 
         // Find the element we are hovering over and draw an overlay.
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {

@@ -5,21 +5,25 @@ use crate::elements::cached_editor::CachedEditor;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
+use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
+use crate::renderer::renderer::TextScroll;
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::Edit;
 use cosmic_text::{Action, Motion};
+use cosmic_text::{Change, Cursor, Edit, Editor};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::event::Ime;
 use winit::keyboard::{Key, NamedKey};
-use crate::elements::scroll_state::ScrollState;
-use crate::renderer::renderer::TextScroll;
+use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -31,6 +35,10 @@ pub struct TextInput {
 pub struct TextInputState<'a> {
     pub cached_editor: CachedEditor<'a>,
     pub dragging: bool,
+    pub is_ime_active: bool,
+    pub is_active: bool,
+    pub ime_starting_cursor: Option<Cursor>,
+    pub ime_ending_cursor: Option<Cursor>,
     pub(crate) scroll_state: ScrollState,
 }
 
@@ -71,8 +79,9 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        element_state: &ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        window: Option<Arc<dyn Window>>
     ) {
         let computed_layer_rectangle_transformed =
             self.common_element_data.computed_layered_rectangle_transformed;
@@ -110,6 +119,29 @@ impl Element for TextInput {
             self.common_element_data.style.color(),
             text_scroll
         );
+
+        if let Some(state) = element_state
+            .storage
+            .get_mut(&self.common_element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_mut::<TextInputState>()
+        {
+
+            if let Some((cursor_x, cursor_y)) = state.cached_editor.editor.cursor_position() {
+                if state.is_active {
+                    if let Some(window) = window {
+                        let content_position = self.common_element_data.computed_layered_rectangle_transformed.content_rectangle();
+                        window.set_ime_cursor_area(
+                            PhysicalPosition::new(content_position.x + cursor_x as f32, content_position.y + cursor_y as f32).into(),
+                            PhysicalSize::new(20.0, 20.0).into(),
+                        );
+                    }
+                }
+            }
+
+            state.is_active = false;
+        }
 
         if is_scrollable {
             self.maybe_end_layer(renderer);
@@ -182,7 +214,7 @@ impl Element for TextInput {
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
-
+        state.is_active = true;
 
         let scroll_result = state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base);
 
@@ -234,6 +266,8 @@ impl Element for TextInput {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
 
+                println!("{:?}", logical_key);
+
                 if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
@@ -278,23 +312,98 @@ impl Element for TextInput {
                 cached_editor.editor.shape_as_needed(font_system, true);
                 cached_editor.clear_cache();
 
-                cached_editor.editor.with_buffer(|buffer| {
+                let event_text = cached_editor.get_text();
+                UpdateResult::new()
+                    .prevent_defaults()
+                    .prevent_propagate()
+                    .result_message(OkuMessage::TextInputChanged(event_text))
+            }
 
-                    let mut buffer_string: String = String::new();
-                    let last_line = buffer.lines.len() - 1;
-                    for (line_number, line) in buffer.lines.iter().enumerate() {
-                        buffer_string.push_str(line.text());
-                        if line_number != last_line {
-                            buffer_string.push('\n');
+            // This is all a bit hacky and needs some improvement:
+            OkuMessage::ImeEvent(ime) => {
+                let previous_ime_ending_cursor = state.ime_ending_cursor;
+
+                // FIXME: This shouldn't be possible, we need to close the ime window when a text input loses focus.
+                if state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled){
+                    // state.ime_starting_cursor = Some(cached_editor.editor.cursor());
+                    return Default::default();
+                }
+
+                // Deletes all the ime pre-edit text from the editor.
+                let delete_ime_pre_edit_text = |editor: &mut Editor| {
+                    if let Some(previous_ime_ending_cursor) = previous_ime_ending_cursor {
+                        let starting_cursor = state.ime_starting_cursor.unwrap();
+                        // println!("starting_cursor: {:?}", starting_cursor);
+                        // println!("ending_cursor: {:?}", previous_ime_ending_cursor);
+                        editor.delete_range(starting_cursor, previous_ime_ending_cursor);
+                    }
+                };
+
+                // Set the cursor to the final cursor location of the last change item.
+                let mut maybe_set_cursor_to_last_change_item = |editor: &mut Editor, change: &Option<Change>| {
+                    if let Some(change) = change {
+                        if let Some(change_item) = change.items.last() {
+                            editor.set_cursor(change_item.end);
+                            state.ime_ending_cursor = Some(change_item.end);
                         }
                     }
+                };
 
-                    UpdateResult::new()
-                        .prevent_defaults()
-                        .prevent_propagate()
-                        .result_message(OkuMessage::TextInputChanged(buffer_string))
-                })
+                // println!("{:?}", ime);
+
+                match ime {
+                    Ime::Enabled => {
+                        state.is_ime_active = true;
+                        state.ime_starting_cursor = Some(cached_editor.editor.cursor());
+                        state.ime_ending_cursor = None;
+                    }
+
+                    Ime::Preedit(str, cursor_info) => {
+                        let is_cleared = str.is_empty();
+                        let _hide_cursor = cursor_info.is_none();
+
+                        if is_cleared {
+                            if state.ime_ending_cursor.is_some() {
+                                cached_editor.editor.start_change();
+                                delete_ime_pre_edit_text(&mut cached_editor.editor);
+                                cached_editor.editor.finish_change();
+                                state.ime_ending_cursor = None;
+                                cached_editor.editor.set_cursor(state.ime_starting_cursor.unwrap());
+                            }
+                        } else {
+                            cached_editor.editor.start_change();
+                            delete_ime_pre_edit_text(&mut cached_editor.editor);
+                            cached_editor.editor.insert_at(state.ime_starting_cursor.unwrap(), str.as_str(), None);
+                            let change = cached_editor.editor.finish_change();
+                            maybe_set_cursor_to_last_change_item(&mut cached_editor.editor, &change);
+                        }
+                    }
+                    Ime::Commit(str) => {
+                        state.is_ime_active = false;
+
+                        cached_editor.editor.start_change();
+                        // delete_ime_pre_edit_text(&mut cached_editor.editor);
+                        cached_editor.editor.insert_at(state.ime_starting_cursor.unwrap(), str.as_str(), None);
+                        let change = cached_editor.editor.finish_change();
+                        maybe_set_cursor_to_last_change_item(&mut cached_editor.editor, &change);
+                    }
+                    Ime::Disabled => {
+                        state.is_ime_active = false;
+                        state.ime_starting_cursor = None;
+                        state.ime_ending_cursor = None;
+                    }
+                };
+
+                cached_editor.editor.shape_as_needed(font_system, true);
+                cached_editor.clear_cache();
+
+                let event_text = cached_editor.get_text();
+                UpdateResult::new()
+                    .prevent_defaults()
+                    .prevent_propagate()
+                    .result_message(OkuMessage::TextInputChanged(event_text))
             }
+            
             _ => UpdateResult::new(),
         }
     }
@@ -304,6 +413,10 @@ impl Element for TextInput {
         let text_input_state = TextInputState {
             cached_editor,
             dragging: false,
+            is_ime_active: false,
+            is_active: false,
+            ime_starting_cursor: None,
+            ime_ending_cursor: None,
             scroll_state: ScrollState::default(),
         };
 

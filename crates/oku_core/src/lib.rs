@@ -631,6 +631,7 @@ async fn dispatch_event(
     };
 
     let is_pointer_event = matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_));
+    let is_ime_event = matches!(event, OkuMessage::ImeEvent(Ime::Enabled) | OkuMessage::ImeEvent(Ime::Disabled));
 
     let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
     let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
@@ -657,7 +658,7 @@ async fn dispatch_event(
             let mut should_pass_hit_test = in_bounds;
 
             // Bypass the hit test result if pointer capture is turned on for the current element.
-            if is_pointer_event {
+            if is_pointer_event || is_ime_event {
                 if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
                     if *element_id == element.component_id() {
                         should_pass_hit_test = true;
@@ -917,6 +918,7 @@ async fn draw_reactive_tree(
     font_system: &mut FontSystem,
     scale_factor: f64,
     mouse_position: Option<Point>,
+    window: Option<Arc<dyn Window>>
 ) {
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
@@ -954,7 +956,7 @@ async fn draw_reactive_tree(
     {
         let span = span!(Level::INFO, "render");
         let _enter = span.enter();
-        root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &reactive_tree.element_state, mouse_position);
+        root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &mut reactive_tree.element_state, mouse_position, window);
         renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
     }
 }
@@ -1015,6 +1017,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         font_system,
         scale_factor,
         app.mouse_position,
+        app.window.clone(),
     )
     .await;
 
@@ -1041,6 +1044,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 font_system,
                 scale_factor,
                 app.mouse_position,
+                app.window.clone(),
             )
             .await;
         }

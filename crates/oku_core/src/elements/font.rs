@@ -9,7 +9,9 @@ use crate::resource_manager::ResourceIdentifier;
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::window::Window;
 
 #[derive(Clone, Debug)]
 pub struct Font {
@@ -49,8 +51,9 @@ impl Element for Font {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _window: Option<Arc<dyn Window>>
     ) {
     }
 

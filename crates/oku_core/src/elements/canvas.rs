@@ -12,7 +12,9 @@ use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
+use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::window::Window;
 
 #[derive(Clone, Default, Debug)]
 pub struct Canvas {
@@ -42,8 +44,9 @@ impl Element for Canvas {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &ElementStateStore,
+        _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
+        _window: Option<Arc<dyn Window>>
     ) {
         let _border_color: Color = self.style().border_color()[0];
         let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;

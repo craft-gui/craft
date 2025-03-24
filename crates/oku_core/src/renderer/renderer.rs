@@ -37,7 +37,9 @@ impl TextScroll {
 
 pub trait Renderer {
     // Surface Functions
+    #[allow(dead_code)]
     fn surface_width(&self) -> f32;
+    #[allow(dead_code)]
     fn surface_height(&self) -> f32;
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
@@ -50,6 +52,7 @@ pub trait Renderer {
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
     fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
+    #[allow(dead_code)]
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
