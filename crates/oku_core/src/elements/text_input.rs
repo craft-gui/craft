@@ -265,9 +265,7 @@ impl Element for TextInput {
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
-
-                println!("{:?}", logical_key);
-
+                
                 if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
