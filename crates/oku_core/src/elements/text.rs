@@ -14,6 +14,7 @@ use cosmic_text::{Action, Edit, FontSystem};
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use winit::keyboard::{Key};
 use winit::window::Window;
 
 // A stateful element that shows text.
@@ -172,6 +173,46 @@ impl Element for Text {
                         },
                     );
                 }
+                UpdateResult::new().prevent_defaults().prevent_propagate()
+            }
+            OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
+                cached_editor.modifiers = modifiers_changed;
+
+                UpdateResult::new().prevent_defaults().prevent_propagate()
+            }
+            OkuMessage::KeyboardInputEvent(keyboard_input) => {
+                let logical_key = keyboard_input.event.logical_key;
+                let key_state = keyboard_input.event.state;
+
+                let (_shift, action_mod) = Option::from(cached_editor.modifiers)
+                    .map(|mods| {
+                        (
+                            mods.state().shift_key(),
+                            if cfg!(target_os = "macos") {
+                                mods.state().super_key()
+                            } else {
+                                mods.state().control_key()
+                            },
+                        )
+                    })
+                    .unwrap_or_default();
+                
+                if !key_state.is_pressed() {
+                    return UpdateResult::new();
+                }
+                
+                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+                if let Key::Character(text) = logical_key {
+                    if action_mod && matches!(text.as_str(), "c") {
+                        // FIXME: Abstract this.
+                        use clipboard_rs::{Clipboard, ClipboardContext};
+                        if let Some(selection_text) = cached_editor.editor.copy_selection() {
+                            let clipboard_context = ClipboardContext::new().unwrap();
+                            clipboard_context.set_text(selection_text).ok();
+                        }
+                    }
+                }
+                
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             _ => UpdateResult::new(),

@@ -4,6 +4,7 @@ use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, Family, FontSystem, Motio
 use rustc_hash::FxHasher;
 use std::collections::HashMap;
 use std::hash::Hasher;
+use winit::event::Modifiers;
 
 #[derive(Clone)]
 pub struct TextHashValue {
@@ -66,6 +67,7 @@ pub struct CachedEditor<'a> {
     pub last_key: Option<TextHashKey>,
     /// The internal cosmic-text editor that we wrap, so that we can do caching.
     pub editor: Editor<'a>,
+    pub modifiers: Modifiers,
     /// Stores Attrs fields as integers for hashing. 
     pub(crate) attributes: AttributesRaw,
     /// Stores Metric fields as integers for hashing.
@@ -151,6 +153,7 @@ impl CachedEditor<'_> {
             cached_text_layout: HashMap::new(),
             last_key: None,
             editor,
+            modifiers: Default::default(),
             attributes,
             metrics,
         }

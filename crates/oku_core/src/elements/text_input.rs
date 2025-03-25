@@ -266,10 +266,28 @@ impl Element for TextInput {
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
+            OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
+                cached_editor.modifiers = modifiers_changed;
+
+                UpdateResult::new().prevent_defaults().prevent_propagate()
+            }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
-                
+
+                let (_shift, action_mod) = Option::from(cached_editor.modifiers)
+                    .map(|mods| {
+                        (
+                            mods.state().shift_key(),
+                            if cfg!(target_os = "macos") {
+                                mods.state().super_key()
+                            } else {
+                                mods.state().control_key()
+                            },
+                        )
+                    })
+                    .unwrap_or_default();
+
                 if key_state.is_pressed() {
                     match logical_key {
                         Key::Named(NamedKey::ArrowLeft) => {
@@ -302,10 +320,42 @@ impl Element for TextInput {
                             }
                         }
                         Key::Character(text) => {
-                            for c in text.chars() {
-                                cached_editor.editor.action(font_system, Action::Insert(c));
+                            if action_mod && matches!(text.as_str(), "c" | "v" | "x") {
 
-                                //text_context.editor.set_selection(Selection::Line(Cursor::new(0, 0)));
+                                // FIXME: Abstract this.
+                                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+                                {
+                                    use clipboard_rs::{Clipboard, ClipboardContext};
+                                    match text.to_lowercase().as_str() {
+                                        "c" => {
+                                            if let Some(selection_text) = cached_editor.editor.copy_selection() {
+                                                let clipboard_context = ClipboardContext::new().unwrap();
+                                                clipboard_context.set_text(selection_text).ok();
+                                            }
+                                        }
+                                        "x" => {
+                                            if let Some(selection_text) = cached_editor.editor.copy_selection() {
+                                                let clipboard_context = ClipboardContext::new().unwrap();
+                                                if cached_editor.editor.delete_selection() {
+                                                    clipboard_context.set_text(selection_text).ok();
+                                                }
+                                            }
+                                        }
+                                        "v" => {
+                                            let clipboard_context = ClipboardContext::new().unwrap();
+                                            if let Ok(clipboard_text) = clipboard_context.get_text() {
+                                                for c in clipboard_text.chars() {
+                                                    cached_editor.editor.action(font_system, Action::Insert(c));
+                                                }
+                                            }
+                                        }
+                                        _ => (),
+                                    }
+                                }
+                            } else {
+                                for c in text.chars() {
+                                    cached_editor.editor.action(font_system, Action::Insert(c));
+                                }
                             }
                         }
                         _ => {}
