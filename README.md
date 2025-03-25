@@ -34,6 +34,7 @@ Updates are performed by handling messages from a Component.
 * ✅ Mac
 * ⬜️ iOS
 * ✅ Text Input (Basic)
+* ✅ IME Support (Basic)
 * ⬜️ Animations
 * ✅ Scrollables (Basic)
 * ⬜️ Documentation
