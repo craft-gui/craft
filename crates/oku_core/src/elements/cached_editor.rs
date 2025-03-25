@@ -156,12 +156,14 @@ impl CachedEditor<'_> {
         }
     }
     
-    pub(crate) fn update_state(&mut self, text: &String, style: &Style, scaling_factor: f64, reload_fonts: bool, font_system: &mut FontSystem) {
-        let text_hash = hash_text(text);
+    pub(crate) fn update_state(&mut self, text: Option<&String>, style: &Style, scaling_factor: f64, reload_fonts: bool, font_system: &mut FontSystem) {
+
+        let text_hash = text.map(hash_text);
         let attributes = AttributesRaw::from(style);
         let metrics = MetricsRaw::from(style, scaling_factor);
 
-        let text_changed = text_hash != self.text_hash
+        let text_hash_changed = text_hash.map(|text_hash| text_hash != self.text_hash).unwrap_or(false);
+        let text_changed = text_hash_changed
             || reload_fonts
             || attributes != self.attributes;
         let size_changed = metrics != self.metrics;
@@ -176,13 +178,20 @@ impl CachedEditor<'_> {
         }
 
         if text_changed {
-            // Rebuild the cosmic-text lines. 
-            self.editor.with_buffer_mut(|buffer| {
-                buffer.set_text(font_system, text, attributes.to_attrs(), Shaping::Advanced);
-            });
-
+            if let Some(text) = text {
+                // The user supplied text or attributes changed, and we need to rebuild the buffer.
+                self.editor.with_buffer_mut(|buffer| {
+                    buffer.set_text(font_system, text, attributes.to_attrs(), Shaping::Advanced);
+                });
+                self.text_hash = text_hash.unwrap();
+            } else {
+                // The attributes changed, and we need to rebuild the buffer.
+                let buffer_text = self.get_text();
+                self.editor.with_buffer_mut(|buffer| {
+                    buffer.set_text(font_system, buffer_text.as_str(), attributes.to_attrs(), Shaping::Advanced);
+                });
+            }
             self.attributes = attributes;
-            self.text_hash = text_hash;
         }
     }
     

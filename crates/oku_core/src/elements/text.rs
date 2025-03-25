@@ -201,7 +201,7 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
         
-        state.cached_editor.update_state(&self.text, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
+        state.cached_editor.update_state(Some(&self.text), &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
     }
 }
 

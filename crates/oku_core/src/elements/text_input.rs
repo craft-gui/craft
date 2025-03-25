@@ -30,6 +30,9 @@ use winit::window::Window;
 pub struct TextInput {
     text: String,
     common_element_data: CommonElementData,
+    /// Whether the text input will update the editor every update with the user provided text.
+    /// NOTE: The editor will always use the user provided text on initialization.
+    use_text_value_on_update: bool,
 }
 
 pub struct TextInputState<'a> {
@@ -47,6 +50,7 @@ impl TextInput {
         Self {
             text: text.to_string(),
             common_element_data: CommonElementData::default(),
+            use_text_value_on_update: true,
         }
     }
 
@@ -434,7 +438,11 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        state.cached_editor.update_state(&self.text, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
+        if self.use_text_value_on_update {
+            state.cached_editor.update_state(Some(&self.text), &self.common_element_data.style, scaling_factor, reload_fonts, font_system);   
+        } else {
+            state.cached_editor.update_state(None, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
+        }
     }
 
     fn default_style(&self) -> Style {
@@ -453,6 +461,13 @@ impl Element for TextInput {
 
 impl TextInput {
     generate_component_methods_no_children!();
+
+    /// Whether the text input will update the editor every update with the user provided text.
+    /// NOTE: The editor will always use the user provided text on initialization.
+    pub fn use_text_value_on_update(mut self, use_initial_text_value: bool) -> Self {
+        self.use_text_value_on_update = use_initial_text_value;
+        self
+    }
 }
 
 impl ElementStyles for TextInput {
