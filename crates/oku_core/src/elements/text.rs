@@ -1,6 +1,5 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::{Props, UpdateResult};
-use crate::elements::cached_editor::CachedEditor;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, TaffyTextContext};
@@ -9,12 +8,13 @@ use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
+use crate::text::cached_editor::CachedEditor;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Action, Edit, FontSystem};
+use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
-use winit::keyboard::{Key};
+use winit::keyboard::Key;
 use winit::window::Window;
 
 // A stateful element that shows text.
@@ -26,7 +26,6 @@ pub struct Text {
 
 pub struct TextState<'a> {
     pub cached_editor: CachedEditor<'a>,
-    pub dragging: bool,
 }
 
 impl Text {
@@ -148,68 +147,35 @@ impl Element for Text {
                 let pointer_position = pointer_button.position;
                 let pointer_content_position = pointer_position - content_position;
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    cached_editor.editor.action(
-                        font_system,
-                        Action::Click {
-                            x: pointer_content_position.x as i32,
-                            y: pointer_content_position.y as i32,
-                        },
-                    );
-                    state.dragging = true;
+                    cached_editor.action_start_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y));
                 } else {
-                    state.dragging = false;
+                    cached_editor.action_end_drag();
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::PointerMovedEvent(moved) => {
-                if state.dragging {
+                if cached_editor.dragging {
                     let pointer_position = moved.position;
                     let pointer_content_position = pointer_position - content_position;
-                    cached_editor.editor.action(
-                        font_system,
-                        Action::Drag {
-                            x: pointer_content_position.x as i32,
-                            y: pointer_content_position.y as i32,
-                        },
-                    );
+                    cached_editor.action_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y));
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
-                cached_editor.modifiers = modifiers_changed;
-
+                cached_editor.action_modifiers_changed(modifiers_changed);
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
-
-                let (_shift, action_mod) = Option::from(cached_editor.modifiers)
-                    .map(|mods| {
-                        (
-                            mods.state().shift_key(),
-                            if cfg!(target_os = "macos") {
-                                mods.state().super_key()
-                            } else {
-                                mods.state().control_key()
-                            },
-                        )
-                    })
-                    .unwrap_or_default();
                 
                 if !key_state.is_pressed() {
                     return UpdateResult::new();
                 }
                 
-                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                 if let Key::Character(text) = logical_key {
-                    if action_mod && matches!(text.as_str(), "c") {
-                        // FIXME: Abstract this.
-                        use clipboard_rs::{Clipboard, ClipboardContext};
-                        if let Some(selection_text) = cached_editor.editor.copy_selection() {
-                            let clipboard_context = ClipboardContext::new().unwrap();
-                            clipboard_context.set_text(selection_text).ok();
-                        }
+                    if cached_editor.is_control_or_super_modifier_pressed() && text == "c" { 
+                        cached_editor.action_copy_to_clipboard() 
                     }
                 }
                 
@@ -223,7 +189,6 @@ impl Element for Text {
         let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
         let text_state = TextState {
             cached_editor,
-            dragging: false,
         };
 
         ElementStateStoreItem {

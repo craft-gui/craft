@@ -72,6 +72,7 @@ pub struct CachedEditor<'a> {
     pub(crate) attributes: AttributesRaw,
     /// Stores Metric fields as integers for hashing.
     pub(crate) metrics: MetricsRaw,
+    pub(crate) dragging: bool,
 }
 
 impl CachedEditor<'_> {
@@ -156,6 +157,7 @@ impl CachedEditor<'_> {
             modifiers: Default::default(),
             attributes,
             metrics,
+            dragging: false,
         }
     }
     
@@ -214,5 +216,13 @@ impl CachedEditor<'_> {
             }
             buffer_string
         })
+    }
+    
+    pub(crate) fn is_control_or_super_modifier_pressed(&self) -> bool {
+        if cfg!(target_os = "macos") {
+            self.modifiers.state().super_key()
+        } else {
+            self.modifiers.state().control_key()
+        }
     }
 }

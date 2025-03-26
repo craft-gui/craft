@@ -5,6 +5,7 @@ pub mod events;
 pub mod oku_runtime;
 mod oku_winit_state;
 mod options;
+mod text;
 pub mod reactive;
 pub mod renderer;
 pub mod style;

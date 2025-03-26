@@ -1,7 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::cached_editor::CachedEditor;
 use crate::elements::common_element_data::CommonElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -13,10 +12,10 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::color::Color;
 use crate::renderer::renderer::TextScroll;
 use crate::style::{Display, Style, Unit};
+use crate::text::cached_editor::CachedEditor;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::{Action, Motion};
-use cosmic_text::{Change, Cursor, Edit, Editor};
 use cosmic_text::FontSystem;
+use cosmic_text::{Cursor, Edit};
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -35,14 +34,18 @@ pub struct TextInput {
     use_text_value_on_update: bool,
 }
 
-pub struct TextInputState<'a> {
-    pub cached_editor: CachedEditor<'a>,
-    pub dragging: bool,
+#[derive(Clone, Default, Debug)]
+pub(crate) struct ImeState {
     pub is_ime_active: bool,
-    pub is_active: bool,
     pub ime_starting_cursor: Option<Cursor>,
     pub ime_ending_cursor: Option<Cursor>,
+}
+
+pub struct TextInputState<'a> {
+    pub cached_editor: CachedEditor<'a>,
+    pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
+    pub(crate) ime_state: ImeState
 }
 
 impl TextInput {
@@ -238,124 +241,60 @@ impl Element for TextInput {
             OkuMessage::PointerButtonEvent(pointer_button) => {
                 let pointer_position = pointer_button.position;
                 let pointer_content_position = pointer_position - content_position;
+                
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    cached_editor.editor.action(
-                        font_system,
-                        Action::Click {
-                            x: pointer_content_position.x as i32,
-                            y: (pointer_content_position.y + scroll_y) as i32,
-                        },
-                    );
-                    state.dragging = true;
+                    cached_editor.action_start_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
                 } else {
-                    state.dragging = false;
+                    cached_editor.action_end_drag();
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::PointerMovedEvent(moved) => {
-                if state.dragging {
+                if cached_editor.dragging {
                     let pointer_position = moved.position;
                     let pointer_content_position = pointer_position - content_position;
-                    cached_editor.editor.action(
-                        font_system,
-                        Action::Drag {
-                            x: pointer_content_position.x as i32,
-                            y: (pointer_content_position.y + scroll_y) as i32,
-                        },
-                    );
+                    cached_editor.action_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
-                cached_editor.modifiers = modifiers_changed;
-
+                cached_editor.action_modifiers_changed(modifiers_changed);
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
                 let logical_key = keyboard_input.event.logical_key;
                 let key_state = keyboard_input.event.state;
 
-                let (_shift, action_mod) = Option::from(cached_editor.modifiers)
-                    .map(|mods| {
-                        (
-                            mods.state().shift_key(),
-                            if cfg!(target_os = "macos") {
-                                mods.state().super_key()
-                            } else {
-                                mods.state().control_key()
-                            },
-                        )
-                    })
-                    .unwrap_or_default();
-
                 if key_state.is_pressed() {
                     match logical_key {
-                        Key::Named(NamedKey::ArrowLeft) => {
-                            cached_editor.editor.action(font_system, Action::Motion(Motion::Left))
-                        }
-                        Key::Named(NamedKey::ArrowRight) => {
-                            cached_editor.editor.action(font_system, Action::Motion(Motion::Right))
-                        }
-                        Key::Named(NamedKey::ArrowUp) => cached_editor.editor.action(font_system, Action::Motion(Motion::Up)),
-                        Key::Named(NamedKey::ArrowDown) => {
-                            cached_editor.editor.action(font_system, Action::Motion(Motion::Down))
-                        }
-                        Key::Named(NamedKey::Home) => cached_editor.editor.action(font_system, Action::Motion(Motion::Home)),
-                        Key::Named(NamedKey::End) => cached_editor.editor.action(font_system, Action::Motion(Motion::End)),
-                        Key::Named(NamedKey::PageUp) => {
-                            cached_editor.editor.action(font_system, Action::Motion(Motion::PageUp))
-                        }
-                        Key::Named(NamedKey::PageDown) => {
-                            cached_editor.editor.action(font_system, Action::Motion(Motion::PageDown))
-                        }
-                        Key::Named(NamedKey::Escape) => cached_editor.editor.action(font_system, Action::Escape),
-                        Key::Named(NamedKey::Enter) => cached_editor.editor.action(font_system, Action::Enter),
-                        Key::Named(NamedKey::Backspace) => cached_editor.editor.action(font_system, Action::Backspace),
-                        Key::Named(NamedKey::Delete) => cached_editor.editor.action(font_system, Action::Delete),
+                        Key::Named(NamedKey::ArrowLeft) => cached_editor.move_left(font_system),
+                        Key::Named(NamedKey::ArrowRight) => cached_editor.move_right(font_system),
+                        Key::Named(NamedKey::ArrowUp) => cached_editor.move_up(font_system),
+                        Key::Named(NamedKey::ArrowDown) => cached_editor.move_down(font_system),
+                        Key::Named(NamedKey::Home) => cached_editor.move_to_start(font_system),
+                        Key::Named(NamedKey::End) => cached_editor.move_to_end(font_system),
+                        Key::Named(NamedKey::PageUp) => cached_editor.move_page_up(font_system),
+                        Key::Named(NamedKey::PageDown) => cached_editor.move_page_down(font_system),
+                        
+                        Key::Named(NamedKey::Escape) => cached_editor.action_escape(font_system),
+                        Key::Named(NamedKey::Enter) => cached_editor.action_enter(font_system),
+                        Key::Named(NamedKey::Backspace) => cached_editor.action_backspace(font_system),
+                        Key::Named(NamedKey::Delete) => cached_editor.action_delete(font_system),
                         Key::Named(key) => {
                             if let Some(text) = key.to_text() {
-                                for char in text.chars() {
-                                    cached_editor.editor.action(font_system, Action::Insert(char));
-                                }
+                                cached_editor.action_insert(font_system, text.chars());
                             }
                         }
                         Key::Character(text) => {
-                            if action_mod && matches!(text.as_str(), "c" | "v" | "x") {
-
-                                // FIXME: Abstract this.
-                                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-                                {
-                                    use clipboard_rs::{Clipboard, ClipboardContext};
-                                    match text.to_lowercase().as_str() {
-                                        "c" => {
-                                            if let Some(selection_text) = cached_editor.editor.copy_selection() {
-                                                let clipboard_context = ClipboardContext::new().unwrap();
-                                                clipboard_context.set_text(selection_text).ok();
-                                            }
-                                        }
-                                        "x" => {
-                                            if let Some(selection_text) = cached_editor.editor.copy_selection() {
-                                                let clipboard_context = ClipboardContext::new().unwrap();
-                                                if cached_editor.editor.delete_selection() {
-                                                    clipboard_context.set_text(selection_text).ok();
-                                                }
-                                            }
-                                        }
-                                        "v" => {
-                                            let clipboard_context = ClipboardContext::new().unwrap();
-                                            if let Ok(clipboard_text) = clipboard_context.get_text() {
-                                                for c in clipboard_text.chars() {
-                                                    cached_editor.editor.action(font_system, Action::Insert(c));
-                                                }
-                                            }
-                                        }
-                                        _ => (),
-                                    }
+                            if cached_editor.is_control_or_super_modifier_pressed() && matches!(text.as_str(), "c" | "v" | "x") {
+                                match text.to_lowercase().as_str() {
+                                    "c" => cached_editor.action_copy_to_clipboard(),
+                                    "v" => cached_editor.action_paste_from_clipboard(font_system),
+                                    "x" => cached_editor.action_cut_from_clipboard(),
+                                    _ => (),
                                 }
                             } else {
-                                for c in text.chars() {
-                                    cached_editor.editor.action(font_system, Action::Insert(c));
-                                }
+                                cached_editor.action_insert(font_system, text.chars());
                             }
                         }
                         _ => {}
@@ -373,76 +312,24 @@ impl Element for TextInput {
 
             // This is all a bit hacky and needs some improvement:
             OkuMessage::ImeEvent(ime) => {
-                let previous_ime_ending_cursor = state.ime_ending_cursor;
-
                 // FIXME: This shouldn't be possible, we need to close the ime window when a text input loses focus.
-                if state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled){
+                if state.ime_state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled){
                     // state.ime_starting_cursor = Some(cached_editor.editor.cursor());
                     return Default::default();
                 }
 
-                // Deletes all the ime pre-edit text from the editor.
-                let delete_ime_pre_edit_text = |editor: &mut Editor| {
-                    if let Some(previous_ime_ending_cursor) = previous_ime_ending_cursor {
-                        let starting_cursor = state.ime_starting_cursor.unwrap();
-                        // println!("starting_cursor: {:?}", starting_cursor);
-                        // println!("ending_cursor: {:?}", previous_ime_ending_cursor);
-                        editor.delete_range(starting_cursor, previous_ime_ending_cursor);
-                    }
-                };
-
-                // Set the cursor to the final cursor location of the last change item.
-                let mut maybe_set_cursor_to_last_change_item = |editor: &mut Editor, change: &Option<Change>| {
-                    if let Some(change) = change {
-                        if let Some(change_item) = change.items.last() {
-                            editor.set_cursor(change_item.end);
-                            state.ime_ending_cursor = Some(change_item.end);
-                        }
-                    }
-                };
-
-                // println!("{:?}", ime);
-
                 match ime {
                     Ime::Enabled => {
-                        state.is_ime_active = true;
-                        state.ime_starting_cursor = Some(cached_editor.editor.cursor());
-                        state.ime_ending_cursor = None;
+                        state.ime_state = cached_editor.action_ime_enabled();
                     }
-
                     Ime::Preedit(str, cursor_info) => {
-                        let is_cleared = str.is_empty();
-                        let _hide_cursor = cursor_info.is_none();
-
-                        if is_cleared {
-                            if state.ime_ending_cursor.is_some() {
-                                cached_editor.editor.start_change();
-                                delete_ime_pre_edit_text(&mut cached_editor.editor);
-                                cached_editor.editor.finish_change();
-                                state.ime_ending_cursor = None;
-                                cached_editor.editor.set_cursor(state.ime_starting_cursor.unwrap());
-                            }
-                        } else {
-                            cached_editor.editor.start_change();
-                            delete_ime_pre_edit_text(&mut cached_editor.editor);
-                            cached_editor.editor.insert_at(state.ime_starting_cursor.unwrap(), str.as_str(), None);
-                            let change = cached_editor.editor.finish_change();
-                            maybe_set_cursor_to_last_change_item(&mut cached_editor.editor, &change);
-                        }
+                        state.ime_state = cached_editor.action_ime_preedit(&state.ime_state, &str, cursor_info);
                     }
                     Ime::Commit(str) => {
-                        state.is_ime_active = false;
-
-                        cached_editor.editor.start_change();
-                        // delete_ime_pre_edit_text(&mut cached_editor.editor);
-                        cached_editor.editor.insert_at(state.ime_starting_cursor.unwrap(), str.as_str(), None);
-                        let change = cached_editor.editor.finish_change();
-                        maybe_set_cursor_to_last_change_item(&mut cached_editor.editor, &change);
+                       state.ime_state = cached_editor.action_ime_commit(&state.ime_state, &str);
                     }
                     Ime::Disabled => {
-                        state.is_ime_active = false;
-                        state.ime_starting_cursor = None;
-                        state.ime_ending_cursor = None;
+                        state.ime_state = cached_editor.action_ime_disabled();
                     }
                 };
 
@@ -464,11 +351,8 @@ impl Element for TextInput {
         let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
         let text_input_state = TextInputState {
             cached_editor,
-            dragging: false,
-            is_ime_active: false,
+            ime_state: ImeState::default(),
             is_active: false,
-            ime_starting_cursor: None,
-            ime_ending_cursor: None,
             scroll_state: ScrollState::default(),
         };
 
