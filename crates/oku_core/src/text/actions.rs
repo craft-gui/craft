@@ -1,5 +1,5 @@
-use crate::text::cached_editor::CachedEditor;
-use cosmic_text::{Action, Change, Cursor, Edit, Editor, FontSystem, Motion};
+use crate::text::cached_editor::{hash_text, AttributesRaw, CachedEditor};
+use cosmic_text::{Action, Change, Cursor, Edit, Editor, FontSystem, Motion, Shaping};
 use std::str::Chars;
 
 use crate::elements::text_input::ImeState;
@@ -7,62 +7,68 @@ use crate::geometry::Point;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use clipboard_rs::{Clipboard, ClipboardContext};
 use winit::event::Modifiers;
+use crate::elements::layout_context::MetricsRaw;
 
 impl CachedEditor<'_> {
     // Motions
     pub(crate) fn move_left(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::Left))
+        self.editor.action(font_system, Action::Motion(Motion::Left));
     }
     
     pub(crate) fn move_right(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::Right))
+        self.editor.action(font_system, Action::Motion(Motion::Right));
     }
     
     pub(crate) fn move_up(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::Up))
+        self.editor.action(font_system, Action::Motion(Motion::Up));
     }
     
     pub(crate) fn move_down(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::Down))
+        self.editor.action(font_system, Action::Motion(Motion::Down));
     }
     
     pub(crate) fn move_to_start(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::Home))
+        self.editor.action(font_system, Action::Motion(Motion::Home));
     }
 
     pub(crate) fn move_to_end(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::End))
+        self.editor.action(font_system, Action::Motion(Motion::End));
     }
 
     pub(crate) fn move_page_up(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::PageUp))
+        self.editor.action(font_system, Action::Motion(Motion::PageUp));
     }
     
     pub(crate) fn move_page_down(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Motion(Motion::PageDown))
+        self.editor.action(font_system, Action::Motion(Motion::PageDown));
     }
     
     // Actions
     pub(crate) fn action_escape(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Escape)
+        self.editor.action(font_system, Action::Escape);
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_enter(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Enter)
+        self.editor.action(font_system, Action::Enter);
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_backspace(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Backspace)
+        self.editor.action(font_system, Action::Backspace);
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_delete(&mut self, font_system: &mut FontSystem) {
-        self.editor.action(font_system, Action::Delete)
+        self.editor.action(font_system, Action::Delete);
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_insert(&mut self, font_system: &mut FontSystem, chars: Chars) {
         for c in chars {
             self.editor.action(font_system, Action::Insert(c));
         }
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_copy_to_clipboard(&mut self) {
@@ -79,6 +85,7 @@ impl CachedEditor<'_> {
             let clipboard_context = ClipboardContext::new().unwrap();
             if self.editor.delete_selection() {
                 clipboard_context.set_text(selection_text).ok();
+                self.is_dirty = true;
             }
         }
     }
@@ -89,6 +96,7 @@ impl CachedEditor<'_> {
             let clipboard_context = ClipboardContext::new().unwrap();
             if let Ok(clipboard_text) = clipboard_context.get_text() {
                 self.action_insert(font_system, clipboard_text.chars());
+                self.is_dirty = true;
             }   
         }
     }
@@ -105,6 +113,7 @@ impl CachedEditor<'_> {
             },
         );
         self.dragging = true;
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_drag(&mut self, font_system: &mut FontSystem, location: Point) {
@@ -115,10 +124,12 @@ impl CachedEditor<'_> {
             },
         );
         self.dragging = true;
+        self.is_dirty = self.editor.redraw();
     }
 
     pub(crate) fn action_end_drag(&mut self) {
         self.dragging = false;
+        self.is_dirty = self.editor.redraw();
     }
     
     pub(crate) fn action_ime_enabled(&mut self) -> ImeState {
@@ -160,6 +171,8 @@ impl CachedEditor<'_> {
             }
         }
 
+        self.is_dirty = true;
+
         result
     }
 
@@ -174,6 +187,8 @@ impl CachedEditor<'_> {
         if let Some(cursor) = maybe_set_cursor_to_last_change_item(&mut self.editor, &change) {
             result.ime_ending_cursor = Some(cursor);
         }
+
+        self.is_dirty = true;
         
         result
     }
@@ -183,6 +198,48 @@ impl CachedEditor<'_> {
             is_ime_active: false,
             ime_starting_cursor: None,
             ime_ending_cursor: None,
+        }
+    }
+    
+    pub(crate) fn action_set_reload_fonts(&mut self, reload_fonts: bool) {
+        if reload_fonts {
+            self.is_dirty = true;
+        }
+    }
+    
+    pub(crate) fn action_set_text(&mut self, font_system: &mut FontSystem, text: Option<&String>) {
+        let text_hash = text.map(hash_text);
+        let text_hash_changed = text_hash.map(|text_hash| text_hash != self.text_hash).unwrap_or(false);
+        
+        if text_hash_changed {
+            self.is_dirty = true;
+            if let Some(text) = text {
+                // The user supplied text or attributes changed, and we need to rebuild the buffer.
+                self.editor.with_buffer_mut(|buffer| {
+                    buffer.set_text(font_system, text, self.attributes.to_attrs(), Shaping::Advanced);
+                });
+                self.text_hash = text_hash.unwrap();
+            } else {
+                // The attributes changed, and we need to rebuild the buffer.
+                let buffer_text = self.get_text();
+                self.editor.with_buffer_mut(|buffer| {
+                    buffer.set_text(font_system, buffer_text.as_str(), self.attributes.to_attrs(), Shaping::Advanced);
+                });
+            }   
+        }
+    }
+    
+    pub(crate) fn action_set_metrics(&mut self, metrics: MetricsRaw) {
+        if metrics != self.metrics {
+            self.is_dirty = true;
+            self.metrics = metrics;
+        }
+    }
+    
+    pub(crate) fn action_set_attributes(&mut self, attributes: AttributesRaw) {
+        if attributes != self.attributes {
+            self.is_dirty = true;
+            self.attributes = attributes;
         }
     }
 }

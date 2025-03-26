@@ -1,6 +1,6 @@
 use crate::elements::layout_context::{MetricsRaw, TextHashKey};
 use crate::style::Style;
-use cosmic_text::{Action, Attrs, Buffer, Edit, Editor, Family, FontSystem, Motion, Shaping, Weight};
+use cosmic_text::{Attrs, Buffer, Edit, Editor, Family, FontSystem, Weight};
 use rustc_hash::FxHasher;
 use std::collections::HashMap;
 use std::hash::Hasher;
@@ -73,6 +73,8 @@ pub struct CachedEditor<'a> {
     /// Stores Metric fields as integers for hashing.
     pub(crate) metrics: MetricsRaw,
     pub(crate) dragging: bool,
+    /// Whether the cache needs to rebuilt or not.
+    pub(crate) is_dirty: bool,
 }
 
 impl CachedEditor<'_> {
@@ -91,14 +93,76 @@ impl CachedEditor<'_> {
         font_system: &mut FontSystem,
     ) -> taffy::Size<f32> {
         let cache_key = TextHashKey::new(known_dimensions, available_space);
-        self.last_key = Some(cache_key);
+        self.rebuild_cache_if_needed(cache_key, font_system)
+    }
+    
+    pub(crate) fn new(text: &String, style: &Style, scaling_factor: f64, font_system: &mut FontSystem) -> Self {
+        let attributes = AttributesRaw::from(style);
+        let metrics = MetricsRaw::from(style, scaling_factor);
 
+        let buffer = Buffer::new(font_system, metrics.to_metrics());
+        let mut editor = Editor::new(buffer);
+        editor.borrow_with(font_system);
+
+        let mut cached_editor = Self {
+            text_hash: 0,
+            cached_text_layout: HashMap::new(),
+            last_key: None,
+            editor,
+            modifiers: Default::default(),
+            attributes,
+            metrics,
+            dragging: false,
+            is_dirty: true,
+        };
+
+        cached_editor.action_set_text(font_system, Some(text));
+        cached_editor.move_to_end(font_system);
+        
+        cached_editor
+    }
+    
+    pub(crate) fn update_state(&mut self, text: Option<&String>, style: &Style, scaling_factor: f64, reload_fonts: bool, font_system: &mut FontSystem) {
+        let attributes = AttributesRaw::from(style);
+        let metrics = MetricsRaw::from(style, scaling_factor);
+        
+        self.action_set_attributes(attributes);
+        self.action_set_reload_fonts(reload_fonts);
+        self.action_set_text(font_system, text);
+        self.action_set_metrics(metrics);
+    }
+
+    /// Get the current text, INCLUDING the IME pre-edit text.
+    pub(crate) fn get_text(&mut self) -> String {
+        self.editor.with_buffer(|buffer| {
+            let mut buffer_string: String = String::new();
+            for line in buffer.lines.iter() {
+                buffer_string.push_str(line.text());
+                buffer_string.push_str(line.ending().as_str());
+            }
+            buffer_string
+        })
+    }
+    
+    pub(crate) fn is_control_or_super_modifier_pressed(&self) -> bool {
+        if cfg!(target_os = "macos") {
+            self.modifiers.state().super_key()
+        } else {
+            self.modifiers.state().control_key()
+        }
+    }
+    
+    pub(crate) fn rebuild_cache_if_needed(&mut self, cache_key: TextHashKey, font_system: &mut FontSystem) -> taffy::Size<f32> {
+        self.last_key = Some(cache_key);
         // Currently we are caching the `Buffer` which is memory hungry, so we should clear the cache if this grows to be too big.
         // Measure is called 3-5 times.
         if self.cached_text_layout.len() > 3 {
             self.cached_text_layout.clear();
         }
-
+        if self.is_dirty {
+            self.cached_text_layout.clear();
+            self.is_dirty = false;
+        }
         let cached_text_layout_value = self.cached_text_layout.get(&cache_key);
 
         if let Some(cached_text_layout_value) = cached_text_layout_value {
@@ -119,10 +183,13 @@ impl CachedEditor<'_> {
                     .fold((0.0, 0usize), |(width, total_lines), run| (run.line_w.max(width), total_lines + 1));
                 let height = total_lines as f32 * buffer.metrics().line_height;
 
+                let mut buffer = buffer.clone();
+                buffer.set_redraw(false);
+
                 TextHashValue {
                     computed_width: width,
                     computed_height: height,
-                    buffer: buffer.clone(),
+                    buffer,
                 }
             });
 
@@ -130,99 +197,9 @@ impl CachedEditor<'_> {
                 width: cached_text_layout_value.computed_width,
                 height: cached_text_layout_value.computed_height,
             };
-
-            // Update the cache.
             self.cached_text_layout.insert(cache_key, cached_text_layout_value);
+            
             size
-        }
-    }
-    
-    pub(crate) fn new( text: &String, style: &Style, scaling_factor: f64, font_system: &mut FontSystem) -> Self {
-        let metrics = MetricsRaw::from(style, scaling_factor);
-
-        let buffer = Buffer::new(font_system, metrics.to_metrics());
-        let mut editor = Editor::new(buffer);
-        editor.borrow_with(font_system);
-
-        let text_hash = hash_text(text);
-        let attributes = AttributesRaw::from(style);
-        editor.with_buffer_mut(|buffer| buffer.set_text(font_system, text, attributes.to_attrs(), Shaping::Advanced));
-        editor.action(font_system, Action::Motion(Motion::End));
-
-        Self {
-            text_hash,
-            cached_text_layout: HashMap::new(),
-            last_key: None,
-            editor,
-            modifiers: Default::default(),
-            attributes,
-            metrics,
-            dragging: false,
-        }
-    }
-    
-    pub(crate) fn update_state(&mut self, text: Option<&String>, style: &Style, scaling_factor: f64, reload_fonts: bool, font_system: &mut FontSystem) {
-
-        let text_hash = text.map(hash_text);
-        let attributes = AttributesRaw::from(style);
-        let metrics = MetricsRaw::from(style, scaling_factor);
-
-        let text_hash_changed = text_hash.map(|text_hash| text_hash != self.text_hash).unwrap_or(false);
-        let text_changed = text_hash_changed
-            || reload_fonts
-            || attributes != self.attributes;
-        let size_changed = metrics != self.metrics;
-        
-        if text_changed || size_changed {
-            self.clear_cache();
-        }
-
-        // In `measure()` we will call `set_metrics_and_size()`, so save the metrics for later.
-        if size_changed {
-            self.metrics = metrics;
-        }
-
-        if text_changed {
-            if let Some(text) = text {
-                // The user supplied text or attributes changed, and we need to rebuild the buffer.
-                self.editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(font_system, text, attributes.to_attrs(), Shaping::Advanced);
-                });
-                self.text_hash = text_hash.unwrap();
-            } else {
-                // The attributes changed, and we need to rebuild the buffer.
-                let buffer_text = self.get_text();
-                self.editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(font_system, buffer_text.as_str(), attributes.to_attrs(), Shaping::Advanced);
-                });
-            }
-            self.attributes = attributes;
-        }
-    }
-    
-    /// Clears the cache.
-    pub(crate) fn clear_cache(&mut self) {
-        self.cached_text_layout.clear();
-        self.last_key = None;
-    }
-
-    /// Get the current text, INCLUDING the IME pre-edit text.
-    pub(crate) fn get_text(&mut self) -> String {
-        self.editor.with_buffer(|buffer| {
-            let mut buffer_string: String = String::new();
-            for line in buffer.lines.iter() {
-                buffer_string.push_str(line.text());
-                buffer_string.push_str(line.ending().as_str());
-            }
-            buffer_string
-        })
-    }
-    
-    pub(crate) fn is_control_or_super_modifier_pressed(&self) -> bool {
-        if cfg!(target_os = "macos") {
-            self.modifiers.state().super_key()
-        } else {
-            self.modifiers.state().control_key()
         }
     }
 }

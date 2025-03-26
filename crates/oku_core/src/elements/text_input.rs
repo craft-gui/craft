@@ -229,18 +229,14 @@ impl Element for TextInput {
             return scroll_result;
         }
 
-
         let cached_editor = &mut state.cached_editor;
-
         let scroll_y = state.scroll_state.scroll_y;
-
         let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
-        let content_position = content_rect.position();
-
+        
         match message {
             OkuMessage::PointerButtonEvent(pointer_button) => {
                 let pointer_position = pointer_button.position;
-                let pointer_content_position = pointer_position - content_position;
+                let pointer_content_position = pointer_position - content_rect.position();
                 
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
                     cached_editor.action_start_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
@@ -252,7 +248,7 @@ impl Element for TextInput {
             OkuMessage::PointerMovedEvent(moved) => {
                 if cached_editor.dragging {
                     let pointer_position = moved.position;
-                    let pointer_content_position = pointer_position - content_position;
+                    let pointer_content_position = pointer_position - content_rect.position();
                     cached_editor.action_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
@@ -300,8 +296,6 @@ impl Element for TextInput {
                         _ => {}
                     }
                 }
-                cached_editor.editor.shape_as_needed(font_system, true);
-                cached_editor.clear_cache();
 
                 let event_text = cached_editor.get_text();
                 UpdateResult::new()
@@ -332,9 +326,6 @@ impl Element for TextInput {
                         state.ime_state = cached_editor.action_ime_disabled();
                     }
                 };
-
-                cached_editor.editor.shape_as_needed(font_system, true);
-                cached_editor.clear_cache();
 
                 let event_text = cached_editor.get_text();
                 UpdateResult::new()
