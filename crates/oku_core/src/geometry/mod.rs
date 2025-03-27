@@ -8,7 +8,7 @@ pub(crate) mod side;
 mod size;
 mod trblrectangle;
 
-pub use element_rectangle::ElementRectangle;
+pub use element_rectangle::ElementBox;
 pub use point::Point;
 pub use rectangle::Rectangle;
 pub use size::Size;

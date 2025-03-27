@@ -2,7 +2,7 @@ use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::element_data::ElementData;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::Container;
@@ -27,7 +27,7 @@ pub struct Dropdown {
     pub element_data: ElementData,
     /// A copy of the currently selected element, this is not stored in the user tree nor will it receive events.
     /// This is copied, so that we can change the location and render it in the dropdown container.
-    pseudo_dropdown_selection: Option<ElementBox>,
+    pseudo_dropdown_selection: Option<ElementBoxed>,
     /// An element not in the user tree. Created, so that we can utilize our existing functionality (like scrollbars).
     pseudo_dropdown_list_element: Container,
 }

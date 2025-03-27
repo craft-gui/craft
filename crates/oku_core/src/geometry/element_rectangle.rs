@@ -1,7 +1,7 @@
 use crate::geometry::{Border, Margin, Padding, Point, Rectangle, Size};
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ElementRectangle {
+pub struct ElementBox {
     pub margin: Margin,
     pub border: Border,
     pub padding: Padding,
@@ -9,7 +9,7 @@ pub struct ElementRectangle {
     pub size: Size,
 }
 
-impl ElementRectangle {
+impl ElementBox {
     pub fn transform(&self, transform: glam::Mat4) -> Self {
         let mut transformed_box = *self;
         let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x, self.position.y, 1.0, 1.0));

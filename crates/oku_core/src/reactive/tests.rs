@@ -1,5 +1,5 @@
 use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use crate::elements::element::ElementBox;
+use crate::elements::element::ElementBoxed;
 use crate::elements::{Container, Text};
 use crate::events::Event;
 use crate::reactive::element_id::reset_unique_element_id;
@@ -19,7 +19,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
     let initial_view = Container::new().component().push(Text::new("Foo").component());
     let updated_view = Container::new().component().push(Text::new("Foo").component());
 
-    let root_element: ElementBox = Container::new().into();
+    let root_element: ElementBoxed = Container::new().into();
 
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
@@ -64,7 +64,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let root_node_2 =
         Container::new().component().push(Text::new("Foo").component()).push(Text::new("Bar").component());
 
-    let root_element: ElementBox = Container::new().into();
+    let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
     let mut global_state = GlobalState::from(Box::new(()));
@@ -106,7 +106,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
 
     let root_component_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
     let root_component_2 = Container::new().component();
-    let root_element: ElementBox = Container::new().into();
+    let root_element: ElementBoxed = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
     let mut global_state = GlobalState::from(Box::new(()));
@@ -185,7 +185,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
     let root_component_1 =
         Container::new().component().push(Text::new("Foo").component().key("key_1")).push(DummyComponent::component());
     let root_component_2 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
-    let root_element: ElementBox = Container::new().into();
+    let root_element: ElementBoxed = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
     let mut global_state = GlobalState::from(Box::new(()));
@@ -245,7 +245,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let root_node_2 =
         Container::new().component().push(Text::new("Bar").component()).push(Text::new("Foo").component().key("key_1"));
 
-    let root_element: ElementBox = Container::new().into();
+    let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
     let mut global_state = GlobalState::from(Box::new(()));

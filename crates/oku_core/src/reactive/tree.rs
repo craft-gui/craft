@@ -1,7 +1,7 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn};
 use crate::components::{Props, UpdateResult};
 use crate::elements::container::ContainerState;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{Element, ElementBoxed};
 use crate::events::{Event, Message, OkuMessage};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
@@ -70,7 +70,7 @@ fn dummy_update(
 
 pub struct DiffTreesResult {
     pub(crate) component_tree: ComponentTreeNode,
-    pub(crate) element_tree: ElementBox,
+    pub(crate) element_tree: ElementBoxed,
     pub(crate) component_ids: HashSet<ComponentId>,
     pub(crate) element_ids: HashSet<ComponentId>,
     pub(crate) pointer_captures: HashMap<i64, ComponentId>,
@@ -81,7 +81,7 @@ pub struct DiffTreesResult {
 /// The ids of the Component tree are stable across renders.
 pub(crate) fn diff_trees(
     component_specification: ComponentSpecification,
-    mut root_element: ElementBox,
+    mut root_element: ElementBoxed,
     old_component_tree: Option<&ComponentTreeNode>,
     user_state: &mut StateStore,
     global_state: &mut GlobalState,

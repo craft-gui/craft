@@ -6,7 +6,7 @@ use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
 use crate::geometry::borders::BorderSpec;
 use crate::geometry::side::Side;
-use crate::geometry::{Border, ElementRectangle, Margin, Padding, Point, Rectangle, Size};
+use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
@@ -18,7 +18,7 @@ use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
 
 #[derive(Clone, Debug)]
-pub struct ElementBox {
+pub struct ElementBoxed {
     pub(crate) internal: Box<dyn Element>,
 }
 
@@ -30,7 +30,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         self.element_data().children.iter().map(|x| x.internal.as_ref()).collect()
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
         &mut self.element_data_mut().children
     }
 
@@ -149,7 +149,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         
         element_data_mut.content_size =
             Size::new(result.content_size.width, result.content_size.height);
-        element_data_mut.computed_box = ElementRectangle {
+        element_data_mut.computed_box = ElementBox {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
@@ -359,9 +359,9 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 }
 
-impl<T: Element> From<T> for ElementBox {
+impl<T: Element> From<T> for ElementBoxed {
     fn from(element: T) -> Self {
-        ElementBox {
+        ElementBoxed {
             internal: Box::new(element),
         }
     }
@@ -373,14 +373,14 @@ impl<T: Element> From<T> for ComponentOrElement {
     }
 }
 
-impl From<ElementBox> for ComponentOrElement {
-    fn from(element: ElementBox) -> Self {
+impl From<ElementBoxed> for ComponentOrElement {
+    fn from(element: ElementBoxed) -> Self {
         ComponentOrElement::Element(element)
     }
 }
 
-impl From<ElementBox> for ComponentSpecification {
-    fn from(element: ElementBox) -> Self {
+impl From<ElementBoxed> for ComponentSpecification {
+    fn from(element: ElementBoxed) -> Self {
         let key = element.internal.element_data().key.clone();
         let children = element.internal.element_data().child_specs.clone();
         let props = element.internal.element_data().props.clone();

@@ -1,7 +1,7 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::{Props, UpdateResult};
 use crate::elements::element_data::ElementData;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::layout_context::{LayoutContext, TaffyTextContext};
 use crate::elements::ElementStyles;
 use crate::events::OkuMessage;
@@ -51,7 +51,7 @@ impl Element for Text {
         &mut self.element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
         &mut self.element_data.children
     }
 

@@ -2,7 +2,7 @@ use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
 use crate::elements::element_data::ElementData;
-use crate::elements::element::{Element, ElementBox};
+use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
@@ -72,7 +72,7 @@ impl Element for TextInput {
         &mut self.element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBox> {
+    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
         &mut self.element_data.children
     }
 

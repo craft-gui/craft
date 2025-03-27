@@ -1,5 +1,5 @@
 use crate::components::props::Props;
-use crate::elements::element::ElementBox;
+use crate::elements::element::ElementBoxed;
 use crate::events::Event;
 use crate::reactive::state_store::StateStoreItem;
 use crate::GlobalState;
@@ -38,7 +38,7 @@ pub struct ComponentData {
 #[derive(Clone, Debug)]
 pub enum ComponentOrElement {
     ComponentSpec(ComponentData),
-    Element(ElementBox),
+    Element(ElementBoxed),
 }
 
 /// A specification for components and elements.

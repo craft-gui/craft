@@ -1,9 +1,9 @@
 use crate::components::Props;
 use crate::components::{ComponentId, ComponentSpecification};
-use crate::elements::element::ElementBox;
+use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
 use crate::geometry::borders::ComputedBorderSpec;
-use crate::geometry::{ElementRectangle, Rectangle, Size};
+use crate::geometry::{ElementBox, Rectangle, Size};
 use crate::style::Style;
 use taffy::NodeId;
 
@@ -29,7 +29,7 @@ pub struct ElementData {
     pub focused_style: Option<Box<Style>>,
 
     /// The children of the element.
-    pub(crate) children: Vec<ElementBox>,
+    pub(crate) children: Vec<ElementBoxed>,
 
     /// The taffy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
@@ -37,9 +37,9 @@ pub struct ElementData {
 
     pub content_size: Size,
     // The computed values after transforms are applied.
-    pub computed_box_transformed: ElementRectangle,
+    pub computed_box_transformed: ElementBox,
     // The computed values without any transforms applied to them.
-    pub computed_box: ElementRectangle,
+    pub computed_box: ElementBox,
 
     /// A user-defined id for the element.
     pub id: Option<String>,

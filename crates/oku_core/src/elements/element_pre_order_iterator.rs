@@ -33,7 +33,7 @@ impl dyn Element {
 #[cfg(test)]
 mod tests {
     use cosmic_text::FontSystem;
-    use crate::elements::element::ElementBox;
+    use crate::elements::element::ElementBoxed;
     use crate::elements::{Container, Text};
     use crate::reactive::element_id::reset_unique_element_id;
     use crate::reactive::element_state_store::ElementStateStore;
@@ -53,7 +53,7 @@ mod tests {
                 .push(Text::new("Bar").id("4").component())
                 .push(Text::new("Baz").id("5").component()),
         );
-        let root_element: ElementBox = Container::new().id("0").into();
+        let root_element: ElementBoxed = Container::new().id("0").into();
 
         let mut user_state = StateStore::default();
         let mut element_state = ElementStateStore::default();
