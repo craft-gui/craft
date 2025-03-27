@@ -1,7 +1,7 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
@@ -28,7 +28,7 @@ use winit::window::Window;
 #[derive(Clone, Default, Debug)]
 pub struct TextInput {
     text: String,
-    common_element_data: CommonElementData,
+    element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
     use_text_value_on_update: bool,
@@ -52,28 +52,28 @@ impl TextInput {
     pub fn new(text: &str) -> Self {
         Self {
             text: text.to_string(),
-            common_element_data: CommonElementData::default(),
+            element_data: ElementData::default(),
             use_text_value_on_update: true,
         }
     }
 
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextInputState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
+        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 }
 
 impl Element for TextInput {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn children_mut(&mut self) -> &mut Vec<ElementBox> {
-        &mut self.common_element_data.children
+        &mut self.element_data.children
     }
 
     fn name(&self) -> &'static str {
@@ -91,12 +91,12 @@ impl Element for TextInput {
         window: Option<Arc<dyn Window>>
     ) {
         let computed_box_transformed =
-            self.common_element_data.computed_box_transformed;
+            self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer);
 
-        let is_scrollable = self.common_element_data.is_scrollable();
+        let is_scrollable = self.element_data.is_scrollable();
 
         if is_scrollable {
             self.maybe_start_layer(renderer);
@@ -104,7 +104,7 @@ impl Element for TextInput {
 
         let scroll_y = if let Some(state) = element_state
             .storage
-            .get(&self.common_element_data.component_id)
+            .get(&self.element_data.component_id)
             .unwrap()
             .data
             .downcast_ref::<TextInputState>()
@@ -115,21 +115,21 @@ impl Element for TextInput {
         };
         
         let text_scroll = if is_scrollable {
-            Some(TextScroll::new(scroll_y, self.common_element_data.computed_scroll_track.height))
+            Some(TextScroll::new(scroll_y, self.element_data.computed_scroll_track.height))
         } else {
             None
         };
 
         renderer.draw_text(
-            self.common_element_data.component_id,
+            self.element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color(),
+            self.element_data.style.color(),
             text_scroll
         );
 
         if let Some(state) = element_state
             .storage
-            .get_mut(&self.common_element_data.component_id)
+            .get_mut(&self.element_data.component_id)
             .unwrap()
             .data
             .downcast_mut::<TextInputState>()
@@ -138,7 +138,7 @@ impl Element for TextInput {
             if let Some((cursor_x, cursor_y)) = state.cached_editor.editor.cursor_position() {
                 if state.is_active {
                     if let Some(window) = window {
-                        let content_position = self.common_element_data.computed_box_transformed.content_rectangle();
+                        let content_position = self.element_data.computed_box_transformed.content_rectangle();
                         window.set_ime_cursor_area(
                             PhysicalPosition::new(content_position.x + cursor_x as f32, content_position.y + cursor_y as f32).into(),
                             PhysicalSize::new(20.0, 20.0).into(),
@@ -164,16 +164,16 @@ impl Element for TextInput {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
+        self.element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
-                LayoutContext::TextInput(TaffyTextInputContext::new(self.common_element_data.component_id)),
+                LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id)),
             )
             .unwrap());
 
-        self.common_element_data().taffy_node_id
+        self.element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -191,12 +191,12 @@ impl Element for TextInput {
         self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
 
-        self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.common_element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
         let scroll_y = if let Some(container_state) = element_state
             .storage
-            .get(&self.common_element_data.component_id)
+            .get(&self.element_data.component_id)
             .unwrap()
             .data
             .downcast_ref::<TextInputState>()
@@ -223,7 +223,7 @@ impl Element for TextInput {
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
         state.is_active = true;
 
-        let scroll_result = state.scroll_state.on_event(&message, &self.common_element_data, &mut base_state.base);
+        let scroll_result = state.scroll_state.on_event(&message, &self.element_data, &mut base_state.base);
 
         if !scroll_result.propagate {
             return scroll_result;
@@ -231,7 +231,7 @@ impl Element for TextInput {
 
         let cached_editor = &mut state.cached_editor;
         let scroll_y = state.scroll_state.scroll_y;
-        let content_rect = self.common_element_data.computed_box.content_rectangle();
+        let content_rect = self.element_data.computed_box.content_rectangle();
         
         match message {
             OkuMessage::PointerButtonEvent(pointer_button) => {
@@ -339,7 +339,7 @@ impl Element for TextInput {
     }
 
     fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
+        let cached_editor = CachedEditor::new(&self.text, &self.element_data.style, scaling_factor, font_system);
         let text_input_state = TextInputState {
             cached_editor,
             ime_state: ImeState::default(),
@@ -356,7 +356,7 @@ impl Element for TextInput {
     fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let state: &mut TextInputState = element_state
             .storage
-            .get_mut(&self.common_element_data.component_id)
+            .get_mut(&self.element_data.component_id)
             .unwrap()
             .data
             .as_mut()
@@ -364,9 +364,9 @@ impl Element for TextInput {
             .unwrap();
 
         if self.use_text_value_on_update {
-            state.cached_editor.update_state(Some(&self.text), &self.common_element_data.style, scaling_factor, reload_fonts, font_system);   
+            state.cached_editor.update_state(Some(&self.text), &self.element_data.style, scaling_factor, reload_fonts, font_system);
         } else {
-            state.cached_editor.update_state(None, &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
+            state.cached_editor.update_state(None, &self.element_data.style, scaling_factor, reload_fonts, font_system);
         }
     }
 
@@ -397,6 +397,6 @@ impl TextInput {
 
 impl ElementStyles for TextInput {
     fn styles_mut(&mut self) -> &mut Style {
-        self.common_element_data.current_style_mut()
+        self.element_data.current_style_mut()
     }
 }

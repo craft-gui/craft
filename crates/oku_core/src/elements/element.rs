@@ -1,6 +1,6 @@
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::UpdateResult;
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::OkuMessage;
@@ -23,54 +23,54 @@ pub struct ElementBox {
 }
 
 pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
-    fn common_element_data(&self) -> &CommonElementData;
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData;
+    fn element_data(&self) -> &ElementData;
+    fn element_data_mut(&mut self) -> &mut ElementData;
 
     fn children(&self) -> Vec<&dyn Element> {
-        self.common_element_data().children.iter().map(|x| x.internal.as_ref()).collect()
+        self.element_data().children.iter().map(|x| x.internal.as_ref()).collect()
     }
 
     fn children_mut(&mut self) -> &mut Vec<ElementBox> {
-        &mut self.common_element_data_mut().children
+        &mut self.element_data_mut().children
     }
 
     fn style(&self) -> &Style {
-        &self.common_element_data().style
+        &self.element_data().style
     }
 
     fn style_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data_mut().style
+        &mut self.element_data_mut().style
     }
 
     fn in_bounds(&self, point: Point) -> bool {
-        let common_element_data = self.common_element_data();
+        let element_data = self.element_data();
 
         let transformed_border_rectangle =
-            common_element_data.computed_box_transformed.border_rectangle();
+            element_data.computed_box_transformed.border_rectangle();
 
         transformed_border_rectangle.contains(&point)
     }
 
     fn get_id(&self) -> &Option<String> {
-        &self.common_element_data().id
+        &self.element_data().id
     }
 
     #[allow(dead_code)]
     fn id(&mut self, id: Option<&str>) -> Box<dyn Element> {
-        self.common_element_data_mut().id = id.map(String::from);
+        self.element_data_mut().id = id.map(String::from);
         self.clone_box()
     }
 
     fn component_id(&self) -> u64 {
-        self.common_element_data().component_id
+        self.element_data().component_id
     }
 
     fn taffy_node_id(&self) -> Option<NodeId> {
-        self.common_element_data().taffy_node_id
+        self.element_data().taffy_node_id
     }
 
     fn set_component_id(&mut self, id: u64) {
-        self.common_element_data_mut().component_id = id;
+        self.element_data_mut().component_id = id;
     }
 
     fn name(&self) -> &'static str;
@@ -97,7 +97,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     /// Finalizes the layout of the element.
     ///
     /// The majority of the layout computation is done in the `compute_layout` method.
-    /// Store the computed values in the `common_element_data` struct.
+    /// Store the computed values in the `element_data` struct.
     #[allow(clippy::too_many_arguments)]
     fn finalize_layout(
         &mut self,
@@ -124,11 +124,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         result: &taffy::Layout,
         layout_order: &mut u32,
     ) {
-        let common_element_data_mut = self.common_element_data_mut();
-        common_element_data_mut.layout_order = *layout_order;
+        let element_data_mut = self.element_data_mut();
+        element_data_mut.layout_order = *layout_order;
         *layout_order += 1;
 
-        let position = match common_element_data_mut.style.position() {
+        let position = match element_data_mut.style.position() {
             Position::Relative => relative_position + result.location.into(),
             // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
             Position::Absolute => relative_position + result.location.into(),
@@ -143,21 +143,21 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         //     ├──  LEAF [x: 13   y: 59   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967300))
         //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
         //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
-        if common_element_data_mut.style.position() == Position::Absolute {
+        if element_data_mut.style.position() == Position::Absolute {
             size = Size::new(f32::max(result.size.width, result.content_size.width), f32::max(result.size.height, result.content_size.height));
         }
         
-        common_element_data_mut.content_size =
+        element_data_mut.content_size =
             Size::new(result.content_size.width, result.content_size.height);
-        common_element_data_mut.computed_box = ElementRectangle {
+        element_data_mut.computed_box = ElementRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
             size,
         };
-        common_element_data_mut.computed_box_transformed =
-            common_element_data_mut.computed_box.transform(scroll_transform);
+        element_data_mut.computed_box_transformed =
+            element_data_mut.computed_box.transform(scroll_transform);
     }
 
     fn draw_children(
@@ -169,7 +169,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>
     ) {
-        for child in self.common_element_data_mut().children.iter_mut() {
+        for child in self.element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
             // Skip non-visual elements.
             if taffy_child_node_id.is_none() {
@@ -188,20 +188,20 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn draw_borders(&self, renderer: &mut RendererBox) {
-        let common_element_data = self.common_element_data();
-        let current_style = common_element_data.current_style();
+        let element_data = self.element_data();
+        let current_style = element_data.current_style();
         let background_color = current_style.background();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         if !current_style.has_border() {
             renderer.draw_rect(
-                common_element_data.computed_box_transformed.padding_rectangle(),
+                element_data.computed_box_transformed.padding_rectangle(),
                 background_color,
             );
             return;
         }
 
-        let computed_border_spec = &common_element_data.computed_border;
+        let computed_border_spec = &element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
         renderer.fill_bez_path(background_path, background_color);
@@ -223,14 +223,14 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn should_start_new_layer(&self) -> bool {
-        let common_data = self.common_element_data();
+        let element_data = self.element_data();
 
-        common_data.current_style().overflow()[1] == Overflow::Scroll
+        element_data.current_style().overflow()[1] == Overflow::Scroll
     }
 
     fn maybe_start_layer(&self, renderer: &mut RendererBox) {
-        let common_data = self.common_element_data();
-        let padding_rectangle = common_data.computed_box_transformed.padding_rectangle();
+        let element_data = self.element_data();
+        let padding_rectangle = element_data.computed_box_transformed.padding_rectangle();
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -244,40 +244,40 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn finalize_borders(&mut self) {
-        let common_element_data = self.common_element_data_mut();
+        let element_data = self.element_data_mut();
 
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
-        if !common_element_data.current_style().has_border() {
+        if !element_data.current_style().has_border() {
             return;
         }
 
-        let element_rect = common_element_data.computed_box_transformed;
+        let element_rect = element_data.computed_box_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
             [borders.top, borders.right, borders.bottom, borders.left],
-            common_element_data.current_style().border_radius(),
-            common_element_data.current_style().border_color(),
+            element_data.current_style().border_radius(),
+            element_data.current_style().border_color(),
         );
-        common_element_data.computed_border = border_spec.compute_border_spec();
+        element_data.computed_border = border_spec.compute_border_spec();
     }
 
     fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
-        let scrollbar_color = self.common_element_data().current_style().scrollbar_color();
+        let scrollbar_color = self.element_data().current_style().scrollbar_color();
 
         // track
-        renderer.draw_rect(self.common_element_data_mut().computed_scroll_track, scrollbar_color.track_color);
+        renderer.draw_rect(self.element_data_mut().computed_scroll_track, scrollbar_color.track_color);
 
         // thumb
-        renderer.draw_rect(self.common_element_data_mut().computed_scroll_thumb, scrollbar_color.thumb_color);
+        renderer.draw_rect(self.element_data_mut().computed_scroll_thumb, scrollbar_color.thumb_color);
     }
 
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
-        let common_element_data = self.common_element_data_mut();
-        if common_element_data.style.overflow()[1] != Overflow::Scroll {
+        let element_data = self.element_data_mut();
+        if element_data.style.overflow()[1] != Overflow::Scroll {
             return;
         }
-        let box_transformed = common_element_data.computed_box_transformed;
+        let box_transformed = element_data.computed_box_transformed;
 
         // Client Height = padding box height.
         let client_height = box_transformed.padding_rectangle().height;
@@ -285,21 +285,21 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         // Taffy is not adding the padding bottom to the content height, so we'll add it here.
         // Content Size = overflowed content size + padding
         // Scroll Height = Content Size
-        let scroll_height = common_element_data.content_size.height + box_transformed.padding.bottom;
-        let scroll_track_width = common_element_data.scrollbar_size.width;
+        let scroll_height = element_data.content_size.height + box_transformed.padding.bottom;
+        let scroll_track_width = element_data.scrollbar_size.width;
 
         // The scroll track height is the height of the padding box.
         let scroll_track_height = client_height;
 
         let max_scroll_y = (scroll_height - client_height).max(0.0);
-        common_element_data.max_scroll_y = max_scroll_y;
+        element_data.max_scroll_y = max_scroll_y;
 
         let visible_y = client_height / scroll_height;
         let scroll_thumb_height = scroll_track_height * visible_y;
         let remaining_height = scroll_track_height - scroll_thumb_height;
         let scroll_thumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
 
-        common_element_data.computed_scroll_track = Rectangle::new(
+        element_data.computed_scroll_track = Rectangle::new(
             box_transformed.position.x + box_transformed.size.width
                 - scroll_track_width
                 - box_transformed.border.right,
@@ -309,10 +309,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         );
 
         let scroll_thumb_width = scroll_track_width;
-        common_element_data.computed_scroll_thumb = common_element_data.computed_scroll_track;
-        common_element_data.computed_scroll_thumb.y += scroll_thumb_offset;
-        common_element_data.computed_scroll_thumb.width = scroll_thumb_width;
-        common_element_data.computed_scroll_thumb.height = scroll_thumb_height;
+        element_data.computed_scroll_thumb = element_data.computed_scroll_track;
+        element_data.computed_scroll_thumb.y += scroll_thumb_offset;
+        element_data.computed_scroll_thumb.width = scroll_thumb_width;
+        element_data.computed_scroll_thumb.height = scroll_thumb_height;
     }
 
     /// Called when the element is assigned a unique component id.
@@ -325,11 +325,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     #[allow(dead_code)]
     fn finalize_state(&mut self, element_state: &mut ElementStateStore, pointer: Option<Point>) {
-        let common_element_data = self.common_element_data_mut();
-        let element_state = element_state.storage.get_mut(&common_element_data.component_id).unwrap();
+        let element_data = self.element_data_mut();
+        let element_state = element_state.storage.get_mut(&element_data.component_id).unwrap();
         element_state.base.current_state = ElementState::Normal;
 
-        let border_rectangle = common_element_data.computed_box_transformed.border_rectangle();
+        let border_rectangle = element_data.computed_box_transformed.border_rectangle();
 
         if let Some(pointer) = pointer {
             if border_rectangle.contains(&pointer) {
@@ -339,12 +339,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn get_base_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ElementStateStoreItem {
-        element_state.storage.get(&self.common_element_data().component_id).unwrap()
+        element_state.storage.get(&self.element_data().component_id).unwrap()
     }
 
     #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
-        element_state.storage.get_mut(&self.common_element_data().component_id).unwrap()
+        element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
 
     /// Called on sequential renders to update any state that the element may have.
@@ -355,7 +355,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     fn merge_default_style(&mut self) {
-        self.common_element_data_mut().style = Style::merge(&self.default_style(), &self.common_element_data().style);
+        self.element_data_mut().style = Style::merge(&self.default_style(), &self.element_data().style);
     }
 }
 
@@ -381,9 +381,9 @@ impl From<ElementBox> for ComponentOrElement {
 
 impl From<ElementBox> for ComponentSpecification {
     fn from(element: ElementBox) -> Self {
-        let key = element.internal.common_element_data().key.clone();
-        let children = element.internal.common_element_data().child_specs.clone();
-        let props = element.internal.common_element_data().props.clone();
+        let key = element.internal.element_data().key.clone();
+        let children = element.internal.element_data().child_specs.clone();
+        let props = element.internal.element_data().props.clone();
         ComponentSpecification {
             component: ComponentOrElement::Element(element),
             key,
@@ -398,9 +398,9 @@ where
     T: Element,
 {
     fn from(element: T) -> Self {
-        let key = element.common_element_data().key.clone();
-        let children_specs = element.common_element_data().child_specs.clone();
-        let props = element.common_element_data().props.clone();
+        let key = element.element_data().key.clone();
+        let children_specs = element.element_data().child_specs.clone();
+        let props = element.element_data().props.clone();
         ComponentSpecification {
             component: ComponentOrElement::Element(element.into()),
             key,
@@ -470,45 +470,45 @@ macro_rules! generate_component_methods_no_children {
 
         #[allow(dead_code)]
         pub fn key(mut self, key: &str) -> Self {
-            self.common_element_data.key = Some(key.to_string());
+            self.element_data.key = Some(key.to_string());
 
             self
         }
 
         #[allow(dead_code)]
         pub fn props(mut self, props: Props) -> Self {
-            self.common_element_data.props = Some(props);
+            self.element_data.props = Some(props);
 
             self
         }
 
         #[allow(dead_code)]
         pub fn id(mut self, id: &str) -> Self {
-            self.common_element_data.id = Some(id.to_string());
+            self.element_data.id = Some(id.to_string());
             self
         }
 
         #[allow(dead_code)]
         pub fn hovered(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Hovered;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Hovered;
             self
         }
 
         #[allow(dead_code)]
         pub fn pressed(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Pressed;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Pressed;
             self
         }
 
         #[allow(dead_code)]
         pub fn disabled(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Disabled;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Disabled;
             self
         }
 
         #[allow(dead_code)]
         pub fn focused(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Focused;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Focused;
             self
         }
     };
@@ -524,7 +524,7 @@ macro_rules! generate_component_methods_private_push {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs.push(component_specification.into());
+            self.element_data.child_specs.push(component_specification.into());
 
             self
         }
@@ -534,7 +534,7 @@ macro_rules! generate_component_methods_private_push {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
+            self.element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
 
             self
         }
@@ -544,14 +544,14 @@ macro_rules! generate_component_methods_private_push {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
+            self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
 
             self
         }
 
         #[allow(dead_code)]
         fn normal(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Normal;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
             self
         }
     };
@@ -567,7 +567,7 @@ macro_rules! generate_component_methods {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs.push(component_specification.into());
+            self.element_data.child_specs.push(component_specification.into());
 
             self
         }
@@ -577,7 +577,7 @@ macro_rules! generate_component_methods {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
+            self.element_data.child_specs = children.into_iter().map(|x| x.into()).collect();
 
             self
         }
@@ -587,14 +587,14 @@ macro_rules! generate_component_methods {
         where
             T: Into<ComponentSpecification>,
         {
-            self.common_element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
+            self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
 
             self
         }
 
         #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
-            self.common_element_data.current_state = $crate::elements::element_states::ElementState::Normal;
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
             self
         }
     };

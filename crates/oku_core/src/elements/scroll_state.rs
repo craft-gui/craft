@@ -1,7 +1,7 @@
 use winit::event::{ButtonSource, MouseButton, MouseScrollDelta, PointerSource};
 use crate::components::UpdateResult;
 use crate::elements::base_element_state::{BaseElementState, DUMMY_DEVICE_ID};
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::events::OkuMessage;
 use winit::event::{ ElementState as WinitElementState};
     
@@ -12,7 +12,7 @@ pub struct ScrollState {
 }
 
 impl ScrollState {
-    pub(crate) fn on_event(&mut self, message: &OkuMessage, element: &CommonElementData, base_state: &mut BaseElementState) -> UpdateResult {
+    pub(crate) fn on_event(&mut self, message: &OkuMessage, element: &ElementData, base_state: &mut BaseElementState) -> UpdateResult {
         if element.is_scrollable() {
             match message {
                 OkuMessage::MouseWheelEvent(mouse_wheel) => {

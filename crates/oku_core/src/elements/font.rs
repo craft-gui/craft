@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::Point;
@@ -16,14 +16,14 @@ use winit::window::Window;
 #[derive(Clone, Debug)]
 pub struct Font {
     pub(crate) resource_identifier: ResourceIdentifier,
-    pub common_element_data: CommonElementData,
+    pub element_data: ElementData,
 }
 
 impl Font {
     pub fn new(resource_identifier: ResourceIdentifier) -> Self {
         Self {
             resource_identifier,
-            common_element_data: Default::default(),
+            element_data: Default::default(),
         }
     }
 
@@ -33,12 +33,12 @@ impl Font {
 }
 
 impl Element for Font {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn name(&self) -> &'static str {

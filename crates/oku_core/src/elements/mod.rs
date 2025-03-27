@@ -13,7 +13,7 @@ pub(crate) mod text_input;
 pub(crate) mod canvas;
 
 pub(crate) mod base_element_state;
-pub(crate) mod common_element_data;
+pub(crate) mod element_data;
 mod element_pre_order_iterator;
 pub(crate) mod element_states;
 pub(crate) mod element_styles;

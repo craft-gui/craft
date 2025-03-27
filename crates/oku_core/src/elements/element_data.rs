@@ -8,7 +8,7 @@ use crate::style::Style;
 use taffy::NodeId;
 
 #[derive(Clone, Debug, Default)]
-pub struct CommonElementData {
+pub struct ElementData {
     pub(crate) current_state: ElementState,
 
     pub computed_border: ComputedBorderSpec,
@@ -58,7 +58,7 @@ pub struct CommonElementData {
     pub(crate) props: Option<Props>,
 }
 
-impl CommonElementData {
+impl ElementData {
     pub fn is_scrollable(&self) -> bool {
         self.style.overflow()[1] == taffy::Overflow::Scroll
     }

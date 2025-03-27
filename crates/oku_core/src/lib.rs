@@ -671,7 +671,7 @@ async fn dispatch_event(
                 targets.push_back((
                     element.component_id(),
                     element.get_id().clone(),
-                    element.common_element_data().layout_order,
+                    element.element_data().layout_order,
                 ))
             } else {
                 //println!("Not in bounds, Element: {:?}", element.get_id());

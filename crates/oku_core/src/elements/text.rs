@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::{Props, UpdateResult};
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::{Element, ElementBox};
 use crate::elements::layout_context::{LayoutContext, TaffyTextContext};
 use crate::elements::ElementStyles;
@@ -21,7 +21,7 @@ use winit::window::Window;
 #[derive(Clone, Default, Debug)]
 pub struct Text {
     text: String,
-    common_element_data: CommonElementData,
+    element_data: ElementData,
 }
 
 pub struct TextState<'a> {
@@ -32,27 +32,27 @@ impl Text {
     pub fn new(text: &str) -> Text {
         Text {
             text: text.to_string(),
-            common_element_data: Default::default(),
+            element_data: Default::default(),
         }
     }
 
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
+        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 }
 
 impl Element for Text {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn children_mut(&mut self) -> &mut Vec<ElementBox> {
-        &mut self.common_element_data.children
+        &mut self.element_data.children
     }
 
     fn name(&self) -> &'static str {
@@ -70,15 +70,15 @@ impl Element for Text {
         _window: Option<Arc<dyn Window>>
     ) {
         let computed_box_transformed =
-            self.common_element_data.computed_box_transformed;
+            self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer);
 
         renderer.draw_text(
-            self.common_element_data.component_id,
+            self.element_data.component_id,
             content_rectangle,
-            self.common_element_data.style.color(),
+            self.element_data.style.color(),
             None,
         );
     }
@@ -89,16 +89,16 @@ impl Element for Text {
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree
+        self.element_data_mut().taffy_node_id = Some(taffy_tree
             .new_leaf_with_context(
                 style,
-                LayoutContext::Text(TaffyTextContext::new(self.common_element_data.component_id)),
+                LayoutContext::Text(TaffyTextContext::new(self.element_data.component_id)),
             )
             .unwrap());
 
-        self.common_element_data().taffy_node_id
+        self.element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -130,7 +130,7 @@ impl Element for Text {
     ) -> UpdateResult {
         let state: &mut TextState = element_state
             .storage
-            .get_mut(&self.common_element_data.component_id)
+            .get_mut(&self.element_data.component_id)
             .unwrap()
             .data
             .as_mut()
@@ -138,7 +138,7 @@ impl Element for Text {
             .unwrap();
 
         let cached_editor = &mut state.cached_editor;
-        let content_rect = self.common_element_data.computed_box.content_rectangle();
+        let content_rect = self.element_data.computed_box.content_rectangle();
         let content_position = content_rect.position();
 
         // Handle selection.
@@ -186,7 +186,7 @@ impl Element for Text {
     }
 
     fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let cached_editor = CachedEditor::new(&self.text, &self.common_element_data.style, scaling_factor, font_system);
+        let cached_editor = CachedEditor::new(&self.text, &self.element_data.style, scaling_factor, font_system);
         let text_state = TextState {
             cached_editor,
         };
@@ -200,14 +200,14 @@ impl Element for Text {
     fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let state: &mut TextState = element_state
             .storage
-            .get_mut(&self.common_element_data.component_id)
+            .get_mut(&self.element_data.component_id)
             .unwrap()
             .data
             .as_mut()
             .downcast_mut()
             .unwrap();
         
-        state.cached_editor.update_state(Some(&self.text), &self.common_element_data.style, scaling_factor, reload_fonts, font_system);
+        state.cached_editor.update_state(Some(&self.text), &self.element_data.style, scaling_factor, reload_fonts, font_system);
     }
 }
 
@@ -218,6 +218,6 @@ impl Text {
 
 impl ElementStyles for Text {
     fn styles_mut(&mut self) -> &mut Style {
-        self.common_element_data.current_style_mut()
+        self.element_data.current_style_mut()
     }
 }

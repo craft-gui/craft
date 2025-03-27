@@ -1,7 +1,7 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::{ComponentId, UpdateResult};
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
@@ -19,7 +19,7 @@ use winit::window::Window;
 
 #[derive(Clone, Default, Debug)]
 pub struct DevTools {
-    pub common_element_data: CommonElementData,
+    pub element_data: ElementData,
     /// The tree to inspect.
     pub(crate) debug_inspector_tree: Option<Box<dyn Element>>,
     /// The selected element in the inspector tree.
@@ -47,12 +47,12 @@ impl DevTools {
 }
 
 impl Element for DevTools {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn name(&self) -> &'static str {
@@ -95,19 +95,19 @@ impl Element for DevTools {
                 let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
 
                 let margin_rectangle =
-                    selected_element.common_element_data().computed_box_transformed.margin_rectangle();
+                    selected_element.element_data().computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
                 let padding_rectangle =
-                    selected_element.common_element_data().computed_box_transformed.padding_rectangle();
+                    selected_element.element_data().computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
                 let content_rectangle =
-                    selected_element.common_element_data().computed_box_transformed.content_rectangle();
+                    selected_element.element_data().computed_box_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
@@ -124,17 +124,17 @@ impl Element for DevTools {
         self.merge_default_style();
         let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
-        for child in self.common_element_data.children.iter_mut() {
+        for child in self.element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             if let Some(child_node) = child_node {
                 child_nodes.push(child_node);
             }
         }
 
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        self.common_element_data().taffy_node_id
+        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
+        self.element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -153,8 +153,8 @@ impl Element for DevTools {
 
         self.finalize_borders();
 
-        for child in self.common_element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.common_element_data().taffy_node_id;
+        for child in self.element_data.children.iter_mut() {
+            let taffy_child_node_id = child.internal.element_data().taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
@@ -162,7 +162,7 @@ impl Element for DevTools {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.common_element_data.computed_box.position,
+                self.element_data.computed_box.position,
                 z_index,
                 transform,
                 element_state,
@@ -193,13 +193,13 @@ impl Element for DevTools {
 impl DevTools {
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a DevToolsState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
+        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut DevToolsState {
         element_state
             .storage
-            .get_mut(&self.common_element_data.component_id)
+            .get_mut(&self.element_data.component_id)
             .unwrap()
             .data
             .as_mut()
@@ -210,7 +210,7 @@ impl DevTools {
     pub fn new() -> DevTools {
         DevTools {
             debug_inspector_tree: None,
-            common_element_data: Default::default(),
+            element_data: Default::default(),
             selected_inspector_element: None,
             hovered_inspector_element: None,
         }
@@ -221,6 +221,6 @@ impl DevTools {
 
 impl ElementStyles for DevTools {
     fn styles_mut(&mut self) -> &mut Style {
-        &mut self.common_element_data.style
+        &mut self.element_data.style
     }
 }

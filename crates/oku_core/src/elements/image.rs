@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::elements::ElementStyles;
@@ -18,14 +18,14 @@ use winit::window::Window;
 #[derive(Clone, Debug)]
 pub struct Image {
     pub(crate) resource_identifier: ResourceIdentifier,
-    pub common_element_data: CommonElementData,
+    pub element_data: ElementData,
 }
 
 impl Image {
     pub fn new(resource_identifier: ResourceIdentifier) -> Image {
         Image {
             resource_identifier,
-            common_element_data: Default::default(),
+            element_data: Default::default(),
         }
     }
 
@@ -35,12 +35,12 @@ impl Image {
 }
 
 impl Element for Image {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn name(&self) -> &'static str {
@@ -57,7 +57,7 @@ impl Element for Image {
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>
     ) {
-        let computed_box_transformed = self.common_element_data.computed_box_transformed;
+        let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         renderer.draw_image(content_rectangle, self.resource_identifier.clone());
@@ -72,9 +72,9 @@ impl Element for Image {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.common_element_data_mut().taffy_node_id = Some(
+        self.element_data_mut().taffy_node_id = Some(
             taffy_tree
                 .new_leaf_with_context(
                     style,
@@ -85,7 +85,7 @@ impl Element for Image {
                 .unwrap(),
         );
 
-        self.common_element_data().taffy_node_id
+        self.element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -116,6 +116,6 @@ impl Image {
 
 impl ElementStyles for Image {
     fn styles_mut(&mut self) -> &mut Style {
-        self.common_element_data.current_style_mut()
+        self.element_data.current_style_mut()
     }
 }

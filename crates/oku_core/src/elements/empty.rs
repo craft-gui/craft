@@ -1,4 +1,4 @@
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::Point;
@@ -12,25 +12,25 @@ use winit::window::Window;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
-    pub common_element_data: CommonElementData,
+    pub element_data: ElementData,
 }
 
 impl Empty {
     #[allow(dead_code)]
     pub fn new() -> Empty {
         Empty {
-            common_element_data: Default::default(),
+            element_data: Default::default(),
         }
     }
 }
 
 impl Element for Empty {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn name(&self) -> &'static str {

@@ -1,5 +1,5 @@
 use crate::components::UpdateResult;
-use crate::elements::common_element_data::CommonElementData;
+use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
@@ -18,7 +18,7 @@ use winit::window::Window;
 /// An element that represents an on or off state.
 #[derive(Clone, Debug)]
 pub struct Switch {
-    pub common_element_data: CommonElementData,
+    pub element_data: ElementData,
     /// When `state.toggled` is None, use this as the default value.
     default_toggled: bool,
     /// A pseudo thumb element, this is not stored in the user tree nor will it receive events.
@@ -36,12 +36,12 @@ pub struct SwitchState {
 }
 
 impl Element for Switch {
-    fn common_element_data(&self) -> &CommonElementData {
-        &self.common_element_data
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
     }
 
-    fn common_element_data_mut(&mut self) -> &mut CommonElementData {
-        &mut self.common_element_data
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
     }
 
     fn name(&self) -> &'static str {
@@ -72,16 +72,16 @@ impl Element for Switch {
         self.merge_default_style();
 
         // FIXME: Use insets and position absolute after we fix a few Taffy bugs.
-        self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.common_element_data_mut().style);
+        self.pseudo_thumb.element_data_mut().style = Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.element_data_mut().style);
         
         let default_toggled = self.default_toggled;
         let mut set_toggled_styles = || {
-            self.common_element_data_mut().style = Style::merge(&self.common_element_data().style, &self.default_toggled_style());
-            self.common_element_data_mut().style = Style::merge(&self.common_element_data().style, &self.toggled_track_style);
+            self.element_data_mut().style = Style::merge(&self.element_data().style, &self.default_toggled_style());
+            self.element_data_mut().style = Style::merge(&self.element_data().style, &self.toggled_track_style);
             
-            self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.pseudo_thumb.common_element_data().style, &self.default_toggled_thumb_style());
-            self.pseudo_thumb.common_element_data_mut().style = Style::merge(&self.pseudo_thumb.common_element_data().style, &self.toggled_thumb_style);
-            *self.common_element_data_mut().style.justify_content_mut() = Some(JustifyContent::FlexEnd);
+            self.pseudo_thumb.element_data_mut().style = Style::merge(&self.pseudo_thumb.element_data().style, &self.default_toggled_thumb_style());
+            self.pseudo_thumb.element_data_mut().style = Style::merge(&self.pseudo_thumb.element_data().style, &self.toggled_thumb_style);
+            *self.element_data_mut().style.justify_content_mut() = Some(JustifyContent::FlexEnd);
         };
         
         // Use the toggled styles when state.toggled is true or default_toggled is true.
@@ -95,9 +95,9 @@ impl Element for Switch {
         
         let child_node = self.pseudo_thumb.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
 
-        let style: taffy::Style = self.common_element_data.style.to_taffy_style_with_scale_factor(scale_factor);
-        self.common_element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
-        self.common_element_data().taffy_node_id
+        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
+        self.element_data().taffy_node_id
     }
 
     fn finalize_layout(
@@ -117,8 +117,8 @@ impl Element for Switch {
 
         self.pseudo_thumb.finalize_layout(
             taffy_tree,
-            self.pseudo_thumb.common_element_data.taffy_node_id.unwrap(),
-            self.common_element_data.computed_box.position,
+            self.pseudo_thumb.element_data.taffy_node_id.unwrap(),
+            self.element_data.computed_box.position,
             z_index,
             transform,
             element_state,
@@ -206,7 +206,7 @@ impl Switch {
     }
 
     pub fn thumb_style(mut self, thumb_style: Style) -> Self {
-        self.pseudo_thumb.common_element_data_mut().style = thumb_style;
+        self.pseudo_thumb.element_data_mut().style = thumb_style;
         self
     }
     
@@ -227,12 +227,12 @@ impl Switch {
 
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SwitchState {
-        element_state.storage.get(&self.common_element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
+        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
     pub fn new() -> Switch {
         Switch {
-            common_element_data: Default::default(),
+            element_data: Default::default(),
             default_toggled: false,
             pseudo_thumb: Container::default(),
             toggled_thumb_style: Default::default(),
@@ -243,6 +243,6 @@ impl Switch {
 
 impl ElementStyles for Switch {
     fn styles_mut(&mut self) -> &mut Style {
-        self.common_element_data.current_style_mut()
+        self.element_data.current_style_mut()
     }
 }
