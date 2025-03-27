@@ -35,7 +35,7 @@ pub struct CommonElementData {
     /// This may be None if this is a non-visual element like Font.
     pub(crate) taffy_node_id: Option<NodeId>,
 
-    pub computed_border_rectangle_overflow_size: Size,
+    pub content_size: Size,
     // The computed values after transforms are applied.
     pub computed_layered_rectangle_transformed: ElementRectangle,
     // The computed values without any transforms applied to them.

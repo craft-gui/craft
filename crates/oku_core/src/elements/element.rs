@@ -147,7 +147,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             size = Size::new(f32::max(result.size.width, result.content_size.width), f32::max(result.size.height, result.content_size.height));
         }
         
-        common_element_data_mut.computed_border_rectangle_overflow_size =
+        common_element_data_mut.content_size =
             Size::new(result.content_size.width, result.content_size.height);
         common_element_data_mut.computed_layered_rectangle = ElementRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
@@ -274,51 +274,45 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
         let common_element_data = self.common_element_data_mut();
-
-        if common_element_data.style.overflow()[0] != Overflow::Scroll {
+        if common_element_data.style.overflow()[1] != Overflow::Scroll {
             return;
         }
+        let box_transformed = common_element_data.computed_layered_rectangle_transformed;
 
-        let computed_layered_rectangle_transformed = common_element_data.computed_layered_rectangle_transformed;
-        let padding_rectangle = computed_layered_rectangle_transformed.padding_rectangle();
+        // Client Height = padding box height.
+        let client_height = box_transformed.padding_rectangle().height;
 
-        let computed_content_height = common_element_data.computed_border_rectangle_overflow_size.height;
+        // Taffy is not adding the padding bottom to the content height, so we'll add it here.
+        // Content Size = overflowed content size + padding
+        // Scroll Height = Content Size
+        let scroll_height = common_element_data.content_size.height + box_transformed.padding.bottom;
+        let scroll_track_width = common_element_data.scrollbar_size.width;
 
-        let client_height = padding_rectangle.height;
-        let scroll_height = computed_content_height - computed_layered_rectangle_transformed.border.top;
-
-        let scrolltrack_width = common_element_data.scrollbar_size.width;
-        let scrolltrack_height = client_height;
+        // The scroll track height is the height of the padding box.
+        let scroll_track_height = client_height;
 
         let max_scroll_y = (scroll_height - client_height).max(0.0);
         common_element_data.max_scroll_y = max_scroll_y;
 
         let visible_y = client_height / scroll_height;
-        let scrollthumb_height = scrolltrack_height * visible_y;
-        let remaining_height = scrolltrack_height - scrollthumb_height;
-        let scrollthumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
+        let scroll_thumb_height = scroll_track_height * visible_y;
+        let remaining_height = scroll_track_height - scroll_thumb_height;
+        let scroll_thumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
 
         common_element_data.computed_scroll_track = Rectangle::new(
-            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width
-                - scrolltrack_width
-                - computed_layered_rectangle_transformed.border.right,
-            computed_layered_rectangle_transformed.position.y + computed_layered_rectangle_transformed.border.top,
-            scrolltrack_width,
-            scrolltrack_height,
+            box_transformed.position.x + box_transformed.size.width
+                - scroll_track_width
+                - box_transformed.border.right,
+            box_transformed.position.y + box_transformed.border.top,
+            scroll_track_width,
+            scroll_track_height,
         );
 
-        let scrollthumb_width = scrolltrack_width;
-
-        common_element_data.computed_scroll_thumb = Rectangle::new(
-            computed_layered_rectangle_transformed.position.x + computed_layered_rectangle_transformed.size.width
-                - scrolltrack_width
-                - computed_layered_rectangle_transformed.border.right,
-            computed_layered_rectangle_transformed.position.y
-                + computed_layered_rectangle_transformed.border.top
-                + scrollthumb_offset,
-            scrollthumb_width,
-            scrollthumb_height,
-        );
+        let scroll_thumb_width = scroll_track_width;
+        common_element_data.computed_scroll_thumb = common_element_data.computed_scroll_track;
+        common_element_data.computed_scroll_thumb.y += scroll_thumb_offset;
+        common_element_data.computed_scroll_thumb.width = scroll_thumb_width;
+        common_element_data.computed_scroll_thumb.height = scroll_thumb_height;
     }
 
     /// Called when the element is assigned a unique component id.
