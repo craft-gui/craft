@@ -96,7 +96,7 @@ impl Element for Container {
         font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
 
         self.finalize_borders();
 
@@ -127,7 +127,7 @@ impl Element for Container {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.common_element_data.computed_layered_rectangle.position,
+                self.common_element_data.computed_box.position,
                 z_index,
                 transform * child_transform,
                 element_state,

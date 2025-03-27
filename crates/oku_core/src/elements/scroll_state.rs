@@ -32,7 +32,7 @@ impl ScrollState {
                         // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                         if let ButtonSource::Touch { .. } = pointer_button.button {
                             let container_rectangle =
-                                element.computed_layered_rectangle_transformed.padding_rectangle();
+                                element.computed_box_transformed.padding_rectangle();
 
                             let in_scroll_bar =
                                 element.computed_scroll_thumb.contains(&pointer_button.position);

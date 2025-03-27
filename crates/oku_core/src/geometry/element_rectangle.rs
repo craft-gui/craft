@@ -11,10 +11,10 @@ pub struct ElementRectangle {
 
 impl ElementRectangle {
     pub fn transform(&self, transform: glam::Mat4) -> Self {
-        let mut transformed_layered_rectangle = *self;
+        let mut transformed_box = *self;
         let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x, self.position.y, 1.0, 1.0));
-        transformed_layered_rectangle.position = Point::new(transformed_xy.x, transformed_xy.y);
-        transformed_layered_rectangle
+        transformed_box.position = Point::new(transformed_xy.x, transformed_xy.y);
+        transformed_box
     }
 
     pub fn margin_rectangle_position(&self) -> Point {

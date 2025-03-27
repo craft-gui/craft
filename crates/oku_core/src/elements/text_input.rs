@@ -90,9 +90,9 @@ impl Element for TextInput {
         _pointer: Option<Point>,
         window: Option<Arc<dyn Window>>
     ) {
-        let computed_layer_rectangle_transformed =
-            self.common_element_data.computed_layered_rectangle_transformed;
-        let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
+        let computed_box_transformed =
+            self.common_element_data.computed_box_transformed;
+        let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer);
 
@@ -138,7 +138,7 @@ impl Element for TextInput {
             if let Some((cursor_x, cursor_y)) = state.cached_editor.editor.cursor_position() {
                 if state.is_active {
                     if let Some(window) = window {
-                        let content_position = self.common_element_data.computed_layered_rectangle_transformed.content_rectangle();
+                        let content_position = self.common_element_data.computed_box_transformed.content_rectangle();
                         window.set_ime_cursor_area(
                             PhysicalPosition::new(content_position.x + cursor_x as f32, content_position.y + cursor_y as f32).into(),
                             PhysicalSize::new(20.0, 20.0).into(),
@@ -188,7 +188,7 @@ impl Element for TextInput {
         _font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
 
         self.common_element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
@@ -231,7 +231,7 @@ impl Element for TextInput {
 
         let cached_editor = &mut state.cached_editor;
         let scroll_y = state.scroll_state.scroll_y;
-        let content_rect = self.common_element_data.computed_layered_rectangle.content_rectangle();
+        let content_rect = self.common_element_data.computed_box.content_rectangle();
         
         match message {
             OkuMessage::PointerButtonEvent(pointer_button) => {

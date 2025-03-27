@@ -37,9 +37,9 @@ pub struct CommonElementData {
 
     pub content_size: Size,
     // The computed values after transforms are applied.
-    pub computed_layered_rectangle_transformed: ElementRectangle,
+    pub computed_box_transformed: ElementRectangle,
     // The computed values without any transforms applied to them.
-    pub computed_layered_rectangle: ElementRectangle,
+    pub computed_box: ElementRectangle,
 
     /// A user-defined id for the element.
     pub id: Option<String>,

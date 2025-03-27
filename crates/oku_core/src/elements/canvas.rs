@@ -49,21 +49,21 @@ impl Element for Canvas {
         _window: Option<Arc<dyn Window>>
     ) {
         let _border_color: Color = self.style().border_color()[0];
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
-        let _border_rectangle = computed_layer_rectangle_transformed.border_rectangle();
-        let _content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
+        let computed_box_transformed = self.common_element_data.computed_box_transformed;
+        let _border_rectangle = computed_box_transformed.border_rectangle();
+        let _content_rectangle = computed_box_transformed.content_rectangle();
 
         // background
-        let computed_x_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.x;
-        let computed_y_transformed = self.common_element_data.computed_layered_rectangle_transformed.position.y;
+        let computed_x_transformed = self.common_element_data.computed_box_transformed.position.x;
+        let computed_y_transformed = self.common_element_data.computed_box_transformed.position.y;
 
-        let computed_width = self.common_element_data.computed_layered_rectangle_transformed.size.width;
-        let computed_height = self.common_element_data.computed_layered_rectangle_transformed.size.height;
+        let computed_width = self.common_element_data.computed_box_transformed.size.width;
+        let computed_height = self.common_element_data.computed_box_transformed.size.height;
 
-        let border_top = self.common_element_data.computed_layered_rectangle_transformed.border.top;
-        let border_right = self.common_element_data.computed_layered_rectangle_transformed.border.right;
-        let border_bottom = self.common_element_data.computed_layered_rectangle_transformed.border.bottom;
-        let border_left = self.common_element_data.computed_layered_rectangle_transformed.border.left;
+        let border_top = self.common_element_data.computed_box_transformed.border.top;
+        let border_right = self.common_element_data.computed_box_transformed.border.right;
+        let border_bottom = self.common_element_data.computed_box_transformed.border.bottom;
+        let border_left = self.common_element_data.computed_box_transformed.border.left;
 
         self.draw_borders(renderer);
 
@@ -169,7 +169,7 @@ impl Element for Canvas {
         font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
 
         for child in self.common_element_data.children.iter_mut() {
@@ -181,7 +181,7 @@ impl Element for Canvas {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.common_element_data.computed_layered_rectangle.position,
+                self.common_element_data.computed_box.position,
                 z_index,
                 transform,
                 element_state,

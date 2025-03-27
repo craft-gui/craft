@@ -112,13 +112,13 @@ impl Element for Switch {
         font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
 
         self.pseudo_thumb.finalize_layout(
             taffy_tree,
             self.pseudo_thumb.common_element_data.taffy_node_id.unwrap(),
-            self.common_element_data.computed_layered_rectangle.position,
+            self.common_element_data.computed_box.position,
             z_index,
             transform,
             element_state,

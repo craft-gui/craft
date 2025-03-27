@@ -46,7 +46,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let common_element_data = self.common_element_data();
 
         let transformed_border_rectangle =
-            common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+            common_element_data.computed_box_transformed.border_rectangle();
 
         transformed_border_rectangle.contains(&point)
     }
@@ -117,7 +117,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         UpdateResult::default()
     }
 
-    fn resolve_layer_rectangle(
+    fn resolve_box(
         &mut self,
         relative_position: Point,
         scroll_transform: glam::Mat4,
@@ -149,15 +149,15 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         
         common_element_data_mut.content_size =
             Size::new(result.content_size.width, result.content_size.height);
-        common_element_data_mut.computed_layered_rectangle = ElementRectangle {
+        common_element_data_mut.computed_box = ElementRectangle {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
             size,
         };
-        common_element_data_mut.computed_layered_rectangle_transformed =
-            common_element_data_mut.computed_layered_rectangle.transform(scroll_transform);
+        common_element_data_mut.computed_box_transformed =
+            common_element_data_mut.computed_box.transform(scroll_transform);
     }
 
     fn draw_children(
@@ -195,7 +195,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         if !current_style.has_border() {
             renderer.draw_rect(
-                common_element_data.computed_layered_rectangle_transformed.padding_rectangle(),
+                common_element_data.computed_box_transformed.padding_rectangle(),
                 background_color,
             );
             return;
@@ -230,7 +230,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn maybe_start_layer(&self, renderer: &mut RendererBox) {
         let common_data = self.common_element_data();
-        let padding_rectangle = common_data.computed_layered_rectangle_transformed.padding_rectangle();
+        let padding_rectangle = common_data.computed_box_transformed.padding_rectangle();
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -251,7 +251,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             return;
         }
 
-        let element_rect = common_element_data.computed_layered_rectangle_transformed;
+        let element_rect = common_element_data.computed_box_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
@@ -277,7 +277,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         if common_element_data.style.overflow()[1] != Overflow::Scroll {
             return;
         }
-        let box_transformed = common_element_data.computed_layered_rectangle_transformed;
+        let box_transformed = common_element_data.computed_box_transformed;
 
         // Client Height = padding box height.
         let client_height = box_transformed.padding_rectangle().height;
@@ -329,7 +329,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let element_state = element_state.storage.get_mut(&common_element_data.component_id).unwrap();
         element_state.base.current_state = ElementState::Normal;
 
-        let border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+        let border_rectangle = common_element_data.computed_box_transformed.border_rectangle();
 
         if let Some(pointer) = pointer {
             if border_rectangle.contains(&pointer) {

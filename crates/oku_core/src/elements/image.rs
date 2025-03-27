@@ -57,8 +57,8 @@ impl Element for Image {
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>
     ) {
-        let computed_layer_rectangle_transformed = self.common_element_data.computed_layered_rectangle_transformed;
-        let content_rectangle = computed_layer_rectangle_transformed.content_rectangle();
+        let computed_box_transformed = self.common_element_data.computed_box_transformed;
+        let content_rectangle = computed_box_transformed.content_rectangle();
 
         renderer.draw_image(content_rectangle, self.resource_identifier.clone());
 
@@ -100,7 +100,7 @@ impl Element for Image {
         _font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
 
         self.finalize_borders();
     }

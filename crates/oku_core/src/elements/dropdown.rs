@@ -58,7 +58,7 @@ impl Element for Dropdown {
     fn in_bounds(&self, point: Point) -> bool {
         // Check the bounds of the dropdown selection.
         let common_element_data = self.common_element_data();
-        let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+        let transformed_border_rectangle = common_element_data.computed_box_transformed.border_rectangle();
         let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&point);
 
         // Check the bounds of the dropdown list items.
@@ -167,7 +167,7 @@ impl Element for Dropdown {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
 
         // Finalize the layout of the pseudo dropdown selection element.
@@ -176,7 +176,7 @@ impl Element for Dropdown {
             dropdown_selection.internal.finalize_layout(
                 taffy_tree,
                 dropdown_selection_taffy,
-                self.common_element_data.computed_layered_rectangle.position,
+                self.common_element_data.computed_box.position,
                 z_index,
                 transform,
                 element_state,
@@ -192,7 +192,7 @@ impl Element for Dropdown {
             self.pseudo_dropdown_list_element.finalize_layout(
                 taffy_tree,
                 dropdown_list,
-                self.common_element_data.computed_layered_rectangle.position,
+                self.common_element_data.computed_box.position,
                 z_index,
                 transform,
                 element_state,
@@ -210,7 +210,7 @@ impl Element for Dropdown {
                     taffy_tree,
                     taffy_child_node_id.unwrap(),
                     // The location of where the dropdown list starts for the list items.
-                    self.pseudo_dropdown_list_element.common_element_data.computed_layered_rectangle.position,
+                    self.pseudo_dropdown_list_element.common_element_data.computed_box.position,
                     z_index,
                     transform,
                     element_state,
@@ -245,7 +245,7 @@ impl Element for Dropdown {
 
                 // Emit an event when the dropdown list is opened or closed.
                 let common_element_data = self.common_element_data();
-                let transformed_border_rectangle = common_element_data.computed_layered_rectangle_transformed.border_rectangle();
+                let transformed_border_rectangle = common_element_data.computed_box_transformed.border_rectangle();
                 let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;

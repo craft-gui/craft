@@ -95,19 +95,19 @@ impl Element for DevTools {
                 let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
 
                 let margin_rectangle =
-                    selected_element.common_element_data().computed_layered_rectangle_transformed.margin_rectangle();
+                    selected_element.common_element_data().computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
                 let padding_rectangle =
-                    selected_element.common_element_data().computed_layered_rectangle_transformed.padding_rectangle();
+                    selected_element.common_element_data().computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
                 let content_rectangle =
-                    selected_element.common_element_data().computed_layered_rectangle_transformed.content_rectangle();
+                    selected_element.common_element_data().computed_box_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
@@ -149,7 +149,7 @@ impl Element for DevTools {
         font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_layer_rectangle(position, transform, result, z_index);
+        self.resolve_box(position, transform, result, z_index);
 
         self.finalize_borders();
 
@@ -162,7 +162,7 @@ impl Element for DevTools {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.common_element_data.computed_layered_rectangle.position,
+                self.common_element_data.computed_box.position,
                 z_index,
                 transform,
                 element_state,
