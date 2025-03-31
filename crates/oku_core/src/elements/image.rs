@@ -57,6 +57,9 @@ impl Element for Image {
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>
     ) {
+        if !self.element_data.style.visible() {
+            return;
+        }
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 

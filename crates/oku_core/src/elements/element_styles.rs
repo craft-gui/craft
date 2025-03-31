@@ -216,6 +216,12 @@ where
         colors.track_color = scroll_track_color;
         self
     }
+
+    fn visible(mut self, visible: bool) -> Self {
+        let visible_mut = self.styles_mut().visible_mut();
+        *visible_mut = visible;
+        self
+    }
 }
 
 impl From<&str> for Unit {

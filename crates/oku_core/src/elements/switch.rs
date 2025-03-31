@@ -58,6 +58,9 @@ impl Element for Switch {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>
     ) {
+        if !self.element_data.style.visible() {
+            return;
+        }
         self.draw_borders(renderer);
         self.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
     }

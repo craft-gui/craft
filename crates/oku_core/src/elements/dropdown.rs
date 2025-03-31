@@ -87,6 +87,9 @@ impl Element for Dropdown {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>
     ) {
+        if !self.element_data.style.visible() {
+            return;
+        }
         let is_open = self.get_state(element_state).is_open;
         
         // We draw the borders before we start any layers, so that we don't clip the borders.

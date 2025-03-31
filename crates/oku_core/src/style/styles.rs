@@ -186,6 +186,9 @@ pub struct Style {
     border_radius: [(f32, f32); 4],
     scrollbar_color: ScrollbarColor,
 
+    /// The element is measured and occupies space, but is not drawn to the screen.
+    visible: bool,
+    
     pub dirty_flags: StyleFlags,
 }
 
@@ -230,6 +233,7 @@ impl Default for Style {
                 thumb_color: Color::from_rgb8(150, 150, 150),
                 track_color: Color::from_rgb8(100, 100, 100),
             },
+            visible: true,
             dirty_flags: StyleFlags::empty(),
         }
     }
@@ -567,6 +571,15 @@ impl Style {
         &mut self.scrollbar_color
     }
 
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn visible_mut(&mut self) -> &mut bool {
+        self.dirty_flags.insert(StyleFlags::VISIBLE);
+        &mut self.visible
+    }
+
     pub fn has_border(&self) -> bool {
         self.dirty_flags.contains(StyleFlags::BORDER_WIDTH)
             || self.dirty_flags.contains(StyleFlags::BORDER_RADIUS)
@@ -796,6 +809,12 @@ impl Style {
             old.scrollbar_color
         };
 
+        let visible = if new_dirty_flags.contains(StyleFlags::VISIBLE) {
+            new.visible
+        } else {
+            old.visible
+        };
+
         let dirty_flags = old_dirty_flags | new_dirty_flags;
 
         Self {
@@ -834,6 +853,7 @@ impl Style {
             border_width,
             border_radius,
             scrollbar_color,
+            visible,
             dirty_flags,
         }
     }

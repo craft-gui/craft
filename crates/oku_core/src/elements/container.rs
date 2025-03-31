@@ -51,6 +51,9 @@ impl Element for Container {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>
     ) {
+        if !self.element_data.style.visible() {
+            return;
+        }
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
