@@ -283,13 +283,13 @@ pub(crate) fn diff_trees(
                             state_mut,
                             global_state,
                             props.clone(),
-                            Event::new(Message::OkuMessage(OkuMessage::Initialized)),
+                            Event::new(&Message::OkuMessage(OkuMessage::Initialized)),
                         );
                     }
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, global_state, props.clone(), new_spec.children);
+                    let new_component = (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id);
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {

@@ -215,7 +215,7 @@ impl Element for TextInput {
 
     fn on_event(
         &self,
-        message: OkuMessage,
+        message: &OkuMessage,
         element_state: &mut ElementStateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
@@ -223,7 +223,7 @@ impl Element for TextInput {
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
         state.is_active = true;
 
-        let scroll_result = state.scroll_state.on_event(&message, &self.element_data, &mut base_state.base);
+        let scroll_result = state.scroll_state.on_event(message, &self.element_data, &mut base_state.base);
 
         if !scroll_result.propagate {
             return scroll_result;
@@ -254,11 +254,11 @@ impl Element for TextInput {
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
-                cached_editor.action_modifiers_changed(modifiers_changed);
+                cached_editor.action_modifiers_changed(*modifiers_changed);
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
-                let logical_key = keyboard_input.event.logical_key;
+                let logical_key = keyboard_input.clone().event.logical_key;
                 let key_state = keyboard_input.event.state;
 
                 if key_state.is_pressed() {
@@ -317,10 +317,10 @@ impl Element for TextInput {
                         state.ime_state = cached_editor.action_ime_enabled();
                     }
                     Ime::Preedit(str, cursor_info) => {
-                        state.ime_state = cached_editor.action_ime_preedit(&state.ime_state, &str, cursor_info);
+                        state.ime_state = cached_editor.action_ime_preedit(&state.ime_state, str, *cursor_info);
                     }
                     Ime::Commit(str) => {
-                       state.ime_state = cached_editor.action_ime_commit(&state.ime_state, &str);
+                       state.ime_state = cached_editor.action_ime_commit(&state.ime_state, str);
                     }
                     Ime::Disabled => {
                         state.ime_state = cached_editor.action_ime_disabled();

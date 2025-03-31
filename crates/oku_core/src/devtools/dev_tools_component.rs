@@ -23,6 +23,7 @@ impl Component for DevToolsComponent {
         state: &Self,
         props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(root.as_ref(), state.selected_element);
@@ -82,8 +83,9 @@ impl Component for DevToolsComponent {
         _global_state: &(),
         props: &Self::Props,
         children: Vec<ComponentSpecification>,
+        id: ComponentId,
     ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children)
+        Self::view_with_no_global_state(state, props, children, id)
     }
 
     fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {

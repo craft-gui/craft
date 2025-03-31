@@ -25,7 +25,7 @@ pub(crate) enum InternalMessage {
     Ime(Ime),
     ProcessUserEvents,
     #[cfg(not(target_arch = "wasm32"))]
-    GotUserMessage((UpdateFn, ComponentId, Box<dyn Any + Send + 'static>, Props)),
+    GotUserMessage((UpdateFn, ComponentId, Box<dyn Any + Send + Sync + 'static>, Props)),
     #[cfg(target_arch = "wasm32")]
     GotUserMessage((UpdateFn, ComponentId, Box<dyn Any>, Props)),
     ResourceEvent(ResourceEvent),

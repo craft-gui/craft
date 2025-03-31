@@ -18,17 +18,24 @@ use crate::events::OkuMessage::PointerButtonEvent;
 use std::any::Any;
 use winit::event::Ime;
 pub use winit::event::MouseButton;
+use crate::components::ComponentId;
 
-pub struct Event {
+#[derive(Clone, Copy, Debug)]
+pub enum EventDispatchType {
+    Bubbling,
+    Direct(ComponentId)
+}
+
+pub struct Event<'a> {
     /// The id of the element that triggered this event.
     pub target: Option<String>,
     /// The id of an element who is listening to this event.
     pub current_target: Option<String>,
-    pub message: Message,
+    pub message: &'a Message,
 }
 
-impl Event {
-    pub fn new(message: Message) -> Self {
+impl<'a> Event<'a> {
+    pub fn new(message: &'a Message) -> Self {
         Self {
             current_target: None,
             target: None,
@@ -83,7 +90,10 @@ impl OkuMessage {
 
 pub enum Message {
     OkuMessage(OkuMessage),
+    #[cfg(target_arch = "wasm32")]
     UserMessage(Box<dyn Any>),
+    #[cfg(not(target_arch = "wasm32"))]
+    UserMessage(Box<dyn Any + Send + Sync>),
 }
 
 impl Message {

@@ -176,7 +176,7 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, _message: &OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 
         UpdateResult::default()

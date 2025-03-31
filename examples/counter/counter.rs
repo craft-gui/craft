@@ -1,7 +1,7 @@
 #[path = "../util.rs"]
 mod util;
 
-use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
 use oku::events::{Event};
@@ -24,6 +24,7 @@ impl Component for Counter {
         state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)

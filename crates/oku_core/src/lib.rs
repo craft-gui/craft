@@ -27,7 +27,7 @@ pub use renderer::color::Color;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
-use crate::events::{Event, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
+use crate::events::{Event, EventDispatchType, KeyboardInput, MouseWheel, OkuMessage, PointerButton, PointerMoved};
 pub use crate::options::RendererType;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
@@ -87,7 +87,7 @@ const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub type FutureAny = dyn Future<Output = Box<dyn Any + Send>> + 'static + Send;
+pub type FutureAny = dyn Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send;
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
@@ -395,7 +395,7 @@ async fn async_main(
                     let message = message.2;
 
                     let state = app.user_tree.user_state.storage.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, &mut app.global_state, props, Event::new(Message::UserMessage(message)));
+                    update_fn(state, &mut app.global_state, props, Event::new(&Message::UserMessage(message)));
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -471,26 +471,28 @@ fn on_process_user_events(
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
+    let message = Message::OkuMessage(OkuMessage::PointerMovedEvent(mouse_moved));
+
     dispatch_event(
-        OkuMessage::PointerMovedEvent(mouse_moved.clone()),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     #[cfg(feature = "dev_tools")]
     dispatch_event(
-        OkuMessage::PointerMovedEvent(mouse_moved),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.dev_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     if let Some(window) = app.window.as_ref() {
         window.request_redraw();
@@ -499,94 +501,97 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
 
 async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     let event = OkuMessage::MouseWheelEvent(mouse_wheel);
+    let message = Message::OkuMessage(event);
 
     dispatch_event(
-        event.clone(),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system)
-        .await;
+    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system);
 
     app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_ime(app: &mut Box<App>, ime: Ime) {
     let event = OkuMessage::ImeEvent(ime);
+    let message = Message::OkuMessage(event);
 
     dispatch_event(
-        event.clone(),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state,  &mut app.font_system,)
-        .await;
+    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state,  &mut app.font_system,);
 
     app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
     let modifiers_event = OkuMessage::ModifiersChangedEvent(modifiers);
-
+    let message = Message::OkuMessage(modifiers_event);
     dispatch_event(
-        modifiers_event.clone(),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    ).await;
+    );
 
     #[cfg(feature = "dev_tools")]
     {
         dispatch_event(
-            modifiers_event.clone(),
+            &message,
+            EventDispatchType::Bubbling,
             &mut app.resource_manager,
             app.mouse_position,
             &mut app.dev_tree,
             &mut app.global_state,
             &mut app.font_system,
-        ).await;
+        );
     }
     app.window.as_ref().unwrap().request_redraw();
 }
 
 async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
     let keyboard_event = OkuMessage::KeyboardInputEvent(keyboard_input.clone());
+    let message = Message::OkuMessage(keyboard_event);
 
     dispatch_event(
-        keyboard_event.clone(),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     #[cfg(feature = "dev_tools")]
     {
         dispatch_event(
-            keyboard_event.clone(),
+            &message,
+            EventDispatchType::Bubbling,
             &mut app.resource_manager,
             app.mouse_position,
             &mut app.dev_tree,
             &mut app.global_state,
             &mut app.font_system,
-        )
-        .await;
+        );
 
         let logical_key = keyboard_input.event.logical_key;
         let key_state = keyboard_input.event.state;
@@ -612,14 +617,17 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn dispatch_event(
-    event: OkuMessage,
+fn dispatch_event(
+    event: &Message,
+    dispatch_type: EventDispatchType,
     _resource_manager: &mut Arc<RwLock<ResourceManager>>,
     mouse_position: Option<Point>,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
     font_system: &mut Option<FontSystem>
 ) {
+    let mut effects: Vec<(EventDispatchType, Message)> = Vec::new();
+
     let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
         current_element_tree
     } else {
@@ -631,213 +639,275 @@ async fn dispatch_event(
         component: Some(reactive_tree.component_tree.as_ref().unwrap()),
     };
 
-    let is_pointer_event = matches!(event, OkuMessage::PointerMovedEvent(_) | OkuMessage::PointerButtonEvent(_));
-    let is_ime_event = matches!(event, OkuMessage::ImeEvent(Ime::Enabled) | OkuMessage::ImeEvent(Ime::Disabled));
+    let is_pointer_event = matches!(event, Message::OkuMessage(OkuMessage::PointerMovedEvent(_)) | Message::OkuMessage(OkuMessage::PointerButtonEvent(_)));
+    let is_ime_event = matches!(event, Message::OkuMessage(OkuMessage::ImeEvent(Ime::Enabled)) | Message::OkuMessage(OkuMessage::ImeEvent(Ime::Disabled)));
 
-    let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
-    let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
+    match dispatch_type {
+        EventDispatchType::Bubbling => {
+            let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
+            let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
 
-    /////////////////////////////////////////
-    // A,0                                 //
-    //   /////////////////////////         //
-    //   // B,1                 //         //
-    //   //   ///////////       //         //
-    //   //   //       //       //         //
-    //   //   //  C,2  //       //         //
-    //   //   //       //       //         //
-    //   //   ///////////       //         //
-    //   //                     //         //
-    //   /////////////////////////         //
-    //                                     //
-    /////////////////////////////////////////
+            /////////////////////////////////////////
+            // A,0                                 //
+            //   /////////////////////////         //
+            //   // B,1                 //         //
+            //   //   ///////////       //         //
+            //   //   //       //       //         //
+            //   //   //  C,2  //       //         //
+            //   //   //       //       //         //
+            //   //   ///////////       //         //
+            //   //                     //         //
+            //   /////////////////////////         //
+            //                                     //
+            /////////////////////////////////////////
 
-    // Collect all possible target elements in reverse order.
-    // Nodes added last are usually on top, so these elements are in visual order.
-    for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-        if let Some(element) = fiber_node.element {
-            let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
-            let mut should_pass_hit_test = in_bounds;
+            // Collect all possible target elements in reverse order.
+            // Nodes added last are usually on top, so these elements are in visual order.
+            for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+                if let Some(element) = fiber_node.element {
+                    let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
+                    let mut should_pass_hit_test = in_bounds;
 
-            // Bypass the hit test result if pointer capture is turned on for the current element.
-            if is_pointer_event || is_ime_event {
-                if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
-                    if *element_id == element.component_id() {
-                        should_pass_hit_test = true;
+                    // Bypass the hit test result if pointer capture is turned on for the current element.
+                    if is_pointer_event || is_ime_event {
+                        if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
+                            if *element_id == element.component_id() {
+                                should_pass_hit_test = true;
+                            }
+                        }
+                    }
+
+                    if should_pass_hit_test {
+                        targets.push_back((
+                            element.component_id(),
+                            element.get_id().clone(),
+                            element.element_data().layout_order,
+                        ))
+                    } else {
+                        //println!("Not in bounds, Element: {:?}", element.get_id());
                     }
                 }
             }
 
-            if should_pass_hit_test {
-                targets.push_back((
-                    element.component_id(),
-                    element.get_id().clone(),
-                    element.element_data().layout_order,
-                ))
-            } else {
-                //println!("Not in bounds, Element: {:?}", element.get_id());
+            // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
+
+            if targets.is_empty() {
+                return;
             }
-        }
-    }
 
-    // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
+            // The target is always the first node (2, Some(c)).
 
-    if targets.is_empty() {
-        return;
-    }
+            let mut tmp_targets: Vec<(ComponentId, Option<String>, u32)> = targets.clone().into_iter().collect();
+            tmp_targets.sort_by(|a, b| b.2.cmp(&a.2)); // Sort using the 3rd field (u32)
+            targets = VecDeque::from(tmp_targets);
 
-    // The target is always the first node (2, Some(c)).
-
-    let mut tmp_targets: Vec<(ComponentId, Option<String>, u32)> = targets.clone().into_iter().collect();
-    tmp_targets.sort_by(|a, b| b.2.cmp(&a.2)); // Sort using the 3rd field (u32)
-    targets = VecDeque::from(tmp_targets);
-
-    let target = targets[0].clone();
-    let (_target_component_id, target_element_id, _layout_order) = target.clone();
-    let mut propagate = true;
-    let mut prevent_defaults = false;
-    for current_target in targets.iter() {
-        if !propagate {
-            break;
-        }
-
-        let (current_target_component_id, current_target_element_id, _layout_order) = current_target.clone();
-
-        // Get the element's component tree node.
-        let current_target_component = reactive_tree
-            .component_tree
-            .as_ref()
-            .unwrap()
-            .pre_order_iter()
-            .find(|node| node.id == current_target_component_id)
-            .unwrap();
-
-        // Search for the closest non-element ancestor.
-        let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
-
-        let mut to_visit = Some(current_target_component);
-        while let Some(node) = to_visit {
-            if !to_visit.unwrap().is_element {
-                closest_ancestor_component = Some(node);
-                to_visit = None;
-            } else if node.parent_id.is_none() {
-                to_visit = None;
-            } else {
-                let parent_id = node.parent_id.unwrap();
-                to_visit =
-                    reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
-            }
-        }
-
-        // Dispatch the event to the element's component.
-        if let Some(node) = closest_ancestor_component {
-            target_components.push_back(node);
-
-            let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-            let res = (node.update)(
-                state,
-                global_state,
-                node.props.clone(),
-                Event::new(Message::OkuMessage(event.clone()))
-                    .current_target(current_target_element_id.clone())
-                    .target(target_element_id.clone()),
-            );
-            propagate = propagate && res.propagate;
-            let element_state =
-                &mut reactive_tree.element_state.storage.get_mut(&current_target_component_id).unwrap().base;
-            match res.pointer_capture {
-                PointerCapture::None => {}
-                PointerCapture::Set => {
-                    element_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
-                }
-                PointerCapture::Unset => {
-                    element_state.pointer_capture.remove(&DUMMY_DEVICE_ID);
-                }
-            }
-            prevent_defaults = prevent_defaults || res.prevent_defaults;
-            if res.future.is_some() {
-                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
-                    node.id,
-                    node.update,
-                    res,
-                    node.props.clone(),
-                ));
-            }
-        }
-    }
-
-    let mut element_events: VecDeque<(OkuMessage, Option<String>)> = VecDeque::new();
-
-    // Handle element events if prevent defaults was not set to true.
-    if !prevent_defaults {
-        for target in targets.iter() {
-            let (target_component_id, _target_element_id, _layout_order) = target.clone();
-
+            let target = targets[0].clone();
+            let (_target_component_id, target_element_id, _layout_order) = target.clone();
             let mut propagate = true;
             let mut prevent_defaults = false;
-
-            for element in current_element_tree.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
+            for current_target in targets.iter() {
                 if !propagate {
                     break;
                 }
-                if element.component_id() == target_component_id {
-                    let res = element.on_event(event.clone(), &mut reactive_tree.element_state, font_system.as_mut().unwrap());
 
-                    if let Some(result_message) = res.result_message {
-                        element_events.push_back((result_message, element.get_id().clone()));
+                let (current_target_component_id, current_target_element_id, _layout_order) = current_target.clone();
+
+                // Get the element's component tree node.
+                let current_target_component = reactive_tree
+                    .component_tree
+                    .as_ref()
+                    .unwrap()
+                    .pre_order_iter()
+                    .find(|node| node.id == current_target_component_id)
+                    .unwrap();
+
+                // Search for the closest non-element ancestor.
+                let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
+
+                let mut to_visit = Some(current_target_component);
+                while let Some(node) = to_visit {
+                    if !to_visit.unwrap().is_element {
+                        closest_ancestor_component = Some(node);
+                        to_visit = None;
+                    } else if node.parent_id.is_none() {
+                        to_visit = None;
+                    } else {
+                        let parent_id = node.parent_id.unwrap();
+                        to_visit =
+                            reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
+                    }
+                }
+
+                // Dispatch the event to the element's component.
+                if let Some(node) = closest_ancestor_component {
+                    target_components.push_back(node);
+
+                    let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+                    let mut res = (node.update)(
+                        state,
+                        global_state,
+                        node.props.clone(),
+                        Event::new(event)
+                            .current_target(current_target_element_id.clone())
+                            .target(target_element_id.clone()),
+                    );
+                    effects.append(&mut res.effects);
+                    propagate = propagate && res.propagate;
+                    let element_state =
+                        &mut reactive_tree.element_state.storage.get_mut(&current_target_component_id).unwrap().base;
+                    match res.pointer_capture {
+                        PointerCapture::None => {}
+                        PointerCapture::Set => {
+                            element_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                        }
+                        PointerCapture::Unset => {
+                            element_state.pointer_capture.remove(&DUMMY_DEVICE_ID);
+                        }
+                    }
+                    prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    if res.future.is_some() {
+                        reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                            node.id,
+                            node.update,
+                            res,
+                            node.props.clone(),
+                        ));
+                    }
+                }
+            }
+
+            let mut element_events: VecDeque<(OkuMessage, Option<String>)> = VecDeque::new();
+
+            // Handle element events if prevent defaults was not set to true.
+            if !prevent_defaults {
+                for target in targets.iter() {
+                    let (target_component_id, _target_element_id, _layout_order) = target.clone();
+
+                    let mut propagate = true;
+                    let mut prevent_defaults = false;
+
+                    for element in current_element_tree.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
+                        if !propagate {
+                            break;
+                        }
+                        if element.component_id() == target_component_id {
+                            if let Message::OkuMessage(event) = event {
+                                let res = element.on_event(event, &mut reactive_tree.element_state, font_system.as_mut().unwrap());
+
+                                if let Some(result_message) = res.result_message {
+                                    element_events.push_back((result_message, element.get_id().clone()));
+                                }
+
+                                propagate = propagate && res.propagate;
+                                prevent_defaults = prevent_defaults || res.prevent_defaults;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (event, target_element_id) in element_events.iter() {
+                let mut propagate = true;
+                let mut prevent_defaults = false;
+                for node in target_components.iter() {
+                    if !propagate {
+                        break;
                     }
 
+                    let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
+                    let res = (node.update)(
+                        state,
+                        global_state,
+                        node.props.clone(),
+                        Event::new(&Message::OkuMessage(event.clone())).current_target(target_element_id.clone()),
+                    );
                     propagate = propagate && res.propagate;
                     prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    if res.future.is_some() {
+                        reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                            node.id,
+                            node.update,
+                            res,
+                            node.props.clone(),
+                        ));
+                    }
+                }
+            }
+        }
+        EventDispatchType::Direct(id) => {
+
+            for node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter() {
+               if let Some(element) = node.element {
+                    if element.component_id() == id {
+                        if let Message::OkuMessage(event) = event {
+                            let mut res = element.on_event(event, &mut reactive_tree.element_state, font_system.as_mut().unwrap());
+
+                            effects.append(&mut res.effects);
+                        }
+
+                        return;
+                    }
+                }
+                if let Some(component) = node.component {
+                    if component.id == id {
+                        let state = reactive_tree.user_state.storage.get_mut(&component.id).unwrap().as_mut();
+                        let mut res = (component.update)(
+                            state,
+                            global_state,
+                            component.props.clone(),
+                            Event::new(event)
+                                .current_target(None)
+                                .target(None),
+                        );
+                        effects.append(&mut res.effects);
+                        if res.future.is_some() {
+                            reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                                component.id,
+                                component.update,
+                                res,
+                                component.props.clone(),
+                            ));
+                        }
+                        
+                        return;
+                    }
                 }
             }
         }
     }
 
-    for (event, target_element_id) in element_events.iter() {
-        let mut propagate = true;
-        let mut prevent_defaults = false;
-        for node in target_components.iter() {
-            if !propagate {
-                break;
-            }
 
-            let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-            let res = (node.update)(
-                state,
-                global_state,
-                node.props.clone(),
-                Event::new(Message::OkuMessage(event.clone())).current_target(target_element_id.clone()),
-            );
-            propagate = propagate && res.propagate;
-            prevent_defaults = prevent_defaults || res.prevent_defaults;
-            if res.future.is_some() {
-                reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
-                    node.id,
-                    node.update,
-                    res,
-                    node.props.clone(),
-                ));
-            }
-        }
+    // Handle effects.
+    for (dispatch_type, message) in effects.iter() {
+        dispatch_event(
+            message,
+            *dispatch_type,
+            _resource_manager,
+            mouse_position,
+            reactive_tree,
+            global_state,
+            font_system,
+        );
     }
 }
 
 async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let event = OkuMessage::PointerButtonEvent(pointer_button);
+    let message = Message::OkuMessage(event);
+
     app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
     dispatch_event(
-        event.clone(),
+        &message,
+        EventDispatchType::Bubbling,
         &mut app.resource_manager,
         app.mouse_position,
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
-    )
-    .await;
+    );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(event, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system)
-        .await;
+    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system);
 
     app.window.as_ref().unwrap().request_redraw();
 }

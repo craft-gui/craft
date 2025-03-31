@@ -1,5 +1,5 @@
 use crate::WebsiteGlobalState;
-use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, ElementStyles, Text};
 use oku::events::Event;
 use oku::palette;
@@ -16,6 +16,7 @@ impl Component<WebsiteGlobalState> for About {
         _global_state: &WebsiteGlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)

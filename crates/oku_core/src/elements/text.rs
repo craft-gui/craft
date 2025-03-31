@@ -124,7 +124,7 @@ impl Element for Text {
 
     fn on_event(
         &self,
-        message: OkuMessage,
+        message: &OkuMessage,
         element_state: &mut ElementStateStore,
         font_system: &mut FontSystem,
     ) -> UpdateResult {
@@ -162,11 +162,11 @@ impl Element for Text {
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::ModifiersChangedEvent(modifiers_changed) => {
-                cached_editor.action_modifiers_changed(modifiers_changed);
+                cached_editor.action_modifiers_changed(*modifiers_changed);
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
             OkuMessage::KeyboardInputEvent(keyboard_input) => {
-                let logical_key = keyboard_input.event.logical_key;
+                let logical_key = keyboard_input.clone().event.logical_key;
                 let key_state = keyboard_input.event.state;
                 
                 if !key_state.is_pressed() {

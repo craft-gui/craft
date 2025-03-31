@@ -168,6 +168,7 @@ impl Component<()> for DummyComponent {
         _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Text::new("dummy").component()
     }

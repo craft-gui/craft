@@ -11,6 +11,7 @@ use oku::style::FlexDirection;
 use oku::style::Unit;
 use oku::RendererType;
 use oku::{oku_main_with_options, OkuOptions};
+use oku_core::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -25,6 +26,7 @@ impl Component<()> for Accordion {
         _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         let accordion_content =
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };

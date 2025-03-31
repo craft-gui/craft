@@ -17,6 +17,7 @@ use oku::style::Overflow::Scroll;
 use oku::style::Unit;
 use oku::OkuOptions;
 use oku::RendererType;
+use oku::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -31,6 +32,7 @@ impl Component for TextState {
         _state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .height(Unit::Px(500.0))

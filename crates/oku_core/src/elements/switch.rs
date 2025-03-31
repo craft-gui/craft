@@ -131,7 +131,7 @@ impl Element for Switch {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: &OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
 

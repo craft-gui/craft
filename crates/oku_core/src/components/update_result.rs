@@ -1,4 +1,4 @@
-use crate::events::OkuMessage;
+use crate::events::{EventDispatchType, Message, OkuMessage};
 use crate::PinnedFutureAny;
 use std::any::Any;
 
@@ -22,11 +22,12 @@ pub struct UpdateResult {
     pub(crate) result_message: Option<OkuMessage>,
     /// Redirect future pointer events to this component. None by default.
     pub(crate) pointer_capture: PointerCapture,
+    pub(crate) effects: Vec<(EventDispatchType, Message)>
 }
 
 impl UpdateResult {
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_result<T: Send + 'static>(t: T) -> Box<dyn Any + Send + 'static> {
+    pub fn async_result<T: Send + Sync + 'static>(t: T) -> Box<dyn Any + Send + Sync + 'static> {
         Box::new(t)
     }
 
@@ -54,6 +55,7 @@ impl Default for UpdateResult {
             prevent_defaults: false,
             result_message: None,
             pointer_capture: Default::default(),
+            effects: Vec::new(),
         }
     }
 }
@@ -69,7 +71,7 @@ impl UpdateResult {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn future<F: Future<Output = Box<dyn Any + Send>> + 'static + Send>(mut self, future: F) -> Self {
+    pub fn future<F: Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send>(mut self, future: F) -> Self {
         self.future = Some(Box::pin(future));
         self
     }
@@ -97,6 +99,11 @@ impl UpdateResult {
 
     pub fn pointer_capture(mut self, pointer_capture: PointerCapture) -> Self {
         self.pointer_capture = pointer_capture;
+        self
+    }
+
+    pub fn add_effect(mut self, event_dispatch_type: EventDispatchType, message: Message) -> Self {
+        self.effects.push((event_dispatch_type, message));
         self
     }
 }

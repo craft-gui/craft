@@ -12,6 +12,7 @@ use oku::style::Position;
 use oku::style::Unit;
 use oku::OkuOptions;
 use oku::RendererType;
+use oku_core::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
@@ -24,6 +25,7 @@ impl Component<()> for EventsExample {
         _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .background(palette::css::RED)

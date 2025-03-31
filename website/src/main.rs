@@ -9,7 +9,7 @@ use crate::examples::Examples;
 use crate::index::index_page;
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::Container;
 use oku::elements::ElementStyles;
 use oku::events::Event;
@@ -41,6 +41,7 @@ impl Component<WebsiteGlobalState> for Website {
         global_state: &WebsiteGlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)

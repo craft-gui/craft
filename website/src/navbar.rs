@@ -1,6 +1,6 @@
 use crate::theme::NAVBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
-use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::{Container, ElementStyles, Text};
 use oku::events::{Event};
 use oku::style::{AlignItems, Display, JustifyContent, Weight};
@@ -25,6 +25,7 @@ impl Component<WebsiteGlobalState> for Navbar {
         _global_state: &WebsiteGlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)

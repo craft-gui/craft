@@ -7,7 +7,7 @@ use ani_list::{anime_view, AniListResponse, QUERY};
 use util::setup_logging;
 use AniListMessage::StateChange;
 
-use oku::components::{Component, ComponentSpecification, UpdateResult};
+use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use oku::elements::ElementStyles;
 use oku::elements::{Container, Text};
 use oku::events::{Event, Message};
@@ -48,6 +48,7 @@ impl Component for AniList {
         state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)

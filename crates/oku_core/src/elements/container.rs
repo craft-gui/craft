@@ -141,11 +141,11 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, message: OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(&self, message: &OkuMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 
-        container_state.scroll_state.on_event(&message, &self.element_data, &mut base_state.base)
+        container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base)
     }
 
     fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {

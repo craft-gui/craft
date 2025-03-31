@@ -10,10 +10,10 @@ use oku::elements::TextInput;
 use oku::elements::{Container, Text};
 use oku::events::Event;
 use oku::oku_main_with_options;
-use oku::style::FlexDirection;
 use oku::OkuOptions;
 use oku::RendererType;
 use oku::elements::{Dropdown, Switch};
+use oku_core::components::ComponentId;
 use oku_core::style::Display;
 
 #[derive(Default, Copy, Clone)]
@@ -31,6 +31,7 @@ impl Component for InputsExample {
         _state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .padding("20px", "20px", "20px", "20px")

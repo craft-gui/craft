@@ -15,6 +15,7 @@ pub type ViewFn = fn(
     global_state: &GlobalState,
     props: Props,
     children: Vec<ComponentSpecification>,
+    id: ComponentId,
 ) -> ComponentSpecification;
 
 /// A Component's update function.
@@ -115,6 +116,7 @@ where
         _state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new().component()
     }
@@ -128,8 +130,9 @@ where
         _global_state: &T,
         props: &Self::Props,
         children: Vec<ComponentSpecification>,
+        id: ComponentId,
     ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children)
+        Self::view_with_no_global_state(state, props, children, id)
     }
 
     fn generic_view(
@@ -137,14 +140,15 @@ where
         global_state: &GlobalState,
         props: Props,
         children: Vec<ComponentSpecification>,
+        id: ComponentId,
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_ref::<T>() {
-            Self::view(casted_state, global_state_casted, props, children)
+            Self::view(casted_state, global_state_casted, props, children, id)
         } else {
-            Self::view_with_no_global_state(casted_state, props, children)
+            Self::view_with_no_global_state(casted_state, props, children, id)
         }
     }
 
