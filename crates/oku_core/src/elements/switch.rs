@@ -1,6 +1,7 @@
+use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::Container;
@@ -8,7 +9,8 @@ use crate::events::OkuMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
-use crate::{palette, RendererBox};
+use crate::ComponentSpecification;
+use crate::{generate_component_methods_no_children, palette, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
@@ -242,6 +244,8 @@ impl Switch {
             toggled_track_style: Default::default(),
         }
     }
+
+    generate_component_methods_no_children!();
 }
 
 impl ElementStyles for Switch {
