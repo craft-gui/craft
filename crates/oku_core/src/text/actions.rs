@@ -216,14 +216,14 @@ impl CachedEditor<'_> {
             if let Some(text) = text {
                 // The user supplied text or attributes changed, and we need to rebuild the buffer.
                 self.editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(font_system, text, self.attributes.to_attrs(), Shaping::Advanced);
+                    buffer.set_text(font_system, text, &self.attributes.to_attrs(), Shaping::Advanced);
                 });
                 self.text_hash = text_hash.unwrap();
             } else {
                 // The attributes changed, and we need to rebuild the buffer.
                 let buffer_text = self.get_text();
                 self.editor.with_buffer_mut(|buffer| {
-                    buffer.set_text(font_system, buffer_text.as_str(), self.attributes.to_attrs(), Shaping::Advanced);
+                    buffer.set_text(font_system, buffer_text.as_str(), &self.attributes.to_attrs(), Shaping::Advanced);
                 });
             }   
         }

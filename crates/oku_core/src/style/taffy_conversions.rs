@@ -4,30 +4,30 @@ use winit::dpi::{LogicalPosition, PhysicalPosition};
 
 fn unit_to_taffy_dimension_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::Dimension {
     match unit {
-        Unit::Px(px) => taffy::Dimension::Length(
+        Unit::Px(px) => taffy::Dimension::length(
             PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
         ),
-        Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
-        Unit::Auto => taffy::Dimension::Auto,
+        Unit::Percentage(percentage) => taffy::Dimension::percent(percentage / 100.0),
+        Unit::Auto => taffy::Dimension::auto(),
     }
 }
 
 fn unit_to_taffy_lengthpercentageauto_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentageAuto {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentageAuto::Length(
+        Unit::Px(px) => taffy::LengthPercentageAuto::length(
             PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
         ),
-        Unit::Percentage(percentage) => taffy::LengthPercentageAuto::Percent(percentage / 100.0),
-        Unit::Auto => taffy::LengthPercentageAuto::Auto,
+        Unit::Percentage(percentage) => taffy::LengthPercentageAuto::percent(percentage / 100.0),
+        Unit::Auto => taffy::LengthPercentageAuto::auto(),
     }
 }
 
 fn unit_to_taffy_length_percentage_with_scale_factor(unit: Unit, scale_factor: f64) -> taffy::LengthPercentage {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentage::Length(
+        Unit::Px(px) => taffy::LengthPercentage::length(
             PhysicalPosition::from_logical(LogicalPosition::new(px as f64, px as f64), scale_factor).x,
         ),
-        Unit::Percentage(percentage) => taffy::LengthPercentage::Percent(percentage / 100.0),
+        Unit::Percentage(percentage) => taffy::LengthPercentage::percent(percentage / 100.0),
         Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
     }
 }
@@ -136,10 +136,10 @@ impl Style {
         .x;
         let flex_basis: taffy::Dimension = match style.flex_basis() {
             Unit::Px(px) => {
-                taffy::Dimension::Length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x)
+                taffy::Dimension::length(PhysicalPosition::from_logical(LogicalPosition::new(px, px), scale_factor).x)
             }
-            Unit::Percentage(percentage) => taffy::Dimension::Percent(percentage / 100.0),
-            Unit::Auto => taffy::Dimension::Auto,
+            Unit::Percentage(percentage) => taffy::Dimension::percent(percentage / 100.0),
+            Unit::Auto => taffy::Dimension::auto(),
         };
 
         fn overflow_to_taffy_overflow(overflow: Overflow) -> Overflow {

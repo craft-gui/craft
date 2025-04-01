@@ -25,7 +25,7 @@ oku_logging = { path = "../oku_logger" }
 
 cfg-if = "1.0.0"
 
-bytemuck = { version = "1.21.0", features = ["derive"] }
+bytemuck = { version = "1.22.0", features = ["derive"] }
 unicode-segmentation = "1.12.0"
 
 lyon = { version = "1.0.1", optional = true }
@@ -42,7 +42,7 @@ default-features = false
 features = ["std"]
 
 [dependencies.glam]
-version = "0.30.0"
+version = "0.30.1"
 default-features = false
 features = ["std"]
 
@@ -55,12 +55,12 @@ features = ["std"]
 version = "0.2.4"
 
 [dependencies.image]
-version = "0.25.5"
+version = "0.25.6"
 default-features = false
 features = ["jpeg", "png"]
 
 [dependencies.taffy]
-version = "0.7.7"
+version = "0.8.0"
 default-features = false
 features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"]
 
@@ -92,7 +92,7 @@ rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
 [dependencies.cosmic-text]
-version = "0.13.2"
+version = "0.14.0"
 default-features = false
 features = ["std", "fontconfig"]
 
