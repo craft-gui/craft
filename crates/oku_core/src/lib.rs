@@ -815,12 +815,13 @@ fn dispatch_event(
                     }
 
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-                    let res = (node.update)(
+                    let mut res = (node.update)(
                         state,
                         global_state,
                         node.props.clone(),
                         Event::new(&Message::OkuMessage(event.clone())).current_target(target_element_id.clone()),
                     );
+                    effects.append(&mut res.effects);
                     propagate = propagate && res.propagate;
                     prevent_defaults = prevent_defaults || res.prevent_defaults;
                     if res.future.is_some() {
