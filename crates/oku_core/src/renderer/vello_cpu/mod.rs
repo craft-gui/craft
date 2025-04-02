@@ -159,7 +159,7 @@ impl Renderer for VelloCpuRenderer {
     ) {
         let paint = Paint::Solid(self.clear_color.premultiply().to_rgba8());
         self.render_context.set_paint(paint);
-        self.render_context.set_blend_mode(BlendMode::new(Mix::Color, Compose::SrcOver));
+        self.render_context.set_blend_mode(BlendMode::new(Mix::Clip, Compose::SrcOver));
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
         self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width as f64, self.pixmap.height as f64));
@@ -184,9 +184,9 @@ impl Renderer for VelloCpuRenderer {
                         editor.draw(
                             font_system,
                             &mut self.cache,
+                            fc,
                             cosmic_text::Color::rgba(0, 0, 0, 255),
-                            cosmic_text::Color::rgba(0, 0, 0, 100),
-                            cosmic_text::Color::rgba(0, 0, 200, 255),
+                            cosmic_text::Color::rgba(0, 120, 215, 255),
                             cosmic_text::Color::rgba(255, 255, 255, 255),
                             |x, y, w, h, color: cosmic_text::Color| {
                                 self.render_context.set_paint(Paint::Solid(PremulRgba8::from_u8_array(color.as_rgba())));
@@ -199,14 +199,14 @@ impl Renderer for VelloCpuRenderer {
                         element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
                     {
                         let buffer = &text_context.cached_editor.editor;
-                        self.render_context.set_blend_mode(BlendMode::new(Mix::Color, Compose::SrcOver));
+                        self.render_context.set_blend_mode(BlendMode::new(Mix::Clip, Compose::SrcOver));
 
                         buffer.draw(
                             font_system,
                             &mut self.cache,
-                            cosmic_text::Color::rgba(0, 0, 0, 255),
-                            cosmic_text::Color::rgba(0, 0, 0, 100),
-                            cosmic_text::Color::rgba(0, 0, 200, 255),
+                            fc,
+                            cosmic_text::Color::rgba(0, 0, 0, 0),
+                            cosmic_text::Color::rgba(0, 120, 215, 1),
                             cosmic_text::Color::rgba(255, 255, 255, 255),
                             |x, y, w, h, color| {
                                 self.render_context.set_paint(Paint::Solid(PremulRgba8::from_u8_array(color.as_rgba())));
