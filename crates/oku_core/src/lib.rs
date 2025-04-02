@@ -284,7 +284,7 @@ fn oku_main_with_options_2(
 async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>) {
     #[cfg(not(target_arch = "wasm32"))]
     if app_message.blocking {
-        sender.send(AppMessage::new(app_message.id, InternalMessage::Confirmation)).await.expect("send failed");
+        sender.send(app_message).await.expect("send failed");
     }
 }
 
@@ -641,10 +641,17 @@ fn dispatch_event(
 
     let is_pointer_event = matches!(event, Message::OkuMessage(OkuMessage::PointerMovedEvent(_)) | Message::OkuMessage(OkuMessage::PointerButtonEvent(_)));
     let is_ime_event = matches!(event, Message::OkuMessage(OkuMessage::ImeEvent(Ime::Enabled)) | Message::OkuMessage(OkuMessage::ImeEvent(Ime::Disabled)));
+    
+    #[derive(Clone)]
+    struct Target {
+        component_id: ComponentId,
+        element_id: Option<String>,
+        layout_order: usize,
+    }
 
     match dispatch_type {
         EventDispatchType::Bubbling => {
-            let mut targets: VecDeque<(ComponentId, Option<String>, u32)> = VecDeque::new();
+            let mut targets: VecDeque<Target> = VecDeque::new();
             let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
 
             /////////////////////////////////////////
@@ -678,11 +685,11 @@ fn dispatch_event(
                     }
 
                     if should_pass_hit_test {
-                        targets.push_back((
-                            element.component_id(),
-                            element.get_id().clone(),
-                            element.element_data().layout_order,
-                        ))
+                        targets.push_back(Target {
+                            component_id: element.component_id(),
+                            element_id: element.get_id().clone(),
+                            layout_order: element.element_data().layout_order as usize,
+                        })
                     } else {
                         //println!("Not in bounds, Element: {:?}", element.get_id());
                     }
@@ -696,29 +703,25 @@ fn dispatch_event(
             }
 
             // The target is always the first node (2, Some(c)).
-
-            let mut tmp_targets: Vec<(ComponentId, Option<String>, u32)> = targets.clone().into_iter().collect();
-            tmp_targets.sort_by(|a, b| b.2.cmp(&a.2)); // Sort using the 3rd field (u32)
+            let mut tmp_targets: Vec<Target> = targets.clone().into_iter().collect();
+            tmp_targets.sort_by(|a, b| b.layout_order.cmp(&a.layout_order)); // Sort using the layout order. (u32)
             targets = VecDeque::from(tmp_targets);
 
             let target = targets[0].clone();
-            let (_target_component_id, target_element_id, _layout_order) = target.clone();
             let mut propagate = true;
             let mut prevent_defaults = false;
             for current_target in targets.iter() {
                 if !propagate {
                     break;
                 }
-
-                let (current_target_component_id, current_target_element_id, _layout_order) = current_target.clone();
-
+                
                 // Get the element's component tree node.
                 let current_target_component = reactive_tree
                     .component_tree
                     .as_ref()
                     .unwrap()
                     .pre_order_iter()
-                    .find(|node| node.id == current_target_component_id)
+                    .find(|node| node.id == current_target.component_id)
                     .unwrap();
 
                 // Search for the closest non-element ancestor.
@@ -748,13 +751,13 @@ fn dispatch_event(
                         global_state,
                         node.props.clone(),
                         Event::new(event)
-                            .current_target(current_target_element_id.clone())
-                            .target(target_element_id.clone()),
+                            .current_target(current_target.element_id.clone())
+                            .target(target.element_id.clone()),
                     );
                     effects.append(&mut res.effects);
                     propagate = propagate && res.propagate;
                     let element_state =
-                        &mut reactive_tree.element_state.storage.get_mut(&current_target_component_id).unwrap().base;
+                        &mut reactive_tree.element_state.storage.get_mut(&current_target.component_id).unwrap().base;
                     match res.pointer_capture {
                         PointerCapture::None => {}
                         PointerCapture::Set => {
@@ -781,8 +784,6 @@ fn dispatch_event(
             // Handle element events if prevent defaults was not set to true.
             if !prevent_defaults {
                 for target in targets.iter() {
-                    let (target_component_id, _target_element_id, _layout_order) = target.clone();
-
                     let mut propagate = true;
                     let mut prevent_defaults = false;
 
@@ -790,7 +791,7 @@ fn dispatch_event(
                         if !propagate {
                             break;
                         }
-                        if element.component_id() == target_component_id {
+                        if element.component_id() == target.component_id {
                             if let Message::OkuMessage(event) = event {
                                 let res = element.on_event(event, &mut reactive_tree.element_state, font_system.as_mut().unwrap());
 
