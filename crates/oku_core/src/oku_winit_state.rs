@@ -36,6 +36,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use tokio::sync::mpsc::error::SendError;
 
 /// Stores state related to Winit.
 ///
@@ -198,8 +199,18 @@ impl ApplicationHandler for OkuWinitState {
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
+        if event_loop.exiting() {
+            return;
+        }
         if self.request_redraw && !self.wait_cancelled && !self.close_requested {
             //self.window.as_ref().unwrap().request_redraw();
+        }
+
+        if self.close_requested {
+            info!("Exiting winit event loop");
+
+            event_loop.exit();
+            return;
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -213,12 +224,6 @@ impl ApplicationHandler for OkuWinitState {
 
         if !self.wait_cancelled {
             event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
-        }
-
-        if self.close_requested {
-            info!("Exiting winit event loop");
-
-            event_loop.exit();
         }
     }
 }
@@ -244,6 +249,8 @@ impl OkuWinitState {
     }
 
     fn send_message(&mut self, message: InternalMessage, blocking: bool) {
+        let is_close_message = matches!(message, InternalMessage::Close);
+
         let app_message = AppMessage {
             id: self.get_id(),
             blocking,
@@ -252,7 +259,11 @@ impl OkuWinitState {
         #[cfg(not(target_arch = "wasm32"))]
         {
             self.runtime.borrow_tokio_runtime().block_on(async {
-                self.app_sender.send(app_message).await.expect("send failed");
+                let result: Result<(), SendError<AppMessage>> = self.app_sender.send(app_message).await;
+                if !is_close_message {
+                    result.expect("Failed to send app message");
+                }
+                
                 if blocking {
                     if let Some(response) = self.winit_receiver.recv().await {
                         if let InternalMessage::Confirmation = response.data {
@@ -260,8 +271,6 @@ impl OkuWinitState {
                         } else {
                             panic!("Expected response message, but response was something else");
                         }
-                    } else {
-                        panic!("Expected response message, but response was empty");
                     }
                 }
             });

@@ -284,7 +284,7 @@ fn oku_main_with_options_2(
 async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>) {
     #[cfg(not(target_arch = "wasm32"))]
     if app_message.blocking {
-        sender.send(AppMessage::new(app_message.id, InternalMessage::Confirmation)).await.expect("send failed");
+        sender.send(app_message).await.expect("send failed");
     }
 }
 
