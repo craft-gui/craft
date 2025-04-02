@@ -184,7 +184,7 @@ impl Renderer for VelloCpuRenderer {
                         editor.draw(
                             font_system,
                             &mut self.cache,
-                            fc,
+                            cosmic_text::Color::rgba(0, 0, 0, 255),
                             cosmic_text::Color::rgba(0, 0, 0, 255),
                             cosmic_text::Color::rgba(0, 120, 215, 255),
                             cosmic_text::Color::rgba(255, 255, 255, 255),
@@ -204,7 +204,7 @@ impl Renderer for VelloCpuRenderer {
                         buffer.draw(
                             font_system,
                             &mut self.cache,
-                            fc,
+                            cosmic_text::Color::rgba(0, 0, 0, 255),
                             cosmic_text::Color::rgba(0, 0, 0, 0),
                             cosmic_text::Color::rgba(0, 120, 215, 1),
                             cosmic_text::Color::rgba(255, 255, 255, 255),
