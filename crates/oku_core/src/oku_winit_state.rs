@@ -7,6 +7,10 @@ use {
 #[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
 
+
+#[cfg(feature = "vello_cpu_renderer")]
+use crate::renderer::vello_cpu::VelloCpuRenderer;
+
 #[cfg(feature = "wgpu_renderer")]
 use crate::renderer::wgpu::WgpuRenderer;
 
@@ -96,6 +100,8 @@ impl ApplicationHandler for OkuWinitState {
             let renderer: Box<dyn Renderer + Send> = match renderer_type {
                 #[cfg(feature = "vello_renderer")]
                 RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                #[cfg(feature = "vello_cpu_renderer")]
+                RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
                 #[cfg(feature = "wgpu_renderer")]
                 RendererType::Wgpu => Box::new(WgpuRenderer::new(window_copy).await),
                 RendererType::Blank => Box::new(BlankRenderer),

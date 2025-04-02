@@ -9,6 +9,9 @@ pub mod wgpu;
 #[cfg(feature = "vello_renderer")]
 pub(crate) mod vello;
 
+#[cfg(feature = "vello_cpu_renderer")]
+pub(crate) mod vello_cpu;
+
 pub(crate) mod blank_renderer;
 mod text;
 
