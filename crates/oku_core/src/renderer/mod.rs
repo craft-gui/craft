@@ -14,5 +14,7 @@ pub(crate) mod vello_cpu;
 
 pub(crate) mod blank_renderer;
 mod text;
+mod image_adapter;
+mod cosmic_adapter;
 
 pub use renderer::RenderCommand;

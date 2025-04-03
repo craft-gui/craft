@@ -1,3 +1,4 @@
+use peniko::kurbo;
 use crate::geometry::Point;
 
 /// A structure representing a rectangle in 2D space.
@@ -77,6 +78,10 @@ impl Rectangle {
     #[inline]
     pub fn left(&self) -> f32 {
         self.x
+    }
+    
+    pub fn to_kurbo(&self) -> kurbo::Rect {
+        kurbo::Rect::new(self.x as f64, self.y as f64, self.right() as f64, self.bottom() as f64)
     }
 }
 

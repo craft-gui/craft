@@ -9,7 +9,7 @@ dev_tools = []
 dynamic_linking = []
 
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
-vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common", "cosmic-text/swash"]
+vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 http_client = ["dep:reqwest"]
 

@@ -1,6 +1,3 @@
-mod image_adapter;
-mod cosmic_adapter;
-
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
@@ -8,7 +5,7 @@ use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
-use crate::renderer::vello::cosmic_adapter::CosmicFontBlobAdapter;
+use crate::renderer::cosmic_adapter::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -26,7 +23,7 @@ use vello::{Glyph, Scene};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
 use crate::renderer::text;
-use crate::renderer::vello::image_adapter::ImageAdapter;
+use crate::renderer::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
