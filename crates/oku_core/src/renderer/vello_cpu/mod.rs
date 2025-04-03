@@ -254,6 +254,7 @@ impl Renderer for VelloCpuRenderer {
                                 let glyph_color = glyph_run.glyph_color;
                                 let glyphs = glyph_run.glyphs.clone();
                                 self.render_context.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
+                                self.render_context.reset_transform();
                                 let glyph_run_builder = self
                                     .render_context
                                     .glyph_run(font)
