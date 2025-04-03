@@ -5,7 +5,6 @@ use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
-use crate::renderer::cosmic_adapter::CosmicFontBlobAdapter;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -22,8 +21,9 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{Glyph, Scene};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use winit::window::Window;
-use crate::renderer::text;
+use crate::renderer::cosmic_adapter::CosmicFontBlobAdapter;
 use crate::renderer::image_adapter::ImageAdapter;
+use crate::renderer::text;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -80,7 +80,7 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
             num_init_threads: None,
         },
     )
-    .expect("Couldn't create renderer")
+        .expect("Couldn't create renderer")
 }
 
 impl<'a> VelloRenderer<'a> {
@@ -191,7 +191,7 @@ impl<'a> VelloRenderer<'a> {
                             Color::from_rgb8(255, 255, 255),
                             text_scroll,
                         );
-                        
+
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {
                             for glyph_highlight in &buffer_line.glyph_highlights {
