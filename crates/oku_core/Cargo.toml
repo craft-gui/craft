@@ -78,12 +78,12 @@ optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "61f82e4e66a9111d6b2ee17f173167c3601c2e55"
+rev = "9e7f06af87d7e1017dbe2245141554008d3e3871"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "61f82e4e66a9111d6b2ee17f173167c3601c2e55"
+rev = "9e7f06af87d7e1017dbe2245141554008d3e3871"
 optional = true
 
 
