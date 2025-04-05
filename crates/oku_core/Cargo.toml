@@ -108,9 +108,9 @@ rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
 [dependencies.cosmic-text]
-version = "0.14.0"
+version = "0.14.1"
 default-features = false
-features = ["std", "fontconfig"]
+features = ["std", "fontconfig", "peniko"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.14"

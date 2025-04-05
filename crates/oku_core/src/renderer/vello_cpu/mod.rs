@@ -3,7 +3,6 @@ use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::cosmic_adapter::CosmicFontBlobAdapter;
 use crate::renderer::renderer::{Renderer, TextScroll};
 use crate::renderer::{text, RenderCommand};
 use crate::resource_manager::resource::Resource;
@@ -11,9 +10,8 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::color::PremulRgba8;
 use peniko::kurbo::{Affine, BezPath, Rect};
-use peniko::{kurbo, BlendMode, Blob, Color, Compose, Fill, Font, Mix};
+use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
 use softbuffer::Buffer;
-use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -62,7 +60,6 @@ pub(crate) struct VelloCpuRenderer {
     pixmap: vello_cpu::Pixmap,
     surface: Surface,
     clear_color: Color,
-    vello_fonts: HashMap<cosmic_text::fontdb::ID, Font>,
 }
 
 impl VelloCpuRenderer {
@@ -86,7 +83,6 @@ impl VelloCpuRenderer {
             pixmap,
             surface,
             clear_color: Color::WHITE,
-            vello_fonts: HashMap::new(),
         }
     }
 }
@@ -144,22 +140,10 @@ impl Renderer for VelloCpuRenderer {
 
     fn pop_layer(&mut self) {}
 
-    fn load_font(&mut self, font_system: &mut FontSystem) {
-        let font_faces: Vec<(cosmic_text::fontdb::ID, u32)> =
-            font_system.db().faces().map(|face| (face.id, face.index)).collect();
-        for (font_id, index) in font_faces {
-            if let Some(font) = font_system.get_font(font_id) {
-                let font_blob = Blob::new(Arc::new(CosmicFontBlobAdapter::new(font)));
-                let vello_font = Font::new(font_blob, index);
-                self.vello_fonts.insert(font_id, vello_font);
-            }
-        }
-    }
-
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
+        font_system: &mut FontSystem,
         element_state: &ElementStateStore,
     ) {
         let paint = Paint::Solid(self.clear_color.premultiply().to_rgba8());
@@ -250,14 +234,14 @@ impl Renderer for VelloCpuRenderer {
                             }
 
                             for glyph_run in &buffer_line.glyph_runs {
-                                let font = self.vello_fonts.get(&glyph_run.font).unwrap();
+                                let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
                                 let glyph_color = glyph_run.glyph_color;
                                 let glyphs = glyph_run.glyphs.clone();
                                 self.render_context.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
                                 self.render_context.reset_transform();
                                 let glyph_run_builder = self
                                     .render_context
-                                    .glyph_run(font)
+                                    .glyph_run(&font)
                                     .font_size(buffer_glyphs.font_size)
                                     .glyph_transform(text_transform);
                                 glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {

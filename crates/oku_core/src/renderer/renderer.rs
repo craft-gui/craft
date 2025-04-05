@@ -44,10 +44,6 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
 
-    fn load_font(&mut self, _font_system: &mut FontSystem) {
-
-    }
-
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 

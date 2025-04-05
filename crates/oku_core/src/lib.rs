@@ -414,10 +414,6 @@ async fn async_main(
                                     }
                                 }
 
-                                if let Some(renderer) = app.renderer.as_mut() {
-                                    renderer.load_font(app.font_system.as_mut().unwrap());
-                                }
-
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
                             } else if resource_type == ResourceType::Image {
@@ -924,7 +920,6 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     app.setup_font_system();
     if renderer.is_some() {
         app.renderer = renderer;
-        app.renderer.as_mut().unwrap().load_font(app.font_system.as_mut().unwrap());
 
         // We can't guarantee the order of events on wasm.
         // This ensures a resize is not missed if the renderer was not finished creating when resize is called.
