@@ -1,8 +1,8 @@
-use oku::components::ComponentSpecification;
-use oku::elements::{Container, ElementStyles, Image, Text};
-use oku::resource_manager::ResourceIdentifier;
-use oku::style::Unit;
-use oku::style::{AlignItems, Display, FlexDirection, JustifyContent};
+use craft::components::ComponentSpecification;
+use craft::elements::{Container, ElementStyles, Image, Text};
+use craft::resource_manager::ResourceIdentifier;
+use craft::style::Unit;
+use craft::style::{AlignItems, Display, FlexDirection, JustifyContent};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]

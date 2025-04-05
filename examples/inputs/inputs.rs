@@ -3,21 +3,24 @@ mod util;
 
 use util::setup_logging;
 
-use oku::components::ComponentSpecification;
-use oku::components::{Component, UpdateResult};
-use oku::elements::ElementStyles;
-use oku::elements::TextInput;
-use oku::elements::{Container, Text};
-use oku::events::Event;
-use oku::oku_main_with_options;
-use oku::OkuOptions;
-use oku::RendererType;
-use oku::elements::{Dropdown, Switch};
-use oku_core::components::ComponentId;
-use oku_core::style::Display;
+use craft::components::ComponentSpecification;
+use craft::components::{Component, UpdateResult};
+use craft::elements::ElementStyles;
+use craft::elements::TextInput;
+use craft::elements::{Container, Text};
+use craft::events::Event;
+use craft::craft_main_with_options;
+use craft::CraftOptions;
+use craft::RendererType;
+use craft::elements::{Dropdown, Switch};
+use craft_core::components::ComponentId;
+use craft_core::events::Message::CraftMessage;
+use craft_core::events::CraftMessage::TextInputChanged;
+use craft_core::style::Display;
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Clone)]
 pub struct InputsExample {
+    my_text: String,
 }
 
 impl InputsExample {
@@ -28,7 +31,7 @@ impl Component for InputsExample {
     type Props = ();
 
     fn view_with_no_global_state(
-        _state: &Self,
+        state: &Self,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
@@ -37,7 +40,7 @@ impl Component for InputsExample {
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Block)
             .push(Text::new("Common Input Elements:").font_size(24.0))
-            .push(TextInput::new("Hi").id("text_input").margin("10px", "0px", "0px", "0px"))
+            .push(TextInput::new(state.my_text.as_str()).id("text_input").margin("10px", "0px", "0px", "0px"))
             .push(Switch::new().default_toggled(true).margin("10px", "0px", "0px", "0px"))
             .push(Dropdown::new()
                 .push(Text::new(Self::DROPDOWN_ITEMS[0]))
@@ -49,7 +52,13 @@ impl Component for InputsExample {
             .component()
     }
 
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+
+        if let CraftMessage(TextInputChanged(str)) = event.message {
+            state.my_text = str.clone();
+            return UpdateResult::new().prevent_defaults().prevent_propagate();
+        }
+
         UpdateResult::new()
     }
 }
@@ -58,10 +67,10 @@ impl Component for InputsExample {
 fn main() {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         InputsExample::component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "inputs".to_string(),
         }),

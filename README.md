@@ -1,6 +1,6 @@
-# Oku
+# Craft
 
-Oku is a reactive GUI. Views are created using Components and Elements.
+Craft is a reactive GUI. Views are created using Components and Elements.
 Updates are performed by handling messages from a Component.
 
 <p align="center">

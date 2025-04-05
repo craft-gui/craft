@@ -1,8 +1,8 @@
-use oku::components::ComponentSpecification;
-use oku::elements::{Container, ElementStyles, Text};
-use oku::palette;
-use oku::style::Wrap::WrapReverse;
-use oku::style::{AlignItems, Display, FlexDirection, Overflow, Unit, Weight};
+use craft::components::ComponentSpecification;
+use craft::elements::{Container, ElementStyles, Text};
+use craft::palette;
+use craft::style::Wrap::WrapReverse;
+use craft::style::{AlignItems, Display, FlexDirection, Overflow, Unit, Weight};
 
 fn hero_intro() -> ComponentSpecification {
     Container::new()
@@ -17,7 +17,7 @@ fn hero_intro() -> ComponentSpecification {
                 .flex_direction(FlexDirection::Column)
                 .margin("0%", "5%", "0%", "10%")
                 .width("39%")
-                .push(Text::new("Oku")
+                .push(Text::new("Craft")
                     .font_size(32.0)
                     .font_weight(Weight::SEMIBOLD)
                     .color(palette::css::WHITE))
@@ -56,10 +56,10 @@ fn hero_features() -> ComponentSpecification {
             hero_feature_item("Components", "Components encapsulate both a view and an update function, enabling modular and reusable UI elements that dynamically respond to state changes.")
         )
         .push(
-            hero_feature_item("Views", "Views in Oku are constructed using Components and Elements, forming the structural and visual hierarchy of an interface. They determine how UI elements are arranged and rendered on the screen.")
+            hero_feature_item("Views", "Views in Craft are constructed using Components and Elements, forming the structural and visual hierarchy of an interface. They determine how UI elements are arranged and rendered on the screen.")
         )
         .push(
-            hero_feature_item("Messages", "Messages in Oku facilitate communication between Components and Views. They define user interactions and system-triggered events, allowing the UI to respond dynamically to changes.")
+            hero_feature_item("Messages", "Messages in Craft facilitate communication between Components and Views. They define user interactions and system-triggered events, allowing the UI to respond dynamically to changes.")
         )
         .component()
 }

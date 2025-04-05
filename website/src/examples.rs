@@ -9,12 +9,12 @@ mod request;
 
 use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::{Container, ElementStyles, Text};
-use oku::events::{Event};
-use oku::palette;
-use oku::style::Display::Flex;
-use oku::style::FlexDirection;
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::{Container, ElementStyles, Text};
+use craft::events::{Event};
+use craft::palette;
+use craft::style::Display::Flex;
+use craft::style::FlexDirection;
 
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;

@@ -2,16 +2,16 @@
 mod util;
 
 use crate::util::setup_logging;
-use oku::components::ComponentSpecification;
-use oku::components::{Component, UpdateResult};
-use oku::elements::ElementStyles;
-use oku::elements::{Container, Text};
-use oku::events::Event;
-use oku::style::FlexDirection;
-use oku::style::Unit;
-use oku::RendererType;
-use oku::{oku_main_with_options, OkuOptions};
-use oku_core::components::ComponentId;
+use craft::components::ComponentSpecification;
+use craft::components::{Component, UpdateResult};
+use craft::elements::ElementStyles;
+use craft::elements::{Container, Text};
+use craft::events::Event;
+use craft::style::FlexDirection;
+use craft::style::Unit;
+use craft::RendererType;
+use craft::{craft_main_with_options, CraftOptions};
+use craft_core::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -61,10 +61,10 @@ impl Component<()> for Accordion {
 fn main() {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         Container::new().push_children(vec![Accordion::component(), Accordion::component()]).component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "accordion".to_string(),
         }),

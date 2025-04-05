@@ -7,16 +7,16 @@ use ani_list::{anime_view, AniListResponse, QUERY};
 use util::setup_logging;
 use AniListMessage::StateChange;
 
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::ElementStyles;
-use oku::elements::{Container, Text};
-use oku::events::{Event, Message};
-use oku::oku_main_with_options;
-use oku::style::FlexDirection;
-use oku::style::{Display, Overflow, Unit, Wrap};
-use oku::Color;
-use oku::OkuOptions;
-use oku::RendererType;
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::ElementStyles;
+use craft::elements::{Container, Text};
+use craft::events::{Event, Message};
+use craft::craft_main_with_options;
+use craft::style::FlexDirection;
+use craft::style::{Display, Overflow, Unit, Wrap};
+use craft::Color;
+use craft::CraftOptions;
+use craft::RendererType;
 
 use reqwest::Client;
 use serde_json::json;
@@ -89,7 +89,7 @@ impl Component for AniList {
 
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
         match event.message {
-            Message::OkuMessage(_) => {}
+            Message::CraftMessage(_) => {}
             Message::UserMessage(msg) => {
                 if let Some(StateChange(new_state)) = msg.downcast_ref::<AniListMessage>() {
                     state.state = new_state.clone();
@@ -140,10 +140,10 @@ impl Component for AniList {
 fn main() {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         AniList::component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Ani List".to_string(),
         }),

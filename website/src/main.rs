@@ -9,13 +9,13 @@ use crate::examples::Examples;
 use crate::index::index_page;
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::Container;
-use oku::elements::ElementStyles;
-use oku::events::Event;
-use oku::style::Display;
-use oku::style::FlexDirection;
-use oku::{oku_main_with_options, OkuOptions, RendererType};
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::Container;
+use craft::elements::ElementStyles;
+use craft::events::Event;
+use craft::style::Display;
+use craft::style::FlexDirection;
+use craft::{craft_main_with_options, CraftOptions, RendererType};
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -69,10 +69,10 @@ impl Component<WebsiteGlobalState> for Website {
 }
 
 fn main() {
-    oku_main_with_options(
+    craft_main_with_options(
         Website::component(),
         WebsiteGlobalState::default(),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             ..Default::default()
         }),

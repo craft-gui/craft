@@ -472,6 +472,67 @@ dependencies = [
 ]
 
 [[package]]
+name = "craft"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft_core",
+ "craft_dylib",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+]
+
+[[package]]
+name = "craft_core"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.9.0",
+ "bytemuck",
+ "cfg-if",
+ "chrono",
+ "clipboard-rs",
+ "cosmic-text",
+ "craft_logging",
+ "glam",
+ "image",
+ "lyon",
+ "peniko",
+ "reqwest",
+ "rustc-hash 2.1.1",
+ "softbuffer",
+ "taffy",
+ "tokio",
+ "unicode-segmentation",
+ "vello",
+ "vello_common",
+ "vello_cpu",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "craft_dylib"
+version = "0.1.0"
+dependencies = [
+ "craft_core",
+]
+
+[[package]]
+name = "craft_logging"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
 name = "crc32fast"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1849,67 +1910,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "oku"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "oku_core",
- "oku_dylib",
- "reqwest",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
- "tracing-web",
-]
-
-[[package]]
-name = "oku_core"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.9.0",
- "bytemuck",
- "cfg-if",
- "chrono",
- "clipboard-rs",
- "cosmic-text",
- "glam",
- "image",
- "lyon",
- "oku_logging",
- "peniko",
- "reqwest",
- "rustc-hash 2.1.1",
- "softbuffer",
- "taffy",
- "tokio",
- "unicode-segmentation",
- "vello",
- "vello_common",
- "vello_cpu",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
- "wgpu",
- "winit",
-]
-
-[[package]]
-name = "oku_dylib"
-version = "0.1.0"
-dependencies = [
- "oku_core",
-]
-
-[[package]]
-name = "oku_logging"
-version = "0.1.0"
-dependencies = [
- "tracing",
 ]
 
 [[package]]
@@ -3551,7 +3551,7 @@ name = "website"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "oku",
+ "craft",
  "reqwest",
  "serde",
  "serde_json",

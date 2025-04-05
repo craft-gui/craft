@@ -1,10 +1,10 @@
 use crate::theme::NAVBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::{Container, ElementStyles, Text};
-use oku::events::{Event};
-use oku::style::{AlignItems, Display, JustifyContent, Weight};
-use oku::Color;
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::{Container, ElementStyles, Text};
+use craft::events::{Event};
+use craft::style::{AlignItems, Display, JustifyContent, Weight};
+use craft::Color;
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
@@ -41,7 +41,7 @@ impl Component<WebsiteGlobalState> for Navbar {
                     .justify_content(JustifyContent::Center)
                     .align_items(AlignItems::Center)
                     .push(
-                        create_link("OKU", "/")
+                        create_link("Craft", "/")
                             .font_size(32.0)
                             .font_weight(Weight::BOLD)
                             .margin("0px", "24px", "0px", "0px"),

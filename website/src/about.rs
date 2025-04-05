@@ -1,9 +1,9 @@
 use crate::WebsiteGlobalState;
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::{Container, ElementStyles, Text};
-use oku::events::Event;
-use oku::palette;
-use oku::style::{AlignItems, Display, JustifyContent, Weight};
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::{Container, ElementStyles, Text};
+use craft::events::Event;
+use craft::palette;
+use craft::style::{AlignItems, Display, JustifyContent, Weight};
 
 #[derive(Default)]
 pub(crate) struct About {}

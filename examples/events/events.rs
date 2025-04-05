@@ -2,17 +2,17 @@
 mod util;
 
 use crate::util::setup_logging;
-use oku::components::{Component, ComponentSpecification, UpdateResult};
-use oku::elements::Container;
-use oku::elements::ElementStyles;
-use oku::events::{Event};
-use oku::oku_main_with_options;
-use oku::palette;
-use oku::style::Position;
-use oku::style::Unit;
-use oku::OkuOptions;
-use oku::RendererType;
-use oku_core::components::ComponentId;
+use craft::components::{Component, ComponentSpecification, UpdateResult};
+use craft::elements::Container;
+use craft::elements::ElementStyles;
+use craft::events::{Event};
+use craft::craft_main_with_options;
+use craft::palette;
+use craft::style::Position;
+use craft::style::Unit;
+use craft::CraftOptions;
+use craft::RendererType;
+use craft_core::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
@@ -65,10 +65,10 @@ impl Component<()> for EventsExample {
 fn main() {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         EventsExample::component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "events".to_string(),
         }),

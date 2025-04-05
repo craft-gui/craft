@@ -1,0 +1,11 @@
+[package]
+name = "craft_logging"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[dependencies.tracing]
+version = "0.1.40"
+default-features = false
+features = ["std"]

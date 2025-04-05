@@ -1,4 +1,4 @@
-use oku::Color;
+use craft::Color;
 
 pub(crate) const BODY_BACKGROUND_COLOR: Color = Color::from_rgb8(34, 42, 55);
 

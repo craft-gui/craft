@@ -1,16 +1,16 @@
 #[path = "../util.rs"]
 mod util;
 
-use oku::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use oku::elements::ElementStyles;
-use oku::elements::{Container, Text};
-use oku::events::{Event};
-use oku::oku_main_with_options;
-use oku::style::Display;
-use oku::style::{AlignItems, FlexDirection, JustifyContent};
-use oku::Color;
-use oku::OkuOptions;
-use oku::RendererType;
+use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::elements::ElementStyles;
+use craft::elements::{Container, Text};
+use craft::events::{Event};
+use craft::craft_main_with_options;
+use craft::style::Display;
+use craft::style::{AlignItems, FlexDirection, JustifyContent};
+use craft::Color;
+use craft::CraftOptions;
+use craft::RendererType;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -89,10 +89,10 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
 fn main() {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         Counter::component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),
         }),
@@ -100,7 +100,7 @@ fn main() {
 }
 
 #[cfg(target_os = "android")]
-use oku::AndroidApp;
+use craft::AndroidApp;
 use util::setup_logging;
 
 #[allow(dead_code)]
@@ -109,10 +109,10 @@ use util::setup_logging;
 fn android_main(app: AndroidApp) {
     setup_logging();
 
-    oku_main_with_options(
+    craft_main_with_options(
         Counter::component(),
         Box::new(()),
-        Some(OkuOptions {
+        Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),
         }),

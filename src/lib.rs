@@ -1,5 +1,5 @@
-pub use oku_core::*;
+pub use craft_core::*;
 
 #[cfg(feature = "dynamic_linking")]
 #[allow(unused_imports)]
-use oku_dylib;
+use craft_dylib;
