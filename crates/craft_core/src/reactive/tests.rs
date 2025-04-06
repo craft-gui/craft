@@ -7,13 +7,13 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::{GlobalState, ReactiveTree};
-use std::collections::HashSet;
 use cosmic_text::FontSystem;
+use std::collections::HashSet;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
     reset_unique_element_id();
-    
+
     let mut font_system = FontSystem::new();
 
     let initial_view = Container::new().component().push(Text::new("Foo").component());

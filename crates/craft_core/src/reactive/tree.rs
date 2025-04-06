@@ -2,15 +2,15 @@ use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpe
 use crate::components::{Props, UpdateResult};
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBoxed};
-use crate::events::{Event, Message, CraftMessage};
+use crate::events::{CraftMessage, Event, Message};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::GlobalState;
-use std::collections::{HashMap, HashSet};
 use cosmic_text::FontSystem;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -88,7 +88,7 @@ pub(crate) fn diff_trees(
     element_state: &mut ElementStateStore,
     reload_fonts: bool,
     font_system: &mut FontSystem,
-    scaling_factor: f64
+    scaling_factor: f64,
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -289,7 +289,8 @@ pub(crate) fn diff_trees(
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id);
+                    let new_component =
+                        (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id);
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {

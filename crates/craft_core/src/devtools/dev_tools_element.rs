@@ -1,8 +1,8 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::{ComponentId, UpdateResult};
-use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::events::CraftMessage;
@@ -67,7 +67,7 @@ impl Element for DevTools {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     ) {
         self.draw_borders(renderer);
         self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
@@ -94,20 +94,17 @@ impl Element for DevTools {
                 let padding_box_highlight_color = Color::from_rgba8(102, 87, 166, 125);
                 let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
 
-                let margin_rectangle =
-                    selected_element.element_data().computed_box_transformed.margin_rectangle();
+                let margin_rectangle = selected_element.element_data().computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
-                let padding_rectangle =
-                    selected_element.element_data().computed_box_transformed.padding_rectangle();
+                let padding_rectangle = selected_element.element_data().computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
-                let content_rectangle =
-                    selected_element.element_data().computed_box_transformed.content_rectangle();
+                let content_rectangle = selected_element.element_data().computed_box_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
@@ -176,7 +173,12 @@ impl Element for DevTools {
         self
     }
 
-    fn on_event(&self, _message: &CraftMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        _message: &CraftMessage,
+        element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+    ) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 
         UpdateResult::default()
@@ -197,14 +199,7 @@ impl DevTools {
     }
 
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut DevToolsState {
-        element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap()
+        element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> DevTools {

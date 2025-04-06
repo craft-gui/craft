@@ -188,7 +188,7 @@ pub struct Style {
 
     /// The element is measured and occupies space, but is not drawn to the screen.
     visible: bool,
-    
+
     pub dirty_flags: StyleFlags,
 }
 
@@ -605,17 +605,10 @@ impl Style {
             old.font_family_length
         };
 
-        let font_family = if new_dirty_flags.contains(StyleFlags::FONT_FAMILY) {
-            new.font_family
-        } else {
-            old.font_family
-        };
+        let font_family =
+            if new_dirty_flags.contains(StyleFlags::FONT_FAMILY) { new.font_family } else { old.font_family };
 
-        let box_sizing = if new_dirty_flags.contains(StyleFlags::BOX_SIZING) {
-            new.box_sizing
-        } else {
-            old.box_sizing
-        };
+        let box_sizing = if new_dirty_flags.contains(StyleFlags::BOX_SIZING) { new.box_sizing } else { old.box_sizing };
 
         let scrollbar_width = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_WIDTH) {
             new.scrollbar_width
@@ -623,101 +616,38 @@ impl Style {
             old.scrollbar_width
         };
 
-        let position = if new_dirty_flags.contains(StyleFlags::POSITION) {
-            new.position
-        } else {
-            old.position
-        };
+        let position = if new_dirty_flags.contains(StyleFlags::POSITION) { new.position } else { old.position };
 
-        let margin = if new_dirty_flags.contains(StyleFlags::MARGIN) {
-            new.margin
-        } else {
-            old.margin
-        };
+        let margin = if new_dirty_flags.contains(StyleFlags::MARGIN) { new.margin } else { old.margin };
 
-        let padding = if new_dirty_flags.contains(StyleFlags::PADDING) {
-            new.padding
-        } else {
-            old.padding
-        };
+        let padding = if new_dirty_flags.contains(StyleFlags::PADDING) { new.padding } else { old.padding };
 
-        let gap = if new_dirty_flags.contains(StyleFlags::GAP) {
-            new.gap
-        } else {
-            old.gap
-        };
+        let gap = if new_dirty_flags.contains(StyleFlags::GAP) { new.gap } else { old.gap };
 
-        let inset = if new_dirty_flags.contains(StyleFlags::INSET) {
-            new.inset
-        } else {
-            old.inset
-        };
+        let inset = if new_dirty_flags.contains(StyleFlags::INSET) { new.inset } else { old.inset };
 
-        let width = if new_dirty_flags.contains(StyleFlags::WIDTH) {
-            new.width
-        } else {
-            old.width
-        };
+        let width = if new_dirty_flags.contains(StyleFlags::WIDTH) { new.width } else { old.width };
 
-        let height = if new_dirty_flags.contains(StyleFlags::HEIGHT) {
-            new.height
-        } else {
-            old.height
-        };
+        let height = if new_dirty_flags.contains(StyleFlags::HEIGHT) { new.height } else { old.height };
 
-        let max_width = if new_dirty_flags.contains(StyleFlags::MAX_WIDTH) {
-            new.max_width
-        } else {
-            old.max_width
-        };
+        let max_width = if new_dirty_flags.contains(StyleFlags::MAX_WIDTH) { new.max_width } else { old.max_width };
 
-        let max_height = if new_dirty_flags.contains(StyleFlags::MAX_HEIGHT) {
-            new.max_height
-        } else {
-            old.max_height
-        };
+        let max_height = if new_dirty_flags.contains(StyleFlags::MAX_HEIGHT) { new.max_height } else { old.max_height };
 
-        let min_width = if new_dirty_flags.contains(StyleFlags::MIN_WIDTH) {
-            new.min_width
-        } else {
-            old.min_width
-        };
+        let min_width = if new_dirty_flags.contains(StyleFlags::MIN_WIDTH) { new.min_width } else { old.min_width };
 
-        let min_height = if new_dirty_flags.contains(StyleFlags::MIN_HEIGHT) {
-            new.min_height
-        } else {
-            old.min_height
-        };
+        let min_height = if new_dirty_flags.contains(StyleFlags::MIN_HEIGHT) { new.min_height } else { old.min_height };
 
-        let x = if new_dirty_flags.contains(StyleFlags::X) {
-            new.x
-        } else {
-            old.x
-        };
+        let x = if new_dirty_flags.contains(StyleFlags::X) { new.x } else { old.x };
 
-        let y = if new_dirty_flags.contains(StyleFlags::Y) {
-            new.y
-        } else {
-            old.y
-        };
+        let y = if new_dirty_flags.contains(StyleFlags::Y) { new.y } else { old.y };
 
-        let display = if new_dirty_flags.contains(StyleFlags::DISPLAY) {
-            new.display
-        } else {
-            old.display
-        };
+        let display = if new_dirty_flags.contains(StyleFlags::DISPLAY) { new.display } else { old.display };
 
-        let wrap = if new_dirty_flags.contains(StyleFlags::WRAP) {
-            new.wrap
-        } else {
-            old.wrap
-        };
+        let wrap = if new_dirty_flags.contains(StyleFlags::WRAP) { new.wrap } else { old.wrap };
 
-        let align_items = if new_dirty_flags.contains(StyleFlags::ALIGN_ITEMS) {
-            new.align_items
-        } else {
-            old.align_items
-        };
+        let align_items =
+            if new_dirty_flags.contains(StyleFlags::ALIGN_ITEMS) { new.align_items } else { old.align_items };
 
         let justify_content = if new_dirty_flags.contains(StyleFlags::JUSTIFY_CONTENT) {
             new.justify_content
@@ -725,83 +655,37 @@ impl Style {
             old.justify_content
         };
 
-        let flex_direction = if new_dirty_flags.contains(StyleFlags::FLEX_DIRECTION) {
-            new.flex_direction
-        } else {
-            old.flex_direction
-        };
+        let flex_direction =
+            if new_dirty_flags.contains(StyleFlags::FLEX_DIRECTION) { new.flex_direction } else { old.flex_direction };
 
-        let flex_grow = if new_dirty_flags.contains(StyleFlags::FLEX_GROW) {
-            new.flex_grow
-        } else {
-            old.flex_grow
-        };
+        let flex_grow = if new_dirty_flags.contains(StyleFlags::FLEX_GROW) { new.flex_grow } else { old.flex_grow };
 
-        let flex_shrink = if new_dirty_flags.contains(StyleFlags::FLEX_SHRINK) {
-            new.flex_shrink
-        } else {
-            old.flex_shrink
-        };
+        let flex_shrink =
+            if new_dirty_flags.contains(StyleFlags::FLEX_SHRINK) { new.flex_shrink } else { old.flex_shrink };
 
-        let flex_basis = if new_dirty_flags.contains(StyleFlags::FLEX_BASIS) {
-            new.flex_basis
-        } else {
-            old.flex_basis
-        };
+        let flex_basis = if new_dirty_flags.contains(StyleFlags::FLEX_BASIS) { new.flex_basis } else { old.flex_basis };
 
-        let color = if new_dirty_flags.contains(StyleFlags::COLOR) {
-            new.color
-        } else {
-            old.color
-        };
+        let color = if new_dirty_flags.contains(StyleFlags::COLOR) { new.color } else { old.color };
 
-        let background = if new_dirty_flags.contains(StyleFlags::BACKGROUND) {
-            new.background
-        } else {
-            old.background
-        };
+        let background = if new_dirty_flags.contains(StyleFlags::BACKGROUND) { new.background } else { old.background };
 
-        let font_size = if new_dirty_flags.contains(StyleFlags::FONT_SIZE) {
-            new.font_size
-        } else {
-            old.font_size
-        };
+        let font_size = if new_dirty_flags.contains(StyleFlags::FONT_SIZE) { new.font_size } else { old.font_size };
 
-        let font_weight = if new_dirty_flags.contains(StyleFlags::FONT_WEIGHT) {
-            new.font_weight
-        } else {
-            old.font_weight
-        };
+        let font_weight =
+            if new_dirty_flags.contains(StyleFlags::FONT_WEIGHT) { new.font_weight } else { old.font_weight };
 
-        let font_style = if new_dirty_flags.contains(StyleFlags::FONT_STYLE) {
-            new.font_style
-        } else {
-            old.font_style
-        };
+        let font_style = if new_dirty_flags.contains(StyleFlags::FONT_STYLE) { new.font_style } else { old.font_style };
 
-        let overflow = if new_dirty_flags.contains(StyleFlags::OVERFLOW) {
-            new.overflow
-        } else {
-            old.overflow
-        };
+        let overflow = if new_dirty_flags.contains(StyleFlags::OVERFLOW) { new.overflow } else { old.overflow };
 
-        let border_color = if new_dirty_flags.contains(StyleFlags::BORDER_COLOR) {
-            new.border_color
-        } else {
-            old.border_color
-        };
+        let border_color =
+            if new_dirty_flags.contains(StyleFlags::BORDER_COLOR) { new.border_color } else { old.border_color };
 
-        let border_width = if new_dirty_flags.contains(StyleFlags::BORDER_WIDTH) {
-            new.border_width
-        } else {
-            old.border_width
-        };
+        let border_width =
+            if new_dirty_flags.contains(StyleFlags::BORDER_WIDTH) { new.border_width } else { old.border_width };
 
-        let border_radius = if new_dirty_flags.contains(StyleFlags::BORDER_RADIUS) {
-            new.border_radius
-        } else {
-            old.border_radius
-        };
+        let border_radius =
+            if new_dirty_flags.contains(StyleFlags::BORDER_RADIUS) { new.border_radius } else { old.border_radius };
 
         let scrollbar_color = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_COLOR) {
             new.scrollbar_color
@@ -809,11 +693,7 @@ impl Style {
             old.scrollbar_color
         };
 
-        let visible = if new_dirty_flags.contains(StyleFlags::VISIBLE) {
-            new.visible
-        } else {
-            old.visible
-        };
+        let visible = if new_dirty_flags.contains(StyleFlags::VISIBLE) { new.visible } else { old.visible };
 
         let dirty_flags = old_dirty_flags | new_dirty_flags;
 

@@ -16,7 +16,7 @@ impl Component<WebsiteGlobalState> for About {
         _global_state: &WebsiteGlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
-        _id: ComponentId
+        _id: ComponentId,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)

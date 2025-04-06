@@ -10,10 +10,10 @@ use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Siz
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
+use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
-use cosmic_text::FontSystem;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
 
@@ -45,8 +45,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
 
-        let transformed_border_rectangle =
-            element_data.computed_box_transformed.border_rectangle();
+        let transformed_border_rectangle = element_data.computed_box_transformed.border_rectangle();
 
         transformed_border_rectangle.contains(&point)
     }
@@ -84,7 +83,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     );
 
     fn compute_layout(
@@ -113,7 +112,12 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
-    fn on_event(&self, _message: &CraftMessage, _element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        _message: &CraftMessage,
+        _element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+    ) -> UpdateResult {
         UpdateResult::default()
     }
 
@@ -144,11 +148,13 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
         //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
         if element_data_mut.style.position() == Position::Absolute {
-            size = Size::new(f32::max(result.size.width, result.content_size.width), f32::max(result.size.height, result.content_size.height));
+            size = Size::new(
+                f32::max(result.size.width, result.content_size.width),
+                f32::max(result.size.height, result.content_size.height),
+            );
         }
-        
-        element_data_mut.content_size =
-            Size::new(result.content_size.width, result.content_size.height);
+
+        element_data_mut.content_size = Size::new(result.content_size.width, result.content_size.height);
         element_data_mut.computed_box = ElementBox {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
@@ -156,8 +162,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             position,
             size,
         };
-        element_data_mut.computed_box_transformed =
-            element_data_mut.computed_box.transform(scroll_transform);
+        element_data_mut.computed_box_transformed = element_data_mut.computed_box.transform(scroll_transform);
     }
 
     fn draw_children(
@@ -167,7 +172,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     ) {
         for child in self.element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -194,10 +199,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         if !current_style.has_border() {
-            renderer.draw_rect(
-                element_data.computed_box_transformed.padding_rectangle(),
-                background_color,
-            );
+            renderer.draw_rect(element_data.computed_box_transformed.padding_rectangle(), background_color);
             return;
         }
 
@@ -300,9 +302,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let scroll_thumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
 
         element_data.computed_scroll_track = Rectangle::new(
-            box_transformed.position.x + box_transformed.size.width
-                - scroll_track_width
-                - box_transformed.border.right,
+            box_transformed.position.x + box_transformed.size.width - scroll_track_width - box_transformed.border.right,
             box_transformed.position.y + box_transformed.border.top,
             scroll_track_width,
             scroll_track_height,
@@ -348,7 +348,14 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(&self, _font_system: &mut FontSystem, _element_state: &mut ElementStateStore, _reload_fonts: bool, _scaling_factor: f64) {}
+    fn update_state(
+        &self,
+        _font_system: &mut FontSystem,
+        _element_state: &mut ElementStateStore,
+        _reload_fonts: bool,
+        _scaling_factor: f64,
+    ) {
+    }
 
     fn default_style(&self) -> Style {
         Style::default()
@@ -590,6 +597,11 @@ macro_rules! generate_component_methods {
             self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
 
             self
+        }
+
+        #[allow(dead_code)]
+        pub fn push_in_place(&mut self, component_specification: ComponentSpecification) {
+            self.element_data.child_specs.push(component_specification);
         }
 
         #[allow(dead_code)]

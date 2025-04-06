@@ -2,8 +2,8 @@ use crate::renderer::color::Color;
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
 use crate::renderer::wgpu::texture::Texture;
-use wgpu::{CompositeAlphaMode, PresentMode};
 use craft_logging::info;
+use wgpu::{CompositeAlphaMode, PresentMode};
 
 pub struct Context<'a> {
     pub(crate) camera: Camera,
@@ -69,9 +69,9 @@ pub fn create_surface_config(
                 wgpu::TextureFormat::Bgra8Unorm
             }
         });
-    
+
     info!("Surface format: {:?}", surface_format);
-    
+
     wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: surface_format,

@@ -37,12 +37,7 @@ pub(crate) struct EditorInfo {
 }
 
 impl EditorInfo {
-    fn new(
-        editor: &Editor,
-        cursor_color: Color,
-        selection_color: Color,
-        selected_text_color: Color,
-    ) -> Self {
+    fn new(editor: &Editor, cursor_color: Color, selection_color: Color, selected_text_color: Color) -> Self {
         Self {
             cursor_color,
             selection_color,
@@ -65,12 +60,7 @@ pub(crate) fn create_glyphs_for_editor(
     create_glyphs(
         buffer,
         text_color,
-        Some(EditorInfo::new(
-            editor,
-            cursor_color,
-            selection_color,
-            selected_text_color,
-        )),
+        Some(EditorInfo::new(editor, cursor_color, selection_color, selected_text_color)),
         text_scroll,
     )
 }
@@ -137,10 +127,9 @@ pub(crate) fn create_glyphs(
                                 && (end.line != line_i || c_start < end.index)
                             {
                                 range_opt = match range_opt.take() {
-                                    Some((min, max)) => Some((
-                                        cmp::min(min, c_x as i32),
-                                        cmp::max(max, (c_x + c_w) as i32),
-                                    )),
+                                    Some((min, max)) => {
+                                        Some((cmp::min(min, c_x as i32), cmp::max(max, (c_x + c_w) as i32)))
+                                    }
                                     None => Some((c_x as i32, (c_x + c_w) as i32)),
                                 };
                             } else if let Some((min, max)) = range_opt.take() {
@@ -177,10 +166,8 @@ pub(crate) fn create_glyphs(
 
             // Cursor
             if let Some((x, y)) = cursor_position(&editor_info.cursor, &layout_run) {
-                buffer_line.cursor = Some(Rect::from_origin_size(
-                    Point::new(x as f64, y as f64),
-                    Size::new(1.0, line_height),
-                ));
+                buffer_line.cursor =
+                    Some(Rect::from_origin_size(Point::new(x as f64, y as f64), Size::new(1.0, line_height)));
             }
         }
 

@@ -3,13 +3,14 @@ mod util;
 
 use util::setup_logging;
 
+use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
+use craft::craft_main_with_options;
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
 use craft::events::Event;
-use craft::craft_main_with_options;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::Display::Block;
 use craft::style::FlexDirection;
@@ -17,7 +18,6 @@ use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::CraftOptions;
 use craft::RendererType;
-use craft::components::ComponentId;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -41,7 +41,13 @@ impl Component for TextState {
             .push(Text::new("Hello, World!").id("hello_text"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
-            .push(TextInput::new(include_str!("../../Cargo.lock")).height(Unit::Px(500.0)).display(Block).overflow(Scroll).id("text_input"))
+            .push(
+                TextInput::new(include_str!("../../Cargo.lock"))
+                    .height(Unit::Px(500.0))
+                    .display(Block)
+                    .overflow(Scroll)
+                    .id("text_input"),
+            )
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()
     }

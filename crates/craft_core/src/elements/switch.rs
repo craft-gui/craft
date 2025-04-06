@@ -24,7 +24,7 @@ pub struct Switch {
     /// When `state.toggled` is None, use this as the default value.
     default_toggled: bool,
     /// A pseudo thumb element, this is not stored in the user tree nor will it receive events.
-    /// This is mostly for convenience, so that we can change the location and render it in the switch track container. 
+    /// This is mostly for convenience, so that we can change the location and render it in the switch track container.
     pseudo_thumb: Container,
     /// The style of the container/track when the switch is toggled. This style will get merged with the default style + user style.
     toggled_track_style: Style,
@@ -58,7 +58,7 @@ impl Element for Switch {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -77,18 +77,21 @@ impl Element for Switch {
         self.merge_default_style();
 
         // FIXME: Use insets and position absolute after we fix a few Taffy bugs.
-        self.pseudo_thumb.element_data_mut().style = Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.element_data_mut().style);
-        
+        self.pseudo_thumb.element_data_mut().style =
+            Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.element_data_mut().style);
+
         let default_toggled = self.default_toggled;
         let mut set_toggled_styles = || {
             self.element_data_mut().style = Style::merge(&self.element_data().style, &self.default_toggled_style());
             self.element_data_mut().style = Style::merge(&self.element_data().style, &self.toggled_track_style);
-            
-            self.pseudo_thumb.element_data_mut().style = Style::merge(&self.pseudo_thumb.element_data().style, &self.default_toggled_thumb_style());
-            self.pseudo_thumb.element_data_mut().style = Style::merge(&self.pseudo_thumb.element_data().style, &self.toggled_thumb_style);
+
+            self.pseudo_thumb.element_data_mut().style =
+                Style::merge(&self.pseudo_thumb.element_data().style, &self.default_toggled_thumb_style());
+            self.pseudo_thumb.element_data_mut().style =
+                Style::merge(&self.pseudo_thumb.element_data().style, &self.toggled_thumb_style);
             *self.element_data_mut().style.justify_content_mut() = Some(JustifyContent::FlexEnd);
         };
-        
+
         // Use the toggled styles when state.toggled is true or default_toggled is true.
         if let Some(toggled) = state.toggled {
             if toggled {
@@ -97,7 +100,7 @@ impl Element for Switch {
         } else if default_toggled {
             set_toggled_styles();
         }
-        
+
         let child_node = self.pseudo_thumb.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
 
         let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
@@ -136,7 +139,12 @@ impl Element for Switch {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        message: &CraftMessage,
+        element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+    ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
 
@@ -148,9 +156,9 @@ impl Element for Switch {
                 // Negate the default toggled bool when `state.toggled` is None.
                 state.toggled = Some(!self.default_toggled);
             }
-            
+
             // Emit the SwitchToggled event with the new value of `state.toggled`.
-            return UpdateResult::default().result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()))
+            return UpdateResult::default().result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
         }
 
         UpdateResult::default()
@@ -187,7 +195,7 @@ impl Default for Switch {
 impl Switch {
     fn default_thumb_style(&self) -> Style {
         let mut style = Style::default();
-        
+
         // FIXME: Do not hardcode these sizes.
         *style.display_mut() = Display::Block;
         *style.width_mut() = Unit::Px(26.0);
@@ -198,13 +206,13 @@ impl Switch {
 
         style
     }
-    
+
     fn default_toggled_style(&self) -> Style {
         let mut style = Style::default();
         *style.background_mut() = palette::css::DODGER_BLUE;
         Style::merge(&self.default_style(), &style)
     }
-    
+
     fn default_toggled_thumb_style(&self) -> Style {
         let style = Style::default();
         Style::merge(&self.default_thumb_style(), &style)
@@ -214,7 +222,7 @@ impl Switch {
         self.pseudo_thumb.element_data_mut().style = thumb_style;
         self
     }
-    
+
     pub fn toggled_thumb_style(mut self, toggled_thumb_style: Style) -> Self {
         self.toggled_thumb_style = toggled_thumb_style;
         self
@@ -224,7 +232,7 @@ impl Switch {
         self.toggled_track_style = toggled_thumb_style;
         self
     }
-    
+
     pub fn default_toggled(mut self, default_toggled: bool) -> Self {
         self.default_toggled = default_toggled;
         self

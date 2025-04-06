@@ -8,7 +8,7 @@ use wgpu::{BindGroup, Extent3d, ImageCopyTexture, ImageDataLayout, Origin3d, Tex
 pub enum ContentType {
     Mask = 0,
     // This is for emojis.
-    Color = 1, 
+    Color = 1,
     // For the cursor and highlights.
     Rectangle = 2,
 }
@@ -20,7 +20,7 @@ pub struct GlyphInfo {
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub swash_image_placement: Placement,
-    pub(crate) content_type: ContentType
+    pub(crate) content_type: ContentType,
 }
 
 pub struct TextAtlas {
@@ -37,13 +37,11 @@ pub struct TextAtlas {
 }
 
 impl TextAtlas {
-
     pub(crate) fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
         let max_texture_size = device.limits().max_texture_dimension_2d;
         let texture_width = u32::clamp(width, 1, max_texture_size);
         let texture_height = u32::clamp(height, 1, max_texture_size);
-        
-        
+
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Text Atlas Texture"),
             size: Extent3d {
@@ -106,7 +104,7 @@ impl TextAtlas {
             ],
             label: Some("craft_bind_group"),
         });
-        
+
         TextAtlas {
             texture,
             _texture_view: view,
@@ -124,11 +122,10 @@ impl TextAtlas {
     pub(crate) fn get_cached_glyph_info(&self, cache_key: CacheKey) -> Option<GlyphInfo> {
         self.glyph_cache.get(&cache_key).cloned()
     }
-    
+
     fn set_cached_glyph_info(&mut self, cache_key: CacheKey, glyph_info: GlyphInfo) {
         self.glyph_cache.insert(cache_key, glyph_info);
     }
-
 
     pub(crate) fn add_glyph(&mut self, swash_image: &SwashImage, cache_key: CacheKey, queue: &wgpu::Queue) {
         if swash_image.placement.height == 0 {
@@ -139,7 +136,7 @@ impl TextAtlas {
         let glyph_height = swash_image.placement.height;
 
         self.tallest_glyph_on_current_row = self.tallest_glyph_on_current_row.max(glyph_height);
-        
+
         // Check if the glyph fits in the current row.
         if self.x_offset + glyph_width > self.texture_width {
             // Move to the next row.
@@ -157,11 +154,11 @@ impl TextAtlas {
 
         let mut data: Vec<u8> = vec![0; (glyph_width * glyph_height * 4) as usize];
         let content_type;
-        
+
         let data = match swash_image.content {
             SwashContent::Mask => {
                 content_type = ContentType::Mask;
-                
+
                 let mut data_i = 0;
                 for y in 0..glyph_height {
                     for x in 0..glyph_width {
@@ -209,15 +206,18 @@ impl TextAtlas {
             },
         );
 
-        self.set_cached_glyph_info(cache_key, GlyphInfo {
-            texture_coordinate_x: self.x_offset,
-            texture_coordinate_y: self.y_offset,
-            width: glyph_width,
-            height: glyph_height,
-            swash_image_placement: swash_image.placement,
-            content_type,
-        });
-        
+        self.set_cached_glyph_info(
+            cache_key,
+            GlyphInfo {
+                texture_coordinate_x: self.x_offset,
+                texture_coordinate_y: self.y_offset,
+                width: glyph_width,
+                height: glyph_height,
+                swash_image_placement: swash_image.placement,
+                content_type,
+            },
+        );
+
         // Update the x_offset for the next glyph.
         self.x_offset += glyph_width;
     }

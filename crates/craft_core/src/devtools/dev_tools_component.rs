@@ -6,7 +6,7 @@ use crate::devtools::element_tree_view::element_tree_view;
 use crate::devtools::style_window::styles_window_view;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
-use crate::events::{Event, Message, CraftMessage};
+use crate::events::{CraftMessage, Event, Message};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
 

@@ -13,7 +13,7 @@ pub(crate) mod vello;
 pub(crate) mod vello_cpu;
 
 pub(crate) mod blank_renderer;
-mod text;
 mod image_adapter;
+mod text;
 
 pub use renderer::RenderCommand;

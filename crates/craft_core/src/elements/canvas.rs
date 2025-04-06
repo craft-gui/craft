@@ -1,7 +1,7 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
@@ -46,7 +46,7 @@ impl Element for Canvas {
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>
+        _window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -129,7 +129,7 @@ impl Element for Canvas {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     renderer.fill_bez_path(path.clone(), *color);
-                },
+                }
                 #[cfg(feature = "wgpu_renderer")]
                 RenderCommand::FillLyonPath(..) => {}
             }
@@ -207,14 +207,7 @@ impl Canvas {
 
     #[allow(dead_code)]
     fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut CanvasState {
-        element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap()
+        element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> Canvas {

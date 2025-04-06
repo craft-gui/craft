@@ -40,7 +40,7 @@ impl ImageRenderer {
 
         renderer.cached_pipelines.insert(
             DEFAULT_IMAGE_PIPELINE_CONFIG,
-            ImagePipeline::new_pipeline_with_configuration(context, DEFAULT_IMAGE_PIPELINE_CONFIG)
+            ImagePipeline::new_pipeline_with_configuration(context, DEFAULT_IMAGE_PIPELINE_CONFIG),
         );
 
         renderer
@@ -52,13 +52,17 @@ impl ImageRenderer {
             vertices: vec![],
             indices: vec![],
         });
-        
+
         let current_batch = self.image_batch.last_mut().unwrap();
-        ImageRenderer::build_texture_rectangle(rectangle, color, &mut current_batch.vertices, &mut current_batch.indices);
+        ImageRenderer::build_texture_rectangle(
+            rectangle,
+            color,
+            &mut current_batch.vertices,
+            &mut current_batch.indices,
+        );
     }
 
     pub(crate) fn prepare(&mut self, context: &Context) -> Option<ImagePerFrameData> {
-
         let mut vertex_buffers = Vec::new();
         let mut index_buffers = Vec::new();
         let mut resource_identifiers: Vec<Option<ResourceIdentifier>> = Vec::new();
@@ -80,7 +84,7 @@ impl ImageRenderer {
             resource_identifiers.push(batch.texture_path.clone());
             indices.push(batch.indices.len());
         }
-        
+
         if vertex_buffers.is_empty() {
             return None;
         }
@@ -95,20 +99,23 @@ impl ImageRenderer {
         })
     }
 
-    pub(crate) fn draw(&mut self, context: &mut Context, resource_manager: &RwLockReadGuard<ResourceManager>, render_pass: &mut RenderPass, per_frame_data: &ImagePerFrameData) {
+    pub(crate) fn draw(
+        &mut self,
+        context: &mut Context,
+        resource_manager: &RwLockReadGuard<ResourceManager>,
+        render_pass: &mut RenderPass,
+        per_frame_data: &ImagePerFrameData,
+    ) {
         let image_pipeline = self.cached_pipelines.get(&DEFAULT_IMAGE_PIPELINE_CONFIG).unwrap();
 
         for index in 0..per_frame_data.vertex_buffers.len() {
-            
             let texture_path = per_frame_data.resource_identifiers.get(index).unwrap();
             let vertex_buffer = per_frame_data.vertex_buffers.get(index).unwrap();
             let index_buffer = per_frame_data.index_buffers.get(index).unwrap();
             let indices = per_frame_data.indices.get(index).unwrap();
-            
-            
+
             // Get the batch texture or use the default white texture if we cannot find the batch texture.
             let texture = if let Some(texture_path) = texture_path {
-                
                 if let Some(texture) = self.cached_textures.get(texture_path) {
                     texture
                 } else {
@@ -118,12 +125,8 @@ impl ImageRenderer {
 
                     let texture = if let Some(Resource::Image(resource)) = resource {
                         let label = resource.common_data.resource_identifier.to_string();
-                        let texture = Texture::from_image(
-                            &context.device,
-                            &context.queue,
-                            &resource.image,
-                            Some(label.as_str()),
-                        );
+                        let texture =
+                            Texture::from_image(&context.device, &context.queue, &resource.image, Some(label.as_str()));
 
                         if let Some(texture) = texture {
                             self.cached_textures.insert(texture_path.clone(), texture);
@@ -150,7 +153,12 @@ impl ImageRenderer {
         }
     }
 
-    pub(crate) fn build_texture_rectangle(rectangle: Rectangle, fill_color: Color, vertices: &mut Vec<ImageVertex>, indices: &mut Vec<u32>) {
+    pub(crate) fn build_texture_rectangle(
+        rectangle: Rectangle,
+        fill_color: Color,
+        vertices: &mut Vec<ImageVertex>,
+        indices: &mut Vec<u32>,
+    ) {
         let x = rectangle.x;
         let y = rectangle.y;
         let width = rectangle.width;

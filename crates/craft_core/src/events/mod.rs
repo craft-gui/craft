@@ -14,16 +14,16 @@ pub use pointer_moved::PointerMoved;
 pub use winit::event::ButtonSource;
 pub use winit::event::ElementState;
 
+use crate::components::ComponentId;
 use crate::events::CraftMessage::PointerButtonEvent;
 use std::any::Any;
 use winit::event::Ime;
 pub use winit::event::MouseButton;
-use crate::components::ComponentId;
 
 #[derive(Clone, Copy, Debug)]
 pub enum EventDispatchType {
     Bubbling,
-    Direct(ComponentId)
+    Direct(ComponentId),
 }
 
 pub struct Event<'a> {
@@ -78,14 +78,15 @@ pub enum CraftMessage {
 impl CraftMessage {
     pub fn clicked(&self) -> bool {
         if let PointerButtonEvent(pointer_button) = self {
-            if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == ElementState::Released {
+            if pointer_button.button.mouse_button() == MouseButton::Left
+                && pointer_button.state == ElementState::Released
+            {
                 return true;
             }
         }
 
         false
     }
-
 }
 
 pub enum Message {

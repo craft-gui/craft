@@ -13,14 +13,12 @@ use crate::style::Style;
 use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
-    pub id: ComponentId
+    pub id: ComponentId,
 }
 
 impl TaffyTextContext {
     pub fn new(id: ComponentId) -> Self {
-        Self {
-            id
-        }
+        Self { id }
     }
 }
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
@@ -58,7 +56,7 @@ pub struct TextHashKey {
 }
 
 impl TextHashKey {
-    pub(crate) fn new(known_dimensions: Size<Option<f32>>, available_space:  Size<taffy::AvailableSpace>) -> Self {
+    pub(crate) fn new(known_dimensions: Size<Option<f32>>, available_space: Size<taffy::AvailableSpace>) -> Self {
         // Set width constraint
         let width_constraint = known_dimensions.width.or(match available_space.width {
             taffy::AvailableSpace::MinContent => Some(0.0),
@@ -151,32 +149,30 @@ pub fn measure_content(
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
-    if let Size { width: Some(width), height: Some(height) } = known_dimensions {
+    if let Size {
+        width: Some(width),
+        height: Some(height),
+    } = known_dimensions
+    {
         return Size { width, height };
     }
 
     match node_context {
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
-            let text_state: &mut TextState = element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
+            let text_state: &mut TextState =
+                element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.cached_editor.measure(
-                known_dimensions,
-                available_space,
-                font_system,
-            )
+            text_state.cached_editor.measure(known_dimensions, available_space, font_system)
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let text_input_state: &mut TextInputState = element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
-            
-            text_input_state.cached_editor.measure(
-                known_dimensions,
-                available_space,
-                font_system,
-            )
+            let text_input_state: &mut TextInputState =
+                element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
+
+            text_input_state.cached_editor.measure(known_dimensions, available_space, font_system)
         }
     }
 }
@@ -189,8 +185,6 @@ pub struct TaffyTextInputContext {
 
 impl TaffyTextInputContext {
     pub fn new(id: ComponentId) -> Self {
-        Self {
-            id,
-        }
+        Self { id }
     }
 }

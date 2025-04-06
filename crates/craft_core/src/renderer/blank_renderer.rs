@@ -34,7 +34,14 @@ impl Renderer for BlankRenderer {
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
-    fn draw_text(&mut self, _element_id: ComponentId, _rectangle: Rectangle, _color: Color, _text_scroll: Option<TextScroll>) {}
+    fn draw_text(
+        &mut self,
+        _element_id: ComponentId,
+        _rectangle: Rectangle,
+        _color: Color,
+        _text_scroll: Option<TextScroll>,
+    ) {
+    }
 
     fn draw_image(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
 

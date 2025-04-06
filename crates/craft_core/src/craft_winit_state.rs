@@ -7,7 +7,6 @@ use {
 #[cfg(feature = "vello_renderer")]
 use crate::renderer::vello::VelloRenderer;
 
-
 #[cfg(feature = "vello_cpu_renderer")]
 use crate::renderer::vello_cpu::VelloCpuRenderer;
 
@@ -140,10 +139,7 @@ impl ApplicationHandler for CraftWinitState {
                 self.close_requested = true;
             }
             WindowEvent::ModifiersChanged(modifiers) => {
-                self.send_message(
-                    InternalMessage::ModifiersChanged(modifiers),
-                    true,
-                );
+                self.send_message(InternalMessage::ModifiersChanged(modifiers), true);
             }
             WindowEvent::PointerButton {
                 device_id,
@@ -269,7 +265,7 @@ impl CraftWinitState {
                 if !is_close_message {
                     result.expect("Failed to send app message");
                 }
-                
+
                 if blocking {
                     if let Some(response) = self.winit_receiver.recv().await {
                         if let InternalMessage::Confirmation = response.data {

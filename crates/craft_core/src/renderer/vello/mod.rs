@@ -4,23 +4,23 @@ use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
+use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
+use crate::renderer::text;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-use peniko::kurbo::BezPath;
-use std::sync::Arc;
 #[cfg(feature = "wgpu_renderer")]
 use lyon::path::Path;
+use peniko::kurbo::BezPath;
+use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
-use vello::{Glyph, Scene};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
+use vello::{Glyph, Scene};
 use winit::window::Window;
-use crate::renderer::image_adapter::ImageAdapter;
-use crate::renderer::text;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -76,7 +76,7 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
             num_init_threads: None,
         },
     )
-        .expect("Couldn't create renderer")
+    .expect("Couldn't create renderer")
 }
 
 impl<'a> VelloRenderer<'a> {
@@ -95,12 +95,7 @@ impl<'a> VelloRenderer<'a> {
 
         let surface = vello_renderer
             .context
-            .create_surface(
-                window.clone(),
-                surface_size.width,
-                surface_size.height,
-                wgpu::PresentMode::AutoVsync,
-            )
+            .create_surface(window.clone(), surface_size.width, surface_size.height, wgpu::PresentMode::AutoVsync)
             .await
             .unwrap();
 
@@ -155,22 +150,21 @@ impl<'a> VelloRenderer<'a> {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-
                     let mut draw_cursor = false;
-                    let cached_editor = if let Some(text_context) = element_state.storage
-                        .get(&component_id)
-                        .unwrap()
-                        .data.downcast_ref::<TextState>() {
+                    let cached_editor = if let Some(text_context) =
+                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
+                    {
                         Some(&text_context.cached_editor)
                     } else {
                         draw_cursor = true;
-                        element_state.storage
+                        element_state
+                            .storage
                             .get(&component_id)
                             .unwrap()
-                            .data.downcast_ref::<TextInputState>()
+                            .data
+                            .downcast_ref::<TextInputState>()
                             .map(|text_context| &text_context.cached_editor)
                     };
-
 
                     if let Some(cached_editor) = cached_editor {
                         let editor = &cached_editor.editor;
@@ -200,13 +194,7 @@ impl<'a> VelloRenderer<'a> {
 
                             if draw_cursor {
                                 if let Some(cursor) = &buffer_line.cursor {
-                                    scene.fill(
-                                        Fill::NonZero,
-                                        text_transform,
-                                        buffer_glyphs.cursor_color,
-                                        None,
-                                        cursor,
-                                    );
+                                    scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
                                 }
                             }
 
@@ -220,11 +208,14 @@ impl<'a> VelloRenderer<'a> {
                                     .font_size(buffer_glyphs.font_size)
                                     .brush(glyph_color)
                                     .transform(text_transform)
-                                    .draw(Fill::NonZero, glyphs.into_iter().map(|glyph| Glyph {
-                                        id: glyph.glyph_id as u32,
-                                        x: glyph.x,
-                                        y: glyph.y + glyph_run.line_y,
-                                    }));
+                                    .draw(
+                                        Fill::NonZero,
+                                        glyphs.into_iter().map(|glyph| Glyph {
+                                            id: glyph.glyph_id as u32,
+                                            x: glyph.x,
+                                            y: glyph.y + glyph_run.line_y,
+                                        }),
+                                    );
                             }
                         }
                     }
@@ -249,7 +240,7 @@ impl<'a> VelloRenderer<'a> {
                 }
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
-                },
+                }
                 #[cfg(feature = "wgpu_renderer")]
                 RenderCommand::FillLyonPath(_, _) => {}
             }
@@ -306,9 +297,15 @@ impl Renderer for VelloRenderer<'_> {
     }
 
     #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) { }
+    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>) {
+    fn draw_text(
+        &mut self,
+        element_id: ComponentId,
+        rectangle: Rectangle,
+        fill_color: Color,
+        text_scroll: Option<TextScroll>,
+    ) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
     }
 
@@ -328,8 +325,15 @@ impl Renderer for VelloRenderer<'_> {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         _font_system: &mut FontSystem,
-        element_state: &ElementStateStore) {
-        VelloRenderer::prepare_with_render_commands(&mut self.scene, &resource_manager, _font_system, element_state, &mut self.render_commands);
+        element_state: &ElementStateStore,
+    ) {
+        VelloRenderer::prepare_with_render_commands(
+            &mut self.scene,
+            &resource_manager,
+            _font_system,
+            element_state,
+            &mut self.render_commands,
+        );
     }
 
     fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {

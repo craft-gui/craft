@@ -21,11 +21,7 @@ pub struct AttributesRaw {
 
 impl AttributesRaw {
     pub(crate) fn from(style: &Style) -> Self {
-        let font_family = if style.font_family_length() == 0 {
-            None
-        } else {
-            Some(style.font_family_raw())
-        };
+        let font_family = if style.font_family_length() == 0 { None } else { Some(style.font_family_raw()) };
         Self {
             font_family_length: style.font_family_length(),
             font_family,
@@ -36,21 +32,18 @@ impl AttributesRaw {
     pub(crate) fn to_attrs(&self) -> Attrs {
         let mut attrs = Attrs::new();
         if let Some(font_family) = &self.font_family {
-            attrs.family = Family::Name(
-                std::str::from_utf8(&font_family[..self.font_family_length as usize]).unwrap()
-            );
+            attrs.family = Family::Name(std::str::from_utf8(&font_family[..self.font_family_length as usize]).unwrap());
             attrs.weight = self.weight;
         }
         attrs
     }
-
 }
 
 impl PartialEq for AttributesRaw {
     fn eq(&self, other: &Self) -> bool {
-        self.font_family == other.font_family &&
-            self.font_family_length == other.font_family_length &&
-            self.weight == other.weight
+        self.font_family == other.font_family
+            && self.font_family_length == other.font_family_length
+            && self.weight == other.weight
     }
 }
 
@@ -68,7 +61,7 @@ pub struct CachedEditor<'a> {
     /// The internal cosmic-text editor that we wrap, so that we can do caching.
     pub editor: Editor<'a>,
     pub modifiers: Modifiers,
-    /// Stores Attrs fields as integers for hashing. 
+    /// Stores Attrs fields as integers for hashing.
     pub(crate) attributes: AttributesRaw,
     /// Stores Metric fields as integers for hashing.
     pub(crate) metrics: MetricsRaw,
@@ -95,7 +88,7 @@ impl CachedEditor<'_> {
         let cache_key = TextHashKey::new(known_dimensions, available_space);
         self.rebuild_cache_if_needed(cache_key, font_system)
     }
-    
+
     pub(crate) fn new(text: &String, style: &Style, scaling_factor: f64, font_system: &mut FontSystem) -> Self {
         let attributes = AttributesRaw::from(style);
         let metrics = MetricsRaw::from(style, scaling_factor);
@@ -118,14 +111,21 @@ impl CachedEditor<'_> {
 
         cached_editor.action_set_text(font_system, Some(text));
         cached_editor.move_to_end(font_system);
-        
+
         cached_editor
     }
-    
-    pub(crate) fn update_state(&mut self, text: Option<&String>, style: &Style, scaling_factor: f64, reload_fonts: bool, font_system: &mut FontSystem) {
+
+    pub(crate) fn update_state(
+        &mut self,
+        text: Option<&String>,
+        style: &Style,
+        scaling_factor: f64,
+        reload_fonts: bool,
+        font_system: &mut FontSystem,
+    ) {
         let attributes = AttributesRaw::from(style);
         let metrics = MetricsRaw::from(style, scaling_factor);
-        
+
         self.action_set_attributes(attributes);
         self.action_set_reload_fonts(reload_fonts);
         self.action_set_text(font_system, text);
@@ -143,7 +143,7 @@ impl CachedEditor<'_> {
             buffer_string
         })
     }
-    
+
     pub(crate) fn is_control_or_super_modifier_pressed(&self) -> bool {
         if cfg!(target_os = "macos") {
             self.modifiers.state().super_key()
@@ -151,8 +151,12 @@ impl CachedEditor<'_> {
             self.modifiers.state().control_key()
         }
     }
-    
-    pub(crate) fn rebuild_cache_if_needed(&mut self, cache_key: TextHashKey, font_system: &mut FontSystem) -> taffy::Size<f32> {
+
+    pub(crate) fn rebuild_cache_if_needed(
+        &mut self,
+        cache_key: TextHashKey,
+        font_system: &mut FontSystem,
+    ) -> taffy::Size<f32> {
         self.last_key = Some(cache_key);
         // Currently we are caching the `Buffer` which is memory hungry, so we should clear the cache if this grows to be too big.
         // Measure is called 3-5 times.
@@ -172,7 +176,12 @@ impl CachedEditor<'_> {
             }
         } else {
             self.editor.with_buffer_mut(|buffer| {
-                buffer.set_metrics_and_size(font_system, self.metrics.to_metrics(), cache_key.width_constraint.map(f32::from_bits), cache_key.height_constraint.map(f32::from_bits));
+                buffer.set_metrics_and_size(
+                    font_system,
+                    self.metrics.to_metrics(),
+                    cache_key.width_constraint.map(f32::from_bits),
+                    cache_key.height_constraint.map(f32::from_bits),
+                );
             });
             self.editor.shape_as_needed(font_system, true);
 
@@ -198,7 +207,7 @@ impl CachedEditor<'_> {
                 height: cached_text_layout_value.computed_height,
             };
             self.cached_text_layout.insert(cache_key, cached_text_layout_value);
-            
+
             size
         }
     }

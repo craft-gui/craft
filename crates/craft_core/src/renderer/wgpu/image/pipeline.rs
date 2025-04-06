@@ -20,7 +20,7 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
 };
 
 pub(crate) const DEFAULT_IMAGE_PIPELINE_CONFIG: ImagePipelineConfig = ImagePipelineConfig {
-    blend_state: DEFAULT_BLEND_STATE
+    blend_state: DEFAULT_BLEND_STATE,
 };
 
 pub struct ImagePipeline {
@@ -29,7 +29,6 @@ pub struct ImagePipeline {
 
 impl ImagePipeline {
     pub fn new_pipeline_with_configuration(context: &Context, config: ImagePipelineConfig) -> Self {
-
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -99,6 +98,5 @@ impl ImagePipeline {
         Self {
             pipeline: render_pipeline,
         }
-
     }
 }

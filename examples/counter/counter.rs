@@ -2,10 +2,10 @@
 mod util;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::craft_main_with_options;
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::{Event};
-use craft::craft_main_with_options;
+use craft::events::Event;
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
 use craft::Color;
@@ -35,7 +35,11 @@ impl Component for Counter {
             .height("100%")
             .background(Color::from_rgb8(250, 250, 250))
             .gap("20px")
-            .push(Text::new(format!("Count:  {}", state.count).as_str()).font_size(72.0).color(Color::from_rgb8(50, 50, 50)))
+            .push(
+                Text::new(format!("Count:  {}", state.count).as_str())
+                    .font_size(72.0)
+                    .color(Color::from_rgb8(50, 50, 50)),
+            )
             .push(
                 Container::new()
                     .display(Display::Flex)

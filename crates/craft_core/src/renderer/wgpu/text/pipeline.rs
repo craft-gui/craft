@@ -20,7 +20,7 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
 };
 
 pub(crate) const DEFAULT_TEXT_PIPELINE_CONFIG: TextPipelineConfig = TextPipelineConfig {
-    blend_state: DEFAULT_BLEND_STATE
+    blend_state: DEFAULT_BLEND_STATE,
 };
 
 pub struct TextPipeline {
@@ -29,7 +29,6 @@ pub struct TextPipeline {
 
 impl TextPipeline {
     pub fn new_pipeline_with_configuration(context: &Context, config: TextPipelineConfig) -> Self {
-        
         let texture_bind_group_layout = context.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -99,6 +98,5 @@ impl TextPipeline {
         Self {
             pipeline: render_pipeline,
         }
-
     }
 }

@@ -32,7 +32,6 @@ impl dyn Element {
 
 #[cfg(test)]
 mod tests {
-    use cosmic_text::FontSystem;
     use crate::elements::element::ElementBoxed;
     use crate::elements::{Container, Text};
     use crate::reactive::element_id::reset_unique_element_id;
@@ -40,6 +39,7 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use crate::GlobalState;
+    use cosmic_text::FontSystem;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {

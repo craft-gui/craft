@@ -1,8 +1,8 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::scroll_state::ScrollState;
@@ -49,7 +49,7 @@ impl Element for Container {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -106,12 +106,8 @@ impl Element for Container {
         self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(container_state) = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_ref::<ContainerState>()
+        let scroll_y = if let Some(container_state) =
+            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<ContainerState>()
         {
             container_state.scroll_state.scroll_y
         } else {
@@ -144,7 +140,12 @@ impl Element for Container {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, element_state: &mut ElementStateStore, _font_system: &mut FontSystem) -> UpdateResult {
+    fn on_event(
+        &self,
+        message: &CraftMessage,
+        element_state: &mut ElementStateStore,
+        _font_system: &mut FontSystem,
+    ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 

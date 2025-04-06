@@ -82,12 +82,21 @@ impl ComponentSpecification {
         self
     }
 
+    pub fn extend_children(mut self, children: Vec<ComponentSpecification>) -> Self {
+        self.children.extend(children);
+        self
+    }
+
     pub fn push<T>(mut self, component: T) -> Self
     where
         T: Into<ComponentSpecification>,
     {
         self.children.push(component.into());
         self
+    }
+
+    pub fn push_in_place(&mut self, component: ComponentSpecification) {
+        self.children.push(component);
     }
 }
 

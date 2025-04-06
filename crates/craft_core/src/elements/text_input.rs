@@ -1,8 +1,8 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
-use crate::elements::element_data::ElementData;
 use crate::elements::element::{Element, ElementBoxed};
+use crate::elements::element_data::ElementData;
 use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
@@ -45,7 +45,7 @@ pub struct TextInputState<'a> {
     pub cached_editor: CachedEditor<'a>,
     pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
-    pub(crate) ime_state: ImeState
+    pub(crate) ime_state: ImeState,
 }
 
 impl TextInput {
@@ -88,13 +88,12 @@ impl Element for TextInput {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>
+        window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed =
-            self.element_data.computed_box_transformed;
+        let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer);
@@ -105,18 +104,14 @@ impl Element for TextInput {
             self.maybe_start_layer(renderer);
         }
 
-        let scroll_y = if let Some(state) = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_ref::<TextInputState>()
+        let scroll_y = if let Some(state) =
+            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
         {
             state.scroll_state.scroll_y
         } else {
             0.0
         };
-        
+
         let text_scroll = if is_scrollable {
             Some(TextScroll::new(scroll_y, self.element_data.computed_scroll_track.height))
         } else {
@@ -127,7 +122,7 @@ impl Element for TextInput {
             self.element_data.component_id,
             content_rectangle,
             self.element_data.style.color(),
-            text_scroll
+            text_scroll,
         );
 
         if let Some(state) = element_state
@@ -137,13 +132,16 @@ impl Element for TextInput {
             .data
             .downcast_mut::<TextInputState>()
         {
-
             if let Some((cursor_x, cursor_y)) = state.cached_editor.editor.cursor_position() {
                 if state.is_active {
                     if let Some(window) = window {
                         let content_position = self.element_data.computed_box_transformed.content_rectangle();
                         window.set_ime_cursor_area(
-                            PhysicalPosition::new(content_position.x + cursor_x as f32, content_position.y + cursor_y as f32).into(),
+                            PhysicalPosition::new(
+                                content_position.x + cursor_x as f32,
+                                content_position.y + cursor_y as f32,
+                            )
+                            .into(),
                             PhysicalSize::new(20.0, 20.0).into(),
                         );
                     }
@@ -169,12 +167,14 @@ impl Element for TextInput {
         self.merge_default_style();
         let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
 
-        self.element_data_mut().taffy_node_id = Some(taffy_tree
-            .new_leaf_with_context(
-                style,
-                LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id)),
-            )
-            .unwrap());
+        self.element_data_mut().taffy_node_id = Some(
+            taffy_tree
+                .new_leaf_with_context(
+                    style,
+                    LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id)),
+                )
+                .unwrap(),
+        );
 
         self.element_data().taffy_node_id
     }
@@ -197,12 +197,8 @@ impl Element for TextInput {
         self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(container_state) = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_ref::<TextInputState>()
+        let scroll_y = if let Some(container_state) =
+            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
         {
             container_state.scroll_state.scroll_y
         } else {
@@ -235,14 +231,17 @@ impl Element for TextInput {
         let cached_editor = &mut state.cached_editor;
         let scroll_y = state.scroll_state.scroll_y;
         let content_rect = self.element_data.computed_box.content_rectangle();
-        
+
         match message {
             CraftMessage::PointerButtonEvent(pointer_button) => {
                 let pointer_position = pointer_button.position;
                 let pointer_content_position = pointer_position - content_rect.position();
-                
+
                 if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    cached_editor.action_start_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
+                    cached_editor.action_start_drag(
+                        font_system,
+                        Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y),
+                    );
                 } else {
                     cached_editor.action_end_drag();
                 }
@@ -252,7 +251,10 @@ impl Element for TextInput {
                 if cached_editor.dragging {
                     let pointer_position = moved.position;
                     let pointer_content_position = pointer_position - content_rect.position();
-                    cached_editor.action_drag(font_system, Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y));
+                    cached_editor.action_drag(
+                        font_system,
+                        Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y),
+                    );
                 }
                 UpdateResult::new().prevent_defaults().prevent_propagate()
             }
@@ -274,7 +276,7 @@ impl Element for TextInput {
                         Key::Named(NamedKey::End) => cached_editor.move_to_end(font_system),
                         Key::Named(NamedKey::PageUp) => cached_editor.move_page_up(font_system),
                         Key::Named(NamedKey::PageDown) => cached_editor.move_page_down(font_system),
-                        
+
                         Key::Named(NamedKey::Escape) => cached_editor.action_escape(font_system),
                         Key::Named(NamedKey::Enter) => cached_editor.action_enter(font_system),
                         Key::Named(NamedKey::Backspace) => cached_editor.action_backspace(font_system),
@@ -285,7 +287,9 @@ impl Element for TextInput {
                             }
                         }
                         Key::Character(text) => {
-                            if cached_editor.is_control_or_super_modifier_pressed() && matches!(text.as_str(), "c" | "v" | "x") {
+                            if cached_editor.is_control_or_super_modifier_pressed()
+                                && matches!(text.as_str(), "c" | "v" | "x")
+                            {
                                 match text.to_lowercase().as_str() {
                                     "c" => cached_editor.action_copy_to_clipboard(),
                                     "v" => cached_editor.action_paste_from_clipboard(font_system),
@@ -310,7 +314,7 @@ impl Element for TextInput {
             // This is all a bit hacky and needs some improvement:
             CraftMessage::ImeEvent(ime) => {
                 // FIXME: This shouldn't be possible, we need to close the ime window when a text input loses focus.
-                if state.ime_state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled){
+                if state.ime_state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled) {
                     // state.ime_starting_cursor = Some(cached_editor.editor.cursor());
                     return Default::default();
                 }
@@ -323,7 +327,7 @@ impl Element for TextInput {
                         state.ime_state = cached_editor.action_ime_preedit(&state.ime_state, str, *cursor_info);
                     }
                     Ime::Commit(str) => {
-                       state.ime_state = cached_editor.action_ime_commit(&state.ime_state, str);
+                        state.ime_state = cached_editor.action_ime_commit(&state.ime_state, str);
                     }
                     Ime::Disabled => {
                         state.ime_state = cached_editor.action_ime_disabled();
@@ -336,7 +340,7 @@ impl Element for TextInput {
                     .prevent_propagate()
                     .result_message(CraftMessage::TextInputChanged(event_text))
             }
-            
+
             _ => UpdateResult::new(),
         }
     }
@@ -352,11 +356,17 @@ impl Element for TextInput {
 
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(text_input_state)
+            data: Box::new(text_input_state),
         }
     }
 
-    fn update_state(&self, font_system: &mut FontSystem, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
+    fn update_state(
+        &self,
+        font_system: &mut FontSystem,
+        element_state: &mut ElementStateStore,
+        reload_fonts: bool,
+        scaling_factor: f64,
+    ) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.element_data.component_id)
@@ -367,7 +377,13 @@ impl Element for TextInput {
             .unwrap();
 
         if self.use_text_value_on_update {
-            state.cached_editor.update_state(Some(&self.text), &self.element_data.style, scaling_factor, reload_fonts, font_system);
+            state.cached_editor.update_state(
+                Some(&self.text),
+                &self.element_data.style,
+                scaling_factor,
+                reload_fonts,
+                font_system,
+            );
         } else {
             state.cached_editor.update_state(None, &self.element_data.style, scaling_factor, reload_fonts, font_system);
         }

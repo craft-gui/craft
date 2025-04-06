@@ -1,11 +1,11 @@
 mod camera;
 mod context;
 mod globals;
-mod text;
-mod render_group;
 mod image;
-pub(crate) mod texture;
 mod path;
+mod render_group;
+mod text;
+pub(crate) mod texture;
 
 use crate::components::component::ComponentId;
 use crate::geometry::Rectangle;
@@ -23,10 +23,10 @@ use crate::renderer::wgpu::texture::Texture;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use lyon::path::Path;
+use peniko::kurbo;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
-use peniko::kurbo;
 use winit::window::Window;
 
 pub struct WgpuRenderer<'a> {
@@ -81,7 +81,7 @@ impl<'a> WgpuRenderer<'a> {
         let global_buffer = GlobalBuffer::new(&device, &global_buffer_uniform);
 
         let default_texture = Texture::generate_default_white_texture(&device, &queue);
-        
+
         let context = Context {
             camera,
             device,
@@ -92,7 +92,7 @@ impl<'a> WgpuRenderer<'a> {
             surface_config,
             surface_clear_color: Color::WHITE,
             _is_surface_srgba_format: is_surface_srgb_format,
-            default_texture
+            default_texture,
         };
         let text_renderer = TextRenderer::new(&context);
         let image_renderer = ImageRenderer::new(&context);
@@ -129,7 +129,6 @@ impl Renderer for WgpuRenderer<'_> {
             z_far: 100.0,
         };
 
-
         self.context.global_buffer_uniform.set_view_proj_with_camera(&self.context.camera);
         self.context.global_buffer.update(&self.context.queue, &self.context.global_buffer_uniform);
     }
@@ -150,10 +149,15 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {
-    }
+    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>) {
+    fn draw_text(
+        &mut self,
+        element_id: ComponentId,
+        rectangle: Rectangle,
+        fill_color: Color,
+        text_scroll: Option<TextScroll>,
+    ) {
         self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
     }
 
@@ -169,39 +173,52 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>, font_system: &mut FontSystem, element_state: &ElementStateStore) {
-
+    fn prepare(
+        &mut self,
+        _resource_manager: RwLockReadGuard<ResourceManager>,
+        font_system: &mut FontSystem,
+        element_state: &ElementStateStore,
+    ) {
         let mut collect_render_snapshots = |render_commands: &mut Vec<RenderCommand>| {
             let render_commands_len = render_commands.len();
-            
+
             if render_commands_len == 0 {
                 return;
             }
-            
+
             let viewport_clip_rect = Rectangle {
                 x: 0.0,
                 y: 0.0,
                 width: self.context.surface_config.width as f32,
-                height: self.context.surface_config.height as f32
+                height: self.context.surface_config.height as f32,
             };
 
             let mut render_groups: Vec<RenderGroup> = Vec::new();
             render_groups.push(RenderGroup {
                 clip_rectangle: viewport_clip_rect,
             });
-            
+
             for (index, command) in render_commands.drain(..).enumerate() {
                 let mut should_submit = index == render_commands_len - 1;
 
                 match command {
                     RenderCommand::PushLayer(clip_rectangle) => {
                         let parent_clip_rectangle = render_groups.last().unwrap().clip_rectangle;
-                        let constrained_clip_rectangle = clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
+                        let constrained_clip_rectangle =
+                            clip_rectangle.constrain_to_clip_rectangle(&parent_clip_rectangle);
                         render_groups.push(RenderGroup {
-                            clip_rectangle: constrained_clip_rectangle
+                            clip_rectangle: constrained_clip_rectangle,
                         });
 
-                        let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, parent_clip_rectangle);
+                        let snapshot = assemble_render_snapshot(
+                            &mut self.context,
+                            font_system,
+                            element_state,
+                            &mut self.text_renderer,
+                            &mut self.image_renderer,
+                            &mut self.path_renderer,
+                            parent_clip_rectangle,
+                        );
                         self.render_snapshots.push(snapshot);
                     }
                     RenderCommand::PopLayer => {
@@ -248,7 +265,7 @@ impl Renderer for WgpuRenderer<'_> {
 
                         let path = builder.build();
                         self.path_renderer.build(path, color);
-                    },
+                    }
                     #[cfg(feature = "wgpu_renderer")]
                     RenderCommand::FillLyonPath(path, color) => {
                         self.path_renderer.build(path, color);
@@ -257,16 +274,22 @@ impl Renderer for WgpuRenderer<'_> {
 
                 if should_submit {
                     let current_clip_rectangle = render_groups.pop().unwrap().clip_rectangle;
-                    let snapshot = assemble_render_snapshot(&mut self.context, font_system, element_state, &mut self.text_renderer, &mut self.image_renderer, &mut self.path_renderer, current_clip_rectangle);
+                    let snapshot = assemble_render_snapshot(
+                        &mut self.context,
+                        font_system,
+                        element_state,
+                        &mut self.text_renderer,
+                        &mut self.image_renderer,
+                        &mut self.path_renderer,
+                        current_clip_rectangle,
+                    );
                     self.render_snapshots.push(snapshot);
                 }
-            };
+            }
         };
-      
+
         collect_render_snapshots(&mut self.render_commands);
     }
-    
-
 
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>) {
         let mut encoder = self.context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -298,15 +321,17 @@ impl Renderer for WgpuRenderer<'_> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            
+
             for snapshot in &self.render_snapshots {
-                
-                let clip_rectangle = ClipRectangle::constrain_to_clip_rectangle(&snapshot.clip_rectangle, &ClipRectangle {
-                    x: 0.0,
-                    y: 0.0,
-                    width: output.texture.width() as f32,
-                    height: output.texture.height() as f32,
-                });
+                let clip_rectangle = ClipRectangle::constrain_to_clip_rectangle(
+                    &snapshot.clip_rectangle,
+                    &ClipRectangle {
+                        x: 0.0,
+                        y: 0.0,
+                        width: output.texture.width() as f32,
+                        height: output.texture.height() as f32,
+                    },
+                );
                 render_pass.set_scissor_rect(
                     clip_rectangle.x as u32,
                     clip_rectangle.y as u32,
@@ -317,15 +342,19 @@ impl Renderer for WgpuRenderer<'_> {
                 if let Some(path_per_frame_data) = snapshot.path_per_frame_data.as_ref() {
                     self.path_renderer.draw(&self.context, &mut render_pass, path_per_frame_data);
                 }
-                
+
                 if let Some(text_per_frame_data) = snapshot.text_per_frame_data.as_ref() {
                     self.text_renderer.draw(&mut self.context, &mut render_pass, text_per_frame_data);
                 }
 
                 if let Some(image_per_frame_data) = snapshot.image_per_frame_data.as_ref() {
-                    self.image_renderer.draw(&mut self.context, &resource_manager, &mut render_pass, image_per_frame_data);
+                    self.image_renderer.draw(
+                        &mut self.context,
+                        &resource_manager,
+                        &mut render_pass,
+                        image_per_frame_data,
+                    );
                 }
-                
             }
         }
 
@@ -336,13 +365,13 @@ impl Renderer for WgpuRenderer<'_> {
 }
 
 fn assemble_render_snapshot(
-        context: &mut Context,
-        font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
-        text_renderer: &mut TextRenderer,
-        image_renderer: &mut ImageRenderer,
-        path_renderer: &mut PathRenderer,
-        clip_rectangle: ClipRectangle
+    context: &mut Context,
+    font_system: &mut FontSystem,
+    element_state: &ElementStateStore,
+    text_renderer: &mut TextRenderer,
+    image_renderer: &mut ImageRenderer,
+    path_renderer: &mut PathRenderer,
+    clip_rectangle: ClipRectangle,
 ) -> RenderSnapshot {
     let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
     let image_renderer_per_frame_data = image_renderer.prepare(context);

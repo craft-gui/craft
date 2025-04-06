@@ -25,15 +25,15 @@ impl PathRenderer {
             vertices: vec![],
             indices: vec![],
         };
-        
+
         renderer.cached_pipelines.insert(
             DEFAULT_PATH_PIPELINE_CONFIG,
-            PathPipeline::new_pipeline_with_configuration(context, DEFAULT_PATH_PIPELINE_CONFIG)
+            PathPipeline::new_pipeline_with_configuration(context, DEFAULT_PATH_PIPELINE_CONFIG),
         );
-        
+
         renderer
     }
-    
+
     pub fn build_rectangle(&mut self, rectangle: Rectangle, color: Color) {
         let x = rectangle.x;
         let y = rectangle.y;
@@ -44,10 +44,10 @@ impl PathRenderer {
         let bottom_left = glam::vec4(x, y + height, 0.0, 1.0);
         let top_right = glam::vec4(x + width, y, 0.0, 1.0);
         let bottom_right = glam::vec4(x + width, y + height, 0.0, 1.0);
-        
+
         let color = color.components;
         let next_starting_index: u32 = self.vertices.len() as u32;
-        
+
         self.vertices.extend(vec![
             PathVertex {
                 position: [top_left.x, top_left.y, top_left.z],
@@ -66,7 +66,7 @@ impl PathRenderer {
                 color,
             },
         ]);
-        
+
         self.indices.extend(vec![
             next_starting_index,
             next_starting_index + 1,
@@ -76,23 +76,28 @@ impl PathRenderer {
             next_starting_index + 3,
         ]);
     }
-    
+
     pub fn build(&mut self, path: Path, fill_color: Color) {
         let mut geometry: lyon::tessellation::VertexBuffers<PathVertex, u32> = lyon::tessellation::VertexBuffers::new();
         let mut tessellator = lyon::tessellation::FillTessellator::new();
         {
-            tessellator.tessellate_path(
-                &path,
-                &lyon::tessellation::FillOptions::default(),
-                &mut lyon::tessellation::BuffersBuilder::new(&mut geometry, |vertex: lyon::tessellation::FillVertex| {
-                    let position = vertex.position();
-                    let color = fill_color.components;
-                    PathVertex {
-                        position: [position.x, position.y, 0.0],
-                        color,
-                    }
-                }),
-            ).unwrap();
+            tessellator
+                .tessellate_path(
+                    &path,
+                    &lyon::tessellation::FillOptions::default(),
+                    &mut lyon::tessellation::BuffersBuilder::new(
+                        &mut geometry,
+                        |vertex: lyon::tessellation::FillVertex| {
+                            let position = vertex.position();
+                            let color = fill_color.components;
+                            PathVertex {
+                                position: [position.x, position.y, 0.0],
+                                color,
+                            }
+                        },
+                    ),
+                )
+                .unwrap();
         }
 
         let vertex_offset = self.vertices.len() as u32;
@@ -100,14 +105,13 @@ impl PathRenderer {
         self.indices.extend(geometry.indices.iter().map(|&i| i + vertex_offset));
     }
 
-    
     pub fn prepare(&mut self, context: &Context) -> Option<PerFrameData> {
         let indices = self.indices.len();
-        
+
         if indices == 0 {
             return None;
         }
-        
+
         let vertex_buffer = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&self.vertices),
@@ -126,16 +130,11 @@ impl PathRenderer {
         Some(PerFrameData {
             vertex_buffer,
             index_buffer,
-            indices
+            indices,
         })
     }
 
-    pub fn draw(
-        &mut self,
-        context: &Context,
-        render_pass: &mut RenderPass,
-        per_frame_data: &PerFrameData
-    ) {
+    pub fn draw(&mut self, context: &Context, render_pass: &mut RenderPass, per_frame_data: &PerFrameData) {
         let rectangle_pipeline = self.cached_pipelines.get(&DEFAULT_PATH_PIPELINE_CONFIG).unwrap();
         render_pass.set_pipeline(&rectangle_pipeline.pipeline);
         render_pass.set_bind_group(0, Some(&context.global_buffer.bind_group), &[]);
@@ -144,4 +143,3 @@ impl PathRenderer {
         render_pass.draw_indexed(0..(per_frame_data.indices as u32), 0, 0..1);
     }
 }
-

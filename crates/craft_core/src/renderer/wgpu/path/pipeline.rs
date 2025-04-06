@@ -20,7 +20,7 @@ pub(crate) const DEFAULT_BLEND_STATE: wgpu::BlendState = wgpu::BlendState {
 };
 
 pub(crate) const DEFAULT_PATH_PIPELINE_CONFIG: PathPipelineConfig = PathPipelineConfig {
-    blend_state: DEFAULT_BLEND_STATE
+    blend_state: DEFAULT_BLEND_STATE,
 };
 
 pub struct PathPipeline {
@@ -29,7 +29,6 @@ pub struct PathPipeline {
 
 impl PathPipeline {
     pub fn new_pipeline_with_configuration(context: &Context, config: PathPipelineConfig) -> Self {
-
         let shader = context.device.create_shader_module(wgpu::include_wgsl!("./path.wgsl"));
         let render_pipeline_layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Path Render Pipeline Layout"),
@@ -77,6 +76,5 @@ impl PathPipeline {
         Self {
             pipeline: render_pipeline,
         }
-        
     }
 }

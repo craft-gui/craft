@@ -132,8 +132,7 @@ impl Renderer for VelloCpuRenderer {
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands
-            .push(RenderCommand::DrawImage(rectangle, resource_identifier));
+        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
     fn push_layer(&mut self, _rect: Rectangle) {}
@@ -220,14 +219,17 @@ impl Renderer for VelloCpuRenderer {
                         // Draw the Glyphs
                         for buffer_line in &buffer_glyphs.buffer_lines {
                             for glyph_highlight in &buffer_line.glyph_highlights {
-                                self.render_context.set_paint(Paint::Solid(buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8()));
+                                self.render_context.set_paint(Paint::Solid(
+                                    buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8(),
+                                ));
                                 self.render_context.set_transform(text_transform);
                                 self.render_context.fill_rect(glyph_highlight);
                             }
 
                             if draw_cursor {
                                 if let Some(cursor) = &buffer_line.cursor {
-                                    self.render_context.set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
+                                    self.render_context
+                                        .set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
                                     self.render_context.set_transform(text_transform);
                                     self.render_context.fill_rect(cursor);
                                 }
@@ -251,7 +253,6 @@ impl Renderer for VelloCpuRenderer {
                                 }))
                             }
                         }
-
                     }
                 }
                 RenderCommand::PushLayer(_rect) => {}

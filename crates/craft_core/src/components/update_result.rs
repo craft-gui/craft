@@ -1,4 +1,4 @@
-use crate::events::{EventDispatchType, Message, CraftMessage};
+use crate::events::{CraftMessage, EventDispatchType, Message};
 use crate::PinnedFutureAny;
 use std::any::Any;
 
@@ -22,7 +22,7 @@ pub struct UpdateResult {
     pub(crate) result_message: Option<CraftMessage>,
     /// Redirect future pointer events to this component. None by default.
     pub(crate) pointer_capture: PointerCapture,
-    pub(crate) effects: Vec<(EventDispatchType, Message)>
+    pub(crate) effects: Vec<(EventDispatchType, Message)>,
 }
 
 impl UpdateResult {

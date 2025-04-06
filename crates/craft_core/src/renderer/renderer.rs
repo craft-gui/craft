@@ -52,7 +52,13 @@ pub trait Renderer {
     #[cfg(feature = "wgpu_renderer")]
     fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
-    fn draw_text(&mut self, element_id: ComponentId, rectangle: Rectangle, fill_color: Color, text_scroll: Option<TextScroll>);
+    fn draw_text(
+        &mut self,
+        element_id: ComponentId,
+        rectangle: Rectangle,
+        fill_color: Color,
+        text_scroll: Option<TextScroll>,
+    );
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
     fn push_layer(&mut self, rect: Rectangle);

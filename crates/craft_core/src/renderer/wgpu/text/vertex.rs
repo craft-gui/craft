@@ -10,7 +10,6 @@ pub struct TextVertex {
 // FIXME: Make a builder for this.
 impl TextVertex {
     pub(crate) fn description<'a>() -> wgpu::VertexBufferLayout<'a> {
-
         wgpu::VertexBufferLayout {
             array_stride: size_of::<TextVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,

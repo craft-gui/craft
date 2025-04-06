@@ -8,10 +8,10 @@ use util::setup_logging;
 use AniListMessage::StateChange;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::craft_main_with_options;
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::events::{Event, Message};
-use craft::craft_main_with_options;
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
 use craft::Color;

@@ -1,16 +1,16 @@
 pub mod accessibility;
 pub mod components;
-pub mod elements;
-pub mod events;
 pub mod craft_runtime;
 mod craft_winit_state;
+pub mod elements;
+pub mod events;
 mod options;
-mod text;
 pub mod reactive;
 pub mod renderer;
 pub mod style;
 #[cfg(test)]
 mod tests;
+mod text;
 
 pub mod app_message;
 #[cfg(feature = "dev_tools")]
@@ -27,7 +27,7 @@ pub use renderer::color::Color;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
-use crate::events::{Event, EventDispatchType, KeyboardInput, MouseWheel, CraftMessage, PointerButton, PointerMoved};
+use crate::events::{CraftMessage, Event, EventDispatchType, KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 pub use crate::options::RendererType;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
@@ -125,7 +125,6 @@ struct App {
 }
 
 impl App {
-
     fn setup_font_system(&mut self) {
         if self.font_system.is_none() {
             #[allow(unused_mut)]
@@ -151,7 +150,6 @@ impl App {
             self.font_system = Some(font_system);
         }
     }
-
 }
 
 #[cfg(target_os = "android")]
@@ -173,13 +171,13 @@ pub fn internal_craft_main_with_options(
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 
+use crate::components::PointerCapture;
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::geometry::{Point, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
-use crate::components::PointerCapture;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
@@ -201,7 +199,7 @@ pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 /// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
-pub fn craft_main_with_options<GlobalState: Send + 'static> (
+pub fn craft_main_with_options<GlobalState: Send + 'static>(
     application: ComponentSpecification,
     global_state: GlobalState,
     options: Option<CraftOptions>,
@@ -399,14 +397,11 @@ async fn async_main(
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
-
                     let mut resource_manager = app.resource_manager.write().await;
 
                     match resource_event {
                         ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                             if resource_type == ResourceType::Font {
-
-
                                 if let Some(font_system) = app.font_system.as_mut() {
                                     if resource.data().is_some() {
                                         font_system.db_mut().load_font_data(resource.data().unwrap().to_vec());
@@ -510,7 +505,15 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
     );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system);
+    dispatch_event(
+        &message,
+        EventDispatchType::Bubbling,
+        &mut app.resource_manager,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+        &mut app.font_system,
+    );
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -530,7 +533,15 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state,  &mut app.font_system,);
+    dispatch_event(
+        &message,
+        EventDispatchType::Bubbling,
+        &mut app.resource_manager,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+        &mut app.font_system,
+    );
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -620,7 +631,7 @@ fn dispatch_event(
     mouse_position: Option<Point>,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
-    font_system: &mut Option<FontSystem>
+    font_system: &mut Option<FontSystem>,
 ) {
     let mut effects: Vec<(EventDispatchType, Message)> = Vec::new();
 
@@ -635,9 +646,17 @@ fn dispatch_event(
         component: Some(reactive_tree.component_tree.as_ref().unwrap()),
     };
 
-    let is_pointer_event = matches!(event, Message::CraftMessage(CraftMessage::PointerMovedEvent(_)) | Message::CraftMessage(CraftMessage::PointerButtonEvent(_)));
-    let is_ime_event = matches!(event, Message::CraftMessage(CraftMessage::ImeEvent(Ime::Enabled)) | Message::CraftMessage(CraftMessage::ImeEvent(Ime::Disabled)));
-    
+    let is_pointer_event = matches!(
+        event,
+        Message::CraftMessage(CraftMessage::PointerMovedEvent(_))
+            | Message::CraftMessage(CraftMessage::PointerButtonEvent(_))
+    );
+    let is_ime_event = matches!(
+        event,
+        Message::CraftMessage(CraftMessage::ImeEvent(Ime::Enabled))
+            | Message::CraftMessage(CraftMessage::ImeEvent(Ime::Disabled))
+    );
+
     #[derive(Clone)]
     struct Target {
         component_id: ComponentId,
@@ -710,7 +729,7 @@ fn dispatch_event(
                 if !propagate {
                     break;
                 }
-                
+
                 // Get the element's component tree node.
                 let current_target_component = reactive_tree
                     .component_tree
@@ -732,8 +751,12 @@ fn dispatch_event(
                         to_visit = None;
                     } else {
                         let parent_id = node.parent_id.unwrap();
-                        to_visit =
-                            reactive_tree.component_tree.as_ref().unwrap().pre_order_iter().find(|node2| node2.id == parent_id);
+                        to_visit = reactive_tree
+                            .component_tree
+                            .as_ref()
+                            .unwrap()
+                            .pre_order_iter()
+                            .find(|node2| node2.id == parent_id);
                     }
                 }
 
@@ -789,7 +812,11 @@ fn dispatch_event(
                         }
                         if element.component_id() == target.component_id {
                             if let Message::CraftMessage(event) = event {
-                                let res = element.on_event(event, &mut reactive_tree.element_state, font_system.as_mut().unwrap());
+                                let res = element.on_event(
+                                    event,
+                                    &mut reactive_tree.element_state,
+                                    font_system.as_mut().unwrap(),
+                                );
 
                                 if let Some(result_message) = res.result_message {
                                     element_events.push_back((result_message, element.get_id().clone()));
@@ -833,12 +860,15 @@ fn dispatch_event(
             }
         }
         EventDispatchType::Direct(id) => {
-
             for node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter() {
-               if let Some(element) = node.element {
+                if let Some(element) = node.element {
                     if element.component_id() == id {
                         if let Message::CraftMessage(event) = event {
-                            let mut res = element.on_event(event, &mut reactive_tree.element_state, font_system.as_mut().unwrap());
+                            let mut res = element.on_event(
+                                event,
+                                &mut reactive_tree.element_state,
+                                font_system.as_mut().unwrap(),
+                            );
 
                             effects.append(&mut res.effects);
                         }
@@ -853,9 +883,7 @@ fn dispatch_event(
                             state,
                             global_state,
                             component.props.clone(),
-                            Event::new(event)
-                                .current_target(None)
-                                .target(None),
+                            Event::new(event).current_target(None).target(None),
                         );
                         effects.append(&mut res.effects);
                         if res.future.is_some() {
@@ -866,14 +894,13 @@ fn dispatch_event(
                                 component.props.clone(),
                             ));
                         }
-                        
+
                         return;
                     }
                 }
             }
         }
     }
-
 
     // Handle effects.
     for (dispatch_type, message) in effects.iter() {
@@ -905,7 +932,15 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     );
 
     #[cfg(feature = "dev_tools")]
-    dispatch_event(&message, EventDispatchType::Bubbling, &mut app.resource_manager, app.mouse_position, &mut app.dev_tree, &mut app.global_state, &mut app.font_system);
+    dispatch_event(
+        &message,
+        EventDispatchType::Bubbling,
+        &mut app.resource_manager,
+        app.mouse_position,
+        &mut app.dev_tree,
+        &mut app.global_state,
+        &mut app.font_system,
+    );
 
     app.window.as_ref().unwrap().request_redraw();
 }
@@ -940,7 +975,7 @@ async fn update_reactive_tree(
     resource_manager: Arc<RwLock<ResourceManager>>,
     should_reload_fonts: &mut bool,
     font_system: &mut FontSystem,
-    scaling_factor: f64
+    scaling_factor: f64,
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
@@ -986,7 +1021,7 @@ async fn draw_reactive_tree(
     font_system: &mut FontSystem,
     scale_factor: f64,
     mouse_position: Option<Point>,
-    window: Option<Arc<dyn Window>>
+    window: Option<Arc<dyn Window>>,
 ) {
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
@@ -1024,7 +1059,15 @@ async fn draw_reactive_tree(
     {
         let span = span!(Level::INFO, "render");
         let _enter = span.enter();
-        root.draw(renderer, font_system, &mut taffy_tree, taffy_root, &mut reactive_tree.element_state, mouse_position, window);
+        root.draw(
+            renderer,
+            font_system,
+            &mut taffy_tree,
+            taffy_root,
+            &mut reactive_tree.element_state,
+            mouse_position,
+            window,
+        );
         renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
     }
 }
@@ -1193,7 +1236,7 @@ fn layout(
         transform,
         element_state,
         pointer,
-        font_system
+        font_system,
     );
 
     // root_element.print_tree();

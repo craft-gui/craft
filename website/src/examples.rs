@@ -11,7 +11,7 @@ use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::{Event};
+use craft::events::Event;
 use craft::palette;
 use craft::style::Display::Flex;
 use craft::style::FlexDirection;

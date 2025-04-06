@@ -1,7 +1,7 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::elements::element_data::ElementData;
 use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
 use crate::elements::layout_context::{ImageContext, LayoutContext};
 use crate::elements::ElementStyles;
 use crate::geometry::Point;
@@ -55,7 +55,7 @@ impl Element for Image {
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>
+        _window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;

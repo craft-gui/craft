@@ -9,7 +9,6 @@ pub struct ImageVertex {
 // FIXME: Make a builder for this.
 impl ImageVertex {
     pub(crate) fn description<'a>() -> wgpu::VertexBufferLayout<'a> {
-
         wgpu::VertexBufferLayout {
             array_stride: size_of::<ImageVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,

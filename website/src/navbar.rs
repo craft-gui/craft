@@ -2,7 +2,7 @@ use crate::theme::NAVBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::{Event};
+use craft::events::Event;
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
 use craft::Color;
 

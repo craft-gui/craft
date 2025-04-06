@@ -3,10 +3,10 @@ mod util;
 
 use crate::util::setup_logging;
 use craft::components::{Component, ComponentSpecification, UpdateResult};
+use craft::craft_main_with_options;
 use craft::elements::Container;
 use craft::elements::ElementStyles;
-use craft::events::{Event};
-use craft::craft_main_with_options;
+use craft::events::Event;
 use craft::palette;
 use craft::style::Position;
 use craft::style::Unit;

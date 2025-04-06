@@ -1,5 +1,5 @@
-use wgpu::util::DeviceExt;
 use crate::renderer::wgpu::camera::Camera;
+use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -18,7 +18,7 @@ impl GlobalUniform {
             view_proj: glam::Mat4::IDENTITY.to_cols_array_2d(),
         }
     }
-    
+
     pub(crate) fn set_is_surface_srgb_format(&mut self, is_surface_srgb_format: bool) {
         self.is_surface_srgb_format = is_surface_srgb_format as u32;
     }
@@ -30,8 +30,6 @@ impl GlobalUniform {
     pub(crate) fn _set_view_proj(&mut self, glam: glam::Mat4) {
         self.view_proj = glam.to_cols_array_2d();
     }
-
-
 }
 
 pub struct GlobalBuffer {
@@ -47,7 +45,7 @@ impl GlobalBuffer {
             contents: bytemuck::bytes_of(global_uniform),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        
+
         let global_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
@@ -70,19 +68,15 @@ impl GlobalBuffer {
             }],
             label: Some("global_bind_group"),
         });
-        
+
         Self {
             buffer: global_buffer,
             bind_group_layout: global_bind_group_layout,
             bind_group: global_bind_group,
         }
     }
-    
+
     pub fn update(&mut self, queue: &wgpu::Queue, global_uniform: &GlobalUniform) {
-        queue.write_buffer(
-            &self.buffer,
-            0,
-            bytemuck::cast_slice(&[*global_uniform]),
-        );
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[*global_uniform]));
     }
 }
