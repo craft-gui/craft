@@ -1,4 +1,6 @@
 # Craft
+[![CI](https://github.com/craft-gui/craft/actions/workflows/ci.yml/badge.svg)](https://github.com/craft-gui/craft/actions/workflows/ci.yml)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](./LICENSE)
 
 Craft is a reactive GUI. Views are created using Components and Elements.
 Updates are performed by handling messages from a Component.
