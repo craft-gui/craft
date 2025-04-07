@@ -23,6 +23,7 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::Ime;
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
+use crate::renderer::text;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -118,12 +119,30 @@ impl Element for TextInput {
             None
         };
 
-        renderer.draw_text(
-            self.element_data.component_id,
-            content_rectangle,
-            self.element_data.style.color(),
-            text_scroll,
-        );
+        if let Some(state) =
+            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
+        {
+            let cached_editor = &mut state.cached_editor;
+            let editor = &cached_editor.editor;
+            let buffer = &cached_editor.get_last_cache_entry().buffer;
+            let fill_color = self.element_data.style.color();
+
+            let buffer_glyphs = text::create_glyphs_for_editor(
+                buffer,
+                editor,
+                fill_color,
+                Color::from_rgb8(0, 0, 0),
+                Color::from_rgb8(0, 120, 215),
+                Color::from_rgb8(255, 255, 255),
+                text_scroll,
+            );
+            renderer.draw_text(
+                buffer_glyphs,
+                content_rectangle,
+                text_scroll,
+                true
+            );
+        }
 
         if let Some(state) = element_state
             .storage

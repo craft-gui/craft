@@ -1,12 +1,7 @@
-use crate::components::component::ComponentId;
-use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
-use crate::renderer::text;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -21,6 +16,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
+use crate::renderer::text::BufferGlyphs;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -113,7 +109,6 @@ impl<'a> VelloRenderer<'a> {
         scene: &mut Scene,
         resource_manager: &RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
         render_commands: &mut Vec<RenderCommand>,
     ) {
         for command in render_commands.drain(..) {
@@ -145,78 +140,47 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(rect, component_id, fill_color, text_scroll) => {
+                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+                    
+                    // Draw the Glyphs
+                    for buffer_line in &buffer_glyphs.buffer_lines {
+                        for glyph_highlight in &buffer_line.glyph_highlights {
+                            scene.fill(
+                                Fill::NonZero,
+                                text_transform,
+                                buffer_glyphs.glyph_highlight_color,
+                                None,
+                                glyph_highlight,
+                            );
+                        }
 
-                    let mut draw_cursor = false;
-                    let cached_editor = if let Some(text_context) =
-                        element_state.storage.get(&component_id).unwrap().data.downcast_ref::<TextState>()
-                    {
-                        Some(&text_context.cached_editor)
-                    } else {
-                        draw_cursor = true;
-                        element_state
-                            .storage
-                            .get(&component_id)
-                            .unwrap()
-                            .data
-                            .downcast_ref::<TextInputState>()
-                            .map(|text_context| &text_context.cached_editor)
-                    };
+                        if show_cursor {
+                            if let Some(cursor) = &buffer_line.cursor {
+                                scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
+                            }
+                        }
 
-                    if let Some(cached_editor) = cached_editor {
-                        let editor = &cached_editor.editor;
-                        let buffer = &cached_editor.get_last_cache_entry().buffer;
-
-                        let buffer_glyphs = text::create_glyphs_for_editor(
-                            buffer,
-                            editor,
-                            fill_color,
-                            Color::from_rgb8(0, 0, 0),
-                            Color::from_rgb8(0, 120, 215),
-                            Color::from_rgb8(255, 255, 255),
-                            text_scroll,
-                        );
-
-                        // Draw the Glyphs
-                        for buffer_line in &buffer_glyphs.buffer_lines {
-                            for glyph_highlight in &buffer_line.glyph_highlights {
-                                scene.fill(
+                        for glyph_run in &buffer_line.glyph_runs {
+                            //let font = vello_fonts.get(&glyph_run.font).unwrap();
+                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
+                            let glyph_color = glyph_run.glyph_color;
+                            let glyphs = glyph_run.glyphs.clone();
+                            scene
+                                .draw_glyphs(&font)
+                                .font_size(buffer_glyphs.font_size)
+                                .brush(glyph_color)
+                                .transform(text_transform)
+                                .draw(
                                     Fill::NonZero,
-                                    text_transform,
-                                    buffer_glyphs.glyph_highlight_color,
-                                    None,
-                                    glyph_highlight,
+                                    glyphs.into_iter().map(|glyph| Glyph {
+                                        id: glyph.glyph_id as u32,
+                                        x: glyph.x,
+                                        y: glyph.y + glyph_run.line_y,
+                                    }),
                                 );
-                            }
-
-                            if draw_cursor {
-                                if let Some(cursor) = &buffer_line.cursor {
-                                    scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
-                                }
-                            }
-
-                            for glyph_run in &buffer_line.glyph_runs {
-                                //let font = vello_fonts.get(&glyph_run.font).unwrap();
-                                let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                                let glyph_color = glyph_run.glyph_color;
-                                let glyphs = glyph_run.glyphs.clone();
-                                scene
-                                    .draw_glyphs(&font)
-                                    .font_size(buffer_glyphs.font_size)
-                                    .brush(glyph_color)
-                                    .transform(text_transform)
-                                    .draw(
-                                        Fill::NonZero,
-                                        glyphs.into_iter().map(|glyph| Glyph {
-                                            id: glyph.glyph_id as u32,
-                                            x: glyph.x,
-                                            y: glyph.y + glyph_run.line_y,
-                                        }),
-                                    );
-                            }
                         }
                     }
                 }
@@ -301,12 +265,12 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_text(
         &mut self,
-        element_id: ComponentId,
+        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
-        fill_color: Color,
         text_scroll: Option<TextScroll>,
+        show_cursor: bool,
     ) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
+        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -325,13 +289,11 @@ impl Renderer for VelloRenderer<'_> {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         _font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
     ) {
         VelloRenderer::prepare_with_render_commands(
             &mut self.scene,
             &resource_manager,
             _font_system,
-            element_state,
             &mut self.render_commands,
         );
     }

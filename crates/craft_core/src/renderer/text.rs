@@ -6,26 +6,29 @@ use peniko::Color;
 use std::cmp;
 use unicode_segmentation::UnicodeSegmentation;
 
-pub(crate) struct BufferGlyphs {
+#[derive(Clone, Debug)]
+pub struct BufferGlyphs {
     #[allow(dead_code)]
-    pub(crate) font_size: f32,
-    pub(crate) glyph_highlight_color: Color,
-    pub(crate) cursor_color: Color,
-    pub(crate) buffer_lines: Vec<BufferLine>,
+    pub font_size: f32,
+    pub glyph_highlight_color: Color,
+    pub cursor_color: Color,
+    pub buffer_lines: Vec<BufferLine>,
 }
 
-pub(crate) struct BufferLine {
-    pub(crate) glyph_highlights: Vec<Rect>,
-    pub(crate) cursor: Option<Rect>,
-    pub(crate) glyph_runs: Vec<BufferGlyphRun>,
+#[derive(Clone, Debug)]
+pub struct BufferLine {
+    pub glyph_highlights: Vec<Rect>,
+    pub cursor: Option<Rect>,
+    pub glyph_runs: Vec<BufferGlyphRun>,
 }
 
-pub(crate) struct BufferGlyphRun {
+#[derive(Clone, Debug)]
+pub struct BufferGlyphRun {
     #[allow(dead_code)]
-    pub(crate) font: ID,
-    pub(crate) glyphs: Vec<LayoutGlyph>,
-    pub(crate) glyph_color: Color,
-    pub(crate) line_y: f32,
+    pub font: ID,
+    pub glyphs: Vec<LayoutGlyph>,
+    pub glyph_color: Color,
+    pub line_y: f32,
 }
 
 pub(crate) struct EditorInfo {

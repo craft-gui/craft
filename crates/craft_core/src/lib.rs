@@ -1068,7 +1068,7 @@ async fn draw_reactive_tree(
             mouse_position,
             window,
         );
-        renderer.prepare(resource_manager, font_system, &reactive_tree.element_state);
+        renderer.prepare(resource_manager, font_system);
     }
 }
 

@@ -1,11 +1,7 @@
-use crate::components::ComponentId;
-use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::TextScroll;
-use crate::renderer::text::create_glyphs_for_editor;
+use crate::renderer::text::BufferGlyphs;
 use crate::renderer::wgpu::context::Context;
 use crate::renderer::wgpu::text::caching::{ContentType, GlyphInfo, TextAtlas};
 use crate::renderer::wgpu::text::pipeline::{TextPipeline, TextPipelineConfig, DEFAULT_TEXT_PIPELINE_CONFIG};
@@ -16,10 +12,10 @@ use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 use wgpu::RenderPass;
 
-pub struct TextRenderInfo {
-    pub(crate) element_id: ComponentId,
+pub(crate) struct TextRenderInfo {
+    pub(crate) buffer_glyphs: BufferGlyphs,
+    pub(crate) show_cursor: bool,
     pub(crate) rectangle: Rectangle,
-    pub(crate) fill_color: Color,
     pub(crate) text_scroll: Option<TextScroll>,
 }
 
@@ -54,16 +50,16 @@ impl TextRenderer {
 
     pub(crate) fn build(
         &mut self,
+        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
-        component_id: ComponentId,
-        color: Color,
         text_scroll: Option<TextScroll>,
+        show_cursor: bool,
     ) {
         self.text_areas.push(TextRenderInfo {
-            element_id: component_id,
+            buffer_glyphs,
             rectangle,
-            fill_color: color,
             text_scroll,
+            show_cursor,
         });
     }
 
@@ -71,122 +67,90 @@ impl TextRenderer {
         &mut self,
         context: &Context,
         font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
     ) -> Option<PerFrameData> {
         for text_area in self.text_areas.iter() {
-            let mut draw_cursor = false;
-            let cached_editor = if let Some(text_context) =
-                element_state.storage.get(&text_area.element_id).unwrap().data.downcast_ref::<TextState>()
-            {
-                Some(&text_context.cached_editor)
-            } else {
-                draw_cursor = true;
-                element_state
-                    .storage
-                    .get(&text_area.element_id)
-                    .unwrap()
-                    .data
-                    .downcast_ref::<TextInputState>()
-                    .map(|text_context| &text_context.cached_editor)
-            };
+            let scroll_y = text_area.text_scroll.unwrap_or_default().scroll_y;
 
-            if let Some(cached_editor) = cached_editor {
-                let editor = &cached_editor.editor;
-                let buffer = &cached_editor.get_last_cache_entry().buffer;
+            // Draw the Glyphs
+            for buffer_line in &text_area.buffer_glyphs.buffer_lines {
+                // Draw the highlights
+                for glyph_highlight in &buffer_line.glyph_highlights {
+                    let width = glyph_highlight.width() as f32;
+                    let height = glyph_highlight.height() as f32;
 
-                let buffer_glyphs = create_glyphs_for_editor(
-                    buffer,
-                    editor,
-                    text_area.fill_color,
-                    Color::from_rgb8(0, 0, 0),
-                    Color::from_rgb8(0, 120, 215),
-                    Color::from_rgb8(255, 255, 255),
-                    text_area.text_scroll,
-                );
+                    build_rectangle(
+                        ContentType::Rectangle,
+                        Rectangle {
+                            x: text_area.rectangle.x + glyph_highlight.x0 as f32,
+                            y: text_area.rectangle.y + glyph_highlight.y0 as f32 - scroll_y,
+                            width,
+                            height,
+                        },
+                        text_area.buffer_glyphs.glyph_highlight_color,
+                        &mut self.vertices,
+                        &mut self.indices,
+                    );
+                }
 
-                let scroll_y = text_area.text_scroll.unwrap_or_default().scroll_y;
-
-                // Draw the Glyphs
-                for buffer_line in &buffer_glyphs.buffer_lines {
-                    // Draw the highlights
-                    for glyph_highlight in &buffer_line.glyph_highlights {
-                        let width = glyph_highlight.width() as f32;
-                        let height = glyph_highlight.height() as f32;
-
+                if text_area.show_cursor {
+                    // Draw the cursor
+                    if let Some(cursor) = &buffer_line.cursor {
                         build_rectangle(
                             ContentType::Rectangle,
                             Rectangle {
-                                x: text_area.rectangle.x + glyph_highlight.x0 as f32,
-                                y: text_area.rectangle.y + glyph_highlight.y0 as f32 - scroll_y,
-                                width,
-                                height,
+                                x: text_area.rectangle.x + cursor.x0 as f32,
+                                y: text_area.rectangle.y + cursor.y0 as f32 - scroll_y,
+                                width: cursor.width() as f32,
+                                height: cursor.height() as f32,
                             },
-                            buffer_glyphs.glyph_highlight_color,
+                            text_area.buffer_glyphs.cursor_color,
                             &mut self.vertices,
                             &mut self.indices,
                         );
                     }
+                }
 
-                    if draw_cursor {
-                        // Draw the cursor
-                        if let Some(cursor) = &buffer_line.cursor {
-                            build_rectangle(
-                                ContentType::Rectangle,
+                // Draw the glyphs
+                for glyph_run in &buffer_line.glyph_runs {
+                    let glyph_color = glyph_run.glyph_color;
+
+                    for glyph in glyph_run.glyphs.iter() {
+                        let physical_glyph = glyph.physical((0., 0.), 1.0);
+
+                        // Check if the image is available in the cache
+                        let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) =
+                            self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
+                        {
+                            Some(glyph_info)
+                        } else if let Some(image) =
+                            self.swash_cache.get_image(font_system, physical_glyph.cache_key)
+                        {
+                            self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
+
+                            self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
+                        } else {
+                            None
+                        };
+
+                        if let Some(glyph_info) = glyph_info {
+                            let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
+                            let rel_gylh_y = glyph_run.line_y as i32
+                                + physical_glyph.y
+                                + (-glyph_info.swash_image_placement.top);
+                            build_glyph_rectangle(
+                                self.text_atlas.texture_width,
+                                self.text_atlas.texture_height,
+                                glyph_info.clone(),
                                 Rectangle {
-                                    x: text_area.rectangle.x + cursor.x0 as f32,
-                                    y: text_area.rectangle.y + cursor.y0 as f32 - scroll_y,
-                                    width: cursor.width() as f32,
-                                    height: cursor.height() as f32,
+                                    x: text_area.rectangle.x + rel_gylh_x as f32,
+                                    y: text_area.rectangle.y + rel_gylh_y as f32 - scroll_y,
+                                    width: glyph_info.width as f32,
+                                    height: glyph_info.height as f32,
                                 },
-                                buffer_glyphs.cursor_color,
+                                glyph_color,
                                 &mut self.vertices,
                                 &mut self.indices,
                             );
-                        }
-                    }
-
-                    // Draw the glyphs
-                    for glyph_run in &buffer_line.glyph_runs {
-                        let glyph_color = glyph_run.glyph_color;
-
-                        for glyph in glyph_run.glyphs.iter() {
-                            let physical_glyph = glyph.physical((0., 0.), 1.0);
-
-                            // Check if the image is available in the cache
-                            let glyph_info: Option<GlyphInfo> = if let Some(glyph_info) =
-                                self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
-                            {
-                                Some(glyph_info)
-                            } else if let Some(image) =
-                                self.swash_cache.get_image(font_system, physical_glyph.cache_key)
-                            {
-                                self.text_atlas.add_glyph(image, physical_glyph.cache_key, &context.queue);
-
-                                self.text_atlas.get_cached_glyph_info(physical_glyph.cache_key)
-                            } else {
-                                None
-                            };
-
-                            if let Some(glyph_info) = glyph_info {
-                                let rel_gylh_x = physical_glyph.x + glyph_info.swash_image_placement.left;
-                                let rel_gylh_y = glyph_run.line_y as i32
-                                    + physical_glyph.y
-                                    + (-glyph_info.swash_image_placement.top);
-                                build_glyph_rectangle(
-                                    self.text_atlas.texture_width,
-                                    self.text_atlas.texture_height,
-                                    glyph_info.clone(),
-                                    Rectangle {
-                                        x: text_area.rectangle.x + rel_gylh_x as f32,
-                                        y: text_area.rectangle.y + rel_gylh_y as f32 - scroll_y,
-                                        width: glyph_info.width as f32,
-                                        height: glyph_info.height as f32,
-                                    },
-                                    glyph_color,
-                                    &mut self.vertices,
-                                    &mut self.indices,
-                                );
-                            }
                         }
                     }
                 }

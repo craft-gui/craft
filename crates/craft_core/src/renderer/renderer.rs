@@ -1,7 +1,6 @@
-use crate::components::component::ComponentId;
 use crate::geometry::Rectangle;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
+use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo;
@@ -12,7 +11,7 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawText(Rectangle, ComponentId, Color, Option<TextScroll>),
+    DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
@@ -54,10 +53,10 @@ pub trait Renderer {
 
     fn draw_text(
         &mut self,
-        element_id: ComponentId,
+        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
-        fill_color: Color,
         text_scroll: Option<TextScroll>,
+        show_cursor: bool,
     );
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
@@ -69,7 +68,6 @@ pub trait Renderer {
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
     );
 
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);

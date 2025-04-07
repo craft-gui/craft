@@ -11,6 +11,7 @@ use crate::style::Style;
 use crate::text::cached_editor::CachedEditor;
 use crate::{generate_component_methods_no_children, RendererBox};
 use cosmic_text::FontSystem;
+use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -72,7 +73,7 @@ impl Element for Text {
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>,
     ) {
@@ -84,7 +85,34 @@ impl Element for Text {
 
         self.draw_borders(renderer);
 
-        renderer.draw_text(self.element_data.component_id, content_rectangle, self.element_data.style.color(), None);
+        let state: &mut TextState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+
+        let cached_editor = &mut state.cached_editor;
+
+        let editor = &cached_editor.editor;
+        let buffer = &cached_editor.get_last_cache_entry().buffer;
+
+        let fill_color = self.element_data.style.color();
+        let text_scroll = None;
+        
+        let buffer_glyphs = crate::renderer::text::create_glyphs_for_editor(
+            buffer,
+            editor,
+            fill_color,
+            Color::from_rgb8(0, 0, 0),
+            Color::from_rgb8(0, 120, 215),
+            Color::from_rgb8(255, 255, 255),
+            text_scroll,
+        );
+        
+        renderer.draw_text(buffer_glyphs, content_rectangle, None, false);
     }
 
     fn compute_layout(

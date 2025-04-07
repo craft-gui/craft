@@ -106,14 +106,14 @@ impl Element for Canvas {
                     );
                     renderer.draw_image(translated_rectangle, resource_identifier.clone());
                 }
-                RenderCommand::DrawText(rectangle, component_id, color, text_scroll) => {
+                RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor,) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
                         rectangle.width,
                         rectangle.height,
                     );
-                    renderer.draw_text(*component_id, translated_rectangle, *color, *text_scroll);
+                    renderer.draw_text(buffer_glyphs.clone(), translated_rectangle, *text_scroll, *show_cursor);
                 }
                 RenderCommand::PushLayer(rectangle) => {
                     let translated_rectangle = Rectangle::new(

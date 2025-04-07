@@ -28,6 +28,7 @@ use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
+use crate::renderer::text::BufferGlyphs;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
@@ -153,12 +154,12 @@ impl Renderer for WgpuRenderer<'_> {
 
     fn draw_text(
         &mut self,
-        element_id: ComponentId,
+        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
-        fill_color: Color,
         text_scroll: Option<TextScroll>,
+        show_cursor: bool,
     ) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, element_id, fill_color, text_scroll));
+        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -177,7 +178,6 @@ impl Renderer for WgpuRenderer<'_> {
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
-        element_state: &ElementStateStore,
     ) {
         let mut collect_render_snapshots = |render_commands: &mut Vec<RenderCommand>| {
             let render_commands_len = render_commands.len();
@@ -213,7 +213,6 @@ impl Renderer for WgpuRenderer<'_> {
                         let snapshot = assemble_render_snapshot(
                             &mut self.context,
                             font_system,
-                            element_state,
                             &mut self.text_renderer,
                             &mut self.image_renderer,
                             &mut self.path_renderer,
@@ -231,8 +230,8 @@ impl Renderer for WgpuRenderer<'_> {
                     RenderCommand::DrawImage(rectangle, resource_identifier) => {
                         self.image_renderer.build(rectangle, resource_identifier.clone(), Color::WHITE);
                     }
-                    RenderCommand::DrawText(rectangle, component_id, color, text_scroll) => {
-                        self.text_renderer.build(rectangle, component_id, color, text_scroll);
+                    RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor) => {
+                        self.text_renderer.build(buffer_glyphs, rectangle, text_scroll, show_cursor);
                     }
                     RenderCommand::FillBezPath(bez_path, color) => {
                         let mut builder = Path::builder();
@@ -277,7 +276,6 @@ impl Renderer for WgpuRenderer<'_> {
                     let snapshot = assemble_render_snapshot(
                         &mut self.context,
                         font_system,
-                        element_state,
                         &mut self.text_renderer,
                         &mut self.image_renderer,
                         &mut self.path_renderer,
@@ -367,13 +365,12 @@ impl Renderer for WgpuRenderer<'_> {
 fn assemble_render_snapshot(
     context: &mut Context,
     font_system: &mut FontSystem,
-    element_state: &ElementStateStore,
     text_renderer: &mut TextRenderer,
     image_renderer: &mut ImageRenderer,
     path_renderer: &mut PathRenderer,
     clip_rectangle: ClipRectangle,
 ) -> RenderSnapshot {
-    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system, element_state);
+    let text_renderer_per_frame_data = text_renderer.prepare(context, font_system);
     let image_renderer_per_frame_data = image_renderer.prepare(context);
     let path_renderer_per_frame_data = path_renderer.prepare(context);
 
