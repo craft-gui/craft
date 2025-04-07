@@ -42,7 +42,7 @@ impl Component for InputsExample {
             .display(Display::Block)
             .push(Text::new("Common Input Elements:").font_size(24.0))
             .push(TextInput::new(state.my_text.as_str()).id("text_input").margin("10px", "0px", "0px", "0px"))
-            .push(Switch::new().default_toggled(true).margin("10px", "0px", "0px", "0px"))
+            .push(Switch::new(24.0).spacing(4.0).round().default_toggled(true).margin("10px", "0px", "0px", "0px"))
             .push(
                 Dropdown::new()
                     .push(Text::new(Self::DROPDOWN_ITEMS[0]))

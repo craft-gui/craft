@@ -30,6 +30,11 @@ pub struct Switch {
     toggled_track_style: Style,
     /// The style of the thumb when the switch is toggled. This style will get merged with the default style + user style.
     toggled_thumb_style: Style,
+    /// The size of the thumb in pixels.
+    size: f32,
+    /// The padding around the thumb and the track in pixels.
+    spacing: f32,
+    rounded: bool,
 }
 
 #[derive(Clone, Default)]
@@ -174,39 +179,64 @@ impl Element for Switch {
     fn default_style(&self) -> Style {
         let mut style = Style::default();
 
-        // FIXME: Do not hardcode these sizes.
+        let thumb_diameter = self.size;
+        let padding = self.spacing;
+
+        let width  = thumb_diameter * 2.25;
+        let height = thumb_diameter + padding * 2.0;
+        
         *style.display_mut() = Display::Flex;
         *style.align_items_mut() = Some(AlignItems::Center);
-        *style.width_mut() = Unit::Px(60.0);
-        *style.height_mut() = Unit::Px(34.0);
-        *style.padding_mut() = [Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0)];
+        *style.width_mut() = Unit::Px(width);
+        *style.height_mut() = Unit::Px(height);
+        *style.padding_mut() = [Unit::Px(padding), Unit::Px(padding), Unit::Px(padding), Unit::Px(padding)];
         *style.background_mut() = palette::css::LIGHT_GRAY;
 
+        if self.rounded {
+            let rounding = self.size / 1.5;
+            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+        }
+        
         style
     }
 }
 
 impl Default for Switch {
     fn default() -> Self {
-        Self::new()
+        Self::new(26.0)
     }
 }
 
 impl Switch {
     fn default_thumb_style(&self) -> Style {
         let mut style = Style::default();
-
-        // FIXME: Do not hardcode these sizes.
+        
         *style.display_mut() = Display::Block;
-        *style.width_mut() = Unit::Px(26.0);
-        *style.height_mut() = Unit::Px(26.0);
+        *style.width_mut() = Unit::Px(self.size);
+        *style.height_mut() = Unit::Px(self.size);
         *style.background_mut() = palette::css::WHITE;
         *style.position_mut() = Position::Relative;
         *style.inset_mut() = [Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
+        
+        if self.rounded {
+            let rounding = self.size / 2.0;
+            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+        }
 
         style
     }
 
+    /// Sets the padding around the thumb and the track in pixels.
+    pub fn spacing(mut self, amount: f32) -> Self {
+        self.spacing = amount;
+        self
+    }
+    
+    pub fn round(mut self) -> Self {
+        self.rounded = true;
+        self
+    }
+    
     fn default_toggled_style(&self) -> Style {
         let mut style = Style::default();
         *style.background_mut() = palette::css::DODGER_BLUE;
@@ -243,13 +273,16 @@ impl Switch {
         element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    pub fn new() -> Switch {
+    pub fn new(size: f32) -> Switch {
         Switch {
             element_data: Default::default(),
             default_toggled: false,
             pseudo_thumb: Container::default(),
             toggled_thumb_style: Default::default(),
             toggled_track_style: Default::default(),
+            size,
+            spacing: 4.0,
+            rounded: false,
         }
     }
 
