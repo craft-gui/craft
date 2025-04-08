@@ -10,6 +10,7 @@ dynamic_linking = []
 
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
+vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 http_client = ["dep:reqwest"]
 
@@ -78,12 +79,17 @@ optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "9e7f06af87d7e1017dbe2245141554008d3e3871"
+rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
+optional = true
+
+[dependencies.vello_hybrid]
+git = "https://github.com/linebender/vello/"
+rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "9e7f06af87d7e1017dbe2245141554008d3e3871"
+rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
 optional = true
 
 
@@ -92,7 +98,7 @@ version = "0.4.6"
 optional = true
 
 [dependencies.wgpu]
-version = "23.0.1"
+version = "24.0.1"
 default-features = false
 features = ["wgsl"]
 optional = true

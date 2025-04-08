@@ -37,6 +37,8 @@ pub enum RendererType {
     Vello,
     #[cfg(feature = "vello_cpu_renderer")]
     VelloCPU,
+    #[cfg(feature = "vello_hybrid_renderer")]
+    VelloHybrid,
     #[cfg(feature = "wgpu_renderer")]
     Wgpu,
     Blank,
@@ -48,7 +50,9 @@ impl Default for RendererType {
         cfg_if::cfg_if! {
             if #[cfg(feature = "vello_renderer")] {
                 RendererType::Vello
-            } else if #[cfg(feature = "vello_cpu_renderer")]{
+            } else if #[cfg(feature = "vello_hybrid_renderer")]{
+                RendererType::VelloHybrid
+            }else if #[cfg(feature = "vello_cpu_renderer")]{
                 RendererType::VelloCPU
             } else if #[cfg(feature = "wgpu_renderer")] {
                 RendererType::Wgpu
@@ -67,6 +71,8 @@ impl Display for RendererType {
             RendererType::Vello => write!(f, "vello/wgpu"),
             #[cfg(feature = "vello_cpu_renderer")]
             RendererType::VelloCPU => write!(f, "vello/cpu"),
+            #[cfg(feature = "vello_hybrid_renderer")]
+            RendererType::VelloHybrid => write!(f, "vello/hybrid"),
             #[cfg(feature = "wgpu_renderer")]
             RendererType::Wgpu => write!(f, "wgpu"),
             RendererType::Blank => write!(f, "blank"),

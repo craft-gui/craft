@@ -1,22 +1,33 @@
+mod render_context;
+
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
-use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
+use crate::renderer::renderer::{RenderCommand, Renderer as CraftRenderer, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
+use cosmic_text::{Edit, FontSystem};
 #[cfg(feature = "wgpu_renderer")]
 use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
-use vello::kurbo::{Affine, Rect};
-use vello::peniko::{BlendMode, Blob, Fill};
-use vello::util::{RenderContext, RenderSurface};
-use vello::{kurbo, peniko, AaConfig, RendererOptions};
-use vello::{Glyph, Scene};
+use vello_common::glyph::Glyph;
+use vello_common::kurbo::{Affine, Rect};
+use vello_common::paint::Paint;
+use vello_common::peniko::Blob;
+use vello_common::{kurbo, peniko};
+use vello_hybrid::RenderSize;
+use vello_hybrid::{RenderTargetConfig, Renderer};
+use wgpu::RenderPassDescriptor;
+use wgpu::TextureFormat;
 use winit::window::Window;
+
 use crate::renderer::text::BufferGlyphs;
+use crate::renderer::vello_hybrid::render_context::RenderContext;
+use crate::renderer::vello_hybrid::render_context::RenderSurface;
+use vello_common::glyph::GlyphRenderer;
+use vello_hybrid::Scene;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -29,7 +40,7 @@ enum RenderState<'a> {
     Suspended,
 }
 
-pub struct VelloRenderer<'a> {
+pub struct VelloHybridRenderer<'a> {
     render_commands: Vec<RenderCommand>,
 
     // The vello RenderContext which is a global context that lasts for the
@@ -37,7 +48,7 @@ pub struct VelloRenderer<'a> {
     context: RenderContext,
 
     // An array of renderers, one per wgpu device
-    renderers: Vec<Option<vello::Renderer>>,
+    renderers: Vec<Option<vello_hybrid::Renderer>>,
 
     // State for our example where we store the winit Window and the wgpu Surface
     state: RenderState<'a>,
@@ -49,51 +60,41 @@ pub struct VelloRenderer<'a> {
     surface_clear_color: Color,
 }
 
-fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> vello::Renderer {
-    vello::Renderer::new(
+fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
+    Renderer::new(
         &render_cx.devices[surface.dev_id].device,
-        RendererOptions {
-            surface_format: Some(surface.format),
-            use_cpu: false,
-            // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
-            antialiasing_support: if cfg!(any(target_os = "android", target_os = "ios")) {
-                vello::AaSupport {
-                    area: true,
-                    msaa8: false,
-                    msaa16: false,
-                }
-            } else {
-                vello::AaSupport {
-                    area: false,
-                    msaa8: false,
-                    msaa16: true,
-                }
-            },
-            num_init_threads: None,
+        &RenderTargetConfig {
+            format: surface.config.format,
+            width: surface.config.width,
+            height: surface.config.height,
         },
     )
-    .expect("Couldn't create renderer")
 }
 
-impl<'a> VelloRenderer<'a> {
-    pub(crate) async fn new(window: Arc<dyn Window>) -> VelloRenderer<'a> {
-        let mut vello_renderer = VelloRenderer {
+impl<'a> VelloHybridRenderer<'a> {
+    pub(crate) async fn new(window: Arc<dyn Window>) -> VelloHybridRenderer<'a> {
+        // Create a vello Surface
+        let surface_size = window.surface_size();
+
+        let mut vello_renderer = VelloHybridRenderer {
             render_commands: vec![],
             context: RenderContext::new(),
             renderers: vec![],
             state: RenderState::Suspended,
-            scene: Scene::new(),
+            scene: Scene::new(surface_size.width as u16, surface_size.height as u16),
             surface_clear_color: Color::WHITE,
         };
 
-        // Create a vello Surface
-        let surface_size = window.surface_size();
-
         let surface = vello_renderer
             .context
-            .create_surface(window.clone(), surface_size.width, surface_size.height, vello::wgpu::PresentMode::AutoVsync)
-            .await
-            .unwrap();
+            .create_surface(
+                window.clone(),
+                surface_size.width,
+                surface_size.height,
+                wgpu::PresentMode::AutoVsync,
+                TextureFormat::Bgra8Unorm,
+            )
+            .await;
 
         // Create a vello Renderer for the surface (using its device id)
         vello_renderer.renderers.resize_with(vello_renderer.context.devices.len(), || None);
@@ -137,50 +138,45 @@ impl<'a> VelloRenderer<'a> {
                             rectangle.height as f64 / image.height() as f64,
                         );
 
-                        scene.draw_image(&vello_image, transform);
+                        //scene.draw_image(&vello_image, transform);
                     }
                 }
                 RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-                    
+
                     // Draw the Glyphs
                     for buffer_line in &buffer_glyphs.buffer_lines {
                         for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.fill(
-                                Fill::NonZero,
-                                text_transform,
-                                buffer_glyphs.glyph_highlight_color,
-                                None,
-                                glyph_highlight,
-                            );
+                            scene.set_paint(Paint::Solid(buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8()));
+                            scene.set_transform(text_transform);
+                            scene.fill_rect(glyph_highlight);
                         }
 
                         if show_cursor {
                             if let Some(cursor) = &buffer_line.cursor {
-                                scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
+                                scene.set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
+                                scene.set_transform(text_transform);
+                                scene.fill_rect(cursor);
                             }
                         }
 
                         for glyph_run in &buffer_line.glyph_runs {
-                            //let font = vello_fonts.get(&glyph_run.font).unwrap();
                             let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
                             let glyph_color = glyph_run.glyph_color;
                             let glyphs = glyph_run.glyphs.clone();
-                            scene
-                                .draw_glyphs(&font)
+                            scene.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
+                            scene.reset_transform();
+                            let glyph_run_builder = scene
+                                .glyph_run(&font)
                                 .font_size(buffer_glyphs.font_size)
-                                .brush(glyph_color)
-                                .transform(text_transform)
-                                .draw(
-                                    Fill::NonZero,
-                                    glyphs.into_iter().map(|glyph| Glyph {
-                                        id: glyph.glyph_id as u32,
-                                        x: glyph.x,
-                                        y: glyph.y + glyph_run.line_y,
-                                    }),
-                                );
+                                .glyph_transform(text_transform);
+                            glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {
+                                id: glyph.glyph_id as u32,
+                                x: glyph.x,
+                                y: glyph.y + glyph_run.line_y,
+                            }))
                         }
                     }
                 }
@@ -197,13 +193,14 @@ impl<'a> VelloRenderer<'a> {
                         (rect.x + rect.width) as f64,
                         (rect.y + rect.height) as f64,
                     );
-                    scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                    //scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                 }
                 RenderCommand::PopLayer => {
-                    scene.pop_layer();
+                    //scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, color) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
+                    scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
+                    scene.fill_path(&path);
                 }
                 #[cfg(feature = "wgpu_renderer")]
                 RenderCommand::FillLyonPath(_, _) => {}
@@ -213,16 +210,11 @@ impl<'a> VelloRenderer<'a> {
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
-    let rect = Rect::new(
-        rectangle.x as f64,
-        rectangle.y as f64,
-        (rectangle.x + rectangle.width) as f64,
-        (rectangle.y + rectangle.height) as f64,
-    );
-    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
+    scene.set_paint(Paint::Solid(fill_color.premultiply().to_rgba8()));
+    scene.fill_rect(&rectangle.to_kurbo());
 }
 
-impl Renderer for VelloRenderer<'_> {
+impl CraftRenderer for VelloHybridRenderer<'_> {
     fn surface_width(&self) -> f32 {
         match &self.state {
             RenderState::Active(active_render_state) => active_render_state.window.surface_size().width as f32,
@@ -285,12 +277,8 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(
-        &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
-    ) {
-        VelloRenderer::prepare_with_render_commands(
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, _font_system: &mut FontSystem) {
+        VelloHybridRenderer::prepare_with_render_commands(
             &mut self.scene,
             &resource_manager,
             _font_system,
@@ -317,28 +305,51 @@ impl Renderer for VelloRenderer<'_> {
         // Get the surface's texture
         let surface_texture = surface.surface.get_current_texture().expect("failed to get surface texture");
 
-        // Render to the surface's texture
-        self.renderers[surface.dev_id]
-            .as_mut()
-            .unwrap()
-            .render_to_surface(
-                &device_handle.device,
-                &device_handle.queue,
-                &self.scene,
-                &surface_texture,
-                &vello::RenderParams {
-                    base_color: self.surface_clear_color,
-                    width,
-                    height,
-                    // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
-                    antialiasing_method: if cfg!(any(target_os = "android", target_os = "ios")) {
-                        AaConfig::Area
-                    } else {
-                        AaConfig::Msaa16
+        let render_size = RenderSize {
+            width: surface.config.width,
+            height: surface.config.height,
+        };
+
+        self.renderers[surface.dev_id].as_mut().unwrap().prepare(
+            &device_handle.device,
+            &device_handle.queue,
+            &self.scene,
+            &render_size,
+        );
+
+        let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Vello Render to Surface pass"),
+        });
+
+        let texture_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        {
+            let clear_color = self.surface_clear_color.to_rgba8();
+            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("Render to Texture Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &texture_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: clear_color.r as f64 / 255.0,
+                            g: clear_color.g as f64 / 255.0,
+                            b: clear_color.b as f64 / 255.0,
+                            a: clear_color.a as f64 / 255.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
                     },
-                },
-            )
-            .expect("failed to render to surface");
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
+
+            // Render to the surface's texture
+            self.renderers[surface.dev_id].as_mut().unwrap().render(&self.scene, &mut pass);
+        }
+
+        device_handle.queue.submit([encoder.finish()]);
 
         // Queue the texture to be presented on the surface
         surface_texture.present();
