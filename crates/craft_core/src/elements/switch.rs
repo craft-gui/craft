@@ -4,7 +4,7 @@ use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
-use crate::elements::Container;
+use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
@@ -14,7 +14,7 @@ use crate::{generate_component_methods_no_children, palette, RendererBox};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
-use taffy::{NodeId, Position, TaffyTree};
+use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
 /// An element that represents an on or off state.
@@ -23,15 +23,14 @@ pub struct Switch {
     pub element_data: ElementData,
     /// When `state.toggled` is None, use this as the default value.
     default_toggled: bool,
-    /// A pseudo thumb element, this is not stored in the user tree nor will it receive events.
+
+    /// A pseudo thumb, this is not stored in the user tree nor will it receive events.
     /// This is mostly for convenience, so that we can change the location and render it in the switch track container.
-    pseudo_thumb: Container,
+    thumb: Thumb,
+
     /// The style of the container/track when the switch is toggled. This style will get merged with the default style + user style.
-    toggled_track_style: Style,
-    /// The style of the thumb when the switch is toggled. This style will get merged with the default style + user style.
-    toggled_thumb_style: Style,
-    /// The size of the thumb in pixels.
-    size: f32,
+    pub(crate) toggled_track_style: Style,
+
     /// The padding around the thumb and the track in pixels.
     spacing: f32,
     rounded: bool,
@@ -69,7 +68,7 @@ impl Element for Switch {
             return;
         }
         self.draw_borders(renderer);
-        self.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
+        self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
     }
 
     fn compute_layout(
@@ -81,20 +80,10 @@ impl Element for Switch {
         let state = self.get_state(element_state);
         self.merge_default_style();
 
-        // FIXME: Use insets and position absolute after we fix a few Taffy bugs.
-        self.pseudo_thumb.element_data_mut().style =
-            Style::merge(&self.default_thumb_style(), &self.pseudo_thumb.element_data_mut().style);
-
         let default_toggled = self.default_toggled;
         let mut set_toggled_styles = || {
             self.element_data_mut().style = Style::merge(&self.element_data().style, &self.default_toggled_style());
             self.element_data_mut().style = Style::merge(&self.element_data().style, &self.toggled_track_style);
-
-            self.pseudo_thumb.element_data_mut().style =
-                Style::merge(&self.pseudo_thumb.element_data().style, &self.default_toggled_thumb_style());
-            self.pseudo_thumb.element_data_mut().style =
-                Style::merge(&self.pseudo_thumb.element_data().style, &self.toggled_thumb_style);
-            *self.element_data_mut().style.justify_content_mut() = Some(JustifyContent::FlexEnd);
         };
 
         // Use the toggled styles when state.toggled is true or default_toggled is true.
@@ -106,7 +95,7 @@ impl Element for Switch {
             set_toggled_styles();
         }
 
-        let child_node = self.pseudo_thumb.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
+        let child_node = self.thumb.compute_layout(taffy_tree, element_state, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
 
         let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
@@ -124,14 +113,21 @@ impl Element for Switch {
         pointer: Option<Point>,
         font_system: &mut FontSystem,
     ) {
+        let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.finalize_borders();
-
-        self.pseudo_thumb.finalize_layout(
+        
+        let x = if state.toggled.unwrap_or(self.default_toggled) {
+            self.element_data.computed_box_transformed.content_rectangle().right() - self.spacing - self.thumb.size
+        } else {
+            self.element_data.computed_box_transformed.content_rectangle().left() + self.spacing
+        };
+        let y = self.element_data.computed_box_transformed.content_rectangle().top() + self.spacing;
+        
+        self.thumb.finalize_layout(
             taffy_tree,
-            self.pseudo_thumb.element_data.taffy_node_id.unwrap(),
-            self.element_data.computed_box.position,
+            Point::new(x, y),
             z_index,
             transform,
             element_state,
@@ -179,21 +175,19 @@ impl Element for Switch {
     fn default_style(&self) -> Style {
         let mut style = Style::default();
 
-        let thumb_diameter = self.size;
+        let thumb_diameter = self.thumb.size;
         let padding = self.spacing;
 
         let width  = thumb_diameter * 2.25;
         let height = thumb_diameter + padding * 2.0;
         
         *style.display_mut() = Display::Flex;
-        *style.align_items_mut() = Some(AlignItems::Center);
         *style.width_mut() = Unit::Px(width);
         *style.height_mut() = Unit::Px(height);
-        *style.padding_mut() = [Unit::Px(padding), Unit::Px(padding), Unit::Px(padding), Unit::Px(padding)];
         *style.background_mut() = palette::css::LIGHT_GRAY;
 
         if self.rounded {
-            let rounding = self.size / 1.5;
+            let rounding = self.thumb.size / 1.5;
             *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
         }
         
@@ -208,23 +202,6 @@ impl Default for Switch {
 }
 
 impl Switch {
-    fn default_thumb_style(&self) -> Style {
-        let mut style = Style::default();
-        
-        *style.display_mut() = Display::Block;
-        *style.width_mut() = Unit::Px(self.size);
-        *style.height_mut() = Unit::Px(self.size);
-        *style.background_mut() = palette::css::WHITE;
-        *style.position_mut() = Position::Relative;
-        *style.inset_mut() = [Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
-        
-        if self.rounded {
-            let rounding = self.size / 2.0;
-            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
-        }
-
-        style
-    }
 
     /// Sets the padding around the thumb and the track in pixels.
     pub fn spacing(mut self, amount: f32) -> Self {
@@ -243,18 +220,13 @@ impl Switch {
         Style::merge(&self.default_style(), &style)
     }
 
-    fn default_toggled_thumb_style(&self) -> Style {
-        let style = Style::default();
-        Style::merge(&self.default_thumb_style(), &style)
-    }
-
     pub fn thumb_style(mut self, thumb_style: Style) -> Self {
-        self.pseudo_thumb.element_data_mut().style = thumb_style;
+        self.thumb.thumb_style(thumb_style);
         self
     }
 
     pub fn toggled_thumb_style(mut self, toggled_thumb_style: Style) -> Self {
-        self.toggled_thumb_style = toggled_thumb_style;
+        self.thumb.toggled_thumb_style(toggled_thumb_style);
         self
     }
 
@@ -277,10 +249,12 @@ impl Switch {
         Switch {
             element_data: Default::default(),
             default_toggled: false,
-            pseudo_thumb: Container::default(),
-            toggled_thumb_style: Default::default(),
+            thumb: Thumb {
+                pseudo_thumb: Default::default(),
+                toggled_thumb_style: Default::default(),
+                size,
+            },
             toggled_track_style: Default::default(),
-            size,
             spacing: 4.0,
             rounded: false,
         }

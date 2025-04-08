@@ -4,6 +4,7 @@ pub(crate) mod element;
 pub(crate) mod empty;
 pub(crate) mod image;
 pub(crate) mod layout_context;
+pub(crate) mod slider;
 pub(crate) mod switch;
 pub(crate) mod text;
 
@@ -19,6 +20,7 @@ pub(crate) mod element_states;
 pub(crate) mod element_styles;
 pub(crate) mod font;
 mod scroll_state;
+mod thumb;
 
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
@@ -26,6 +28,8 @@ pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::element_styles::ElementStyles;
 pub use crate::elements::font::Font;
 pub use crate::elements::image::Image;
+pub use crate::elements::slider::Slider;
+pub use crate::elements::slider::SliderDirection;
 pub use crate::elements::switch::Switch;
 pub use crate::elements::text::Text;
 pub use crate::elements::text_input::TextInput;

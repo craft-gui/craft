@@ -73,6 +73,7 @@ pub enum CraftMessage {
     DropdownItemSelected(usize),
     /// Generated when a switch is toggled. The boolean is the status of toggled after the event has occurred.
     SwitchToggled(bool),
+    SliderValueChanged(f64),
 }
 
 impl CraftMessage {
