@@ -7,11 +7,10 @@ mod render_group;
 mod text;
 pub(crate) mod texture;
 
-use crate::components::component::ComponentId;
 use crate::geometry::Rectangle;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
+use crate::renderer::text::BufferGlyphs;
 use crate::renderer::wgpu::camera::Camera;
 use crate::renderer::wgpu::context::{create_surface_config, request_adapter, request_device_and_queue, Context};
 use crate::renderer::wgpu::globals::{GlobalBuffer, GlobalUniform};
@@ -28,7 +27,6 @@ use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use winit::window::Window;
-use crate::renderer::text::BufferGlyphs;
 
 pub struct WgpuRenderer<'a> {
     context: Context<'a>,
@@ -54,7 +52,7 @@ pub struct RenderSnapshot {
 
 impl<'a> WgpuRenderer<'a> {
     pub(crate) async fn new(window: Arc<dyn Window>) -> WgpuRenderer<'a> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });

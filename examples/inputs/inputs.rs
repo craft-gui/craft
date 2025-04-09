@@ -5,19 +5,19 @@ use util::setup_logging;
 
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
+use craft::craft_main_with_options;
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Switch};
 use craft::events::Event;
-use craft::CraftOptions;
 use craft::RendererType;
-use craft::craft_main_with_options;
-use craft_core::components::ComponentId;
-use craft_core::elements::{Slider, SliderDirection};
-use craft_core::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
-use craft_core::events::Message::CraftMessage;
-use craft_core::style::{Display, FlexDirection};
+use craft::CraftOptions;
+use craft::components::ComponentId;
+use craft::elements::{Slider, SliderDirection};
+use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
+use craft::events::Message::CraftMessage;
+use craft::style::{Display, FlexDirection};
 
 #[derive(Clone)]
 pub struct InputsExample {
@@ -52,6 +52,7 @@ impl Component for InputsExample {
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
     ) -> ComponentSpecification {
+        
         Container::new()
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Flex)
@@ -62,7 +63,7 @@ impl Component for InputsExample {
             .push(Text::new(format!("Value: {}", state.my_text).as_str()).margin("0px", "0px", "25px", "0px"))
             .push(Switch::new(24.0).spacing(4.0).round().default_toggled(DEFAULT_SWITCH_VALUE))
             .push(Text::new(format!("Value: {}", if state.switch_value { "On" } else { "Off" }).as_str()).margin("0px", "0px", "25px", "0px"))
-            .push(Slider::new(24.0).direction(SliderDirection::Horizontal).step(1.0).round())
+            .push(Slider::new(16.0).direction(SliderDirection::Horizontal).step(1.0).round())
             .push(Text::new(format!("Value: {:?}", state.slider_value).as_str()).margin("0px", "0px", "25px", "0px"))
              .push(
                  Dropdown::new()

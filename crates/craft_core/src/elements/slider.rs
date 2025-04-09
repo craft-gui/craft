@@ -1,23 +1,25 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::UpdateResult;
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
-use crate::events::{CraftMessage};
-use crate::geometry::{Point};
+use crate::elements::thumb::Thumb;
+use crate::events::CraftMessage;
+use crate::geometry::borders::BorderSpec;
+use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods, palette, RendererBox};
 use cosmic_text::FontSystem;
+use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::event::ElementState;
 use winit::window::Window;
-use crate::elements::base_element_state::DUMMY_DEVICE_ID;
-use crate::elements::thumb::Thumb;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -33,6 +35,9 @@ pub struct Slider {
     pub min: f64,
     pub max: f64,
     pub direction: SliderDirection,
+
+    /// The color of the track to the left of the thumb. This may be disabled by setting this to `None`.
+    value_track_color: Option<Color>,
 
     /// A pseudo thumb, this is not stored in the user tree nor will it receive events.
     /// This is mostly for convenience, so that we can change the location and render it in the slider track container.
@@ -74,6 +79,44 @@ impl Element for Slider {
         }
         
         self.draw_borders(renderer);
+
+        // Draw the value track color to the left of the thumb.
+        if let Some(value_track_color) = self.value_track_color {
+            let element_data = self.element_data();
+            let mut element_rect = self.element_data().computed_box_transformed;
+
+            let borders = element_rect.border;
+            let border_radius = element_data.current_style().border_radius();
+
+            if self.direction == SliderDirection::Horizontal {
+                element_rect.size.width = self.thumb.pseudo_thumb.element_data.computed_box_transformed.position.x - self.element_data().computed_box_transformed.position.x;
+
+                // HACK: When the value track is visible add some extra width to make sure there are no gaps in the value track color.
+                // The background track may show through on the left edge if the thumb is round.
+                if element_rect.size.width > 0.0001 {
+                    element_rect.size.width += self.thumb.size / 2.0;
+                }
+            } else {
+                element_rect.size.height = self.thumb.pseudo_thumb.element_data.computed_box_transformed.position.y - self.element_data().computed_box_transformed.position.y;
+
+                // HACK: When the value track is visible add some extra height to make sure there are no gaps in the value track color.
+                // The background track may show through on the top edge if the thumb is round.
+                if element_rect.size.height > 0.0001 {
+                    element_rect.size.height += self.thumb.size / 2.0;
+                }
+            }
+
+            let border_spec = BorderSpec::new(
+                element_rect.border_rectangle(),
+                [borders.top, borders.right, borders.bottom, borders.left],
+                border_radius,
+                element_data.current_style().border_color(),
+            );
+            let computed_border_spec = border_spec.compute_border_spec();
+            let background_path = computed_border_spec.build_background_path();
+            renderer.fill_bez_path(background_path, value_track_color);
+        }
+
         self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
     }
 
@@ -227,39 +270,46 @@ impl Slider {
         
         Point::new(x, y)
     }
-    
+
+    /// Set the slider step value. Defaults to 1.
     pub fn step(mut self, value: f64) -> Self {
         self.step = value;
         self
     }
 
+    /// Set the minimum slider value. Defaults to 0.
     pub fn min(mut self, min: f64) -> Self {
         self.min = min;
         self
     }
 
+    /// Set the max slider value. Defaults to 100.
     pub fn max(mut self, max: f64) -> Self {
         self.max = max;
         self
     }
 
+    /// Set the slider direction.
     pub fn direction(mut self, direction: SliderDirection) -> Self {
         self.direction = direction;
         self
     }
 
+    /// Sets the thumb style.
     pub fn thumb_style(mut self, thumb_style: Style) -> Self {
         self.thumb.thumb_style(thumb_style);
         self
     }
 
-    pub fn toggled_thumb_style(mut self, toggled_thumb_style: Style) -> Self {
-        self.thumb.toggled_thumb_style(toggled_thumb_style);
+    /// Enable rounding in the thumb and track.
+    pub fn round(mut self) -> Self {
+        self.rounded = true;
         self
     }
 
-    pub fn round(mut self) -> Self {
-        self.rounded = true;
+    /// The color of the track to the left of the thumb. This may be disabled by setting this to `None`.
+    pub fn value_track_color(mut self, color: Option<Color>) -> Self {
+        self.value_track_color = color;
         self
     }
 
@@ -298,6 +348,7 @@ impl Slider {
             min: 0.0,
             max: 100.0,
             direction: Default::default(),
+            value_track_color: Some(palette::css::DODGER_BLUE),
             thumb,
             rounded: false,
         }
