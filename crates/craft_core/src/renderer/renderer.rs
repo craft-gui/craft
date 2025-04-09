@@ -15,8 +15,6 @@ pub enum RenderCommand {
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
-    #[cfg(feature = "wgpu_renderer")]
-    FillLyonPath(lyon::path::Path, Color),
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -47,9 +45,6 @@ pub trait Renderer {
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
     fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
-    #[allow(dead_code)]
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, path: &lyon::path::Path, color: Color);
 
     fn draw_text(
         &mut self,

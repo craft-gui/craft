@@ -148,8 +148,6 @@ impl Renderer for WgpuRenderer<'_> {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
 
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
-
     fn draw_text(
         &mut self,
         buffer_glyphs: BufferGlyphs,
@@ -261,10 +259,6 @@ impl Renderer for WgpuRenderer<'_> {
                         }
 
                         let path = builder.build();
-                        self.path_renderer.build(path, color);
-                    }
-                    #[cfg(feature = "wgpu_renderer")]
-                    RenderCommand::FillLyonPath(path, color) => {
                         self.path_renderer.build(path, color);
                     }
                 }

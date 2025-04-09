@@ -3,8 +3,6 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::{Renderer, TextScroll};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-#[cfg(feature = "wgpu_renderer")]
-use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
 use crate::renderer::text::BufferGlyphs;
@@ -29,9 +27,6 @@ impl Renderer for BlankRenderer {
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
     fn fill_bez_path(&mut self, _path: BezPath, _color: Color) {}
-
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
     fn draw_text(
         &mut self,

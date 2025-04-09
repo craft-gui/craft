@@ -6,8 +6,6 @@ use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-#[cfg(feature = "wgpu_renderer")]
-use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
@@ -209,8 +207,6 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::FillBezPath(path, color) => {
                     scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
                 }
-                #[cfg(feature = "wgpu_renderer")]
-                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -263,9 +259,6 @@ impl Renderer for VelloRenderer<'_> {
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
-
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
     fn draw_text(
         &mut self,

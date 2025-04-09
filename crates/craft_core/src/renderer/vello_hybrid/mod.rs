@@ -7,8 +7,6 @@ use crate::renderer::renderer::{RenderCommand, Renderer as CraftRenderer, TextSc
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::{Edit, FontSystem};
-#[cfg(feature = "wgpu_renderer")]
-use lyon::path::Path;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
@@ -202,8 +200,6 @@ impl<'a> VelloHybridRenderer<'a> {
                     scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
                     scene.fill_path(&path);
                 }
-                #[cfg(feature = "wgpu_renderer")]
-                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
@@ -251,9 +247,6 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
-
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, _path: &Path, _color: Color) {}
 
     fn draw_text(
         &mut self,

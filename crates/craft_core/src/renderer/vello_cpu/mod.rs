@@ -16,8 +16,6 @@ use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
-#[cfg(feature = "wgpu_renderer")]
-use lyon::path::Path;
 use tokio::sync::RwLockReadGuard;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
@@ -123,9 +121,6 @@ impl Renderer for VelloCpuRenderer {
     fn fill_bez_path(&mut self, path: BezPath, color: Color) {
         self.render_commands.push(RenderCommand::FillBezPath(path, color));
     }
-
-    #[cfg(feature = "wgpu_renderer")]
-    fn fill_lyon_path(&mut self, path: &Path, color: Color) {}
 
     fn draw_text(
         &mut self,
@@ -236,8 +231,6 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
                     self.render_context.fill_path(&path);
                 }
-                #[cfg(feature = "wgpu_renderer")]
-                RenderCommand::FillLyonPath(_, _) => {}
             }
         }
     }
