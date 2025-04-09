@@ -10,7 +10,7 @@ Updates are performed by handling messages from a Component.
   <img src="./images/ani_list.png" alt="The ani list example." width="45%">
 </p>
 <p align="center">
-  <img src="./images/inputs.png" alt="The inputs example." width="45%">
+  <img src="./images/tour.png" alt="The inputs example." width="45%">
   <img src="./images/counter.png" alt="The counter example." width="45%">
 </p>
 
