@@ -2,6 +2,7 @@ use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
+use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -16,7 +17,6 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
-use crate::renderer::text::BufferGlyphs;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -53,7 +53,6 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
     vello::Renderer::new(
         &render_cx.devices[surface.dev_id].device,
         RendererOptions {
-            surface_format: Some(surface.format),
             use_cpu: false,
             // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
             antialiasing_support: if cfg!(any(target_os = "android", target_os = "ios")) {
@@ -91,7 +90,12 @@ impl<'a> VelloRenderer<'a> {
 
         let surface = vello_renderer
             .context
-            .create_surface(window.clone(), surface_size.width, surface_size.height, vello::wgpu::PresentMode::AutoVsync)
+            .create_surface(
+                window.clone(),
+                surface_size.width,
+                surface_size.height,
+                vello::wgpu::PresentMode::AutoVsync,
+            )
             .await
             .unwrap();
 
@@ -144,7 +148,7 @@ impl<'a> VelloRenderer<'a> {
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-                    
+
                     // Draw the Glyphs
                     for buffer_line in &buffer_glyphs.buffer_lines {
                         for glyph_highlight in &buffer_line.glyph_highlights {
@@ -285,11 +289,7 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(
-        &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
-    ) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, _font_system: &mut FontSystem) {
         VelloRenderer::prepare_with_render_commands(
             &mut self.scene,
             &resource_manager,
@@ -321,11 +321,11 @@ impl Renderer for VelloRenderer<'_> {
         self.renderers[surface.dev_id]
             .as_mut()
             .unwrap()
-            .render_to_surface(
+            .render_to_texture(
                 &device_handle.device,
                 &device_handle.queue,
                 &self.scene,
-                &surface_texture,
+                &surface.target_view,
                 &vello::RenderParams {
                     base_color: self.surface_clear_color,
                     width,
@@ -339,7 +339,16 @@ impl Renderer for VelloRenderer<'_> {
                 },
             )
             .expect("failed to render to surface");
-
+        let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Surface Blit"),
+        });
+        surface.blitter.copy(
+            &device_handle.device,
+            &mut encoder,
+            &surface.target_view,
+            &surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default()),
+        );
+        device_handle.queue.submit([encoder.finish()]);
         // Queue the texture to be presented on the surface
         surface_texture.present();
 

@@ -72,7 +72,8 @@ default-features = false
 features = ["std"]
 
 [dependencies.vello]
-version = "0.4.1"
+git = "https://github.com/linebender/vello/"
+rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
 default-features = false
 features = ["wgpu"]
 optional = true
