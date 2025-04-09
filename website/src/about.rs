@@ -28,7 +28,6 @@ impl Component<WebsiteGlobalState> for About {
                 Text::new("Coming Soon...")
                     .font_size(48.0)
                     .font_weight(Weight::BOLD)
-                    .color(palette::css::WHITE)
                     .component(),
             )
             .component()

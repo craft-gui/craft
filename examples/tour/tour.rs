@@ -57,6 +57,7 @@ impl Component for Tour {
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
+            .width("100%")
             .gap("10px")
             .push(Text::new("Tour:").font_size(24.0))
             .push(TextInput::new(state.my_text.as_str()).id("text_input"))

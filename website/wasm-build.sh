@@ -7,6 +7,6 @@ set -e
 
 cargo build --target wasm32-unknown-unknown --release
 
-wasm-bindgen ../target/wasm32-unknown-unknown/debug/website.wasm --target web --no-typescript --out-dir dist --out-name website
+wasm-bindgen ../target/wasm32-unknown-unknown/release/website.wasm --target web --no-typescript --out-dir dist --out-name website
 cp index.html dist/index.html
 simple-http-server dist -c wasm,html,js -i --coep --coop --ip 127.0.0.1

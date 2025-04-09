@@ -7,6 +7,9 @@ mod text;
 #[path = "../../examples/request/request.rs"]
 mod request;
 
+#[path = "../../examples/tour/tour.rs"]
+mod tour;
+
 use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
@@ -19,6 +22,7 @@ use craft::style::FlexDirection;
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
 use crate::examples::text::TextState;
+use crate::examples::tour::Tour;
 
 pub(crate) struct Examples {
     pub(crate) example_to_show: String,
@@ -33,7 +37,7 @@ impl Default for Examples {
 }
 
 fn create_examples_link(label: &str, example_link: &str) -> Text {
-    Text::new(label).id(example_link).color(palette::css::WHITE)
+    Text::new(label).id(example_link)
 }
 
 fn examples_sidebar() -> ComponentSpecification {
@@ -47,10 +51,11 @@ fn examples_sidebar() -> ComponentSpecification {
         .min_width("300px")
         .max_width("50%")
         .height("100%")
-        .push(Text::new("Examples").color(palette::css::WHITE).font_size(24.0).component())
+        .push(Text::new("Examples").font_size(24.0).component())
         .push(create_examples_link("Counter", "example_counter"))
-        .push(create_examples_link("Text", "example_text_state"))
+        .push(create_examples_link("Tour", "example_tour"))
         .push(create_examples_link("Request", "example_request"))
+        .push(create_examples_link("Text", "example_text_state"))
         .component()
 }
 
@@ -69,6 +74,7 @@ impl Component<WebsiteGlobalState> for Examples {
         wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
             match state.example_to_show.as_str() {
                 "text_state" => TextState::component().key("example_text_state"),
+                "tour" => Tour::component().key("example_tour"),
                 "request" => AniList::component().key("example_request"),
                 "counter" | &_ => Counter::component().key("example_counter"),
             },

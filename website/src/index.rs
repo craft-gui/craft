@@ -1,34 +1,57 @@
-use craft::components::ComponentSpecification;
+use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::palette;
+use craft::{palette, Color};
 use craft::style::Wrap::WrapReverse;
-use craft::style::{AlignItems, Display, FlexDirection, Overflow, Unit, Weight};
+use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Style, Unit, Weight};
+use crate::link::{Link, LinkProps};
 
 fn hero_intro() -> ComponentSpecification {
+    let mut craft_text = "📜 Craft";
+
+    // FIXME: Emojis aren't showing on the web.
+    #[cfg(target_arch = "wasm32")]
+    {
+        craft_text = "Craft";
+    }
+
     Container::new()
         .display(Display::Flex)
-        .flex_direction(FlexDirection::Row)
-        .align_items(AlignItems::Center)
-        .wrap(WrapReverse)
-        .width("100%")
+        .flex_direction(FlexDirection::Column)
+        .margin("100px", "5%", "100px", "5%")
+        .width("600px")
+        .min_width("330px")
+        .max_width("100%")
+        .push(Text::new(craft_text)
+            .font_size(32.0)
+            .font_weight(Weight::BOLD)
+            .margin("0px", "0px", "8px", "0px")
+        )
+        .push(
+            Text::new("A reactive GUI framework that allows developers to build interactive graphical user interfaces efficiently and elegantly.")
+                .font_size(24.0)
+            ,
+        )
         .push(
             Container::new()
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Column)
-                .margin("0%", "5%", "0%", "10%")
-                .width("39%")
-                .push(Text::new("Craft")
-                    .font_size(32.0)
-                    .font_weight(Weight::SEMIBOLD)
-                    .color(palette::css::WHITE))
+                .margin("16px", "0px", "0px", "0px")
                 .push(
-                    Text::new("A reactive GUI framework that allows developers to build interactive graphical user interfaces efficiently and elegantly.")
-                        .font_size(24.0)
-                        .color(palette::css::WHITE),
+                    Link::component()
+                        .props(Props::new(LinkProps {
+                            href: "https://github.com/craft-gui/craft".to_string(),
+                        }))
+                        .push(Text::new("GitHub")
+                            .display(Display::Flex)
+                            .align_items(AlignItems::Center)
+                            .justify_content(JustifyContent::Center)
+                            .font_size(18.0)
+                            .min_width("100px")
+                            .border_radius(8.0, 8.0, 8.0, 8.0)
+                            .padding("8px", "20px", "8px", "20px")
+                            .background(Color::from_rgb8(18, 14, 15))
+                            .color(palette::css::WHITE))
+                    ,
                 )
         )
-        .push(Container::new().width("40%").height("500px").margin("0%", "5%", "0%", "0%"))
-        // .push(Image::new(ResourceIdentifier::File(PathBuf::from("Intro Hero Image.png"))).width("40%").margin("0%", "5%", "0%", "0%"))
         .component()
 }
 
@@ -40,26 +63,36 @@ fn hero_features() -> ComponentSpecification {
             .align_items(AlignItems::FlexStart)
             .width("80%")
             .gap("20px")
-            .push(Text::new(title).font_size(24.0).font_weight(Weight::SEMIBOLD).color(palette::css::WHITE))
-            .push(Text::new(text).font_size(18.0).color(palette::css::WHITE))
+            .push(Text::new(title).font_size(24.0).font_weight(Weight::SEMIBOLD))
+            .push(Text::new(text).font_size(18.0))
             .component()
     }
 
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .align_items(AlignItems::Center)
-        .padding("5%", "10%", "0%", "10%")
+        .padding("5%", "5%", "0%", "5%")
         .width("100%")
         .gap("50px")
         .push(
-            hero_feature_item("Components", "Components encapsulate both a view and an update function, enabling modular and reusable UI elements that dynamically respond to state changes.")
-        )
-        .push(
-            hero_feature_item("Views", "Views in Craft are constructed using Components and Elements, forming the structural and visual hierarchy of an interface. They determine how UI elements are arranged and rendered on the screen.")
-        )
-        .push(
-            hero_feature_item("Messages", "Messages in Craft facilitate communication between Components and Views. They define user interactions and system-triggered events, allowing the UI to respond dynamically to changes.")
+
+            Container::new()
+                .gap("10px")
+                .display(Display::Flex)
+                .flex_direction(FlexDirection::Column)
+                .push(Text::new("Goals:").font_size(32.0)
+                    .font_weight(Weight::SEMIBOLD).margin("0px", "0px", "10px", "0px"))
+                .push(Text::new("1. Reactive").font_size(24.0))
+                .push(Text::new("When your data changes, we automatically re-run your view function.").font_size(16.0).color(palette::css::GRAY))
+                .push(Text::new("2. Components").font_size(24.0))
+                .push(Text::new("Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates.").font_size(16.0).color(palette::css::GRAY))
+                .push(Text::new("3. Pure Rust without macros").font_size(24.0))
+                .push(Text::new("No macros.").font_size(16.0).color(palette::css::GRAY))
+                .push(Text::new("4. Web-like styling").font_size(24.0))
+                .push(Text::new("We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.").font_size(16.0).color(palette::css::GRAY))
+                .push(Text::new("5. Cross Platform").font_size(24.0))
+                .push(Text::new("Currently we support Windows, macOS, Linux, Web, and Android.").font_size(16.0).color(palette::css::GRAY))
+
         )
         .component()
 }

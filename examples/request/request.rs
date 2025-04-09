@@ -56,7 +56,6 @@ impl Component for AniList {
             .width("100%")
             .height("100%")
             .overflow(Overflow::Scroll)
-            .background(Color::from_rgb8(230, 230, 230))
             .gap("40px")
             .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Px(20.0))
             .push(

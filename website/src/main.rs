@@ -3,6 +3,7 @@ mod examples;
 mod index;
 mod navbar;
 mod theme;
+mod link;
 
 use crate::about::About;
 use crate::examples::Examples;

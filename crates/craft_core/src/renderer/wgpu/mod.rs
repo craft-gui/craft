@@ -230,6 +230,8 @@ impl Renderer for WgpuRenderer<'_> {
                         self.text_renderer.build(buffer_glyphs, rectangle, text_scroll, show_cursor);
                     }
                     RenderCommand::FillBezPath(bez_path, color) => {
+                        
+                        
                         let mut builder = Path::builder();
                         for element in bez_path.iter() {
                             match element {
