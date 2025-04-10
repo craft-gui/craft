@@ -243,7 +243,7 @@ impl Slider {
     }
 
     fn thumb_position(&self, thumb_value: f64) -> Point {
-        let content_rectangle = self.element_data.computed_box_transformed.content_rectangle();
+        let content_rectangle = self.element_data.computed_box.content_rectangle();
         
         let mut normalized_value = thumb_value / self.max;
         normalized_value = normalized_value.clamp(0.0, 1.0);
@@ -314,7 +314,7 @@ impl Slider {
     }
 
     fn compute_slider_value(&self, pointer_position: &Point) -> f64 {
-        let content_rectangle = self.element_data.computed_box_transformed.content_rectangle();
+        let content_rectangle = self.element_data.computed_box.content_rectangle();
         let start = if self.direction == SliderDirection::Horizontal { content_rectangle.left() as f64 } else { content_rectangle.top() as f64 };
         let end = if self.direction == SliderDirection::Horizontal { content_rectangle.right() as f64 } else { content_rectangle.bottom() as f64 };
 
