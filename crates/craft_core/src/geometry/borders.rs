@@ -5,7 +5,7 @@ use peniko::kurbo::{BezPath, PathEl, Point, Shape, Vec2};
 
 use crate::geometry::cornerside::CornerSide;
 use crate::geometry::side::Side;
-use crate::geometry::Rectangle;
+use crate::geometry::{Rectangle, TrblRectangle};
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 pub struct BorderSpec {
@@ -34,7 +34,7 @@ pub struct BorderSpec {
 }
 
 impl BorderSpec {
-    pub fn new(rect: Rectangle, widths: [f32; 4], radii: [(f32, f32); 4], colors: [Color; 4]) -> Self {
+    pub fn new(rect: Rectangle, widths: [f32; 4], radii: [(f32, f32); 4], colors: TrblRectangle<Color>) -> Self {
         Self {
             x1: rect.x as f64,
             y1: rect.y as f64,
@@ -52,10 +52,10 @@ impl BorderSpec {
             right_width: widths[1] as f64,
             bottom_width: widths[2] as f64,
             left_width: widths[3] as f64,
-            top_color: colors[0],
-            right_color: colors[1],
-            bottom_color: colors[2],
-            left_color: colors[3],
+            top_color: colors.top,
+            right_color: colors.right,
+            bottom_color: colors.bottom,
+            left_color: colors.left,
         }
     }
 

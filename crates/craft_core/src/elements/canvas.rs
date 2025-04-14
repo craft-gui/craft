@@ -51,7 +51,7 @@ impl Element for Canvas {
         if !self.element_data.style.visible() {
             return;
         }
-        let _border_color: Color = self.style().border_color()[0];
+        let _border_color: Color = self.style().border_color().top;
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let _border_rectangle = computed_box_transformed.border_rectangle();
         let _content_rectangle = computed_box_transformed.content_rectangle();

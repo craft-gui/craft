@@ -7,7 +7,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::elements::Container;
 use crate::events::CraftMessage;
-use crate::geometry::Point;
+use crate::geometry::{Point, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
@@ -313,7 +313,7 @@ impl Element for Dropdown {
         *default_style.align_items_mut() = Some(AlignItems::Center);
         let vertical_padding = Unit::Px(8.0);
         let horizontal_padding = Unit::Px(12.0);
-        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        *default_style.padding_mut() = TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
 
         *default_style.min_width_mut() = Unit::Px(140.0);
         *default_style.min_height_mut() = Unit::Px(45.0);
@@ -323,8 +323,8 @@ impl Element for Dropdown {
         let border_radius = (6.0, 6.0);
         let border_width = Unit::Px(1.0);
         *default_style.border_radius_mut() = [border_radius, border_radius, border_radius, border_radius];
-        *default_style.border_color_mut() = [border_color, border_color, border_color, border_color];
-        *default_style.border_width_mut() = [border_width, border_width, border_width, border_width];
+        *default_style.border_color_mut() = TrblRectangle::new_all(border_color);
+        *default_style.border_width_mut() = TrblRectangle::new_all(border_width);
 
         default_style
     }
@@ -343,7 +343,7 @@ impl Dropdown {
 
         let vertical_padding = Unit::Px(8.0);
         let horizontal_padding = Unit::Px(12.0);
-        *default_style.padding_mut() = [vertical_padding, horizontal_padding, vertical_padding, horizontal_padding];
+        *default_style.padding_mut() = TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
         *default_style.min_width_mut() = Unit::Px(140.0);
         *default_style.min_height_mut() = Unit::Px(45.0);
         *default_style.background_mut() = Color::from_rgb8(220, 220, 220);
@@ -352,14 +352,14 @@ impl Dropdown {
         let border_radius = (6.0, 6.0);
         let border_width = Unit::Px(1.0);
         *default_style.border_radius_mut() = [border_radius, border_radius, border_radius, border_radius];
-        *default_style.border_color_mut() = [border_color, border_color, border_color, border_color];
-        *default_style.border_width_mut() = [border_width, border_width, border_width, border_width];
+        *default_style.border_color_mut() = TrblRectangle::new_all(border_color);
+        *default_style.border_width_mut() = TrblRectangle::new_all(border_width);
 
         *default_style.display_mut() = Display::Flex;
         *default_style.flex_direction_mut() = FlexDirection::Column;
         *default_style.position_mut() = Position::Absolute;
         // Position the dropdown list at the bottom of the dropdown.
-        *default_style.inset_mut() = [Unit::Percentage(100.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0)];
+        default_style.inset_mut().top = Unit::Percentage(100.0);
 
         default_style
     }

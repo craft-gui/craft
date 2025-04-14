@@ -63,31 +63,31 @@ impl Style {
         };
 
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin()[3], scale_factor),
-            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin()[1], scale_factor),
-            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin()[0], scale_factor),
-            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin()[2], scale_factor),
+            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin().left, scale_factor),
+            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin().right, scale_factor),
+            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin().top, scale_factor),
+            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.margin().bottom, scale_factor),
         };
 
         let padding: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage_with_scale_factor(style.padding()[3], scale_factor),
-            right: unit_to_taffy_length_percentage_with_scale_factor(style.padding()[1], scale_factor),
-            top: unit_to_taffy_length_percentage_with_scale_factor(style.padding()[0], scale_factor),
-            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.padding()[2], scale_factor),
+            left: unit_to_taffy_length_percentage_with_scale_factor(style.padding().left, scale_factor),
+            right: unit_to_taffy_length_percentage_with_scale_factor(style.padding().right, scale_factor),
+            top: unit_to_taffy_length_percentage_with_scale_factor(style.padding().top, scale_factor),
+            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.padding().bottom, scale_factor),
         };
 
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage_with_scale_factor(style.border_width()[3], scale_factor),
-            right: unit_to_taffy_length_percentage_with_scale_factor(style.border_width()[1], scale_factor),
-            top: unit_to_taffy_length_percentage_with_scale_factor(style.border_width()[0], scale_factor),
-            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border_width()[2], scale_factor),
+            left: unit_to_taffy_length_percentage_with_scale_factor(style.border_width().left, scale_factor),
+            right: unit_to_taffy_length_percentage_with_scale_factor(style.border_width().right, scale_factor),
+            top: unit_to_taffy_length_percentage_with_scale_factor(style.border_width().top, scale_factor),
+            bottom: unit_to_taffy_length_percentage_with_scale_factor(style.border_width().bottom, scale_factor),
         };
 
         let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset()[3], scale_factor),
-            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset()[1], scale_factor),
-            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset()[0], scale_factor),
-            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset()[2], scale_factor),
+            left: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset().left, scale_factor),
+            right: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset().right, scale_factor),
+            top: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset().top, scale_factor),
+            bottom: unit_to_taffy_lengthpercentageauto_with_scale_factor(style.inset().bottom, scale_factor),
         };
 
         let align_items = match style.align_items() {

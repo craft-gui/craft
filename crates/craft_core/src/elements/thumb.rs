@@ -65,7 +65,8 @@ impl Thumb {
 
         self.pseudo_thumb.compute_layout(taffy_tree, element_state, scale_factor).unwrap()
     }
-    
+
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn finalize_layout(&mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         position: Point,

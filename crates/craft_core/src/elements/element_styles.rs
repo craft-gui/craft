@@ -3,6 +3,7 @@ use crate::style::{
     AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap,
 };
 use taffy::Position;
+use crate::geometry::TrblRectangle;
 
 pub trait ElementStyles
 where
@@ -16,17 +17,17 @@ where
     }
 
     fn margin<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().margin_mut() = [top.into(), right.into(), bottom.into(), left.into()];
+        *self.styles_mut().margin_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
         self
     }
 
     fn padding<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().padding_mut() = [top.into(), right.into(), bottom.into(), left.into()];
+        *self.styles_mut().padding_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
         self
     }
 
     fn border_width<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().border_width_mut() = [top.into(), right.into(), bottom.into(), left.into()];
+        *self.styles_mut().border_width_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
         self
     }
 
@@ -41,27 +42,27 @@ where
     }
 
     fn border_color(mut self, color: Color) -> Self {
-        *self.styles_mut().border_color_mut() = [color, color, color, color];
+        *self.styles_mut().border_color_mut() = TrblRectangle::new_all(color);
         self
     }
 
     fn border_color_top(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut()[0] = color;
+        self.styles_mut().border_color_mut().top = color;
         self
     }
 
     fn border_color_right(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut()[1] = color;
+        self.styles_mut().border_color_mut().right = color;
         self
     }
 
     fn border_color_bottom(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut()[2] = color;
+        self.styles_mut().border_color_mut().bottom = color;
         self
     }
 
     fn border_color_left(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut()[3] = color;
+        self.styles_mut().border_color_mut().left = color;
         self
     }
 
@@ -181,7 +182,7 @@ where
     }
 
     fn inset<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().inset_mut() = [top.into(), right.into(), bottom.into(), left.into()];
+        *self.styles_mut().inset_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
         self
     }
 

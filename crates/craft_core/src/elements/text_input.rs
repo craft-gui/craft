@@ -7,7 +7,7 @@ use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
 use crate::events::CraftMessage;
-use crate::geometry::{Point, Size};
+use crate::geometry::{Point, Size, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::TextScroll;
@@ -412,11 +412,11 @@ impl Element for TextInput {
         let mut style = Style::default();
         *style.display_mut() = Display::Block;
         const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
-        *style.border_color_mut() = [BORDER_COLOR; 4];
-        *style.border_width_mut() = [Unit::Px(1.0); 4];
+        *style.border_color_mut() = TrblRectangle::new_all(BORDER_COLOR);
+        *style.border_width_mut() = TrblRectangle::new_all(Unit::Px(1.0));
         *style.border_radius_mut() = [(5.0, 5.0); 4];
         let padding = Unit::Px(4.0);
-        *style.padding_mut() = [padding, padding, padding, padding];
+        *style.padding_mut() = TrblRectangle::new_all(padding);
 
         style
     }

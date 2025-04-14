@@ -87,25 +87,25 @@ pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> Comp
             styles_window = styles_window.push(field_row(
                 "Margin Top: ",
                 FIELD_NAME_COLOR,
-                style.margin()[0].to_string().as_str(),
+                style.margin().top.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Margin Right: ",
                 FIELD_NAME_COLOR,
-                style.margin()[1].to_string().as_str(),
+                style.margin().right.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Margin Bottom: ",
                 FIELD_NAME_COLOR,
-                style.margin()[2].to_string().as_str(),
+                style.margin().bottom.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Margin Left: ",
                 FIELD_NAME_COLOR,
-                style.margin()[3].to_string().as_str(),
+                style.margin().left.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
         }
@@ -115,25 +115,25 @@ pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> Comp
             styles_window = styles_window.push(field_row(
                 "Padding Top: ",
                 FIELD_NAME_COLOR,
-                style.padding()[0].to_string().as_str(),
+                style.padding().top.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Padding Right: ",
                 FIELD_NAME_COLOR,
-                style.padding()[1].to_string().as_str(),
+                style.padding().right.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Padding Bottom: ",
                 FIELD_NAME_COLOR,
-                style.padding()[2].to_string().as_str(),
+                style.padding().bottom.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Padding Left: ",
                 FIELD_NAME_COLOR,
-                style.padding()[3].to_string().as_str(),
+                style.padding().left.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
         }
@@ -159,25 +159,25 @@ pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> Comp
             styles_window = styles_window.push(field_row(
                 "Inset Top: ",
                 FIELD_NAME_COLOR,
-                style.inset()[0].to_string().as_str(),
+                style.inset().top.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Inset Right: ",
                 FIELD_NAME_COLOR,
-                style.inset()[1].to_string().as_str(),
+                style.inset().right.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Inset Bottom: ",
                 FIELD_NAME_COLOR,
-                style.inset()[2].to_string().as_str(),
+                style.inset().bottom.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
             styles_window = styles_window.push(field_row(
                 "Inset Left: ",
                 FIELD_NAME_COLOR,
-                style.inset()[3].to_string().as_str(),
+                style.inset().left.to_string().as_str(),
                 FIELD_VALUE_COLOR,
             ));
         }
@@ -417,7 +417,7 @@ pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> Comp
             styles_window = styles_window.push(field_row(
                 "Border Width: ",
                 FIELD_NAME_COLOR,
-                style.border_width().map(|bw| bw.to_string()).join(", ").as_str(),
+                style.border_width().to_array().map(|bw| bw.to_string()).join(", ").as_str(),
                 FIELD_VALUE_COLOR,
             ));
         }

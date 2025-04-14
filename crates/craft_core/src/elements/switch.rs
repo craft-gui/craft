@@ -8,7 +8,7 @@ use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
+use crate::style::{Display, Style, Unit};
 use crate::ComponentSpecification;
 use crate::{generate_component_methods_no_children, palette, RendererBox};
 use cosmic_text::FontSystem;

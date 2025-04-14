@@ -14,6 +14,6 @@ pub use rectangle::Rectangle;
 pub use size::Size;
 pub use trblrectangle::TrblRectangle;
 
-pub type Border = TrblRectangle;
-pub type Padding = TrblRectangle;
-pub type Margin = TrblRectangle;
+pub type Border = TrblRectangle<f32>;
+pub type Padding = TrblRectangle<f32>;
+pub type Margin = TrblRectangle<f32>;

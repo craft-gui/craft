@@ -6,6 +6,7 @@ pub use taffy::Overflow;
 pub use taffy::Position;
 
 use std::fmt;
+use crate::geometry::TrblRectangle;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -153,10 +154,10 @@ pub struct Style {
     box_sizing: BoxSizing,
     scrollbar_width: f32,
     position: Position,
-    margin: [Unit; 4],
-    padding: [Unit; 4],
+    margin: TrblRectangle<Unit>,
+    padding: TrblRectangle<Unit>,
     gap: [Unit; 2],
-    inset: [Unit; 4],
+    inset: TrblRectangle<Unit>,
     width: Unit,
     height: Unit,
     max_width: Unit,
@@ -181,8 +182,8 @@ pub struct Style {
     font_style: FontStyle,
     overflow: [Overflow; 2],
 
-    border_color: [Color; 4],
-    border_width: [Unit; 4],
+    border_color: TrblRectangle<Color>,
+    border_width: TrblRectangle<Unit>,
     border_radius: [(f32, f32); 4],
     scrollbar_color: ScrollbarColor,
 
@@ -200,11 +201,11 @@ impl Default for Style {
             box_sizing: BoxSizing::BorderBox,
             scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 },
             position: Position::Relative,
-            margin: [Unit::Px(0.0); 4],
-            padding: [Unit::Px(0.0); 4],
-            border_width: [Unit::Px(0.0); 4],
+            margin: TrblRectangle::new_all(Unit::Px(0.0)),
+            padding: TrblRectangle::new_all(Unit::Px(0.0)),
+            border_width: TrblRectangle::new_all(Unit::Px(0.0)),
             gap: [Unit::Px(0.0); 2],
-            inset: [Unit::Px(0.0); 4],
+            inset: TrblRectangle::new_all(Unit::Px(0.0)),
             width: Unit::Auto,
             height: Unit::Auto,
             min_width: Unit::Auto,
@@ -223,7 +224,7 @@ impl Default for Style {
             flex_basis: Unit::Auto,
             color: Color::BLACK,
             background: Color::TRANSPARENT,
-            border_color: [Color::BLACK; 4],
+            border_color: TrblRectangle::new_all(Color::BLACK),
             font_size: 16.0,
             font_weight: Default::default(),
             font_style: Default::default(),
@@ -301,20 +302,20 @@ impl Style {
         &mut self.position
     }
 
-    pub fn margin(&self) -> [Unit; 4] {
+    pub fn margin(&self) -> TrblRectangle<Unit> {
         self.margin
     }
 
-    pub fn margin_mut(&mut self) -> &mut [Unit; 4] {
+    pub fn margin_mut(&mut self) -> &mut TrblRectangle<Unit> {
         self.dirty_flags.insert(StyleFlags::MARGIN);
         &mut self.margin
     }
 
-    pub fn padding(&self) -> [Unit; 4] {
+    pub fn padding(&self) -> TrblRectangle<Unit> {
         self.padding
     }
 
-    pub fn padding_mut(&mut self) -> &mut [Unit; 4] {
+    pub fn padding_mut(&mut self) -> &mut TrblRectangle<Unit> {
         self.dirty_flags.insert(StyleFlags::PADDING);
         &mut self.padding
     }
@@ -328,11 +329,11 @@ impl Style {
         &mut self.gap
     }
 
-    pub fn inset(&self) -> [Unit; 4] {
+    pub fn inset(&self) -> TrblRectangle<Unit> {
         self.inset
     }
 
-    pub fn inset_mut(&mut self) -> &mut [Unit; 4] {
+    pub fn inset_mut(&mut self) -> &mut TrblRectangle<Unit> {
         self.dirty_flags.insert(StyleFlags::INSET);
         &mut self.inset
     }
@@ -535,20 +536,20 @@ impl Style {
         &mut self.overflow
     }
 
-    pub fn border_color(&self) -> [Color; 4] {
+    pub fn border_color(&self) -> TrblRectangle<Color> {
         self.border_color
     }
 
-    pub fn border_color_mut(&mut self) -> &mut [Color; 4] {
+    pub fn border_color_mut(&mut self) -> &mut TrblRectangle<Color> {
         self.dirty_flags.insert(StyleFlags::BORDER_COLOR);
         &mut self.border_color
     }
 
-    pub fn border_width(&self) -> [Unit; 4] {
+    pub fn border_width(&self) -> TrblRectangle<Unit> {
         self.border_width
     }
 
-    pub fn border_width_mut(&mut self) -> &mut [Unit; 4] {
+    pub fn border_width_mut(&mut self) -> &mut TrblRectangle<Unit> {
         self.dirty_flags.insert(StyleFlags::BORDER_WIDTH);
         &mut self.border_width
     }
