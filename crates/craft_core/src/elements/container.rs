@@ -11,7 +11,6 @@ use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods, RendererBox};
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -44,7 +43,6 @@ impl Element for Container {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -58,7 +56,7 @@ impl Element for Container {
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
         {
-            self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
+            self.draw_children(renderer, taffy_tree, element_state, pointer, window);
         }
         self.maybe_end_layer(renderer);
 
@@ -96,7 +94,6 @@ impl Element for Container {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -131,7 +128,6 @@ impl Element for Container {
                 transform * child_transform,
                 element_state,
                 pointer,
-                font_system,
             );
         }
     }
@@ -144,7 +140,6 @@ impl Element for Container {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
@@ -152,7 +147,7 @@ impl Element for Container {
         container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base)
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(ContainerState::default()),

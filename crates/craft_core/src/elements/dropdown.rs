@@ -11,7 +11,6 @@ use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
 use crate::{generate_component_methods, RendererBox};
-use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
@@ -80,7 +79,6 @@ impl Element for Dropdown {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -100,7 +98,6 @@ impl Element for Dropdown {
             if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
                 pseudo_dropdown_selection.internal.draw(
                     renderer,
-                    font_system,
                     taffy_tree,
                     pseudo_dropdown_selection.internal.element_data().taffy_node_id.unwrap(),
                     element_state,
@@ -113,14 +110,13 @@ impl Element for Dropdown {
             if is_open && !self.children().is_empty() {
                 self.pseudo_dropdown_list_element.draw(
                     renderer,
-                    font_system,
                     taffy_tree,
                     self.pseudo_dropdown_list_element.element_data.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
                 );
-                self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window.clone());
+                self.draw_children(renderer, taffy_tree, element_state, pointer, window.clone());
             }
         }
         self.maybe_end_layer(renderer);
@@ -191,7 +187,6 @@ impl Element for Dropdown {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     ) {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
@@ -210,7 +205,6 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
-                font_system,
             );
         }
 
@@ -226,7 +220,6 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
-                font_system,
             );
 
             for child in self.element_data.children.iter_mut() {
@@ -244,7 +237,6 @@ impl Element for Dropdown {
                     transform,
                     element_state,
                     pointer,
-                    font_system,
                 );
             }
         }
@@ -254,7 +246,6 @@ impl Element for Dropdown {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
@@ -294,7 +285,7 @@ impl Element for Dropdown {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DropdownState::default()),

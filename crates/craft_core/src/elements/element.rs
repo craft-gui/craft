@@ -10,7 +10,6 @@ use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Siz
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::RendererBox;
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -78,7 +77,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -107,7 +105,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     );
 
     fn as_any(&self) -> &dyn Any;
@@ -116,7 +113,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self,
         _message: &CraftMessage,
         _element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
     ) -> UpdateResult {
         UpdateResult::default()
     }
@@ -168,7 +164,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn draw_children(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
@@ -182,7 +177,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
             }
             child.internal.draw(
                 renderer,
-                font_system,
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
                 element_state,
@@ -316,7 +310,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     }
 
     /// Called when the element is assigned a unique component id.
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(()),
@@ -350,7 +344,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     /// Called on sequential renders to update any state that the element may have.
     fn update_state(
         &self,
-        _font_system: &mut FontSystem,
         _element_state: &mut ElementStateStore,
         _reload_fonts: bool,
         _scaling_factor: f64,

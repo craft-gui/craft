@@ -1,4 +1,3 @@
-use cosmic_text::FontSystem;
 use taffy::{NodeId, Position, TaffyTree};
 use crate::elements::Container;
 use crate::elements::element::Element;
@@ -73,7 +72,6 @@ impl Thumb {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem
     ) {
         self.pseudo_thumb.finalize_layout(
             taffy_tree,
@@ -83,7 +81,6 @@ impl Thumb {
             transform,
             element_state,
             pointer,
-            font_system,
         );
     }
 }

@@ -11,7 +11,7 @@ dynamic_linking = []
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
-wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
+wgpu_renderer = ["dep:wgpu",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 http_client = ["dep:reqwest"]
 
 default = ["vello_renderer", "http_client"]
@@ -98,6 +98,10 @@ optional = true
 version = "0.4.6"
 optional = true
 
+[dependencies.parley]
+git = "https://github.com/linebender/parley.git"
+rev = "d53a05820799a88b23a9712d9d026378a2699403"
+
 [dependencies.wgpu]
 version = "24.0.1"
 default-features = false
@@ -114,10 +118,6 @@ git = "https://github.com/rust-windowing/winit"
 rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
-[dependencies.cosmic-text]
-version = "0.14.1"
-default-features = false
-features = ["std", "fontconfig", "peniko"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.15"

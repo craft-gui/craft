@@ -10,7 +10,6 @@ use crate::renderer::RenderCommand;
 use crate::style::Style;
 use crate::Color;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -41,7 +40,6 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -106,14 +104,14 @@ impl Element for Canvas {
                     );
                     renderer.draw_image(translated_rectangle, resource_identifier.clone());
                 }
-                RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor,) => {
+                RenderCommand::DrawText(rectangle, text_scroll, show_cursor,) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
                         rectangle.width,
                         rectangle.height,
                     );
-                    renderer.draw_text(buffer_glyphs.clone(), translated_rectangle, *text_scroll, *show_cursor);
+                    renderer.draw_text(translated_rectangle, *text_scroll, *show_cursor);
                 }
                 RenderCommand::PushLayer(rectangle) => {
                     let translated_rectangle = Rectangle::new(
@@ -167,7 +165,6 @@ impl Element for Canvas {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -187,7 +184,6 @@ impl Element for Canvas {
                 transform,
                 element_state,
                 pointer,
-                font_system,
             );
         }
     }

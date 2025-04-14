@@ -13,7 +13,6 @@ use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::{Display, Style, Unit};
 use crate::{generate_component_methods, palette, RendererBox};
-use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
@@ -67,7 +66,6 @@ impl Element for Slider {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -117,7 +115,7 @@ impl Element for Slider {
             renderer.fill_bez_path(background_path, value_track_color);
         }
 
-        self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
+        self.thumb.pseudo_thumb.draw(renderer, taffy_tree, _root_node, element_state, pointer, window);
     }
 
     fn compute_layout(
@@ -143,7 +141,6 @@ impl Element for Slider {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     ) {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
@@ -159,7 +156,6 @@ impl Element for Slider {
             transform,
             element_state,
             pointer,
-            font_system,
         );
     }
 
@@ -171,7 +167,6 @@ impl Element for Slider {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
@@ -206,7 +201,7 @@ impl Element for Slider {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(SliderState::default()),

@@ -2,10 +2,8 @@ use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{Renderer, TextScroll};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
-use crate::renderer::text::BufferGlyphs;
 
 pub struct BlankRenderer;
 
@@ -30,7 +28,6 @@ impl Renderer for BlankRenderer {
 
     fn draw_text(
         &mut self,
-        _buffer_glyphs: BufferGlyphs,
         _rectangle: Rectangle,
         _text_scroll: Option<TextScroll>,
         _show_cursor: bool,
@@ -46,7 +43,6 @@ impl Renderer for BlankRenderer {
     fn prepare(
         &mut self,
         _resource_manager: RwLockReadGuard<ResourceManager>,
-        _font_system: &mut FontSystem,
     ) {
     }
 

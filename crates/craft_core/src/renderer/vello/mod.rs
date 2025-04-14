@@ -2,10 +2,8 @@ use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
-use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
@@ -110,7 +108,6 @@ impl<'a> VelloRenderer<'a> {
     fn prepare_with_render_commands(
         scene: &mut Scene,
         resource_manager: &RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
         render_commands: &mut Vec<RenderCommand>,
     ) {
         for command in render_commands.drain(..) {
@@ -142,7 +139,8 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
+                RenderCommand::DrawText(rect, text_scroll, show_cursor) => {
+                    /*
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
@@ -184,14 +182,8 @@ impl<'a> VelloRenderer<'a> {
                                     }),
                                 );
                         }
-                    }
+                    }*/
                 }
-                /*RenderCommand::PushTransform(transform) => {
-                    self.scene.push_transform(transform);
-                },
-                RenderCommand::PopTransform => {
-                    self.scene.pop_transform();
-                },*/
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
                         rect.x as f64,
@@ -262,12 +254,11 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_text(
         &mut self,
-        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
-        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
+        self.render_commands.push(RenderCommand::DrawText(rectangle, text_scroll, show_cursor));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
@@ -282,11 +273,10 @@ impl Renderer for VelloRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, _font_system: &mut FontSystem) {
+    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>) {
         VelloRenderer::prepare_with_render_commands(
             &mut self.scene,
             &resource_manager,
-            _font_system,
             &mut self.render_commands,
         );
     }

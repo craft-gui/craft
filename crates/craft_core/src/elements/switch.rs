@@ -11,7 +11,6 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::style::{AlignItems, Display, JustifyContent, Style, Unit};
 use crate::ComponentSpecification;
 use crate::{generate_component_methods_no_children, palette, RendererBox};
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -57,7 +56,6 @@ impl Element for Switch {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -68,7 +66,7 @@ impl Element for Switch {
             return;
         }
         self.draw_borders(renderer);
-        self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
+        self.thumb.pseudo_thumb.draw(renderer, taffy_tree, _root_node, element_state, pointer, window);
     }
 
     fn compute_layout(
@@ -111,7 +109,6 @@ impl Element for Switch {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
     ) {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
@@ -132,7 +129,6 @@ impl Element for Switch {
             transform,
             element_state,
             pointer,
-            font_system,
         );
     }
 
@@ -144,7 +140,6 @@ impl Element for Switch {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
@@ -165,7 +160,7 @@ impl Element for Switch {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(SwitchState::default()),

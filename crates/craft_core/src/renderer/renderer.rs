@@ -1,8 +1,6 @@
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
 
@@ -11,7 +9,7 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
+    DrawText(Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
@@ -48,7 +46,6 @@ pub trait Renderer {
 
     fn draw_text(
         &mut self,
-        buffer_glyphs: BufferGlyphs,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
@@ -62,7 +59,6 @@ pub trait Renderer {
     fn prepare(
         &mut self,
         resource_manager: RwLockReadGuard<ResourceManager>,
-        font_system: &mut FontSystem,
     );
 
     fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);

@@ -5,8 +5,6 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 
-use cosmic_text::{FontSystem, Metrics};
-
 use taffy::Size;
 
 use crate::style::Style;
@@ -36,13 +34,6 @@ impl MetricsRaw {
             font_size: (style.font_size() * scaling_factor as f32).to_bits(),
             line_height: (style.font_size() * 1.2 * scaling_factor as f32).to_bits(),
             scaling_factor: scaling_factor.to_bits(),
-        }
-    }
-
-    pub(crate) fn to_metrics(self) -> Metrics {
-        Metrics {
-            font_size: f32::from_bits(self.font_size),
-            line_height: f32::from_bits(self.line_height),
         }
     }
 }
@@ -145,7 +136,6 @@ pub fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
-    font_system: &mut FontSystem,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
@@ -163,7 +153,10 @@ pub fn measure_content(
             let text_state: &mut TextState =
                 element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_state.cached_editor.measure(known_dimensions, available_space, font_system)
+            Size {
+                width: 100.0,
+                height: 100.0,
+            }
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
@@ -172,7 +165,10 @@ pub fn measure_content(
             let text_input_state: &mut TextInputState =
                 element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_input_state.cached_editor.measure(known_dimensions, available_space, font_system)
+            Size {
+                width: 100.0,
+                height: 100.0,
+            }
         }
     }
 }

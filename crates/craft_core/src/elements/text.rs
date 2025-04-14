@@ -8,9 +8,7 @@ use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
-use crate::text::cached_editor::CachedEditor;
 use crate::{generate_component_methods_no_children, RendererBox};
-use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
@@ -26,8 +24,7 @@ pub struct Text {
     selectable: bool,
 }
 
-pub struct TextState<'a> {
-    pub cached_editor: CachedEditor<'a>,
+pub struct TextState {
 }
 
 impl Text {
@@ -70,7 +67,6 @@ impl Element for Text {
     fn draw(
         &mut self,
         renderer: &mut RendererBox,
-        _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -94,25 +90,7 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
 
-        let cached_editor = &mut state.cached_editor;
-
-        let editor = &cached_editor.editor;
-        let buffer = &cached_editor.get_last_cache_entry().buffer;
-
         let fill_color = self.element_data.style.color();
-        let text_scroll = None;
-        
-        let buffer_glyphs = crate::renderer::text::create_glyphs_for_editor(
-            buffer,
-            editor,
-            fill_color,
-            Color::from_rgb8(0, 0, 0),
-            Color::from_rgb8(0, 120, 215),
-            Color::from_rgb8(255, 255, 255),
-            text_scroll,
-        );
-        
-        renderer.draw_text(buffer_glyphs, content_rectangle, None, false);
     }
 
     fn compute_layout(
@@ -144,7 +122,6 @@ impl Element for Text {
         transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _font_system: &mut FontSystem,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -160,7 +137,6 @@ impl Element for Text {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        font_system: &mut FontSystem,
     ) -> UpdateResult {
         let state: &mut TextState = element_state
             .storage
@@ -171,7 +147,6 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
 
-        let cached_editor = &mut state.cached_editor;
         let content_rect = self.element_data.computed_box.content_rectangle();
         let content_position = content_rect.position();
 
@@ -182,28 +157,14 @@ impl Element for Text {
                     let pointer_position = pointer_button.position;
                     let pointer_content_position = pointer_position - content_position;
                     if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                        cached_editor.action_start_drag(
-                            font_system,
-                            Point::new(pointer_content_position.x, pointer_content_position.y),
-                        );
                     } else {
-                        cached_editor.action_end_drag();
                     }
                     UpdateResult::new().prevent_defaults().prevent_propagate()
                 }
                 CraftMessage::PointerMovedEvent(moved) => {
-                    if cached_editor.dragging {
-                        let pointer_position = moved.position;
-                        let pointer_content_position = pointer_position - content_position;
-                        cached_editor.action_drag(
-                            font_system,
-                            Point::new(pointer_content_position.x, pointer_content_position.y),
-                        );
-                    }
                     UpdateResult::new().prevent_defaults().prevent_propagate()
                 }
                 CraftMessage::ModifiersChangedEvent(modifiers_changed) => {
-                    cached_editor.action_modifiers_changed(*modifiers_changed);
                     UpdateResult::new().prevent_defaults().prevent_propagate()
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
@@ -215,9 +176,6 @@ impl Element for Text {
                     }
 
                     if let Key::Character(text) = logical_key {
-                        if cached_editor.is_control_or_super_modifier_pressed() && text == "c" {
-                            cached_editor.action_copy_to_clipboard()
-                        }
                     }
 
                     UpdateResult::new().prevent_defaults().prevent_propagate()
@@ -229,9 +187,8 @@ impl Element for Text {
         }
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let cached_editor = CachedEditor::new(&self.text, &self.element_data.style, scaling_factor, font_system);
-        let text_state = TextState { cached_editor };
+    fn initialize_state(&self, scaling_factor: f64) -> ElementStateStoreItem {
+        let text_state = TextState { };
 
         ElementStateStoreItem {
             base: Default::default(),
@@ -241,7 +198,6 @@ impl Element for Text {
 
     fn update_state(
         &self,
-        font_system: &mut FontSystem,
         element_state: &mut ElementStateStore,
         reload_fonts: bool,
         scaling_factor: f64,
@@ -254,14 +210,6 @@ impl Element for Text {
             .as_mut()
             .downcast_mut()
             .unwrap();
-
-        state.cached_editor.update_state(
-            Some(&self.text),
-            &self.element_data.style,
-            scaling_factor,
-            reload_fonts,
-            font_system,
-        );
     }
 }
 
