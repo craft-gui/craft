@@ -115,12 +115,13 @@ impl Element for TextInput {
             element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
         {
             let fill_color = self.element_data.style.color();
-            
-            renderer.draw_text(
+
+            /*renderer.draw_text(
+
                 content_rectangle,
                 text_scroll,
                 true
-            );
+            );*/
         }
 
         if let Some(state) = element_state

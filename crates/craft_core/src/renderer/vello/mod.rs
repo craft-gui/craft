@@ -13,6 +13,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
+use crate::text::text_render_data::TextRender;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -139,7 +140,28 @@ impl<'a> VelloRenderer<'a> {
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(rect, text_scroll, show_cursor) => {
+                RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
+                    let transform =
+                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
+                    
+                    for line in &text_render.lines {
+                        for item in &line.items {
+                            scene
+                                .draw_glyphs(&item.font)
+                                .font_size(item.font_size)
+                                .brush(Color::BLACK)
+                                .transform(transform)
+                                .glyph_transform(item.glyph_transform)
+                                .draw(
+                                    Fill::NonZero,
+                                    item.glyphs.clone().into_iter().map(|glyph| Glyph {
+                                        id: glyph.id as u32,
+                                        x: glyph.x,
+                                        y: glyph.y,
+                                    }),
+                                );
+                        }
+                    }
                     /*
                     let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
@@ -254,11 +276,12 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_text(
         &mut self,
+        text_render: TextRender,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
-        self.render_commands.push(RenderCommand::DrawText(rectangle, text_scroll, show_cursor));
+        self.render_commands.push(RenderCommand::DrawText(text_render, rectangle, text_scroll, show_cursor));
     }
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {

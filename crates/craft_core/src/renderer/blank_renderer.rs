@@ -4,6 +4,7 @@ use crate::renderer::renderer::{Renderer, TextScroll};
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
+use crate::text::text_render_data::TextRender;
 
 pub struct BlankRenderer;
 
@@ -28,6 +29,7 @@ impl Renderer for BlankRenderer {
 
     fn draw_text(
         &mut self,
+        _text_render: TextRender,
         _rectangle: Rectangle,
         _text_scroll: Option<TextScroll>,
         _show_cursor: bool,

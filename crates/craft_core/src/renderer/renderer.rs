@@ -3,13 +3,14 @@ use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo;
 use tokio::sync::RwLockReadGuard;
+use crate::text::text_render_data::TextRender;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawText(Rectangle, Option<TextScroll>, bool),
+    DrawText(TextRender, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Color),
@@ -46,6 +47,7 @@ pub trait Renderer {
 
     fn draw_text(
         &mut self,
+        text_render: TextRender,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,

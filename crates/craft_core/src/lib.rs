@@ -77,6 +77,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use parley::Brush;
 use winit::event::{Ime, Modifiers};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
@@ -120,6 +121,18 @@ struct App {
 
     #[cfg(feature = "dev_tools")]
     dev_tree: ReactiveTree,
+
+    text_context: Option<TextContext>,
+}
+
+impl App {
+
+    fn setup_text_context(&mut self) {
+        if self.text_context.is_none() {
+            self.text_context = Some(TextContext::new());
+        }
+    }
+
 }
 
 #[cfg(target_os = "android")]
@@ -148,6 +161,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
+use crate::text::text_context::TextContext;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
@@ -306,6 +320,7 @@ async fn async_main(
             component_ids: Default::default(),
             pointer_captures: Default::default(),
         },
+        text_context: None,
     });
 
     info!("starting main event loop");
@@ -892,6 +907,8 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
 }
 
 async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<dyn Renderer + Send>>) {
+    app.setup_text_context();
+
     if app.user_tree.element_tree.is_none() {
         reset_unique_element_id();
         //let new_view = app.app.view();
@@ -964,6 +981,7 @@ async fn draw_reactive_tree(
     scale_factor: f64,
     mouse_position: Option<Point>,
     window: Option<Arc<dyn Window>>,
+    text_context: &mut TextContext,
 ) {
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
@@ -992,6 +1010,7 @@ async fn draw_reactive_tree(
             &resource_manager,
             scale_factor,
             mouse_position,
+            text_context,
         )
     };
 
@@ -1063,6 +1082,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         scale_factor,
         app.mouse_position,
         app.window.clone(),
+        &mut app.text_context.as_mut().unwrap(),
     )
     .await;
 
@@ -1088,6 +1108,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 scale_factor,
                 app.mouse_position,
                 app.window.clone(),
+                &mut app.text_context.as_mut().unwrap(),
             )
             .await;
         }
@@ -1129,6 +1150,7 @@ fn layout(
     resource_manager: &RwLockReadGuard<ResourceManager>,
     scale_factor: f64,
     pointer: Option<Point>,
+    text_context: &mut TextContext,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
     let mut taffy_tree: TaffyTree<LayoutContext> = TaffyTree::new();
     let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
@@ -1150,6 +1172,7 @@ fn layout(
                     node_context,
                     resource_manager,
                     style,
+                    text_context,
                 )
             },
         )

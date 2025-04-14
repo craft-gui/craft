@@ -9,6 +9,7 @@ use taffy::Size;
 
 use crate::style::Style;
 use tokio::sync::RwLockReadGuard;
+use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
@@ -138,6 +139,7 @@ pub fn measure_content(
     node_context: Option<&mut LayoutContext>,
     resource_manager: &RwLockReadGuard<ResourceManager>,
     style: &taffy::Style,
+    text_context: &mut TextContext,
 ) -> Size<f32> {
     if let Size {
         width: Some(width),
@@ -152,11 +154,12 @@ pub fn measure_content(
         Some(LayoutContext::Text(taffy_text_context)) => {
             let text_state: &mut TextState =
                 element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
-
-            Size {
-                width: 100.0,
-                height: 100.0,
-            }
+            
+            text_state.measure(
+                known_dimensions,
+                available_space,
+                text_context,
+            )
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
