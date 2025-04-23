@@ -3,7 +3,8 @@ use crate::renderer::color::Color;
 use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-use peniko::kurbo;
+use peniko::{kurbo, BrushRef, Gradient};
+use peniko::color::{DynamicColor, Srgb};
 use tokio::sync::RwLockReadGuard;
 
 #[derive(Debug, Clone)]
@@ -14,7 +15,22 @@ pub enum RenderCommand {
     DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
-    FillBezPath(kurbo::BezPath, Color),
+    FillBezPath(kurbo::BezPath, Brush),
+}
+
+#[derive(Clone, Debug)]
+pub enum Brush {
+    Color(Color),
+    Gradient(Gradient),
+}
+
+impl<'a> From<&'a Brush> for BrushRef<'a> {
+    fn from(brush: &'a Brush) -> Self {
+        match brush {
+            Brush::Color(color) => Self::Solid(*color),
+            Brush::Gradient(gradient) => Self::Gradient(gradient),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -44,7 +60,7 @@ pub trait Renderer {
     fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color);
     fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color);
 
-    fn fill_bez_path(&mut self, path: kurbo::BezPath, color: Color);
+    fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush);
 
     fn draw_text(
         &mut self,

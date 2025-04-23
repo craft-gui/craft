@@ -12,7 +12,6 @@ http_client = ["craft_core/http_client"]
 vello_renderer = ["craft_core/vello_renderer"]
 vello_cpu_renderer = ["craft_core/vello_cpu_renderer"]
 vello_hybrid_renderer = ["craft_core/vello_hybrid_renderer"]
-wgpu_renderer = ["craft_core/wgpu_renderer"]
 
 default = ["craft_core/vello_renderer", "craft_core/http_client", "craft_core/dev_tools"]
 

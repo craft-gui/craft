@@ -11,7 +11,6 @@ dynamic_linking = []
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
-wgpu_renderer = ["dep:wgpu", "cosmic-text/swash",  "wgpu/fragile-send-sync-non-atomic-wasm", "dep:lyon"]
 http_client = ["dep:reqwest"]
 
 default = ["vello_renderer", "http_client"]
@@ -42,6 +41,11 @@ features = ["std"]
 version = "0.3.1"
 default-features = false
 features = ["std"]
+
+[dependencies.tinyvg]
+git = "https://github.com/craft-gui/tinyvg-rs"
+rev = "380e88956bd5f0a7fdca4c39d8c6928fa9c02511"
+default-features = false
 
 [dependencies.glam]
 version = "0.30.1"
