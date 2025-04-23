@@ -5,6 +5,7 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
+use crate::renderer::Brush;
 use crate::renderer::text::BufferGlyphs;
 
 pub struct BlankRenderer;
@@ -26,7 +27,7 @@ impl Renderer for BlankRenderer {
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
-    fn fill_bez_path(&mut self, _path: BezPath, _color: Color) {}
+    fn fill_bez_path(&mut self, _path: BezPath, _brush: Brush) {}
 
     fn draw_text(
         &mut self,

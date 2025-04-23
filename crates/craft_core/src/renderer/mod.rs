@@ -16,3 +16,4 @@ mod image_adapter;
 pub(crate) mod text;
 
 pub use renderer::RenderCommand;
+pub use renderer::Brush;

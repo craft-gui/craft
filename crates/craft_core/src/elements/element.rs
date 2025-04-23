@@ -16,6 +16,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
+use crate::renderer::Brush;
 
 #[derive(Clone, Debug)]
 pub struct ElementBoxed {
@@ -206,7 +207,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let computed_border_spec = &element_data.computed_border;
 
         let background_path = computed_border_spec.build_background_path();
-        renderer.fill_bez_path(background_path, background_color);
+        renderer.fill_bez_path(background_path, Brush::Color(background_color));
 
         let top = computed_border_spec.get_side(Side::Top);
         let right = computed_border_spec.get_side(Side::Right);
@@ -218,10 +219,10 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
         let border_left_path = computed_border_spec.build_side_path(Side::Left);
 
-        renderer.fill_bez_path(border_top_path, top.color);
-        renderer.fill_bez_path(border_right_path, right.color);
-        renderer.fill_bez_path(border_bottom_path, bottom.color);
-        renderer.fill_bez_path(border_left_path, left.color);
+        renderer.fill_bez_path(border_top_path,    Brush::Color(top.color));
+        renderer.fill_bez_path(border_right_path,  Brush::Color(right.color));
+        renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
+        renderer.fill_bez_path(border_left_path,   Brush::Color(left.color));
     }
 
     fn should_start_new_layer(&self) -> bool {

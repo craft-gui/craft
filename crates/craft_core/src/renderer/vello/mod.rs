@@ -15,6 +15,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
+use crate::renderer::Brush;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -204,8 +205,8 @@ impl<'a> VelloRenderer<'a> {
                 RenderCommand::PopLayer => {
                     scene.pop_layer();
                 }
-                RenderCommand::FillBezPath(path, color) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, color, None, &path);
+                RenderCommand::FillBezPath(path, brush) => {
+                    scene.fill(Fill::NonZero, Affine::IDENTITY, &brush, None, &path);
                 }
             }
         }
@@ -256,8 +257,8 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
-    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
     }
 
     fn draw_text(

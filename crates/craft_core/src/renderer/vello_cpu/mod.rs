@@ -4,7 +4,7 @@ use crate::elements::text_input::TextInputState;
 use crate::geometry::Rectangle;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::{Renderer, TextScroll};
-use crate::renderer::{text, RenderCommand};
+use crate::renderer::{text, Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -118,8 +118,8 @@ impl Renderer for VelloCpuRenderer {
         self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
     }
 
-    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
     }
 
     fn draw_text(
@@ -227,9 +227,20 @@ impl Renderer for VelloCpuRenderer {
                 }
                 RenderCommand::PushLayer(_rect) => {}
                 RenderCommand::PopLayer => {}
-                RenderCommand::FillBezPath(path, color) => {
-                    self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                    self.render_context.fill_path(&path);
+                RenderCommand::FillBezPath(path, brush) => {
+                    
+                    match brush {
+                        Brush::Color(color) => {
+                            self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
+                            self.render_context.fill_path(&path);
+                        }
+                        Brush::Gradient(gradient) => {
+                            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
+                            let color = gradient.stops.get(0).map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
+                            self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
+                            self.render_context.fill_path(&path);
+                        }
+                    }
                 }
             }
         }

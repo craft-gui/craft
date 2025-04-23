@@ -127,8 +127,8 @@ impl Element for Canvas {
                 RenderCommand::PopLayer => {
                     renderer.pop_layer();
                 }
-                RenderCommand::FillBezPath(path, color) => {
-                    renderer.fill_bez_path(path.clone(), *color);
+                RenderCommand::FillBezPath(path, brush) => {
+                    renderer.fill_bez_path(path.clone(), brush.clone());
                 }
             }
         }

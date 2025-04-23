@@ -20,6 +20,7 @@ use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::event::ElementState;
 use winit::window::Window;
+use crate::renderer::Brush;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -114,7 +115,7 @@ impl Element for Slider {
             );
             let computed_border_spec = border_spec.compute_border_spec();
             let background_path = computed_border_spec.build_background_path();
-            renderer.fill_bez_path(background_path, value_track_color);
+            renderer.fill_bez_path(background_path, Brush::Color(value_track_color));
         }
 
         self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);

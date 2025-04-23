@@ -26,6 +26,7 @@ use crate::renderer::vello_hybrid::render_context::RenderContext;
 use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use vello_common::glyph::GlyphRenderer;
 use vello_hybrid::Scene;
+use crate::renderer::Brush;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -196,9 +197,19 @@ impl<'a> VelloHybridRenderer<'a> {
                 RenderCommand::PopLayer => {
                     //scene.pop_layer();
                 }
-                RenderCommand::FillBezPath(path, color) => {
-                    scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                    scene.fill_path(&path);
+                RenderCommand::FillBezPath(path, brush) => {
+                    match brush {
+                        Brush::Color(color) => {
+                            scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
+                            scene.fill_path(&path);
+                        }
+                        Brush::Gradient(gradient) => {
+                            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
+                            let color = gradient.stops.get(0).map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
+                            scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
+                            scene.fill_path(&path);
+                        }
+                    }
                 }
             }
         }
@@ -244,8 +255,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
 
     fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
 
-    fn fill_bez_path(&mut self, path: BezPath, color: Color) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, color));
+    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
+        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
     }
 
     fn draw_text(
