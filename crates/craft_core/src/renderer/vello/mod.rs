@@ -1,4 +1,6 @@
-use crate::geometry::Rectangle;
+mod tinyvg;
+
+use crate::geometry::{Rectangle};
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
@@ -6,7 +8,7 @@ use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-use peniko::kurbo::BezPath;
+use peniko::kurbo::{BezPath};
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use vello::kurbo::{Affine, Rect};
@@ -16,6 +18,7 @@ use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
 use crate::renderer::Brush;
+use crate::renderer::vello::tinyvg::draw_tiny_vg;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -93,7 +96,7 @@ impl<'a> VelloRenderer<'a> {
                 window.clone(),
                 surface_size.width,
                 surface_size.height,
-                vello::wgpu::PresentMode::AutoVsync,
+                wgpu::PresentMode::AutoVsync,
             )
             .await
             .unwrap();
@@ -187,12 +190,9 @@ impl<'a> VelloRenderer<'a> {
                         }
                     }
                 }
-                /*RenderCommand::PushTransform(transform) => {
-                    self.scene.push_transform(transform);
-                },
-                RenderCommand::PopTransform => {
-                    self.scene.pop_transform();
-                },*/
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+                    draw_tiny_vg(scene, rectangle, resource_manager, resource_identifier);
+                }
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
                         rect.x as f64,
@@ -273,6 +273,10 @@ impl Renderer for VelloRenderer<'_> {
 
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
+    }
+
+    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
+        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
     }
 
     fn push_layer(&mut self, rect: Rectangle) {

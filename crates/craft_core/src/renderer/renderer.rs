@@ -4,7 +4,6 @@ use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::{kurbo, BrushRef, Gradient};
-use peniko::color::{DynamicColor, Srgb};
 use tokio::sync::RwLockReadGuard;
 
 #[derive(Debug, Clone)]
@@ -12,6 +11,7 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
+    DrawTinyVg(Rectangle, ResourceIdentifier),
     DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
@@ -70,6 +70,7 @@ pub trait Renderer {
         show_cursor: bool,
     );
     fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
+    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier);
 
     fn push_layer(&mut self, rect: Rectangle);
 

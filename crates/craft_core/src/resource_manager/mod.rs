@@ -3,6 +3,7 @@ pub(crate) mod image;
 pub mod resource;
 pub mod resource_data;
 pub mod resource_type;
+pub(crate) mod tinyvg_resource;
 
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
@@ -24,6 +25,7 @@ use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
 use std::sync::Arc;
+use crate::resource_manager::tinyvg_resource::TinyVgResource;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
@@ -53,6 +55,10 @@ impl ResourceManager {
                 }
                 ResourceType::Font => {
                     self.resources.insert(resource_identifier.clone(), Resource::Font(vec![]));
+                }
+                ResourceType::TinyVg => {
+                    let generic_resource = ResourceData::new(resource_identifier.clone(), None, None, ResourceType::TinyVg);
+                    self.resources.insert(resource_identifier.clone(), Resource::TinyVg(TinyVgResource::new(generic_resource)));
                 }
             }
         }
@@ -120,6 +126,36 @@ impl ResourceManager {
                                     InternalMessage::ResourceEvent(ResourceEvent::Loaded(
                                         resource_identifier_copy,
                                         ResourceType::Font,
+                                        resource,
+                                    )),
+                                ))
+                                .await
+                                .expect("Failed to send added resource event");
+                        }
+                    };
+                    CraftRuntime::native_spawn(f);
+                }
+                ResourceType::TinyVg => {
+                    let resource = resource_identifier.clone();
+                    let app_sender_copy = self.app_sender.clone();
+                    let f = async move {
+                        let bytes = resource.clone().fetch_data_from_resource_identifier().await;
+
+                        if let Some(bytes) = bytes {
+                            let generic_resource = ResourceData::new(
+                                resource_identifier.clone(),
+                                Some(bytes.to_vec()),
+                                None,
+                                ResourceType::TinyVg,
+                            );
+                            let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
+
+                            app_sender_copy
+                                .send(AppMessage::new(
+                                    0,
+                                    InternalMessage::ResourceEvent(ResourceEvent::Loaded(
+                                        resource_identifier_copy,
+                                        ResourceType::TinyVg,
                                         resource,
                                     )),
                                 ))

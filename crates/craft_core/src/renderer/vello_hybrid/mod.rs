@@ -1,4 +1,5 @@
 mod render_context;
+mod tinyvg;
 
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
@@ -6,7 +7,7 @@ use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, Renderer as CraftRenderer, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::{Edit, FontSystem};
+use cosmic_text::{FontSystem};
 use peniko::kurbo::BezPath;
 use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
@@ -24,9 +25,9 @@ use winit::window::Window;
 use crate::renderer::text::BufferGlyphs;
 use crate::renderer::vello_hybrid::render_context::RenderContext;
 use crate::renderer::vello_hybrid::render_context::RenderSurface;
-use vello_common::glyph::GlyphRenderer;
-use vello_hybrid::Scene;
+use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::renderer::Brush;
+use vello_hybrid::Scene;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -47,7 +48,7 @@ pub struct VelloHybridRenderer<'a> {
     context: RenderContext,
 
     // An array of renderers, one per wgpu device
-    renderers: Vec<Option<vello_hybrid::Renderer>>,
+    renderers: Vec<Option<Renderer>>,
 
     // State for our example where we store the winit Window and the wgpu Surface
     state: RenderState<'a>,
@@ -119,23 +120,23 @@ impl<'a> VelloHybridRenderer<'a> {
                 RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
                     // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
                 }
-                RenderCommand::DrawImage(rectangle, resource_identifier) => {
+                RenderCommand::DrawImage(_rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
 
                     if let Some(Resource::Image(resource)) = resource {
                         let image = &resource.image;
                         let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
-                        let vello_image =
+                        let _vello_image =
                             peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-                        let mut transform = Affine::IDENTITY;
+                     /*   let mut transform = Affine::IDENTITY;
                         transform =
                             transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             rectangle.width as f64 / image.width() as f64,
                             rectangle.height as f64 / image.height() as f64,
-                        );
+                        );*/
 
                         //scene.draw_image(&vello_image, transform);
                     }
@@ -179,14 +180,11 @@ impl<'a> VelloHybridRenderer<'a> {
                         }
                     }
                 }
-                /*RenderCommand::PushTransform(transform) => {
-                    self.scene.push_transform(transform);
-                },
-                RenderCommand::PopTransform => {
-                    self.scene.pop_transform();
-                },*/
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+                    draw_tiny_vg(scene, rectangle, resource_manager, resource_identifier);
+                }
                 RenderCommand::PushLayer(rect) => {
-                    let clip = Rect::new(
+                    let _clip = Rect::new(
                         rect.x as f64,
                         rect.y as f64,
                         (rect.x + rect.width) as f64,
@@ -198,18 +196,8 @@ impl<'a> VelloHybridRenderer<'a> {
                     //scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, brush) => {
-                    match brush {
-                        Brush::Color(color) => {
-                            scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                            scene.fill_path(&path);
-                        }
-                        Brush::Gradient(gradient) => {
-                            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
-                            let color = gradient.stops.get(0).map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
-                            scene.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                            scene.fill_path(&path);
-                        }
-                    }
+                    scene.set_paint(brush_to_paint(&brush));
+                    scene.fill_path(&path);
                 }
             }
         }
@@ -273,6 +261,10 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
+    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
+        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
+    }
+
     fn push_layer(&mut self, rect: Rectangle) {
         self.render_commands.push(RenderCommand::PushLayer(rect));
     }
@@ -300,8 +292,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         let surface = &render_state.surface;
 
         // Get the window size
-        let width = surface.config.width;
-        let height = surface.config.height;
+        let _width = surface.config.width;
+        let _height = surface.config.height;
 
         // Get a handle to the device
         let device_handle = &self.context.devices[surface.dev_id];
@@ -359,5 +351,18 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         surface_texture.present();
 
         self.scene.reset();
+    }
+}
+
+fn brush_to_paint(brush: &Brush) -> Paint {
+    match brush {
+        Brush::Color(color) => {
+            Paint::Solid(color.premultiply().to_rgba8())
+        }
+        Brush::Gradient(gradient) => {
+            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
+            let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
+            Paint::Solid(color.premultiply().to_rgba8())
+        }
     }
 }

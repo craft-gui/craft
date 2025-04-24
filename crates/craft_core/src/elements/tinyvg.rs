@@ -2,7 +2,7 @@ use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::elements::layout_context::{ImageContext, LayoutContext};
+use crate::elements::layout_context::{LayoutContext, TinyVgContext};
 use crate::elements::ElementStyles;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
@@ -16,25 +16,25 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
 #[derive(Clone, Debug)]
-pub struct Image {
+pub struct TinyVg {
     pub(crate) resource_identifier: ResourceIdentifier,
     pub element_data: ElementData,
 }
 
-impl Image {
-    pub fn new(resource_identifier: ResourceIdentifier) -> Image {
-        Image {
+impl TinyVg {
+    pub fn new(resource_identifier: ResourceIdentifier) -> TinyVg {
+        TinyVg {
             resource_identifier,
             element_data: Default::default(),
         }
     }
 
     pub fn name() -> &'static str {
-        "Image"
+        "TinyVG"
     }
 }
 
-impl Element for Image {
+impl Element for TinyVg {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -44,7 +44,7 @@ impl Element for Image {
     }
 
     fn name(&self) -> &'static str {
-        "Image"
+        "TinyVG"
     }
 
     fn draw(
@@ -63,8 +63,8 @@ impl Element for Image {
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer);
-
-        renderer.draw_image(content_rectangle, self.resource_identifier.clone());
+        
+        renderer.draw_tiny_vg(content_rectangle, self.resource_identifier.clone());
     }
 
     fn compute_layout(
@@ -80,7 +80,7 @@ impl Element for Image {
             taffy_tree
                 .new_leaf_with_context(
                     style,
-                    LayoutContext::Image(ImageContext {
+                    LayoutContext::TinyVg(TinyVgContext {
                         resource_identifier: self.resource_identifier.clone(),
                     }),
                 )
@@ -112,11 +112,11 @@ impl Element for Image {
     }
 }
 
-impl Image {
+impl TinyVg {
     generate_component_methods_no_children!();
 }
 
-impl ElementStyles for Image {
+impl ElementStyles for TinyVg {
     fn styles_mut(&mut self) -> &mut Style {
         self.element_data.current_style_mut()
     }

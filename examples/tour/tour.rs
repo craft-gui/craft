@@ -1,12 +1,13 @@
 #[path = "../util.rs"]
 mod util;
 
+use std::path::PathBuf;
 use util::setup_logging;
 
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
 use craft::craft_main_with_options;
-use craft::elements::ElementStyles;
+use craft::elements::{ElementStyles, TinyVg};
 use craft::elements::TextInput;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Switch};
@@ -17,7 +18,8 @@ use craft::components::ComponentId;
 use craft::elements::{Slider, SliderDirection};
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
 use craft::events::Message::CraftMessage;
-use craft::style::{Display, FlexDirection};
+use craft::resource_manager::ResourceIdentifier;
+use craft::style::{Display, FlexDirection, Overflow};
 
 #[derive(Clone)]
 pub struct Tour {
@@ -53,11 +55,13 @@ impl Component for Tour {
         _id: ComponentId,
     ) -> ComponentSpecification {
         
-        Container::new()
+        let mut container = Container::new()
+            .overflow_y(Overflow::Scroll)
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
             .width("100%")
+            .max_height("100%")
             .gap("10px")
             .push(Text::new("Tour:").font_size(24.0))
             .push(TextInput::new(state.my_text.as_str()).id("text_input"))
@@ -66,14 +70,26 @@ impl Component for Tour {
             .push(Text::new(format!("Value: {}", if state.switch_value { "On" } else { "Off" }).as_str()).margin("0px", "0px", "25px", "0px"))
             .push(Slider::new(16.0).direction(SliderDirection::Horizontal).step(1.0).round())
             .push(Text::new(format!("Value: {:?}", state.slider_value).as_str()).margin("0px", "0px", "25px", "0px"))
-             .push(
+            .push(
                  Dropdown::new()
                      .push(Text::new(Self::DROPDOWN_ITEMS[0]))
                      .push(Text::new(Self::DROPDOWN_ITEMS[1]))
                      .push(Text::new(Self::DROPDOWN_ITEMS[2]))
                      .push(Text::new(Self::DROPDOWN_ITEMS[3])),
-             )
-            .component()
+            )
+            .component();
+
+        // FIXME: Allow ResourceIdentifier::Bytes() and include this at compile time or point to the file on GitHub.
+        #[cfg(not(target_arch = "wasm32"))] {
+            let tiger_tvg = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/tour/tiger.tvg");
+            container.push_in_place(
+                TinyVg::new(ResourceIdentifier::File(tiger_tvg))
+                    .max_width("40%")
+                    .component(),
+            )
+        }
+        
+        container
     }
 
     fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {

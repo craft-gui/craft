@@ -1,9 +1,10 @@
 #[path = "../util.rs"]
 mod util;
 
+use std::path::PathBuf;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::craft_main_with_options;
-use craft::elements::ElementStyles;
+use craft::elements::{ElementStyles, TinyVg};
 use craft::elements::{Container, Text};
 use craft::events::Event;
 use craft::style::Display;
@@ -105,6 +106,7 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use craft::AndroidApp;
+use craft::resource_manager::ResourceIdentifier;
 use util::setup_logging;
 
 #[allow(dead_code)]

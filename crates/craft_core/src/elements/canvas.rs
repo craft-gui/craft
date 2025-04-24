@@ -130,6 +130,9 @@ impl Element for Canvas {
                 RenderCommand::FillBezPath(path, brush) => {
                     renderer.fill_bez_path(path.clone(), brush.clone());
                 }
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+                    renderer.draw_tiny_vg(*rectangle, resource_identifier.clone());
+                }
             }
         }
 

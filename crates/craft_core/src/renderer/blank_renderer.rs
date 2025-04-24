@@ -1,12 +1,12 @@
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{Renderer, TextScroll};
+use crate::renderer::text::BufferGlyphs;
+use crate::renderer::Brush;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
 use tokio::sync::RwLockReadGuard;
-use crate::renderer::Brush;
-use crate::renderer::text::BufferGlyphs;
 
 pub struct BlankRenderer;
 
@@ -39,6 +39,8 @@ impl Renderer for BlankRenderer {
     }
 
     fn draw_image(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
+
+    fn draw_tiny_vg(&mut self, _rectangle: Rectangle, _resource_identifier: ResourceIdentifier) {}
 
     fn push_layer(&mut self, _rect: Rectangle) {}
 

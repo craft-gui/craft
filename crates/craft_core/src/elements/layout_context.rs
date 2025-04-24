@@ -134,10 +134,49 @@ impl ImageContext {
     }
 }
 
+pub(crate) struct TinyVgContext {
+    pub(crate) resource_identifier: ResourceIdentifier,
+}
+
+impl TinyVgContext {
+    pub fn measure(
+        &mut self,
+        known_dimensions: Size<Option<f32>>,
+        _available_space: Size<taffy::AvailableSpace>,
+        resource_manager: &RwLockReadGuard<ResourceManager>,
+        _style: &taffy::Style,
+    ) -> Size<f32> {
+        let mut original_image_width: f32 = 0.0;
+        let mut original_image_height: f32 = 0.0;
+        if let Some(Resource::TinyVg(tinyvg_resource)) = resource_manager.resources.get(&self.resource_identifier) {
+            if let Some(tinyvg) = tinyvg_resource.tinyvg.as_ref() {
+                original_image_width = tinyvg.header.width as f32;
+                original_image_height = tinyvg.header.height as f32;   
+            }
+        }
+        match (known_dimensions.width, known_dimensions.height) {
+            (Some(width), Some(height)) => Size { width, height },
+            (Some(width), None) => Size {
+                width,
+                height: (width / original_image_width) * original_image_height,
+            },
+            (None, Some(height)) => Size {
+                width: (height / original_image_height) * original_image_width,
+                height,
+            },
+            (None, None) => Size {
+                width: original_image_width,
+                height: original_image_height,
+            },
+        }
+    }
+}
+
 pub(crate) enum LayoutContext {
     Text(TaffyTextContext),
     TextInput(TaffyTextInputContext),
     Image(ImageContext),
+    TinyVg(TinyVgContext)
 }
 
 pub fn measure_content(
@@ -173,6 +212,9 @@ pub fn measure_content(
                 element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
             text_input_state.cached_editor.measure(known_dimensions, available_space, font_system)
+        }
+        Some(LayoutContext::TinyVg(tinyvg_context)) => {
+            tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
     }
 }

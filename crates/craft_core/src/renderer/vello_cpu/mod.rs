@@ -1,10 +1,10 @@
-use crate::components::ComponentId;
-use crate::elements::text::TextState;
-use crate::elements::text_input::TextInputState;
+pub(crate) mod tinyvg;
+
 use crate::geometry::Rectangle;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::{Renderer, TextScroll};
-use crate::renderer::{text, Brush, RenderCommand};
+use crate::renderer::text::BufferGlyphs;
+use crate::renderer::vello_cpu::tinyvg::draw_tiny_vg;
+use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
@@ -22,7 +22,6 @@ use vello_common::kurbo::Stroke;
 use vello_common::paint::Paint;
 use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
-use crate::renderer::text::BufferGlyphs;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -58,7 +57,7 @@ pub(crate) struct VelloCpuRenderer {
     render_commands: Vec<RenderCommand>,
     window: Arc<dyn Window>,
     render_context: RenderContext,
-    pixmap: vello_cpu::Pixmap,
+    pixmap: Pixmap,
     surface: Surface,
     clear_color: Color,
 }
@@ -68,9 +67,9 @@ impl VelloCpuRenderer {
         let width = window.surface_size().width as u16;
         let height = window.surface_size().height as u16;
 
-        let render_context = vello_cpu::RenderContext::new(width, height);
+        let render_context = RenderContext::new(width, height);
 
-        let pixmap = vello_cpu::Pixmap::new(width, height);
+        let pixmap = Pixmap::new(width, height);
 
         let mut surface = Surface::new(window.clone());
         surface
@@ -136,6 +135,10 @@ impl Renderer for VelloCpuRenderer {
         self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
+    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
+        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
+    }
+
     fn push_layer(&mut self, _rect: Rectangle) {}
 
     fn pop_layer(&mut self) {}
@@ -171,7 +174,7 @@ impl Renderer for VelloCpuRenderer {
                         for (x, y, pixel) in image.enumerate_pixels() {
                             let premultiplied_color = PremulRgba8::from_u8_array(pixel.0);
                             self.render_context.set_paint(Paint::Solid(premultiplied_color));
-                            let pixel = kurbo::Rect::new(
+                            let pixel = Rect::new(
                                 rectangle.x as f64 + x as f64,
                                 rectangle.y as f64 + y as f64,
                                 rectangle.x as f64 + x as f64 + 1.0,
@@ -228,19 +231,11 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::PushLayer(_rect) => {}
                 RenderCommand::PopLayer => {}
                 RenderCommand::FillBezPath(path, brush) => {
-                    
-                    match brush {
-                        Brush::Color(color) => {
-                            self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                            self.render_context.fill_path(&path);
-                        }
-                        Brush::Gradient(gradient) => {
-                            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
-                            let color = gradient.stops.get(0).map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
-                            self.render_context.set_paint(Paint::Solid(color.premultiply().to_rgba8()));
-                            self.render_context.fill_path(&path);
-                        }
-                    }
+                    self.render_context.set_paint(brush_to_paint(&brush));
+                    self.render_context.fill_path(&path);
+                }
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+                    draw_tiny_vg(&mut self.render_context, rectangle, &resource_manager, resource_identifier);
                 }
             }
         }
@@ -260,7 +255,7 @@ impl VelloCpuRenderer {
         let pixmap = &self.pixmap.buf;
 
         for offset in 0..(width * height) {
-            let red = pixmap[4 * offset + 0];
+            let red = pixmap[4 * offset];
             let green = pixmap[4 * offset + 1];
             let blue = pixmap[4 * offset + 2];
             let alpha = pixmap[4 * offset + 3];
@@ -269,6 +264,19 @@ impl VelloCpuRenderer {
         }
 
         buffer
+    }
+}
+
+fn brush_to_paint(brush: &Brush) -> Paint {
+    match brush {
+        Brush::Color(color) => {
+            Paint::Solid(color.premultiply().to_rgba8())
+        }
+        Brush::Gradient(gradient) => {
+            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
+            let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
+            Paint::Solid(color.premultiply().to_rgba8())
+        }
     }
 }
 

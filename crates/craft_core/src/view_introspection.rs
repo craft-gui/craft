@@ -1,5 +1,5 @@
 use crate::elements::element::Element;
-use crate::elements::{Font, Image};
+use crate::elements::{Font, Image, TinyVg};
 use crate::reactive::fiber_node::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
@@ -28,8 +28,9 @@ pub async fn scan_view_for_resources(
                 element.as_any().downcast_ref::<Image>().map(|image| image.resource_identifier.clone());
 
             let font_resource = element.as_any().downcast_ref::<Font>().map(|font| font.resource_identifier.clone());
+            let tinyvg_resource = element.as_any().downcast_ref::<TinyVg>().map(|tinyvg| tinyvg.resource_identifier.clone());
 
-            if image_resource.is_some() || font_resource.is_some() {
+            if image_resource.is_some() || font_resource.is_some() || tinyvg_resource.is_some() {
                 let mut resource_manager = resource_manager.write().await;
 
                 if let Some(image_resource) = image_resource {
@@ -45,6 +46,13 @@ pub async fn scan_view_for_resources(
                         .async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font);
                     resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
                 }
+                
+                if let Some(tinyvg_resource) = tinyvg_resource {
+                    resource_manager
+                        .async_download_resource_and_send_message_on_finish(tinyvg_resource.clone(), ResourceType::TinyVg);
+                    resource_manager.add_temporary_resource(tinyvg_resource.clone(), ResourceType::TinyVg);
+                }
+                
             }
         }
     }

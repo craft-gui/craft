@@ -14,6 +14,7 @@ pub(crate) mod vello_hybrid;
 pub(crate) mod blank_renderer;
 mod image_adapter;
 pub(crate) mod text;
+pub(crate) mod tinyvg_helpers;
 
 pub use renderer::RenderCommand;
 pub use renderer::Brush;

@@ -411,7 +411,7 @@ async fn async_main(
 
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
-                            } else if resource_type == ResourceType::Image {
+                            } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                                 resource_manager.resources.insert(resource_identifier, resource);
                                 app.window.as_ref().unwrap().request_redraw();
                             }

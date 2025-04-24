@@ -7,14 +7,13 @@
 )]
 
 use winit::window::Window;
-use std::sync::Arc;
 
 use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::{
     Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration,
     SurfaceTarget, TextureFormat,
 };
-use winit::{event_loop::ActiveEventLoop};
+use winit::event_loop::ActiveEventLoop;
 
 /// Helper function that creates a Winit window and returns it (wrapped in an Arc for sharing)
 pub(crate) fn create_winit_window(

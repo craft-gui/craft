@@ -7,6 +7,7 @@ pub(crate) mod layout_context;
 pub(crate) mod slider;
 pub(crate) mod switch;
 pub(crate) mod text;
+pub(crate) mod tinyvg;
 
 #[allow(clippy::module_inception)]
 pub(crate) mod text_input;
@@ -22,6 +23,7 @@ pub(crate) mod font;
 mod scroll_state;
 mod thumb;
 
+
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
 pub use crate::elements::dropdown::Dropdown;
@@ -33,3 +35,4 @@ pub use crate::elements::slider::SliderDirection;
 pub use crate::elements::switch::Switch;
 pub use crate::elements::text::Text;
 pub use crate::elements::text_input::TextInput;
+pub use crate::elements::tinyvg::TinyVg;
