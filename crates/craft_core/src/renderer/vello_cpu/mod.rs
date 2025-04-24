@@ -8,7 +8,6 @@ use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
-use peniko::color::PremulRgba8;
 use peniko::kurbo::{Affine, BezPath, Rect};
 use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
 use softbuffer::Buffer;
@@ -19,7 +18,7 @@ use std::sync::Arc;
 use tokio::sync::RwLockReadGuard;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
-use vello_common::paint::Paint;
+use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
 
@@ -148,7 +147,7 @@ impl Renderer for VelloCpuRenderer {
         resource_manager: RwLockReadGuard<ResourceManager>,
         font_system: &mut FontSystem,
     ) {
-        let paint = Paint::Solid(self.clear_color.premultiply().to_rgba8());
+        let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
         self.render_context.set_blend_mode(BlendMode::new(Mix::Clip, Compose::SrcOver));
         self.render_context.set_fill_rule(Fill::NonZero);
@@ -158,12 +157,12 @@ impl Renderer for VelloCpuRenderer {
         for command in self.render_commands.drain(..) {
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
-                    self.render_context.set_paint(Paint::Solid(fill_color.premultiply().to_rgba8()));
+                    self.render_context.set_paint(PaintType::Solid(fill_color));
                     self.render_context.fill_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color) => {
                     self.render_context.set_stroke(Stroke::new(1.0));
-                    self.render_context.set_paint(Paint::Solid(outline_color.premultiply().to_rgba8()));
+                    self.render_context.set_paint(PaintType::Solid(outline_color));
                     self.render_context.stroke_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
@@ -172,8 +171,8 @@ impl Renderer for VelloCpuRenderer {
                     if let Some(Resource::Image(resource)) = resource {
                         let image = &resource.image;
                         for (x, y, pixel) in image.enumerate_pixels() {
-                            let premultiplied_color = PremulRgba8::from_u8_array(pixel.0);
-                            self.render_context.set_paint(Paint::Solid(premultiplied_color));
+                            let color = Color::from_rgba8(pixel.0[0], pixel.0[1], pixel.0[2], pixel.0[3]);
+                            self.render_context.set_paint(PaintType::Solid(color));
                             let pixel = Rect::new(
                                 rectangle.x as f64 + x as f64,
                                 rectangle.y as f64 + y as f64,
@@ -193,8 +192,8 @@ impl Renderer for VelloCpuRenderer {
                     // Draw the Glyphs
                     for buffer_line in &buffer_glyphs.buffer_lines {
                         for glyph_highlight in &buffer_line.glyph_highlights {
-                            self.render_context.set_paint(Paint::Solid(
-                                buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8(),
+                            self.render_context.set_paint(PaintType::Solid(
+                                buffer_glyphs.glyph_highlight_color
                             ));
                             self.render_context.set_transform(text_transform);
                             self.render_context.fill_rect(glyph_highlight);
@@ -203,7 +202,7 @@ impl Renderer for VelloCpuRenderer {
                         if show_cursor {
                             if let Some(cursor) = &buffer_line.cursor {
                                 self.render_context
-                                    .set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
+                                    .set_paint(PaintType::Solid(buffer_glyphs.cursor_color));
                                 self.render_context.set_transform(text_transform);
                                 self.render_context.fill_rect(cursor);
                             }
@@ -213,7 +212,7 @@ impl Renderer for VelloCpuRenderer {
                             let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
                             let glyph_color = glyph_run.glyph_color;
                             let glyphs = glyph_run.glyphs.clone();
-                            self.render_context.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
+                            self.render_context.set_paint(PaintType::Solid(glyph_color));
                             self.render_context.reset_transform();
                             let glyph_run_builder = self
                                 .render_context
@@ -267,15 +266,18 @@ impl VelloCpuRenderer {
     }
 }
 
-fn brush_to_paint(brush: &Brush) -> Paint {
+fn brush_to_paint(brush: &Brush) -> PaintType {
     match brush {
         Brush::Color(color) => {
-            Paint::Solid(color.premultiply().to_rgba8())
+            PaintType::Solid(*color)
         }
         Brush::Gradient(gradient) => {
-            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
-            let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
-            Paint::Solid(color.premultiply().to_rgba8())
+            PaintType::Gradient(vello_common::paint::Gradient {
+                kind: gradient.kind,
+                stops: gradient.stops.clone(),
+                transform: Default::default(),
+                extend: gradient.extend,
+            })
         }
     }
 }

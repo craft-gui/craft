@@ -17,7 +17,6 @@ default = ["vello_renderer", "http_client"]
 
 
 [dependencies]
-
 craft_logging = { path = "../craft_logger" }
 
 # Add at the next stable release.
@@ -25,16 +24,11 @@ craft_logging = { path = "../craft_logger" }
 #accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 
 cfg-if = "1.0.0"
-
-bytemuck = { version = "1.22.0", features = ["derive"] }
 unicode-segmentation = "1.12.0"
-
-lyon = { version = "1.0.1", optional = true }
 
 [dependencies.bitflags]
 version = "2.9.0"
 features = ["std"]
-
 
 
 [dependencies.peniko]
@@ -48,7 +42,7 @@ rev = "380e88956bd5f0a7fdca4c39d8c6928fa9c02511"
 default-features = false
 
 [dependencies.glam]
-version = "0.30.1"
+version = "0.30.2"
 default-features = false
 features = ["std"]
 
@@ -66,7 +60,7 @@ default-features = false
 features = ["jpeg", "png"]
 
 [dependencies.taffy]
-version = "0.8.0"
+version = "0.8.1"
 default-features = false
 features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"]
 
@@ -77,26 +71,25 @@ features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello/"
-rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
+rev = "244ed01801816b99c99adcbbedc3612962919040"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
+rev = "244ed01801816b99c99adcbbedc3612962919040"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello/"
-rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
+rev = "244ed01801816b99c99adcbbedc3612962919040"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "ef6273b037f4354594cc7e3cfacfa2067ee1ec7f"
+rev = "244ed01801816b99c99adcbbedc3612962919040"
 optional = true
-
 
 [dependencies.softbuffer]
 version = "0.4.6"
@@ -119,7 +112,7 @@ rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
 [dependencies.cosmic-text]
-version = "0.14.1"
+version = "0.14.2"
 default-features = false
 features = ["std", "fontconfig", "peniko"]
 
