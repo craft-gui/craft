@@ -4,13 +4,13 @@ use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use std::sync::Arc;
 
 use cosmic_text::{FontSystem, Metrics};
 
 use taffy::Size;
 
 use crate::style::Style;
-use tokio::sync::RwLockReadGuard;
 
 pub struct TaffyTextContext {
     pub id: ComponentId,
@@ -105,14 +105,16 @@ impl ImageContext {
         &mut self,
         known_dimensions: Size<Option<f32>>,
         _available_space: Size<taffy::AvailableSpace>,
-        resource_manager: &RwLockReadGuard<ResourceManager>,
+        resource_manager: Arc<ResourceManager>,
         _style: &taffy::Style,
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(Resource::Image(image_data)) = resource_manager.resources.get(&self.resource_identifier) {
-            original_image_width = image_data.width as f32;
-            original_image_height = image_data.height as f32;
+        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) {
+            if let Resource::Image(image_data) = resource.as_ref() {
+                original_image_width = image_data.width as f32;
+                original_image_height = image_data.height as f32;
+            }
         }
         // println!("image size: {} {}", original_image_width, original_image_height);
         // println!("known dims: {:?}", known_dimensions);
@@ -143,17 +145,21 @@ impl TinyVgContext {
         &mut self,
         known_dimensions: Size<Option<f32>>,
         _available_space: Size<taffy::AvailableSpace>,
-        resource_manager: &RwLockReadGuard<ResourceManager>,
+        resource_manager: Arc<ResourceManager>,
         _style: &taffy::Style,
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(Resource::TinyVg(tinyvg_resource)) = resource_manager.resources.get(&self.resource_identifier) {
-            if let Some(tinyvg) = tinyvg_resource.tinyvg.as_ref() {
-                original_image_width = tinyvg.header.width as f32;
-                original_image_height = tinyvg.header.height as f32;   
+
+        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) {
+            if let Resource::TinyVg(resource) = resource.as_ref() {
+                if let Some(tinyvg) = &resource.tinyvg {
+                    original_image_width = tinyvg.header.width as f32;
+                    original_image_height = tinyvg.header.height as f32;   
+                }
             }
         }
+        
         match (known_dimensions.width, known_dimensions.height) {
             (Some(width), Some(height)) => Size { width, height },
             (Some(width), None) => Size {
@@ -185,7 +191,7 @@ pub fn measure_content(
     available_space: Size<taffy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
     font_system: &mut FontSystem,
-    resource_manager: &RwLockReadGuard<ResourceManager>,
+    resource_manager: Arc<ResourceManager>,
     style: &taffy::Style,
 ) -> Size<f32> {
     if let Size {

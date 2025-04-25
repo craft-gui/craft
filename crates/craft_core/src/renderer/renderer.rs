@@ -1,10 +1,10 @@
+use std::sync::Arc;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::{kurbo, BrushRef, Gradient};
-use tokio::sync::RwLockReadGuard;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -78,9 +78,9 @@ pub trait Renderer {
 
     fn prepare(
         &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
+        resource_manager: Arc<ResourceManager>,
         font_system: &mut FontSystem,
     );
 
-    fn submit(&mut self, resource_manager: RwLockReadGuard<ResourceManager>);
+    fn submit(&mut self, resource_manager: Arc<ResourceManager>);
 }

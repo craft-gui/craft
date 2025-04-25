@@ -3,10 +3,8 @@ use crate::elements::{Font, Image, TinyVg};
 use crate::reactive::fiber_node::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
-use crate::resource_manager::ResourceManager;
-
-use tokio::sync::RwLock;
-
+use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Introspect the view.
@@ -15,7 +13,8 @@ use std::sync::Arc;
 pub async fn scan_view_for_resources(
     element: &dyn Element,
     component: &ComponentTreeNode,
-    resource_manager: Arc<RwLock<ResourceManager>>,
+    resource_manager: Arc<ResourceManager>,
+    resources_collected: &mut HashMap<ResourceIdentifier, bool>
 ) {
     let fiber: FiberNode = FiberNode {
         element: Some(element),
@@ -31,26 +30,26 @@ pub async fn scan_view_for_resources(
             let tinyvg_resource = element.as_any().downcast_ref::<TinyVg>().map(|tinyvg| tinyvg.resource_identifier.clone());
 
             if image_resource.is_some() || font_resource.is_some() || tinyvg_resource.is_some() {
-                let mut resource_manager = resource_manager.write().await;
 
                 if let Some(image_resource) = image_resource {
                     resource_manager.async_download_resource_and_send_message_on_finish(
                         image_resource.clone(),
                         ResourceType::Image,
+                        resources_collected
                     );
-                    resource_manager.add_temporary_resource(image_resource.clone(), ResourceType::Image);
+                    resources_collected.insert(image_resource.clone(), true);
                 }
 
                 if let Some(font_resource) = font_resource {
                     resource_manager
-                        .async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font);
-                    resource_manager.add_temporary_resource(font_resource.clone(), ResourceType::Font);
+                        .async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, resources_collected);
+                    resources_collected.insert(font_resource.clone(), true);
                 }
                 
                 if let Some(tinyvg_resource) = tinyvg_resource {
                     resource_manager
-                        .async_download_resource_and_send_message_on_finish(tinyvg_resource.clone(), ResourceType::TinyVg);
-                    resource_manager.add_temporary_resource(tinyvg_resource.clone(), ResourceType::TinyVg);
+                        .async_download_resource_and_send_message_on_finish(tinyvg_resource.clone(), ResourceType::TinyVg, resources_collected);
+                    resources_collected.insert(tinyvg_resource.clone(), true);
                 }
                 
             }

@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{Renderer, TextScroll};
@@ -6,7 +7,6 @@ use crate::renderer::Brush;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use cosmic_text::FontSystem;
 use peniko::kurbo::BezPath;
-use tokio::sync::RwLockReadGuard;
 
 pub struct BlankRenderer;
 
@@ -48,10 +48,10 @@ impl Renderer for BlankRenderer {
 
     fn prepare(
         &mut self,
-        _resource_manager: RwLockReadGuard<ResourceManager>,
+        _resource_manager: Arc<ResourceManager>,
         _font_system: &mut FontSystem,
     ) {
     }
 
-    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {}
+    fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}
 }
