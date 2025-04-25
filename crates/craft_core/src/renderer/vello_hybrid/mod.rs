@@ -108,7 +108,7 @@ impl<'a> VelloHybridRenderer<'a> {
 
     fn prepare_with_render_commands(
         scene: &mut Scene,
-        resource_manager: &RwLockReadGuard<ResourceManager>,
+        resource_manager: &Arc<ResourceManager>,
         font_system: &mut FontSystem,
         render_commands: &mut Vec<RenderCommand>,
     ) {
@@ -123,22 +123,24 @@ impl<'a> VelloHybridRenderer<'a> {
                 RenderCommand::DrawImage(_rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
 
-                    if let Some(Resource::Image(resource)) = resource {
-                        let image = &resource.image;
-                        let data = Arc::new(ImageAdapter::new(resource.clone()));
-                        let blob = Blob::new(data);
-                        let _vello_image =
-                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                    if let Some(resource) = resource {
+                        if let Resource::Image(resource) = resource.as_ref() {
+                            let image = &resource.image;
+                            let data = Arc::new(ImageAdapter::new(resource.clone()));
+                            let blob = Blob::new(data);
+                            let _vello_image =
+                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-                     /*   let mut transform = Affine::IDENTITY;
-                        transform =
-                            transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                        transform = transform.pre_scale_non_uniform(
-                            rectangle.width as f64 / image.width() as f64,
-                            rectangle.height as f64 / image.height() as f64,
-                        );*/
+                            /*   let mut transform = Affine::IDENTITY;
+                               transform =
+                                   transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                               transform = transform.pre_scale_non_uniform(
+                                   rectangle.width as f64 / image.width() as f64,
+                                   rectangle.height as f64 / image.height() as f64,
+                               );*/
 
-                        //scene.draw_image(&vello_image, transform);
+                            //scene.draw_image(&vello_image, transform);
+                        }   
                     }
                 }
                 RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
@@ -273,7 +275,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.render_commands.push(RenderCommand::PopLayer);
     }
 
-    fn prepare(&mut self, resource_manager: RwLockReadGuard<ResourceManager>, _font_system: &mut FontSystem) {
+    fn prepare(&mut self, resource_manager: Arc<ResourceManager>, _font_system: &mut FontSystem) {
         VelloHybridRenderer::prepare_with_render_commands(
             &mut self.scene,
             &resource_manager,
@@ -282,7 +284,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         );
     }
 
-    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
+    fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
             _ => panic!("!!!"),

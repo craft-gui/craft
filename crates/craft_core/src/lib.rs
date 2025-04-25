@@ -60,7 +60,6 @@ use cosmic_text::FontSystem;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::sync::{RwLock, RwLockReadGuard};
 
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
@@ -112,7 +111,11 @@ struct App {
     renderer: Option<Box<dyn Renderer + Send>>,
     mouse_position: Option<Point>,
     reload_fonts: bool,
-    resource_manager: Arc<RwLock<ResourceManager>>,
+    resource_manager: Arc<ResourceManager>,
+    /// Resources that have already been collected.
+    /// We use this in view_introspection, so that we don't request the download
+    /// of a resource too many times.
+    resources_collected: HashMap<ResourceIdentifier, bool>,
     winit_sender: Sender<AppMessage>,
 
     user_tree: ReactiveTree,
@@ -178,6 +181,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
+use crate::resource_manager::ResourceIdentifier;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
@@ -264,7 +268,7 @@ fn craft_main_with_options_2(
 
     let (app_sender, app_receiver) = channel::<AppMessage>(100);
     let (winit_sender, winit_receiver) = channel::<AppMessage>(100);
-    let resource_manager = Arc::new(RwLock::new(ResourceManager::new(app_sender.clone())));
+    let resource_manager = Arc::new(ResourceManager::new(app_sender.clone()));
 
     let app_sender_copy = app_sender.clone();
     let resource_manager_copy = resource_manager.clone();
@@ -291,7 +295,7 @@ async fn async_main(
     mut app_receiver: Receiver<AppMessage>,
     winit_sender: Sender<AppMessage>,
     mut app_sender: Sender<AppMessage>,
-    resource_manager: Arc<RwLock<ResourceManager>>,
+    resource_manager: Arc<ResourceManager>,
     global_state: GlobalState,
 ) {
     let mut user_state = StateStore::default();
@@ -310,6 +314,7 @@ async fn async_main(
         renderer: None,
         mouse_position: None,
         resource_manager,
+        resources_collected: Default::default(),
         winit_sender: winit_sender.clone(),
         reload_fonts: false,
         user_tree: ReactiveTree {
@@ -397,7 +402,7 @@ async fn async_main(
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
-                    let mut resource_manager = app.resource_manager.write().await;
+                    let resource_manager = &mut app.resource_manager;
 
                     match resource_event {
                         ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
@@ -405,14 +410,14 @@ async fn async_main(
                                 if let Some(font_system) = app.font_system.as_mut() {
                                     if resource.data().is_some() {
                                         font_system.db_mut().load_font_data(resource.data().unwrap().to_vec());
-                                        resource_manager.resources.insert(resource_identifier.clone(), resource);
+                                        resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
                                     }
                                 }
 
                                 app.reload_fonts = true;
                                 app.window.as_ref().unwrap().request_redraw();
                             } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
-                                resource_manager.resources.insert(resource_identifier, resource);
+                                resource_manager.resources.insert(resource_identifier, Arc::new(resource));
                                 app.window.as_ref().unwrap().request_redraw();
                             }
                         }
@@ -627,7 +632,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 fn dispatch_event(
     event: &Message,
     dispatch_type: EventDispatchType,
-    _resource_manager: &mut Arc<RwLock<ResourceManager>>,
+    _resource_manager: &mut Arc<ResourceManager>,
     mouse_position: Option<Point>,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
@@ -972,10 +977,11 @@ async fn update_reactive_tree(
     component_spec_to_generate_tree: ComponentSpecification,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
-    resource_manager: Arc<RwLock<ResourceManager>>,
+    resource_manager: Arc<ResourceManager>,
     should_reload_fonts: &mut bool,
     font_system: &mut FontSystem,
     scaling_factor: f64,
+    resources_collected: &mut HashMap<ResourceIdentifier, bool>,
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
@@ -1002,6 +1008,7 @@ async fn update_reactive_tree(
         new_tree.element_tree.internal.as_ref(),
         &new_tree.component_tree,
         resource_manager.clone(),
+        resources_collected,
     )
     .await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
@@ -1014,7 +1021,7 @@ async fn update_reactive_tree(
 #[allow(clippy::too_many_arguments)]
 async fn draw_reactive_tree(
     reactive_tree: &mut ReactiveTree,
-    resource_manager: Arc<RwLock<ResourceManager>>,
+    resource_manager: Arc<ResourceManager>,
     renderer: &mut Box<dyn Renderer + Send>,
     viewport_size: Size,
     origin: Point,
@@ -1036,8 +1043,6 @@ async fn draw_reactive_tree(
 
     style_root_element(root, root_size);
 
-    let resource_manager = resource_manager.read().await;
-
     let (mut taffy_tree, taffy_root) = {
         let span = span!(Level::INFO, "layout");
         let _enter = span.enter();
@@ -1048,7 +1053,7 @@ async fn draw_reactive_tree(
             font_system,
             root.as_mut(),
             origin,
-            &resource_manager,
+            resource_manager.clone(),
             scale_factor,
             mouse_position,
         )
@@ -1088,6 +1093,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         &mut app.reload_fonts,
         font_system,
         scale_factor,
+        &mut app.resources_collected
     )
     .await;
 
@@ -1143,6 +1149,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 &mut app.reload_fonts,
                 font_system,
                 scale_factor,
+                &mut app.resources_collected
             )
             .await;
 
@@ -1161,8 +1168,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         }
     }
 
-    let resource_manager = app.resource_manager.as_ref().read().await;
-    renderer.submit(resource_manager);
+    renderer.submit(app.resource_manager.clone());
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
@@ -1195,7 +1201,7 @@ fn layout(
     font_system: &mut FontSystem,
     root_element: &mut dyn Element,
     origin: Point,
-    resource_manager: &RwLockReadGuard<ResourceManager>,
+    resource_manager: Arc<ResourceManager>,
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> (TaffyTree<LayoutContext>, NodeId) {
@@ -1218,7 +1224,7 @@ fn layout(
                     available_space,
                     node_context,
                     font_system,
-                    resource_manager,
+                    resource_manager.clone(),
                     style,
                 )
             },

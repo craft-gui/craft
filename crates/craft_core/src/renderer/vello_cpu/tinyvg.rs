@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::geometry::Rectangle;
 use crate::renderer::tinyvg_helpers::TinyVgHelpers;
 use crate::renderer::vello_cpu::brush_to_paint;
@@ -36,10 +37,14 @@ pub(crate) fn draw_path(scene: &mut RenderContext, path: &Path, fill_style: &Sty
     }
 }
 
-pub(crate) fn draw_tiny_vg(scene: &mut RenderContext, rectangle: Rectangle, resource_manager: &RwLockReadGuard<ResourceManager>, resource_identifier: ResourceIdentifier) {
+pub(crate) fn draw_tiny_vg(scene: &mut RenderContext, rectangle: Rectangle, resource_manager: &Arc<ResourceManager>, resource_identifier: ResourceIdentifier) {
     let resource = resource_manager.resources.get(&resource_identifier);
-
-    if let Some(Resource::TinyVg(resource)) = resource {
+    if resource.is_none() {
+        return;
+    }
+    let resource = resource.unwrap();
+    
+    if let Resource::TinyVg(resource) = resource.as_ref() {
         if resource.tinyvg.is_none() {
             return;
         }

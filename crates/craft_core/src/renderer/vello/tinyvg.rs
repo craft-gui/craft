@@ -1,14 +1,14 @@
 use crate::geometry::Rectangle;
+use crate::renderer::tinyvg_helpers::TinyVgHelpers;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{Affine, Line, Stroke};
 use peniko::{kurbo, Fill};
+use std::sync::Arc;
 use tinyvg::color_table::ColorTable;
 use tinyvg::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg::common::Unit;
-use tokio::sync::RwLockReadGuard;
 use vello::Scene;
-use crate::renderer::tinyvg_helpers::TinyVgHelpers;
 
 pub(crate) fn draw_path(scene: &mut Scene, path: &Path, fill_style: &Style, line_width: Option<&Unit>, color_table: &ColorTable, affine: &Affine) {
     let (bezier_path, brush) = TinyVgHelpers::assemble_path(path, fill_style, color_table);
@@ -32,10 +32,10 @@ pub(crate) fn draw_path(scene: &mut Scene, path: &Path, fill_style: &Style, line
     }
 }
 
-pub(crate) fn draw_tiny_vg(scene: &mut Scene, rectangle: Rectangle, resource_manager: &RwLockReadGuard<ResourceManager>, resource_identifier: ResourceIdentifier) {
+pub(crate) fn draw_tiny_vg(scene: &mut Scene, rectangle: Rectangle, resource_manager: Arc<ResourceManager>, resource_identifier: ResourceIdentifier) {
     let resource = resource_manager.resources.get(&resource_identifier);
-    
-    if let Some(Resource::TinyVg(resource)) = resource {
+    if let Some(resource) = resource {
+    if let Resource::TinyVg(resource) = resource.as_ref() {
         if resource.tinyvg.is_none() {
             return;
         }
@@ -152,5 +152,6 @@ pub(crate) fn draw_tiny_vg(scene: &mut Scene, rectangle: Rectangle, resource_man
                 DrawCommand::TextHint(_data) => {}
             }
         }
+    }
     }
 }

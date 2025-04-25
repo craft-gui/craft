@@ -4,6 +4,7 @@ pub mod resource;
 pub mod resource_data;
 pub mod resource_type;
 pub(crate) mod tinyvg_resource;
+mod lock_free_map;
 
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
@@ -25,42 +26,21 @@ use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
 use std::sync::Arc;
+use crate::resource_manager::lock_free_map::LockFreeMap;
 use crate::resource_manager::tinyvg_resource::TinyVgResource;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
 pub struct ResourceManager {
-    pub(crate) resources: HashMap<ResourceIdentifier, Resource>,
+    pub(crate) resources: LockFreeMap<ResourceIdentifier, Resource>,
     pub(crate) app_sender: Sender<AppMessage>,
 }
 
 impl ResourceManager {
     pub(crate) fn new(app_sender: Sender<AppMessage>) -> Self {
         Self {
-            resources: HashMap::new(),
+            resources: LockFreeMap::new(),
             app_sender,
-        }
-    }
-
-    pub fn add_temporary_resource(&mut self, resource_identifier: ResourceIdentifier, resource_type: ResourceType) {
-        if !self.resources.contains_key(&resource_identifier) {
-            match resource_type {
-                ResourceType::Image => {
-                    let generic_resource =
-                        ResourceData::new(resource_identifier.clone(), None, None, ResourceType::Image);
-                    self.resources.insert(
-                        resource_identifier.clone(),
-                        Resource::Image(Arc::new(ImageResource::new(0, 0, generic_resource))),
-                    );
-                }
-                ResourceType::Font => {
-                    self.resources.insert(resource_identifier.clone(), Resource::Font(vec![]));
-                }
-                ResourceType::TinyVg => {
-                    let generic_resource = ResourceData::new(resource_identifier.clone(), None, None, ResourceType::TinyVg);
-                    self.resources.insert(resource_identifier.clone(), Resource::TinyVg(TinyVgResource::new(generic_resource)));
-                }
-            }
         }
     }
 
@@ -68,8 +48,9 @@ impl ResourceManager {
         &self,
         resource_identifier: ResourceIdentifier,
         resource_type: ResourceType,
+        resources_collected: &HashMap<ResourceIdentifier, bool>
     ) {
-        if !self.resources.contains_key(&resource_identifier) {
+        if !resources_collected.contains_key(&resource_identifier) {
             let resource_identifier_copy = resource_identifier.clone();
             let resource_type_copy = resource_type;
 

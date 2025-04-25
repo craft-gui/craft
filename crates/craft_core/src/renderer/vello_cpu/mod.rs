@@ -144,7 +144,7 @@ impl Renderer for VelloCpuRenderer {
 
     fn prepare(
         &mut self,
-        resource_manager: RwLockReadGuard<ResourceManager>,
+        resource_manager: Arc<ResourceManager>,
         font_system: &mut FontSystem,
     ) {
         let paint = PaintType::Solid(self.clear_color);
@@ -168,19 +168,21 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
 
-                    if let Some(Resource::Image(resource)) = resource {
-                        let image = &resource.image;
-                        for (x, y, pixel) in image.enumerate_pixels() {
-                            let color = Color::from_rgba8(pixel.0[0], pixel.0[1], pixel.0[2], pixel.0[3]);
-                            self.render_context.set_paint(PaintType::Solid(color));
-                            let pixel = Rect::new(
-                                rectangle.x as f64 + x as f64,
-                                rectangle.y as f64 + y as f64,
-                                rectangle.x as f64 + x as f64 + 1.0,
-                                rectangle.y as f64 + y as f64 + 1.0,
-                            );
-                            self.render_context.fill_rect(&pixel);
-                        }
+                    if let Some(resource) = resource {
+                        if let Resource::Image(resource) = resource.as_ref() {
+                            let image = &resource.image;
+                            for (x, y, pixel) in image.enumerate_pixels() {
+                                let color = Color::from_rgba8(pixel.0[0], pixel.0[1], pixel.0[2], pixel.0[3]);
+                                self.render_context.set_paint(PaintType::Solid(color));
+                                let pixel = Rect::new(
+                                    rectangle.x as f64 + x as f64,
+                                    rectangle.y as f64 + y as f64,
+                                    rectangle.x as f64 + x as f64 + 1.0,
+                                    rectangle.y as f64 + y as f64 + 1.0,
+                                );
+                                self.render_context.fill_rect(&pixel);
+                            }
+                        }   
                     }
                 }
                 RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
@@ -240,7 +242,7 @@ impl Renderer for VelloCpuRenderer {
         }
     }
 
-    fn submit(&mut self, _resource_manager: RwLockReadGuard<ResourceManager>) {
+    fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
         self.render_context.render_to_pixmap(&mut self.pixmap);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width as usize, self.pixmap.height as usize);
         buffer.present().expect("Failed to present buffer");
