@@ -6,10 +6,11 @@ use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
+use crate::renderer::renderer::RenderList;
 use crate::renderer::RenderCommand;
 use crate::style::Style;
 use crate::Color;
-use crate::{generate_component_methods_no_children, RendererBox};
+use crate::generate_component_methods_no_children;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ use winit::window::Window;
 #[derive(Clone, Default, Debug)]
 pub struct Canvas {
     pub element_data: ElementData,
-    pub render_commands: Vec<RenderCommand>,
+    pub render_list: Vec<RenderCommand>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -40,7 +41,7 @@ impl Element for Canvas {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
@@ -77,7 +78,7 @@ impl Element for Canvas {
             computed_height - (border_top + border_bottom),
         ));
 
-        for render_command in self.render_commands.iter() {
+        for render_command in self.render_list.iter() {
             match render_command {
                 RenderCommand::DrawRect(rectangle, color) => {
                     let translated_rectangle = Rectangle::new(
@@ -220,7 +221,7 @@ impl Canvas {
     pub fn new() -> Canvas {
         Canvas {
             element_data: Default::default(),
-            render_commands: Vec::new(),
+            render_list: Vec::new(),
         }
     }
 

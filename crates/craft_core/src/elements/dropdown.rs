@@ -9,8 +9,9 @@ use crate::elements::Container;
 use crate::events::CraftMessage;
 use crate::geometry::{Point, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
-use crate::{generate_component_methods, RendererBox};
+use crate::generate_component_methods;
 use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
@@ -79,7 +80,7 @@ impl Element for Dropdown {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,

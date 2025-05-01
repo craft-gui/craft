@@ -181,6 +181,7 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
+use crate::renderer::renderer::RenderList;
 use crate::resource_manager::ResourceIdentifier;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
@@ -1073,8 +1074,9 @@ async fn draw_reactive_tree(
     {
         let span = span!(Level::INFO, "render");
         let _enter = span.enter();
+        let mut render_list = RenderList::new();
         root.draw(
-            renderer,
+            &mut render_list,
             font_system,
             &mut taffy_tree,
             taffy_root,
@@ -1082,7 +1084,8 @@ async fn draw_reactive_tree(
             mouse_position,
             window,
         );
-        renderer.prepare(resource_manager, font_system);
+        renderer.sort_render_list(&mut render_list);
+        renderer.prepare_render_list(render_list, resource_manager, font_system);
     }
 }
 

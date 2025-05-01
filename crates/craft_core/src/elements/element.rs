@@ -8,15 +8,15 @@ use crate::geometry::borders::BorderSpec;
 use crate::geometry::side::Side;
 use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
+use crate::renderer::Brush;
 use crate::style::Style;
-use crate::RendererBox;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
-use crate::renderer::Brush;
 
 #[derive(Clone, Debug)]
 pub struct ElementBoxed {
@@ -78,7 +78,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
     #[allow(clippy::too_many_arguments)]
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
@@ -168,7 +168,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn draw_children(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &mut ElementStateStore,
@@ -193,7 +193,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
 
-    fn draw_borders(&self, renderer: &mut RendererBox) {
+    fn draw_borders(&self, renderer: &mut RenderList) {
         let element_data = self.element_data();
         let current_style = element_data.current_style();
         let background_color = current_style.background();
@@ -231,7 +231,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_data.current_style().overflow()[1] == Overflow::Scroll
     }
 
-    fn maybe_start_layer(&self, renderer: &mut RendererBox) {
+    fn maybe_start_layer(&self, renderer: &mut RenderList) {
         let element_data = self.element_data();
         let padding_rectangle = element_data.computed_box_transformed.padding_rectangle();
 
@@ -240,7 +240,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
 
-    fn maybe_end_layer(&self, renderer: &mut RendererBox) {
+    fn maybe_end_layer(&self, renderer: &mut RenderList) {
         if self.should_start_new_layer() {
             renderer.pop_layer();
         }
@@ -265,7 +265,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_data.computed_border = border_spec.compute_border_spec();
     }
 
-    fn draw_scrollbar(&mut self, renderer: &mut RendererBox) {
+    fn draw_scrollbar(&mut self, renderer: &mut RenderList) {
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
 
         // track

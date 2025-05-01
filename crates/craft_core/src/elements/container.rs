@@ -10,12 +10,13 @@ use crate::events::CraftMessage;
 use crate::geometry::{Point, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
-use crate::{generate_component_methods, RendererBox};
+use crate::{generate_component_methods};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::renderer::renderer::RenderList;
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
@@ -43,7 +44,7 @@ impl Element for Container {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,

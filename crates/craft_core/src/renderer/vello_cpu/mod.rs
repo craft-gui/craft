@@ -1,21 +1,18 @@
 pub(crate) mod tinyvg;
 
-use crate::geometry::Rectangle;
-use crate::renderer::renderer::{Renderer, TextScroll};
-use crate::renderer::text::BufferGlyphs;
+use crate::renderer::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
 use crate::renderer::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::resource_manager::ResourceManager;
 use cosmic_text::FontSystem;
-use peniko::kurbo::{Affine, BezPath, Rect};
+use peniko::kurbo::{Affine, Rect};
 use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
 use softbuffer::Buffer;
 use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
-use tokio::sync::RwLockReadGuard;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
@@ -53,7 +50,6 @@ impl DerefMut for Surface {
 }
 
 pub(crate) struct VelloCpuRenderer {
-    render_commands: Vec<RenderCommand>,
     window: Arc<dyn Window>,
     render_context: RenderContext,
     pixmap: Pixmap,
@@ -76,7 +72,6 @@ impl VelloCpuRenderer {
             .expect("TODO: panic message");
 
         Self {
-            render_commands: Vec::new(),
             window,
             render_context,
             pixmap,
@@ -109,41 +104,9 @@ impl Renderer for VelloCpuRenderer {
         self.clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-    }
-    fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
-    }
-
-    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
-    }
-
-    fn draw_text(
+    fn prepare_render_list(
         &mut self,
-        buffer_glyphs: BufferGlyphs,
-        rectangle: Rectangle,
-        text_scroll: Option<TextScroll>,
-        show_cursor: bool,
-    ) {
-        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
-    }
-
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-    }
-
-    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
-    }
-
-    fn push_layer(&mut self, _rect: Rectangle) {}
-
-    fn pop_layer(&mut self) {}
-
-    fn prepare(
-        &mut self,
+        render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
         font_system: &mut FontSystem,
     ) {
@@ -154,15 +117,15 @@ impl Renderer for VelloCpuRenderer {
         self.render_context.set_transform(Affine::IDENTITY);
         self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width as f64, self.pixmap.height as f64));
 
-        for command in self.render_commands.drain(..) {
+        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
-                    self.render_context.set_paint(PaintType::Solid(fill_color));
+                    self.render_context.set_paint(PaintType::Solid(*fill_color));
                     self.render_context.fill_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color) => {
                     self.render_context.set_stroke(Stroke::new(1.0));
-                    self.render_context.set_paint(PaintType::Solid(outline_color));
+                    self.render_context.set_paint(PaintType::Solid(*outline_color));
                     self.render_context.stroke_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
@@ -182,7 +145,7 @@ impl Renderer for VelloCpuRenderer {
                                 );
                                 self.render_context.fill_rect(&pixel);
                             }
-                        }   
+                        }
                     }
                 }
                 RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
@@ -201,7 +164,7 @@ impl Renderer for VelloCpuRenderer {
                             self.render_context.fill_rect(glyph_highlight);
                         }
 
-                        if show_cursor {
+                        if *show_cursor {
                             if let Some(cursor) = &buffer_line.cursor {
                                 self.render_context
                                     .set_paint(PaintType::Solid(buffer_glyphs.cursor_color));
@@ -236,10 +199,11 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.fill_path(&path);
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(&mut self.render_context, rectangle, &resource_manager, resource_identifier);
+                    draw_tiny_vg(&mut self.render_context, *rectangle, &resource_manager, resource_identifier.clone());
                 }
+                _ => {}
             }
-        }
+        });
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {

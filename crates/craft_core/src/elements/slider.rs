@@ -11,8 +11,10 @@ use crate::events::CraftMessage;
 use crate::geometry::borders::BorderSpec;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
+use crate::renderer::Brush;
 use crate::style::{Display, Style, Unit};
-use crate::{generate_component_methods, palette, RendererBox};
+use crate::{generate_component_methods, palette};
 use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
@@ -20,7 +22,6 @@ use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::event::ElementState;
 use winit::window::Window;
-use crate::renderer::Brush;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -67,7 +68,7 @@ impl Element for Slider {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
