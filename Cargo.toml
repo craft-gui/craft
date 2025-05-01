@@ -75,6 +75,10 @@ path = "examples/text/text.rs"
 name = "events"
 path = "examples/events/events.rs"
 
+[[example]]
+name = "overlay"
+path = "examples/overlay/overlay.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

@@ -5,9 +5,8 @@ use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::elements::layout_context::LayoutContext;
-use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use crate::geometry::{Point, Size};
+use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods};
@@ -20,16 +19,15 @@ use crate::renderer::renderer::RenderList;
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
-pub struct Container {
+pub struct Overlay {
     pub element_data: ElementData,
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct ContainerState {
-    pub(crate) scroll_state: ScrollState,
+pub struct OverlayState {
 }
 
-impl Element for Container {
+impl Element for Overlay {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -39,7 +37,7 @@ impl Element for Container {
     }
 
     fn name(&self) -> &'static str {
-        "Container"
+        "Overlay"
     }
 
     fn draw(
@@ -55,6 +53,8 @@ impl Element for Container {
         if !self.element_data.style.visible() {
             return;
         }
+        renderer.start_overlay();
+        
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer);
         self.maybe_start_layer(renderer);
@@ -62,8 +62,9 @@ impl Element for Container {
             self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
         }
         self.maybe_end_layer(renderer);
-
         self.draw_scrollbar(renderer);
+        
+        renderer.end_overlay();
     }
 
     fn compute_layout(
@@ -103,21 +104,7 @@ impl Element for Container {
         self.resolve_box(position, transform, result, z_index);
 
         self.finalize_borders();
-
-        self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
-
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<ContainerState>()
-        {
-            container_state.scroll_state.scroll_y
-        } else {
-            0.0
-        };
-
-        self.finalize_scrollbar(scroll_y);
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
-
+        
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().taffy_node_id;
             if taffy_child_node_id.is_none() {
@@ -129,7 +116,7 @@ impl Element for Container {
                 taffy_child_node_id.unwrap(),
                 self.element_data.computed_box.position,
                 z_index,
-                transform * child_transform,
+                transform,
                 element_state,
                 pointer,
                 font_system,
@@ -147,28 +134,25 @@ impl Element for Container {
         element_state: &mut ElementStateStore,
         _font_system: &mut FontSystem,
     ) -> UpdateResult {
-        let base_state = self.get_base_state_mut(element_state);
-        let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
-
-        container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base)
+        UpdateResult::default()
     }
 
     fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
-            data: Box::new(ContainerState::default()),
+            data: Box::new(OverlayState::default()),
         }
     }
 }
 
-impl Container {
+impl Overlay {
     #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ContainerState {
+    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a OverlayState {
         element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
-    pub fn new() -> Container {
-        Container {
+    pub fn new() -> Overlay {
+        Overlay {
             element_data: Default::default(),
         }
     }
@@ -176,7 +160,7 @@ impl Container {
     generate_component_methods!();
 }
 
-impl ElementStyles for Container {
+impl ElementStyles for Overlay {
     fn styles_mut(&mut self) -> &mut Style {
         self.element_data.current_style_mut()
     }

@@ -1,4 +1,5 @@
 pub(crate) mod container;
+pub(crate) mod overlay;
 pub(crate) mod dropdown;
 pub(crate) mod element;
 pub(crate) mod empty;
@@ -26,6 +27,7 @@ mod thumb;
 
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
+pub use crate::elements::overlay::Overlay;
 pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::element_styles::ElementStyles;
 pub use crate::elements::font::Font;

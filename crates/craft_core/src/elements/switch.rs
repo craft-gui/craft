@@ -8,9 +8,10 @@ use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
 use crate::style::{Display, Style, Unit};
 use crate::ComponentSpecification;
-use crate::{generate_component_methods_no_children, palette, RendererBox};
+use crate::{generate_component_methods_no_children, palette};
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
@@ -56,7 +57,7 @@ impl Element for Switch {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         font_system: &mut FontSystem,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,

@@ -5,8 +5,9 @@ use crate::elements::element_data::ElementData;
 use crate::elements::layout_context::LayoutContext;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
+use crate::renderer::renderer::RenderList;
 use crate::resource_manager::ResourceIdentifier;
-use crate::{generate_component_methods_no_children, RendererBox};
+use crate::generate_component_methods_no_children;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
@@ -47,7 +48,7 @@ impl Element for Font {
 
     fn draw(
         &mut self,
-        _renderer: &mut RendererBox,
+        _renderer: &mut RenderList,
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,

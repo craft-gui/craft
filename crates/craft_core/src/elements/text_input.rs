@@ -10,10 +10,11 @@ use crate::events::CraftMessage;
 use crate::geometry::{Point, Size, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
-use crate::renderer::renderer::TextScroll;
+use crate::renderer::renderer::{RenderList, TextScroll};
+use crate::renderer::text;
 use crate::style::{Display, Style, Unit};
 use crate::text::cached_editor::CachedEditor;
-use crate::{generate_component_methods_no_children, RendererBox};
+use crate::generate_component_methods_no_children;
 use cosmic_text::FontSystem;
 use cosmic_text::{Cursor, Edit};
 use std::any::Any;
@@ -23,7 +24,6 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::Ime;
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
-use crate::renderer::text;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
@@ -83,7 +83,7 @@ impl Element for TextInput {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,

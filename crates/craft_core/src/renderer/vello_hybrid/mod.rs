@@ -4,13 +4,11 @@ mod tinyvg;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
-use crate::renderer::renderer::{RenderCommand, Renderer as CraftRenderer, TextScroll};
+use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::resource_manager::resource::Resource;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::{FontSystem};
-use peniko::kurbo::BezPath;
+use crate::resource_manager::ResourceManager;
+use cosmic_text::FontSystem;
 use std::sync::Arc;
-use tokio::sync::RwLockReadGuard;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::{Affine, Rect};
 use vello_common::paint::Paint;
@@ -22,7 +20,6 @@ use wgpu::RenderPassDescriptor;
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use crate::renderer::text::BufferGlyphs;
 use crate::renderer::vello_hybrid::render_context::RenderContext;
 use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
@@ -41,8 +38,6 @@ enum RenderState<'a> {
 }
 
 pub struct VelloHybridRenderer<'a> {
-    render_commands: Vec<RenderCommand>,
-
     // The vello RenderContext which is a global context that lasts for the
     // lifetime of the application
     context: RenderContext,
@@ -77,7 +72,6 @@ impl<'a> VelloHybridRenderer<'a> {
         let surface_size = window.surface_size();
 
         let mut vello_renderer = VelloHybridRenderer {
-            render_commands: vec![],
             context: RenderContext::new(),
             renderers: vec![],
             state: RenderState::Suspended,
@@ -104,105 +98,6 @@ impl<'a> VelloHybridRenderer<'a> {
         vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface });
 
         vello_renderer
-    }
-
-    fn prepare_with_render_commands(
-        scene: &mut Scene,
-        resource_manager: &Arc<ResourceManager>,
-        font_system: &mut FontSystem,
-        render_commands: &mut Vec<RenderCommand>,
-    ) {
-        for command in render_commands.drain(..) {
-            match command {
-                RenderCommand::DrawRect(rectangle, fill_color) => {
-                    vello_draw_rect(scene, rectangle, fill_color);
-                }
-                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
-                    // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
-                }
-                RenderCommand::DrawImage(_rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(&resource_identifier);
-
-                    if let Some(resource) = resource {
-                        if let Resource::Image(resource) = resource.as_ref() {
-                            let image = &resource.image;
-                            let data = Arc::new(ImageAdapter::new(resource.clone()));
-                            let blob = Blob::new(data);
-                            let _vello_image =
-                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
-
-                            /*   let mut transform = Affine::IDENTITY;
-                               transform =
-                                   transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                               transform = transform.pre_scale_non_uniform(
-                                   rectangle.width as f64 / image.width() as f64,
-                                   rectangle.height as f64 / image.height() as f64,
-                               );*/
-
-                            //scene.draw_image(&vello_image, transform);
-                        }   
-                    }
-                }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
-                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
-                    let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
-                    let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-
-                    // Draw the Glyphs
-                    for buffer_line in &buffer_glyphs.buffer_lines {
-                        for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.set_paint(Paint::Solid(buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8()));
-                            scene.set_transform(text_transform);
-                            scene.fill_rect(glyph_highlight);
-                        }
-
-                        if show_cursor {
-                            if let Some(cursor) = &buffer_line.cursor {
-                                scene.set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
-                                scene.set_transform(text_transform);
-                                scene.fill_rect(cursor);
-                            }
-                        }
-
-                        for glyph_run in &buffer_line.glyph_runs {
-                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                            let glyph_color = glyph_run.glyph_color;
-                            let glyphs = glyph_run.glyphs.clone();
-                            scene.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
-                            scene.reset_transform();
-                            let glyph_run_builder = scene
-                                .glyph_run(&font)
-                                .font_size(buffer_glyphs.font_size)
-                                .glyph_transform(text_transform);
-                            glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {
-                                id: glyph.glyph_id as u32,
-                                x: glyph.x,
-                                y: glyph.y + glyph_run.line_y,
-                            }))
-                        }
-                    }
-                }
-                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(scene, rectangle, resource_manager, resource_identifier);
-                }
-                RenderCommand::PushLayer(rect) => {
-                    let _clip = Rect::new(
-                        rect.x as f64,
-                        rect.y as f64,
-                        (rect.x + rect.width) as f64,
-                        (rect.y + rect.height) as f64,
-                    );
-                    //scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
-                }
-                RenderCommand::PopLayer => {
-                    //scene.pop_layer();
-                }
-                RenderCommand::FillBezPath(path, brush) => {
-                    scene.set_paint(brush_to_paint(&brush));
-                    scene.fill_path(&path);
-                }
-            }
-        }
     }
 }
 
@@ -239,49 +134,101 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-    }
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+            let scene = &mut self.scene;
+            
+            match command {
+                RenderCommand::DrawRect(rectangle, fill_color) => {
+                    vello_draw_rect(scene, *rectangle, *fill_color);
+                }
+                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
+                    // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
+                }
+                RenderCommand::DrawImage(_rectangle, resource_identifier) => {
+                    let resource = resource_manager.resources.get(&resource_identifier);
 
-    fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
+                    if let Some(resource) = resource {
+                        if let Resource::Image(resource) = resource.as_ref() {
+                            let image = &resource.image;
+                            let data = Arc::new(ImageAdapter::new(resource.clone()));
+                            let blob = Blob::new(data);
+                            let _vello_image =
+                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
-    }
+                            /*   let mut transform = Affine::IDENTITY;
+                               transform =
+                                   transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                               transform = transform.pre_scale_non_uniform(
+                                   rectangle.width as f64 / image.width() as f64,
+                                   rectangle.height as f64 / image.height() as f64,
+                               );*/
 
-    fn draw_text(
-        &mut self,
-        buffer_glyphs: BufferGlyphs,
-        rectangle: Rectangle,
-        text_scroll: Option<TextScroll>,
-        show_cursor: bool,
-    ) {
-        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
-    }
+                            //scene.draw_image(&vello_image, transform);
+                        }
+                    }
+                }
+                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
+                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                    let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
+                    let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-    }
+                    // Draw the Glyphs
+                    for buffer_line in &buffer_glyphs.buffer_lines {
+                        for glyph_highlight in &buffer_line.glyph_highlights {
+                            scene.set_paint(Paint::Solid(buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8()));
+                            scene.set_transform(text_transform);
+                            scene.fill_rect(glyph_highlight);
+                        }
 
-    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
-    }
+                        if *show_cursor {
+                            if let Some(cursor) = &buffer_line.cursor {
+                                scene.set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
+                                scene.set_transform(text_transform);
+                                scene.fill_rect(cursor);
+                            }
+                        }
 
-    fn push_layer(&mut self, rect: Rectangle) {
-        self.render_commands.push(RenderCommand::PushLayer(rect));
-    }
-
-    fn pop_layer(&mut self) {
-        self.render_commands.push(RenderCommand::PopLayer);
-    }
-
-    fn prepare(&mut self, resource_manager: Arc<ResourceManager>, _font_system: &mut FontSystem) {
-        VelloHybridRenderer::prepare_with_render_commands(
-            &mut self.scene,
-            &resource_manager,
-            _font_system,
-            &mut self.render_commands,
-        );
+                        for glyph_run in &buffer_line.glyph_runs {
+                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
+                            let glyph_color = glyph_run.glyph_color;
+                            let glyphs = glyph_run.glyphs.clone();
+                            scene.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
+                            scene.reset_transform();
+                            let glyph_run_builder = scene
+                                .glyph_run(&font)
+                                .font_size(buffer_glyphs.font_size)
+                                .glyph_transform(text_transform);
+                            glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {
+                                id: glyph.glyph_id as u32,
+                                x: glyph.x,
+                                y: glyph.y + glyph_run.line_y,
+                            }))
+                        }
+                    }
+                }
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+                    draw_tiny_vg(scene, *rectangle, &resource_manager, resource_identifier.clone());
+                }
+                RenderCommand::PushLayer(rect) => {
+                    let _clip = Rect::new(
+                        rect.x as f64,
+                        rect.y as f64,
+                        (rect.x + rect.width) as f64,
+                        (rect.y + rect.height) as f64,
+                    );
+                    //scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                }
+                RenderCommand::PopLayer => {
+                    //scene.pop_layer();
+                }
+                RenderCommand::FillBezPath(path, brush) => {
+                    scene.set_paint(brush_to_paint(&brush));
+                    scene.fill_path(&path);
+                }
+                _ => {}
+            }
+        });
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {

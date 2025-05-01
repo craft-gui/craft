@@ -3,12 +3,10 @@ mod tinyvg;
 use crate::geometry::{Rectangle};
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
-use crate::renderer::renderer::{RenderCommand, Renderer, TextScroll};
-use crate::renderer::text::BufferGlyphs;
+use crate::renderer::renderer::{SortedCommands, RenderCommand, RenderList, Renderer, TextScroll};
 use crate::resource_manager::resource::Resource;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::resource_manager::{ResourceManager};
 use cosmic_text::FontSystem;
-use peniko::kurbo::{BezPath};
 use std::sync::Arc;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -16,7 +14,6 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
-use crate::renderer::Brush;
 use crate::renderer::vello::tinyvg::draw_tiny_vg;
 
 pub struct ActiveRenderState<'s> {
@@ -31,8 +28,6 @@ enum RenderState<'a> {
 }
 
 pub struct VelloRenderer<'a> {
-    render_commands: Vec<RenderCommand>,
-
     // The vello RenderContext which is a global context that lasts for the
     // lifetime of the application
     context: RenderContext,
@@ -78,7 +73,6 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
 impl<'a> VelloRenderer<'a> {
     pub(crate) async fn new(window: Arc<dyn Window>) -> VelloRenderer<'a> {
         let mut vello_renderer = VelloRenderer {
-            render_commands: vec![],
             context: RenderContext::new(),
             renderers: vec![],
             state: RenderState::Suspended,
@@ -109,17 +103,53 @@ impl<'a> VelloRenderer<'a> {
 
         vello_renderer
     }
+}
 
-    fn prepare_with_render_commands(
-        scene: &mut Scene,
-        resource_manager: Arc<ResourceManager>,
-        font_system: &mut FontSystem,
-        render_commands: &mut Vec<RenderCommand>,
-    ) {
-        for command in render_commands.drain(..) {
+fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
+    let rect = Rect::new(
+        rectangle.x as f64,
+        rectangle.y as f64,
+        (rectangle.x + rectangle.width) as f64,
+        (rectangle.y + rectangle.height) as f64,
+    );
+    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
+}
+
+impl Renderer for VelloRenderer<'_> {
+    fn surface_width(&self) -> f32 {
+        match &self.state {
+            RenderState::Active(active_render_state) => active_render_state.window.surface_size().width as f32,
+            RenderState::Suspended => 0.0,
+        }
+    }
+
+    fn surface_height(&self) -> f32 {
+        match &self.state {
+            RenderState::Active(active_render_state) => active_render_state.window.surface_size().height as f32,
+            RenderState::Suspended => 0.0,
+        }
+    }
+
+    fn resize_surface(&mut self, width: f32, height: f32) {
+        let render_state = match &mut self.state {
+            RenderState::Active(state) => state,
+            _ => return,
+        };
+
+        self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
+    }
+
+    fn surface_set_clear_color(&mut self, color: Color) {
+        self.surface_clear_color = color;
+    }
+
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+            let scene = &mut self.scene;
+
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
-                    vello_draw_rect(scene, rectangle, fill_color);
+                    vello_draw_rect(scene, *rectangle, *fill_color);
                 }
                 RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
                     // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
@@ -163,7 +193,7 @@ impl<'a> VelloRenderer<'a> {
                             );
                         }
 
-                        if show_cursor {
+                        if *show_cursor {
                             if let Some(cursor) = &buffer_line.cursor {
                                 scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
                             }
@@ -191,7 +221,7 @@ impl<'a> VelloRenderer<'a> {
                     }
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(scene, rectangle, resource_manager.clone(), resource_identifier);
+                    draw_tiny_vg(scene, *rectangle, resource_manager.clone(), resource_identifier.clone());
                 }
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
@@ -206,94 +236,12 @@ impl<'a> VelloRenderer<'a> {
                     scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, brush) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, &brush, None, &path);
+                    scene.fill(Fill::NonZero, Affine::IDENTITY, brush, None, &path);
                 }
+                _ => {}
             }
-        }
-    }
-}
-
-fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
-    let rect = Rect::new(
-        rectangle.x as f64,
-        rectangle.y as f64,
-        (rectangle.x + rectangle.width) as f64,
-        (rectangle.y + rectangle.height) as f64,
-    );
-    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
-}
-
-impl Renderer for VelloRenderer<'_> {
-    fn surface_width(&self) -> f32 {
-        match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.surface_size().width as f32,
-            RenderState::Suspended => 0.0,
-        }
-    }
-
-    fn surface_height(&self) -> f32 {
-        match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.surface_size().height as f32,
-            RenderState::Suspended => 0.0,
-        }
-    }
-
-    fn resize_surface(&mut self, width: f32, height: f32) {
-        let render_state = match &mut self.state {
-            RenderState::Active(state) => state,
-            _ => return,
-        };
-
-        self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
-    }
-
-    fn surface_set_clear_color(&mut self, color: Color) {
-        self.surface_clear_color = color;
-    }
-
-    fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        self.render_commands.push(RenderCommand::DrawRect(rectangle, fill_color));
-    }
-
-    fn draw_rect_outline(&mut self, _rectangle: Rectangle, _outline_color: Color) {}
-
-    fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
-        self.render_commands.push(RenderCommand::FillBezPath(path, brush));
-    }
-
-    fn draw_text(
-        &mut self,
-        buffer_glyphs: BufferGlyphs,
-        rectangle: Rectangle,
-        text_scroll: Option<TextScroll>,
-        show_cursor: bool,
-    ) {
-        self.render_commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
-    }
-
-    fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
-    }
-
-    fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.render_commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
-    }
-
-    fn push_layer(&mut self, rect: Rectangle) {
-        self.render_commands.push(RenderCommand::PushLayer(rect));
-    }
-
-    fn pop_layer(&mut self) {
-        self.render_commands.push(RenderCommand::PopLayer);
-    }
-
-    fn prepare(&mut self, resource_manager: Arc<ResourceManager>, _font_system: &mut FontSystem) {
-        VelloRenderer::prepare_with_render_commands(
-            &mut self.scene,
-            resource_manager,
-            _font_system,
-            &mut self.render_commands,
-        );
+            
+        });
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {

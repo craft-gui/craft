@@ -7,9 +7,10 @@ use crate::elements::ElementStyles;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::cached_editor::CachedEditor;
-use crate::{generate_component_methods_no_children, RendererBox};
+use crate::generate_component_methods_no_children;
 use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
@@ -69,7 +70,7 @@ impl Element for Text {
 
     fn draw(
         &mut self,
-        renderer: &mut RendererBox,
+        renderer: &mut RenderList,
         _font_system: &mut FontSystem,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
