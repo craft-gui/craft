@@ -16,6 +16,8 @@ pub enum RenderCommand {
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Brush),
+    StartOverlay,
+    EndOverlay,
 }
 
 #[derive(Clone, Debug)]
@@ -75,6 +77,10 @@ pub trait Renderer {
     fn push_layer(&mut self, rect: Rectangle);
 
     fn pop_layer(&mut self);
+
+    fn start_overlay(&mut self);
+
+    fn end_overlay(&mut self);
 
     fn prepare(
         &mut self,

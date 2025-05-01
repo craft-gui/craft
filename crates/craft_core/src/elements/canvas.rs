@@ -133,6 +133,12 @@ impl Element for Canvas {
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
                     renderer.draw_tiny_vg(*rectangle, resource_identifier.clone());
                 }
+                RenderCommand::StartOverlay => {
+                    renderer.start_overlay();
+                }
+                RenderCommand::EndOverlay => {
+                    renderer.end_overlay();
+                }    
             }
         }
 

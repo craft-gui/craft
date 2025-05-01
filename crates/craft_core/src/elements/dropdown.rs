@@ -109,6 +109,9 @@ impl Element for Dropdown {
                 );
             }
 
+            // CLEANUP: We could make pseudo_dropdown_list_element an Overlay, but below we draw the overlay then the children.
+            //          We didn't do that for any particular reason, mainly just because we need to add more abstractions around drawing.
+            renderer.start_overlay();
             // Draw the dropdown list if it is open.
             if is_open && !self.children().is_empty() {
                 self.pseudo_dropdown_list_element.draw(
@@ -122,6 +125,7 @@ impl Element for Dropdown {
                 );
                 self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window.clone());
             }
+            renderer.end_overlay();
         }
         self.maybe_end_layer(renderer);
     }

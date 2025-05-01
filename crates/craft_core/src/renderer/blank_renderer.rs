@@ -46,6 +46,10 @@ impl Renderer for BlankRenderer {
 
     fn pop_layer(&mut self) {}
 
+    fn start_overlay(&mut self) {}
+
+    fn end_overlay(&mut self) {}
+
     fn prepare(
         &mut self,
         _resource_manager: Arc<ResourceManager>,

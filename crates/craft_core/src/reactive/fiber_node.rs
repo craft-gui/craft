@@ -1,6 +1,7 @@
 use crate::elements::element::Element;
 use crate::reactive::tree::ComponentTreeNode;
 use std::collections::VecDeque;
+use crate::elements::Overlay;
 
 #[derive(Clone)]
 pub(crate) struct FiberNode<'a> {
@@ -94,6 +95,12 @@ impl<'a> FiberNode<'a> {
     pub fn level_order_iter(&'a self) -> FiberNodeLevelOrderIterator<'a> {
         FiberNodeLevelOrderIterator::new(self)
     }
+
+    pub fn dfs_with_overlay_depth(&'a self) -> FiberNodeDFSIterator<'a> {
+        let mut stack = Vec::new();
+        stack.push((self.clone(), 0));
+        FiberNodeDFSIterator { stack }
+    }
 }
 
 pub(crate) struct FiberNodeLevelOrderIterator<'a> {
@@ -144,5 +151,41 @@ impl<'a> Iterator for FiberNodeLevelOrderIterator<'a> {
 
         // If both stacks are empty, traversal is complete
         None
+    }
+}
+
+pub(crate) struct FiberNodeDFSIterator<'a> {
+    stack: Vec<(FiberNode<'a>, usize)>,
+}
+
+impl<'a> Iterator for FiberNodeDFSIterator<'a> {
+    type Item = (FiberNode<'a>, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (node, depth) = self.stack.pop()?;
+        let mut depth = depth;
+        let mut children = Vec::new();
+        
+        if let Some(comp) = node.component {
+            for child_comp in comp.children.iter().rev() {
+                children.push(FiberNode::new(Some(child_comp), None));
+            }
+        }
+        
+        if let Some(el) = node.element {
+            if el.as_any().is::<Overlay>() {
+                depth += 1;
+            }
+            
+            for child_el in el.children().iter().rev() {
+                children.push(FiberNode::new(None, Some(*child_el)));
+            }
+        }
+        
+        for child in children {
+            self.stack.push((child, depth));
+        }
+
+        Some((node, depth))
     }
 }

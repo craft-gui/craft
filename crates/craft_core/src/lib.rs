@@ -667,12 +667,14 @@ fn dispatch_event(
         component_id: ComponentId,
         element_id: Option<String>,
         layout_order: usize,
+        overlay_depth: usize,
     }
 
     match dispatch_type {
         EventDispatchType::Bubbling => {
             let mut targets: VecDeque<Target> = VecDeque::new();
             let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
+
 
             /////////////////////////////////////////
             // A,0                                 //
@@ -690,7 +692,10 @@ fn dispatch_event(
 
             // Collect all possible target elements in reverse order.
             // Nodes added last are usually on top, so these elements are in visual order.
-            for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
+
+
+            for (fiber_node, overlay_depth) in fiber.dfs_with_overlay_depth() {
+
                 if let Some(element) = fiber_node.element {
                     let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
                     let mut should_pass_hit_test = in_bounds;
@@ -705,10 +710,13 @@ fn dispatch_event(
                     }
 
                     if should_pass_hit_test {
+                        // println!("CID: {:?}, depth: {:?}", element.component_id(), overlay_depth);
+
                         targets.push_back(Target {
                             component_id: element.component_id(),
                             element_id: element.get_id().clone(),
                             layout_order: element.element_data().layout_order as usize,
+                            overlay_depth,
                         })
                     } else {
                         //println!("Not in bounds, Element: {:?}", element.get_id());
@@ -725,6 +733,7 @@ fn dispatch_event(
             // The target is always the first node (2, Some(c)).
             let mut tmp_targets: Vec<Target> = targets.clone().into_iter().collect();
             tmp_targets.sort_by(|a, b| b.layout_order.cmp(&a.layout_order)); // Sort using the layout order. (u32)
+            tmp_targets.sort_by(|a, b| b.overlay_depth.cmp(&a.overlay_depth)); // Sort using the overlay depth order. (u32)
             targets = VecDeque::from(tmp_targets);
 
             let target = targets[0].clone();

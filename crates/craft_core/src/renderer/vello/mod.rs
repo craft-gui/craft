@@ -116,100 +116,184 @@ impl<'a> VelloRenderer<'a> {
         font_system: &mut FontSystem,
         render_commands: &mut Vec<RenderCommand>,
     ) {
-        for command in render_commands.drain(..) {
-            match command {
-                RenderCommand::DrawRect(rectangle, fill_color) => {
-                    vello_draw_rect(scene, rectangle, fill_color);
-                }
-                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
-                    // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
-                }
-                RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(&resource_identifier);
-                    if let Some(resource) = resource {
-                        if let Resource::Image(resource) = resource.as_ref() {
-                            let image = &resource.image;
-                            let data = Arc::new(ImageAdapter::new(resource.clone()));
-                            let blob = Blob::new(data);
-                            let vello_image =
-                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+        #[derive(Debug)]
+        enum OverlayItem {
+            Overlay(OverlayRender),
+            Other(u32)
+        }
 
-                            let mut transform = Affine::IDENTITY;
-                            transform =
-                                transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                            transform = transform.pre_scale_non_uniform(
-                                rectangle.width as f64 / image.width() as f64,
-                                rectangle.height as f64 / image.height() as f64,
-                            );
+        #[derive(Debug)]
+        struct OverlayRender {
+            children: Vec<OverlayItem>,
+        }
+        
+        fn build_overlay_render(render_commands: &mut Vec<RenderCommand>) -> OverlayRender {
+            let mut overlay_render = OverlayRender {
+                children: vec![],
+            };
 
-                            scene.draw_image(&vello_image, transform);
-                        }
-                    }
-                }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
-                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
-                    let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
-                    let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-
-                    // Draw the Glyphs
-                    for buffer_line in &buffer_glyphs.buffer_lines {
-                        for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.fill(
-                                Fill::NonZero,
-                                text_transform,
-                                buffer_glyphs.glyph_highlight_color,
-                                None,
-                                glyph_highlight,
-                            );
-                        }
-
-                        if show_cursor {
-                            if let Some(cursor) = &buffer_line.cursor {
-                                scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
+            let mut current: *mut OverlayRender = &mut overlay_render;
+            let mut stack: Vec<*mut OverlayRender> = vec![current];
+            for (index, command) in render_commands.iter().enumerate() {
+                match &command {
+                    RenderCommand::StartOverlay => {
+                        // Overlay Start
+                        unsafe {
+                            (*current).children.push(OverlayItem::Overlay(OverlayRender { children: vec![] }));
+                            match (*current).children.last_mut(){
+                                Some(OverlayItem::Overlay(overlay)) => {
+                                    stack.push(overlay);
+                                }
+                                _ => {
+                                    panic!("OverlayRender stack corrupted");
+                                }
                             }
+                            current = *stack.last_mut().unwrap();
                         }
-
-                        for glyph_run in &buffer_line.glyph_runs {
-                            //let font = vello_fonts.get(&glyph_run.font).unwrap();
-                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                            let glyph_color = glyph_run.glyph_color;
-                            let glyphs = glyph_run.glyphs.clone();
-                            scene
-                                .draw_glyphs(&font)
-                                .font_size(buffer_glyphs.font_size)
-                                .brush(glyph_color)
-                                .transform(text_transform)
-                                .draw(
-                                    Fill::NonZero,
-                                    glyphs.into_iter().map(|glyph| Glyph {
-                                        id: glyph.glyph_id as u32,
-                                        x: glyph.x,
-                                        y: glyph.y + glyph_run.line_y,
-                                    }),
-                                );
+                    }
+                    RenderCommand::EndOverlay => {
+                        // Overlay End
+                        stack.pop();
+                        current = *stack.last_mut().unwrap();
+                    }
+                    _ => {
+                        // Normal Draw Command
+                        unsafe {
+                            (*current).children.push(OverlayItem::Other(index as u32));
                         }
                     }
                 }
-                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(scene, rectangle, resource_manager.clone(), resource_identifier);
+
+            }   
+            
+            overlay_render
+        }
+        
+        let overlay_render = build_overlay_render(render_commands);
+        // println!("{:?}", overlay_render);
+        fn overlay_render_draw(render_commands: &mut Vec<RenderCommand>, overlay_render: &OverlayRender, scene: &mut Scene, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+            let mut others = Vec::new();
+            let mut overlays = Vec::new();
+
+            for child in &overlay_render.children {
+                match child {
+                    OverlayItem::Other(_) => others.push(child),
+                    OverlayItem::Overlay(_) => overlays.push(child),
                 }
-                RenderCommand::PushLayer(rect) => {
-                    let clip = Rect::new(
-                        rect.x as f64,
-                        rect.y as f64,
-                        (rect.x + rect.width) as f64,
-                        (rect.y + rect.height) as f64,
-                    );
-                    scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+            }
+            
+            for child in others {
+                if let OverlayItem::Other(command_index) = child {
+                    let command = render_commands.get(*command_index as usize).unwrap();
+                    draw_command(&command, scene, resource_manager.clone(), font_system);
                 }
-                RenderCommand::PopLayer => {
-                    scene.pop_layer();
-                }
-                RenderCommand::FillBezPath(path, brush) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, &brush, None, &path);
+            }
+            
+            for child in overlays {
+                if let OverlayItem::Overlay(overlay) = child {
+                    overlay_render_draw(render_commands, overlay, scene, resource_manager.clone(), font_system);
                 }
             }
         }
+
+        overlay_render_draw(render_commands, &overlay_render, scene, resource_manager.clone(), font_system);
+        render_commands.clear();
+    }
+}
+
+fn draw_command(command: &RenderCommand, scene: &mut Scene, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+    match command {
+        RenderCommand::DrawRect(rectangle, fill_color) => {
+            vello_draw_rect(scene, *rectangle, *fill_color);
+        }
+        RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
+            // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
+        }
+        RenderCommand::DrawImage(rectangle, resource_identifier) => {
+            let resource = resource_manager.resources.get(&resource_identifier);
+            if let Some(resource) = resource {
+                if let Resource::Image(resource) = resource.as_ref() {
+                    let image = &resource.image;
+                    let data = Arc::new(ImageAdapter::new(resource.clone()));
+                    let blob = Blob::new(data);
+                    let vello_image =
+                        peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+
+                    let mut transform = Affine::IDENTITY;
+                    transform =
+                        transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                    transform = transform.pre_scale_non_uniform(
+                        rectangle.width as f64 / image.width() as f64,
+                        rectangle.height as f64 / image.height() as f64,
+                    );
+
+                    scene.draw_image(&vello_image, transform);
+                }
+            }
+        }
+        RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
+            let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+            let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
+            let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+
+            // Draw the Glyphs
+            for buffer_line in &buffer_glyphs.buffer_lines {
+                for glyph_highlight in &buffer_line.glyph_highlights {
+                    scene.fill(
+                        Fill::NonZero,
+                        text_transform,
+                        buffer_glyphs.glyph_highlight_color,
+                        None,
+                        glyph_highlight,
+                    );
+                }
+
+                if *show_cursor {
+                    if let Some(cursor) = &buffer_line.cursor {
+                        scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
+                    }
+                }
+
+                for glyph_run in &buffer_line.glyph_runs {
+                    //let font = vello_fonts.get(&glyph_run.font).unwrap();
+                    let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
+                    let glyph_color = glyph_run.glyph_color;
+                    let glyphs = glyph_run.glyphs.clone();
+                    scene
+                        .draw_glyphs(&font)
+                        .font_size(buffer_glyphs.font_size)
+                        .brush(glyph_color)
+                        .transform(text_transform)
+                        .draw(
+                            Fill::NonZero,
+                            glyphs.into_iter().map(|glyph| Glyph {
+                                id: glyph.glyph_id as u32,
+                                x: glyph.x,
+                                y: glyph.y + glyph_run.line_y,
+                            }),
+                        );
+                }
+            }
+        }
+        RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
+            draw_tiny_vg(scene, *rectangle, resource_manager.clone(), resource_identifier.clone());
+        }
+        RenderCommand::PushLayer(rect) => {
+            let clip = Rect::new(
+                rect.x as f64,
+                rect.y as f64,
+                (rect.x + rect.width) as f64,
+                (rect.y + rect.height) as f64,
+            );
+            scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+        }
+        RenderCommand::PopLayer => {
+            scene.pop_layer();
+        }
+        RenderCommand::FillBezPath(path, brush) => {
+            scene.fill(Fill::NonZero, Affine::IDENTITY, brush, None, &path);
+        }
+        _ => {}
     }
 }
 
@@ -285,6 +369,14 @@ impl Renderer for VelloRenderer<'_> {
 
     fn pop_layer(&mut self) {
         self.render_commands.push(RenderCommand::PopLayer);
+    }
+
+    fn start_overlay(&mut self) {
+        self.render_commands.push(RenderCommand::StartOverlay);
+    }
+
+    fn end_overlay(&mut self) {
+        self.render_commands.push(RenderCommand::EndOverlay);
     }
 
     fn prepare(&mut self, resource_manager: Arc<ResourceManager>, _font_system: &mut FontSystem) {
