@@ -151,6 +151,7 @@ fn android_main(app: AndroidApp) {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Overlay".to_string(),
+            ..Default::default()
         }),
         app,
     );

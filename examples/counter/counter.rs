@@ -121,6 +121,7 @@ fn android_main(app: AndroidApp) {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),
+            ..Default::default()
         }),
         app,
     );
