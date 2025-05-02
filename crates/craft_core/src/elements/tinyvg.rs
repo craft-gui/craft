@@ -13,8 +13,10 @@ use crate::generate_component_methods_no_children;
 use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
+use peniko::Color;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+
 
 #[derive(Clone, Debug)]
 pub struct TinyVg {
@@ -65,7 +67,12 @@ impl Element for TinyVg {
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer);
         
-        renderer.draw_tiny_vg(content_rectangle, self.resource_identifier.clone());
+        
+        let mut color = None;
+        if self.style().color() != Color::TRANSPARENT {
+            color = Some(self.style().color());
+        }
+        renderer.draw_tiny_vg(content_rectangle, self.resource_identifier.clone(), color);
     }
 
     fn compute_layout(
@@ -110,6 +117,13 @@ impl Element for TinyVg {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn default_style(&self) -> Style {
+        let mut style = Style::default();
+        *style.color_mut() = Color::TRANSPARENT;
+        
+        style
     }
 }
 

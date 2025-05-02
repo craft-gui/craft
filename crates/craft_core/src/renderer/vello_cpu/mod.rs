@@ -198,8 +198,8 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.set_paint(brush_to_paint(&brush));
                     self.render_context.fill_path(&path);
                 }
-                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(&mut self.render_context, *rectangle, &resource_manager, resource_identifier.clone());
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
+                    draw_tiny_vg(&mut self.render_context, *rectangle, &resource_manager, resource_identifier.clone(), override_color);
                 }
                 _ => {}
             }

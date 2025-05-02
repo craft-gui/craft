@@ -11,7 +11,7 @@ pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
-    DrawTinyVg(Rectangle, ResourceIdentifier),
+    DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
     DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
@@ -123,8 +123,8 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
-    pub fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier));
+    pub fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, override_color: Option<Color>) {
+        self.commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color));
     }
 
     pub fn push_layer(&mut self, rect: Rectangle) {

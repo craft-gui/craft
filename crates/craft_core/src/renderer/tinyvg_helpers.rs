@@ -22,9 +22,9 @@ impl TinyVgHelpers {
     }
 
     /// Assemble a kurbo bez path from a TinyVG path.
-    pub(crate) fn assemble_path(path: &Path, fill_style: &Style, color_table: &ColorTable) -> (BezPath, Brush) {
+    pub(crate) fn assemble_path(path: &Path, fill_style: &Style, color_table: &ColorTable, override_color: &Option<Color>) -> (BezPath, Brush) {
 
-        let brush = Self::get_brush(fill_style, color_table);
+        let brush = Self::get_brush(fill_style, color_table, override_color);
         let mut bezier_path = BezPath::new();
 
         for segment in &path.segments {
@@ -119,7 +119,11 @@ impl TinyVgHelpers {
     }
 
     /// Convert the TinyVG style to a Brush.
-    pub(crate) fn get_brush(fill_style: &Style, color_table: &ColorTable) -> Brush {
+    pub(crate) fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Option<Color>) -> Brush {
+        if let Some(override_color) = override_color {
+            return Brush::Color(*override_color);
+        }
+        
         match fill_style {
             Style::FlatColor(flat_colored) => {
                 let color = color_table[flat_colored.color_index as usize];

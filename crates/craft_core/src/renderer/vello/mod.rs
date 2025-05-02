@@ -220,8 +220,8 @@ impl Renderer for VelloRenderer<'_> {
                         }
                     }
                 }
-                RenderCommand::DrawTinyVg(rectangle, resource_identifier) => {
-                    draw_tiny_vg(scene, *rectangle, resource_manager.clone(), resource_identifier.clone());
+                RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
+                    draw_tiny_vg(scene, *rectangle, resource_manager.clone(), resource_identifier.clone(), override_color);
                 }
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
