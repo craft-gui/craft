@@ -25,6 +25,7 @@ impl Component for OverlayExample {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -86,7 +87,8 @@ impl Component for OverlayExample {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult { 
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult { 
+        println!("{:?}", _window_context);
         state.hovered_element_id = event.target;
         
         if state.hovered_element_id.is_some() {
@@ -133,6 +135,7 @@ fn main() {
 use craft::AndroidApp;
 use craft_core::elements::Overlay;
 use craft_core::style::{Position, Unit};
+use craft_core::WindowContext;
 use util::setup_logging;
 
 #[allow(dead_code)]

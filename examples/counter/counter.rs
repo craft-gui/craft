@@ -1,17 +1,16 @@
 #[path = "../util.rs"]
 mod util;
 
-use std::path::PathBuf;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use craft::craft_main_with_options;
-use craft::elements::{ElementStyles, TinyVg};
 use craft::elements::{Container, Text};
+use craft::elements::ElementStyles;
 use craft::events::Event;
-use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
+use craft::style::Display;
 use craft::Color;
 use craft::CraftOptions;
 use craft::RendererType;
+use craft::{craft_main_with_options, WindowContext};
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -26,6 +25,7 @@ impl Component for Counter {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -57,7 +57,7 @@ impl Component for Counter {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         if event.message.clicked() && event.target.is_some() {
             match event.target.as_deref().unwrap() {
                 "increment" => state.count += 1,
@@ -106,7 +106,6 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use craft::AndroidApp;
-use craft::resource_manager::ResourceIdentifier;
 use util::setup_logging;
 
 #[allow(dead_code)]

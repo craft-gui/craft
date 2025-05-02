@@ -61,11 +61,12 @@ use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use winit::dpi::PhysicalSize;
+use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize};
 use winit::event_loop::EventLoop;
 #[cfg(feature = "dev_tools")]
 use winit::keyboard::{Key, NamedKey};
-use winit::window::Window;
+use winit::window::{Window};
+pub use winit::window::{Cursor, CursorIcon};
 
 use std::any::Any;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -103,6 +104,97 @@ struct ReactiveTree {
     element_state: ElementStateStore,
 }
 
+#[derive(Debug)]
+/// User-level API to get and set common window properties.
+/// All values are in logical pixels.
+pub struct WindowContext {
+    window_size: Size<f32>,
+    mouse_position: Option<Point>,
+    cursor: Option<Cursor>,
+
+    requested_window_width: Option<f32>,
+    requested_window_height: Option<f32>,
+    requested_mouse_position_x: Option<f32>,
+    requested_mouse_position_y: Option<f32>,
+    requested_cursor: Option<Cursor>,
+}
+
+impl WindowContext {
+    pub(crate) fn new() -> WindowContext {
+        Self {
+            window_size: Default::default(),
+            mouse_position: None,
+            cursor: None,
+            requested_window_width: None,
+            requested_window_height: None,
+            requested_mouse_position_x: None,
+            requested_mouse_position_y: None,
+            requested_cursor: None,
+        }
+    }
+
+    pub fn cursor(&self) -> Option<Cursor> {
+        self.cursor.clone()
+    }
+    
+    pub fn window_width(&self) -> f32 {
+        self.window_size.width
+    }
+    pub fn window_height(&self) -> f32 {
+        self.window_size.height
+    }
+    
+    pub fn mouse_position_x(&self) -> Option<f32> {
+        self.mouse_position.map(|pos| pos.x)
+    }
+
+    pub fn mouse_position_y(&self) -> Option<f32> {
+        self.mouse_position.map(|pos| pos.y)
+    }
+
+    pub fn set_window_width(&mut self, width: f32) {
+        self.requested_window_width = Some(width);
+    }
+
+    pub fn set_window_height(&mut self, height: f32) {
+        self.requested_window_height = Some(height);
+    }
+
+    pub fn set_mouse_position_x(&mut self, x: f32) {
+        self.requested_mouse_position_x = Some(x);
+    }
+
+    pub fn set_mouse_position_y(&mut self, y: f32) {
+        self.requested_mouse_position_y = Some(y);
+    }
+    
+    pub fn set_cursor(&mut self, cursor: Cursor) {
+        self.requested_cursor = Some(cursor);
+    }
+    
+    pub(crate) fn reset(&mut self) {
+        *self = WindowContext {
+            window_size: self.window_size,
+            mouse_position: self.mouse_position,
+            cursor: None,
+            
+            requested_window_width: None,
+            requested_window_height: None,
+            requested_mouse_position_x: None,
+            requested_mouse_position_y: None,
+            requested_cursor: None,
+        }
+    }
+}
+
+pub(crate) fn get_scale_factor(window: &Option<Arc<dyn Window>>) -> f64 {
+    if let Some(window) = window {
+        window.scale_factor()
+    } else { 
+        1.0
+    }
+}
+
 struct App {
     app: ComponentSpecification,
     global_state: GlobalState,
@@ -119,6 +211,7 @@ struct App {
     winit_sender: Sender<AppMessage>,
 
     user_tree: ReactiveTree,
+    window_context: WindowContext,
 
     #[cfg(feature = "dev_tools")]
     is_dev_tools_open: bool,
@@ -313,7 +406,7 @@ async fn async_main(
         window: None,
         font_system: None,
         renderer: None,
-        mouse_position: None,
+        window_context: WindowContext::new(),
         resource_manager,
         resources_collected: Default::default(),
         winit_sender: winit_sender.clone(),
@@ -343,6 +436,7 @@ async fn async_main(
             component_ids: Default::default(),
             pointer_captures: Default::default(),
         },
+        mouse_position: None,
     });
 
     info!("starting main event loop");
@@ -399,7 +493,7 @@ async fn async_main(
                     let message = message.2;
 
                     let state = app.user_tree.user_state.storage.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, &mut app.global_state, props, Event::new(&Message::UserMessage(message)));
+                    update_fn(state, &mut app.global_state, props, Event::new(&Message::UserMessage(message)), &mut app.window_context);
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -468,6 +562,11 @@ fn on_process_user_events(
 
 async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
+
+    let scale_factor = get_scale_factor(&app.window);
+    let logical_mouse_position: LogicalPosition<f32> = LogicalPosition::from_physical(PhysicalPosition::new(mouse_moved.position.x, mouse_moved.position.y), scale_factor);
+    app.window_context.mouse_position = Some(Point::new(logical_mouse_position.x, logical_mouse_position.y));
+    
     let message = Message::CraftMessage(CraftMessage::PointerMovedEvent(mouse_moved));
 
     dispatch_event(
@@ -478,6 +577,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -489,6 +589,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
         &mut app.dev_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     if let Some(window) = app.window.as_ref() {
@@ -508,6 +609,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -519,6 +621,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
         &mut app.dev_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     app.window.as_ref().unwrap().request_redraw();
@@ -536,6 +639,7 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -547,6 +651,7 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
         &mut app.dev_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     app.window.as_ref().unwrap().request_redraw();
@@ -563,6 +668,7 @@ async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -575,6 +681,7 @@ async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
             &mut app.dev_tree,
             &mut app.global_state,
             &mut app.font_system,
+            &mut app.window_context,
         );
     }
     app.window.as_ref().unwrap().request_redraw();
@@ -592,6 +699,7 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -604,6 +712,7 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
             &mut app.dev_tree,
             &mut app.global_state,
             &mut app.font_system,
+            &mut app.window_context,
         );
 
         let logical_key = keyboard_input.event.logical_key;
@@ -619,6 +728,9 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
 }
 
 async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
+    let scale_factor = get_scale_factor(&app.window);
+    let window_size: LogicalSize<f32> = new_size.to_logical(scale_factor);
+    app.window_context.window_size = Size::new(window_size.width, window_size.height);
     if let Some(renderer) = app.renderer.as_mut() {
         renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
     }
@@ -638,6 +750,7 @@ fn dispatch_event(
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
     font_system: &mut Option<FontSystem>,
+    window_context: &mut WindowContext
 ) {
     let mut effects: Vec<(EventDispatchType, Message)> = Vec::new();
 
@@ -787,6 +900,7 @@ fn dispatch_event(
                         Event::new(event)
                             .current_target(current_target.element_id.clone())
                             .target(target.element_id.clone()),
+                        window_context
                     );
                     effects.append(&mut res.effects);
                     propagate = propagate && res.propagate;
@@ -859,6 +973,7 @@ fn dispatch_event(
                         global_state,
                         node.props.clone(),
                         Event::new(&Message::CraftMessage(event.clone())).current_target(target_element_id.clone()),
+                        window_context
                     );
                     effects.append(&mut res.effects);
                     propagate = propagate && res.propagate;
@@ -899,6 +1014,7 @@ fn dispatch_event(
                             global_state,
                             component.props.clone(),
                             Event::new(event).current_target(None).target(None),
+                            window_context
                         );
                         effects.append(&mut res.effects);
                         if res.future.is_some() {
@@ -927,6 +1043,7 @@ fn dispatch_event(
             reactive_tree,
             global_state,
             font_system,
+            window_context
         );
     }
 }
@@ -936,6 +1053,11 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     let message = Message::CraftMessage(event);
 
     app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
+
+    let scale_factor = get_scale_factor(&app.window);
+    let logical_mouse_position: LogicalPosition<f32> = LogicalPosition::from_physical(PhysicalPosition::new(pointer_button.position.x, pointer_button.position.y), scale_factor);
+    app.window_context.mouse_position = Some(Point::new(logical_mouse_position.x, logical_mouse_position.y));
+    
     dispatch_event(
         &message,
         EventDispatchType::Bubbling,
@@ -944,6 +1066,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
         &mut app.user_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -955,6 +1078,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
         &mut app.dev_tree,
         &mut app.global_state,
         &mut app.font_system,
+        &mut app.window_context,
     );
 
     app.window.as_ref().unwrap().request_redraw();
@@ -992,6 +1116,7 @@ async fn update_reactive_tree(
     font_system: &mut FontSystem,
     scaling_factor: f64,
     resources_collected: &mut HashMap<ResourceIdentifier, bool>,
+    window_context: &mut WindowContext
 ) {
     let window_element = Container::new().into();
     let old_component_tree = reactive_tree.component_tree.as_ref();
@@ -1009,6 +1134,7 @@ async fn update_reactive_tree(
             *should_reload_fonts,
             font_system,
             scaling_factor,
+            window_context,
         )
     };
 
@@ -1033,7 +1159,7 @@ async fn draw_reactive_tree(
     reactive_tree: &mut ReactiveTree,
     resource_manager: Arc<ResourceManager>,
     renderer: &mut Box<dyn Renderer + Send>,
-    viewport_size: Size,
+    viewport_size: Size<f32>,
     origin: Point,
     font_system: &mut FontSystem,
     scale_factor: f64,
@@ -1089,7 +1215,7 @@ async fn draw_reactive_tree(
     }
 }
 
-async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size) {
+async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size<f32>) {
     if app.font_system.is_none() {
         app.setup_font_system();
     }
@@ -1105,9 +1231,40 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
         &mut app.reload_fonts,
         font_system,
         scale_factor,
-        &mut app.resources_collected
+        &mut app.resources_collected,
+        &mut app.window_context
     )
     .await;
+
+    let window_context = &mut app.window_context;
+
+    // Handle window requests:
+    if let Some(window) = app.window.clone() {
+        if let Some(requested_cursor) = &window_context.requested_cursor {
+            window.set_cursor(requested_cursor.clone());
+        };
+        
+        if let Some(requested_window_width) = window_context.requested_window_width {
+            let _ = window.request_surface_size(winit::dpi::Size::Logical(LogicalSize::new(requested_window_width as f64, window_context.window_size.height as f64)));
+        };
+        
+        if let Some(requested_window_height) = window_context.requested_window_height {
+            let _ = window.request_surface_size(winit::dpi::Size::Logical(LogicalSize::new(window_context.window_size.width as f64, requested_window_height as f64)));
+        };
+        
+        if let Some(requested_mouse_position_x) = window_context.requested_mouse_position_x {
+            let mouse_y = window_context.requested_mouse_position_y.unwrap_or_default() as f64;
+            let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(requested_mouse_position_x as f64, mouse_y)));
+        };
+        
+        if let Some(requested_mouse_position_y) = window_context.requested_mouse_position_y {
+            let mouse_x = window_context.requested_mouse_position_x.unwrap_or_default() as f64;
+            let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(mouse_x, requested_mouse_position_y as f64)));
+        };   
+    }
+    
+    // Reset the requested values:
+    window_context.reset();
 
     // Cleanup unmounted components and elements.
     app.user_tree.user_state.remove_unused_state(&old_component_ids, &app.user_tree.component_ids);
@@ -1161,7 +1318,8 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
                 &mut app.reload_fonts,
                 font_system,
                 scale_factor,
-                &mut app.resources_collected
+                &mut app.resources_collected,
+                &mut app.window_context
             )
             .await;
 
@@ -1183,7 +1341,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size)
     renderer.submit(app.resource_manager.clone());
 }
 
-fn style_root_element(root: &mut Box<dyn Element>, root_size: Size) {
+fn style_root_element(root: &mut Box<dyn Element>, root_size: Size<f32>) {
     *root.style_mut().width_mut() = Unit::Px(root_size.width);
     *root.style_mut().wrap_mut() = Wrap::Wrap;
     *root.style_mut().display_mut() = Display::Block;

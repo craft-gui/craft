@@ -8,7 +8,7 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
-use crate::GlobalState;
+use crate::{GlobalState, WindowContext};
 use cosmic_text::FontSystem;
 use std::collections::{HashMap, HashSet};
 
@@ -64,6 +64,7 @@ fn dummy_update(
     _global_state: &mut GlobalState,
     _props: Props,
     _message: Event,
+    _window_context: &mut WindowContext
 ) -> UpdateResult {
     UpdateResult::new()
 }
@@ -89,6 +90,7 @@ pub(crate) fn diff_trees(
     reload_fonts: bool,
     font_system: &mut FontSystem,
     scaling_factor: f64,
+    window_context: &mut WindowContext
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -284,13 +286,14 @@ pub(crate) fn diff_trees(
                             global_state,
                             props.clone(),
                             Event::new(&Message::CraftMessage(CraftMessage::Initialized)),
+                            window_context
                         );
                     }
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
                     let new_component =
-                        (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id);
+                        (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id, window_context);
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {

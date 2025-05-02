@@ -2,7 +2,7 @@ use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Event;
-use craft::palette;
+use craft::{palette, WindowContext};
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
 
 #[derive(Default)]
@@ -17,6 +17,7 @@ impl Component<WebsiteGlobalState> for About {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -38,6 +39,7 @@ impl Component<WebsiteGlobalState> for About {
         _global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
         _event: Event,
+        _window_context: &mut WindowContext
     ) -> UpdateResult {
         UpdateResult::default()
     }

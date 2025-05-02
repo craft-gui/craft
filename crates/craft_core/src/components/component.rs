@@ -2,7 +2,7 @@ use crate::components::props::Props;
 use crate::elements::element::ElementBoxed;
 use crate::events::Event;
 use crate::reactive::state_store::StateStoreItem;
-use crate::GlobalState;
+use crate::{GlobalState, WindowContext};
 
 use crate::components::update_result::UpdateResult;
 use crate::elements::Container;
@@ -16,11 +16,12 @@ pub type ViewFn = fn(
     props: Props,
     children: Vec<ComponentSpecification>,
     id: ComponentId,
+    window_context: &WindowContext,
 ) -> ComponentSpecification;
 
 /// A Component's update function.
 pub type UpdateFn =
-    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event) -> UpdateResult;
+    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, message: Event, window_context: &mut WindowContext) -> UpdateResult;
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -126,11 +127,12 @@ where
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new().component()
     }
 
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _message: Event) -> UpdateResult {
+    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _message: Event, _window_context: &mut WindowContext) -> UpdateResult {
         UpdateResult::default()
     }
 
@@ -140,8 +142,9 @@ where
         props: &Self::Props,
         children: Vec<ComponentSpecification>,
         id: ComponentId,
+        window_context: &WindowContext
     ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children, id)
+        Self::view_with_no_global_state(state, props, children, id, window_context)
     }
 
     fn generic_view(
@@ -150,14 +153,15 @@ where
         props: Props,
         children: Vec<ComponentSpecification>,
         id: ComponentId,
+        window_context: &WindowContext
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_ref::<T>() {
-            Self::view(casted_state, global_state_casted, props, children, id)
+            Self::view(casted_state, global_state_casted, props, children, id, &window_context)
         } else {
-            Self::view_with_no_global_state(casted_state, props, children, id)
+            Self::view_with_no_global_state(casted_state, props, children, id, &window_context)
         }
     }
 
@@ -169,8 +173,8 @@ where
         Props::new(Self::Props::default())
     }
 
-    fn update(state: &mut Self, _global_state: &mut T, props: &Self::Props, message: Event) -> UpdateResult {
-        Self::update_with_no_global_state(state, props, message)
+    fn update(state: &mut Self, _global_state: &mut T, props: &Self::Props, message: Event, window_context: &mut WindowContext) -> UpdateResult {
+        Self::update_with_no_global_state(state, props, message, window_context)
     }
 
     fn generic_update(
@@ -178,14 +182,15 @@ where
         global_state: &mut GlobalState,
         props: Props,
         message: Event,
+        window_context: &mut WindowContext
     ) -> UpdateResult {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_mut::<T>() {
-            Self::update(casted_state, global_state_casted, props, message)
+            Self::update(casted_state, global_state_casted, props, message, window_context)
         } else {
-            Self::update_with_no_global_state(casted_state, props, message)
+            Self::update_with_no_global_state(casted_state, props, message, window_context)
         }
     }
 

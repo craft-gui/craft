@@ -4,7 +4,7 @@ use craft::components::{Component, ComponentId, ComponentSpecification, UpdateRe
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Event;
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
-use craft::Color;
+use craft::{Color, WindowContext};
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
@@ -26,6 +26,7 @@ impl Component<WebsiteGlobalState> for Navbar {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -58,6 +59,7 @@ impl Component<WebsiteGlobalState> for Navbar {
         global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
         event: Event,
+        _window_context: &mut WindowContext
     ) -> UpdateResult {
         if event.message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();

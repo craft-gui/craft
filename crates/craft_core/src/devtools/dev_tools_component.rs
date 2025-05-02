@@ -9,6 +9,7 @@ use crate::elements::ElementStyles;
 use crate::events::{CraftMessage, Event, Message};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
+use crate::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct DevToolsComponent {
@@ -24,6 +25,7 @@ impl Component for DevToolsComponent {
         props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(root.as_ref(), state.selected_element);
@@ -58,7 +60,7 @@ impl Component for DevToolsComponent {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         if let Some(id) = event.target {
             // Set the selected element in the element tree inspector.
             if event.message.clicked() {
@@ -84,12 +86,13 @@ impl Component for DevToolsComponent {
         props: &Self::Props,
         children: Vec<ComponentSpecification>,
         id: ComponentId,
+        window_context: &WindowContext
     ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children, id)
+        Self::view_with_no_global_state(state, props, children, id, window_context)
     }
 
-    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event) -> UpdateResult {
-        Self::update_with_no_global_state(state, props, event)
+    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event, window_context: &mut WindowContext) -> UpdateResult {
+        Self::update_with_no_global_state(state, props, event, window_context)
     }
 }
 

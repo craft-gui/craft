@@ -6,7 +6,7 @@ use util::setup_logging;
 
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
-use craft::craft_main_with_options;
+use craft::{craft_main_with_options, WindowContext};
 use craft::elements::{ElementStyles, TinyVg};
 use craft::elements::TextInput;
 use craft::elements::{Container, Text};
@@ -53,6 +53,7 @@ impl Component for Tour {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         
         let mut container = Container::new()
@@ -92,7 +93,7 @@ impl Component for Tour {
         container
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         if let CraftMessage(TextInputChanged(str)) = event.message {
             state.my_text = str.clone();
             return UpdateResult::new().prevent_defaults().prevent_propagate();

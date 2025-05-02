@@ -1,13 +1,13 @@
 /// A structure representing the size of a 2D object.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct Size {
+pub struct Size<T> {
     /// The width of the object.
-    pub(crate) width: f32,
+    pub(crate) width: T,
     /// The height of the object.
-    pub(crate) height: f32,
+    pub(crate) height: T,
 }
 
-impl Size {
+impl<T> Size<T> {
     /// Creates a new `Size` with the given width and height.
     ///
     /// # Arguments
@@ -18,12 +18,12 @@ impl Size {
     /// # Returns
     ///
     /// A `Size` instance with the specified width and height.
-    pub fn new(width: f32, height: f32) -> Self {
+    pub fn new(width: T, height: T) -> Self {
         Self { width, height }
     }
 }
 
-impl From<taffy::Size<f32>> for Size {
+impl From<taffy::Size<f32>> for Size<f32> {
     /// Converts a `taffy::Size<f32>` to a `Size`.
     ///
     /// # Arguments

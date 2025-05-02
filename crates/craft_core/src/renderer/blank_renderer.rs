@@ -1,12 +1,8 @@
-use std::sync::Arc;
-use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderList, Renderer, TextScroll};
-use crate::renderer::text::BufferGlyphs;
-use crate::renderer::{Brush, RenderCommand};
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::renderer::renderer::{RenderList, Renderer};
+use crate::resource_manager::ResourceManager;
 use cosmic_text::FontSystem;
-use peniko::kurbo::BezPath;
+use std::sync::Arc;
 
 pub struct BlankRenderer;
 

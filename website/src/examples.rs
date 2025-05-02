@@ -15,7 +15,7 @@ use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Event;
-use craft::palette;
+use craft::{palette, WindowContext};
 use craft::style::Display::Flex;
 use craft::style::FlexDirection;
 
@@ -68,6 +68,7 @@ impl Component<WebsiteGlobalState> for Examples {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         let wrapper = Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
@@ -86,6 +87,7 @@ impl Component<WebsiteGlobalState> for Examples {
         _global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
         event: Event,
+        _window_context: &mut WindowContext
     ) -> UpdateResult {
         if event.message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();

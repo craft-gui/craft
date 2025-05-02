@@ -13,6 +13,7 @@ use craft::style::Unit;
 use craft::CraftOptions;
 use craft::RendererType;
 use craft_core::components::ComponentId;
+use craft_core::WindowContext;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
@@ -26,6 +27,7 @@ impl Component<()> for EventsExample {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .background(palette::css::RED)
@@ -53,7 +55,7 @@ impl Component<()> for EventsExample {
             .component()
     }
 
-    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         if event.message.clicked() {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }

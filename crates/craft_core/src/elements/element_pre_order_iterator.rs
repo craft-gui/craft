@@ -38,7 +38,7 @@ mod tests {
     use crate::reactive::element_state_store::ElementStateStore;
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
-    use crate::GlobalState;
+    use crate::{GlobalState, WindowContext};
     use cosmic_text::FontSystem;
 
     #[test]
@@ -59,6 +59,8 @@ mod tests {
         let mut element_state = ElementStateStore::default();
         let mut global_state = GlobalState::from(Box::new(()));
 
+        let mut window_context = WindowContext::new();
+        
         let initial_tree = diff_trees(
             initial_view,
             root_element.clone(),
@@ -69,6 +71,7 @@ mod tests {
             false,
             &mut font_system,
             1.0,
+            &mut window_context,
         );
 
         initial_tree.component_tree.print_tree();

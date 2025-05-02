@@ -6,7 +6,7 @@ use util::setup_logging;
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
-use craft::craft_main_with_options;
+use craft::{craft_main_with_options, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
@@ -33,6 +33,7 @@ impl Component for TextState {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .height(Unit::Px(500.0))
@@ -52,7 +53,7 @@ impl Component for TextState {
             .component()
     }
 
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _event: Event) -> UpdateResult {
+    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, _event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         UpdateResult::new()
     }
 }

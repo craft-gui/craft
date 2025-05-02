@@ -8,7 +8,7 @@ use util::setup_logging;
 use AniListMessage::StateChange;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use craft::craft_main_with_options;
+use craft::{craft_main_with_options, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::events::{Event, Message};
@@ -49,6 +49,7 @@ impl Component for AniList {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
@@ -86,7 +87,7 @@ impl Component for AniList {
         root.component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         match event.message {
             Message::CraftMessage(_) => {}
             Message::UserMessage(msg) => {

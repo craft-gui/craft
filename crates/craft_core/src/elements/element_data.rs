@@ -35,7 +35,7 @@ pub struct ElementData {
     /// This may be None if this is a non-visual element like Font.
     pub(crate) taffy_node_id: Option<NodeId>,
 
-    pub content_size: Size,
+    pub content_size: Size<f32>,
     // The computed values after transforms are applied.
     pub computed_box_transformed: ElementBox,
     // The computed values without any transforms applied to them.
@@ -45,8 +45,8 @@ pub struct ElementData {
     pub id: Option<String>,
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
-    pub computed_scrollbar_size: Size,
-    pub scrollbar_size: Size,
+    pub computed_scrollbar_size: Size<f32>,
+    pub scrollbar_size: Size<f32>,
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
     pub(crate) max_scroll_y: f32,

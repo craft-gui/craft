@@ -130,8 +130,8 @@ impl Element for Overlay {
 
     fn on_event(
         &self,
-        message: &CraftMessage,
-        element_state: &mut ElementStateStore,
+        _message: &CraftMessage,
+        _element_state: &mut ElementStateStore,
         _font_system: &mut FontSystem,
     ) -> UpdateResult {
         UpdateResult::default()

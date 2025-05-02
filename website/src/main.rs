@@ -16,7 +16,7 @@ use craft::elements::ElementStyles;
 use craft::events::Event;
 use craft::style::Display;
 use craft::style::FlexDirection;
-use craft::{craft_main_with_options, CraftOptions, RendererType};
+use craft::{craft_main_with_options, CraftOptions, RendererType, WindowContext};
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -43,6 +43,7 @@ impl Component<WebsiteGlobalState> for Website {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)
@@ -64,6 +65,7 @@ impl Component<WebsiteGlobalState> for Website {
         _global_state: &mut WebsiteGlobalState,
         _props: &Self::Props,
         _message: Event,
+        _window_context: &mut WindowContext
     ) -> UpdateResult {
         UpdateResult::default()
     }

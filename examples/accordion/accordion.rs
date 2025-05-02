@@ -12,6 +12,7 @@ use craft::style::Unit;
 use craft::RendererType;
 use craft::{craft_main_with_options, CraftOptions};
 use craft_core::components::ComponentId;
+use craft_core::WindowContext;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -27,6 +28,7 @@ impl Component<()> for Accordion {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         let accordion_content =
             if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
@@ -44,7 +46,7 @@ impl Component<()> for Accordion {
             .push(accordion_content)
     }
 
-    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event) -> UpdateResult {
+    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         println!("target: {:?}", event.target);
         if event.target.as_deref() != Some("accordion_header") {
             return UpdateResult::default();

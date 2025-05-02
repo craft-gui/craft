@@ -6,7 +6,7 @@ pub struct ElementBox {
     pub border: Border,
     pub padding: Padding,
     pub position: Point,
-    pub size: Size,
+    pub size: Size<f32>,
 }
 
 impl ElementBox {
@@ -21,7 +21,7 @@ impl ElementBox {
         Point::new(self.position.x - self.margin.left, self.position.y - self.margin.top)
     }
 
-    pub fn margin_rectangle_size(&self) -> Size {
+    pub fn margin_rectangle_size(&self) -> Size<f32> {
         let margin_width = self.size.width + self.margin.left + self.margin.right;
         let margin_height = self.size.height + self.margin.top + self.margin.bottom;
         Size {
@@ -42,7 +42,7 @@ impl ElementBox {
         }
     }
 
-    pub fn border_rectangle_size(&self) -> Size {
+    pub fn border_rectangle_size(&self) -> Size<f32> {
         Size {
             width: self.size.width,
             height: self.size.height,
@@ -65,7 +65,7 @@ impl ElementBox {
         }
     }
 
-    pub fn padding_rectangle_size(&self) -> Size {
+    pub fn padding_rectangle_size(&self) -> Size<f32> {
         let padding_width = self.size.width - self.border.left - self.border.right;
         let padding_height = self.size.height - self.border.top - self.border.bottom;
         Size {
@@ -92,7 +92,7 @@ impl ElementBox {
         }
     }
 
-    pub fn content_rectangle_size(&self) -> Size {
+    pub fn content_rectangle_size(&self) -> Size<f32> {
         let content_width =
             self.size.width - self.padding.left - self.padding.right - self.border.left - self.border.right;
         let content_height =

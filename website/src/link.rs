@@ -3,6 +3,7 @@ use craft::components::{Component, ComponentId, ComponentSpecification, UpdateRe
 use craft::elements::{ElementStyles, Text};
 use craft::events::Event;
 use craft::style::Style;
+use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct Link;
@@ -21,6 +22,7 @@ impl Component<WebsiteGlobalState> for Link {
         _props: &Self::Props,
         children: Vec<ComponentSpecification>,
         _id: ComponentId,
+        _window_context: &WindowContext
     ) -> ComponentSpecification {
         children.get(0).unwrap_or(&Text::new("Invalid Link").component()).clone()
     }
@@ -30,6 +32,7 @@ impl Component<WebsiteGlobalState> for Link {
         _global_state: &mut WebsiteGlobalState,
         props: &Self::Props,
         event: Event,
+        _window_context: &mut WindowContext
     ) -> UpdateResult {
         if event.message.clicked() {
             #[cfg(target_arch = "wasm32")]

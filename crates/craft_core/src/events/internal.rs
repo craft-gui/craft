@@ -12,7 +12,7 @@ use winit::event::Ime;
 use winit::window::Window;
 
 pub(crate) enum InternalMessage {
-    RequestRedraw(f64, Size),
+    RequestRedraw(f64, Size<f32>),
     Close,
     Confirmation,
     Resume(Arc<dyn Window>, Option<Box<dyn Renderer + Send>>),
