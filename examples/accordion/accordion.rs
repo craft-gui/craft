@@ -69,6 +69,7 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "accordion".to_string(),
+            ..Default::default()
         }),
     );
 }

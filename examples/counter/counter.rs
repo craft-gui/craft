@@ -100,6 +100,7 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Counter".to_string(),
+            ..Default::default()
         }),
     );
 }

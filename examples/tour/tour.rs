@@ -123,6 +123,7 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Tour".to_string(),
+            ..Default::default()
         }),
     );
 }

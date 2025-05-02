@@ -68,6 +68,7 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "text".to_string(),
+            ..Default::default()
         }),
     );
 }

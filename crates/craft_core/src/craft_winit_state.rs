@@ -40,6 +40,7 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use tokio::sync::mpsc::error::SendError;
+use winit::dpi::LogicalSize;
 
 /// Stores state related to Winit.
 ///
@@ -67,8 +68,12 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
-        let window_attributes = WindowAttributes::default().with_title(self.craft_options.window_title.as_str());
-
+        let mut window_attributes = WindowAttributes::default().with_title(self.craft_options.window_title.as_str());
+        
+        if let Some(window_size) = &self.craft_options.window_size {
+            window_attributes = window_attributes.with_surface_size(LogicalSize::new(window_size.width, window_size.height));
+        }
+        
         #[cfg(target_arch = "wasm32")]
         let window_attributes = {
             let canvas = web_sys::window()

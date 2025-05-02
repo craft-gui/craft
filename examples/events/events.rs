@@ -73,6 +73,7 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "events".to_string(),
+            ..Default::default()
         }),
     );
 }

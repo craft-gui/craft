@@ -127,15 +127,16 @@ fn main() {
         Some(CraftOptions {
             renderer: RendererType::default(),
             window_title: "Overlay".to_string(),
+            ..Default::default()
         }),
     );
 }
 
 #[cfg(target_os = "android")]
 use craft::AndroidApp;
-use craft_core::elements::Overlay;
-use craft_core::style::{Position, Unit};
-use craft_core::WindowContext;
+use craft::elements::Overlay;
+use craft::style::{Position, Unit};
+use craft::WindowContext;
 use util::setup_logging;
 
 #[allow(dead_code)]
