@@ -163,5 +163,6 @@ pub(crate) fn draw_tiny_vg(scene: &mut RenderContext, rectangle: Rectangle, reso
                 DrawCommand::TextHint(_data) => {}
             }
         }
+        scene.reset_transform();
     }
 }

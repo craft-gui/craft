@@ -18,6 +18,7 @@ use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
+use peniko::kurbo::Shape;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -112,7 +113,6 @@ impl Renderer for VelloCpuRenderer {
     ) {
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
-        self.render_context.set_blend_mode(BlendMode::new(Mix::Clip, Compose::SrcOver));
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
         self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width as f64, self.pixmap.height as f64));
@@ -192,8 +192,13 @@ impl Renderer for VelloCpuRenderer {
                         }
                     }
                 }
-                RenderCommand::PushLayer(_rect) => {}
-                RenderCommand::PopLayer => {}
+                RenderCommand::PushLayer(rect) => {
+                    let clip_path = Some(peniko::kurbo::Rect::from_origin_size(peniko::kurbo::Point::new(rect.x as f64, rect.y as f64), peniko::kurbo::Size::new(rect.width as f64, rect.height as f64)).into_path(0.1));
+                    self.render_context.push_layer(clip_path.as_ref(), None, None, None);
+                }
+                RenderCommand::PopLayer => {
+                    self.render_context.pop_layer();
+                }
                 RenderCommand::FillBezPath(path, brush) => {
                     self.render_context.set_paint(brush_to_paint(&brush));
                     self.render_context.fill_path(&path);
@@ -210,6 +215,7 @@ impl Renderer for VelloCpuRenderer {
         self.render_context.render_to_pixmap(&mut self.pixmap);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width as usize, self.pixmap.height as usize);
         buffer.present().expect("Failed to present buffer");
+        self.render_context.reset();
     }
 }
 
@@ -238,12 +244,7 @@ fn brush_to_paint(brush: &Brush) -> PaintType {
             PaintType::Solid(*color)
         }
         Brush::Gradient(gradient) => {
-            PaintType::Gradient(vello_common::paint::Gradient {
-                kind: gradient.kind,
-                stops: gradient.stops.clone(),
-                transform: Default::default(),
-                extend: gradient.extend,
-            })
+            PaintType::Gradient(gradient.clone())
         }
     }
 }

@@ -65,6 +65,7 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
                 }
             },
             num_init_threads: None,
+            pipeline_cache: None,
         },
     )
     .expect("Couldn't create renderer")

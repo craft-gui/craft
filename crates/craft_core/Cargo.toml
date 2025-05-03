@@ -32,7 +32,7 @@ features = ["std"]
 
 
 [dependencies.peniko]
-version = "0.3.1"
+version = "0.4.0"
 default-features = false
 features = ["std"]
 
@@ -71,24 +71,24 @@ features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello/"
-rev = "244ed01801816b99c99adcbbedc3612962919040"
+rev = "912090298121c40b7c908bdde156c4937dbbc5c6"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "244ed01801816b99c99adcbbedc3612962919040"
+rev = "912090298121c40b7c908bdde156c4937dbbc5c6"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello/"
-rev = "244ed01801816b99c99adcbbedc3612962919040"
+rev = "912090298121c40b7c908bdde156c4937dbbc5c6"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "244ed01801816b99c99adcbbedc3612962919040"
+rev = "912090298121c40b7c908bdde156c4937dbbc5c6"
 optional = true
 
 [dependencies.softbuffer]

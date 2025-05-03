@@ -10,7 +10,6 @@ use peniko::{kurbo, Fill};
 use tinyvg::color_table::ColorTable;
 use tinyvg::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg::common::Unit;
-use tokio::sync::RwLockReadGuard;
 use vello_hybrid::Scene;
 use crate::Color;
 
@@ -163,5 +162,7 @@ pub(crate) fn draw_tiny_vg(scene: &mut Scene, rectangle: Rectangle, resource_man
                 DrawCommand::TextHint(_data) => {}
             }
         }
+        
+        scene.reset_transform();
     }
 }

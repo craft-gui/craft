@@ -102,7 +102,7 @@ impl<'a> VelloHybridRenderer<'a> {
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
-    scene.set_paint(Paint::Solid(fill_color.premultiply().to_rgba8()));
+    scene.set_paint(Paint::from(fill_color));
     scene.fill_rect(&rectangle.to_kurbo());
 }
 
@@ -176,14 +176,14 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     // Draw the Glyphs
                     for buffer_line in &buffer_glyphs.buffer_lines {
                         for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.set_paint(Paint::Solid(buffer_glyphs.glyph_highlight_color.premultiply().to_rgba8()));
+                            scene.set_paint(Paint::from(buffer_glyphs.glyph_highlight_color));
                             scene.set_transform(text_transform);
                             scene.fill_rect(glyph_highlight);
                         }
 
                         if *show_cursor {
                             if let Some(cursor) = &buffer_line.cursor {
-                                scene.set_paint(Paint::Solid(buffer_glyphs.cursor_color.premultiply().to_rgba8()));
+                                scene.set_paint(Paint::from(buffer_glyphs.cursor_color));
                                 scene.set_transform(text_transform);
                                 scene.fill_rect(cursor);
                             }
@@ -193,7 +193,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                             let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
                             let glyph_color = glyph_run.glyph_color;
                             let glyphs = glyph_run.glyphs.clone();
-                            scene.set_paint(Paint::Solid(glyph_color.premultiply().to_rgba8()));
+                            scene.set_paint(Paint::from(glyph_color));
                             scene.reset_transform();
                             let glyph_run_builder = scene
                                 .glyph_run(&font)
@@ -306,12 +306,12 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
 fn brush_to_paint(brush: &Brush) -> Paint {
     match brush {
         Brush::Color(color) => {
-            Paint::Solid(color.premultiply().to_rgba8())
+            Paint::from(*color)
         }
         Brush::Gradient(gradient) => {
             // Paint::Gradient does not exist yet, so we need to come back and fix this later.
             let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
-            Paint::Solid(color.premultiply().to_rgba8())
+            Paint::from(color)
         }
     }
 }
