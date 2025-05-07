@@ -78,17 +78,10 @@ impl Component for Tour {
                      .push(Text::new(Self::DROPDOWN_ITEMS[2]))
                      .push(Text::new(Self::DROPDOWN_ITEMS[3])),
             )
-            .component();
-
-        // FIXME: Allow ResourceIdentifier::Bytes() and include this at compile time or point to the file on GitHub.
-        #[cfg(not(target_arch = "wasm32"))] {
-            let tiger_tvg = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/tour/tiger.tvg");
-            container.push_in_place(
-                TinyVg::new(ResourceIdentifier::File(tiger_tvg))
-                    .max_width("40%")
-                    .component(),
+            .push(
+                TinyVg::new(ResourceIdentifier::Bytes(include_bytes!("tiger.tvg"))).max_width("40%")
             )
-        }
+            .component();
         
         container
     }

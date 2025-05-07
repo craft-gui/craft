@@ -1,4 +1,4 @@
-use crate::resource_manager::ResourceIdentifier::File;
+use crate::resource_manager::ResourceIdentifier::{Bytes, File};
 
 #[cfg(feature = "http_client")]
 use crate::resource_manager::ResourceIdentifier::Url;
@@ -12,6 +12,7 @@ pub enum ResourceIdentifier {
     #[cfg(feature = "http_client")]
     Url(String),
     File(PathBuf),
+    Bytes(&'static[u8]),
 }
 
 impl Display for ResourceIdentifier {
@@ -20,6 +21,7 @@ impl Display for ResourceIdentifier {
             #[cfg(feature = "http_client")]
             Url(url) => write!(f, "URL: {}", url),
             File(file_path) => write!(f, "File: {:?}", file_path.as_os_str().to_str()),
+            Bytes(bytes) => write!(f, "Bytes: {:?}", bytes.as_ptr()),
         }
     }
 }
@@ -51,6 +53,9 @@ impl ResourceIdentifier {
                 }
                 //tracing::warn!("Failed to find the local file: {:?}", path.as_os_str().to_str());
                 None
+            }
+            Bytes(bytes) => {
+                Some(bytes.to_vec())
             }
         }
     }
