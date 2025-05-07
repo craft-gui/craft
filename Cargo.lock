@@ -2303,6 +2303,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "read-fonts"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "600e807b48ac55bad68a8cb75cc3c7739f139b9248f7e003e01e080f589b5288"
+dependencies = [
+ "bytemuck",
+ "font-types",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2643,7 +2653,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cc1aa86c26dbb1b63875a7180aa0819709b33348eb5b1491e4321fae388179d"
 dependencies = [
  "bytemuck",
- "read-fonts",
+ "read-fonts 0.25.3",
+]
+
+[[package]]
+name = "skrifa"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fa1e5622e4f7b98877e8a19890efddcac1230cec6198bd9de91ec0e00010dc8"
+dependencies = [
+ "bytemuck",
+ "read-fonts 0.28.0",
 ]
 
 [[package]]
@@ -2820,7 +2840,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fae9a562c7b46107d9c78cd78b75bbe1e991c16734c0aee8ff0ee711fb8b620a"
 dependencies = [
- "skrifa",
+ "skrifa 0.26.6",
  "yazi",
  "zeno",
 ]
@@ -3308,14 +3328,14 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vello"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
  "log",
  "peniko 0.4.0",
  "png",
- "skrifa",
+ "skrifa 0.30.0",
  "static_assertions",
  "thiserror 2.0.12",
  "vello_encoding",
@@ -3326,7 +3346,7 @@ dependencies = [
 [[package]]
 name = "vello_api"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "peniko 0.4.0",
  "png",
@@ -3335,11 +3355,11 @@ dependencies = [
 [[package]]
 name = "vello_common"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "bytemuck",
  "roxmltree",
- "skrifa",
+ "skrifa 0.30.0",
  "smallvec",
  "vello_api",
 ]
@@ -3347,7 +3367,7 @@ dependencies = [
 [[package]]
 name = "vello_cpu"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "vello_common",
 ]
@@ -3355,19 +3375,19 @@ dependencies = [
 [[package]]
 name = "vello_encoding"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "bytemuck",
  "guillotiere",
  "peniko 0.4.0",
- "skrifa",
+ "skrifa 0.30.0",
  "smallvec",
 ]
 
 [[package]]
 name = "vello_hybrid"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "bytemuck",
  "vello_common",
@@ -3377,7 +3397,7 @@ dependencies = [
 [[package]]
 name = "vello_shaders"
 version = "0.4.0"
-source = "git+https://github.com/linebender/vello/?rev=912090298121c40b7c908bdde156c4937dbbc5c6#912090298121c40b7c908bdde156c4937dbbc5c6"
+source = "git+https://github.com/linebender/vello/?rev=576819e6589aa765a3801524fe3f4ca2f6dd3b90#576819e6589aa765a3801524fe3f4ca2f6dd3b90"
 dependencies = [
  "bytemuck",
  "naga",
