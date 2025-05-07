@@ -184,7 +184,9 @@ impl Element for Switch {
         
         *style.display_mut() = Display::Flex;
         *style.width_mut() = Unit::Px(width);
+        *style.min_width_mut() = Unit::Px(width);
         *style.height_mut() = Unit::Px(height);
+        *style.min_height_mut() = Unit::Px(height);
         *style.background_mut() = palette::css::LIGHT_GRAY;
 
         if self.rounded {
