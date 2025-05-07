@@ -249,7 +249,7 @@ impl Element for TextInput {
 
         let cached_editor = &mut state.cached_editor;
         let scroll_y = state.scroll_state.scroll_y;
-        let content_rect = self.element_data.computed_box.content_rectangle();
+        let content_rect = self.element_data.computed_box_transformed.content_rectangle();
 
         match message {
             CraftMessage::PointerButtonEvent(pointer_button) => {

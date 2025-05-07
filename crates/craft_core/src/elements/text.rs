@@ -173,7 +173,7 @@ impl Element for Text {
             .unwrap();
 
         let cached_editor = &mut state.cached_editor;
-        let content_rect = self.element_data.computed_box.content_rectangle();
+        let content_rect = self.element_data.computed_box_transformed.content_rectangle();
         let content_position = content_rect.position();
 
         // Handle selection.
