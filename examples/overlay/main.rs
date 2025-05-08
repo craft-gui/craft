@@ -1,6 +1,4 @@
-#[path = "../util.rs"]
-mod util;
-
+use util::setup_logging;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, Text};
 use craft::elements::ElementStyles;
@@ -137,7 +135,6 @@ use craft::AndroidApp;
 use craft::elements::Overlay;
 use craft::style::{Position, Unit};
 use craft::WindowContext;
-use util::setup_logging;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

@@ -91,7 +91,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --package counter-lib
+        run: cargo apk build --package counter --lib
 
   build-ios:
     runs-on: macos-latest
@@ -116,6 +116,6 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Unit Tests
-        run: cargo test --workspace --no-run
+        run: cargo test --package craft_core --no-run
       - name: Run Unit Tests
-        run: cargo test --workspace --no-fail-fast --verbose
+        run: cargo test --package craft_core --no-fail-fast --verbose

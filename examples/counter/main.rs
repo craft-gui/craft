@@ -1,6 +1,3 @@
-#[path = "../util.rs"]
-mod util;
-
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, Text};
 use craft::elements::ElementStyles;
@@ -11,6 +8,7 @@ use craft::Color;
 use craft::CraftOptions;
 use craft::RendererType;
 use craft::{craft_main_with_options, WindowContext};
+use util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct Counter {
@@ -107,7 +105,6 @@ fn main() {
 
 #[cfg(target_os = "android")]
 use craft::AndroidApp;
-use util::setup_logging;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

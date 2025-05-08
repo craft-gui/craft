@@ -1,6 +1,3 @@
-#[path = "../util.rs"]
-mod util;
-
 use util::setup_logging;
 
 use craft::components::ComponentId;

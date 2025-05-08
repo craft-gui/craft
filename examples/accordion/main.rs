@@ -1,7 +1,4 @@
-#[path = "../util.rs"]
-mod util;
-
-use crate::util::setup_logging;
+use util::setup_logging;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
 use craft::elements::ElementStyles;

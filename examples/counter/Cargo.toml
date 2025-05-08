@@ -2,30 +2,36 @@
 name = "counter"
 version = "0.1.0"
 edition = "2024"
+default-run = "counter"
+
+[lib]
+name = "counter_android"
+path = "main.rs"
+crate-type = ["cdylib"]
 
 [[bin]]
 name = "counter"
 path = "main.rs"
 
 [dependencies]
-
 craft = { path = "../../" }
 
-tracing-subscriber = "0.3.19"
-tracing = "0.1.41"
+util = { path = "../util" }
 
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
 serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.133"
 web-sys = "0.3.77"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-tracing-web = "0.1.3"
-console_error_panic_hook = "0.1.7"
 
 [dependencies.reqwest]
 version = "0.12.15"
 default-features = false
 features = ["rustls-tls", "json"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tracing-web = "0.1.3"
+console_error_panic_hook = "0.1.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 open = "5"

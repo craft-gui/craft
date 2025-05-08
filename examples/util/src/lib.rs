@@ -1,9 +1,6 @@
 use tracing_subscriber::fmt::format::FmtSpan;
 
 #[allow(dead_code)]
-fn main() {}
-
-#[allow(dead_code)]
 pub fn setup_logging() {
     #[cfg(target_arch = "wasm32")]
     {

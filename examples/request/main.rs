@@ -1,10 +1,8 @@
 mod ani_list;
 
-#[path = "../util.rs"]
-mod util;
+use util::setup_logging;
 
 use ani_list::{anime_view, AniListResponse, QUERY};
-use util::setup_logging;
 use AniListMessage::StateChange;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
