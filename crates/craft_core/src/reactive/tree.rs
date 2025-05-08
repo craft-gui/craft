@@ -257,14 +257,21 @@ pub(crate) fn diff_trees(
                     let children_keys = (*parent_component_ptr).children_keys.clone();
                     let props = new_spec.props.unwrap_or((component_data.default_props)());
 
-                    let mut should_update = false;
+                    let mut is_new_component = true;
                     let id: ComponentId =
                         if new_spec.key.is_some() && children_keys.contains_key(new_spec.key.as_deref().unwrap()) {
+                            is_new_component = false;
                             *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
                         } else if let Some(old_tag) = old_tag {
-                            if component_data.tag.as_str() == old_tag {
-                                // If the old tag is the same as the new tag, we can reuse the old id.
-                                should_update = true;
+                            let same_key = new_spec.key
+                                == tree_node
+                                .old_component_node
+                                .as_ref()
+                                .and_then(|node| (*(*node)).key.clone());
+                            
+                            if component_data.tag.as_str() == old_tag && same_key {
+                                // If the old tag is the same as the new tag AND they have the same key, then we can reuse the old id.
+                                is_new_component = false;
                                 (*tree_node.old_component_node.unwrap()).id
                             } else {
                                 create_unique_element_id()
@@ -276,7 +283,7 @@ pub(crate) fn diff_trees(
                     // Collect the component id for later use.
                     new_component_ids.insert(id);
 
-                    if !should_update {
+                    if is_new_component {
                         let default_state = (component_data.default_state)();
                         user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
@@ -319,9 +326,16 @@ pub(crate) fn diff_trees(
 
                     // Get the old component node or none.
                     // NOTE: ComponentSpecs can only have one child.
-                    let old_component_tree = tree_node.old_component_node.and_then(|old_node| {
+                    let mut old_component_tree = tree_node.old_component_node.and_then(|old_node| {
                         (*old_node).children.first().map(|child| child as *const ComponentTreeNode)
                     });
+
+                    // EDGE CASE: If this is a new component, then we must drop any old tree.
+                    // This was found because when swapping out components in the same place in the tree,
+                    // the new component tree would retain old info for elements like the scroll state.
+                    if is_new_component {
+                        old_component_tree = None;
+                    }
 
                     // Add the computed component spec to the to visit list.
                     to_visit.push(TreeVisitorNode {

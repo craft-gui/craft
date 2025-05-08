@@ -298,3 +298,95 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
 
     assert_eq!(initial_id, updated_id, "Elements in different positions with the same key, should have the same id.");
 }
+
+#[test]
+fn diff_trees_after_one_iteration_same_position_different_component_keys_different_id() {
+    let mut font_system = FontSystem::new();
+    reset_unique_element_id();
+
+    let root_node_1 = DummyComponent::component().key("key_1");
+    let root_node_2 = DummyComponent::component().key("key_2");
+
+    let root_element: ElementBoxed = Container::new().into();
+    let mut user_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
+    let mut global_state = GlobalState::from(Box::new(()));
+    let mut window_context = WindowContext::new();
+
+    let tree_1 = diff_trees(
+        root_node_1,
+        root_element.clone(),
+        None,
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut font_system,
+        1.0,
+        &mut window_context
+    );
+
+    let tree_2 = diff_trees(
+        root_node_2,
+        root_element.clone(),
+        Some(&tree_1.component_tree),
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut font_system,
+        1.0,
+        &mut window_context
+    );
+
+    let initial_id = &tree_1.component_tree.children[0].id;
+    let updated_id = &tree_2.component_tree.children[0].id;
+    
+    assert_ne!(initial_id, updated_id, "Components in the same position with different keys, should have different ids.");
+}
+
+#[test]
+fn diff_trees_after_one_iteration_same_position_different_components_different_child_element_id() {
+    let mut font_system = FontSystem::new();
+    reset_unique_element_id();
+
+    let root_node_1 = DummyComponent::component().key("key_1");
+    let root_node_2 = DummyComponent::component().key("key_2");
+
+    let root_element: ElementBoxed = Container::new().into();
+    let mut user_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
+    let mut global_state = GlobalState::from(Box::new(()));
+    let mut window_context = WindowContext::new();
+
+    let tree_1 = diff_trees(
+        root_node_1,
+        root_element.clone(),
+        None,
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut font_system,
+        1.0,
+        &mut window_context
+    );
+
+    let tree_2 = diff_trees(
+        root_node_2,
+        root_element.clone(),
+        Some(&tree_1.component_tree),
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut font_system,
+        1.0,
+        &mut window_context
+    );
+
+    let initial_id = &tree_1.component_tree.children[0].children[0].id;
+    let updated_id = &tree_2.component_tree.children[0].children[0].id;
+
+    assert_ne!(initial_id, updated_id, "Different Components in the same position should not have the same element child id.");
+}
