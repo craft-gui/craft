@@ -21,9 +21,6 @@ craft_dylib = { path = "crates/craft_dylib", default-features = false, optional 
 craft_core = { path = "crates/craft_core", default-features = false, version = "0.1.0" }
 
 [dev-dependencies]
-
-serde = { version = "1.0.213", features = ["derive"] }
-serde_json = "1.0.133"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 
@@ -44,40 +41,14 @@ members = [
     "crates/craft_dylib",
     "crates/craft_logger",
     "website",
+    "examples/tour",
+    "examples/accordion",
+    "examples/counter",
+    "examples/events",
+    "examples/request",
+    "examples/overlay",
+    "examples/text",
 ]
-
-[[example]]
-name = "counter"
-path = "examples/counter/counter.rs"
-
-[[example]]
-name = "counter-lib"
-path = "examples/counter/counter.rs"
-crate-type = ["cdylib"]
-
-[[example]]
-name = "accordion"
-path = "examples/accordion/accordion.rs"
-
-[[example]]
-name = "tour"
-path = "examples/tour/tour.rs"
-
-[[example]]
-name = "request"
-path = "examples/request/request.rs"
-
-[[example]]
-name = "text"
-path = "examples/text/text.rs"
-
-[[example]]
-name = "events"
-path = "examples/events/events.rs"
-
-[[example]]
-name = "overlay"
-path = "examples/overlay/overlay.rs"
 
 [profile.release]
 opt-level = 3

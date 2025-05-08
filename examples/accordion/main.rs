@@ -11,8 +11,8 @@ use craft::style::FlexDirection;
 use craft::style::Unit;
 use craft::RendererType;
 use craft::{craft_main_with_options, CraftOptions};
-use craft_core::components::ComponentId;
-use craft_core::WindowContext;
+use craft::components::ComponentId;
+use craft::WindowContext;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
@@ -22,9 +22,8 @@ pub struct Accordion {
 impl Component<()> for Accordion {
     type Props = ();
 
-    fn view(
+    fn view_with_no_global_state(
         state: &Self,
-        _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
@@ -46,7 +45,7 @@ impl Component<()> for Accordion {
             .push(accordion_content)
     }
 
-    fn update(state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
+    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         println!("target: {:?}", event.target);
         if event.target.as_deref() != Some("accordion_header") {
             return UpdateResult::default();

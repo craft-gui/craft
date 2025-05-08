@@ -48,5 +48,5 @@ Updates are performed by handling messages from a Component.
 ## Run Examples:
 
 ```shell
-cargo run --example counter
+cargo run --package counter
 ```

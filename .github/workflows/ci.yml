@@ -25,11 +25,11 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --example counter
+        run: cargo build --package counter
       - name: Build Request Example
-        run: cargo build --example request
+        run: cargo build --package request
       - name: Build Text Example
-        run: cargo build --example text
+        run: cargo build --package text
 
   build-macos:
     runs-on: macos-latest
@@ -43,7 +43,7 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --example counter
+        run: cargo build --package counter
 
   build-windows:
     runs-on: windows-latest
@@ -57,7 +57,7 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --example counter
+        run: cargo build --package counter
 
   build-android:
     runs-on: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --example counter-lib
+        run: cargo apk build --package counter-lib
 
   build-ios:
     runs-on: macos-latest
@@ -104,7 +104,7 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --example counter
+        run: cargo build --target aarch64-apple-ios --package counter
 
   unit-tests:
     runs-on: ubuntu-latest

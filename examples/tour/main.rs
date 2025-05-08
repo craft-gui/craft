@@ -1,25 +1,22 @@
 #[path = "../util.rs"]
 mod util;
 
-use std::path::PathBuf;
 use util::setup_logging;
 
+use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, UpdateResult};
-use craft::{craft_main_with_options, WindowContext};
-use craft::elements::{ElementStyles, TinyVg};
-use craft::elements::TextInput;
 use craft::elements::{Container, Text};
-use craft::elements::{Dropdown, Switch};
-use craft::events::Event;
-use craft::RendererType;
-use craft::CraftOptions;
-use craft::components::ComponentId;
-use craft::elements::{Slider, SliderDirection};
+use craft::elements::ElementStyles;
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
+use craft::events::Event;
 use craft::events::Message::CraftMessage;
-use craft::resource_manager::ResourceIdentifier;
 use craft::style::{Display, FlexDirection, Overflow};
+use craft::CraftOptions;
+use craft::RendererType;
+use craft::{craft_main_with_options, WindowContext};
+use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
+use craft::resource_manager::ResourceIdentifier;
 
 #[derive(Clone)]
 pub struct Tour {

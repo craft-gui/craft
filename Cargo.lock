@@ -19,6 +19,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c71b1793ee61086797f5c80b6efa2b8ffa6d5dd703f118545808a7f2e27f7046"
 
 [[package]]
+name = "accordion"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "web-sys",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,6 +491,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "counter"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "web-sys",
+]
+
+[[package]]
 name = "craft"
 version = "0.1.0"
 dependencies = [
@@ -482,8 +514,6 @@ dependencies = [
  "craft_core",
  "craft_dylib",
  "reqwest",
- "serde",
- "serde_json",
  "tracing",
  "tracing-subscriber",
  "tracing-web",
@@ -690,6 +720,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad9cdb4b747e485a12abb0e6566612956c7a1bafa3bdb8d682c5b6d403589e48"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "events"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "web-sys",
 ]
 
 [[package]]
@@ -1984,6 +2030,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "overlay"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "web-sys",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2326,6 +2388,22 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "request"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "web-sys",
+]
 
 [[package]]
 name = "reqwest"
@@ -2920,6 +2998,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "text"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3101,6 +3191,18 @@ dependencies = [
  "indexmap",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "tour"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft",
+ "open",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
 ]
 
 [[package]]

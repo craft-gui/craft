@@ -1,0 +1,31 @@
+[package]
+name = "overlay"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "overlay"
+path = "main.rs"
+
+[dependencies]
+
+craft = { path = "../../" }
+
+tracing-subscriber = "0.3.19"
+tracing = "0.1.41"
+
+serde = { version = "1.0.213", features = ["derive"] }
+serde_json = "1.0.133"
+web-sys = "0.3.77"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tracing-web = "0.1.3"
+console_error_panic_hook = "0.1.7"
+
+[dependencies.reqwest]
+version = "0.12.15"
+default-features = false
+features = ["rustls-tls", "json"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+open = "5"

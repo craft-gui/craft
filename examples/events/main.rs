@@ -12,8 +12,8 @@ use craft::style::Position;
 use craft::style::Unit;
 use craft::CraftOptions;
 use craft::RendererType;
-use craft_core::components::ComponentId;
-use craft_core::WindowContext;
+use craft::components::ComponentId;
+use craft::WindowContext;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
@@ -21,9 +21,8 @@ pub struct EventsExample {}
 impl Component<()> for EventsExample {
     type Props = ();
 
-    fn view(
+    fn view_with_no_global_state(
         _state: &Self,
-        _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
@@ -55,7 +54,7 @@ impl Component<()> for EventsExample {
             .component()
     }
 
-    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
+    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
         if event.message.clicked() {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }

@@ -1,13 +1,13 @@
-#[path = "../../examples/counter/counter.rs"]
+#[path = "../../examples/counter/main.rs"]
 mod counter;
 
-#[path = "../../examples/text/text.rs"]
+#[path = "../../examples/text/main.rs"]
 mod text;
 
-#[path = "../../examples/request/request.rs"]
+#[path = "../../examples/request/main.rs"]
 mod request;
 
-#[path = "../../examples/tour/tour.rs"]
+#[path = "../../examples/tour/main.rs"]
 mod tour;
 
 use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
