@@ -404,15 +404,17 @@ impl From<ElementBoxed> for ComponentSpecification {
     }
 }
 
-
 impl<T> From<T> for ComponentSpecification
 where
     T: Element,
 {
-    fn from(element: T) -> Self {
-        let key = element.element_data().key.clone();
-        let children_specs = element.element_data().child_specs.clone();
-        let props = element.element_data().props.clone();
+    fn from(mut element: T) -> Self {
+        let data = element.element_data_mut();
+
+        let key = mem::take(&mut data.key);
+        let children_specs = mem::take(&mut data.child_specs);
+        let props = mem::take(&mut data.props);
+
         ComponentSpecification {
             component: ComponentOrElement::Element(element.into()),
             key,
@@ -421,6 +423,7 @@ where
         }
     }
 }
+
 
 impl dyn Element {
     #[allow(dead_code)]
