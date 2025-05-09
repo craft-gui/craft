@@ -7,14 +7,14 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::{GlobalState, ReactiveTree, WindowContext};
-use cosmic_text::FontSystem;
 use std::collections::HashSet;
+use crate::text::text_context::TextContext;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
     reset_unique_element_id();
 
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
 
     let initial_view = Container::new().component().push(Text::new("Foo").component());
     let updated_view = Container::new().component().push(Text::new("Foo").component());
@@ -35,7 +35,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -48,7 +48,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -61,7 +61,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
 #[test]
 fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component());
@@ -82,7 +82,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -95,7 +95,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -108,7 +108,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
 
 #[test]
 fn remove_unused_element_state_after_removal_is_state_deleted() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_component_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -128,7 +128,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut global_state,
         &mut reactive_tree.element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -150,7 +150,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
         &mut global_state,
         &mut reactive_tree.element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -192,7 +192,7 @@ impl Component<()> for DummyComponent {
 
 #[test]
 fn remove_unused_component_state_after_removal_is_state_deleted() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_component_1 =
@@ -212,7 +212,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut global_state,
         &mut reactive_tree.element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -234,7 +234,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
         &mut global_state,
         &mut reactive_tree.element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -254,7 +254,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
 
 #[test]
 fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_node_1 = Container::new().component().push(Text::new("Foo").component().key("key_1"));
@@ -275,7 +275,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -288,7 +288,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -301,7 +301,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
 
 #[test]
 fn diff_trees_after_one_iteration_same_position_different_component_keys_different_id() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_node_1 = DummyComponent::component().key("key_1");
@@ -321,7 +321,7 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -334,7 +334,7 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -347,7 +347,7 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
 
 #[test]
 fn diff_trees_after_one_iteration_same_position_different_components_different_child_element_id() {
-    let mut font_system = FontSystem::new();
+    let mut text_context = TextContext::new();
     reset_unique_element_id();
 
     let root_node_1 = DummyComponent::component().key("key_1");
@@ -367,7 +367,7 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );
@@ -380,7 +380,7 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
         &mut global_state,
         &mut element_state,
         false,
-        &mut font_system,
+        &mut text_context,
         1.0,
         &mut window_context
     );

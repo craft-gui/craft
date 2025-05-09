@@ -6,8 +6,8 @@ use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{SortedCommands, RenderCommand, RenderList, Renderer, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceManager};
-use cosmic_text::FontSystem;
 use std::sync::Arc;
+use peniko::BrushRef;
 use vello::kurbo::{Affine, Rect};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
@@ -15,6 +15,7 @@ use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
 use crate::renderer::vello::tinyvg::draw_tiny_vg;
+use crate::text::text_context::TextContext;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -144,7 +145,7 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, window: Rectangle) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
@@ -177,47 +178,94 @@ impl Renderer for VelloRenderer<'_> {
                         }
                     }
                 }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
-                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
+                    let text_transform =
+                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    // Draw the Glyphs
-                    for buffer_line in &buffer_glyphs.buffer_lines {
-                        for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.fill(
-                                Fill::NonZero,
-                                text_transform,
-                                buffer_glyphs.glyph_highlight_color,
-                                None,
-                                glyph_highlight,
-                            );
+                    let mut skip_remaining_lines = false;
+                    let mut skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
                         }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the selections vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                    break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        if *show_cursor {
-                            if let Some(cursor) = &buffer_line.cursor {
-                                scene.fill(Fill::NonZero, text_transform, buffer_glyphs.cursor_color, None, cursor);
+                            for selection in &line.selections {
+                                let selection_rect = Rectangle {
+                                    x: selection.x + rect.x,
+                                    y: -scroll + selection.y + rect.y,
+                                    width: selection.width,
+                                    height: selection.height,
+                                };
+                                vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
                             }
                         }
+                    }
+                    skip_remaining_lines = false;
+                    skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
+                        }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the glyphs vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                  break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        for glyph_run in &buffer_line.glyph_runs {
-                            //let font = vello_fonts.get(&glyph_run.font).unwrap();
-                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                            let glyph_color = glyph_run.glyph_color;
-                            let glyphs = glyph_run.glyphs.clone();
                             scene
-                                .draw_glyphs(&font)
-                                .font_size(buffer_glyphs.font_size)
-                                .brush(glyph_color)
+                                .draw_glyphs(&item.font)
+                                .font_size(item.font_size)
+                                .brush(BrushRef::Solid(item.brush.color))
                                 .transform(text_transform)
+                                .glyph_transform(item.glyph_transform)
                                 .draw(
                                     Fill::NonZero,
-                                    glyphs.into_iter().map(|glyph| Glyph {
-                                        id: glyph.glyph_id as u32,
+                                    item.glyphs.iter().map(|glyph| Glyph {
+                                        id: glyph.id as u32,
                                         x: glyph.x,
-                                        y: glyph.y + glyph_run.line_y,
+                                        y: glyph.y,
                                     }),
                                 );
+                        }
+                    }
+                    if *show_cursor {
+                        if let Some(cursor) = &text_render.cursor {
+                            let cursor_rect = Rectangle {
+                                x: cursor.x + rect.x,
+                                y: -scroll + cursor.y + rect.y,
+                                width: cursor.width,
+                                height: cursor.height,
+                            };
+                            vello_draw_rect(scene, cursor_rect, Color::from_rgb8(0, 0, 0));
                         }
                     }
                 }

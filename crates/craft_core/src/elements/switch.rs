@@ -3,7 +3,7 @@ use crate::components::UpdateResult;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
@@ -12,11 +12,11 @@ use crate::renderer::renderer::RenderList;
 use crate::style::{Display, Style, Unit};
 use crate::ComponentSpecification;
 use crate::{generate_component_methods_no_children, palette};
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 /// An element that represents an on or off state.
 #[derive(Clone, Debug)]
@@ -58,7 +58,7 @@ impl Element for Switch {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -69,7 +69,7 @@ impl Element for Switch {
             return;
         }
         self.draw_borders(renderer);
-        self.thumb.pseudo_thumb.draw(renderer, font_system, taffy_tree, _root_node, element_state, pointer, window);
+        self.thumb.pseudo_thumb.draw(renderer, text_context, taffy_tree, _root_node, element_state, pointer, window);
     }
 
     fn compute_layout(
@@ -112,7 +112,7 @@ impl Element for Switch {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
@@ -133,7 +133,7 @@ impl Element for Switch {
             transform,
             element_state,
             pointer,
-            font_system,
+            text_context,
         );
     }
 
@@ -145,7 +145,7 @@ impl Element for Switch {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
@@ -166,7 +166,7 @@ impl Element for Switch {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(SwitchState::default()),

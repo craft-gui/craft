@@ -95,3 +95,14 @@ impl From<taffy::Rect<f32>> for Rectangle {
         }
     }
 }
+
+impl From<parley::Rect> for Rectangle {
+    fn from(rect: parley::Rect) -> Self {
+        Rectangle {
+            x: rect.x0 as f32,
+            y: rect.y0 as f32,
+            width: (rect.x1 - rect.x0) as f32,
+            height: (rect.y1 - rect.y0) as f32,
+        }
+    }
+}

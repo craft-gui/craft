@@ -1,58 +1,76 @@
+use crate::CraftMessage;
 use crate::components::component::ComponentSpecification;
-use crate::components::Props;
+use crate::components::{ImeAction, Props};
 use crate::components::UpdateResult;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
-use crate::elements::layout_context::{LayoutContext, TaffyTextInputContext};
+use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
-use crate::events::CraftMessage;
-use crate::geometry::{Point, Size, TrblRectangle};
+use crate::geometry::{Point, Rectangle, Size, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
-use crate::renderer::text;
 use crate::style::{Display, Style, Unit};
-use crate::text::cached_editor::CachedEditor;
-use crate::generate_component_methods_no_children;
-use cosmic_text::FontSystem;
-use cosmic_text::{Cursor, Edit};
+use crate::{generate_component_methods_no_children, RendererBox};
 use std::any::Any;
+use std::collections::HashMap;
 use std::sync::Arc;
-use taffy::{NodeId, TaffyTree};
+use std::time::Duration;
+use parley::{Alignment, AlignmentOptions, FontContext, PlainEditor, PlainEditorDriver};
+use taffy::{AvailableSpace, NodeId, TaffyTree};
+use tokio::time::Instant;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::event::Ime;
+use winit::event::{Ime, Modifiers};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
+use crate::elements::text::TextState;
+use crate::layout::layout_context::TextHashKey;
+use crate::text::text_context::{ColorBrush, TextContext};
+use crate::text::text_render_data;
+use crate::text::text_render_data::TextRender;
 
 // A stateful element that shows text.
 #[derive(Clone, Default, Debug)]
 pub struct TextInput {
-    text: String,
     element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
     use_text_value_on_update: bool,
+    pub text: Option<String>,
 }
 
 #[derive(Clone, Default, Debug)]
 pub(crate) struct ImeState {
     pub is_ime_active: bool,
-    pub ime_starting_cursor: Option<Cursor>,
-    pub ime_ending_cursor: Option<Cursor>,
 }
 
-pub struct TextInputState<'a> {
-    pub cached_editor: CachedEditor<'a>,
+pub struct TextInputState {
     pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
     pub(crate) ime_state: ImeState,
+    pub(crate) editor: PlainEditor<ColorBrush>,
+
+    cache: HashMap<TextHashKey, taffy::Size<f32>>,
+    current_key: Option<TextHashKey>,
+    last_requested_key: Option<TextHashKey>,
+    text_render: Option<TextRender>,
+    new_text: Option<String>,
+
+    last_click_time: Option<Instant>,
+    click_count: u32,
+    pointer_down: bool,
+    cursor_pos: (f32, f32),
+    cursor_visible: bool,
+    modifiers: Option<Modifiers>,
+    start_time: Option<Instant>,
+    blink_period: Duration,
 }
 
 impl TextInput {
     pub fn new(text: &str) -> Self {
         Self {
-            text: text.to_string(),
+            text: Some(text.to_string()),
             element_data: ElementData::default(),
             use_text_value_on_update: true,
         }
@@ -84,7 +102,7 @@ impl Element for TextInput {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -122,52 +140,9 @@ impl Element for TextInput {
         if let Some(state) =
             element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
         {
-            let cached_editor = &mut state.cached_editor;
-            let editor = &cached_editor.editor;
-            let buffer = &cached_editor.get_last_cache_entry().buffer;
-            let fill_color = self.element_data.style.color();
-
-            let buffer_glyphs = text::create_glyphs_for_editor(
-                buffer,
-                editor,
-                fill_color,
-                Color::from_rgb8(0, 0, 0),
-                Color::from_rgb8(0, 120, 215),
-                Color::from_rgb8(255, 255, 255),
-                text_scroll,
-            );
-            renderer.draw_text(
-                buffer_glyphs,
-                content_rectangle,
-                text_scroll,
-                true
-            );
-        }
-
-        if let Some(state) = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_mut::<TextInputState>()
-        {
-            if let Some((cursor_x, cursor_y)) = state.cached_editor.editor.cursor_position() {
-                if state.is_active {
-                    if let Some(window) = window {
-                        let content_position = self.element_data.computed_box_transformed.content_rectangle();
-                        window.set_ime_cursor_area(
-                            PhysicalPosition::new(
-                                content_position.x + cursor_x as f32,
-                                content_position.y + cursor_y as f32,
-                            )
-                            .into(),
-                            PhysicalSize::new(20.0, 20.0).into(),
-                        );
-                    }
-                }
+            if let Some(text_render) = state.text_render.as_ref() {
+                renderer.draw_text(text_render.clone(), content_rectangle, text_scroll, state.cursor_visible);
             }
-
-            state.is_active = false;
         }
 
         if is_scrollable {
@@ -206,20 +181,48 @@ impl Element for TextInput {
         z_index: &mut u32,
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
-        _pointer: Option<Point>,
-        _font_system: &mut FontSystem,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+
         self.finalize_borders();
+
+        let state: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+
+        if state.current_key != state.last_requested_key {
+            state.layout(
+                state.last_requested_key.unwrap().known_dimensions(),
+                state.last_requested_key.unwrap().available_space(),
+                text_context,
+            );
+        }
+
+        let layout = state.editor.try_layout().as_ref().unwrap();
+        let text_renderer = state.text_render.as_mut().unwrap();
+        for line in text_renderer.lines.iter_mut() {
+            line.selections.clear();
+        }
+        state.editor.selection_geometry_with( |rect, line| {
+            text_renderer.lines[line].selections.push(rect.into());
+        });
+        text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
 
         self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(container_state) =
+        let scroll_y = if let Some(state) =
             element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
         {
-            container_state.scroll_state.scroll_y
+            state.scroll_state.scroll_y
         } else {
             0.0
         };
@@ -235,7 +238,7 @@ impl Element for TextInput {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
@@ -247,130 +250,292 @@ impl Element for TextInput {
             return scroll_result;
         }
 
-        let cached_editor = &mut state.cached_editor;
         let scroll_y = state.scroll_state.scroll_y;
-        let content_rect = self.element_data.computed_box_transformed.content_rectangle();
 
+        let text_position = self.element_data().computed_box_transformed.content_rectangle();
+        let text_x = text_position.x;
+        let text_y = text_position.y;
+        let state: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
         match message {
-            CraftMessage::PointerButtonEvent(pointer_button) => {
-                let pointer_position = pointer_button.position;
-                let pointer_content_position = pointer_position - content_rect.position();
-
-                if pointer_button.state.is_pressed() && content_rect.contains(&pointer_button.position) {
-                    cached_editor.action_start_drag(
-                        font_system,
-                        Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y),
-                    );
-                } else {
-                    cached_editor.action_end_drag();
+            CraftMessage::ModifiersChangedEvent(modifiers) => {
+                state.modifiers = Some(*modifiers);
+            }
+            CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
+                if !keyboard_input.event.state.is_pressed() {
+                    return UpdateResult::default();
                 }
-                UpdateResult::new().prevent_defaults().prevent_propagate()
-            }
-            CraftMessage::PointerMovedEvent(moved) => {
-                if cached_editor.dragging {
-                    let pointer_position = moved.position;
-                    let pointer_content_position = pointer_position - content_rect.position();
-                    cached_editor.action_drag(
-                        font_system,
-                        Point::new(pointer_content_position.x, pointer_content_position.y + scroll_y),
-                    );
-                }
-                UpdateResult::new().prevent_defaults().prevent_propagate()
-            }
-            CraftMessage::ModifiersChangedEvent(modifiers_changed) => {
-                cached_editor.action_modifiers_changed(*modifiers_changed);
-                UpdateResult::new().prevent_defaults().prevent_propagate()
-            }
-            CraftMessage::KeyboardInputEvent(keyboard_input) => {
-                let logical_key = keyboard_input.clone().event.logical_key;
-                let key_state = keyboard_input.event.state;
 
-                if key_state.is_pressed() {
-                    match logical_key {
-                        Key::Named(NamedKey::ArrowLeft) => cached_editor.move_left(font_system),
-                        Key::Named(NamedKey::ArrowRight) => cached_editor.move_right(font_system),
-                        Key::Named(NamedKey::ArrowUp) => cached_editor.move_up(font_system),
-                        Key::Named(NamedKey::ArrowDown) => cached_editor.move_down(font_system),
-                        Key::Named(NamedKey::Home) => cached_editor.move_to_start(font_system),
-                        Key::Named(NamedKey::End) => cached_editor.move_to_end(font_system),
-                        Key::Named(NamedKey::PageUp) => cached_editor.move_page_up(font_system),
-                        Key::Named(NamedKey::PageDown) => cached_editor.move_page_down(font_system),
-
-                        Key::Named(NamedKey::Escape) => cached_editor.action_escape(font_system),
-                        Key::Named(NamedKey::Enter) => cached_editor.action_enter(font_system),
-                        Key::Named(NamedKey::Backspace) => cached_editor.action_backspace(font_system),
-                        Key::Named(NamedKey::Delete) => cached_editor.action_delete(font_system),
-                        Key::Named(key) => {
-                            if let Some(text) = key.to_text() {
-                                cached_editor.action_insert(font_system, text.chars());
-                            }
-                        }
-                        Key::Character(text) => {
-                            if cached_editor.is_control_or_super_modifier_pressed()
-                                && matches!(text.as_str(), "c" | "v" | "x")
-                            {
-                                match text.to_lowercase().as_str() {
-                                    "c" => cached_editor.action_copy_to_clipboard(),
-                                    "v" => cached_editor.action_paste_from_clipboard(font_system),
-                                    "x" => cached_editor.action_cut_from_clipboard(),
-                                    _ => (),
-                                }
+                state.cursor_reset();
+                #[allow(unused)]
+                let (shift, action_mod) = state
+                    .modifiers
+                    .map(|mods| {
+                        (
+                            mods.state().shift_key(),
+                            if cfg!(target_os = "macos") {
+                                mods.state().super_key()
                             } else {
-                                cached_editor.action_insert(font_system, text.chars());
+                                mods.state().control_key()
+                            },
+                        )
+                    })
+                    .unwrap_or_default();
+
+                let mut drv = state.driver(text_context);
+                match &keyboard_input.event.logical_key {
+                    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+                    Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
+                        use clipboard_rs::{Clipboard, ClipboardContext};
+                        match c.to_lowercase().as_str() {
+                            "c" => {
+                                if let Some(text) = drv.editor.selected_text() {
+                                    let cb = ClipboardContext::new().unwrap();
+                                    cb.set_text(text.to_owned()).ok();
+                                }
                             }
+                            "x" => {
+                                if let Some(text) = drv.editor.selected_text() {
+                                    let cb = ClipboardContext::new().unwrap();
+                                    cb.set_text(text.to_owned()).ok();
+                                    drv.delete_selection();
+                                    state.cache.clear();
+                                }
+                            }
+                            "v" => {
+                                let cb = ClipboardContext::new().unwrap();
+                                let text = cb.get_text().unwrap_or_default();
+                                drv.insert_or_replace_selection(&text);
+                                state.cache.clear();
+                            }
+                            _ => (),
                         }
-                        _ => {}
                     }
+                    Key::Character(c) if action_mod && matches!(c.to_lowercase().as_str(), "a") => {
+                        if shift {
+                            drv.collapse_selection();
+                        } else {
+                            drv.select_all();
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowLeft) => {
+                        if action_mod {
+                            if shift {
+                                drv.select_word_left();
+                            } else {
+                                drv.move_word_left();
+                            }
+                        } else if shift {
+                            drv.select_left();
+                        } else {
+                            drv.move_left();
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowRight) => {
+                        if action_mod {
+                            if shift {
+                                drv.select_word_right();
+                            } else {
+                                drv.move_word_right();
+                            }
+                        } else if shift {
+                            drv.select_right();
+                        } else {
+                            drv.move_right();
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowUp) => {
+                        if shift {
+                            drv.select_up();
+                        } else {
+                            drv.move_up();
+                        }
+                    }
+                    Key::Named(NamedKey::ArrowDown) => {
+                        if shift {
+                            drv.select_down();
+                        } else {
+                            drv.move_down();
+                        }
+                    }
+                    Key::Named(NamedKey::Home) => {
+                        if action_mod {
+                            if shift {
+                                drv.select_to_text_start();
+                            } else {
+                                drv.move_to_text_start();
+                            }
+                        } else if shift {
+                            drv.select_to_line_start();
+                        } else {
+                            drv.move_to_line_start();
+                        }
+                    }
+                    Key::Named(NamedKey::End) => {
+                        let mut drv = state.driver(text_context);
+
+                        if action_mod {
+                            if shift {
+                                drv.select_to_text_end();
+                            } else {
+                                drv.move_to_text_end();
+                            }
+                        } else if shift {
+                            drv.select_to_line_end();
+                        } else {
+                            drv.move_to_line_end();
+                        }
+                    }
+                    Key::Named(NamedKey::Delete) => {
+                        if action_mod {
+                            drv.delete_word();
+                            state.cache.clear();
+                        } else {
+                            drv.delete();
+                            state.cache.clear();
+                        }
+                    }
+                    Key::Named(NamedKey::Backspace) => {
+                        if action_mod {
+                            drv.backdelete_word();
+                            state.cache.clear();
+                        } else {
+                            drv.backdelete();
+                            state.cache.clear();
+                        }
+                    }
+                    Key::Named(NamedKey::Enter) => {
+                        drv.insert_or_replace_selection("\n");
+                        state.cache.clear();
+                    }
+                    Key::Named(NamedKey::Space) => {
+                        drv.insert_or_replace_selection(" ");
+                        state.cache.clear();
+                    }
+                    Key::Character(s) => {
+                        drv.insert_or_replace_selection(&s);
+                        state.cache.clear();
+                    }
+                    _ => (),
                 }
 
-                let event_text = cached_editor.get_text();
-                UpdateResult::new()
+
+                // FIXME: This is more of a hack, we should be doing this somewhere else.
+                return UpdateResult::new()
                     .prevent_defaults()
                     .prevent_propagate()
-                    .result_message(CraftMessage::TextInputChanged(event_text))
+                    .result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
             }
-
-            // This is all a bit hacky and needs some improvement:
-            CraftMessage::ImeEvent(ime) => {
-                // FIXME: This shouldn't be possible, we need to close the ime window when a text input loses focus.
-                if state.ime_state.ime_starting_cursor.is_none() && !matches!(ime, Ime::Enabled) {
-                    // state.ime_starting_cursor = Some(cached_editor.editor.cursor());
-                    return Default::default();
+            // WindowEvent::Touch(Touch {
+            //     phase, location, ..
+            // }) if !self.editor.is_composing() => {
+            //     let mut drv = self.editor.driver(&mut self.font_cx, &mut self.layout_cx);
+            //     use winit::event::TouchPhase::*;
+            //     match phase {
+            //         Started => {
+            //             // TODO: start a timer to convert to a SelectWordAtPoint
+            //             drv.move_to_point(location.x as f32, location.y as f32);
+            //         }
+            //         Cancelled => {
+            //             drv.collapse_selection();
+            //         }
+            //         Moved => {
+            //             // TODO: cancel SelectWordAtPoint timer
+            //             drv.extend_selection_to_point(
+            //                 location.x as f32,
+            //                 location.y as f32,
+            //             );
+            //         }
+            //         Ended => (),
+            //     }
+            // }
+            CraftMessage::PointerButtonEvent(pointer_button) => {
+                if pointer_button.button.mouse_button() == winit::event::MouseButton::Left {
+                    state.pointer_down = pointer_button.state.is_pressed();
+                    state.cursor_reset();
+                    if state.pointer_down && !state.editor.is_composing() {
+                        let now = Instant::now();
+                        if let Some(last) = state.last_click_time.take() {
+                            if now.duration_since(last).as_secs_f64() < 0.25 {
+                                state.click_count = (state.click_count + 1) % 4;
+                            } else {
+                                state.click_count = 1;
+                            }
+                        } else {
+                            state.click_count = 1;
+                        }
+                        state.last_click_time = Some(now);
+                        let click_count = state.click_count;
+                        let cursor_pos = state.cursor_pos;
+                        let mut drv = state.driver(text_context);
+                        match click_count {
+                            2 => drv.select_word_at_point(cursor_pos.0, cursor_pos.1),
+                            3 => drv.select_line_at_point(cursor_pos.0, cursor_pos.1),
+                            _ => drv.move_to_point(cursor_pos.0, cursor_pos.1),
+                        }
+                    }
                 }
-
-                match ime {
-                    Ime::Enabled => {
-                        state.ime_state = cached_editor.action_ime_enabled();
-                    }
-                    Ime::Preedit(str, cursor_info) => {
-                        state.ime_state = cached_editor.action_ime_preedit(&state.ime_state, str, *cursor_info);
-                    }
-                    Ime::Commit(str) => {
-                        state.ime_state = cached_editor.action_ime_commit(&state.ime_state, str);
-                    }
-                    Ime::Disabled => {
-                        state.ime_state = cached_editor.action_ime_disabled();
-                    }
-                };
-
-                let event_text = cached_editor.get_text();
-                UpdateResult::new()
-                    .prevent_defaults()
-                    .prevent_propagate()
-                    .result_message(CraftMessage::TextInputChanged(event_text))
             }
-
-            _ => UpdateResult::new(),
+            CraftMessage::PointerMovedEvent(pointer_moved) => {
+                let prev_pos = state.cursor_pos;
+                // NOTE: Cursor position should be relative to the top left of the text box.
+                state.cursor_pos = (pointer_moved.position.x - text_x, pointer_moved.position.y - text_y + scroll_y);
+                // macOS seems to generate a spurious move after selecting word?
+                if state.pointer_down && prev_pos != state.cursor_pos && !state.editor.is_composing() {
+                    state.cursor_reset();
+                    let cursor_pos = state.cursor_pos;
+                    state.driver(text_context).extend_selection_to_point(cursor_pos.0, cursor_pos.1);
+                }
+            }
+            CraftMessage::ImeEvent(Ime::Disabled) => {
+                state.driver(text_context).clear_compose();
+                state.cache.clear();
+            }
+            CraftMessage::ImeEvent(Ime::Commit(text)) => {
+                state.driver(text_context).insert_or_replace_selection(&text);
+                state.cache.clear();
+            }
+            CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
+                if text.is_empty() {
+                    state.driver(text_context).clear_compose();
+                } else {
+                    state.driver(text_context).set_compose(&text, *cursor);
+                }
+                state.cache.clear();
+            }
+            _ => {}
         }
+        let ime = state.editor.ime_cursor_area();
+        UpdateResult::default().ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)))
     }
 
-    fn initialize_state(&self, font_system: &mut FontSystem, scaling_factor: f64) -> ElementStateStoreItem {
-        let cached_editor = CachedEditor::new(&self.text, &self.element_data.style, scaling_factor, font_system);
+    fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
+        let mut editor = PlainEditor::new(self.style().font_size());
+        editor.set_scale(scaling_factor as f32);
         let text_input_state = TextInputState {
-            cached_editor,
             ime_state: ImeState::default(),
             is_active: false,
             scroll_state: ScrollState::default(),
+            editor: editor,
+            cache: Default::default(),
+            current_key: None,
+            last_requested_key: None,
+            text_render: None,
+            new_text: std::mem::take(&mut self.text),
+            last_click_time: None,
+            click_count: 0,
+            pointer_down: false,
+            cursor_pos: (0.0, 0.0),
+            cursor_visible: false,
+            modifiers: None,
+            start_time: None,
+            blink_period: Default::default(),
         };
 
         ElementStateStoreItem {
@@ -380,8 +545,7 @@ impl Element for TextInput {
     }
 
     fn update_state(
-        &self,
-        font_system: &mut FontSystem,
+        &mut self,
         element_state: &mut ElementStateStore,
         reload_fonts: bool,
         scaling_factor: f64,
@@ -394,18 +558,6 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-
-        if self.use_text_value_on_update {
-            state.cached_editor.update_state(
-                Some(&self.text),
-                &self.element_data.style,
-                scaling_factor,
-                reload_fonts,
-                font_system,
-            );
-        } else {
-            state.cached_editor.update_state(None, &self.element_data.style, scaling_factor, reload_fonts, font_system);
-        }
     }
 
     fn default_style(&self) -> Style {
@@ -437,4 +589,106 @@ impl ElementStyles for TextInput {
     fn styles_mut(&mut self) -> &mut Style {
         self.element_data.current_style_mut()
     }
+}
+
+
+impl TextInputState {
+    pub fn measure(
+        &mut self,
+        known_dimensions: taffy::Size<Option<f32>>,
+        available_space: taffy::Size<taffy::AvailableSpace>,
+        text_context: &mut TextContext,
+    ) -> taffy::Size<f32> {
+        if self.editor.try_layout().is_none() {
+            let text = std::mem::take(&mut self.new_text).unwrap();
+            self.editor.set_text(text.as_str());
+            self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+        }
+        self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+
+        let key = TextHashKey::new(known_dimensions, available_space);
+
+        self.last_requested_key = Some(key);
+
+        if let Some(value) = self.cache.get(&key) {
+            return *value;
+        }
+
+        self.layout(known_dimensions, available_space, text_context)
+    }
+
+    pub fn layout(
+        &mut self,
+        known_dimensions: taffy::Size<Option<f32>>,
+        available_space: taffy::Size<taffy::AvailableSpace>,
+        text_context: &mut TextContext,
+    ) -> taffy::Size<f32> {
+        let key = TextHashKey::new(known_dimensions, available_space);
+
+        if let Some(value) = self.cache.get(&key) {
+            return *value;
+        }
+
+        let width_constraint = known_dimensions.width.or(match available_space.width {
+            AvailableSpace::MinContent => Some(self.editor.try_layout().unwrap().min_content_width()),
+            AvailableSpace::MaxContent => Some(self.editor.try_layout().unwrap().max_content_width()),
+            AvailableSpace::Definite(width) => Some(width),
+        });
+        // Some(self.text_style.font_size * self.text_style.line_height)
+        let height_constraint = known_dimensions.height.or(match available_space.height {
+            AvailableSpace::MinContent => None,
+            AvailableSpace::MaxContent => None,
+            AvailableSpace::Definite(height) => Some(height),
+        });
+
+        self.editor.set_width(width_constraint);
+        self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+
+        let layout = self.editor.try_layout().unwrap();
+        let width = layout.width();
+        let height = layout.height();
+
+        self.text_render = Some(text_render_data::from_editor(&layout));
+
+        let size = taffy::Size { width, height };
+
+        self.cache.insert(key, size);
+        self.current_key = Some(key);
+        size
+    }
+
+    pub fn cursor_reset(&mut self) {
+        self.start_time = Some(Instant::now());
+        // TODO: for real world use, this should be reading from the system settings
+        self.blink_period = Duration::from_millis(500);
+        self.cursor_visible = true;
+    }
+
+    pub fn disable_blink(&mut self) {
+        self.start_time = None;
+    }
+
+    pub fn next_blink_time(&self) -> Option<Instant> {
+        self.start_time.map(|start_time| {
+            let phase = Instant::now().duration_since(start_time);
+
+            start_time
+                + Duration::from_nanos(
+                ((phase.as_nanos() / self.blink_period.as_nanos() + 1)
+                    * self.blink_period.as_nanos()) as u64,
+            )
+        })
+    }
+
+    pub fn cursor_blink(&mut self) {
+        self.cursor_visible = self.start_time.is_some_and(|start_time| {
+            let elapsed = Instant::now().duration_since(start_time);
+            (elapsed.as_millis() / self.blink_period.as_millis()) % 2 == 0
+        });
+    }
+
+    fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a, ColorBrush> {
+        self.editor.driver(&mut text_context.font_context, &mut text_context.layout_context)
+    }
+
 }
