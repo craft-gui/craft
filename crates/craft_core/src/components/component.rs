@@ -159,9 +159,9 @@ where
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_ref::<T>() {
-            Self::view(casted_state, global_state_casted, props, children, id, &window_context)
+            Self::view(casted_state, global_state_casted, props, children, id, window_context)
         } else {
-            Self::view_with_no_global_state(casted_state, props, children, id, &window_context)
+            Self::view_with_no_global_state(casted_state, props, children, id, window_context)
         }
     }
 

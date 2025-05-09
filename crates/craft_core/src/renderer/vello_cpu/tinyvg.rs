@@ -11,7 +11,6 @@ use peniko::{kurbo, Fill};
 use tinyvg::color_table::ColorTable;
 use tinyvg::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg::common::Unit;
-use tokio::sync::RwLockReadGuard;
 use vello_cpu::RenderContext;
 
 fn stroke_path(scene: &mut RenderContext, bez_path: &BezPath, affine: &Affine, line_width: f64, brush: &Brush) {

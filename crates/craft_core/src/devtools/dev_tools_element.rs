@@ -178,7 +178,7 @@ impl Element for DevTools {
         &self,
         _message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
     ) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 

@@ -9,7 +9,6 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use taffy::Size;
 
 use crate::style::Style;
-use tokio::sync::RwLockReadGuard;
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
@@ -50,6 +49,7 @@ pub struct MetricsRaw {
 }
 
 impl MetricsRaw {
+    #[allow(dead_code)]
     pub(crate) fn from(style: &Style, scaling_factor: f64) -> Self {
         Self {
             font_size: (style.font_size() * scaling_factor as f32).to_bits(),
@@ -213,8 +213,8 @@ impl TextHashKey {
 
     pub(crate) fn known_dimensions(&self) -> Size<Option<f32>> {
         Size {
-            width: self.width_constraint.map(|w| f32::from_bits(w)),
-            height: self.height_constraint.map(|h| f32::from_bits(h)),
+            width: self.width_constraint.map(f32::from_bits),
+            height: self.height_constraint.map(f32::from_bits),
         }
     }
 }

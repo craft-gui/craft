@@ -4,7 +4,7 @@ use crate::components::{ImeAction, Props};
 use crate::components::UpdateResult;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
-use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TaffyTextInputContext};
+use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
 use crate::geometry::{Point, Rectangle, Size, TrblRectangle};
@@ -12,19 +12,17 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
 use crate::style::{Display, Style, Unit};
-use crate::{generate_component_methods_no_children, RendererBox};
+use crate::{generate_component_methods_no_children};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use parley::{Alignment, AlignmentOptions, FontContext, PlainEditor, PlainEditorDriver};
+use parley::{PlainEditor, PlainEditorDriver};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::time::Instant;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{Ime, Modifiers};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
-use crate::elements::text::TextState;
 use crate::layout::layout_context::TextHashKey;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
@@ -42,12 +40,14 @@ pub struct TextInput {
 
 #[derive(Clone, Default, Debug)]
 pub(crate) struct ImeState {
+    #[allow(dead_code)]
     pub is_ime_active: bool,
 }
 
 pub struct TextInputState {
     pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
+    #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
     pub(crate) editor: PlainEditor<ColorBrush>,
 
@@ -102,12 +102,12 @@ impl Element for TextInput {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -181,7 +181,7 @@ impl Element for TextInput {
         z_index: &mut u32,
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
-        pointer: Option<Point>,
+        _pointer: Option<Point>,
         text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
@@ -206,7 +206,7 @@ impl Element for TextInput {
             );
         }
 
-        let layout = state.editor.try_layout().as_ref().unwrap();
+        let _layout = state.editor.try_layout().as_ref().unwrap();
         let text_renderer = state.text_render.as_mut().unwrap();
         for line in text_renderer.lines.iter_mut() {
             line.selections.clear();
@@ -419,7 +419,7 @@ impl Element for TextInput {
                         state.cache.clear();
                     }
                     Key::Character(s) => {
-                        drv.insert_or_replace_selection(&s);
+                        drv.insert_or_replace_selection(s);
                         state.cache.clear();
                     }
                     _ => (),
@@ -498,14 +498,14 @@ impl Element for TextInput {
                 state.cache.clear();
             }
             CraftMessage::ImeEvent(Ime::Commit(text)) => {
-                state.driver(text_context).insert_or_replace_selection(&text);
+                state.driver(text_context).insert_or_replace_selection(text);
                 state.cache.clear();
             }
             CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
                 if text.is_empty() {
                     state.driver(text_context).clear_compose();
                 } else {
-                    state.driver(text_context).set_compose(&text, *cursor);
+                    state.driver(text_context).set_compose(text, *cursor);
                 }
                 state.cache.clear();
             }
@@ -522,7 +522,7 @@ impl Element for TextInput {
             ime_state: ImeState::default(),
             is_active: false,
             scroll_state: ScrollState::default(),
-            editor: editor,
+            editor,
             cache: Default::default(),
             current_key: None,
             last_requested_key: None,
@@ -547,10 +547,10 @@ impl Element for TextInput {
     fn update_state(
         &mut self,
         element_state: &mut ElementStateStore,
-        reload_fonts: bool,
-        scaling_factor: f64,
+        _reload_fonts: bool,
+        _scaling_factor: f64,
     ) {
-        let state: &mut TextInputState = element_state
+        let _state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.element_data.component_id)
             .unwrap()
@@ -596,7 +596,7 @@ impl TextInputState {
     pub fn measure(
         &mut self,
         known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<taffy::AvailableSpace>,
+        available_space: taffy::Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> taffy::Size<f32> {
         if self.editor.try_layout().is_none() {
@@ -620,7 +620,7 @@ impl TextInputState {
     pub fn layout(
         &mut self,
         known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<taffy::AvailableSpace>,
+        available_space: taffy::Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> taffy::Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
@@ -635,7 +635,7 @@ impl TextInputState {
             AvailableSpace::Definite(width) => Some(width),
         });
         // Some(self.text_style.font_size * self.text_style.line_height)
-        let height_constraint = known_dimensions.height.or(match available_space.height {
+        let _height_constraint = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
             AvailableSpace::Definite(height) => Some(height),
@@ -648,7 +648,7 @@ impl TextInputState {
         let width = layout.width();
         let height = layout.height();
 
-        self.text_render = Some(text_render_data::from_editor(&layout));
+        self.text_render = Some(text_render_data::from_editor(layout));
 
         let size = taffy::Size { width, height };
 
@@ -664,10 +664,12 @@ impl TextInputState {
         self.cursor_visible = true;
     }
 
+    #[allow(dead_code)]
     pub fn disable_blink(&mut self) {
         self.start_time = None;
     }
 
+    #[allow(dead_code)]
     pub fn next_blink_time(&self) -> Option<Instant> {
         self.start_time.map(|start_time| {
             let phase = Instant::now().duration_since(start_time);
@@ -680,6 +682,7 @@ impl TextInputState {
         })
     }
 
+    #[allow(dead_code)]
     pub fn cursor_blink(&mut self) {
         self.cursor_visible = self.start_time.is_some_and(|start_time| {
             let elapsed = Instant::now().duration_since(start_time);

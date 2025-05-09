@@ -132,7 +132,7 @@ impl Element for Overlay {
         &self,
         _message: &CraftMessage,
         _element_state: &mut ElementStateStore,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
     ) -> UpdateResult {
         UpdateResult::default()
     }

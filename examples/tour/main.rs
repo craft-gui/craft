@@ -50,7 +50,7 @@ impl Component for Tour {
         _window_context: &WindowContext
     ) -> ComponentSpecification {
         
-        let mut container = Container::new()
+        let container = Container::new()
             .overflow_y(Overflow::Scroll)
             .padding("20px", "20px", "20px", "20px")
             .display(Display::Flex)

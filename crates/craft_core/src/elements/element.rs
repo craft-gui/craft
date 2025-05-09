@@ -118,7 +118,7 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self,
         _message: &CraftMessage,
         _element_state: &mut ElementStateStore,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
     ) -> UpdateResult {
         UpdateResult::default()
     }

@@ -85,12 +85,12 @@ impl Element for Text {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -142,8 +142,8 @@ impl Element for Text {
         z_index: &mut u32,
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
-        pointer: Option<Point>,
-        text_context: &mut TextContext,
+        _pointer: Option<Point>,
+        _text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -180,7 +180,7 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, _message: &CraftMessage, _element_state: &mut ElementStateStore, text_context: &mut TextContext) -> UpdateResult {
+    fn on_event(&self, _message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext) -> UpdateResult {
         if !self.selectable {
             return UpdateResult::default();
         }
@@ -194,8 +194,7 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
 
-        let content_rect = self.element_data.computed_box.content_rectangle();
-        let content_position = content_rect.position();
+        let _content_rect = self.element_data.computed_box.content_rectangle();
 
         // Handle selection.
         if self.selectable {
@@ -255,7 +254,7 @@ impl Element for Text {
             text: std::mem::take(&mut self.text),
             text_hash: Some(hash),
             text_render: None,
-            last_text_style: self.style().clone(),
+            last_text_style: *self.style(),
             layout: None,
             cache: Default::default(),
             current_key: None,
@@ -277,7 +276,7 @@ impl Element for Text {
         }
     }
 
-    fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
+    fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, _scaling_factor: f64) {
         let text_hash = hash_string(self.text.as_ref().unwrap());
 
         let state: &mut TextState = element_state
@@ -293,15 +292,9 @@ impl Element for Text {
             let style = self.style();
             let last_style = &state.last_text_style;
 
-            if style.font_size() != last_style.font_size()
+            style.font_size() != last_style.font_size()
                 || style.font_weight() != last_style.font_weight()
-                || style.font_style() != last_style.font_style()
-                || style.font_family() != last_style.font_family()
-            {
-                true
-            } else {
-                false
-            }
+                || style.font_style() != last_style.font_style() || style.font_family() != last_style.font_family()
         };
 
         let text = std::mem::take(&mut self.text);
@@ -315,7 +308,7 @@ impl Element for Text {
             state.last_requested_key = None;
         }
 
-        state.last_text_style = self.style().clone();
+        state.last_text_style = *self.style();
     }
 }
 
@@ -339,7 +332,7 @@ impl TextState {
     pub fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
-        available_space: Size<taffy::AvailableSpace>,
+        available_space: Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> Size<f32> {
         if self.layout.is_none() {
@@ -364,7 +357,7 @@ impl TextState {
     pub fn layout(
         &mut self,
         known_dimensions: Size<Option<f32>>,
-        available_space: Size<taffy::AvailableSpace>,
+        available_space: Size<AvailableSpace>,
     ) -> Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
 
@@ -391,7 +384,7 @@ impl TextState {
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));
 
-        self.text_render = Some(text_render_data::from_editor(&layout));
+        self.text_render = Some(text_render_data::from_editor(layout));
 
         let size = Size { width, height };
 

@@ -42,7 +42,7 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -132,7 +132,7 @@ impl Element for Canvas {
                     renderer.fill_bez_path(path.clone(), brush.clone());
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, color) => {
-                    renderer.draw_tiny_vg(*rectangle, resource_identifier.clone(), color.clone());
+                    renderer.draw_tiny_vg(*rectangle, resource_identifier.clone(), *color);
                 }
                 RenderCommand::StartOverlay => {
                     renderer.start_overlay();

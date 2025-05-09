@@ -6,7 +6,7 @@ use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use peniko::kurbo::{Affine, Rect};
-use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
+use peniko::{kurbo, Color, Fill};
 use softbuffer::Buffer;
 use std::num::NonZeroU32;
 use std::ops::Deref;
@@ -14,12 +14,11 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
-use vello_common::paint::{Paint, PaintType};
+use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
 use peniko::kurbo::Shape;
 use crate::geometry::Rectangle;
-use crate::text::text_context::TextContext;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -115,7 +114,6 @@ impl Renderer for VelloCpuRenderer {
         &mut self,
         render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
-        text_context: &mut TextContext,
         window: Rectangle
     ) {
         let paint = PaintType::Solid(self.clear_color);

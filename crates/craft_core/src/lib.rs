@@ -55,8 +55,6 @@ thread_local! {
     pub static MESSAGE_QUEUE: RefCell<Vec<Message>> = RefCell::new(Vec::new());
 }
 
-type RendererBox = dyn Renderer;
-
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -483,7 +481,7 @@ async fn async_main(
                     match resource_event {
                         ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                             if resource_type == ResourceType::Font {
-                                if let Some(text_context) = app.text_context.as_mut() {
+                                if let Some(_text_context) = app.text_context.as_mut() {
                                     if resource.data().is_some() {
                                         // Todo: Load the font into the text context.
                                         resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
@@ -723,6 +721,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn dispatch_event(
     event: &Message,
     dispatch_type: EventDispatchType,
@@ -1088,6 +1087,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
     app.window = Some(window.clone());
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn update_reactive_tree(
     component_spec_to_generate_tree: ComponentSpecification,
     reactive_tree: &mut ReactiveTree,
@@ -1199,7 +1199,7 @@ async fn draw_reactive_tree(
             width: renderer.surface_width(),
             height: renderer.surface_height(),
         };
-        renderer.prepare_render_list(render_list, resource_manager, text_context, window);
+        renderer.prepare_render_list(render_list, resource_manager, window);
     }
 }
 

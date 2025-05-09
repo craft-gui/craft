@@ -1,10 +1,9 @@
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use crate::text::text_render_data::TextRender;
 use peniko::{kurbo, BrushRef, Gradient};
 use std::sync::Arc;
-use crate::text::text_context::TextContext;
-use crate::text::text_render_data::TextRender;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -197,7 +196,6 @@ pub trait Renderer {
         &mut self,
         render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
-        text_context: &mut TextContext,
         window: Rectangle,
     );
 

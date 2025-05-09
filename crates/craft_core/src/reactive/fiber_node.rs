@@ -97,8 +97,7 @@ impl<'a> FiberNode<'a> {
     }
 
     pub fn dfs_with_overlay_depth(&'a self) -> FiberNodeDFSIterator<'a> {
-        let mut stack = Vec::new();
-        stack.push((self.clone(), 0));
+        let stack = vec![(self.clone(), 0)];
         FiberNodeDFSIterator { stack }
     }
 }

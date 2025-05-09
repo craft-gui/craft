@@ -15,7 +15,6 @@ use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
 use crate::renderer::vello::tinyvg::draw_tiny_vg;
-use crate::text::text_context::TextContext;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -145,7 +144,7 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, window: Rectangle) {
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, window: Rectangle) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
@@ -157,7 +156,7 @@ impl Renderer for VelloRenderer<'_> {
                     // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(&resource_identifier);
+                    let resource = resource_manager.resources.get(resource_identifier);
                     if let Some(resource) = resource {
                         if let Resource::Image(resource) = resource.as_ref() {
                             let image = &resource.image;
@@ -180,7 +179,7 @@ impl Renderer for VelloRenderer<'_> {
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
                     let text_transform =
-                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
+                        Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 

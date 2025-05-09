@@ -8,15 +8,13 @@ use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRend
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use std::sync::Arc;
-use peniko::{BrushRef, Fill};
 use vello_common::glyph::Glyph;
-use vello_common::kurbo::{Affine, Rect};
+use vello_common::kurbo::Rect;
 use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::RenderSize;
 use vello_hybrid::{RenderTargetConfig, Renderer};
-use wgpu::RenderPassDescriptor;
 use wgpu::TextureFormat;
 use winit::window::Window;
 
@@ -25,7 +23,6 @@ use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::renderer::Brush;
 use vello_hybrid::Scene;
-use crate::text::text_context::TextContext;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -135,7 +132,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, window: Rectangle) {
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, window: Rectangle) {
         // Draw the bg color.
         vello_draw_rect(&mut self.scene, window, self.surface_clear_color);
         

@@ -1,9 +1,8 @@
+use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, Renderer};
 use crate::resource_manager::ResourceManager;
 use std::sync::Arc;
-use crate::geometry::Rectangle;
-use crate::text::text_context::TextContext;
 
 pub struct BlankRenderer;
 
@@ -24,8 +23,7 @@ impl Renderer for BlankRenderer {
         &mut self,
         _render_list: RenderList,
         _resource_manager: Arc<ResourceManager>,
-        text_context: &mut TextContext,
-        window: Rectangle,
+        _window: Rectangle,
     ) {}
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}

@@ -24,6 +24,7 @@ impl<T> TrblRectangle<T> where T: Copy {
         }
     }
     
+    #[allow(dead_code)]
     pub(crate) fn to_array(self) -> [T; 4] {
         [self.top, self.right, self.bottom, self.left]
     }

@@ -49,7 +49,7 @@ impl Element for Font {
     fn draw(
         &mut self,
         _renderer: &mut RenderList,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -76,7 +76,7 @@ impl Element for Font {
         _transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
     ) {
     }
 

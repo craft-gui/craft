@@ -28,6 +28,7 @@ impl TextContext {
         }
     }
 
+    #[allow(dead_code)]
     pub fn set_scale(&mut self, scale: f32) {
         self.scale = scale;
     }

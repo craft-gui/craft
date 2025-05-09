@@ -742,7 +742,8 @@ impl Style {
         }
     }
 
-    pub(crate) fn to_text_style<'a>(&'a self) -> TextStyle<'a, ColorBrush> {
+    #[allow(clippy::wrong_self_convention)]
+    pub(crate) fn to_text_style(&self) -> TextStyle<ColorBrush> {
         let font_size = self.font_size();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
         let font_style = match self.font_style() {

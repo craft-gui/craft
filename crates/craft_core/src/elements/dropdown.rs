@@ -259,7 +259,7 @@ impl Element for Dropdown {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();

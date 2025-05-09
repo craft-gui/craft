@@ -6,6 +6,7 @@ pub struct ImageAdapter {
 }
 
 impl ImageAdapter {
+    #[allow(dead_code)]
     pub fn new(image: Arc<ImageResource>) -> Self {
         Self { image }
     }

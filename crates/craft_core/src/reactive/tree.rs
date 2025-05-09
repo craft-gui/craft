@@ -88,7 +88,7 @@ pub(crate) fn diff_trees(
     global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
     reload_fonts: bool,
-    text_context: &mut TextContext,
+    _text_context: &mut TextContext,
     scaling_factor: f64,
     window_context: &mut WindowContext
 ) -> DiffTreesResult {

@@ -18,8 +18,11 @@ pub struct TextRenderLine {
 #[derive(Clone, Debug)]
 pub struct TextRenderItem {
     pub(crate) brush: ColorBrush,
+    #[allow(dead_code)]
     pub(crate) underline: Option<TextRenderItemLine>,
+    #[allow(dead_code)]
     pub(crate) strikethrough: Option<TextRenderItemLine>,
+    #[allow(dead_code)]
     pub(crate) glyph_transform: Option<Affine>,
     pub(crate) font_size: f32,
     pub(crate) glyphs: Vec<TextRenderGlyph>,
@@ -28,7 +31,9 @@ pub struct TextRenderItem {
 
 #[derive(Clone, Copy, Debug)]
 pub struct TextRenderItemLine {
+    #[allow(dead_code)]
     pub(crate) line: Line,
+    #[allow(dead_code)]
     pub(crate) width: f32,
 }
 
@@ -54,7 +59,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             // We draw underlines under the text, then the strikethrough on top, following:
             // https://drafts.csswg.org/css-text-decor/#painting-order
             let underline: Option<TextRenderItemLine> = if let Some(underline) = &style.underline {
-                let underline_brush = &style.brush;
+                let _underline_brush = &style.brush;
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match underline.offset {
                     Some(offset) => offset,
@@ -100,7 +105,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             });
 
             let strikethrough = if let Some(strikethrough) = &style.strikethrough {
-                let strikethrough_brush = &style.brush;
+                let _strikethrough_brush = &style.brush;
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match strikethrough.offset {
                     Some(offset) => offset,
