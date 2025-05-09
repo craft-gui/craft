@@ -17,6 +17,7 @@ use std::sync::Arc;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
+use std::mem;
 
 #[derive(Clone, Debug)]
 pub struct ElementBoxed {
@@ -387,10 +388,13 @@ impl From<ElementBoxed> for ComponentOrElement {
 }
 
 impl From<ElementBoxed> for ComponentSpecification {
-    fn from(element: ElementBoxed) -> Self {
-        let key = element.internal.element_data().key.clone();
-        let children = element.internal.element_data().child_specs.clone();
-        let props = element.internal.element_data().props.clone();
+    fn from(mut element: ElementBoxed) -> Self {
+        let data = element.internal.element_data_mut();
+
+        let key = mem::take(&mut data.key);
+        let children = mem::take(&mut data.child_specs);
+        let props = mem::take(&mut data.props);
+
         ComponentSpecification {
             component: ComponentOrElement::Element(element),
             key,
@@ -399,6 +403,7 @@ impl From<ElementBoxed> for ComponentSpecification {
         }
     }
 }
+
 
 impl<T> From<T> for ComponentSpecification
 where
