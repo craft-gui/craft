@@ -39,7 +39,6 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use crate::{GlobalState, WindowContext};
-    use cosmic_text::FontSystem;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {

@@ -1,2 +1,2 @@
-mod actions;
-pub(crate) mod cached_editor;
+pub(crate) mod text_context;
+pub(crate) mod text_render_data;

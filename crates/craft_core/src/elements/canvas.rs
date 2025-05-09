@@ -3,7 +3,7 @@ use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
@@ -11,11 +11,11 @@ use crate::renderer::RenderCommand;
 use crate::style::Style;
 use crate::Color;
 use crate::generate_component_methods_no_children;
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default, Debug)]
 pub struct Canvas {
@@ -42,7 +42,7 @@ impl Element for Canvas {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -107,14 +107,14 @@ impl Element for Canvas {
                     );
                     renderer.draw_image(translated_rectangle, resource_identifier.clone());
                 }
-                RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor,) => {
+                RenderCommand::DrawText(text_renderer, rectangle, text_scroll, show_cursor,) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
                         rectangle.width,
                         rectangle.height,
                     );
-                    renderer.draw_text(buffer_glyphs.clone(), translated_rectangle, *text_scroll, *show_cursor);
+                    renderer.draw_text(text_renderer.clone(), translated_rectangle, *text_scroll, *show_cursor);
                 }
                 RenderCommand::PushLayer(rectangle) => {
                     let translated_rectangle = Rectangle::new(
@@ -177,7 +177,7 @@ impl Element for Canvas {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -197,7 +197,7 @@ impl Element for Canvas {
                 transform,
                 element_state,
                 pointer,
-                font_system,
+                text_context,
             );
         }
     }

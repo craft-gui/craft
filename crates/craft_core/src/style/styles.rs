@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::renderer::color::Color;
 use crate::style::style_flags::StyleFlags;
 
@@ -6,7 +7,9 @@ pub use taffy::Overflow;
 pub use taffy::Position;
 
 use std::fmt;
+use parley::{FontSettings, FontStack, TextStyle};
 use crate::geometry::TrblRectangle;
+use crate::text::text_context::ColorBrush;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -736,6 +739,45 @@ impl Style {
             scrollbar_color,
             visible,
             dirty_flags,
+        }
+    }
+
+    pub(crate) fn to_text_style<'a>(&'a self) -> TextStyle<'a, ColorBrush> {
+        let font_size = self.font_size();
+        let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
+        let font_style = match self.font_style() {
+            FontStyle::Normal => parley::FontStyle::Normal,
+            FontStyle::Italic => parley::FontStyle::Italic,
+            // FIXME: Allow an angle when setting the obliqueness.
+            FontStyle::Oblique => parley::FontStyle::Oblique(None),
+        };
+        let brush = ColorBrush {
+            color: self.color(),
+        };
+
+        TextStyle {
+            font_stack: FontStack::Source(Cow::Borrowed("sans-serif")),
+            font_size,
+            font_width: Default::default(),
+            font_style,
+            font_weight,
+            font_variations: FontSettings::List(Cow::Borrowed(&[])),
+            font_features: FontSettings::List(Cow::Borrowed(&[])),
+            locale: Default::default(),
+            brush,
+            has_underline: Default::default(),
+            underline_offset: Default::default(),
+            underline_size: Default::default(),
+            underline_brush: Default::default(),
+            has_strikethrough: Default::default(),
+            strikethrough_offset: Default::default(),
+            strikethrough_size: Default::default(),
+            strikethrough_brush: Default::default(),
+            line_height: 1.2,
+            word_spacing: Default::default(),
+            letter_spacing: Default::default(),
+            word_break: Default::default(),
+            overflow_wrap: Default::default(),
         }
     }
 }

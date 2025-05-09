@@ -1,6 +1,7 @@
 use crate::events::{CraftMessage, EventDispatchType, Message};
 use crate::PinnedFutureAny;
 use std::any::Any;
+use crate::geometry::Rectangle;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum PointerCapture {
@@ -23,6 +24,15 @@ pub struct UpdateResult {
     /// Redirect future pointer events to this component. None by default.
     pub(crate) pointer_capture: PointerCapture,
     pub(crate) effects: Vec<(EventDispatchType, Message)>,
+    pub(crate) ime: ImeAction,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ImeAction {
+    #[default]
+    None,
+    Set(Rectangle),
+    Unset,
 }
 
 impl UpdateResult {
@@ -45,6 +55,11 @@ impl UpdateResult {
     pub fn async_no_result() -> Box<dyn Any + 'static> {
         Box::new(())
     }
+
+    pub(crate) fn ime_action(mut self, action: ImeAction) -> Self {
+        self.ime = action;
+        self
+    }
 }
 
 impl Default for UpdateResult {
@@ -56,6 +71,7 @@ impl Default for UpdateResult {
             result_message: None,
             pointer_capture: Default::default(),
             effects: Vec::new(),
+            ime: ImeAction::None,
         }
     }
 }

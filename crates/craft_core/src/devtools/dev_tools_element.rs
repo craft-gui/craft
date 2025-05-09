@@ -4,7 +4,7 @@ use crate::components::{ComponentId, UpdateResult};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::events::CraftMessage;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
@@ -12,11 +12,11 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::generate_component_methods;
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default, Debug)]
 pub struct DevTools {
@@ -63,7 +63,7 @@ impl Element for DevTools {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -71,7 +71,7 @@ impl Element for DevTools {
         window: Option<Arc<dyn Window>>,
     ) {
         self.draw_borders(renderer);
-        self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window);
+        self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
 
         // Find the element we are hovering over and draw an overlay.
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
@@ -144,7 +144,7 @@ impl Element for DevTools {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -165,7 +165,7 @@ impl Element for DevTools {
                 transform,
                 element_state,
                 pointer,
-                font_system,
+                text_context,
             );
         }
     }
@@ -178,14 +178,14 @@ impl Element for DevTools {
         &self,
         _message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) -> UpdateResult {
         let _dev_tools_state = self.get_state_mut(element_state);
 
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DevToolsState::default()),

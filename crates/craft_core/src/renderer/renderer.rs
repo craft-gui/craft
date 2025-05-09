@@ -1,10 +1,10 @@
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::text::BufferGlyphs;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use cosmic_text::FontSystem;
 use peniko::{kurbo, BrushRef, Gradient};
 use std::sync::Arc;
+use crate::text::text_context::TextContext;
+use crate::text::text_render_data::TextRender;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -12,7 +12,7 @@ pub enum RenderCommand {
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
-    DrawText(BufferGlyphs, Rectangle, Option<TextScroll>, bool),
+    DrawText(TextRender, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Brush),
@@ -112,12 +112,12 @@ impl RenderList {
 
     pub fn draw_text(
         &mut self,
-        buffer_glyphs: BufferGlyphs,
+        text_render: TextRender,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
-        self.commands.push(RenderCommand::DrawText(buffer_glyphs, rectangle, text_scroll, show_cursor));
+        self.commands.push(RenderCommand::DrawText(text_render, rectangle, text_scroll, show_cursor));
     }
     pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
@@ -197,7 +197,8 @@ pub trait Renderer {
         &mut self,
         render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
+        window: Rectangle,
     );
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);

@@ -1,14 +1,14 @@
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default, Debug)]
 pub struct Empty {
@@ -40,7 +40,7 @@ impl Element for Empty {
     fn draw(
         &mut self,
         _renderer: &mut RenderList,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -67,7 +67,7 @@ impl Element for Empty {
         _transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
     }
 

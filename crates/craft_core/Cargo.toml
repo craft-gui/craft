@@ -111,10 +111,10 @@ git = "https://github.com/rust-windowing/winit"
 rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
 features = ["android-native-activity"]
 
-[dependencies.cosmic-text]
-version = "0.14.2"
+[dependencies.parley]
+version = "0.4.0"
 default-features = false
-features = ["std", "fontconfig", "peniko"]
+features = ["std", "system"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.15"

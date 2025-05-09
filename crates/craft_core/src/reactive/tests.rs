@@ -7,7 +7,6 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::{GlobalState, ReactiveTree, WindowContext};
-use cosmic_text::FontSystem;
 use std::collections::HashSet;
 
 #[test]

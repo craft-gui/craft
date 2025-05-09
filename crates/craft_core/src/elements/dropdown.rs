@@ -4,7 +4,7 @@ use crate::components::UpdateResult;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::elements::Container;
 use crate::events::CraftMessage;
 use crate::geometry::{Point, TrblRectangle};
@@ -12,12 +12,12 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::renderer::RenderList;
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
 use crate::generate_component_methods;
-use cosmic_text::FontSystem;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 /// The index of the dropdown list in the layout tree.
 const DROPDOWN_LIST_INDEX: usize = 1;
@@ -81,7 +81,7 @@ impl Element for Dropdown {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
@@ -101,7 +101,7 @@ impl Element for Dropdown {
             if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
                 pseudo_dropdown_selection.internal.draw(
                     renderer,
-                    font_system,
+                    text_context,
                     taffy_tree,
                     pseudo_dropdown_selection.internal.element_data().taffy_node_id.unwrap(),
                     element_state,
@@ -117,14 +117,14 @@ impl Element for Dropdown {
             if is_open && !self.children().is_empty() {
                 self.pseudo_dropdown_list_element.draw(
                     renderer,
-                    font_system,
+                    text_context,
                     taffy_tree,
                     self.pseudo_dropdown_list_element.element_data.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
                 );
-                self.draw_children(renderer, font_system, taffy_tree, element_state, pointer, window.clone());
+                self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window.clone());
             }
             renderer.end_overlay();
         }
@@ -196,7 +196,7 @@ impl Element for Dropdown {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
@@ -215,7 +215,7 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
-                font_system,
+                text_context,
             );
         }
 
@@ -231,7 +231,7 @@ impl Element for Dropdown {
                 transform,
                 element_state,
                 pointer,
-                font_system,
+                text_context,
             );
 
             for child in self.element_data.children.iter_mut() {
@@ -249,7 +249,7 @@ impl Element for Dropdown {
                     transform,
                     element_state,
                     pointer,
-                    font_system,
+                    text_context,
                 );
             }
         }
@@ -259,7 +259,7 @@ impl Element for Dropdown {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) -> UpdateResult {
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
@@ -299,7 +299,7 @@ impl Element for Dropdown {
         UpdateResult::default()
     }
 
-    fn initialize_state(&self, _font_system: &mut FontSystem, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(DropdownState::default()),

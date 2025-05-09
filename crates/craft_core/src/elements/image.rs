@@ -2,7 +2,7 @@ use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::elements::layout_context::{ImageContext, LayoutContext};
+use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::elements::ElementStyles;
 use crate::geometry::Point;
 use crate::reactive::element_state_store::ElementStateStore;
@@ -10,11 +10,11 @@ use crate::renderer::renderer::RenderList;
 use crate::resource_manager::ResourceIdentifier;
 use crate::style::Style;
 use crate::generate_component_methods_no_children;
-use cosmic_text::FontSystem;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Debug)]
 pub struct Image {
@@ -51,7 +51,7 @@ impl Element for Image {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
@@ -100,7 +100,7 @@ impl Element for Image {
         transform: glam::Mat4,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _font_system: &mut FontSystem,
+        text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);

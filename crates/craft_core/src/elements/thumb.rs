@@ -1,12 +1,12 @@
-use cosmic_text::FontSystem;
 use taffy::{NodeId, Position, TaffyTree};
 use crate::elements::Container;
 use crate::elements::element::Element;
-use crate::elements::layout_context::LayoutContext;
+use crate::layout::layout_context::LayoutContext;
 use crate::geometry::Point;
 use crate::palette;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Style, Unit};
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Thumb {
@@ -74,7 +74,7 @@ impl Thumb {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        font_system: &mut FontSystem
+        text_context: &mut TextContext,
     ) {
         self.pseudo_thumb.finalize_layout(
             taffy_tree,
@@ -84,7 +84,7 @@ impl Thumb {
             transform,
             element_state,
             pointer,
-            font_system,
+            text_context,
         );
     }
 }
