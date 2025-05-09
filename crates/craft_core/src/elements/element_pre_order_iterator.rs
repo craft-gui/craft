@@ -39,10 +39,11 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use crate::{GlobalState, WindowContext};
+    use crate::text::text_context::TextContext;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
-        let mut font_system = FontSystem::new();
+        let mut text_context = TextContext::new();
         reset_unique_element_id();
 
         let initial_view = Container::new().id("1").component().push(Text::new("Foo").id("2").component()).push(
@@ -68,7 +69,7 @@ mod tests {
             &mut global_state,
             &mut element_state,
             false,
-            &mut font_system,
+            &mut text_context,
             1.0,
             &mut window_context,
         );
