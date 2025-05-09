@@ -5,7 +5,6 @@ use crate::renderer::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
-use cosmic_text::FontSystem;
 use peniko::kurbo::{Affine, Rect};
 use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
 use softbuffer::Buffer;
@@ -15,10 +14,12 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
-use vello_common::paint::PaintType;
-use vello_cpu::{Pixmap, RenderContext};
+use vello_common::paint::{Paint, PaintType};
+use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
 use peniko::kurbo::Shape;
+use crate::geometry::Rectangle;
+use crate::text::text_context::TextContext;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -48,6 +49,11 @@ impl DerefMut for Surface {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner_surface
     }
+}
+
+fn vello_draw_rect(scene: &mut RenderContext, rectangle: Rectangle, fill_color: Color) {
+    scene.set_paint(PaintType::from(fill_color));
+    scene.fill_rect(&rectangle.to_kurbo());
 }
 
 pub(crate) struct VelloCpuRenderer {
@@ -109,13 +115,14 @@ impl Renderer for VelloCpuRenderer {
         &mut self,
         render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
-        font_system: &mut FontSystem,
+        text_context: &mut TextContext,
+        window: Rectangle
     ) {
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
-        self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width as f64, self.pixmap.height as f64));
+        self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width() as f64, self.pixmap.height() as f64));
 
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
@@ -148,47 +155,92 @@ impl Renderer for VelloCpuRenderer {
                         }
                     }
                 }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
-                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
+                    let text_transform =
+                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-
-                    // Draw the Glyphs
-                    for buffer_line in &buffer_glyphs.buffer_lines {
-                        for glyph_highlight in &buffer_line.glyph_highlights {
-                            self.render_context.set_paint(PaintType::Solid(
-                                buffer_glyphs.glyph_highlight_color
-                            ));
-                            self.render_context.set_transform(text_transform);
-                            self.render_context.fill_rect(glyph_highlight);
+                    let mut skip_remaining_lines = false;
+                    let mut skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
                         }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the selections vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                    break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        if *show_cursor {
-                            if let Some(cursor) = &buffer_line.cursor {
-                                self.render_context
-                                    .set_paint(PaintType::Solid(buffer_glyphs.cursor_color));
-                                self.render_context.set_transform(text_transform);
-                                self.render_context.fill_rect(cursor);
+                            for selection in &line.selections {
+                                let selection_rect = Rectangle {
+                                    x: selection.x + rect.x,
+                                    y: -scroll + selection.y + rect.y,
+                                    width: selection.width,
+                                    height: selection.height,
+                                };
+                                vello_draw_rect(&mut self.render_context, selection_rect, Color::from_rgb8(0, 120, 215));
                             }
                         }
+                    }
+                    skip_remaining_lines = false;
+                    skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
+                        }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the glyphs vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                    break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        for glyph_run in &buffer_line.glyph_runs {
-                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                            let glyph_color = glyph_run.glyph_color;
-                            let glyphs = glyph_run.glyphs.clone();
-                            self.render_context.set_paint(PaintType::Solid(glyph_color));
+                            self.render_context.set_paint(PaintType::from(item.brush.color));
                             self.render_context.reset_transform();
-                            let glyph_run_builder = self
-                                .render_context
-                                .glyph_run(&font)
-                                .font_size(buffer_glyphs.font_size)
+
+                            let glyph_run_builder = self.render_context
+                                .glyph_run(&item.font)
+                                .font_size(item.font_size)
                                 .glyph_transform(text_transform);
-                            glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {
-                                id: glyph.glyph_id as u32,
+                            glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
+                                id: glyph.id as u32,
                                 x: glyph.x,
-                                y: glyph.y + glyph_run.line_y,
-                            }))
+                                y: glyph.y,
+                            }));
+                        }
+                    }
+                    if *show_cursor {
+                        if let Some(cursor) = &text_render.cursor {
+                            let cursor_rect = Rectangle {
+                                x: cursor.x + rect.x,
+                                y: -scroll + cursor.y + rect.y,
+                                width: cursor.width,
+                                height: cursor.height,
+                            };
+                            vello_draw_rect(&mut self.render_context, cursor_rect, Color::from_rgb8(0, 0, 0));
                         }
                     }
                 }
@@ -212,8 +264,8 @@ impl Renderer for VelloCpuRenderer {
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
-        self.render_context.render_to_pixmap(&mut self.pixmap);
-        let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width as usize, self.pixmap.height as usize);
+        self.render_context.render_to_pixmap(&mut self.pixmap, RenderMode::OptimizeQuality);
+        let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
         self.render_context.reset();
     }
@@ -223,7 +275,7 @@ impl VelloCpuRenderer {
     fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<Arc<dyn Window>, Arc<dyn Window>> {
         let mut buffer = self.surface.buffer_mut().unwrap();
 
-        let pixmap = &self.pixmap.buf;
+        let pixmap = &self.pixmap.data_as_u8_slice();
 
         for offset in 0..(width * height) {
             let red = pixmap[4 * offset];
