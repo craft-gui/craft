@@ -183,7 +183,7 @@ impl Renderer for VelloRenderer<'_> {
                         kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-                    
+
                     let mut skip_remaining_lines = false;
                     let mut skip_line = false;
                     for line in &text_render.lines {
@@ -196,11 +196,11 @@ impl Renderer for VelloRenderer<'_> {
                         }
                         for item in &line.items {
                             if let Some(first_glyph) = item.glyphs.first() {
-                                // Cull the glyphs vertically that are outside the window
+                                // Cull the selections vertically that are outside the window
                                 let gy = first_glyph.y + rect.y - scroll;
                                 if gy < window.y {
                                     skip_line = true;
-                                  break;  
+                                    break;
                                 } else if gy > (window.y + window.height) {
                                     skip_remaining_lines = true;
                                     break;
@@ -215,6 +215,30 @@ impl Renderer for VelloRenderer<'_> {
                                     height: selection.height,
                                 };
                                 vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
+                            }
+                        }
+                    }
+                    skip_remaining_lines = false;
+                    skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
+                        }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the glyphs vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                  break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
                             }
 
                             scene
@@ -231,6 +255,17 @@ impl Renderer for VelloRenderer<'_> {
                                         y: glyph.y,
                                     }),
                                 );
+                        }
+                    }
+                    if *show_cursor {
+                        if let Some(cursor) = &text_render.cursor {
+                            let cursor_rect = Rectangle {
+                                x: cursor.x + rect.x,
+                                y: -scroll + cursor.y + rect.y,
+                                width: cursor.width,
+                                height: cursor.height,
+                            };
+                            vello_draw_rect(scene, cursor_rect, Color::from_rgb8(0, 0, 0));
                         }
                     }
                 }

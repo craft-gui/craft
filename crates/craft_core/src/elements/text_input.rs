@@ -141,7 +141,7 @@ impl Element for TextInput {
             element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
         {
             if let Some(text_render) = state.text_render.as_ref() {
-                renderer.draw_text(text_render.clone(), content_rectangle, text_scroll, true);
+                renderer.draw_text(text_render.clone(), content_rectangle, text_scroll, state.cursor_visible);
             }
         }
 
@@ -214,6 +214,7 @@ impl Element for TextInput {
         state.editor.selection_geometry_with( |rect, line| {
             text_renderer.lines[line].selections.push(rect.into());
         });
+        text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
 
         self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
@@ -515,11 +516,13 @@ impl Element for TextInput {
     }
 
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
+        let mut editor = PlainEditor::new(self.style().font_size());
+        editor.set_scale(scaling_factor as f32);
         let text_input_state = TextInputState {
             ime_state: ImeState::default(),
             is_active: false,
             scroll_state: ScrollState::default(),
-            editor: PlainEditor::new(self.style().font_size()),
+            editor: editor,
             cache: Default::default(),
             current_key: None,
             last_requested_key: None,
