@@ -24,7 +24,6 @@ craft_logging = { path = "../craft_logger" }
 #accesskit_winit = { version = "0.23.1", features = ["tokio"] }
 
 cfg-if = "1.0.0"
-unicode-segmentation = "1.12.0"
 
 [dependencies.bitflags]
 version = "2.9.0"
@@ -71,24 +70,24 @@ features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello/"
-rev = "576819e6589aa765a3801524fe3f4ca2f6dd3b90"
+rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "576819e6589aa765a3801524fe3f4ca2f6dd3b90"
+rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello/"
-rev = "576819e6589aa765a3801524fe3f4ca2f6dd3b90"
+rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "576819e6589aa765a3801524fe3f4ca2f6dd3b90"
+rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
 optional = true
 
 [dependencies.softbuffer]
@@ -148,14 +147,14 @@ features = [
 [target.'cfg(target_arch = "wasm32")'.dependencies.tokio]
 version = "1.44.2"
 default-features = false
-features = ["sync"]
+features = ["sync", "time"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
 version = "1.44.2"
 default-features = false
-features = ["rt-multi-thread", "sync"]
+features = ["rt-multi-thread", "sync", "time"]
 
 [target.'cfg(target_os = "android")'.dependencies.reqwest]
 version = "0.12.15"

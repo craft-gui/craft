@@ -7,8 +7,8 @@ use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
-use cosmic_text::FontSystem;
 use std::sync::Arc;
+use peniko::{BrushRef, Fill};
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::{Affine, Rect};
 use vello_common::paint::Paint;
@@ -25,6 +25,7 @@ use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::renderer::Brush;
 use vello_hybrid::Scene;
+use crate::text::text_context::TextContext;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -134,10 +135,13 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, font_system: &mut FontSystem) {
+    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, window: Rectangle) {
+        // Draw the bg color.
+        vello_draw_rect(&mut self.scene, window, self.surface_clear_color);
+        
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
-            
+
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
@@ -168,42 +172,92 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                         }
                     }
                 }
-                RenderCommand::DrawText(buffer_glyphs, rect, text_scroll, show_cursor) => {
-                    let text_transform = Affine::translate((rect.x as f64, rect.y as f64));
+                RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
+                    let text_transform =
+                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    // Draw the Glyphs
-                    for buffer_line in &buffer_glyphs.buffer_lines {
-                        for glyph_highlight in &buffer_line.glyph_highlights {
-                            scene.set_paint(Paint::from(buffer_glyphs.glyph_highlight_color));
-                            scene.set_transform(text_transform);
-                            scene.fill_rect(glyph_highlight);
+                    let mut skip_remaining_lines = false;
+                    let mut skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
                         }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the selections vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                    break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        if *show_cursor {
-                            if let Some(cursor) = &buffer_line.cursor {
-                                scene.set_paint(Paint::from(buffer_glyphs.cursor_color));
-                                scene.set_transform(text_transform);
-                                scene.fill_rect(cursor);
+                            for selection in &line.selections {
+                                let selection_rect = Rectangle {
+                                    x: selection.x + rect.x,
+                                    y: -scroll + selection.y + rect.y,
+                                    width: selection.width,
+                                    height: selection.height,
+                                };
+                                vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
                             }
                         }
+                    }
+                    skip_remaining_lines = false;
+                    skip_line = false;
+                    for line in &text_render.lines {
+                        if skip_remaining_lines {
+                            break;
+                        }
+                        if skip_line {
+                            skip_line = false;
+                            continue;
+                        }
+                        for item in &line.items {
+                            if let Some(first_glyph) = item.glyphs.first() {
+                                // Cull the glyphs vertically that are outside the window
+                                let gy = first_glyph.y + rect.y - scroll;
+                                if gy < window.y {
+                                    skip_line = true;
+                                    break;
+                                } else if gy > (window.y + window.height) {
+                                    skip_remaining_lines = true;
+                                    break;
+                                }
+                            }
 
-                        for glyph_run in &buffer_line.glyph_runs {
-                            let font = font_system.get_font(glyph_run.font).unwrap().as_peniko();
-                            let glyph_color = glyph_run.glyph_color;
-                            let glyphs = glyph_run.glyphs.clone();
-                            scene.set_paint(Paint::from(glyph_color));
+                            scene.set_paint(Paint::from(item.brush.color));
                             scene.reset_transform();
+
                             let glyph_run_builder = scene
-                                .glyph_run(&font)
-                                .font_size(buffer_glyphs.font_size)
+                                .glyph_run(&item.font)
+                                .font_size(item.font_size)
                                 .glyph_transform(text_transform);
-                            glyph_run_builder.fill_glyphs(glyphs.iter().map(|glyph| Glyph {
-                                id: glyph.glyph_id as u32,
+                            glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
+                                id: glyph.id as u32,
                                 x: glyph.x,
-                                y: glyph.y + glyph_run.line_y,
-                            }))
+                                y: glyph.y,
+                            }));
+                        }
+                    }
+                    if *show_cursor {
+                        if let Some(cursor) = &text_render.cursor {
+                            let cursor_rect = Rectangle {
+                                x: cursor.x + rect.x,
+                                y: -scroll + cursor.y + rect.y,
+                                width: cursor.width,
+                                height: cursor.height,
+                            };
+                            vello_draw_rect(scene, cursor_rect, Color::from_rgb8(0, 0, 0));
                         }
                     }
                 }
@@ -255,44 +309,23 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
             height: surface.config.height,
         };
 
-        self.renderers[surface.dev_id].as_mut().unwrap().prepare(
-            &device_handle.device,
-            &device_handle.queue,
-            &self.scene,
-            &render_size,
-        );
-
         let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Vello Render to Surface pass"),
         });
-
         let texture_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-        {
-            let clear_color = self.surface_clear_color.to_rgba8();
-            let mut pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                label: Some("Render to Texture Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &texture_view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: clear_color.r as f64 / 255.0,
-                            g: clear_color.g as f64 / 255.0,
-                            b: clear_color.b as f64 / 255.0,
-                            a: clear_color.a as f64 / 255.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
-
-            // Render to the surface's texture
-            self.renderers[surface.dev_id].as_mut().unwrap().render(&self.scene, &mut pass);
-        }
+        
+        self.renderers[surface.dev_id]
+            .as_mut()
+            .unwrap()
+            .render(
+                &self.scene,
+                &device_handle.device,
+                &device_handle.queue,
+                &mut encoder,
+                &render_size,
+                &texture_view,
+            )
+            .unwrap();
 
         device_handle.queue.submit([encoder.finish()]);
 
