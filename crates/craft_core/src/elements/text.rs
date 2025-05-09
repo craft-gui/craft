@@ -181,6 +181,10 @@ impl Element for Text {
     }
 
     fn on_event(&self, _message: &CraftMessage, _element_state: &mut ElementStateStore, text_context: &mut TextContext) -> UpdateResult {
+        if !self.selectable {
+            return UpdateResult::default();
+        }
+        
         let state: &mut TextState = _element_state
             .storage
             .get_mut(&self.element_data.component_id)

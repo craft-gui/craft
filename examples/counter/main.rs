@@ -82,7 +82,7 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
         .align_items(AlignItems::Center)
         .hovered()
         .background(hover_color)
-        .push(Text::new(label).id(id).font_size(24.0).color(Color::WHITE).width("100%").height("100%"))
+        .push(Text::new(label).id(id).font_size(24.0).color(Color::WHITE).width("100%").height("100%").disable_selection())
         .id(id)
         .component()
 }
