@@ -13,3 +13,8 @@ console_error_panic_hook = "0.1.7"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 open = "5"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "util"
+path = "src/lib.rs"

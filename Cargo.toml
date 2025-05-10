@@ -40,9 +40,14 @@ members = [
     "crates/craft_core",
     "crates/craft_dylib",
     "crates/craft_logger",
-    "website",
     "examples/util",
-    "examples/*",
+    "examples/request",
+    "examples/accordion",
+    "examples/counter",
+    "examples/text",
+    "examples/tour",
+    "examples/events",
+    "website",
 ]
 
 [profile.release]
