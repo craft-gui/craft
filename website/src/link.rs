@@ -1,8 +1,7 @@
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use craft::elements::{ElementStyles, Text};
+use craft::elements::Text;
 use craft::events::Event;
-use craft::style::Style;
 use craft::WindowContext;
 
 #[derive(Default)]

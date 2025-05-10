@@ -2,8 +2,8 @@ use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Event;
-use craft::{palette, WindowContext};
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
+use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct About {}

@@ -1,18 +1,16 @@
+use crate::link::{Link, LinkProps};
 use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text};
+use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight};
 use craft::{palette, Color};
-use craft::style::Wrap::WrapReverse;
-use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Style, Unit, Weight};
-use crate::link::{Link, LinkProps};
 
 fn hero_intro() -> ComponentSpecification {
-    let mut craft_text = "📜 Craft";
+    #[cfg(not(target_arch = "wasm32"))]
+    let craft_text = "📜 Craft";
 
     // FIXME: Emojis aren't showing on the web.
     #[cfg(target_arch = "wasm32")]
-    {
-        craft_text = "Craft";
-    }
+    let craft_text = "Craft";
 
     Container::new()
         .display(Display::Flex)
@@ -56,17 +54,6 @@ fn hero_intro() -> ComponentSpecification {
 }
 
 fn hero_features() -> ComponentSpecification {
-    fn hero_feature_item(title: &str, text: &str) -> ComponentSpecification {
-        Container::new()
-            .display(Display::Flex)
-            .flex_direction(FlexDirection::Column)
-            .align_items(AlignItems::FlexStart)
-            .width("80%")
-            .gap("20px")
-            .push(Text::new(title).font_size(24.0).font_weight(Weight::SEMIBOLD))
-            .push(Text::new(text).font_size(18.0))
-            .component()
-    }
 
     Container::new()
         .display(Display::Flex)
