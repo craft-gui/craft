@@ -47,6 +47,7 @@ members = [
     "examples/text",
     "examples/tour",
     "examples/events",
+    "examples/overlay",
     "website",
 ]
 
