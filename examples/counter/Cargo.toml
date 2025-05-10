@@ -14,5 +14,5 @@ name = "counter"
 path = "main.rs"
 
 [dependencies]
-craft = { path = "../../crates/craft" }
+craft = { path = "../../crates/craft", default-features = false, features = ["vello_renderer", "devtools"] }
 util = { path = "../util" }
