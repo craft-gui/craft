@@ -8,5 +8,5 @@ name = "events"
 path = "main.rs"
 
 [dependencies]
-craft = { path = "../../" }
+craft = { path = "../../crates/craft" }
 util = { path = "../util" }

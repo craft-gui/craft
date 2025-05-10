@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 
-craft = { path = "..", default-features = false, features = ["vello_renderer", "devtools", "http_client"] }
+craft = { path = "../crates/craft", default-features = false, features = ["vello_renderer", "devtools", "http_client"] }
 
 tracing-subscriber = "0.3.19"
 tracing = "0.1.41"

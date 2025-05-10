@@ -2,6 +2,7 @@
 resolver = "2"
 
 members = [
+    "crates/craft",
     "crates/craft_core",
     "crates/craft_dylib",
     "crates/craft_logger",
@@ -13,30 +14,11 @@ members = [
     "examples/tour",
     "examples/events",
     "examples/overlay",
-    "website",
+    "website", "crates/craft",
 ]
 
-[package]
-name = "craft"
+[workspace.package]
 edition = "2024"
-publish = true
-version = "0.1.0"
-
-[features]
-# Force dynamic linking, which improves iterative compile times
-dynamic_linking = ["dep:craft_dylib", "craft_core/dynamic_linking"]
-devtools = ["craft_core/dev_tools"]
-http_client = ["craft_core/http_client"]
-vello_renderer = ["craft_core/vello_renderer"]
-vello_cpu_renderer = ["craft_core/vello_cpu_renderer"]
-vello_hybrid_renderer = ["craft_core/vello_hybrid_renderer"]
-
-default = ["craft_core/vello_renderer", "craft_core/http_client", "craft_core/dev_tools"]
-
-
-[dependencies]
-craft_dylib = { path = "crates/craft_dylib", default-features = false, optional = true, version = "0.1.0" }
-craft_core = { path = "crates/craft_core", default-features = false, version = "0.1.0" }
 
 [profile.release]
 opt-level = 3
