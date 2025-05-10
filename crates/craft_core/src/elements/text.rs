@@ -39,8 +39,9 @@ pub struct TextState {
     last_text_style: Style,
     layout: Option<parley::Layout<ColorBrush>>,
     cache: HashMap<TextHashKey, Size<f32>>,
-    current_key: Option<TextHashKey>,
-    last_requested_key: Option<TextHashKey>,
+    current_layout_key: Option<TextHashKey>,
+    last_requested_measure_key: Option<TextHashKey>,
+    current_render_key: Option<TextHashKey>,
 
     pub(crate) last_click_time: Option<Instant>,
     pub(crate) click_count: u32,
@@ -159,12 +160,14 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
 
-        if state.current_key != state.last_requested_key {
+        if state.current_layout_key != state.last_requested_measure_key {
             state.layout(
-                state.last_requested_key.unwrap().known_dimensions(),
-                state.last_requested_key.unwrap().available_space(),
+                state.last_requested_measure_key.unwrap().known_dimensions(),
+                state.last_requested_measure_key.unwrap().available_space(),
             );
         }
+
+        state.try_update_text_render(_text_context);
 
         let layout = state.layout.as_ref().unwrap();
         let text_renderer = state.text_render.as_mut().unwrap();
@@ -257,8 +260,9 @@ impl Element for Text {
             last_text_style: *self.style(),
             layout: None,
             cache: Default::default(),
-            current_key: None,
-            last_requested_key: None,
+            current_layout_key: None,
+            last_requested_measure_key: None,
+            current_render_key: None,
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -304,8 +308,9 @@ impl Element for Text {
             state.text = text;
             state.layout = None;
             state.cache.clear();
-            state.current_key = None;
-            state.last_requested_key = None;
+            state.current_layout_key = None;
+            state.last_requested_measure_key = None;
+            state.current_render_key = None;
         }
 
         state.last_text_style = *self.style();
@@ -345,7 +350,7 @@ impl TextState {
 
         let key = TextHashKey::new(known_dimensions, available_space);
 
-        self.last_requested_key = Some(key);
+        self.last_requested_measure_key = Some(key);
 
         if let Some(value) = self.cache.get(&key) {
             return *value;
@@ -360,10 +365,6 @@ impl TextState {
         available_space: Size<AvailableSpace>,
     ) -> Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
-
-        if let Some(value) = self.cache.get(&key) {
-            return *value;
-        }
 
         let layout = self.layout.as_mut().unwrap();
 
@@ -384,13 +385,21 @@ impl TextState {
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));
 
-        self.text_render = Some(text_render_data::from_editor(layout));
-
         let size = Size { width, height };
 
         self.cache.insert(key, size);
-        self.current_key = Some(key);
+        self.current_layout_key = Some(key);
         size
+    }
+
+    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext) {
+        if self.current_render_key == self.current_layout_key {
+            return;
+        }
+        
+        let layout = self.layout.as_ref().unwrap();
+        self.text_render = Some(text_render_data::from_editor(layout));
+        self.current_render_key = self.current_layout_key;
     }
 
     pub fn cursor_reset(&mut self) {

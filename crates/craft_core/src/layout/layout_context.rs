@@ -168,15 +168,6 @@ impl TaffyTextInputContext {
 
 impl TextHashKey {
     pub(crate) fn new(known_dimensions: Size<Option<f32>>, available_space: Size<taffy::AvailableSpace>) -> Self {
-        // Set width constraint
-        let width_constraint = known_dimensions.width.or(match available_space.width {
-            taffy::AvailableSpace::MinContent => Some(0.0),
-            taffy::AvailableSpace::MaxContent => None,
-            taffy::AvailableSpace::Definite(width) => Some(width),
-        });
-
-        let height_constraint = known_dimensions.height;
-
         let available_space_width_u32: AvailableSpaceKey = match available_space.width {
             taffy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
             taffy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
@@ -189,8 +180,8 @@ impl TextHashKey {
         };
 
         Self {
-            width_constraint: width_constraint.map(|w| w.to_bits()),
-            height_constraint: height_constraint.map(|h| h.to_bits()),
+            width_constraint: known_dimensions.width.map(|w| w.to_bits()),
+            height_constraint: known_dimensions.height.map(|h| h.to_bits()),
             available_space_width: available_space_width_u32,
             available_space_height: available_space_height_u32,
         }
