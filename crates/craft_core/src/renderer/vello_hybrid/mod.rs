@@ -8,6 +8,7 @@ use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRend
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use std::sync::Arc;
+use peniko::kurbo::Shape;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Rect;
 use vello_common::paint::Paint;
@@ -262,16 +263,12 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     draw_tiny_vg(scene, *rectangle, &resource_manager, resource_identifier.clone(), override_color);
                 }
                 RenderCommand::PushLayer(rect) => {
-                    let _clip = Rect::new(
-                        rect.x as f64,
-                        rect.y as f64,
-                        (rect.x + rect.width) as f64,
-                        (rect.y + rect.height) as f64,
-                    );
-                    //scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                    let clip_path = Some(peniko::kurbo::Rect::from_origin_size(peniko::kurbo::Point::new(rect.x as f64, rect.y as f64), peniko::kurbo::Size::new(rect.width as f64, rect.height as f64)).into_path(0.1));
+                    scene.push_layer(clip_path.as_ref(), None, None, None);
+
                 }
                 RenderCommand::PopLayer => {
-                    //scene.pop_layer();
+                    scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, brush) => {
                     scene.set_paint(brush_to_paint(&brush));

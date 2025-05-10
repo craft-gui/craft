@@ -124,9 +124,9 @@ impl Element for TextInput {
 
         let is_scrollable = self.element_data.is_scrollable();
 
-        if is_scrollable {
-            self.maybe_start_layer(renderer);
-        }
+        let element_data = self.element_data();
+        let padding_rectangle = element_data.computed_box_transformed.padding_rectangle();
+        renderer.push_layer(padding_rectangle);
 
         let scroll_y = if let Some(state) =
             element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
@@ -150,9 +150,7 @@ impl Element for TextInput {
             }
         }
 
-        if is_scrollable {
-            self.maybe_end_layer(renderer);
-        }
+        renderer.pop_layer();
 
         self.draw_scrollbar(renderer);
     }
