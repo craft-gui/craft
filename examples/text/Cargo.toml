@@ -8,5 +8,5 @@ name = "text"
 path = "main.rs"
 
 [dependencies]
-craft = { path = "../../crates/craft", default-features = false, features = ["vello_renderer", "devtools"] }
+craft = { path = "../../crates/craft", default-features = false, features = ["vello_renderer", "devtools", "http_client"] }
 util = { path = "../util" }

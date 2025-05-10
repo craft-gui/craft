@@ -23,7 +23,7 @@ impl Component<WebsiteGlobalState> for Link {
         _id: ComponentId,
         _window_context: &WindowContext
     ) -> ComponentSpecification {
-        children.get(0).unwrap_or(&Text::new("Invalid Link").component()).clone()
+        children.first().unwrap_or(&Text::new("Invalid Link").component()).clone()
     }
 
     fn update(

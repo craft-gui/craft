@@ -97,23 +97,6 @@ impl Component for OverlayExample {
     }
 }
 
-fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> ComponentSpecification {
-    Container::new()
-        .border_width("1px", "2px", "3px", "4px")
-        .border_color(Color::from_rgb8(0, 0, 0))
-        .border_radius(10.0, 10.0, 10.0, 10.0)
-        .padding("15px", "30px", "15px", "30px")
-        .background(color)
-        .display(Display::Flex)
-        .justify_content(JustifyContent::Center)
-        .align_items(AlignItems::Center)
-        .hovered()
-        .background(hover_color)
-        .push(Text::new(label).id(id).font_size(24.0).color(Color::WHITE).width("100%").height("100%"))
-        .id(id)
-        .component()
-}
-
 #[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn main() {

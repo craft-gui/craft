@@ -283,7 +283,7 @@ impl Element for TextInput {
                         (
                             mods.state().shift_key(),
                             if cfg!(target_os = "macos") {
-                                mods.state().super_key()
+                                mods.state().meta_key()
                             } else {
                                 mods.state().control_key()
                             },
@@ -415,10 +415,6 @@ impl Element for TextInput {
                     }
                     Key::Named(NamedKey::Enter) => {
                         drv.insert_or_replace_selection("\n");
-                        state.cache.clear();
-                    }
-                    Key::Named(NamedKey::Space) => {
-                        drv.insert_or_replace_selection(" ");
                         state.cache.clear();
                     }
                     Key::Character(s) => {

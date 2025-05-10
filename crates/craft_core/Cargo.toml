@@ -41,7 +41,7 @@ rev = "380e88956bd5f0a7fdca4c39d8c6928fa9c02511"
 default-features = false
 
 [dependencies.glam]
-version = "0.30.2"
+version = "0.30.3"
 default-features = false
 features = ["std"]
 
@@ -64,30 +64,30 @@ default-features = false
 features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"]
 
 [dependencies.chrono]
-version = "0.4.40"
+version = "0.4.41"
 default-features = false
 features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello/"
-rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
+rev = "e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello/"
-rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
+rev = "e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello/"
-rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
+rev = "e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello/"
-rev = "eb3a42ca563c0af74c05f17c1bf75b68e5895962"
+rev = "e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
 optional = true
 
 [dependencies.softbuffer]
@@ -102,12 +102,12 @@ optional = true
 
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]
 git = "https://github.com/rust-windowing/winit"
-rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
+rev = "519947463fe2c2e213c5cc8f217554d07301ef23"
 features = []
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
 git = "https://github.com/rust-windowing/winit"
-rev = "5cada36ae8eade018bbad035b538bc01347ff7a8"
+rev = "519947463fe2c2e213c5cc8f217554d07301ef23"
 features = ["android-native-activity"]
 
 [dependencies.parley]
@@ -145,14 +145,14 @@ features = [
 ]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.tokio]
-version = "1.44.2"
+version = "1.45.0"
 default-features = false
 features = ["sync", "time"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
-version = "1.44.2"
+version = "1.45.0"
 default-features = false
 features = ["rt-multi-thread", "sync", "time"]
 

@@ -10,7 +10,6 @@ use crate::resource_manager::ResourceManager;
 use std::sync::Arc;
 use peniko::kurbo::Shape;
 use vello_common::glyph::Glyph;
-use vello_common::kurbo::Rect;
 use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
 use vello_common::{kurbo, peniko};
@@ -148,7 +147,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
                 }
                 RenderCommand::DrawImage(_rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(&resource_identifier);
+                    let resource = resource_manager.resources.get(resource_identifier);
 
                     if let Some(resource) = resource {
                         if let Resource::Image(resource) = resource.as_ref() {
@@ -271,8 +270,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(path, brush) => {
-                    scene.set_paint(brush_to_paint(&brush));
-                    scene.fill_path(&path);
+                    scene.set_paint(brush_to_paint(brush));
+                    scene.fill_path(path);
                 }
                 _ => {}
             }
