@@ -3135,12 +3135,7 @@ dependencies = [
 name = "tour"
 version = "0.1.0"
 dependencies = [
- "console_error_panic_hook",
  "craft",
- "open",
- "tracing",
- "tracing-subscriber",
- "tracing-web",
  "util",
 ]
 
