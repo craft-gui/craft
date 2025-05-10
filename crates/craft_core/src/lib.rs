@@ -1206,7 +1206,7 @@ async fn draw_reactive_tree(
             mouse_position,
             window,
         );
-        renderer.sort_render_list(&mut render_list);
+        renderer.sort_and_cull_render_list(&mut render_list);
 
         let window = Rectangle {
             x: 0.0,

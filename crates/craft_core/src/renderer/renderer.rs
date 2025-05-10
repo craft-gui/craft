@@ -4,6 +4,7 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::text::text_render_data::TextRender;
 use peniko::{kurbo, BrushRef, Gradient};
 use std::sync::Arc;
+use peniko::kurbo::Shape;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -152,10 +153,31 @@ pub trait Renderer {
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
 
-    fn sort_render_list(&mut self, render_list: &mut RenderList) {
+    fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
         let mut overlay_render = SortedCommands {
             children: vec![],
         };
+
+        fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
+            let cull_top = (rectangle.y + rectangle.height) < 0.0;
+            let cull_bottom = rectangle.y > window_height;
+
+            cull_top || cull_bottom
+        }
+
+        fn bounding_rect(render_command: &RenderCommand) -> Rectangle {
+            match render_command {
+                RenderCommand::DrawRect(rect, _)
+                | RenderCommand::DrawRectOutline(rect, _)
+                | RenderCommand::DrawImage(rect, _)
+                | RenderCommand::DrawTinyVg(rect, _, _)
+                | RenderCommand::DrawText(_, rect, _, _) => *rect,
+                RenderCommand::FillBezPath(path, _) => path.bounding_box().into(),
+                _ => unreachable!("Cannot compute the bounding rect of this render command."),
+            }
+        }
+
+        let window_height = self.surface_height();
 
         let mut current: *mut SortedCommands = &mut overlay_render;
         let mut stack: Vec<*mut SortedCommands> = vec![current];
@@ -181,10 +203,21 @@ pub trait Renderer {
                     stack.pop();
                     current = *stack.last_mut().unwrap();
                 }
-                _ => {
+
+                // FIXME: If this is a clipping layer, and it is not in bounds we should discard all commands in the clip.
+                RenderCommand::PushLayer(_) | RenderCommand::PopLayer => {
                     // Normal Draw Command
                     unsafe {
                         (*current).children.push(SortedItem::Other(index as u32));
+                    }
+                }
+
+                _ => {
+                    let bounding_rect = bounding_rect(&command);
+                    if !should_cull(&bounding_rect, window_height) {
+                        unsafe {
+                            (*current).children.push(SortedItem::Other(index as u32));
+                        }   
                     }
                 }
             }
