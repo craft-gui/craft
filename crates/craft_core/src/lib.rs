@@ -52,7 +52,7 @@ use {std::cell::RefCell, web_time as time};
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
-    pub static MESSAGE_QUEUE: RefCell<Vec<Message>> = RefCell::new(Vec::new());
+    pub static MESSAGE_QUEUE: RefCell<Vec<Message>> = const {RefCell::new(Vec::new())};
 }
 
 use taffy::{AvailableSpace, NodeId, TaffyTree};
@@ -76,11 +76,15 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use parley::GenericFamily;
-use peniko::Blob;
 use winit::event::{Ime, Modifiers};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
+
+#[cfg(target_arch = "wasm32")]
+use {
+    parley::GenericFamily,
+    peniko::Blob,
+};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 #[cfg(target_arch = "wasm32")]
@@ -223,7 +227,10 @@ struct App {
 impl App {
     fn setup_text_context(&mut self) {
         if self.text_context.is_none() {
+            #[cfg(target_arch = "wasm32")]
             let mut text_context = TextContext::new();
+            #[cfg(not(target_arch = "wasm32"))]
+            let text_context = TextContext::new();
 
             #[cfg(target_arch = "wasm32")]
             {
@@ -371,8 +378,12 @@ fn craft_main_with_options_2(
     event_loop.run_app(&mut app).expect("run_app failed");
 }
 
+#[cfg(target_arch = "wasm32")]
+async fn send_response(_app_message: AppMessage, _sender: &mut Sender<AppMessage>) {
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>) {
-    #[cfg(not(target_arch = "wasm32"))]
     if app_message.blocking {
         sender.send(app_message).await.expect("send failed");
     }

@@ -39,6 +39,7 @@ use tokio::sync::mpsc::Sender;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc::error::SendError;
 use winit::dpi::LogicalSize;
 
@@ -117,7 +118,7 @@ impl ApplicationHandler for CraftWinitState {
 
         #[cfg(target_arch = "wasm32")]
         {
-            let mut tx = self.app_sender.clone();
+            let tx = self.app_sender.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let renderer = renderer_future.await;
 
@@ -256,6 +257,7 @@ impl CraftWinitState {
     }
 
     fn send_message(&mut self, message: InternalMessage, blocking: bool) {
+        #[cfg(not(target_arch = "wasm32"))]
         let is_close_message = matches!(message, InternalMessage::Close);
 
         let app_message = AppMessage {
@@ -285,7 +287,7 @@ impl CraftWinitState {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            let mut tx = self.app_sender.clone();
+            let tx = self.app_sender.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 tx.send(app_message).await.expect("send failed");
             });

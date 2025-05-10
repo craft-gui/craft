@@ -16,7 +16,7 @@ use crate::{generate_component_methods_no_children};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
+use parley::{PlainEditor, PlainEditorDriver};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 #[cfg(target_arch = "wasm32")]

@@ -9,6 +9,7 @@ pub struct CraftRuntime {
     wasm_runtime: (),
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CraftRuntime {
     fn default() -> Self {
         cfg_if! {

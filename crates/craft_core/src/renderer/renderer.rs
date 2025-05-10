@@ -213,7 +213,7 @@ pub trait Renderer {
                 }
 
                 _ => {
-                    let bounding_rect = bounding_rect(&command);
+                    let bounding_rect = bounding_rect(command);
                     if !should_cull(&bounding_rect, window_height) {
                         unsafe {
                             (*current).children.push(SortedItem::Other(index as u32));

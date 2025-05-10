@@ -1,5 +1,3 @@
-use tracing_subscriber::fmt::format::FmtSpan;
-
 #[allow(dead_code)]
 pub fn setup_logging() {
     #[cfg(target_arch = "wasm32")]
@@ -25,6 +23,7 @@ pub fn setup_logging() {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
+        use tracing_subscriber::fmt::format::FmtSpan;
         tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).with_span_events(FmtSpan::CLOSE).init();
     }
 }

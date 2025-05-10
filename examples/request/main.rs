@@ -12,7 +12,6 @@ use craft::elements::{Container, Text};
 use craft::events::{Event, Message};
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
-use craft::Color;
 use craft::CraftOptions;
 use craft::RendererType;
 

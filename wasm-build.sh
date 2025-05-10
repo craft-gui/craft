@@ -5,8 +5,8 @@ set -e
 #cargo install -f wasm-bindgen-cli
 #cargo install simple-http-server
 
-cargo build --target wasm32-unknown-unknown --example request
+cargo build --target wasm32-unknown-unknown --package request
 
-wasm-bindgen target/wasm32-unknown-unknown/debug/examples/request.wasm --target web --no-typescript --out-dir target/generated --out-name request --debug --keep-debug
+wasm-bindgen target/wasm32-unknown-unknown/debug/ani_list.wasm --target web --no-typescript --out-dir target/generated --out-name request --debug --keep-debug
 
 simple-http-server . -c wasm,html,js -i --coep --coop --ip 127.0.0.1
