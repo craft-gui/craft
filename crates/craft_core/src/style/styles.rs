@@ -7,7 +7,7 @@ pub use taffy::Overflow;
 pub use taffy::Position;
 
 use std::fmt;
-use parley::{FontSettings, FontStack, TextStyle};
+use parley::{FontFamily, FontSettings, FontStack, GenericFamily, TextStyle};
 use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
 
@@ -756,8 +756,22 @@ impl Style {
             color: self.color(),
         };
 
+        let font_stack_cow_list = if let Some(font_family) = self.font_family() {
+            // Use the user-provided font and fallback to system UI fonts as needed.
+            Cow::Owned(vec![
+                FontFamily::Named(Cow::Borrowed(font_family)),
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        } else {
+            // Just default to system UI fonts.
+            Cow::Owned(vec![
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        };
+        
+        let font_stack = FontStack::List(font_stack_cow_list);
         TextStyle {
-            font_stack: FontStack::Source(Cow::Borrowed("sans-serif")),
+            font_stack,
             font_size,
             font_width: Default::default(),
             font_style,
