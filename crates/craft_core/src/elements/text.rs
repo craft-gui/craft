@@ -19,8 +19,15 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time as time;
+use time::{Duration, Instant};
+
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
+
 use winit::window::Window;
 
 // A stateful element that shows text.

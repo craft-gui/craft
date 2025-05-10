@@ -7,7 +7,7 @@ pub use taffy::Overflow;
 pub use taffy::Position;
 
 use std::fmt;
-use parley::{FontSettings, FontStack, TextStyle};
+use parley::{FontFamily, FontSettings, FontStack, GenericFamily, StyleProperty, StyleSet, TextStyle};
 use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
 
@@ -756,8 +756,22 @@ impl Style {
             color: self.color(),
         };
 
+        let font_stack_cow_list = if let Some(font_family) = self.font_family() {
+            // Use the user-provided font and fallback to system UI fonts as needed.
+            Cow::Owned(vec![
+                FontFamily::Named(Cow::Borrowed(font_family)),
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        } else {
+            // Just default to system UI fonts.
+            Cow::Owned(vec![
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        };
+        
+        let font_stack = FontStack::List(font_stack_cow_list);
         TextStyle {
-            font_stack: FontStack::Source(Cow::Borrowed("sans-serif")),
+            font_stack,
             font_size,
             font_width: Default::default(),
             font_style,
@@ -780,5 +794,40 @@ impl Style {
             word_break: Default::default(),
             overflow_wrap: Default::default(),
         }
+    }
+    
+    pub(crate) fn add_styles_to_style_set(&self, style_set: &mut StyleSet<ColorBrush>) {
+        let font_size = self.font_size();
+        let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
+        let font_style = match self.font_style() {
+            FontStyle::Normal => parley::FontStyle::Normal,
+            FontStyle::Italic => parley::FontStyle::Italic,
+            // FIXME: Allow an angle when setting the obliqueness.
+            FontStyle::Oblique => parley::FontStyle::Oblique(None),
+        };
+        let brush = ColorBrush {
+            color: self.color(),
+        };
+
+        let font_stack_cow_list = if let Some(font_family) = self.font_family() {
+            // Use the user-provided font and fallback to system UI fonts as needed.
+            Cow::Owned(vec![
+                FontFamily::Named(Cow::Owned(font_family.to_string())),
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        } else {
+            // Just default to system UI fonts.
+            Cow::Owned(vec![
+                FontFamily::Generic(GenericFamily::SystemUi)
+            ])
+        };
+
+        
+        style_set.insert(StyleProperty::from(FontStack::List(font_stack_cow_list)));
+        style_set.insert(StyleProperty::FontSize(font_size));
+        style_set.insert(StyleProperty::FontStyle(font_style));
+        style_set.insert(StyleProperty::FontWeight(font_weight));
+        style_set.insert(StyleProperty::Brush(brush));
+        style_set.insert(StyleProperty::LineHeight(1.2));
     }
 }

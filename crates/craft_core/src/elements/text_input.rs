@@ -16,10 +16,15 @@ use crate::{generate_component_methods_no_children};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
-use parley::{PlainEditor, PlainEditorDriver};
+use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
-use tokio::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time as time;
+use time::{Duration, Instant};
+
 use winit::event::{Ime, Modifiers};
 use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
@@ -518,6 +523,9 @@ impl Element for TextInput {
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
         let mut editor = PlainEditor::new(self.style().font_size());
         editor.set_scale(scaling_factor as f32);
+        let style_set = editor.edit_styles();
+        self.style().add_styles_to_style_set(style_set);
+        
         let text_input_state = TextInputState {
             ime_state: ImeState::default(),
             is_active: false,

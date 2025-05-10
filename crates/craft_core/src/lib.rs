@@ -76,6 +76,8 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use parley::GenericFamily;
+use peniko::Blob;
 use winit::event::{Ime, Modifiers};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
@@ -221,7 +223,20 @@ struct App {
 impl App {
     fn setup_text_context(&mut self) {
         if self.text_context.is_none() {
-            self.text_context = Some(TextContext::new());
+            let mut text_context = TextContext::new();
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let variable_roboto = include_bytes!("../../../fonts/Roboto-VariableFont_wdth,wght.ttf");
+                let roboto_blog = Blob::new(Arc::new(variable_roboto));
+                let fonts = text_context.font_context.collection.register_fonts(roboto_blog, None);
+
+                // Register all the Roboto families under GenericFamily::SystemUi. 
+                // This will become the fallback font for platforms like WASM.
+                text_context.font_context.collection.append_generic_families(GenericFamily::SystemUi, fonts.iter().map(|f| f.0));                
+            }
+            
+            self.text_context = Some(text_context);
         }
     }
 }
@@ -1191,7 +1206,7 @@ async fn draw_reactive_tree(
             mouse_position,
             window,
         );
-        renderer.sort_render_list(&mut render_list);
+        renderer.sort_and_cull_render_list(&mut render_list);
 
         let window = Rectangle {
             x: 0.0,
