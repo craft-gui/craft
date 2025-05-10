@@ -56,12 +56,6 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         &self.element_data().id
     }
 
-    #[allow(dead_code)]
-    fn id(&mut self, id: Option<&str>) -> Box<dyn Element> {
-        self.element_data_mut().id = id.map(String::from);
-        self.clone_box()
-    }
-
     fn component_id(&self) -> u64 {
         self.element_data().component_id
     }

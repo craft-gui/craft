@@ -125,19 +125,12 @@ pub(crate) fn diff_trees(
 
         let component_root: *mut ComponentTreeNode = &mut component_tree as *mut ComponentTreeNode;
 
-        let root_spec = ComponentSpecification {
-            component: ComponentOrElement::Element(root_element.clone()),
-            key: None,
-            props: None,
-            children: vec![component_specification],
-        };
-
         let mut new_component_ids: HashSet<ComponentId> = HashSet::new();
         let mut new_element_ids: HashSet<ComponentId> = HashSet::new();
         let mut pointer_captures: HashMap<i64, ComponentId> = HashMap::new();
 
         let mut to_visit: Vec<TreeVisitorNode> = vec![TreeVisitorNode {
-            component_specification: root_spec.children[0].clone(),
+            component_specification,
             parent_element_ptr: root_element.internal.as_mut() as *mut dyn Element,
             parent_component_node: component_root,
             old_component_node: old_component_tree_as_ptr,
@@ -254,7 +247,7 @@ pub(crate) fn diff_trees(
                     to_visit.extend(new_to_visits.into_iter().rev());
                 }
                 ComponentOrElement::ComponentSpec(component_data) => {
-                    let children_keys = (*parent_component_ptr).children_keys.clone();
+                    let children_keys = &(*parent_component_ptr).children_keys;
                     let props = new_spec.props.unwrap_or((component_data.default_props)());
 
                     let mut is_new_component = true;
@@ -263,11 +256,11 @@ pub(crate) fn diff_trees(
                             is_new_component = false;
                             *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
                         } else if let Some(old_tag) = old_tag {
-                            let same_key = new_spec.key
+                            let same_key = new_spec.key.as_ref()
                                 == tree_node
                                 .old_component_node
                                 .as_ref()
-                                .and_then(|node| (*(*node)).key.clone());
+                                .and_then(|node| (**node).key.as_ref());
                             
                             if component_data.tag.as_str() == old_tag && same_key {
                                 // If the old tag is the same as the new tag AND they have the same key, then we can reuse the old id.
