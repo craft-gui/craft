@@ -54,7 +54,7 @@ impl Element for Image {
         _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>,
     ) {
@@ -63,7 +63,7 @@ impl Element for Image {
         }
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
 
         renderer.draw_image(content_rectangle, self.resource_identifier.clone());
     }
@@ -98,14 +98,14 @@ impl Element for Image {
         position: Point,
         z_index: &mut u32,
         transform: glam::Mat4,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
     }
 
     fn as_any(&self) -> &dyn Any {

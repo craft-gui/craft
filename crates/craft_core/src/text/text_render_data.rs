@@ -7,6 +7,7 @@ use crate::text::text_context::ColorBrush;
 pub struct TextRender {
     pub(crate) lines: Vec<TextRenderLine>,
     pub(crate) cursor: Option<Rectangle>,
+    pub override_brush: Option<ColorBrush>,
 }
 
 #[derive(Clone, Debug)]
@@ -45,7 +46,7 @@ pub struct TextRenderGlyph {
 }
 
 pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
-    let mut text_render = TextRender { lines: Vec::new(), cursor: None };
+    let mut text_render = TextRender { lines: Vec::new(), cursor: None, override_brush: None };
 
     for line in layout.lines() {
         let mut text_render_line = TextRenderLine { items: Vec::new(), selections: Vec::new(), };

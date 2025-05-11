@@ -70,7 +70,7 @@ impl Element for DevTools {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>,
     ) {
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
         self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
 
         // Find the element we are hovering over and draw an overlay.
@@ -149,7 +149,7 @@ impl Element for DevTools {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().taffy_node_id;
@@ -176,12 +176,12 @@ impl Element for DevTools {
 
     fn on_event(
         &self,
-        _message: &CraftMessage,
+        message: &CraftMessage,
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
-        let _dev_tools_state = self.get_state_mut(element_state);
-
+        self.on_style_event(message, element_state, should_style);
         UpdateResult::default()
     }
 
@@ -197,10 +197,6 @@ impl DevTools {
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a DevToolsState {
         element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut DevToolsState {
-        element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
     }
 
     pub fn new() -> DevTools {

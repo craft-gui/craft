@@ -7,8 +7,14 @@ pub(crate) struct TextContext {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct ColorBrush {
+pub struct ColorBrush {
     pub(crate) color: peniko::Color,
+}
+
+impl ColorBrush {
+    pub fn new(color: peniko::Color) -> Self {
+        Self { color }
+    }
 }
 
 impl Default for ColorBrush {

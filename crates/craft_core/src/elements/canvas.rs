@@ -45,7 +45,7 @@ impl Element for Canvas {
         _text_context: &mut TextContext,
         _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<dyn Window>>,
     ) {
@@ -69,7 +69,7 @@ impl Element for Canvas {
         let border_bottom = self.element_data.computed_box_transformed.border.bottom;
         let border_left = self.element_data.computed_box_transformed.border.left;
 
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
 
         renderer.push_layer(Rectangle::new(
             computed_x_transformed + border_left,
@@ -181,7 +181,7 @@ impl Element for Canvas {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();

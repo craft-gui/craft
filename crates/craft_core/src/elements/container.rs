@@ -52,11 +52,15 @@ impl Element for Container {
         pointer: Option<Point>,
         window: Option<Arc<dyn Window>>,
     ) {
-        if !self.element_data.style.visible() {
+        let base_state = self.get_base_state_mut(element_state);
+        let current_style = base_state.base.current_style(self.element_data());
+        
+        if !current_style.visible() {
             return;
         }
+        
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
         {
             self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
@@ -82,7 +86,9 @@ impl Element for Container {
             }
         }
 
-        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        let base_state = self.get_base_state_mut(element_state);
+        let current_style = base_state.base.current_style(self.element_data());
+        let style: taffy::Style = current_style.to_taffy_style_with_scale_factor(scale_factor);
 
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.element_data().taffy_node_id
@@ -102,7 +108,7 @@ impl Element for Container {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
@@ -146,7 +152,9 @@ impl Element for Container {
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
+        self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 

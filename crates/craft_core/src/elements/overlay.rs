@@ -1,21 +1,19 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::components::UpdateResult;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
-use crate::events::CraftMessage;
 use crate::geometry::Point;
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
 use crate::style::Style;
-use crate::{generate_component_methods};
+use crate::text::text_context::TextContext;
+use crate::generate_component_methods;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::renderer::renderer::RenderList;
-use crate::text::text_context::TextContext;
 
 /// An element for storing related elements.
 #[derive(Clone, Default, Debug)]
@@ -56,7 +54,7 @@ impl Element for Overlay {
         renderer.start_overlay();
         
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
         {
             self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
@@ -103,7 +101,7 @@ impl Element for Overlay {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
         
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().taffy_node_id;
@@ -126,15 +124,6 @@ impl Element for Overlay {
 
     fn as_any(&self) -> &dyn Any {
         self
-    }
-
-    fn on_event(
-        &self,
-        _message: &CraftMessage,
-        _element_state: &mut ElementStateStore,
-        _text_context: &mut TextContext,
-    ) -> UpdateResult {
-        UpdateResult::default()
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

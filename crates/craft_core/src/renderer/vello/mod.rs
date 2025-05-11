@@ -243,7 +243,7 @@ impl Renderer for VelloRenderer<'_> {
                             scene
                                 .draw_glyphs(&item.font)
                                 .font_size(item.font_size)
-                                .brush(BrushRef::Solid(item.brush.color))
+                                .brush(BrushRef::Solid(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)))
                                 .transform(text_transform)
                                 .glyph_transform(item.glyph_transform)
                                 .draw(

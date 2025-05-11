@@ -120,7 +120,7 @@ impl Element for TextInput {
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
 
         let is_scrollable = self.element_data.is_scrollable();
 
@@ -190,7 +190,7 @@ impl Element for TextInput {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         let state: &mut TextInputState = element_state
             .storage
@@ -241,8 +241,11 @@ impl Element for TextInput {
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
+        self.on_style_event(message, element_state, should_style);
+
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
         state.is_active = true;
@@ -291,7 +294,7 @@ impl Element for TextInput {
                     })
                     .unwrap_or_default();
 
-                let mut drv = state.driver(text_context);
+                let mut drv = state.driver(_text_context);
                 match &keyboard_input.event.logical_key {
                     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                     Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
@@ -381,7 +384,7 @@ impl Element for TextInput {
                         }
                     }
                     Key::Named(NamedKey::End) => {
-                        let mut drv = state.driver(text_context);
+                        let mut drv = state.driver(_text_context);
 
                         if action_mod {
                             if shift {
@@ -472,7 +475,7 @@ impl Element for TextInput {
                         state.last_click_time = Some(now);
                         let click_count = state.click_count;
                         let cursor_pos = state.cursor_pos;
-                        let mut drv = state.driver(text_context);
+                        let mut drv = state.driver(_text_context);
                         match click_count {
                             2 => drv.select_word_at_point(cursor_pos.0, cursor_pos.1),
                             3 => drv.select_line_at_point(cursor_pos.0, cursor_pos.1),
@@ -489,22 +492,22 @@ impl Element for TextInput {
                 if state.pointer_down && prev_pos != state.cursor_pos && !state.editor.is_composing() {
                     state.cursor_reset();
                     let cursor_pos = state.cursor_pos;
-                    state.driver(text_context).extend_selection_to_point(cursor_pos.0, cursor_pos.1);
+                    state.driver(_text_context).extend_selection_to_point(cursor_pos.0, cursor_pos.1);
                 }
             }
             CraftMessage::ImeEvent(Ime::Disabled) => {
-                state.driver(text_context).clear_compose();
+                state.driver(_text_context).clear_compose();
                 state.cache.clear();
             }
             CraftMessage::ImeEvent(Ime::Commit(text)) => {
-                state.driver(text_context).insert_or_replace_selection(text);
+                state.driver(_text_context).insert_or_replace_selection(text);
                 state.cache.clear();
             }
             CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
                 if text.is_empty() {
-                    state.driver(text_context).clear_compose();
+                    state.driver(_text_context).clear_compose();
                 } else {
-                    state.driver(text_context).set_compose(text, *cursor);
+                    state.driver(_text_context).set_compose(text, *cursor);
                 }
                 state.cache.clear();
             }
