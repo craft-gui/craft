@@ -1,4 +1,10 @@
+#[cfg(not(target_arch = "wasm32"))]
+mod mp3_player;
+
 use util::setup_logging;
+
+#[cfg(not(target_arch = "wasm32"))]
+use mp3_player::Mp3Player;
 
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
@@ -13,9 +19,9 @@ use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
-use craft::RendererType;
 use craft::{craft_main_with_options, WindowContext};
 use craft::{Color, CraftOptions};
+use craft::RendererType;
 
 #[derive(Clone)]
 pub struct Tour {
@@ -168,6 +174,9 @@ impl Component for Tour {
                 )
             )
             .component();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let bottom_section = bottom_section.push(Mp3Player::component());
 
         Container::new()
             .overflow_y(Overflow::Scroll)

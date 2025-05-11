@@ -10,3 +10,5 @@ path = "main.rs"
 [dependencies]
 craft = { path = "../../crates/craft", features = ["vello_hybrid_renderer"], default-features = false }
 util = { path = "../util" }
+rodio = {  version = "0.20.1", features = ["minimp3"], default-features = false }
+tokio = { version = "1.45.0"}
