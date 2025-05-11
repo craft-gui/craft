@@ -1,4 +1,4 @@
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::base_element_state::{BaseElementState, DUMMY_DEVICE_ID};
 use crate::elements::element_data::ElementData;
 use crate::events::CraftMessage;
@@ -17,7 +17,8 @@ impl ScrollState {
         message: &CraftMessage,
         element: &ElementData,
         base_state: &mut BaseElementState,
-    ) -> UpdateResult {
+    ) -> Event {
+        let mut ret = Event::new();
         if element.is_scrollable() {
             match message {
                 CraftMessage::MouseWheelEvent(mouse_wheel) => {
@@ -30,7 +31,8 @@ impl ScrollState {
 
                     self.scroll_y = (self.scroll_y + delta).clamp(0.0, max_scroll_y);
 
-                    UpdateResult::new().prevent_propagate().prevent_defaults()
+                    ret.prevent_propagate();
+                    ret.prevent_defaults();
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
                     if pointer_button.button.mouse_button() == MouseButton::Left {
@@ -42,7 +44,9 @@ impl ScrollState {
 
                             if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
                                 self.scroll_click = Some((pointer_button.position.x, pointer_button.position.y));
-                                return UpdateResult::new().prevent_propagate().prevent_defaults();
+                                ret.prevent_propagate();
+                                ret.prevent_defaults();
+                                return ret;
                             }
                         }
 
@@ -53,7 +57,8 @@ impl ScrollState {
                                     // FIXME: Turn pointer capture on with the correct device id.
                                     base_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
 
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
+                                    ret.prevent_propagate();
+                                    ret.prevent_defaults();
                                 } else if element.computed_scroll_track.contains(&pointer_button.position) {
                                     let offset_y = pointer_button.position.y - element.computed_scroll_track.y;
 
@@ -62,9 +67,8 @@ impl ScrollState {
 
                                     self.scroll_y = scroll_y.clamp(0.0, element.max_scroll_y);
 
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else {
-                                    UpdateResult::new()
+                                    ret.prevent_propagate();
+                                    ret.prevent_defaults();
                                 }
                             }
                             WinitElementState::Released => {
@@ -72,14 +76,11 @@ impl ScrollState {
                                 if self.scroll_click.is_some() {
                                     // FIXME: Turn pointer capture off with the correct device id.
                                     base_state.pointer_capture.insert(DUMMY_DEVICE_ID, false);
-                                    UpdateResult::new().prevent_propagate().prevent_defaults()
-                                } else {
-                                    UpdateResult::new()
+                                    ret.prevent_propagate();
+                                    ret.prevent_defaults();
                                 }
                             }
                         }
-                    } else {
-                        UpdateResult::new()
                     }
                 }
                 CraftMessage::PointerMovedEvent(pointer_motion) => {
@@ -99,15 +100,14 @@ impl ScrollState {
 
                         self.scroll_y = (self.scroll_y + delta).clamp(0.0, max_scroll_y);
                         self.scroll_click = Some((click_x, pointer_motion.position.y));
-                        UpdateResult::new().prevent_propagate().prevent_defaults()
-                    } else {
-                        UpdateResult::new()
+                        ret.prevent_propagate();
+                        ret.prevent_defaults();
                     }
-                }
-                _ => UpdateResult::new(),
+                },
+                _ => {  }
             }
-        } else {
-            UpdateResult::new()
         }
+        
+        ret
     }
 }

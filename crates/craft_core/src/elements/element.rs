@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::layout::layout_context::LayoutContext;
@@ -115,9 +115,9 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
         self.on_style_event(message, element_state, should_style);
-        UpdateResult::default()
+        Event::default()
     }
 
     fn on_style_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, should_style: bool) {

@@ -1,12 +1,12 @@
 use crate::components::Props;
-use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
 use crate::devtools::dev_tools_element::DevTools;
 use crate::devtools::element_tree_view::element_tree_view;
 use crate::devtools::style_window::styles_window_view;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
-use crate::events::{CraftMessage, Event, Message};
+use crate::events::{CraftMessage, Message};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
 use crate::WindowContext;
@@ -18,23 +18,26 @@ pub(crate) struct DevToolsComponent {
 }
 
 impl Component for DevToolsComponent {
+    type GlobalState = ();
     type Props = Option<Box<dyn Element>>;
+    type Message = ();
 
-    fn view_with_no_global_state(
-        state: &Self,
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
-        let element_tree = element_tree_view(root.as_ref(), state.selected_element);
+        let element_tree = element_tree_view(root.as_ref(), self.selected_element);
 
         // Find the selected element in the element tree, so that we can inspect their style values.
         let mut selected_element: Option<&dyn Element> = None;
-        if state.selected_element.is_some() {
+        if self.selected_element.is_some() {
             for element in root.pre_order_iter().collect::<Vec<&dyn Element>>().iter().rev() {
-                if element.component_id() != state.selected_element.unwrap() {
+                if element.component_id() != self.selected_element.unwrap() {
                     continue;
                 }
 
@@ -48,8 +51,8 @@ impl Component for DevToolsComponent {
         DevTools::new()
             .display(Flex)
             .push_debug_inspector_tree(root)
-            .push_selected_inspector_element(state.selected_element)
-            .push_hovered_inspector_element(state.inspector_hovered_element)
+            .push_selected_inspector_element(self.selected_element)
+            .push_hovered_inspector_element(self.inspector_hovered_element)
             .flex_direction(FlexDirection::Column)
             .background(CONTAINER_BACKGROUND_COLOR)
             .width(Unit::Percentage(100.0))
@@ -60,39 +63,23 @@ impl Component for DevToolsComponent {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        if let Some(id) = event.target {
+
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+        if let Some(id) = &event.target {
             // Set the selected element in the element tree inspector.
-            if event.message.clicked() {
+            if message.clicked() {
                 let component_id: ComponentId = id.parse().unwrap();
-                state.selected_element = Some(component_id);
+                self.selected_element = Some(component_id);
             }
 
             // Update the hovered element in the inspector tree, so that the DevTools widget can draw a debug overlay.
-            if let Message::CraftMessage(CraftMessage::PointerMovedEvent(_pointer_moved_event)) = event.message {
+            if let Message::CraftMessage(CraftMessage::PointerMovedEvent(_pointer_moved_event)) = message {
                 let component_id: ComponentId = id.parse().unwrap();
-                state.inspector_hovered_element = Some(component_id);
+                self.inspector_hovered_element = Some(component_id);
             }
         } else {
-            state.inspector_hovered_element = None;
+            self.inspector_hovered_element = None;
         }
-
-        UpdateResult::default()
-    }
-
-    fn view(
-        state: &Self,
-        _global_state: &(),
-        props: &Self::Props,
-        children: Vec<ComponentSpecification>,
-        id: ComponentId,
-        window_context: &WindowContext
-    ) -> ComponentSpecification {
-        Self::view_with_no_global_state(state, props, children, id, window_context)
-    }
-
-    fn update(state: &mut Self, _global_state: &mut (), props: &Self::Props, event: Event, window_context: &mut WindowContext) -> UpdateResult {
-        Self::update_with_no_global_state(state, props, event, window_context)
     }
 }
 

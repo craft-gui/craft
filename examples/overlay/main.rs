@@ -1,29 +1,32 @@
-use util::setup_logging;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use craft::elements::{Container, Text};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::ElementStyles;
-use craft::events::Event;
+use craft::elements::{Container, Text};
+use craft::events::{Message};
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
 use craft::Color;
 use craft::CraftOptions;
 use craft::RendererType;
 use craft::{craft_main_with_options, palette};
+use util::setup_logging;
 
 #[derive(Default, Clone)]
 pub struct OverlayExample {
-    hovered_element_id: Option<String>
+    hovered_element_id: Option<String>,
 }
 
 impl Component for OverlayExample {
     type Props = ();
+    type Message = ();
+    type GlobalState = ();
 
-    fn view_with_no_global_state(
-        state: &Self,
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -33,8 +36,7 @@ impl Component for OverlayExample {
             .width("100%")
             .height("100%")
             .background(Color::from_rgb8(250, 250, 250))
-
-            .push(Text::new(format!("Hovered Element: {:?}", state.hovered_element_id).as_str()))
+            .push(Text::new(format!("Hovered Element: {:?}", self.hovered_element_id).as_str()))
             .push(
                 Container::new()
                     .background(palette::css::RED)
@@ -65,10 +67,8 @@ impl Component for OverlayExample {
                                     .position(Position::Absolute)
                                     .width(Unit::Px(50.0))
                                     .height(Unit::Px(50.0))
-                                    .id("pink")
-                                ,
-                            )
-                        ,
+                                    .id("pink"),
+                            ),
                     )
                     .push(
                         Container::new()
@@ -77,23 +77,25 @@ impl Component for OverlayExample {
                             .position(Position::Absolute)
                             .width(Unit::Px(100.0))
                             .height(Unit::Px(100.0))
-                            .id("blue")
-                        ,
-                    )
+                            .id("blue"),
+                    ),
             )
-
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult { 
-        println!("{:?}", _window_context);
-        state.hovered_element_id = event.target;
-        
-        if state.hovered_element_id.is_some() {
-            return UpdateResult::new().prevent_propagate();
+    fn update(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        _message: &Message,
+    ) {
+        println!("{:?}", event.window);
+        self.hovered_element_id = event.target.clone();
+
+        if self.hovered_element_id.is_some() {
+            event.prevent_propagate();
         }
-        
-       UpdateResult::default()
     }
 }
 
@@ -113,10 +115,10 @@ fn main() {
     );
 }
 
-#[cfg(target_os = "android")]
-use craft::AndroidApp;
 use craft::elements::Overlay;
 use craft::style::{Position, Unit};
+#[cfg(target_os = "android")]
+use craft::AndroidApp;
 use craft::WindowContext;
 
 #[allow(dead_code)]

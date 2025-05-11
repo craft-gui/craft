@@ -1,5 +1,5 @@
 use crate::events::{CraftMessage, EventDispatchType, Message};
-use crate::PinnedFutureAny;
+use crate::{PinnedFutureAny, WindowContext};
 use std::any::Any;
 use crate::geometry::Rectangle;
 
@@ -12,7 +12,7 @@ pub enum PointerCapture {
 }
 
 /// The result of an update.
-pub struct UpdateResult {
+pub struct Event {
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -25,6 +25,10 @@ pub struct UpdateResult {
     pub(crate) pointer_capture: PointerCapture,
     pub(crate) effects: Vec<(EventDispatchType, Message)>,
     pub(crate) ime: ImeAction,
+
+    pub target: Option<String>,
+    pub current_target: Option<String>,
+    pub window: WindowContext,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -35,7 +39,14 @@ pub enum ImeAction {
     Unset,
 }
 
-impl UpdateResult {
+impl Event {
+    pub fn with_window_context(window: WindowContext) -> Self {
+        Event {
+            window,
+            ..Default::default()
+        }
+    }
+    
     #[cfg(not(target_arch = "wasm32"))]
     pub fn async_result<T: Send + Sync + 'static>(t: T) -> Box<dyn Any + Send + Sync + 'static> {
         Box::new(t)
@@ -62,9 +73,9 @@ impl UpdateResult {
     }
 }
 
-impl Default for UpdateResult {
+impl Default for Event {
     fn default() -> Self {
-        UpdateResult {
+        Event {
             propagate: true,
             future: None,
             prevent_defaults: false,
@@ -72,54 +83,49 @@ impl Default for UpdateResult {
             pointer_capture: Default::default(),
             effects: Vec::new(),
             ime: ImeAction::None,
+            target: None,
+            current_target: None,
+            window: WindowContext::new(),
         }
     }
 }
 
-impl UpdateResult {
-    pub fn new() -> UpdateResult {
-        UpdateResult::default()
+impl Event {
+    pub fn new() -> Event {
+        Event::default()
     }
 
-    pub fn pinned_future(mut self, future: PinnedFutureAny) -> Self {
+    pub fn pinned_future(&mut self, future: PinnedFutureAny) {
         self.future = Some(future);
-        self
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn future<F: Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send>(mut self, future: F) -> Self {
+    pub fn future<F: Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send>(&mut self, future: F) {
         self.future = Some(Box::pin(future));
-        self
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(mut self, future: F) -> Self {
+    pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(&mut self, future: F) {
         self.future = Some(Box::pin(future));
-        self
     }
 
-    pub fn prevent_defaults(mut self) -> Self {
+    pub fn prevent_defaults(&mut self) {
         self.prevent_defaults = true;
-        self
     }
 
-    pub fn prevent_propagate(mut self) -> Self {
+    pub fn prevent_propagate(&mut self) {
         self.propagate = false;
-        self
     }
 
-    pub(crate) fn result_message(mut self, message: CraftMessage) -> Self {
+    pub(crate) fn result_message(&mut self, message: CraftMessage) {
         self.result_message = Some(message);
-        self
     }
 
-    pub fn pointer_capture(mut self, pointer_capture: PointerCapture) -> Self {
+    pub fn pointer_capture(&mut self, pointer_capture: PointerCapture) {
         self.pointer_capture = pointer_capture;
-        self
     }
 
-    pub fn add_effect(mut self, event_dispatch_type: EventDispatchType, message: Message) -> Self {
+    pub fn add_effect(&mut self, event_dispatch_type: EventDispatchType, message: Message) {
         self.effects.push((event_dispatch_type, message));
-        self
     }
 }

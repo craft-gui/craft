@@ -2,14 +2,14 @@ use util::setup_logging;
 
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
-use craft::components::{Component, UpdateResult};
+use craft::components::{Component, Event};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
 use craft::events::CraftMessage::DropdownItemSelected;
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
-use craft::events::Event;
 use craft::events::Message::CraftMessage;
+use craft::events::Message;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
@@ -45,13 +45,16 @@ const DEFAULT_SWITCH_VALUE: bool = true;
 
 impl Component for Tour {
     type Props = ();
+    type Message = ();
+    type GlobalState = ();
 
-    fn view_with_no_global_state(
-        state: &Self,
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
 
         let section = |title: &str, content: ComponentSpecification| {
@@ -87,9 +90,9 @@ impl Component for Tour {
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
                 .push(
-                    labeled_row("Input:", TextInput::new(state.text_input_value.as_str()).id("text_input").min_width("200px").component())
+                    labeled_row("Input:", TextInput::new(self.text_input_value.as_str()).id("text_input").min_width("200px").component())
                 )
-                .push(Text::new(format!("Preview: {}", state.text_input_value).as_str())
+                .push(Text::new(format!("Preview: {}", self.text_input_value).as_str())
                     .font_size(14.0)
                     .color(secondary_text_color)
                 )
@@ -111,7 +114,7 @@ impl Component for Tour {
                             .component()
                     )
                 )
-                .push(Text::new(if state.switch_value { "On" } else { "Off" }).font_size(14.0).color(secondary_text_color))
+                .push(Text::new(if self.switch_value { "On" } else { "Off" }).font_size(14.0).color(secondary_text_color))
                 .component()
         );
 
@@ -130,7 +133,7 @@ impl Component for Tour {
                             .component()
                     )
                 )
-                .push(Text::new(format!("{}", state.slider_value).as_str()).font_size(14.0).color(secondary_text_color))
+                .push(Text::new(format!("{}", self.slider_value).as_str()).font_size(14.0).color(secondary_text_color))
                 .component()
         );
 
@@ -152,7 +155,7 @@ impl Component for Tour {
                 )
                 .push(
                     Text::new(
-                        format!("Selected: {}", state.dropdown_value.map(|index| Self::DROPDOWN_ITEMS[index]).unwrap_or("None")).as_str()
+                        format!("Selected: {}", self.dropdown_value.map(|index| Self::DROPDOWN_ITEMS[index]).unwrap_or("None")).as_str()
                     )
                     .font_size(14.0)
                     .margin("12px", "0px", "0px", "0px")
@@ -187,28 +190,33 @@ impl Component for Tour {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        if let CraftMessage(TextInputChanged(str)) = event.message {
-            state.text_input_value = str.clone();
-            return UpdateResult::new().prevent_defaults().prevent_propagate();
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+        if let CraftMessage(TextInputChanged(str)) = message {
+            self.text_input_value = str.clone();
+            event.prevent_defaults();
+            event.prevent_propagate();
+            return;
         }
 
-        if let CraftMessage(SliderValueChanged(val)) = event.message {
-            state.slider_value = *val;
-            return UpdateResult::new().prevent_defaults().prevent_propagate();
+        if let CraftMessage(SliderValueChanged(val)) = message {
+            self.slider_value = *val;
+            event.prevent_defaults();
+            event.prevent_propagate();
+            return;
         }
 
-        if let CraftMessage(SwitchToggled(val)) = event.message {
-            state.switch_value = *val;
-            return UpdateResult::new().prevent_defaults().prevent_propagate();
+        if let CraftMessage(SwitchToggled(val)) = message {
+            self.switch_value = *val;
+            event.prevent_defaults();
+            event.prevent_propagate();
+            return;
         }
 
-        if let CraftMessage(DropdownItemSelected(item)) = event.message {
-            state.dropdown_value = Some(*item);
-            return UpdateResult::new().prevent_defaults().prevent_propagate();
+        if let CraftMessage(DropdownItemSelected(item)) = message {
+            self.dropdown_value = Some(*item);
+            event.prevent_defaults();
+            event.prevent_propagate();
         }
-
-        UpdateResult::new()
     }
 }
 

@@ -1,33 +1,36 @@
-use util::setup_logging;
+use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
-use craft::components::{Component, UpdateResult};
+use craft::components::{Component, Event};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::Event;
+use craft::events::{Message};
 use craft::style::FlexDirection;
 use craft::style::Unit;
 use craft::RendererType;
-use craft::{craft_main_with_options, CraftOptions};
-use craft::components::ComponentId;
 use craft::WindowContext;
+use craft::{craft_main_with_options, CraftOptions};
+use util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct Accordion {
     show_content: bool,
 }
 
-impl Component<()> for Accordion {
+impl Component for Accordion {
     type Props = ();
+    type GlobalState = ();
+    type Message = ();
 
-    fn view_with_no_global_state(
-        state: &Self,
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         let accordion_content =
-            if state.show_content { Text::new("My content!").component() } else { Container::new().component() };
+            if self.show_content { Text::new("My content!").component() } else { Container::new().component() };
 
         Container::new()
             .margin(Unit::Px(14.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(14.0))
@@ -42,17 +45,23 @@ impl Component<()> for Accordion {
             .push(accordion_content)
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
+    fn update(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        message: &Message,
+    ) {
         println!("target: {:?}", event.target);
         if event.target.as_deref() != Some("accordion_header") {
-            return UpdateResult::default();
+            return;
         }
 
-        if event.message.clicked() {
-            state.show_content = !state.show_content
+        if message.clicked() {
+            self.show_content = !self.show_content
         }
 
-        UpdateResult::new().prevent_propagate()
+        Event::new().prevent_propagate()
     }
 }
 

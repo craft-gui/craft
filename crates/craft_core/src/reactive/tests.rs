@@ -1,15 +1,14 @@
-use crate::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use crate::components::{Component, ComponentId, ComponentSpecification};
 use crate::elements::element::ElementBoxed;
 use crate::elements::{Container, Text};
-use crate::events::Event;
+use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::reactive::element_id::reset_unique_element_id;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
+use crate::text::text_context::TextContext;
 use crate::{GlobalState, ReactiveTree, WindowContext};
 use std::collections::{HashSet, VecDeque};
-use crate::events::update_queue_entry::UpdateQueueEntry;
-use crate::text::text_context::TextContext;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
@@ -180,22 +179,20 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
 #[derive(Default)]
 struct DummyComponent {}
 
-impl Component<()> for DummyComponent {
+impl Component for DummyComponent {
+    type GlobalState = ();
     type Props = ();
+    type Message = ();
 
     fn view(
-        _state: &Self,
-        _global_state: &(),
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext,
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Text::new("dummy").component()
-    }
-
-    fn update(_state: &mut Self, _global_state: &mut (), _props: &Self::Props, _message: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        UpdateResult::default()
     }
 }
 

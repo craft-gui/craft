@@ -26,36 +26,6 @@ pub enum EventDispatchType {
     Direct(ComponentId),
 }
 
-pub struct Event<'a> {
-    /// The id of the element that triggered this event.
-    pub target: Option<String>,
-    /// The id of an element who is listening to this event.
-    pub current_target: Option<String>,
-    pub message: &'a Message,
-}
-
-impl<'a> Event<'a> {
-    pub fn new(message: &'a Message) -> Self {
-        Self {
-            current_target: None,
-            target: None,
-            message,
-        }
-    }
-
-    /// Set the event's target to the id of the element that triggered it.
-    pub fn target(mut self, target: Option<String>) -> Self {
-        self.target = target;
-        self
-    }
-
-    /// Set the event's current target to the id of an element who is listening to this event.
-    pub fn current_target(mut self, current_target: Option<String>) -> Self {
-        self.current_target = current_target;
-        self
-    }
-}
-
 #[derive(Clone, Debug)]
 pub enum CraftMessage {
     Initialized,
@@ -90,12 +60,23 @@ impl CraftMessage {
     }
 }
 
+impl PointerButton {
+    pub fn clicked(&self) -> bool {
+        self.button.mouse_button() == MouseButton::Left && self.state == ElementState::Released
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub type UserMessage = dyn Any;
+#[cfg(not(target_arch = "wasm32"))]
+pub type UserMessage = dyn Any + Send + Sync;
+
 pub enum Message {
     CraftMessage(CraftMessage),
     #[cfg(target_arch = "wasm32")]
-    UserMessage(Box<dyn Any>),
+    UserMessage(Box<UserMessage>),
     #[cfg(not(target_arch = "wasm32"))]
-    UserMessage(Box<dyn Any + Send + Sync>),
+    UserMessage(Box<UserMessage>),
 }
 
 impl Message {

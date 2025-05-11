@@ -12,12 +12,12 @@ mod tour;
 
 use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::Event;
-use craft::{palette, WindowContext};
+use craft::events::Message;
 use craft::style::Display::Flex;
 use craft::style::FlexDirection;
+use craft::{palette, WindowContext};
 
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
@@ -59,21 +59,23 @@ fn examples_sidebar() -> ComponentSpecification {
         .component()
 }
 
-impl Component<WebsiteGlobalState> for Examples {
+impl Component for Examples {
+    type GlobalState = WebsiteGlobalState;
     type Props = ();
+    type Message = ();
 
     fn view(
-        state: &Self,
-        _global_state: &WebsiteGlobalState,
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         let wrapper = Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
         wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
-            match state.example_to_show.as_str() {
+            match self.example_to_show.as_str() {
                 "text_state" => TextState::component().key("example_text_state"),
                 "tour" => Tour::component().key("example_tour"),
                 "request" => AniList::component().key("example_request"),
@@ -83,19 +85,17 @@ impl Component<WebsiteGlobalState> for Examples {
     }
 
     fn update(
-        state: &mut Self,
-        _global_state: &mut WebsiteGlobalState,
+        &mut self,
+        _global_state: &mut Self::GlobalState,
         _props: &Self::Props,
-        event: Event,
-        _window_context: &mut WindowContext
-    ) -> UpdateResult {
-        if event.message.clicked() && event.current_target.is_some() {
+        event: &mut Event,
+        message: &Message,
+    ) {
+        if message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();
             if current_target.starts_with("example_") {
-                state.example_to_show = current_target.replace("example_", "").to_string();
+                self.example_to_show = current_target.replace("example_", "").to_string();
             }
         }
-
-        UpdateResult::default()
     }
 }

@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -153,7 +153,7 @@ impl Element for Container {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
         self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();

@@ -1,8 +1,8 @@
 use crate::theme::NAVBAR_BACKGROUND_COLOR;
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::Event;
+use craft::events::Message;
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
 use craft::{Color, WindowContext};
 
@@ -17,16 +17,18 @@ fn create_link(label: &str, route: &str) -> Text {
         .color(Color::from_rgb8(220, 220, 220)) // Light text for readability
 }
 
-impl Component<WebsiteGlobalState> for Navbar {
+impl Component for Navbar {
+    type GlobalState = WebsiteGlobalState;
     type Props = ();
+    type Message = ();
 
     fn view(
-        _state: &Self,
-        _global_state: &WebsiteGlobalState,
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -55,19 +57,17 @@ impl Component<WebsiteGlobalState> for Navbar {
     }
 
     fn update(
-        _state: &mut Self,
-        global_state: &mut WebsiteGlobalState,
+        &mut self,
+        global_state: &mut Self::GlobalState,
         _props: &Self::Props,
-        event: Event,
-        _window_context: &mut WindowContext
-    ) -> UpdateResult {
-        if event.message.clicked() && event.current_target.is_some() {
+        event: &mut Event,
+        message: &Message,
+    ) {
+        if message.clicked() && event.current_target.is_some() {
             let current_target = event.current_target.as_ref().unwrap();
             if current_target.starts_with("route_") {
                 global_state.route = current_target.replace("route_", "").to_string();
             }
         }
-
-        UpdateResult::default()
     }
 }

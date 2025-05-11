@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::{Props, UpdateResult};
+use crate::components::{Props, Event};
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementStyles;
@@ -189,11 +189,12 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool) -> UpdateResult {
+    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool) -> Event {
+        let mut ret = Event::default();
         self.on_style_event(message, _element_state, should_style);
 
         if !self.selectable {
-            return UpdateResult::default();
+            return ret;
         }
         
         let state: &mut TextState = _element_state
@@ -237,7 +238,7 @@ impl Element for Text {
                             }
                         }
                     }
-                    UpdateResult::new().prevent_defaults()
+                    ret.prevent_defaults();
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
@@ -249,13 +250,13 @@ impl Element for Text {
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos.0, cursor_pos.1);
                     }
-                    UpdateResult::new().prevent_defaults()
-                }
-                _ => UpdateResult::new(),
+                    ret.prevent_defaults();
+                },
+                _ => {  }
             }
-        } else {
-            UpdateResult::default()
         }
+        
+        ret
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

@@ -1,7 +1,7 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::Text;
-use craft::events::Event;
+use craft::events::Message;
 use craft::WindowContext;
 
 #[derive(Default)]
@@ -12,28 +12,30 @@ pub(crate) struct LinkProps {
     pub(crate) href: String,
 }
 
-impl Component<WebsiteGlobalState> for Link {
+impl Component for Link {
     type Props = LinkProps;
+    type GlobalState = WebsiteGlobalState;
+    type Message = ();
 
     fn view(
-        _state: &Self,
-        _global_state: &WebsiteGlobalState,
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         children.first().unwrap_or(&Text::new("Invalid Link").component()).clone()
     }
 
     fn update(
-        _state: &mut Self,
-        _global_state: &mut WebsiteGlobalState,
+        &mut self,
+        _global_state: &mut Self::GlobalState,
         props: &Self::Props,
-        event: Event,
-        _window_context: &mut WindowContext
-    ) -> UpdateResult {
-        if event.message.clicked() {
+        _event: &mut Event,
+        message: &Message,
+    ) {
+        if message.clicked() {
             #[cfg(target_arch = "wasm32")]
             {
                 if let Some(win) = web_sys::window() {
@@ -45,6 +47,5 @@ impl Component<WebsiteGlobalState> for Link {
                 open::that(props.href.as_str()).unwrap();
             }
         }
-        UpdateResult::default()
     }
 }

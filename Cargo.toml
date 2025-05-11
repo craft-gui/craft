@@ -14,7 +14,8 @@ members = [
     "examples/tour",
     "examples/events",
     "examples/overlay",
-    "website", "crates/craft",
+    "website",
+    "crates/craft",
 ]
 
 [workspace.package]

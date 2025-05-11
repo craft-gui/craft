@@ -1,5 +1,5 @@
 use crate::components::Props;
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -147,7 +147,8 @@ impl Element for Switch {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
+        let mut ret = Event::default();
         self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
@@ -162,10 +163,10 @@ impl Element for Switch {
             }
 
             // Emit the SwitchToggled event with the new value of `state.toggled`.
-            return UpdateResult::default().result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
+            ret.result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
         }
-
-        UpdateResult::default()
+        
+        ret
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

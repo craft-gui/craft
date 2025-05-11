@@ -1,9 +1,9 @@
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
-use craft::elements::{Container, Text};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::ElementStyles;
-use craft::events::Event;
-use craft::style::{AlignItems, FlexDirection, JustifyContent};
+use craft::elements::{Container, Text};
+use craft::events::PointerButton;
 use craft::style::Display;
+use craft::style::{AlignItems, FlexDirection, JustifyContent};
 use craft::Color;
 use craft::CraftOptions;
 use craft::RendererType;
@@ -15,15 +15,20 @@ pub struct Counter {
     count: i64,
 }
 
-impl Component for Counter {
-    type Props = ();
+pub enum CounterMessage {}
 
-    fn view_with_no_global_state(
-        state: &Self,
+impl Component for Counter {
+    type GlobalState = ();
+    type Props = ();
+    type Message = CounterMessage;
+
+    fn view(
+        &self,
+        _global_state: &(),
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -35,7 +40,7 @@ impl Component for Counter {
             .background(Color::from_rgb8(250, 250, 250))
             .gap("20px")
             .push(
-                Text::new(format!("Count:  {}", state.count).as_str())
+                Text::new(format!("Count:  {}", self.count).as_str())
                     .font_size(72.0)
                     .color(Color::from_rgb8(50, 50, 50)),
             )
@@ -55,18 +60,25 @@ impl Component for Counter {
             .component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        if event.message.clicked() && event.target.is_some() {
+    fn on_pointer_button(
+        &mut self,
+        _props: &Self::Props,
+        event: &mut Event,
+        _pointer_button: &PointerButton,
+    ) {
+        if _pointer_button.clicked() && event.target.is_some() {
             match event.target.as_deref().unwrap() {
-                "increment" => state.count += 1,
-                "decrement" => state.count -= 1,
-                _ => return UpdateResult::default(),
+                "increment" => {
+                    self.count += 1;
+                    event.prevent_propagate();
+                }
+                "decrement" => {
+                    self.count -= 1;
+                    event.prevent_propagate();
+                }
+                _ => {}
             };
-
-            return UpdateResult::new().prevent_propagate();
         }
-
-        UpdateResult::default()
     }
 }
 
@@ -82,7 +94,15 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
         .align_items(AlignItems::Center)
         .hovered()
         .background(hover_color)
-        .push(Text::new(label).id(id).font_size(24.0).color(Color::WHITE).width("100%").height("100%").disable_selection())
+        .push(
+            Text::new(label)
+                .id(id)
+                .font_size(24.0)
+                .color(Color::WHITE)
+                .width("100%")
+                .height("100%")
+                .disable_selection(),
+        )
         .id(id)
         .component()
 }

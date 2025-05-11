@@ -10,10 +10,9 @@ use crate::examples::Examples;
 use crate::index::index_page;
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification};
 use craft::elements::Container;
 use craft::elements::ElementStyles;
-use craft::events::Event;
 use craft::style::Display;
 use craft::style::FlexDirection;
 use craft::{craft_main_with_options, CraftOptions, RendererType, WindowContext};
@@ -34,16 +33,18 @@ impl Default for WebsiteGlobalState {
 #[derive(Default)]
 pub(crate) struct Website {}
 
-impl Component<WebsiteGlobalState> for Website {
+impl Component for Website {
+    type GlobalState = WebsiteGlobalState;
     type Props = ();
+    type Message = ();
 
     fn view(
-        _state: &Self,
-        global_state: &WebsiteGlobalState,
+        &self,
+        global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)
@@ -58,16 +59,6 @@ impl Component<WebsiteGlobalState> for Website {
             "/about" => wrapper.push(About::component().key("about")).component(),
             _ => wrapper.push(index_page().key("index")).component(),
         }
-    }
-
-    fn update(
-        _state: &mut Self,
-        _global_state: &mut WebsiteGlobalState,
-        _props: &Self::Props,
-        _message: Event,
-        _window_context: &mut WindowContext
-    ) -> UpdateResult {
-        UpdateResult::default()
     }
 }
 

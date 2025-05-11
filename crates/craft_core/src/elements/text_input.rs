@@ -1,7 +1,7 @@
 use crate::CraftMessage;
 use crate::components::component::ComponentSpecification;
 use crate::components::{ImeAction, Props};
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -243,7 +243,8 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
+        let mut ret = Event::default();
         self.on_style_event(message, element_state, should_style);
 
         let base_state = self.get_base_state_mut(element_state);
@@ -275,7 +276,7 @@ impl Element for TextInput {
             }
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
                 if !keyboard_input.event.state.is_pressed() {
-                    return UpdateResult::default();
+                    return Event::default();
                 }
 
                 state.cursor_reset();
@@ -429,10 +430,9 @@ impl Element for TextInput {
 
 
                 // FIXME: This is more of a hack, we should be doing this somewhere else.
-                return UpdateResult::new()
-                    .prevent_defaults()
-                    .prevent_propagate()
-                    .result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
+                ret.prevent_defaults();
+                ret.prevent_propagate();
+                ret.result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
             }
             // WindowEvent::Touch(Touch {
             //     phase, location, ..
@@ -514,7 +514,7 @@ impl Element for TextInput {
             _ => {}
         }
         let ime = state.editor.ime_cursor_area();
-        UpdateResult::default().ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)))
+        ret.ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)))
     }
 
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {

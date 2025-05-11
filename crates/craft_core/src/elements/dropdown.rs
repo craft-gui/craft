@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::components::UpdateResult;
+use crate::components::Event;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -261,7 +261,8 @@ impl Element for Dropdown {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
+        let mut ret = Event::default();
         self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
@@ -269,7 +270,7 @@ impl Element for Dropdown {
         match message {
             CraftMessage::PointerButtonEvent(pointer_button) => {
                 if !message.clicked() {
-                    return UpdateResult::default();
+                    return Event::default();
                 }
 
                 for child in self.children().iter().enumerate() {
@@ -279,9 +280,9 @@ impl Element for Dropdown {
                         // We need to retain the index of the selected item to render the `pseudo_dropdown_selection` element.
                         state.selected_item = Some(child.0);
                         state.is_open = false;
-
-                        return UpdateResult::default()
-                            .result_message(CraftMessage::DropdownItemSelected(state.selected_item.unwrap()));
+                        
+                        ret.result_message(CraftMessage::DropdownItemSelected(state.selected_item.unwrap()));
+                        return ret
                     }
                 }
 
@@ -291,14 +292,15 @@ impl Element for Dropdown {
                 let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;
-                    return UpdateResult::default().result_message(CraftMessage::DropdownToggled(state.is_open));
+                    ret.result_message(CraftMessage::DropdownToggled(state.is_open));
+                    return ret;
                 }
             }
             CraftMessage::KeyboardInputEvent(_) => {}
             _ => {}
         }
 
-        UpdateResult::default()
+        Event::default()
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

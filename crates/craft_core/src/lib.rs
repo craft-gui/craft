@@ -28,7 +28,7 @@ pub use renderer::color::Color;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
-use crate::events::{CraftMessage, Event, EventDispatchType, KeyboardInput, MouseWheel, PointerButton, PointerMoved};
+use crate::events::{CraftMessage, EventDispatchType, KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 pub use crate::options::RendererType;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
@@ -108,7 +108,7 @@ struct ReactiveTree {
     element_state: ElementStateStore,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// User-level API to get and set common window properties.
 /// All values are in logical pixels.
 pub struct WindowContext {
@@ -267,7 +267,7 @@ pub fn internal_craft_main_with_options(
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 
-use crate::components::PointerCapture;
+use crate::components::{Event, PointerCapture};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::geometry::{Point, Rectangle, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
@@ -498,7 +498,12 @@ async fn async_main(
                     let message = message.2;
 
                     let state = app.user_tree.user_state.storage.get_mut(&source_component).unwrap().as_mut();
-                    update_fn(state, &mut app.global_state, props, Event::new(&Message::UserMessage(message)), &mut app.window_context);
+
+                    let mut event = Event::with_window_context(app.window_context.clone());
+
+                    update_fn(state, &mut app.global_state, props, &mut event, &Message::UserMessage(message));
+                    app.window_context = event.window;
+
                     app.window.as_ref().unwrap().request_redraw();
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
@@ -759,7 +764,7 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
 
 #[allow(clippy::too_many_arguments)]
 fn dispatch_event(
-    event: &Message,
+    message: &Message,
     dispatch_type: EventDispatchType,
     _resource_manager: &mut Arc<ResourceManager>,
     mouse_position: Option<Point>,
@@ -783,12 +788,12 @@ fn dispatch_event(
     };
 
     let is_pointer_event = matches!(
-        event,
+        message,
         Message::CraftMessage(CraftMessage::PointerMovedEvent(_))
             | Message::CraftMessage(CraftMessage::PointerButtonEvent(_))
     );
     let is_ime_event = matches!(
-        event,
+        message,
         Message::CraftMessage(CraftMessage::ImeEvent(Ime::Enabled))
             | Message::CraftMessage(CraftMessage::ImeEvent(Ime::Disabled))
     );
@@ -910,20 +915,22 @@ fn dispatch_event(
                     target_components.push_back(node);
 
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-                    let mut res = (node.update)(
+                    let mut event = Event::with_window_context(window_context.clone());
+                    event.current_target = current_target.element_id.clone();
+                    event.target = target.element_id.clone();
+                    (node.update)(
                         state,
                         global_state,
                         node.props.clone(),
-                        Event::new(event)
-                            .current_target(current_target.element_id.clone())
-                            .target(target.element_id.clone()),
-                        window_context
+                        &mut event,
+                        message,
                     );
-                    effects.append(&mut res.effects);
-                    propagate = propagate && res.propagate;
+                    *window_context = event.window.clone();
+                    effects.append(&mut event.effects);
+                    propagate = propagate && event.propagate;
                     let element_state =
                         &mut reactive_tree.element_state.storage.get_mut(&current_target.component_id).unwrap().base;
-                    match res.pointer_capture {
+                    match event.pointer_capture {
                         PointerCapture::None => {}
                         PointerCapture::Set => {
                             element_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
@@ -932,12 +939,12 @@ fn dispatch_event(
                             element_state.pointer_capture.remove(&DUMMY_DEVICE_ID);
                         }
                     }
-                    prevent_defaults = prevent_defaults || res.prevent_defaults;
-                    if res.future.is_some() {
+                    prevent_defaults = prevent_defaults || event.prevent_defaults;
+                    if event.future.is_some() {
                         reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
                             node.id,
                             node.update,
-                            res,
+                            event,
                             node.props.clone(),
                         ));
                     }
@@ -947,7 +954,7 @@ fn dispatch_event(
             let mut element_events: VecDeque<(CraftMessage, Option<String>)> = VecDeque::new();
 
             for element_state in reactive_tree.element_state.storage.values_mut() {
-                if let Message::CraftMessage(message) = &event {
+                if let Message::CraftMessage(message) = &message {
                     match message {
                         CraftMessage::PointerMovedEvent(..) => {
                             element_state.base.hovered = false;
@@ -974,7 +981,7 @@ fn dispatch_event(
                             break;
                         }
                         if element.component_id() == target.component_id {
-                            if let Message::CraftMessage(event) = event {
+                            if let Message::CraftMessage(event) = message {
                                 let res = element.on_event(
                                     event,
                                     &mut reactive_tree.element_state,
@@ -996,7 +1003,7 @@ fn dispatch_event(
                 }
             }
 
-            for (event, target_element_id) in element_events.iter() {
+            for (message, target_element_id) in element_events.iter() {
                 let mut propagate = true;
                 let mut prevent_defaults = false;
                 for node in target_components.iter() {
@@ -1005,21 +1012,24 @@ fn dispatch_event(
                     }
 
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-                    let mut res = (node.update)(
+                    let mut event = Event::with_window_context(window_context.clone());
+                    event.current_target = target_element_id.clone();
+                    (node.update)(
                         state,
                         global_state,
                         node.props.clone(),
-                        Event::new(&Message::CraftMessage(event.clone())).current_target(target_element_id.clone()),
-                        window_context
+                        &mut event,
+                        &Message::CraftMessage(message.clone()),
                     );
-                    effects.append(&mut res.effects);
-                    propagate = propagate && res.propagate;
-                    prevent_defaults = prevent_defaults || res.prevent_defaults;
-                    if res.future.is_some() {
+                    *window_context = event.window.clone();
+                    effects.append(&mut event.effects);
+                    propagate = propagate && event.propagate;
+                    prevent_defaults = prevent_defaults || event.prevent_defaults;
+                    if event.future.is_some() {
                         reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
                             node.id,
                             node.update,
-                            res,
+                            event,
                             node.props.clone(),
                         ));
                     }
@@ -1030,9 +1040,9 @@ fn dispatch_event(
             for node in fiber.pre_order_iter().collect::<Vec<FiberNode>>().iter() {
                 if let Some(element) = node.element {
                     if element.component_id() == id {
-                        if let Message::CraftMessage(event) = event {
+                        if let Message::CraftMessage(message) = message {
                             let mut res = element.on_event(
-                                event,
+                                message,
                                 &mut reactive_tree.element_state,
                                 text_context.as_mut().unwrap(),
                                 false,
@@ -1047,19 +1057,23 @@ fn dispatch_event(
                 if let Some(component) = node.component {
                     if component.id == id {
                         let state = reactive_tree.user_state.storage.get_mut(&component.id).unwrap().as_mut();
-                        let mut res = (component.update)(
+                        let mut event = Event::with_window_context(window_context.clone());
+                        event.current_target = None;
+                        event.target = None;
+                        (component.update)(
                             state,
                             global_state,
                             component.props.clone(),
-                            Event::new(event).current_target(None).target(None),
-                            window_context
+                            &mut event,
+                            message,
                         );
-                        effects.append(&mut res.effects);
-                        if res.future.is_some() {
+                        *window_context = event.window.clone();
+                        effects.append(&mut event.effects);
+                        if event.future.is_some() {
                             reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
                                 component.id,
                                 component.update,
-                                res,
+                                event,
                                 component.props.clone(),
                             ));
                         }

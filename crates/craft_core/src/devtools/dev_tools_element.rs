@@ -1,6 +1,6 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
-use crate::components::{ComponentId, UpdateResult};
+use crate::components::{ComponentId, Event};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -180,9 +180,9 @@ impl Element for DevTools {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> UpdateResult {
+    ) -> Event {
         self.on_style_event(message, element_state, should_style);
-        UpdateResult::default()
+        Event::default()
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

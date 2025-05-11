@@ -1,9 +1,9 @@
 use util::setup_logging;
-use craft::components::{Component, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentSpecification, Event};
 use craft::craft_main_with_options;
 use craft::elements::Container;
 use craft::elements::ElementStyles;
-use craft::events::Event;
+use craft::events::{Message};
 use craft::palette;
 use craft::style::Position;
 use craft::style::Unit;
@@ -15,15 +15,20 @@ use craft::WindowContext;
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
 
-impl Component<()> for EventsExample {
+impl Component for EventsExample {
+    type GlobalState = ();
+
     type Props = ();
 
-    fn view_with_no_global_state(
-        _state: &Self,
+    type Message = ();
+
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .background(palette::css::RED)
@@ -50,13 +55,10 @@ impl Component<()> for EventsExample {
             )
             .component()
     }
-
-    fn update_with_no_global_state(_state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        if event.message.clicked() {
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+        if message.clicked() {
             println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
         }
-
-        UpdateResult::new()
     }
 }
 

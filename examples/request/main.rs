@@ -5,11 +5,11 @@ use util::setup_logging;
 use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::{craft_main_with_options, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::{Event, Message};
+use craft::events::{Message};
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
 use craft::CraftOptions;
@@ -21,7 +21,7 @@ use serde_json::json;
 use std::result::Result;
 
 #[derive(Debug, Clone, Default, PartialEq)]
-enum State {
+pub enum State {
     #[default]
     Initial,
     Loading,
@@ -29,7 +29,7 @@ enum State {
     Error,
 }
 
-enum AniListMessage {
+pub enum AniListMessage {
     StateChange(State),
 }
 
@@ -39,14 +39,17 @@ pub struct AniList {
 }
 
 impl Component for AniList {
+    type GlobalState = ();
     type Props = ();
+    type Message = AniListMessage;
 
-    fn view_with_no_global_state(
-        state: &Self,
+    fn view(
+        &self,
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
@@ -65,7 +68,7 @@ impl Component for AniList {
                     .flex_direction(FlexDirection::Column),
             );
 
-        match &state.state {
+        match &self.state {
             State::Initial => {}
             State::Loading => {
                 root = root.push(Text::new("Loading...").font_size(24.0));
@@ -84,14 +87,14 @@ impl Component for AniList {
         root.component()
     }
 
-    fn update_with_no_global_state(state: &mut Self, _props: &Self::Props, event: Event, _window_context: &mut WindowContext) -> UpdateResult {
-        match event.message {
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+        match message {
             Message::CraftMessage(_) => {}
             Message::UserMessage(msg) => {
                 if let Some(StateChange(new_state)) = msg.downcast_ref::<AniListMessage>() {
-                    state.state = new_state.clone();
+                    self.state = new_state.clone();
                 }
-                return UpdateResult::default();
+                return;
             }
         }
 
@@ -109,27 +112,25 @@ impl Component for AniList {
 
             if let Err(response) = response {
                 tracing::error!("Error fetching data: {:?}", response);
-                return UpdateResult::async_result(StateChange(State::Error));
+                return Event::async_result(StateChange(State::Error));
             }
 
             let result: Result<AniListResponse, reqwest::Error> = response.unwrap().json().await;
 
             if let Err(response) = &result {
                 tracing::error!("Error parsing data: {:?}", response);
-                return UpdateResult::async_result(StateChange(State::Error));
+                return Event::async_result(StateChange(State::Error));
             }
 
             let result = result.unwrap();
             tracing::info!("Loaded data: ");
-            UpdateResult::async_result(StateChange(State::Loaded(result)))
+            Event::async_result(StateChange(State::Loaded(result)))
         };
 
-        if state.state != State::Loading && event.message.clicked() && Some("get_data") == event.target.as_deref() {
-            state.state = State::Loading;
-            return UpdateResult::default().future(get_ani_list_data);
+        if self.state != State::Loading && message.clicked() && Some("get_data") == event.target.as_deref() {
+            self.state = State::Loading;
+            event.future(get_ani_list_data);
         }
-
-        UpdateResult::default()
     }
 }
 

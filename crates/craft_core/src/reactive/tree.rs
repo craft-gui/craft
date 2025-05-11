@@ -1,17 +1,17 @@
 use crate::components::component::{ComponentId, ComponentOrElement, ComponentSpecification, UpdateFn};
-use crate::components::{Props, UpdateResult};
+use crate::components::{Event, Props};
 use crate::elements::container::ContainerState;
 use crate::elements::element::{Element, ElementBoxed};
-use crate::events::{CraftMessage, Event, Message};
+use crate::events::{CraftMessage, Message};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
-use crate::{GlobalState, WindowContext};
-use std::collections::{HashMap, HashSet, VecDeque};
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::text::text_context::TextContext;
+use crate::{GlobalState, WindowContext};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -64,10 +64,9 @@ fn dummy_update(
     _state: &mut StateStoreItem,
     _global_state: &mut GlobalState,
     _props: Props,
-    _message: Event,
-    _window_context: &mut WindowContext
-) -> UpdateResult {
-    UpdateResult::new()
+    _event: &mut Event,
+    _message: &Message,
+) {
 }
 
 pub struct DiffTreesResult {
@@ -283,19 +282,23 @@ pub(crate) fn diff_trees(
                         user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
 
-                        let res = (component_data.update_fn)(
+                        // TODO: Remove clones.
+                        let mut event = Event::with_window_context(window_context.clone());
+
+                        (component_data.update_fn)(
                             state_mut,
                             global_state,
                             props.clone(),
-                            Event::new(&Message::CraftMessage(CraftMessage::Initialized)),
-                            window_context
+                            &mut event,
+                            &Message::CraftMessage(CraftMessage::Initialized),
                         );
+                        *window_context = event.window.clone();
                         // TODO: Should we handle effects here?
-                        if res.future.is_some() {
+                        if event.future.is_some() {
                             update_queue.push_back(UpdateQueueEntry::new(
                                 id,
                                 component_data.update_fn,
-                                res,
+                                event,
                                 props.clone(),
                             ));
                         }

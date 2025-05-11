@@ -9,5 +9,6 @@ pub use component::ComponentOrElement;
 pub use component::ComponentSpecification;
 pub use props::Props;
 pub use update_result::PointerCapture;
-pub use update_result::UpdateResult;
+pub use update_result::Event;
 pub use update_result::ImeAction;
+pub use crate::events::UserMessage;

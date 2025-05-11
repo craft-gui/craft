@@ -1,23 +1,24 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, UpdateResult};
+use craft::components::{Component, ComponentId, ComponentSpecification};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::Event;
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
 use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct About {}
 
-impl Component<WebsiteGlobalState> for About {
+impl Component for About {
     type Props = ();
+    type GlobalState = WebsiteGlobalState;
+    type Message = ();
 
     fn view(
-        _state: &Self,
+        &self,
         _global_state: &WebsiteGlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window_context: &WindowContext
+        _window: &WindowContext
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -32,15 +33,5 @@ impl Component<WebsiteGlobalState> for About {
                     .component(),
             )
             .component()
-    }
-
-    fn update(
-        _state: &mut Self,
-        _global_state: &mut WebsiteGlobalState,
-        _props: &Self::Props,
-        _event: Event,
-        _window_context: &mut WindowContext
-    ) -> UpdateResult {
-        UpdateResult::default()
     }
 }
