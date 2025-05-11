@@ -9,7 +9,8 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::{GlobalState, WindowContext};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
+use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -90,7 +91,8 @@ pub(crate) fn diff_trees(
     reload_fonts: bool,
     _text_context: &mut TextContext,
     scaling_factor: f64,
-    window_context: &mut WindowContext
+    window_context: &mut WindowContext,
+    update_queue: &mut VecDeque<UpdateQueueEntry>,
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -281,13 +283,22 @@ pub(crate) fn diff_trees(
                         user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
 
-                        (component_data.update_fn)(
+                        let res = (component_data.update_fn)(
                             state_mut,
                             global_state,
                             props.clone(),
                             Event::new(&Message::CraftMessage(CraftMessage::Initialized)),
                             window_context
                         );
+                        // TODO: Should we handle effects here?
+                        if res.future.is_some() {
+                            update_queue.push_back(UpdateQueueEntry::new(
+                                id,
+                                component_data.update_fn,
+                                res,
+                                props.clone(),
+                            ));
+                        }
                     }
 
                     let state = user_state.storage.get(&id);
