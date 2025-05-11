@@ -24,7 +24,7 @@ impl Component for Counter {
 
     fn view(
         &self,
-        _global_state: &(),
+        _global_state: &Self::GlobalState,
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
