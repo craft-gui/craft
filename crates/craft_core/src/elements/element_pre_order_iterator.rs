@@ -32,6 +32,7 @@ impl dyn Element {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
     use crate::elements::element::ElementBoxed;
     use crate::elements::{Container, Text};
     use crate::reactive::element_id::reset_unique_element_id;
@@ -39,6 +40,7 @@ mod tests {
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
     use crate::{GlobalState, WindowContext};
+    use crate::events::update_queue_entry::UpdateQueueEntry;
     use crate::text::text_context::TextContext;
 
     #[test]
@@ -58,8 +60,8 @@ mod tests {
         let mut user_state = StateStore::default();
         let mut element_state = ElementStateStore::default();
         let mut global_state = GlobalState::from(Box::new(()));
-
         let mut window_context = WindowContext::new();
+        let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
         
         let initial_tree = diff_trees(
             initial_view,
@@ -72,6 +74,7 @@ mod tests {
             &mut text_context,
             1.0,
             &mut window_context,
+            &mut update_queue
         );
 
         initial_tree.component_tree.print_tree();
