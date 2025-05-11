@@ -76,7 +76,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use winit::event::{Ime, Modifiers};
+use winit::event::{ElementState, Ime, Modifiers, MouseButton};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
@@ -583,6 +583,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        true,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -595,6 +596,7 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        true,
     );
 
     if let Some(window) = app.window.as_ref() {
@@ -615,6 +617,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -627,6 +630,7 @@ async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     app.window.as_ref().unwrap().request_redraw();
@@ -645,6 +649,7 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -657,6 +662,7 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     app.window.as_ref().unwrap().request_redraw();
@@ -674,6 +680,7 @@ async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -687,6 +694,7 @@ async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
             &mut app.global_state,
             &mut app.text_context,
             &mut app.window_context,
+            false,
         );
     }
     app.window.as_ref().unwrap().request_redraw();
@@ -705,6 +713,7 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -718,6 +727,7 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
             &mut app.global_state,
             &mut app.text_context,
             &mut app.window_context,
+            false,
         );
 
         let logical_key = keyboard_input.event.logical_key;
@@ -756,7 +766,8 @@ fn dispatch_event(
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
     text_context: &mut Option<TextContext>,
-    window_context: &mut WindowContext
+    window_context: &mut WindowContext,
+    is_style: bool
 ) {
     let mut effects: Vec<(EventDispatchType, Message)> = Vec::new();
 
@@ -935,7 +946,24 @@ fn dispatch_event(
 
             let mut element_events: VecDeque<(CraftMessage, Option<String>)> = VecDeque::new();
 
+            for element_state in reactive_tree.element_state.storage.values_mut() {
+                if let Message::CraftMessage(message) = &event {
+                    match message {
+                        CraftMessage::PointerMovedEvent(..) => {
+                            element_state.base.hovered = false;
+                        }
+                        CraftMessage::PointerButtonEvent(pointer_button) => {
+                            if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == ElementState::Released {
+                                element_state.base.active = false;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
             // Handle element events if prevent defaults was not set to true.
+            //let mut first_element = true;
             if !prevent_defaults {
                 for target in targets.iter() {
                     let mut propagate = true;
@@ -951,7 +979,10 @@ fn dispatch_event(
                                     event,
                                     &mut reactive_tree.element_state,
                                     text_context.as_mut().unwrap(),
+                                    // first_element && is_style. For only the first element.
+                                    is_style,
                                 );
+                                //first_element = false;
 
                                 if let Some(result_message) = res.result_message {
                                     element_events.push_back((result_message, element.get_id().clone()));
@@ -1004,6 +1035,7 @@ fn dispatch_event(
                                 event,
                                 &mut reactive_tree.element_state,
                                 text_context.as_mut().unwrap(),
+                                false,
                             );
 
                             effects.append(&mut res.effects);
@@ -1049,7 +1081,8 @@ fn dispatch_event(
             reactive_tree,
             global_state,
             text_context,
-            window_context
+            window_context,
+            false
         );
     }
 }
@@ -1073,6 +1106,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        true,
     );
 
     #[cfg(feature = "dev_tools")]
@@ -1085,6 +1119,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
         &mut app.global_state,
         &mut app.text_context,
         &mut app.window_context,
+        false,
     );
 
     app.window.as_ref().unwrap().request_redraw();

@@ -94,7 +94,7 @@ impl Element for Dropdown {
         let is_open = self.get_state(element_state).is_open;
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
         {
             // Draw the dropdown selection.
@@ -202,7 +202,7 @@ impl Element for Dropdown {
         let is_open = state.is_open;
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         // Finalize the layout of the pseudo dropdown selection element.
         if let Some(dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
@@ -260,7 +260,9 @@ impl Element for Dropdown {
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
+        self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
 

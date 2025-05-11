@@ -68,7 +68,7 @@ impl Element for Switch {
         if !self.element_data.style.visible() {
             return;
         }
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
         self.thumb.pseudo_thumb.draw(renderer, text_context, taffy_tree, _root_node, element_state, pointer, window);
     }
 
@@ -117,7 +117,7 @@ impl Element for Switch {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-        self.finalize_borders();
+        self.finalize_borders(element_state);
         
         let x = if state.toggled.unwrap_or(self.default_toggled) {
             self.element_data.computed_box.content_rectangle().right() - self.spacing - self.thumb.size
@@ -146,7 +146,9 @@ impl Element for Switch {
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
+        self.on_style_event(message, element_state, should_style);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
 

@@ -18,6 +18,7 @@ use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
 use std::mem;
+use winit::event::MouseButton;
 
 #[derive(Clone, Debug)]
 pub struct ElementBoxed {
@@ -110,11 +111,31 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
 
     fn on_event(
         &self,
-        _message: &CraftMessage,
-        _element_state: &mut ElementStateStore,
+        message: &CraftMessage,
+        element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        should_style: bool,
     ) -> UpdateResult {
+        self.on_style_event(message, element_state, should_style);
         UpdateResult::default()
+    }
+
+    fn on_style_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, should_style: bool) {
+        if should_style {
+            let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
+
+            match message {
+                CraftMessage::PointerMovedEvent(..) => {
+                    state.base.hovered = true;
+                }
+                CraftMessage::PointerButtonEvent(pointer_button) => {
+                    if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == winit::event::ElementState::Pressed {
+                        state.base.active = true;
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     fn resolve_box(
@@ -188,9 +209,11 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
 
-    fn draw_borders(&self, renderer: &mut RenderList) {
+    fn draw_borders(&self, renderer: &mut RenderList, element_state: &mut ElementStateStore) {
+        let base_state = self.get_base_state(element_state);
+        let current_style = base_state.base.current_style(self.element_data());
+
         let element_data = self.element_data();
-        let current_style = element_data.current_style();
         let background_color = current_style.background();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
@@ -241,22 +264,24 @@ pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
         }
     }
 
-    fn finalize_borders(&mut self) {
-        let element_data = self.element_data_mut();
+    fn finalize_borders(&mut self, element_state: &ElementStateStore,) {
+        let base_state = self.get_base_state(element_state);
+        let current_style = base_state.base.current_style(self.element_data());
 
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
-        if !element_data.current_style().has_border() {
+        if !current_style.has_border() {
             return;
         }
 
-        let element_rect = element_data.computed_box_transformed;
+        let element_rect = self.element_data().computed_box_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
             [borders.top, borders.right, borders.bottom, borders.left],
-            element_data.current_style().border_radius(),
-            element_data.current_style().border_color(),
+            current_style.border_radius(),
+            current_style.border_color(),
         );
+        let element_data = self.element_data_mut();
         element_data.computed_border = border_spec.compute_border_spec();
     }
 

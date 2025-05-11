@@ -4,6 +4,7 @@ use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementStyles;
 use crate::events::CraftMessage;
+use crate::generate_component_methods_no_children;
 use crate::geometry::Point;
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
@@ -12,7 +13,6 @@ use crate::style::Style;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use crate::generate_component_methods_no_children;
 use parley::{Alignment, AlignmentOptions, Selection};
 use rustc_hash::FxHasher;
 use std::any::Any;
@@ -27,7 +27,6 @@ use std::time as time;
 use time::{Duration, Instant};
 
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
-
 use winit::window::Window;
 
 // A stateful element that shows text.
@@ -106,7 +105,7 @@ impl Element for Text {
         let computed_box_transformed = self.element_data.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
 
         let state: &mut TextState = element_state
             .storage
@@ -156,7 +155,7 @@ impl Element for Text {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
 
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         let state: &mut TextState = element_state
             .storage
@@ -190,7 +189,9 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, _message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext) -> UpdateResult {
+    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool) -> UpdateResult {
+        self.on_style_event(message, _element_state, should_style);
+
         if !self.selectable {
             return UpdateResult::default();
         }
@@ -210,7 +211,7 @@ impl Element for Text {
         if self.selectable {
             let text_position = self.element_data().computed_box_transformed.content_rectangle();
 
-            match _message {
+            match message {
                 CraftMessage::PointerButtonEvent(pointer_button) => {
                     if pointer_button.button.mouse_button() == winit::event::MouseButton::Left {
                         state.pointer_down = pointer_button.state.is_pressed();
@@ -290,22 +291,32 @@ impl Element for Text {
     fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, _scaling_factor: f64) {
         let text_hash = hash_string(self.text.as_ref().unwrap());
 
-        let state: &mut TextState = element_state
+        let base_state: &mut ElementStateStoreItem = element_state
             .storage
             .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
+            .unwrap();
+
+
+        let state: &mut TextState = base_state.data
             .as_mut()
             .downcast_mut()
             .unwrap();
 
+        let last_style = &state.last_text_style;
+
+        let current_style = *base_state.base.current_style(self.element_data());
+        if last_style.color() != current_style.color() {
+            if let Some(text_render) = state.text_render.as_mut() {
+                text_render.override_brush = Some(ColorBrush::new(current_style.color()));
+            }
+        }
+
         let style_changed = {
-            let style = self.style();
             let last_style = &state.last_text_style;
 
-            style.font_size() != last_style.font_size()
-                || style.font_weight() != last_style.font_weight()
-                || style.font_style() != last_style.font_style() || style.font_family() != last_style.font_family()
+            current_style.font_size() != last_style.font_size()
+                || current_style.font_weight() != last_style.font_weight()
+                || current_style.font_style() != last_style.font_style() || current_style.font_family() != last_style.font_family()
         };
 
         let text = std::mem::take(&mut self.text);
@@ -320,7 +331,7 @@ impl Element for Text {
             state.current_render_key = None;
         }
 
-        state.last_text_style = *self.style();
+        state.last_text_style = current_style;
     }
 }
 

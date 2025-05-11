@@ -80,7 +80,7 @@ impl Element for Slider {
             return;
         }
         
-        self.draw_borders(renderer);
+        self.draw_borders(renderer, element_state);
 
         // Draw the value track color to the left of the thumb.
         if let Some(value_track_color) = self.value_track_color {
@@ -150,7 +150,7 @@ impl Element for Slider {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-        self.finalize_borders();
+        self.finalize_borders(element_state);
 
         let thumb_position = self.thumb_position(state.value);
 
@@ -171,14 +171,15 @@ impl Element for Slider {
 
     fn on_event(
         &self,
-        message: &CraftMessage,
-        element_state: &mut ElementStateStore,
+        _message: &CraftMessage,
+        _element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
+        _should_style: bool,
     ) -> UpdateResult {
-        let base_state = self.get_base_state_mut(element_state);
+        let base_state = self.get_base_state_mut(_element_state);
         let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
 
-        if let CraftMessage::PointerButtonEvent(pointer) = message {
+        if let CraftMessage::PointerButtonEvent(pointer) = _message {
 
             if pointer.state == ElementState::Pressed {
                 state.dragging = true;
@@ -195,7 +196,7 @@ impl Element for Slider {
             return UpdateResult::default().result_message(CraftMessage::SliderValueChanged(value));
         }
 
-        if let CraftMessage::PointerMovedEvent(pointer) = message {
+        if let CraftMessage::PointerMovedEvent(pointer) = _message {
             if !state.dragging {
                 return UpdateResult::default();
             }
