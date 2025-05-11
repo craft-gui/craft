@@ -1177,6 +1177,7 @@ async fn update_reactive_tree(
             text_context,
             scaling_factor,
             window_context,
+            &mut reactive_tree.update_queue,
         )
     };
 
