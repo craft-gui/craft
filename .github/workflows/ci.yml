@@ -54,8 +54,6 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
-      - name: Build Craft
-        run: cargo build --verbose
       - name: Build Counter Example
         run: cargo build --bin counter
 
