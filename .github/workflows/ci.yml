@@ -57,7 +57,7 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --package counter
+        run: cargo build --bin counter
 
   build-android:
     runs-on: ubuntu-latest
@@ -104,7 +104,7 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --package counter
+        run: cargo build --target aarch64-apple-ios --bin counter
 
   unit-tests:
     runs-on: ubuntu-latest
