@@ -5,9 +5,9 @@ use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{Affine, Line, Stroke};
 use peniko::{kurbo, Color, Fill};
 use std::sync::Arc;
-use tinyvg::color_table::ColorTable;
-use tinyvg::commands::{DrawCommand, Path, PathCommand, Segment, Style};
-use tinyvg::common::Unit;
+use tinyvg_rs::color_table::ColorTable;
+use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Segment, Style};
+use tinyvg_rs::common::Unit;
 use vello::Scene;
 
 pub(crate) fn draw_path(scene: &mut Scene, path: &Path, fill_style: &Style, line_width: Option<&Unit>, color_table: &ColorTable, affine: &Affine, override_color: &Option<Color>) {

@@ -2,8 +2,8 @@ use peniko::color::AlphaColor;
 use peniko::kurbo::SvgArc;
 use peniko::kurbo::BezPath;
 use peniko::{kurbo, Color, Gradient};
-use tinyvg::color_table::ColorTable;
-use tinyvg::commands::{Path, PathCommand, Point, Style};
+use tinyvg_rs::color_table::ColorTable;
+use tinyvg_rs::commands::{Path, PathCommand, Point, Style};
 use crate::renderer::Brush;
 
 pub(crate) struct TinyVgHelpers;
@@ -17,7 +17,7 @@ impl TinyVgHelpers {
 
     #[allow(clippy::wrong_self_convention)]
     /// Convert the TinyVG color to a peniko color.
-    pub(crate) fn to_peniko_color(color: tinyvg::color_table::RgbaF32) -> Color {
+    pub(crate) fn to_peniko_color(color: tinyvg_rs::color_table::RgbaF32) -> Color {
         Color::from(AlphaColor::new([color.0, color.1, color.2, color.3]))
     }
 

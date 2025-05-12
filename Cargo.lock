@@ -494,10 +494,10 @@ dependencies = [
  "rustc-hash 2.1.1",
  "softbuffer",
  "taffy",
- "tinyvg",
+ "tinyvg-rs",
  "tokio",
  "vello",
- "vello_common",
+ "vello_common 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "vello_cpu",
  "vello_hybrid",
  "wasm-bindgen",
@@ -505,7 +505,7 @@ dependencies = [
  "web-sys",
  "web-time",
  "wgpu",
- "winit",
+ "winit_craft",
 ]
 
 [[package]]
@@ -597,7 +597,8 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "dpi"
 version = "0.1.2"
-source = "git+https://github.com/rust-windowing/winit?rev=519947463fe2c2e213c5cc8f217554d07301ef23#519947463fe2c2e213c5cc8f217554d07301ef23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "drm"
@@ -3011,9 +3012,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
-name = "tinyvg"
-version = "0.1.0"
-source = "git+https://github.com/craft-gui/tinyvg-rs?rev=380e88956bd5f0a7fdca4c39d8c6928fa9c02511#380e88956bd5f0a7fdca4c39d8c6928fa9c02511"
+name = "tinyvg-rs"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a24f31975b7aab856cf34269ec78d746f05c31919d2ee893d4461f93b82315c0"
 dependencies = [
  "byteorder",
 ]
@@ -3265,7 +3267,8 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vello"
 version = "0.5.0"
-source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3#e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df026e62e8b0d12d55ff5e91ae9114a20f82d9b856bedfdbf3abd5d1472dceed"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
@@ -3283,7 +3286,8 @@ dependencies = [
 [[package]]
 name = "vello_common"
 version = "0.0.1"
-source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3#e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b5e49f2836e87b6bd3d8f70324696f22b5f7dfdc836caeab463fff05957c1b1"
 dependencies = [
  "bytemuck",
  "peniko",
@@ -3293,17 +3297,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "vello_cpu"
+name = "vello_common"
 version = "0.0.1"
 source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3#e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
 dependencies = [
- "vello_common",
+ "bytemuck",
+ "peniko",
+ "skrifa",
+ "smallvec",
+]
+
+[[package]]
+name = "vello_cpu"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a45e0a6b777abb4354e15146ecf95bac03aada7a85024fd47762f56095b32896"
+dependencies = [
+ "vello_common 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "vello_encoding"
 version = "0.5.0"
-source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3#e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c5702642f6ea77eedc12d119e1eebead0dba3cf91fe5c5d1f3efc12bf0cfaf1"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -3319,14 +3336,15 @@ source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f
 dependencies = [
  "bytemuck",
  "thiserror 2.0.12",
- "vello_common",
+ "vello_common 0.0.1 (git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3)",
  "wgpu",
 ]
 
 [[package]]
 name = "vello_shaders"
 version = "0.5.0"
-source = "git+https://github.com/linebender/vello/?rev=e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3#e986f4163ea7fa1cb7c218f1f374bbcbdaa014b3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "381790a3779021edd9f88267c1b13b49546cb0fb164f329ee2f2587869ddf459"
 dependencies = [
  "bytemuck",
  "naga",
@@ -4169,9 +4187,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
-name = "winit"
+name = "winit_craft"
 version = "0.30.10"
-source = "git+https://github.com/rust-windowing/winit?rev=519947463fe2c2e213c5cc8f217554d07301ef23#519947463fe2c2e213c5cc8f217554d07301ef23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21cac85da02a252e49400c166511dffc9f1a996083310c1ef6a663a891ea1692"
 dependencies = [
  "ahash",
  "android-activity",
