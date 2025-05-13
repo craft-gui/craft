@@ -1,7 +1,12 @@
 [package]
-name = "craft"
+name = "craft_gui"
+description = "A reactive GUI focused on being practical. Inspired by Elm and React. No macros."
 version = "0.1.0"
 edition = "2024"
+license-file = "LICENSE"
+homepage = "https://craftgui.com/"
+repository = "https://github.com/craft-gui/craft"
+readme = "../../README.md"
 
 [features]
 # Force dynamic linking, which improves iterative compile times

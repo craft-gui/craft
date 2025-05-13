@@ -2,6 +2,10 @@
 name = "craft_logging"
 version = "0.1.0"
 edition = "2024"
+license-file = "LICENSE"
+description = "A logging library for the Craft project, providing structured logging and tracing capabilities."
+homepage = "https://craftgui.com/"
+repository = "https://github.com/craft-gui/craft"
 
 [dependencies]
 

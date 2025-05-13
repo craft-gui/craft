@@ -8,5 +8,10 @@ name = "tour"
 path = "main.rs"
 
 [dependencies]
-craft = { path = "../../crates/craft", features = ["vello_hybrid_renderer"], default-features = false }
 util = { path = "../util" }
+
+[dependencies.craft]
+path = "../../crates/craft"
+features = ["vello_hybrid_renderer"]
+default-features = false
+package = "craft_gui"

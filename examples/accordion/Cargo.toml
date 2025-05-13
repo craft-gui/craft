@@ -8,5 +8,10 @@ name = "accordion"
 path = "main.rs"
 
 [dependencies]
-craft = { path = "../../crates/craft", default-features = false, features = ["vello_renderer", "devtools"] }
 util = { path = "../util" }
+
+[dependencies.craft]
+path = "../../crates/craft"
+default-features = false
+features = ["vello_renderer", "devtools"]
+package = "craft_gui"
