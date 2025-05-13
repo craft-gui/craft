@@ -6,7 +6,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 
-use taffy::Size;
+use taffy::{AvailableSpace, Size};
 
 use crate::style::Style;
 use crate::text::text_context::TextContext;
@@ -59,7 +59,7 @@ impl MetricsRaw {
     }
 }
 
-pub(crate) struct ImageContext {
+pub struct ImageContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }
 
@@ -99,11 +99,18 @@ impl ImageContext {
     }
 }
 
-pub(crate) enum LayoutContext {
+pub enum LayoutContext {
     Text(TaffyTextContext),
     TextInput(TaffyTextInputContext),
     Image(ImageContext),
-    TinyVg(TinyVgContext)
+    TinyVg(TinyVgContext),
+    Other(ComponentId, fn(
+          component_id: ComponentId,
+          element_state: &mut ElementStateStore,
+          known_dimensions: Size<Option<f32>>,
+          available_space: Size<AvailableSpace>,
+          text_context: &mut TextContext,
+    ) -> Size<f32>),
 }
 
 pub fn measure_content(
@@ -151,6 +158,9 @@ pub fn measure_content(
         Some(LayoutContext::TinyVg(tinyvg_context)) => {
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
+        Some(LayoutContext::Other(component_id, measure_fn)) => {
+            measure_fn(component_id.clone(), element_state, known_dimensions, available_space, text_context)
+        }
     }
 }
 
@@ -167,7 +177,7 @@ impl TaffyTextInputContext {
 }
 
 impl TextHashKey {
-    pub(crate) fn new(known_dimensions: Size<Option<f32>>, available_space: Size<taffy::AvailableSpace>) -> Self {
+    pub fn new(known_dimensions: Size<Option<f32>>, available_space: Size<taffy::AvailableSpace>) -> Self {
         let available_space_width_u32: AvailableSpaceKey = match available_space.width {
             taffy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
             taffy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
@@ -187,7 +197,7 @@ impl TextHashKey {
         }
     }
 
-    pub(crate) fn available_space(&self) -> Size<taffy::AvailableSpace> {
+    pub fn available_space(&self) -> Size<taffy::AvailableSpace> {
         Size {
             width: match self.available_space_width {
                 AvailableSpaceKey::Definite(width) => taffy::AvailableSpace::Definite(width as f32),
@@ -202,7 +212,7 @@ impl TextHashKey {
         }
     }
 
-    pub(crate) fn known_dimensions(&self) -> Size<Option<f32>> {
+    pub fn known_dimensions(&self) -> Size<Option<f32>> {
         Size {
             width: self.width_constraint.map(f32::from_bits),
             height: self.height_constraint.map(f32::from_bits),
@@ -210,7 +220,7 @@ impl TextHashKey {
     }
 }
 
-pub(crate) struct TinyVgContext {
+pub struct TinyVgContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }
 

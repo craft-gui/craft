@@ -25,7 +25,7 @@ pub struct ElementBoxed {
     pub(crate) internal: Box<dyn Element>,
 }
 
-pub(crate) trait Element: Any + StandardElementClone + Debug + Send + Sync {
+pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
     fn element_data(&self) -> &ElementData;
     fn element_data_mut(&mut self) -> &mut ElementData;
 

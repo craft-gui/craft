@@ -17,3 +17,5 @@ pub use trblrectangle::TrblRectangle;
 pub type Border = TrblRectangle<f32>;
 pub type Padding = TrblRectangle<f32>;
 pub type Margin = TrblRectangle<f32>;
+
+pub use glam;

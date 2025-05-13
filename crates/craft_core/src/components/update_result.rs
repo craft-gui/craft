@@ -67,7 +67,7 @@ impl Event {
         Box::new(())
     }
 
-    pub(crate) fn ime_action(mut self, action: ImeAction) -> Self {
+    pub fn ime_action(mut self, action: ImeAction) -> Self {
         self.ime = action;
         self
     }
@@ -117,7 +117,7 @@ impl Event {
         self.propagate = false;
     }
 
-    pub(crate) fn result_message(&mut self, message: CraftMessage) {
+    pub fn result_message(&mut self, message: CraftMessage) {
         self.result_message = Some(message);
     }
 

@@ -7,7 +7,7 @@ pub struct TrblRectangle<T> where T: Copy {
 }
 
 impl<T> TrblRectangle<T> where T: Copy {
-    pub(crate) fn new(top: T, right: T, bottom: T, left: T) -> Self {
+    pub fn new(top: T, right: T, bottom: T, left: T) -> Self {
         Self { 
             top,
             right,
@@ -15,7 +15,7 @@ impl<T> TrblRectangle<T> where T: Copy {
             left 
         }
     }
-    pub(crate) fn new_all(value: T) -> Self {
+    pub fn new_all(value: T) -> Self {
         Self {
             top: value,
             right: value,
@@ -25,7 +25,7 @@ impl<T> TrblRectangle<T> where T: Copy {
     }
     
     #[allow(dead_code)]
-    pub(crate) fn to_array(self) -> [T; 4] {
+    pub fn to_array(self) -> [T; 4] {
         [self.top, self.right, self.bottom, self.left]
     }
 }

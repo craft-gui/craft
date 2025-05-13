@@ -24,6 +24,10 @@ mod scroll_state;
 mod thumb;
 
 
+pub use crate::elements::element::Element;
+pub use crate::elements::element_data::ElementData;
+pub use crate::elements::element_states::ElementState;
+pub use crate::elements::element::ElementBoxed;
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
 pub use crate::elements::overlay::Overlay;

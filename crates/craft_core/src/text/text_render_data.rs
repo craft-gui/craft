@@ -5,44 +5,44 @@ use crate::text::text_context::ColorBrush;
 
 #[derive(Clone, Debug)]
 pub struct TextRender {
-    pub(crate) lines: Vec<TextRenderLine>,
-    pub(crate) cursor: Option<Rectangle>,
+    pub lines: Vec<TextRenderLine>,
+    pub cursor: Option<Rectangle>,
     pub override_brush: Option<ColorBrush>,
 }
 
 #[derive(Clone, Debug)]
 pub struct TextRenderLine {
-    pub(crate) items: Vec<TextRenderItem>,
-    pub(crate) selections: Vec<Rectangle>,
+    pub items: Vec<TextRenderItem>,
+    pub selections: Vec<Rectangle>,
 }
 
 #[derive(Clone, Debug)]
 pub struct TextRenderItem {
-    pub(crate) brush: ColorBrush,
+    pub brush: ColorBrush,
     #[allow(dead_code)]
-    pub(crate) underline: Option<TextRenderItemLine>,
+    pub underline: Option<TextRenderItemLine>,
     #[allow(dead_code)]
-    pub(crate) strikethrough: Option<TextRenderItemLine>,
+    pub strikethrough: Option<TextRenderItemLine>,
     #[allow(dead_code)]
-    pub(crate) glyph_transform: Option<Affine>,
-    pub(crate) font_size: f32,
-    pub(crate) glyphs: Vec<TextRenderGlyph>,
-    pub(crate) font: parley::Font,
+    pub glyph_transform: Option<Affine>,
+    pub font_size: f32,
+    pub glyphs: Vec<TextRenderGlyph>,
+    pub font: parley::Font,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct TextRenderItemLine {
     #[allow(dead_code)]
-    pub(crate) line: Line,
+    pub line: Line,
     #[allow(dead_code)]
-    pub(crate) width: f32,
+    pub width: f32,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct TextRenderGlyph {
-    pub(crate) id: parley::swash::GlyphId,
-    pub(crate) x: f32,
-    pub(crate) y: f32,
+    pub id: parley::swash::GlyphId,
+    pub x: f32,
+    pub y: f32,
 }
 
 pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {

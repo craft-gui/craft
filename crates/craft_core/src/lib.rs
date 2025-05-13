@@ -10,7 +10,7 @@ pub mod renderer;
 pub mod style;
 #[cfg(test)]
 mod tests;
-mod text;
+pub mod text;
 
 pub mod app_message;
 #[cfg(feature = "dev_tools")]
@@ -18,7 +18,7 @@ pub(crate) mod devtools;
 pub mod geometry;
 pub mod resource_manager;
 mod view_introspection;
-mod layout;
+pub mod layout;
 
 pub use craft_runtime::CraftRuntime;
 pub use options::CraftOptions;

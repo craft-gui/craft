@@ -16,4 +16,5 @@ mod image_adapter;
 pub(crate) mod tinyvg_helpers;
 
 pub use renderer::RenderCommand;
+pub use renderer::RenderList;
 pub use renderer::Brush;

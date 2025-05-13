@@ -1,6 +1,6 @@
 use parley::{FontContext, TextStyle, TreeBuilder};
 
-pub(crate) struct TextContext {
+pub struct TextContext {
     pub font_context: FontContext,
     pub layout_context: parley::LayoutContext<ColorBrush>,
     pub scale: f32,

@@ -9,7 +9,7 @@ use taffy::NodeId;
 
 #[derive(Clone, Debug, Default)]
 pub struct ElementData {
-    pub(crate) current_state: ElementState,
+    pub current_state: ElementState,
 
     pub computed_border: ComputedBorderSpec,
 
@@ -29,11 +29,11 @@ pub struct ElementData {
     pub focused_style: Option<Box<Style>>,
 
     /// The children of the element.
-    pub(crate) children: Vec<ElementBoxed>,
+    pub children: Vec<ElementBoxed>,
 
     /// The taffy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
-    pub(crate) taffy_node_id: Option<NodeId>,
+    pub taffy_node_id: Option<NodeId>,
 
     pub content_size: Size<f32>,
     // The computed values after transforms are applied.
@@ -53,7 +53,7 @@ pub struct ElementData {
     pub layout_order: u32,
 
     // Used for converting the element to a component specification.
-    pub(crate) child_specs: Vec<ComponentSpecification>,
+    pub child_specs: Vec<ComponentSpecification>,
     pub(crate) key: Option<String>,
     pub(crate) props: Option<Props>,
 }
@@ -63,7 +63,7 @@ impl ElementData {
         self.style.overflow()[1] == taffy::Overflow::Scroll
     }
 
-    pub(crate) fn current_style_mut(&mut self) -> &mut Style {
+    pub fn current_style_mut(&mut self) -> &mut Style {
         match self.current_state {
             ElementState::Normal => &mut self.style,
             ElementState::Hovered => {
