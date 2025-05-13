@@ -1,7 +1,7 @@
 [package]
 name = "craft_gui"
 description = "A reactive GUI focused on being practical. Inspired by Elm and React. No macros."
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license-file = "LICENSE"
 homepage = "https://craftgui.com/"
@@ -21,7 +21,7 @@ default = ["craft_core/vello_renderer", "craft_core/http_client", "craft_core/de
 
 
 [dependencies]
-craft_dylib = { path = "../craft_dylib", default-features = false, optional = true, version = "0.1.0" }
-craft_core = { path = "../craft_core", default-features = false, version = "0.1.0" }
+craft_dylib = { path = "../craft_dylib", default-features = false, optional = true, version = "0.1.1" }
+craft_core = { path = "../craft_core", default-features = false, version = "0.1.1" }
 
 [lib]

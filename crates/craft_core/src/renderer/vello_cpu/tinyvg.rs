@@ -8,9 +8,9 @@ use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{Affine, BezPath, Line, Shape, Stroke};
 use peniko::{kurbo, Fill};
-use tinyvg::color_table::ColorTable;
-use tinyvg::commands::{DrawCommand, Path, PathCommand, Segment, Style};
-use tinyvg::common::Unit;
+use tinyvg_rs::color_table::ColorTable;
+use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Segment, Style};
+use tinyvg_rs::common::Unit;
 use vello_cpu::RenderContext;
 
 fn stroke_path(scene: &mut RenderContext, bez_path: &BezPath, affine: &Affine, line_width: f64, brush: &Brush) {
