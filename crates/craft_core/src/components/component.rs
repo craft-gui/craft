@@ -5,7 +5,7 @@ use crate::reactive::state_store::StateStoreItem;
 use crate::{GlobalState, WindowContext};
 
 use crate::components::update_result::Event;
-use crate::elements::{Container, Element};
+use crate::elements::{Container};
 use std::any::{Any, TypeId};
 use std::ops::Deref;
 use winit::event::{Ime, Modifiers};
@@ -22,7 +22,7 @@ pub type ViewFn = fn(
 
 /// A Component's update function.
 pub type UpdateFn =
-    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, event: &mut Event, message: &Message, element: Option<&dyn Element>);
+    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, event: &mut Event, message: &Message);
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -160,15 +160,14 @@ where
         props: Props,
         event: &mut Event,
         message: &Message,
-        element: Option<&dyn Element>
     ) {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_mut::<Self::GlobalState>() {
-            Self::update(casted_state, global_state_casted, props, event, message, element)
+            Self::update(casted_state, global_state_casted, props, event, message)
         } else {
-            Self::update(casted_state, &mut Self::GlobalState::default(), props, event, message, element)
+            Self::update(casted_state, &mut Self::GlobalState::default(), props, event, message)
         }
     }
 
@@ -178,7 +177,6 @@ where
         props: &Self::Props,
         event: &mut Event,
         message: &Message,
-        element: Option<&dyn Element>,
     ) {
         match message {
             Message::CraftMessage(craft_message) => match craft_message {
@@ -186,7 +184,7 @@ where
                     self.on_initialize(props, event);
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
-                    self.on_pointer_button(global_state, props, event, pointer_button, element);
+                    self.on_pointer_button(global_state, props, event, pointer_button);
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
                     self.on_keyboard_input(props, event, keyboard_input);
@@ -228,8 +226,8 @@ where
         }
     }
 
-    fn on_pointer_button(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton, element: Option<&dyn Element>,) {
-        if let Some(element) = element {
+    fn on_pointer_button(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton) {
+        if let Some(element) = event.current_target {
             if let Some(on_pointer_button) = &element.element_data().on_pointer_button {
                 on_pointer_button(self, global_state, event, pointer_button);
             }

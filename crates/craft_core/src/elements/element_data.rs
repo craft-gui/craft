@@ -43,9 +43,7 @@ pub struct ElementData {
     pub computed_box_transformed: ElementBox,
     // The computed values without any transforms applied to them.
     pub computed_box: ElementBox,
-
-    /// A user-defined id for the element.
-    pub id: Option<String>,
+    
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
     pub computed_scrollbar_size: Size<f32>,

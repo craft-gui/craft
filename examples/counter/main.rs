@@ -50,7 +50,7 @@ impl Component for Counter {
                     .flex_direction(FlexDirection::Row)
                     .gap("20px")
                     .push(
-                        create_button("-", "decrement", Color::from_rgb8(244, 67, 54), Color::from_rgb8(211, 47, 47))
+                        create_button("-", Color::from_rgb8(244, 67, 54), Color::from_rgb8(211, 47, 47))
                             .on_pointer_button(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
                                 if pointer_button.clicked() {
                                     state.count -= 1;
@@ -59,7 +59,7 @@ impl Component for Counter {
                             }),
                     )
                     .push(
-                        create_button("+", "increment", Color::from_rgb8(76, 175, 80), Color::from_rgb8(67, 160, 71))
+                        create_button("+", Color::from_rgb8(76, 175, 80), Color::from_rgb8(67, 160, 71))
                             .on_pointer_button(|state: &mut Self, _: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
                                 if pointer_button.clicked() {
                                     state.count += 1;
@@ -72,7 +72,7 @@ impl Component for Counter {
     }
 }
 
-fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Container {
+fn create_button(label: &str, color: Color, hover_color: Color) -> Container {
     Container::new()
         .border_width("1px", "2px", "3px", "4px")
         .border_color(Color::from_rgb8(0, 0, 0))
@@ -86,14 +86,12 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Con
         .background(hover_color)
         .push(
             Text::new(label)
-                .id(id)
                 .font_size(24.0)
                 .color(Color::WHITE)
                 .width("100%")
                 .height("100%")
                 .disable_selection(),
         )
-        .id(id)
 }
 
 #[allow(dead_code)]

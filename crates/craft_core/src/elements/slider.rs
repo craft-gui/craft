@@ -175,8 +175,8 @@ impl Element for Slider {
         _element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         _should_style: bool,
-    ) -> Event {
-        let mut ret = Event::default();
+        event: &mut Event,
+    ) {
         let base_state = self.get_base_state_mut(_element_state);
         let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
 
@@ -194,22 +194,20 @@ impl Element for Slider {
 
             let value = self.compute_slider_value(&pointer.position);
             state.value = value;
-            ret.result_message(CraftMessage::SliderValueChanged(value));
-            return ret;
+            event.result_message(CraftMessage::SliderValueChanged(value));
+            return;
         }
 
         if let CraftMessage::PointerMovedEvent(pointer) = _message {
             if !state.dragging {
-                return Event::default();
+                return;
             }
 
             let value = self.compute_slider_value(&pointer.position);
             state.value = value;
-            ret.result_message(CraftMessage::SliderValueChanged(value));
-            return ret;
+            event.result_message(CraftMessage::SliderValueChanged(value));
+            return;
         }
-
-        ret
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

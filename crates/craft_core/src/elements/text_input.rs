@@ -243,17 +243,17 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        let mut ret = Event::default();
-        self.on_style_event(message, element_state, should_style);
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
 
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
         state.is_active = true;
 
-        let scroll_result = state.scroll_state.on_event(message, &self.element_data, &mut base_state.base);
+        let scroll_result = state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
 
-        if !scroll_result.propagate {
+        if !event.propagate {
             return scroll_result;
         }
 
@@ -276,7 +276,7 @@ impl Element for TextInput {
             }
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
                 if !keyboard_input.event.state.is_pressed() {
-                    return Event::default();
+                    return;
                 }
 
                 state.cursor_reset();
@@ -430,9 +430,9 @@ impl Element for TextInput {
 
 
                 // FIXME: This is more of a hack, we should be doing this somewhere else.
-                ret.prevent_defaults();
-                ret.prevent_propagate();
-                ret.result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
+                event.prevent_defaults();
+                event.prevent_propagate();
+                event.result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
             }
             // WindowEvent::Touch(Touch {
             //     phase, location, ..
@@ -514,7 +514,7 @@ impl Element for TextInput {
             _ => {}
         }
         let ime = state.editor.ime_cursor_area();
-        ret.ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)))
+        event.ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)));
     }
 
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {

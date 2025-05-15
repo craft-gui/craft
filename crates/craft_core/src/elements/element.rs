@@ -52,10 +52,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         transformed_border_rectangle.contains(&point)
     }
 
-    fn get_id(&self) -> &Option<String> {
-        &self.element_data().id
-    }
-
     fn component_id(&self) -> u64 {
         self.element_data().component_id
     }
@@ -114,12 +110,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        self.on_style_event(message, element_state, should_style);
-        Event::default()
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
     }
 
-    fn on_style_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, should_style: bool) {
+    fn on_style_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, should_style: bool, _event: &mut Event) {
         if should_style {
             let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
 
@@ -453,11 +449,10 @@ impl dyn Element {
                 prefix.push_str("├─");
             }
             println!(
-                "{}{}, Component Id: {} Id: {:?}",
+                "{}{}, Component Id: {}",
                 prefix,
                 element.name(),
                 element.component_id(),
-                element.get_id()
             );
             let children = element.children();
             for (i, child) in children.iter().enumerate().rev() {
@@ -507,12 +502,6 @@ macro_rules! generate_component_methods_no_children {
         pub fn props(mut self, props: Props) -> Self {
             self.element_data.props = Some(props);
 
-            self
-        }
-
-        #[allow(dead_code)]
-        pub fn id(mut self, id: &str) -> Self {
-            self.element_data.id = Some(id.to_string());
             self
         }
 
