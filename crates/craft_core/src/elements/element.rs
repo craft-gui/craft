@@ -2,22 +2,22 @@ use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::Event;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
-use crate::layout::layout_context::LayoutContext;
 use crate::events::CraftMessage;
 use crate::geometry::borders::BorderSpec;
 use crate::geometry::side::Side;
 use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::renderer::Brush;
 use crate::style::Style;
+use crate::text::text_context::TextContext;
 use std::any::Any;
+use std::mem;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
-use winit::window::Window;
-use crate::text::text_context::TextContext;
-use std::mem;
 use winit::event::MouseButton;
+use winit::window::Window;
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -128,7 +128,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
                     state.base.hovered = true;
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == MouseButton::Left && pointer_button.state == winit::event::ElementState::Pressed {
+                    if pointer_button.button.mouse_button() == MouseButton::Left
+                        && pointer_button.state == winit::event::ElementState::Pressed
+                    {
                         state.base.active = true;
                     }
                 }
@@ -236,10 +238,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
         let border_left_path = computed_border_spec.build_side_path(Side::Left);
 
-        renderer.fill_bez_path(border_top_path,    Brush::Color(top.color));
-        renderer.fill_bez_path(border_right_path,  Brush::Color(right.color));
+        renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
+        renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
         renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
-        renderer.fill_bez_path(border_left_path,   Brush::Color(left.color));
+        renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
     }
 
     fn should_start_new_layer(&self) -> bool {
@@ -263,7 +265,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         }
     }
 
-    fn finalize_borders(&mut self, element_state: &ElementStateStore,) {
+    fn finalize_borders(&mut self, element_state: &ElementStateStore) {
         let base_state = self.get_base_state(element_state);
         let current_style = base_state.base.current_style(self.element_data());
 
@@ -368,13 +370,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     }
 
     /// Called on sequential renders to update any state that the element may have.
-    fn update_state(
-        &mut self,
-        _element_state: &mut ElementStateStore,
-        _reload_fonts: bool,
-        _scaling_factor: f64,
-    ) {
-    }
+    fn update_state(&mut self, _element_state: &mut ElementStateStore, _reload_fonts: bool, _scaling_factor: f64) {}
 
     fn default_style(&self) -> Style {
         Style::default()
@@ -441,7 +437,6 @@ where
         }
     }
 }
-
 
 impl dyn Element {
     #[allow(dead_code)]
@@ -637,21 +632,32 @@ macro_rules! generate_component_methods {
         }
 
         #[allow(dead_code)]
-        /// Sets the click handler for the element.
-        pub fn on_click<T, F>(mut self, handler: F) -> Self
+        /// Sets the on_pointer_button handler for the element.
+        pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            T: Any + 'static + Send + Sync,
-            F: Fn(&mut T, &mut $crate::components::Event, &$crate::events::PointerButton) + Send + Sync + 'static,
+            State: Any + 'static + Send + Sync,
+            GlobalState: Any + 'static + Send + Sync + Default,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerButton)
+                + Send
+                + Sync
+                + 'static,
         {
-            let cb: Arc<dyn Fn(&mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton) + Send + Sync> =
-                Arc::new(move |state_any: &mut dyn Any, event: &mut $crate::components::Event, pointer_button: &$crate::events::PointerButton| {
-                    // try to downcast back to T
-                    let state_t: &mut T = state_any
-                        .downcast_mut()
-                        .expect("Type mismatch in Element::click");
-                    handler(state_t, event, pointer_button);
-                });
-            self.element_data_mut().on_click = Some(cb);
+            let callback: Arc<
+                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton)
+                    + Send
+                    + Sync,
+            > = Arc::new(
+                move |state: &mut dyn Any,
+                      global_state: &mut dyn Any,
+                      event: &mut $crate::components::Event,
+                      pointer_button: &$crate::events::PointerButton| {
+                    let state: &mut State = state.downcast_mut().unwrap();
+                    let global_state: &mut GlobalState =
+                        global_state.downcast_mut().unwrap();
+                    handler(state, global_state, event, pointer_button);
+                },
+            );
+            self.element_data_mut().on_pointer_button = Some(callback);
             self
         }
     };

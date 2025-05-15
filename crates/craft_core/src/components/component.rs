@@ -174,7 +174,7 @@ where
 
     fn update(
         &mut self,
-        _global_state: &mut Self::GlobalState,
+        global_state: &mut Self::GlobalState,
         props: &Self::Props,
         event: &mut Event,
         message: &Message,
@@ -186,7 +186,7 @@ where
                     self.on_initialize(props, event);
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
-                    self.on_pointer_button(props, event, pointer_button, element);
+                    self.on_pointer_button(global_state, props, event, pointer_button, element);
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
                     self.on_keyboard_input(props, event, keyboard_input);
@@ -228,10 +228,10 @@ where
         }
     }
 
-    fn on_pointer_button(&mut self, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton, element: Option<&dyn Element>,) {
+    fn on_pointer_button(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton, element: Option<&dyn Element>,) {
         if let Some(element) = element {
-            if let Some(on_click) = &element.element_data().on_click {
-                on_click(self, event, pointer_button);
+            if let Some(on_pointer_button) = &element.element_data().on_pointer_button {
+                on_pointer_button(self, global_state, event, pointer_button);
             }
         }
     }

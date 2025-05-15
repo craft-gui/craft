@@ -51,7 +51,7 @@ impl Component for Counter {
                     .gap("20px")
                     .push(
                         create_button("-", "decrement", Color::from_rgb8(244, 67, 54), Color::from_rgb8(211, 47, 47))
-                            .on_click(|state: &mut Self, event: &mut Event, pointer_button: &PointerButton| {
+                            .on_pointer_button(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
                                 if pointer_button.clicked() {
                                     state.count -= 1;
                                     event.prevent_propagate();
@@ -60,7 +60,7 @@ impl Component for Counter {
                     )
                     .push(
                         create_button("+", "increment", Color::from_rgb8(76, 175, 80), Color::from_rgb8(67, 160, 71))
-                            .on_click(|state: &mut Self, event: &mut Event, pointer_button: &PointerButton| {
+                            .on_pointer_button(|state: &mut Self, _: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
                                 if pointer_button.clicked() {
                                     state.count += 1;
                                     event.prevent_propagate();

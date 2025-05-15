@@ -60,7 +60,7 @@ pub struct ElementData {
     pub(crate) key: Option<String>,
     pub(crate) props: Option<Props>,
     
-    pub(crate) on_click: Option<Arc<dyn Fn(&mut dyn Any, &mut Event, &PointerButton) + Send + Sync>>,
+    pub(crate) on_pointer_button: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &PointerButton) + Send + Sync>>,
 }
 
 impl ElementData {
