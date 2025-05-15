@@ -122,7 +122,7 @@ impl Component for AniList {
         root.component()
     }
 
-    fn on_user_message(&mut self, _props: &Self::Props, _event: &mut Event, message: &Self::Message) {
+    fn on_user_message(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, _event: &mut Event, message: &Self::Message) {
         let StateChange(new_state) = message;
         self.state = new_state.clone();
     }

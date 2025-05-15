@@ -181,46 +181,46 @@ where
         match message {
             Message::CraftMessage(craft_message) => match craft_message {
                 CraftMessage::Initialized => {
-                    self.on_initialize(props, event);
+                    self.on_initialize(global_state, props, event);
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
                     self.on_pointer_button(global_state, props, event, pointer_button);
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
-                    self.on_keyboard_input(props, event, keyboard_input);
+                    self.on_keyboard_input(global_state, props, event, keyboard_input);
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
-                    self.on_pointer_move(props, event, pointer_moved);
+                    self.on_pointer_move(global_state, props, event, pointer_moved);
                 }
                 CraftMessage::MouseWheelEvent(mouse_wheel) => {
-                    self.on_mouse_wheel(props, event, mouse_wheel);
+                    self.on_mouse_wheel(global_state, props, event, mouse_wheel);
                 }
                 CraftMessage::ModifiersChangedEvent(modifiers) => {
-                    self.on_modifiers_changed(props, event, modifiers);
+                    self.on_modifiers_changed(global_state, props, event, modifiers);
                 }
                 CraftMessage::ImeEvent(ime) => {
-                    self.on_ime(props, event, ime);
+                    self.on_ime(global_state, props, event, ime);
                 }
                 CraftMessage::TextInputChanged(new_string) => {
-                    self.on_text_input_changed(props, event, new_string);
+                    self.on_text_input_changed(global_state, props, event, new_string);
                 }
                 CraftMessage::DropdownToggled(dropdown_toggled) => {
-                    self.on_dropdown_toggled(props, event, *dropdown_toggled);
+                    self.on_dropdown_toggled(global_state, props, event, *dropdown_toggled);
                 }
                 CraftMessage::DropdownItemSelected(index) => {
-                    self.on_dropdown_item_selected(props, event, *index);
+                    self.on_dropdown_item_selected(global_state, props, event, *index);
                 }
                 CraftMessage::SwitchToggled(switch_state) => {
-                    self.on_switch_toggled(props, event, *switch_state);
+                    self.on_switch_toggled(global_state, props, event, *switch_state);
                 }
                 CraftMessage::SliderValueChanged(slider_value) => {
-                    self.on_slider_value_changed(props, event, *slider_value);
+                    self.on_slider_value_changed(global_state, props, event, *slider_value);
                 }
             },
             crate::events::Message::UserMessage(user_message) => {
                 let user_message = user_message.downcast_ref::<Self::Message>();
                 if let Some(user_message) = user_message {
-                    self.on_user_message(props, event, user_message);
+                    self.on_user_message(global_state, props, event, user_message);
                 }
             }
         }
@@ -234,29 +234,95 @@ where
         }
     }
 
-    fn on_initialize(&mut self, _props: &Self::Props, _event: &mut Event) {}
+    fn on_initialize(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event) {
+        if let Some(element) = event.current_target {
+            if let Some(on_initialized) = &element.element_data().on_initialized {
+                on_initialized(self, global_state, event);
+            }
+        }
+    }
 
-    fn on_keyboard_input(&mut self, _props: &Self::Props, _event: &mut Event, _keyboard_input: &KeyboardInput) {}
+    fn on_keyboard_input(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, keyboard_input: &KeyboardInput) {
+        if let Some(element) = event.current_target {
+            if let Some(on_keyboard_input) = &element.element_data().on_keyboard_input {
+                on_keyboard_input(self, global_state, event, keyboard_input);
+            }
+        }
+    }
 
-    fn on_pointer_move(&mut self, _props: &Self::Props, _event: &mut Event, _pointer_moved: &PointerMoved) {}
+    fn on_pointer_move(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_moved: &PointerMoved) {
+        if let Some(element) = event.current_target {
+            if let Some(on_pointer_move) = &element.element_data().on_pointer_move {
+                on_pointer_move(self, global_state, event, pointer_moved);
+            }
+        }
+    }
+    
+    fn on_user_message(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, _event: &mut Event, _user_message: &Self::Message) {}
 
-    fn on_user_message(&mut self, _props: &Self::Props, _event: &mut Event, _user_message: &Self::Message) {}
+    fn on_mouse_wheel(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, mouse_wheel: &MouseWheel) {
+        if let Some(element) = event.current_target {
+            if let Some(on_mouse_wheel) = &element.element_data().on_mouse_wheel {
+                on_mouse_wheel(self, global_state, event, mouse_wheel);
+            }
+        }
+    }
 
-    fn on_mouse_wheel(&mut self, _props: &Self::Props, _event: &mut Event, _mouse_wheel: &MouseWheel) {}
+    fn on_modifiers_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, modifiers: &Modifiers) {
+        if let Some(element) = event.current_target {
+            if let Some(on_modifiers_changed) = &element.element_data().on_modifiers_changed {
+                on_modifiers_changed(self, global_state, event, modifiers);
+            }
+        }
+    }
 
-    fn on_modifiers_changed(&mut self, _props: &Self::Props, _event: &mut Event, _modifiers: &Modifiers) {}
+    fn on_ime(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, ime: &Ime) {
+        if let Some(element) = event.current_target {
+            if let Some(on_ime) = &element.element_data().on_ime {
+                on_ime(self, global_state, event, ime);
+            }
+        }
+    }
 
-    fn on_ime(&mut self, _props: &Self::Props, _event: &mut Event, _ime: &Ime) {}
+    fn on_text_input_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, new_string: &str) {
+        if let Some(element) = event.current_target {
+            if let Some(on_text_input_changed) = &element.element_data().on_text_input_changed {
+                on_text_input_changed(self, global_state, event, new_string);
+            }
+        }
+    }
 
-    fn on_text_input_changed(&mut self, _props: &Self::Props, _event: &mut Event, _new_string: &str) {}
+    fn on_dropdown_toggled(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, dropdown_toggled: bool) {
+        if let Some(element) = event.current_target {
+            if let Some(on_dropdown_toggled) = &element.element_data().on_dropdown_toggled {
+                on_dropdown_toggled(self, global_state, event, dropdown_toggled);
+            }
+        }
+    }
 
-    fn on_dropdown_toggled(&mut self, _props: &Self::Props, _event: &mut Event, _dropdown_toggled: bool) {}
+    fn on_dropdown_item_selected(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, index: usize) {
+        if let Some(element) = event.current_target {
+            if let Some(on_dropdown_item_selected) = &element.element_data().on_dropdown_item_selected {
+                on_dropdown_item_selected(self, global_state, event, index);
+            }
+        }
+    }
 
-    fn on_dropdown_item_selected(&mut self, _props: &Self::Props, _event: &mut Event, _index: usize) {}
+    fn on_switch_toggled(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, switch_state: bool) {
+        if let Some(element) = event.current_target {
+            if let Some(on_switch_toggled) = &element.element_data().on_switch_toggled {
+                on_switch_toggled(self, global_state, event, switch_state);
+            }
+        }
+    }
 
-    fn on_switch_toggled(&mut self, _props: &Self::Props, _event: &mut Event, _switch_state: bool) {}
-
-    fn on_slider_value_changed(&mut self, _props: &Self::Props, _event: &mut Event, _slider_value: f64) {}
+    fn on_slider_value_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, slider_value: f64) {
+        if let Some(element) = event.current_target {
+            if let Some(on_slider_value_changed) = &element.element_data().on_slider_value_changed {
+                on_slider_value_changed(self, global_state, event, slider_value);
+            }
+        }
+    }
 
     fn default_state() -> Box<StateStoreItem> {
         Box::<Self>::default()

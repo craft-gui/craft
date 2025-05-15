@@ -8,7 +8,8 @@ use crate::geometry::borders::ComputedBorderSpec;
 use crate::geometry::{ElementBox, Rectangle, Size};
 use crate::style::Style;
 use taffy::NodeId;
-use crate::events::PointerButton;
+use winit::event::{Ime, Modifiers};
+use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 
 #[derive(Clone, Default)]
 pub struct ElementData {
@@ -62,6 +63,17 @@ pub struct ElementData {
     pub(crate) props: Option<Props>,
     
     pub(crate) on_pointer_button: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &PointerButton) + Send + Sync>>,
+    pub(crate) on_initialized: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event) + Send + Sync>>,
+    pub(crate) on_keyboard_input: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &KeyboardInput) + Send + Sync>>,
+    pub(crate) on_pointer_move: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &PointerMoved) + Send + Sync>>,
+    pub(crate) on_mouse_wheel: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &MouseWheel) + Send + Sync>>,
+    pub(crate) on_modifiers_changed: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &Modifiers) + Send + Sync>>,
+    pub(crate) on_ime: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &Ime) + Send + Sync>>,
+    pub(crate) on_text_input_changed: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &str) + Send + Sync>>,
+    pub(crate) on_dropdown_toggled: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, bool) + Send + Sync>>,
+    pub(crate) on_dropdown_item_selected: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, usize) + Send + Sync>>,
+    pub(crate) on_switch_toggled: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, bool) + Send + Sync>>,
+    pub(crate) on_slider_value_changed: Option<Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, f64) + Send + Sync>>,
 }
 
 impl ElementData {
