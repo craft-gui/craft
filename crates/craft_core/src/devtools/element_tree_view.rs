@@ -32,8 +32,6 @@ pub(crate) fn element_tree_view(
             CONTAINER_BACKGROUND_COLOR
         };
 
-        let id = element.component_id().to_string();
-
         let row_name = element.name().to_string();
 
         let mut row = Container::new()
