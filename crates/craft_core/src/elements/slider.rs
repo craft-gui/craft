@@ -30,7 +30,7 @@ pub enum SliderDirection {
     Vertical,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Slider {
     pub element_data: ElementData,
     pub step: f64,

@@ -1,4 +1,6 @@
-use crate::components::Props;
+use std::any::Any;
+use std::sync::Arc;
+use crate::components::{Event, Props};
 use crate::components::{ComponentId, ComponentSpecification};
 use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
@@ -6,8 +8,9 @@ use crate::geometry::borders::ComputedBorderSpec;
 use crate::geometry::{ElementBox, Rectangle, Size};
 use crate::style::Style;
 use taffy::NodeId;
+use crate::events::PointerButton;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct ElementData {
     pub current_state: ElementState,
 
@@ -56,6 +59,8 @@ pub struct ElementData {
     pub child_specs: Vec<ComponentSpecification>,
     pub(crate) key: Option<String>,
     pub(crate) props: Option<Props>,
+    
+    pub(crate) on_click: Option<Arc<dyn Fn(&mut dyn Any, &mut Event, &PointerButton) + Send + Sync>>,
 }
 
 impl ElementData {

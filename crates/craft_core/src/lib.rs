@@ -501,7 +501,7 @@ async fn async_main(
 
                     let mut event = Event::with_window_context(app.window_context.clone());
 
-                    update_fn(state, &mut app.global_state, props, &mut event, &Message::UserMessage(message));
+                    update_fn(state, &mut app.global_state, props, &mut event, &Message::UserMessage(message), None);
                     app.window_context = event.window;
 
                     app.window.as_ref().unwrap().request_redraw();
@@ -799,11 +799,12 @@ fn dispatch_event(
     );
 
     #[derive(Clone)]
-    struct Target {
+    struct Target<'a> {
         component_id: ComponentId,
         element_id: Option<String>,
         layout_order: usize,
         overlay_depth: usize,
+        element: &'a dyn Element,
     }
 
     match dispatch_type {
@@ -853,6 +854,7 @@ fn dispatch_event(
                             element_id: element.get_id().clone(),
                             layout_order: element.element_data().layout_order as usize,
                             overlay_depth,
+                            element,
                         })
                     } else {
                         //println!("Not in bounds, Element: {:?}", element.get_id());
@@ -924,6 +926,7 @@ fn dispatch_event(
                         node.props.clone(),
                         &mut event,
                         message,
+                        Some(current_target.element),
                     );
                     *window_context = event.window.clone();
                     effects.append(&mut event.effects);
@@ -951,7 +954,7 @@ fn dispatch_event(
                 }
             }
 
-            let mut element_events: VecDeque<(CraftMessage, Option<String>)> = VecDeque::new();
+            let mut element_events: VecDeque<(CraftMessage, &dyn Element)> = VecDeque::new();
 
             for element_state in reactive_tree.element_state.storage.values_mut() {
                 if let Message::CraftMessage(message) = &message {
@@ -992,7 +995,7 @@ fn dispatch_event(
                                 //first_element = false;
 
                                 if let Some(result_message) = res.result_message {
-                                    element_events.push_back((result_message, element.get_id().clone()));
+                                    element_events.push_back((result_message, *element));
                                 }
 
                                 propagate = propagate && res.propagate;
@@ -1003,7 +1006,7 @@ fn dispatch_event(
                 }
             }
 
-            for (message, target_element_id) in element_events.iter() {
+            for (message, target_element) in element_events.iter() {
                 let mut propagate = true;
                 let mut prevent_defaults = false;
                 for node in target_components.iter() {
@@ -1013,13 +1016,14 @@ fn dispatch_event(
 
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
                     let mut event = Event::with_window_context(window_context.clone());
-                    event.current_target = target_element_id.clone();
+                    event.current_target = target_element.get_id().clone();
                     (node.update)(
                         state,
                         global_state,
                         node.props.clone(),
                         &mut event,
                         &Message::CraftMessage(message.clone()),
+                        Some(*target_element),
                     );
                     *window_context = event.window.clone();
                     effects.append(&mut event.effects);
@@ -1066,6 +1070,7 @@ fn dispatch_event(
                             component.props.clone(),
                             &mut event,
                             message,
+                            None,
                         );
                         *window_context = event.window.clone();
                         effects.append(&mut event.effects);

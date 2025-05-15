@@ -17,7 +17,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct TinyVg {
     pub(crate) resource_identifier: ResourceIdentifier,
     pub element_data: ElementData,

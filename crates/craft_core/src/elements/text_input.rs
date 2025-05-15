@@ -34,7 +34,7 @@ use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 
 // A stateful element that shows text.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct TextInput {
     element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.

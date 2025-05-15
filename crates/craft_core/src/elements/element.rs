@@ -12,7 +12,6 @@ use crate::renderer::renderer::RenderList;
 use crate::renderer::Brush;
 use crate::style::Style;
 use std::any::Any;
-use std::fmt::Debug;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, Position, TaffyTree};
 use winit::window::Window;
@@ -20,12 +19,12 @@ use crate::text::text_context::TextContext;
 use std::mem;
 use winit::event::MouseButton;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ElementBoxed {
     pub(crate) internal: Box<dyn Element>,
 }
 
-pub trait Element: Any + StandardElementClone + Debug + Send + Sync {
+pub trait Element: Any + StandardElementClone + Send + Sync {
     fn element_data(&self) -> &ElementData;
     fn element_data_mut(&mut self) -> &mut ElementData;
 
@@ -634,6 +633,25 @@ macro_rules! generate_component_methods {
         #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
             self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
+            self
+        }
+
+        #[allow(dead_code)]
+        /// Sets the click handler for the element.
+        pub fn on_click<T, F>(mut self, handler: F) -> Self
+        where
+            T: Any + 'static + Send + Sync,
+            F: Fn(&mut T, &mut $crate::components::Event, &$crate::events::PointerButton) + Send + Sync + 'static,
+        {
+            let cb: Arc<dyn Fn(&mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton) + Send + Sync> =
+                Arc::new(move |state_any: &mut dyn Any, event: &mut $crate::components::Event, pointer_button: &$crate::events::PointerButton| {
+                    // try to downcast back to T
+                    let state_t: &mut T = state_any
+                        .downcast_mut()
+                        .expect("Type mismatch in Element::click");
+                    handler(state_t, event, pointer_button);
+                });
+            self.element_data_mut().on_click = Some(cb);
             self
         }
     };

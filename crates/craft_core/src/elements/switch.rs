@@ -19,7 +19,7 @@ use winit::window::Window;
 use crate::text::text_context::TextContext;
 
 /// An element that represents an on or off state.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Switch {
     pub element_data: ElementData,
     /// When `state.toggled` is None, use this as the default value.

@@ -66,6 +66,7 @@ fn dummy_update(
     _props: Props,
     _event: &mut Event,
     _message: &Message,
+    _element: Option<&dyn Element>,
 ) {
 }
 
@@ -291,6 +292,7 @@ pub(crate) fn diff_trees(
                             props.clone(),
                             &mut event,
                             &Message::CraftMessage(CraftMessage::Initialized),
+                            None,
                         );
                         *window_context = event.window.clone();
                         // TODO: Should we handle effects here?

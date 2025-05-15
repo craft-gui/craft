@@ -18,7 +18,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct DevTools {
     pub element_data: ElementData,
     /// The tree to inspect.

@@ -16,7 +16,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
 /// An element for storing related elements.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Overlay {
     pub element_data: ElementData,
 }

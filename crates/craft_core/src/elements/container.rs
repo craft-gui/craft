@@ -19,7 +19,7 @@ use crate::renderer::renderer::RenderList;
 use crate::text::text_context::TextContext;
 
 /// An element for storing related elements.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Container {
     pub element_data: ElementData,
 }

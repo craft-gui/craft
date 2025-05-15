@@ -5,7 +5,7 @@ use crate::reactive::state_store::StateStoreItem;
 use crate::{GlobalState, WindowContext};
 
 use crate::components::update_result::Event;
-use crate::elements::Container;
+use crate::elements::{Container, Element};
 use std::any::{Any, TypeId};
 use std::ops::Deref;
 use winit::event::{Ime, Modifiers};
@@ -22,7 +22,7 @@ pub type ViewFn = fn(
 
 /// A Component's update function.
 pub type UpdateFn =
-    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, event: &mut Event, message: &Message);
+    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, event: &mut Event, message: &Message, element: Option<&dyn Element>);
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -38,14 +38,14 @@ pub struct ComponentData {
 }
 
 /// An enum containing either an [`Element`] or a [`ComponentData`].
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum ComponentOrElement {
     ComponentSpec(ComponentData),
     Element(ElementBoxed),
 }
 
 /// A specification for components and elements.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ComponentSpecification {
     pub component: ComponentOrElement,
     /// Specify a key when the component position or type may change, but state should be retained.
@@ -160,14 +160,15 @@ where
         props: Props,
         event: &mut Event,
         message: &Message,
+        element: Option<&dyn Element>
     ) {
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
         let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
         if let Some(global_state_casted) = global_state.downcast_mut::<Self::GlobalState>() {
-            Self::update(casted_state, global_state_casted, props, event, message)
+            Self::update(casted_state, global_state_casted, props, event, message, element)
         } else {
-            Self::update(casted_state, &mut Self::GlobalState::default(), props, event, message)
+            Self::update(casted_state, &mut Self::GlobalState::default(), props, event, message, element)
         }
     }
 
@@ -177,6 +178,7 @@ where
         props: &Self::Props,
         event: &mut Event,
         message: &Message,
+        element: Option<&dyn Element>,
     ) {
         match message {
             Message::CraftMessage(craft_message) => match craft_message {
@@ -184,7 +186,7 @@ where
                     self.on_initialize(props, event);
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
-                    self.on_pointer_button(props, event, pointer_button);
+                    self.on_pointer_button(props, event, pointer_button, element);
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
                     self.on_keyboard_input(props, event, keyboard_input);
@@ -226,7 +228,13 @@ where
         }
     }
 
-    fn on_pointer_button(&mut self, _props: &Self::Props, _event: &mut Event, _pointer_button: &PointerButton) {}
+    fn on_pointer_button(&mut self, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton, element: Option<&dyn Element>,) {
+        if let Some(element) = element {
+            if let Some(on_click) = &element.element_data().on_click {
+                on_click(self, event, pointer_button);
+            }
+        }
+    }
 
     fn on_initialize(&mut self, _props: &Self::Props, _event: &mut Event) {}
 

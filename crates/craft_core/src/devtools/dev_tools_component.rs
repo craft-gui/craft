@@ -64,7 +64,7 @@ impl Component for DevToolsComponent {
     }
 
 
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message, _element: Option<&dyn Element>) {
         if let Some(id) = &event.target {
             // Set the selected element in the element tree inspector.
             if message.clicked() {

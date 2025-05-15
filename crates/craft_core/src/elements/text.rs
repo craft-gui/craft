@@ -30,7 +30,7 @@ use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use winit::window::Window;
 
 // A stateful element that shows text.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Text {
     text: Option<String>,
     element_data: ElementData,

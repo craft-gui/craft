@@ -23,7 +23,7 @@ use crate::text::text_context::TextContext;
 const DROPDOWN_LIST_INDEX: usize = 1;
 
 /// An element for displaying a list of items in a dropdown. By default, the first list item will be shown, otherwise show the selected item.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Dropdown {
     pub element_data: ElementData,
     /// A copy of the currently selected element, this is not stored in the user tree nor will it receive events.
@@ -255,6 +255,10 @@ impl Element for Dropdown {
         }
     }
 
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn on_event(
         &self,
         message: &CraftMessage,
@@ -308,10 +312,6 @@ impl Element for Dropdown {
             base: Default::default(),
             data: Box::new(DropdownState::default()),
         }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 
     /// The default style for the Dropdown container.
