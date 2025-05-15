@@ -52,6 +52,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         transformed_border_rectangle.contains(&point)
     }
 
+    fn get_id(&self) -> &Option<String> {
+        &self.element_data().id
+    }
+
     fn component_id(&self) -> u64 {
         self.element_data().component_id
     }
@@ -494,14 +498,18 @@ macro_rules! generate_component_methods_no_children {
         #[allow(dead_code)]
         pub fn key(mut self, key: &str) -> Self {
             self.element_data.key = Some(key.to_string());
-
             self
         }
 
         #[allow(dead_code)]
         pub fn props(mut self, props: Props) -> Self {
             self.element_data.props = Some(props);
+            self
+        }
 
+        #[allow(dead_code)]
+        pub fn id(mut self, id: &str) -> Self {
+            self.element_data.id = Some(id.to_string());
             self
         }
 
@@ -528,7 +536,7 @@ macro_rules! generate_component_methods_no_children {
             self.element_data.current_state = $crate::elements::element_states::ElementState::Focused;
             self
         }
-        
+
         #[allow(dead_code)]
         /// Sets the on_pointer_button handler for the element.
         pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self

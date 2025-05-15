@@ -57,7 +57,17 @@ impl Component for EventsExample {
     }
     fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
         if message.clicked() {
-            println!("Target: {:?}, Current Target: {:?}", event.target, event.current_target);
+            let target = if let Some(target) = event.target {
+                target.get_id().clone()
+            } else {
+                None
+            };
+            let current_target = if let Some(current_target) = event.current_target {
+                current_target.get_id().clone()
+            } else {
+                None
+            };
+            println!("Target: {:?}, Current Target: {:?}", target, current_target);
         }
     }
 }

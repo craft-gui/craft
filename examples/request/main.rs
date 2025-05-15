@@ -9,7 +9,7 @@ use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::{craft_main_with_options, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::{Message, PointerButton};
+use craft::events::{PointerButton};
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
 use craft::CraftOptions;
@@ -94,7 +94,7 @@ impl Component for AniList {
                                 tracing::info!("Loaded data: ");
                                 Event::async_result(StateChange(State::Loaded(result)))
                             };
-                            
+
                             event.future(get_ani_list_data);
                         }
                     }))
@@ -123,9 +123,8 @@ impl Component for AniList {
     }
 
     fn on_user_message(&mut self, _props: &Self::Props, _event: &mut Event, message: &Self::Message) {
-        if let StateChange(new_state) = message {
-            self.state = new_state.clone();
-        }
+        let StateChange(new_state) = message;
+        self.state = new_state.clone();
     }
 }
 

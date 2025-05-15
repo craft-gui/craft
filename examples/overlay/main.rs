@@ -91,10 +91,14 @@ impl Component for OverlayExample {
         _message: &Message,
     ) {
         println!("{:?}", event.window);
-        self.hovered_element_id = event.target.clone();
-
-        if self.hovered_element_id.is_some() {
-            event.prevent_propagate();
+        
+        if let Some(target) = event.target{
+            self.hovered_element_id = target.get_id().clone();
+            if let Some(_id) = target.get_id() {
+                event.prevent_propagate();
+            }
+        } else {
+            self.hovered_element_id = None;
         }
     }
 }
