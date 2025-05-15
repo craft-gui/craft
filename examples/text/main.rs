@@ -38,7 +38,7 @@ impl Component for TextState {
             .height(Unit::Px(500.0))
             .display(Block)
             .flex_direction(FlexDirection::Row)
-            .push(Text::new("Hello, World!").id("hello_text"))
+            .push(Text::new("Hello, World!"))
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .push(
@@ -46,7 +46,6 @@ impl Component for TextState {
                     .height(Unit::Px(500.0))
                     .display(Block)
                     .overflow(Scroll)
-                    .id("text_input"),
             )
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()

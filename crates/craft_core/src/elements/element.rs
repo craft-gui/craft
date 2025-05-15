@@ -528,6 +528,36 @@ macro_rules! generate_component_methods_no_children {
             self.element_data.current_state = $crate::elements::element_states::ElementState::Focused;
             self
         }
+        
+        #[allow(dead_code)]
+        /// Sets the on_pointer_button handler for the element.
+        pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
+        where
+            State: Any + 'static + Send + Sync,
+            GlobalState: Any + 'static + Send + Sync + Default,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerButton)
+                + Send
+                + Sync
+                + 'static,
+        {
+            let callback: Arc<
+                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton)
+                    + Send
+                    + Sync,
+            > = Arc::new(
+                move |state: &mut dyn Any,
+                      global_state: &mut dyn Any,
+                      event: &mut $crate::components::Event,
+                      pointer_button: &$crate::events::PointerButton| {
+                    let state: &mut State = state.downcast_mut().unwrap();
+                    let global_state: &mut GlobalState =
+                        global_state.downcast_mut().unwrap();
+                    handler(state, global_state, event, pointer_button);
+                },
+            );
+            self.element_data_mut().on_pointer_button = Some(callback);
+            self
+        }
     };
 }
 
@@ -617,36 +647,6 @@ macro_rules! generate_component_methods {
         #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
             self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
-            self
-        }
-
-        #[allow(dead_code)]
-        /// Sets the on_pointer_button handler for the element.
-        pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
-        where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerButton)
-                + Send
-                + Sync
-                + 'static,
-        {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      pointer_button: &$crate::events::PointerButton| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, pointer_button);
-                },
-            );
-            self.element_data_mut().on_pointer_button = Some(callback);
             self
         }
     };

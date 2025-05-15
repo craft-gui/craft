@@ -218,7 +218,7 @@ where
                 }
             },
             crate::events::Message::UserMessage(user_message) => {
-                let user_message = user_message.downcast_ref::<Message>();
+                let user_message = user_message.downcast_ref::<Self::Message>();
                 if let Some(user_message) = user_message {
                     self.on_user_message(props, event, user_message);
                 }
@@ -240,7 +240,7 @@ where
 
     fn on_pointer_move(&mut self, _props: &Self::Props, _event: &mut Event, _pointer_moved: &PointerMoved) {}
 
-    fn on_user_message(&mut self, _props: &Self::Props, _event: &mut Event, _user_message: &Message) {}
+    fn on_user_message(&mut self, _props: &Self::Props, _event: &mut Event, _user_message: &Self::Message) {}
 
     fn on_mouse_wheel(&mut self, _props: &Self::Props, _event: &mut Event, _mouse_wheel: &MouseWheel) {}
 

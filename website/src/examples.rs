@@ -37,7 +37,7 @@ impl Default for Examples {
 }
 
 fn create_examples_link(label: &str, example_link: &str) -> Text {
-    Text::new(label).id(example_link)
+    Text::new(label)
 }
 
 fn examples_sidebar() -> ComponentSpecification {
