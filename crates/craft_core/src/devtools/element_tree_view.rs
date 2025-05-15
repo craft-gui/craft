@@ -34,11 +34,14 @@ pub(crate) fn element_tree_view(
 
         let row_name = element.name().to_string();
 
+        let id = element.component_id().to_string();
+        
         let mut row = Container::new()
             .push(
                 Text::new(row_name.as_str())
                     .padding("0px", "0px", "0px", format!("{}px", indent * 10).as_str())
                     .color(Color::WHITE)
+                    .id(id.as_str())
                     .component(),
             )
             .display(Display::Flex)
@@ -46,20 +49,42 @@ pub(crate) fn element_tree_view(
             .background(row_color)
             .padding("6px", "6px", "6px", "6px")
             .height("40px")
+            .id(id.as_str())
             .max_height("40px")
             .key(element_count.to_string().as_str())
             .width("100%");
 
+        if let Some(custom_id) = element.get_id() {
+            let user_id_color = Color::from_rgb8(68, 147, 248);
+            row = row.push(
+                Container::new()
+                    .push(
+                        Text::new(custom_id.as_str())
+                            .color(Color::WHITE)
+                            .margin("2.5px", "10px", "2.5px", "10px")
+                            .id(id.as_str()),
+                    )
+                    .id(id.as_str())
+                    .border_width("2px", "2px", "2px", "2px")
+                    .border_color(user_id_color)
+                    .border_radius(100.0, 100.0, 100.0, 100.0)
+                    .margin("0px", "0px", "0px", "5px")
+                    .component(),
+            );
+        }
+        
         let user_id_color = Color::from_rgb8(68, 147, 248);
         row = row.push(
             Container::new()
                 .push(
                     Text::new(element.component_id().to_string().as_str())
                         .color(Color::WHITE)
+                        .id(id.as_str())
                         .margin("2.5px", "10px", "2.5px", "10px"),
                 )
                 .border_width("2px", "2px", "2px", "2px")
                 .border_color(user_id_color)
+                .id(id.as_str())
                 .border_radius(100.0, 100.0, 100.0, 100.0)
                 .margin("0px", "0px", "0px", "5px")
                 .component(),
