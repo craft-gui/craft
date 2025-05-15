@@ -36,8 +36,8 @@ impl Default for Examples {
     }
 }
 
-fn create_examples_link(label: &str, example_link: &str) -> Text {
-    Text::new(label).id(example_link)
+fn create_examples_link(label: &str, example_link: &str) -> ComponentSpecification {
+    Text::new(label).id(example_link).component()
 }
 
 fn examples_sidebar() -> ComponentSpecification {
@@ -70,18 +70,20 @@ impl Component for Examples {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         let wrapper = Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
-        wrapper.push(Container::new().width("100%").height("100%").background(palette::css::WHITE).push(
-            match self.example_to_show.as_str() {
-                "text_state" => TextState::component().key("example_text_state"),
-                "tour" => Tour::component().key("example_tour"),
-                "request" => AniList::component().key("example_request"),
-                "counter" | &_ => Counter::component().key("example_counter"),
-            },
-        ))
+        let content = match self.example_to_show.as_str() {
+            "text_state" => TextState::component().key("example_text_state"),
+            "tour" => Tour::component().key("example_tour"),
+            "request" => AniList::component().key("example_request"),
+            _ => Counter::component().key("example_counter"),
+        };
+
+        wrapper.push(
+            Container::new().width("100%").height("100%").background(palette::css::WHITE).push(content).component(),
+        )
     }
 
     fn update(
@@ -91,10 +93,13 @@ impl Component for Examples {
         event: &mut Event,
         message: &Message,
     ) {
-        if message.clicked() && event.current_target.is_some() {
-            let current_target = event.current_target.as_ref().unwrap();
-            if current_target.starts_with("example_") {
-                self.example_to_show = current_target.replace("example_", "").to_string();
+        if message.clicked() {
+            if let Some(target) = event.current_target.as_ref() {
+                if let Some(id) = target.get_id() {
+                    if id.starts_with("example_") {
+                        self.example_to_show = id.trim_start_matches("example_").to_string();
+                    }
+                }
             }
         }
     }

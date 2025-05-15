@@ -19,7 +19,7 @@ use winit::window::Window;
 use crate::text::text_context::TextContext;
 
 /// An element that represents an on or off state.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Switch {
     pub element_data: ElementData,
     /// When `state.toggled` is None, use this as the default value.
@@ -147,9 +147,9 @@ impl Element for Switch {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        let mut ret = Event::default();
-        self.on_style_event(message, element_state, should_style);
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
 
@@ -163,10 +163,8 @@ impl Element for Switch {
             }
 
             // Emit the SwitchToggled event with the new value of `state.toggled`.
-            ret.result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
+            event.result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
         }
-        
-        ret
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

@@ -17,8 +17,8 @@ impl ScrollState {
         message: &CraftMessage,
         element: &ElementData,
         base_state: &mut BaseElementState,
-    ) -> Event {
-        let mut ret = Event::new();
+        event: &mut Event,
+    ) {
         if element.is_scrollable() {
             match message {
                 CraftMessage::MouseWheelEvent(mouse_wheel) => {
@@ -31,8 +31,8 @@ impl ScrollState {
 
                     self.scroll_y = (self.scroll_y + delta).clamp(0.0, max_scroll_y);
 
-                    ret.prevent_propagate();
-                    ret.prevent_defaults();
+                    event.prevent_propagate();
+                    event.prevent_defaults();
                 }
                 CraftMessage::PointerButtonEvent(pointer_button) => {
                     if pointer_button.button.mouse_button() == MouseButton::Left {
@@ -44,9 +44,9 @@ impl ScrollState {
 
                             if container_rectangle.contains(&pointer_button.position) && !in_scroll_bar {
                                 self.scroll_click = Some((pointer_button.position.x, pointer_button.position.y));
-                                ret.prevent_propagate();
-                                ret.prevent_defaults();
-                                return ret;
+                                event.prevent_propagate();
+                                event.prevent_defaults();
+                                return;
                             }
                         }
 
@@ -57,8 +57,8 @@ impl ScrollState {
                                     // FIXME: Turn pointer capture on with the correct device id.
                                     base_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
 
-                                    ret.prevent_propagate();
-                                    ret.prevent_defaults();
+                                    event.prevent_propagate();
+                                    event.prevent_defaults();
                                 } else if element.computed_scroll_track.contains(&pointer_button.position) {
                                     let offset_y = pointer_button.position.y - element.computed_scroll_track.y;
 
@@ -67,8 +67,8 @@ impl ScrollState {
 
                                     self.scroll_y = scroll_y.clamp(0.0, element.max_scroll_y);
 
-                                    ret.prevent_propagate();
-                                    ret.prevent_defaults();
+                                    event.prevent_propagate();
+                                    event.prevent_defaults();
                                 }
                             }
                             WinitElementState::Released => {
@@ -76,8 +76,8 @@ impl ScrollState {
                                 if self.scroll_click.is_some() {
                                     // FIXME: Turn pointer capture off with the correct device id.
                                     base_state.pointer_capture.insert(DUMMY_DEVICE_ID, false);
-                                    ret.prevent_propagate();
-                                    ret.prevent_defaults();
+                                    event.prevent_propagate();
+                                    event.prevent_defaults();
                                 }
                             }
                         }
@@ -100,14 +100,12 @@ impl ScrollState {
 
                         self.scroll_y = (self.scroll_y + delta).clamp(0.0, max_scroll_y);
                         self.scroll_click = Some((click_x, pointer_motion.position.y));
-                        ret.prevent_propagate();
-                        ret.prevent_defaults();
+                        event.prevent_propagate();
+                        event.prevent_defaults();
                     }
                 },
                 _ => {  }
             }
         }
-        
-        ret
     }
 }

@@ -8,7 +8,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Style, Unit};
 use crate::text::text_context::TextContext;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct Thumb {
     /// A pseudo thumb element, this is not stored in the user tree nor will it receive events.
     /// This is mostly for convenience, so that we can change the location and render it in the switch track container.

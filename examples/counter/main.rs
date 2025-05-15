@@ -49,40 +49,30 @@ impl Component for Counter {
                     .display(Display::Flex)
                     .flex_direction(FlexDirection::Row)
                     .gap("20px")
-                    .push(create_button("-", "decrement", Color::from_rgb8(244, 67, 54), Color::from_rgb8(211, 47, 47)))
-                    .push(create_button(
-                        "+",
-                        "increment",
-                        Color::from_rgb8(76, 175, 80),
-                        Color::from_rgb8(67, 160, 71),
-                    )),
+                    .push(
+                        create_button("-", Color::from_rgb8(244, 67, 54), Color::from_rgb8(211, 47, 47))
+                            .on_pointer_button(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
+                                if pointer_button.clicked() {
+                                    state.count -= 1;
+                                    event.prevent_propagate();
+                                }
+                            }),
+                    )
+                    .push(
+                        create_button("+", Color::from_rgb8(76, 175, 80), Color::from_rgb8(67, 160, 71))
+                            .on_pointer_button(|state: &mut Self, _: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
+                                if pointer_button.clicked() {
+                                    state.count += 1;
+                                    event.prevent_propagate();
+                                }
+                            }),
+                    ),
             )
             .component()
     }
-
-    fn on_pointer_button(
-        &mut self,
-        _props: &Self::Props,
-        event: &mut Event,
-        _pointer_button: &PointerButton,
-    ) {
-        if _pointer_button.clicked() && event.target.is_some() {
-            match event.target.as_deref().unwrap() {
-                "increment" => {
-                    self.count += 1;
-                    event.prevent_propagate();
-                }
-                "decrement" => {
-                    self.count -= 1;
-                    event.prevent_propagate();
-                }
-                _ => {}
-            };
-        }
-    }
 }
 
-fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> ComponentSpecification {
+fn create_button(label: &str, color: Color, hover_color: Color) -> Container {
     Container::new()
         .border_width("1px", "2px", "3px", "4px")
         .border_color(Color::from_rgb8(0, 0, 0))
@@ -96,15 +86,12 @@ fn create_button(label: &str, id: &str, color: Color, hover_color: Color) -> Com
         .background(hover_color)
         .push(
             Text::new(label)
-                .id(id)
                 .font_size(24.0)
                 .color(Color::WHITE)
                 .width("100%")
                 .height("100%")
                 .disable_selection(),
         )
-        .id(id)
-        .component()
 }
 
 #[allow(dead_code)]

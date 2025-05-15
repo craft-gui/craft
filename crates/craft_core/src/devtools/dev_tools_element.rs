@@ -18,7 +18,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct DevTools {
     pub element_data: ElementData,
     /// The tree to inspect.
@@ -180,9 +180,9 @@ impl Element for DevTools {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        self.on_style_event(message, element_state, should_style);
-        Event::default()
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

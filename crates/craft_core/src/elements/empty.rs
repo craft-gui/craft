@@ -10,7 +10,7 @@ use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::text::text_context::TextContext;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Empty {
     pub element_data: ElementData,
 }

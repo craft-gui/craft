@@ -17,7 +17,8 @@ pub use winit::event::ElementState;
 use crate::components::ComponentId;
 use crate::events::CraftMessage::PointerButtonEvent;
 use std::any::Any;
-use winit::event::Ime;
+pub use winit::event::Modifiers;
+pub use winit::event::Ime;
 pub use winit::event::MouseButton;
 
 #[derive(Clone, Copy, Debug)]

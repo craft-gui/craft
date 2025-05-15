@@ -23,7 +23,7 @@ use crate::text::text_context::TextContext;
 const DROPDOWN_LIST_INDEX: usize = 1;
 
 /// An element for displaying a list of items in a dropdown. By default, the first list item will be shown, otherwise show the selected item.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Dropdown {
     pub element_data: ElementData,
     /// A copy of the currently selected element, this is not stored in the user tree nor will it receive events.
@@ -255,22 +255,26 @@ impl Element for Dropdown {
         }
     }
 
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn on_event(
         &self,
         message: &CraftMessage,
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        let mut ret = Event::default();
-        self.on_style_event(message, element_state, should_style);
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
 
         match message {
             CraftMessage::PointerButtonEvent(pointer_button) => {
                 if !message.clicked() {
-                    return Event::default();
+                    return;
                 }
 
                 for child in self.children().iter().enumerate() {
@@ -280,9 +284,9 @@ impl Element for Dropdown {
                         // We need to retain the index of the selected item to render the `pseudo_dropdown_selection` element.
                         state.selected_item = Some(child.0);
                         state.is_open = false;
-                        
-                        ret.result_message(CraftMessage::DropdownItemSelected(state.selected_item.unwrap()));
-                        return ret
+
+                        event.result_message(CraftMessage::DropdownItemSelected(state.selected_item.unwrap()));
+                        return;
                     }
                 }
 
@@ -292,15 +296,13 @@ impl Element for Dropdown {
                 let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;
-                    ret.result_message(CraftMessage::DropdownToggled(state.is_open));
-                    return ret;
+                    event.result_message(CraftMessage::DropdownToggled(state.is_open));
+                    return;
                 }
             }
             CraftMessage::KeyboardInputEvent(_) => {}
             _ => {}
         }
-
-        Event::default()
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
@@ -308,10 +310,6 @@ impl Element for Dropdown {
             base: Default::default(),
             data: Box::new(DropdownState::default()),
         }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 
     /// The default style for the Dropdown container.

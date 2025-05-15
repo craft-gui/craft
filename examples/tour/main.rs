@@ -90,7 +90,7 @@ impl Component for Tour {
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
                 .push(
-                    labeled_row("Input:", TextInput::new(self.text_input_value.as_str()).id("text_input").min_width("200px").component())
+                    labeled_row("Input:", TextInput::new(self.text_input_value.as_str()).min_width("200px").component())
                 )
                 .push(Text::new(format!("Preview: {}", self.text_input_value).as_str())
                     .font_size(14.0)

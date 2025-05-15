@@ -8,7 +8,6 @@ members = [
     "crates/craft_logger",
     "examples/util",
     "examples/request",
-    "examples/accordion",
     "examples/counter",
     "examples/text",
     "examples/tour",

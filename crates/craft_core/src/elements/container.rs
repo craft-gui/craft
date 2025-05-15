@@ -19,7 +19,7 @@ use crate::renderer::renderer::RenderList;
 use crate::text::text_context::TextContext;
 
 /// An element for storing related elements.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Container {
     pub element_data: ElementData,
 }
@@ -153,12 +153,13 @@ impl Element for Container {
         element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
         should_style: bool,
-    ) -> Event {
-        self.on_style_event(message, element_state, should_style);
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 
-        container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base)
+        container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

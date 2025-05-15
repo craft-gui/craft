@@ -1,6 +1,7 @@
 use crate::events::{CraftMessage, EventDispatchType, Message};
 use crate::{PinnedFutureAny, WindowContext};
 use std::any::Any;
+use crate::elements::Element;
 use crate::geometry::Rectangle;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -12,7 +13,7 @@ pub enum PointerCapture {
 }
 
 /// The result of an update.
-pub struct Event {
+pub struct Event<'a> {
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -26,9 +27,9 @@ pub struct Event {
     pub(crate) effects: Vec<(EventDispatchType, Message)>,
     pub(crate) ime: ImeAction,
 
-    pub target: Option<String>,
-    pub current_target: Option<String>,
+    pub target: Option<&'a dyn Element>,
     pub window: WindowContext,
+    pub current_target: Option<&'a dyn Element>
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -39,7 +40,7 @@ pub enum ImeAction {
     Unset,
 }
 
-impl Event {
+impl<'a> Event<'a> {
     pub fn with_window_context(window: WindowContext) -> Self {
         Event {
             window,
@@ -67,13 +68,12 @@ impl Event {
         Box::new(())
     }
 
-    pub fn ime_action(mut self, action: ImeAction) -> Self {
+    pub fn ime_action(&mut self, action: ImeAction) {
         self.ime = action;
-        self
     }
 }
 
-impl Default for Event {
+impl<'a> Default for Event<'a> {
     fn default() -> Self {
         Event {
             propagate: true,
@@ -90,8 +90,8 @@ impl Default for Event {
     }
 }
 
-impl Event {
-    pub fn new() -> Event {
+impl<'a> Event<'a> {
+    pub fn new() -> Event<'a> {
         Event::default()
     }
 

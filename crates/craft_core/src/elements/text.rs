@@ -30,7 +30,7 @@ use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use winit::window::Window;
 
 // A stateful element that shows text.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default)]
 pub struct Text {
     text: Option<String>,
     element_data: ElementData,
@@ -189,12 +189,11 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool) -> Event {
-        let mut ret = Event::default();
-        self.on_style_event(message, _element_state, should_style);
+    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool, event: &mut Event,) {
+        self.on_style_event(message, _element_state, should_style, event);
 
         if !self.selectable {
-            return ret;
+            return;
         }
         
         let state: &mut TextState = _element_state
@@ -238,7 +237,7 @@ impl Element for Text {
                             }
                         }
                     }
-                    ret.prevent_defaults();
+                    event.prevent_defaults();
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
@@ -250,13 +249,11 @@ impl Element for Text {
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos.0, cursor_pos.1);
                     }
-                    ret.prevent_defaults();
+                    event.prevent_defaults();
                 },
                 _ => {  }
             }
         }
-        
-        ret
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

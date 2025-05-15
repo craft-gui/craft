@@ -1,11 +1,12 @@
 use crate::components::component::UpdateFn;
 use crate::components::ComponentId;
 use crate::components::{Props, Event};
+use crate::PinnedFutureAny;
 
 pub struct UpdateQueueEntry {
     pub source_component: ComponentId,
     pub update_function: UpdateFn,
-    pub update_result: Event,
+    pub update_result: Option<PinnedFutureAny>,
     pub props: Props,
 }
 
@@ -14,7 +15,7 @@ impl UpdateQueueEntry {
         UpdateQueueEntry {
             source_component,
             update_function,
-            update_result,
+            update_result: update_result.future,
             props,
         }
     }
