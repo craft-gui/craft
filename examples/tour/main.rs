@@ -8,13 +8,12 @@ use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
 use craft::events::CraftMessage::DropdownItemSelected;
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
-use craft::events::Message::CraftMessage;
 use craft::events::Message;
+use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
-use craft::RendererType;
-use craft::{craft_main_with_options, WindowContext};
+use craft::{craft_main, WindowContext};
 use craft::{Color, CraftOptions};
 
 #[derive(Clone)]
@@ -223,14 +222,5 @@ impl Component for Tour {
 #[allow(dead_code)]
 fn main() {
     setup_logging();
-
-    craft_main_with_options(
-        Tour::component(),
-        Box::new(()),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            window_title: "Tour".to_string(),
-            ..Default::default()
-        }),
-    );
+    craft_main(Tour::component(), (), CraftOptions::basic("Tour"));
 }

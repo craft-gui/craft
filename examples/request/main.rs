@@ -6,14 +6,13 @@ use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
-use craft::{craft_main_with_options, WindowContext};
+use craft::{craft_main, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::events::{PointerButton};
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
 use craft::CraftOptions;
-use craft::RendererType;
 
 use reqwest::Client;
 use serde_json::json;
@@ -131,14 +130,5 @@ impl Component for AniList {
 #[allow(dead_code)]
 fn main() {
     setup_logging();
-
-    craft_main_with_options(
-        AniList::component(),
-        Box::new(()),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            window_title: "Ani List".to_string(),
-            ..Default::default()
-        }),
-    );
+    craft_main(AniList::component(), (), CraftOptions::basic("Ani List"));
 }

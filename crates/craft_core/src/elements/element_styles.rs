@@ -31,12 +31,12 @@ where
         self
     }
 
-    fn border_radius<U: Into<f32> + Copy>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
+    fn border_radius<U: IntoF32 + Copy>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
         *self.styles_mut().border_radius_mut() = [
-            (top.into(), top.into()),
-            (right.into(), right.into()),
-            (bottom.into(), bottom.into()),
-            (left.into(), left.into()),
+            (top.into_f32(), top.into_f32()),
+            (right.into_f32(), right.into_f32()),
+            (bottom.into_f32(), bottom.into_f32()),
+            (left.into_f32(), left.into_f32()),
         ];
         self
     }
@@ -156,8 +156,8 @@ where
         self
     }
 
-    fn font_size(mut self, font_size: f32) -> Self {
-        *self.styles_mut().font_size_mut() = font_size;
+    fn font_size<U: IntoF32 + Copy>(mut self, font_size: U) -> Self {
+        *self.styles_mut().font_size_mut() = font_size.into_f32();
         self
     }
 
@@ -245,4 +245,22 @@ impl From<&str> for Unit {
             panic!("Invalid unit: {}", s);
         }
     }
+}
+
+impl From<i32> for Unit {
+    fn from(value: i32) -> Self {
+        Unit::Px(value as f32)
+    }
+}
+
+pub trait IntoF32 {
+    fn into_f32(self) -> f32;
+}
+
+impl IntoF32 for f32 {
+    fn into_f32(self) -> f32 { self }
+}
+
+impl IntoF32 for i32 {
+    fn into_f32(self) -> f32 { self as f32 }
 }

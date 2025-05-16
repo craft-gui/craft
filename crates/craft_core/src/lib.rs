@@ -297,12 +297,12 @@ pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 /// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
-pub fn craft_main_with_options<GlobalState: Send + 'static>(
+pub fn craft_main<GlobalState: Send + 'static>(
     application: ComponentSpecification,
     global_state: GlobalState,
-    options: Option<CraftOptions>,
+    options: CraftOptions,
 ) {
-    internal_craft_main_with_options(application, Box::new(global_state), options);
+    internal_craft_main_with_options(application, Box::new(global_state), Some(options));
 }
 
 /// Starts the Craft application with the provided component specification, global state, and configuration options.
@@ -324,13 +324,13 @@ pub fn craft_main_with_options<GlobalState: Send + 'static>(
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 /// * `android_app` - The Android application instance.
 #[cfg(target_os = "android")]
-pub fn craft_main_with_options<GlobalState: Send + 'static>(
+pub fn craft_main<GlobalState: Send + 'static>(
     application: ComponentSpecification,
     global_state: GlobalState,
-    options: Option<CraftOptions>,
+    options: CraftOptions,
     android_app: AndroidApp,
 ) {
-    internal_craft_main_with_options(application, Box::new(global_state), options, android_app);
+    internal_craft_main_with_options(application, Box::new(global_state), Some(options), android_app);
 }
 
 #[cfg(not(target_os = "android"))]
@@ -1143,4 +1143,12 @@ fn layout(
     // taffy_tree.print_tree(root_node);
 
     (taffy_tree, root_node)
+}
+
+pub fn rgb(r: u8, g: u8, b: u8) -> crate::Color {
+    Color::from_rgb8(r, g, b)
+}
+
+pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> crate::Color {
+    Color::from_rgba8(r, g, b, a)
 }

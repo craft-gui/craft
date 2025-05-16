@@ -1,13 +1,12 @@
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::{Message};
+use craft::events::Message;
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
 use craft::Color;
 use craft::CraftOptions;
-use craft::RendererType;
-use craft::{craft_main_with_options, palette};
+use craft::{craft_main, palette};
 use util::setup_logging;
 
 #[derive(Default, Clone)]
@@ -107,16 +106,7 @@ impl Component for OverlayExample {
 #[cfg(not(target_os = "android"))]
 fn main() {
     setup_logging();
-
-    craft_main_with_options(
-        OverlayExample::component(),
-        Box::new(()),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            window_title: "Overlay".to_string(),
-            ..Default::default()
-        }),
-    );
+    craft_main(OverlayExample::component(), (), CraftOptions::basic("Overlay"));
 }
 
 use craft::elements::Overlay;
@@ -131,7 +121,7 @@ use craft::WindowContext;
 fn android_main(app: AndroidApp) {
     setup_logging();
 
-    craft_main_with_options(
+    craft_main(
         OverlayExample::component(),
         Box::new(()),
         Some(CraftOptions {

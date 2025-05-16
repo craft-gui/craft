@@ -6,7 +6,7 @@ default-run = "counter"
 
 [lib]
 name = "counter_android"
-path = "main.rs"
+path = "counter_android.rs"
 crate-type = ["cdylib"]
 
 [[bin]]

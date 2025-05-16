@@ -1,16 +1,15 @@
-use util::setup_logging;
+use craft::components::ComponentId;
 use craft::components::{Component, ComponentSpecification, Event};
-use craft::craft_main_with_options;
+use craft::craft_main;
 use craft::elements::Container;
 use craft::elements::ElementStyles;
-use craft::events::{Message};
+use craft::events::Message;
 use craft::palette;
 use craft::style::Position;
 use craft::style::Unit;
 use craft::CraftOptions;
-use craft::RendererType;
-use craft::components::ComponentId;
 use craft::WindowContext;
+use util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
 pub struct EventsExample {}
@@ -74,14 +73,5 @@ impl Component for EventsExample {
 
 fn main() {
     setup_logging();
-
-    craft_main_with_options(
-        EventsExample::component(),
-        Box::new(()),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            window_title: "events".to_string(),
-            ..Default::default()
-        }),
-    );
+    craft_main(EventsExample::component(), (), CraftOptions::basic("Events"));
 }

@@ -1,8 +1,8 @@
 use util::setup_logging;
 
+use craft::components::Component;
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
-use craft::components::Component;
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
@@ -12,8 +12,7 @@ use craft::style::FlexDirection;
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::CraftOptions;
-use craft::RendererType;
-use craft::{craft_main_with_options, WindowContext};
+use craft::{craft_main, WindowContext};
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -55,14 +54,5 @@ impl Component for TextState {
 #[allow(dead_code)]
 fn main() {
     setup_logging();
-
-    craft_main_with_options(
-        TextState::component(),
-        Box::new(()),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            window_title: "text".to_string(),
-            ..Default::default()
-        }),
-    );
+    craft_main(TextState::component(), (), CraftOptions::basic("Text"));
 }

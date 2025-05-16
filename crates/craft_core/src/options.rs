@@ -76,3 +76,15 @@ impl Display for RendererType {
         }
     }
 }
+
+impl CraftOptions {
+    
+    pub fn basic(title: &str) -> Self {
+        Self {
+            renderer: RendererType::default(),
+            window_title: title.to_string(),
+            window_size: None,
+        }
+    }
+    
+}

@@ -15,7 +15,7 @@ use craft::elements::Container;
 use craft::elements::ElementStyles;
 use craft::style::Display;
 use craft::style::FlexDirection;
-use craft::{craft_main_with_options, CraftOptions, RendererType, WindowContext};
+use craft::{craft_main, CraftOptions, WindowContext};
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -63,12 +63,5 @@ impl Component for Website {
 }
 
 fn main() {
-    craft_main_with_options(
-        Website::component(),
-        WebsiteGlobalState::default(),
-        Some(CraftOptions {
-            renderer: RendererType::default(),
-            ..Default::default()
-        }),
-    )
+    craft_main(Website::component(), WebsiteGlobalState::default(), CraftOptions::basic("Craft"));
 }
