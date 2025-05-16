@@ -25,6 +25,12 @@ impl Default for ColorBrush {
     }
 }
 
+impl Default for TextContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextContext {
     pub fn new() -> Self {
         Self {

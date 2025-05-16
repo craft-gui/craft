@@ -206,7 +206,6 @@ impl Element for Slider {
             let value = self.compute_slider_value(&pointer.position);
             state.value = value;
             event.result_message(CraftMessage::SliderValueChanged(value));
-            return;
         }
     }
 

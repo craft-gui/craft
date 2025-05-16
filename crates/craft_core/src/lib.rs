@@ -42,7 +42,6 @@ use events::resource_event::ResourceEvent;
 use events::update_queue_entry::UpdateQueueEntry;
 use events::Message;
 use reactive::element_id::reset_unique_element_id;
-use reactive::fiber_node::FiberNode;
 use reactive::tree::{diff_trees, ComponentTreeNode};
 use renderer::renderer::Renderer;
 use resource_manager::ResourceManager;
@@ -76,7 +75,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use winit::event::{ElementState, Ime, Modifiers, MouseButton};
+use winit::event::{Ime, Modifiers};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
@@ -267,8 +266,7 @@ pub fn internal_craft_main_with_options(
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 
-use crate::components::{Event, PointerCapture};
-use crate::elements::base_element_state::DUMMY_DEVICE_ID;
+use crate::components::{Event};
 use crate::geometry::{Point, Rectangle, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::resource_manager::resource_type::ResourceType;

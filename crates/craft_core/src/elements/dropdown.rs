@@ -297,7 +297,6 @@ impl Element for Dropdown {
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;
                     event.result_message(CraftMessage::DropdownToggled(state.is_open));
-                    return;
                 }
             }
             CraftMessage::KeyboardInputEvent(_) => {}

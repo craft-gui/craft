@@ -251,10 +251,10 @@ impl Element for TextInput {
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
         state.is_active = true;
 
-        let scroll_result = state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
+        state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
 
         if !event.propagate {
-            return scroll_result;
+            return;
         }
 
         let scroll_y = state.scroll_state.scroll_y;

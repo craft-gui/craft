@@ -30,6 +30,8 @@ pub struct ActiveRenderState<'s> {
     window: Arc<dyn Window>,
 }
 
+// This enum is only a few hundred bytes.
+#[allow(clippy::large_enum_variant)]
 enum RenderState<'a> {
     Active(ActiveRenderState<'a>),
     Suspended,

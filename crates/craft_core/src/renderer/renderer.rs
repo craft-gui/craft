@@ -94,6 +94,12 @@ pub struct RenderList {
     pub overlay: SortedCommands,
 }
 
+impl Default for RenderList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RenderList {
     pub fn new() -> Self {
         Self { commands: Vec::new(), overlay: SortedCommands { children: vec![] } }

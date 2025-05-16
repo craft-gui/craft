@@ -119,7 +119,13 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         self.on_style_event(message, element_state, should_style, event);
     }
 
-    fn on_style_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, should_style: bool, _event: &mut Event) {
+    fn on_style_event(
+        &self,
+        message: &CraftMessage,
+        _element_state: &mut ElementStateStore,
+        should_style: bool,
+        _event: &mut Event,
+    ) {
         if should_style {
             let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
 
@@ -438,35 +444,6 @@ where
     }
 }
 
-impl dyn Element {
-    #[allow(dead_code)]
-    pub fn print_tree(&self) {
-        let mut elements: Vec<(&dyn Element, usize, bool)> = vec![(self, 0, true)];
-        while let Some((element, indent, is_last)) = elements.pop() {
-            let mut prefix = String::new();
-            for _ in 0..indent {
-                prefix.push_str("  ");
-            }
-            if is_last {
-                prefix.push_str("└─");
-            } else {
-                prefix.push_str("├─");
-            }
-            println!(
-                "{}{}, Component Id: {}",
-                prefix,
-                element.name(),
-                element.component_id(),
-            );
-            let children = element.children();
-            for (i, child) in children.iter().enumerate().rev() {
-                let is_last = i == children.len() - 1;
-                elements.push((*child, indent + 1, is_last));
-            }
-        }
-    }
-}
-
 pub trait StandardElementClone {
     fn clone_box(&self) -> Box<dyn Element>;
 }
@@ -541,268 +518,219 @@ macro_rules! generate_component_methods_no_children {
         /// Sets the on_pointer_button handler for the element.
         pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerButton)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerButton)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      pointer_button: &$crate::events::PointerButton| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, pointer_button);
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::PointerButton;
+
+            let callback: EventHandlerWithRef<PointerButton> = Arc::new(
+                move |state_any: &mut dyn Any,
+                      global_any: &mut dyn Any,
+                      event: &mut Event,
+                      pointer_button: &PointerButton| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event, pointer_button);
                 },
             );
             self.element_data_mut().on_pointer_button = Some(callback);
             self
-        } 
-        
+        }
+
         #[allow(dead_code)]
         /// Sets the on_initialized handler for the element.
         pub fn on_initialized<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      | {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event);
-                },
-            );
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandler;
+
+            let callback: EventHandler =
+                Arc::new(move |state_any: &mut dyn Any, global_any: &mut dyn Any, event: &mut Event| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event);
+                });
             self.element_data_mut().on_initialized = Some(callback);
             self
         }
-        
+
         #[allow(dead_code)]
         /// Sets the on_keyboard_input handler for the element.
         pub fn on_keyboard_input<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::KeyboardInput)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::KeyboardInput)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      keyboard_input: &$crate::events::KeyboardInput| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, keyboard_input);
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::KeyboardInput;
+
+            let callback: EventHandlerWithRef<KeyboardInput> = Arc::new(
+                move |state_any: &mut dyn Any,
+                      global_any: &mut dyn Any,
+                      event: &mut Event,
+                      keyboard_input: &KeyboardInput| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event, keyboard_input);
                 },
             );
             self.element_data_mut().on_keyboard_input = Some(callback);
             self
         }
-        
+
         #[allow(dead_code)]
         /// Sets the on_pointer_move handler for the element.
         pub fn on_pointer_move<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerMoved)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::PointerMoved)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      pointer_moved: &$crate::events::PointerMoved| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, pointer_moved);
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::PointerMoved;
+
+            let callback: EventHandlerWithRef<PointerMoved> = Arc::new(
+                move |state_any: &mut dyn Any,
+                      global_any: &mut dyn Any,
+                      event: &mut Event,
+                      pointer_moved: &PointerMoved| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event, pointer_moved);
                 },
             );
             self.element_data_mut().on_pointer_move = Some(callback);
             self
-        } 
-        
+        }
+
         #[allow(dead_code)]
         /// Sets the on_mouse_wheel handler for the element.
         pub fn on_mouse_wheel<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::MouseWheel)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::MouseWheel)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      mouse_wheel: &$crate::events::MouseWheel| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, mouse_wheel);
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::MouseWheel;
+
+            let callback: EventHandlerWithRef<MouseWheel> = Arc::new(
+                move |state_any: &mut dyn Any,
+                      global_any: &mut dyn Any,
+                      event: &mut Event,
+                      mouse_wheel: &MouseWheel| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event, mouse_wheel);
                 },
             );
             self.element_data_mut().on_mouse_wheel = Some(callback);
             self
-        } 
-        
+        }
+
         #[allow(dead_code)]
         /// Sets the on_modifiers_changed handler for the element.
         pub fn on_modifiers_changed<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::Modifiers)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::Modifiers)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      modifiers: &$crate::events::Modifiers| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, modifiers);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::Modifiers;
+
+            let callback: EventHandlerWithRef<Modifiers> = Arc::new(move |state_any, global_any, event, modifiers| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, modifiers);
+            });
             self.element_data_mut().on_modifiers_changed = Some(callback);
             self
-        } 
+        }
 
         #[allow(dead_code)]
         /// Sets the on_ime handler for the element.
         pub fn on_ime<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
             Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::Ime)
                 + Send
                 + Sync
                 + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &$crate::events::Ime)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      ime: &$crate::events::Ime| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, ime);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use $crate::events::Ime;
+
+            let callback: EventHandlerWithRef<Ime> = Arc::new(move |state_any, global_any, event, ime| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, ime);
+            });
             self.element_data_mut().on_ime = Some(callback);
             self
-        } 
-        
+        }
+
         #[allow(dead_code)]
         /// Sets the on_text_input_changed handler for the element.
         pub fn on_text_input_changed<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &str)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &str) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, &str)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      new_string: &str| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, new_string);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerWithRef;
+
+            let callback: EventHandlerWithRef<str> = Arc::new(move |state_any, global_any, event, text| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, text);
+            });
             self.element_data_mut().on_text_input_changed = Some(callback);
             self
-        } 
-        
+        }
+
         #[allow(dead_code)]
         /// Sets the on_dropdown_toggled handler for the element.
         pub fn on_dropdown_toggled<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, bool)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, bool) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, bool)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      dropdown_toggled: bool| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, dropdown_toggled);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerCopy;
+
+            let callback: EventHandlerCopy<bool> = Arc::new(move |state_any, global_any, event, flag| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, flag);
+            });
             self.element_data_mut().on_dropdown_toggled = Some(callback);
             self
         }
@@ -811,92 +739,58 @@ macro_rules! generate_component_methods_no_children {
         /// Sets the on_dropdown_item_selected handler for the element.
         pub fn on_dropdown_item_selected<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, usize)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, usize) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, usize)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      index: usize| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, index);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerCopy;
+
+            let callback: EventHandlerCopy<usize> = Arc::new(move |state_any, global_any, event, index| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, index);
+            });
             self.element_data_mut().on_dropdown_item_selected = Some(callback);
             self
         }
-        
+
         #[allow(dead_code)]
         /// Sets the on_switch_toggled handler for the element.
         pub fn on_switch_toggled<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, bool)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, bool) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, bool)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      switch_state: bool| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, switch_state);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerCopy;
+
+            let callback: EventHandlerCopy<bool> = Arc::new(move |state_any, global_any, event, flag| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, flag);
+            });
             self.element_data_mut().on_switch_toggled = Some(callback);
             self
         }
-        
+
         #[allow(dead_code)]
         /// Sets the on_slider_value_changed handler for the element.
         pub fn on_slider_value_changed<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
-            State: Any + 'static + Send + Sync,
-            GlobalState: Any + 'static + Send + Sync + Default,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, f64)
-                + Send
-                + Sync
-                + 'static,
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, f64) + Send + Sync + 'static,
         {
-            let callback: Arc<
-                dyn Fn(&mut dyn Any, &mut dyn Any, &mut $crate::components::Event, f64)
-                    + Send
-                    + Sync,
-            > = Arc::new(
-                move |state: &mut dyn Any,
-                      global_state: &mut dyn Any,
-                      event: &mut $crate::components::Event,
-                      slider_value: f64| {
-                    let state: &mut State = state.downcast_mut().unwrap();
-                    let global_state: &mut GlobalState =
-                        global_state.downcast_mut().unwrap();
-                    handler(state, global_state, event, slider_value);
-                },
-            );
+            use $crate::elements::element_data::EventHandlerCopy;
+
+            let callback: EventHandlerCopy<f64> = Arc::new(move |state_any, global_any, event, value| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, value);
+            });
             self.element_data_mut().on_slider_value_changed = Some(callback);
             self
         }
-        
     };
 }
 

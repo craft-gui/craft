@@ -99,18 +99,20 @@ impl ImageContext {
     }
 }
 
+pub type LayoutFn = fn(
+    component_id: ComponentId,
+    element_state: &mut ElementStateStore,
+    known_dimensions: Size<Option<f32>>,
+    available_space: Size<AvailableSpace>,
+    text_context: &mut TextContext,
+) -> Size<f32>;
+
 pub enum LayoutContext {
     Text(TaffyTextContext),
     TextInput(TaffyTextInputContext),
     Image(ImageContext),
     TinyVg(TinyVgContext),
-    Other(ComponentId, fn(
-          component_id: ComponentId,
-          element_state: &mut ElementStateStore,
-          known_dimensions: Size<Option<f32>>,
-          available_space: Size<AvailableSpace>,
-          text_context: &mut TextContext,
-    ) -> Size<f32>),
+    Other(ComponentId, LayoutFn),
 }
 
 pub fn measure_content(
@@ -159,7 +161,7 @@ pub fn measure_content(
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
         Some(LayoutContext::Other(component_id, measure_fn)) => {
-            measure_fn(component_id.clone(), element_state, known_dimensions, available_space, text_context)
+            measure_fn(*component_id, element_state, known_dimensions, available_space, text_context)
         }
     }
 }

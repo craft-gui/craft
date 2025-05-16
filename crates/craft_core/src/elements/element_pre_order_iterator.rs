@@ -78,7 +78,6 @@ mod tests {
         );
 
         initial_tree.component_tree.print_tree();
-        initial_tree.element_tree.internal.print_tree();
 
         let mut iter = initial_tree.element_tree.internal.pre_order_iter();
         assert_eq!(iter.next().unwrap().get_id().clone(), Some("0".to_string()));
