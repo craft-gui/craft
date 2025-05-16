@@ -1,7 +1,6 @@
-use craft::elements::ElementStyles;
 use craft::{
     components::{Component, ComponentId, ComponentSpecification, Event},
-    elements::{Container, Text},
+    elements::{Container, ElementStyles, Text},
     events::PointerButton,
     rgb,
     style::{AlignItems, Display, FlexDirection, JustifyContent},
