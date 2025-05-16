@@ -164,6 +164,7 @@ impl Element for Switch {
 
             // Emit the SwitchToggled event with the new value of `state.toggled`.
             event.result_message(CraftMessage::SwitchToggled(state.toggled.unwrap()));
+            event.prevent_propagate();
         }
     }
 

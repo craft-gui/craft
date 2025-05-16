@@ -6,6 +6,7 @@ mod pointer_moved;
 pub(crate) mod internal;
 pub(crate) mod resource_event;
 pub mod update_queue_entry;
+pub(crate) mod event_dispatch;
 
 pub use keyboard_input::KeyboardInput;
 pub use mouse_wheel::MouseWheel;
