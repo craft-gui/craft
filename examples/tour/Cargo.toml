@@ -12,6 +12,6 @@ util = { path = "../util" }
 
 [dependencies.craft]
 path = "../../crates/craft"
-features = ["vello_hybrid_renderer"]
+features = ["vello_renderer"]
 default-features = false
 package = "craft_gui"
