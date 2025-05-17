@@ -21,7 +21,7 @@ use winit::window::Window;
 
 #[derive(Clone)]
 pub struct ElementBoxed {
-    pub(crate) internal: Box<dyn Element>,
+    pub internal: Box<dyn Element>,
 }
 
 pub trait Element: Any + StandardElementClone + Send + Sync {
