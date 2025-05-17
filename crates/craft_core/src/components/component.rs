@@ -216,6 +216,7 @@ where
                 CraftMessage::SliderValueChanged(slider_value) => {
                     self.on_slider_value_changed(global_state, props, event, *slider_value);
                 }
+                CraftMessage::ElementMessage(_) => {}
             },
             crate::events::Message::UserMessage(user_message) => {
                 let user_message = user_message.downcast_ref::<Self::Message>();

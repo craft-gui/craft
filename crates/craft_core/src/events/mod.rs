@@ -18,6 +18,7 @@ pub use winit::event::ElementState;
 use crate::components::ComponentId;
 use crate::events::CraftMessage::PointerButtonEvent;
 use std::any::Any;
+use std::sync::Arc;
 pub use winit::event::Modifiers;
 pub use winit::event::Ime;
 pub use winit::event::MouseButton;
@@ -46,6 +47,7 @@ pub enum CraftMessage {
     /// Generated when a switch is toggled. The boolean is the status of toggled after the event has occurred.
     SwitchToggled(bool),
     SliderValueChanged(f64),
+    ElementMessage(Arc<UserMessage>),
 }
 
 impl CraftMessage {
