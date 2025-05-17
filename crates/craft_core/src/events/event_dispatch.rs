@@ -54,7 +54,8 @@ pub(crate) fn dispatch_event(
         component_id: ComponentId,
         layout_order: usize,
         overlay_depth: usize,
-        element: &'a dyn Element,
+        element: Option<&'a dyn Element>,
+        component: Option<&'a ComponentTreeNode>
     }
 
     match dispatch_type {
@@ -80,9 +81,9 @@ pub(crate) fn dispatch_event(
             // Collect all possible target elements in reverse order.
             // Nodes added last are usually on top, so these elements are in visual order.
 
-
+            
             for (fiber_node, overlay_depth) in fiber.dfs_with_overlay_depth() {
-
+                
                 if let Some(element) = fiber_node.element {
                     let in_bounds = mouse_position.is_some() && element.in_bounds(mouse_position.unwrap());
                     let mut should_pass_hit_test = in_bounds;
@@ -97,22 +98,65 @@ pub(crate) fn dispatch_event(
                     }
 
                     if should_pass_hit_test {
-                        // println!("CID: {:?}, depth: {:?}", element.component_id(), overlay_depth);
+                        let mut parent_component_targets: VecDeque<Target> = VecDeque::new();
+                        let current_target_component = reactive_tree
+                            .component_tree
+                            .as_ref()
+                            .unwrap()
+                            .pre_order_iter()
+                            .find(|node| node.id == element.component_id())
+                            .unwrap();
+                        let mut to_visit = Some(current_target_component);
+                        while let Some(node) = to_visit {
+                            if !node.is_element {
+
+                                parent_component_targets.push_back(Target {
+                                    component_id: node.id,
+                                    layout_order: element.element_data().layout_order as usize,
+                                    overlay_depth,
+                                    element: Some(element),
+                                    component: Some(node),
+                                });
+                                
+                                if let Some(parent_id) = node.parent_id {
+                                    to_visit = reactive_tree
+                                        .component_tree
+                                        .as_ref()
+                                        .unwrap()
+                                        .pre_order_iter()
+                                        .find(|node2| node2.id == parent_id);
+                                } else{
+                                    to_visit = None;
+                                }
+                            } else if node.parent_id.is_none() {
+                                to_visit = None;
+                            } else {
+                                let parent_id = node.parent_id.unwrap();
+                                to_visit = reactive_tree
+                                    .component_tree
+                                    .as_ref()
+                                    .unwrap()
+                                    .pre_order_iter()
+                                    .find(|node2| node2.id == parent_id);
+                            }
+                        }
+                        
+                        for parent in parent_component_targets.drain(..).rev() {
+                            targets.push_back(parent);
+                        }
 
                         targets.push_back(Target {
                             component_id: element.component_id(),
                             layout_order: element.element_data().layout_order as usize,
                             overlay_depth,
-                            element,
-                        })
-                    } else {
-                        //println!("Not in bounds, Element: {:?}", element.get_id());
+                            element: Some(element),
+                            component: None,
+                        });
                     }
                 }
             }
 
             // The targets should be [(2, Some(c)), (1, Some(b)), (0, Some(a))].
-
             if targets.is_empty() {
                 return;
             }
@@ -122,6 +166,8 @@ pub(crate) fn dispatch_event(
             tmp_targets.sort_by(|a, b| b.layout_order.cmp(&a.layout_order)); // Sort using the layout order. (u32)
             tmp_targets.sort_by(|a, b| b.overlay_depth.cmp(&a.overlay_depth)); // Sort using the overlay depth order. (u32)
             targets = VecDeque::from(tmp_targets);
+
+            let mut element_events: VecDeque<(CraftMessage, &dyn Element)> = VecDeque::new();
 
             let target = targets[0].clone();
             let mut propagate = true;
@@ -139,13 +185,17 @@ pub(crate) fn dispatch_event(
                     .pre_order_iter()
                     .find(|node| node.id == current_target.component_id)
                     .unwrap();
+                
+                if current_target.component.is_some() {
+                    continue;
+                }
 
                 // Search for the closest non-element ancestor.
                 let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
 
                 let mut to_visit = Some(current_target_component);
                 while let Some(node) = to_visit {
-                    if !to_visit.unwrap().is_element {
+                    if !node.is_element {
                         closest_ancestor_component = Some(node);
                         to_visit = None;
                     } else if node.parent_id.is_none() {
@@ -175,8 +225,8 @@ pub(crate) fn dispatch_event(
 
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
                     let mut event = Event::with_window_context(window_context.clone());
-                    event.target = Some(target.element);
-                    event.current_target = Some(current_target.element);
+                    event.target = Some(target.element.unwrap());
+                    event.current_target = Some(current_target.element.unwrap());
                     (node.update)(
                         state,
                         global_state,
@@ -184,6 +234,13 @@ pub(crate) fn dispatch_event(
                         &mut event,
                         message,
                     );
+
+                    if !event.prevent_defaults && event.propagate {
+                        if let Some(ref result_message) = event.result_message {
+                            element_events.push_back((result_message.clone(), *event.target.as_ref().unwrap()));
+                        }
+                    }
+
                     *window_context = event.window.clone();
                     effects.append(&mut event.effects);
                     propagate = propagate && event.propagate;
@@ -209,8 +266,6 @@ pub(crate) fn dispatch_event(
                     }
                 }
             }
-
-            let mut element_events: VecDeque<(CraftMessage, &dyn Element)> = VecDeque::new();
 
             for element_state in reactive_tree.element_state.storage.values_mut() {
                 if let Message::CraftMessage(message) = &message {
@@ -267,34 +322,60 @@ pub(crate) fn dispatch_event(
             for (message, target_element) in element_events.iter() {
                 let mut propagate = true;
                 let mut prevent_defaults = false;
-                for node in target_components.iter() {
+                for node in targets.iter() {
+                    let current_target = reactive_tree
+                        .component_tree
+                        .as_ref()
+                        .unwrap()
+                        .pre_order_iter()
+                        .find(|node2| node2.id == node.component_id)
+                        .unwrap();
+
+
                     if !propagate {
                         break;
                     }
 
-                    let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
                     let mut event = Event::with_window_context(window_context.clone());
-                    // For element events the target and current target
-                    // are the element the event was dispatched from.
-                    event.target = Some(*target_element);
-                    event.current_target = Some(*target_element);
-                    (node.update)(
-                        state,
-                        global_state,
-                        node.props.clone(),
-                        &mut event,
-                        &Message::CraftMessage(message.clone()),
-                    );
+                    if current_target.is_element {
+                        if let Some(element) = current_element_tree
+                            .pre_order_iter()
+                            .collect::<Vec<&dyn Element>>()
+                            .iter()
+                            .find(|node2| node2.element_data().component_id == current_target.id) {
+                            element.on_event(
+                                message,
+                                &mut reactive_tree.element_state,
+                                text_context.as_mut().unwrap(),
+                                // first_element && is_style. For only the first element.
+                                is_style,
+                                &mut event,
+                            );
+                        }
+                    } else {
+                        let state = reactive_tree.user_state.storage.get_mut(&current_target.id).unwrap().as_mut();
+                        // For element events the target and current target
+                        // are the element the event was dispatched from.
+                        event.target = Some(*target_element);
+                        event.current_target = Some(*target_element);
+                        (current_target.update)(
+                            state,
+                            global_state,
+                            current_target.props.clone(),
+                            &mut event,
+                            &Message::CraftMessage(message.clone()),
+                        );
+                    }
                     *window_context = event.window.clone();
                     effects.append(&mut event.effects);
                     propagate = propagate && event.propagate;
                     prevent_defaults = prevent_defaults || event.prevent_defaults;
                     if event.future.is_some() {
                         reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
-                            node.id,
-                            node.update,
+                            current_target.id,
+                            current_target.update,
                             event,
-                            node.props.clone(),
+                            current_target.props.clone(),
                         ));
                     }
                 }
