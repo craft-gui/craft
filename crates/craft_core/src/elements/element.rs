@@ -47,13 +47,15 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
         let rect = element_data.computed_box_transformed.border_rectangle();
-        
-        let bounds = element_data
-            .clip_bounds
-            .and_then(|clip| clip.intersection(&rect))
-            .unwrap_or(rect);
 
-        bounds.contains(&point)
+        if let Some(clip) = element_data.clip_bounds {
+            match rect.intersection(&clip) {
+                Some(bounds) => bounds.contains(&point),
+                None => false,
+            }
+        } else {
+            rect.contains(&point)
+        }
     }
 
     fn get_id(&self) -> &Option<String> {
@@ -149,7 +151,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             }
         }
     }
-    
+
     fn resolve_clip(
         &mut self,
         clip_bounds: Option<Rectangle>,
@@ -501,7 +503,7 @@ macro_rules! generate_component_methods_no_children {
             self.element_data.id = Some(id.to_string());
             self
         }
-        
+
         #[allow(dead_code)]
         pub fn normal(mut self) -> Self {
             self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
