@@ -61,9 +61,7 @@ pub(crate) fn dispatch_event(
     match dispatch_type {
         EventDispatchType::Bubbling => {
             let mut targets: VecDeque<Target> = VecDeque::new();
-            let mut target_components: VecDeque<&ComponentTreeNode> = VecDeque::new();
-
-
+            
             /////////////////////////////////////////
             // A,0                                 //
             //   /////////////////////////         //
@@ -81,7 +79,7 @@ pub(crate) fn dispatch_event(
             // Collect all possible target elements in reverse order.
             // Nodes added last are usually on top, so these elements are in visual order.
 
-            
+
             for (fiber_node, overlay_depth) in fiber.dfs_with_overlay_depth() {
                 
                 if let Some(element) = fiber_node.element {
@@ -108,6 +106,9 @@ pub(crate) fn dispatch_event(
                             .unwrap();
                         let mut to_visit = Some(current_target_component);
                         while let Some(node) = to_visit {
+                            if node.id == 0 {
+                                break;
+                            }
                             if !node.is_element {
 
                                 parent_component_targets.push_back(Target {
@@ -130,7 +131,7 @@ pub(crate) fn dispatch_event(
                                 }
                             } else if node.parent_id.is_none() {
                                 to_visit = None;
-                            } else {
+                            } else if node.id == element.component_id() {
                                 let parent_id = node.parent_id.unwrap();
                                 to_visit = reactive_tree
                                     .component_tree
@@ -138,6 +139,8 @@ pub(crate) fn dispatch_event(
                                     .unwrap()
                                     .pre_order_iter()
                                     .find(|node2| node2.id == parent_id);
+                            } else {
+                                to_visit = None;
                             }
                         }
                         
@@ -213,16 +216,6 @@ pub(crate) fn dispatch_event(
 
                 // Dispatch the event to the element's component.
                 if let Some(node) = closest_ancestor_component {
-                    // Ensure that components are not duplicated in the target_components list. 
-                    if let Some(last) = target_components.back() {
-                        if last.id == node.id {
-                            continue;
-                        }
-                        target_components.push_back(node);
-                    } else {
-                        target_components.push_back(node);
-                    }
-
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
                     let mut event = Event::with_window_context(window_context.clone());
                     event.target = Some(target.element.unwrap());
