@@ -72,8 +72,8 @@ impl ScrollState {
                                 }
                             }
                             WinitElementState::Released => {
-                                self.scroll_click = None;
                                 if self.scroll_click.is_some() {
+                                    self.scroll_click = None;
                                     // FIXME: Turn pointer capture off with the correct device id.
                                     base_state.pointer_capture.insert(DUMMY_DEVICE_ID, false);
                                     event.prevent_propagate();
