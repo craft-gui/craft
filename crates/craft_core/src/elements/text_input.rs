@@ -2,7 +2,7 @@ use crate::CraftMessage;
 use crate::components::component::ComponentSpecification;
 use crate::components::{ImeAction, Props};
 use crate::components::Event;
-use crate::elements::element::{Element, ElementBoxed};
+use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
@@ -186,9 +186,11 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
 
         self.finalize_borders(element_state);
 
@@ -231,6 +233,10 @@ impl Element for TextInput {
         };
 
         self.finalize_scrollbar(scroll_y);
+    }
+
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn as_any(&self) -> &dyn Any {

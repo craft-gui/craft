@@ -1,11 +1,11 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::{Props, Event};
-use crate::elements::element::{Element, ElementBoxed};
+use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementStyles;
 use crate::events::CraftMessage;
 use crate::generate_component_methods_no_children;
-use crate::geometry::Point;
+use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
@@ -150,10 +150,12 @@ impl Element for Text {
         transform: glam::Mat4,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _text_context: &mut TextContext,
+        text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
 
         self.finalize_borders(element_state);
 
@@ -173,7 +175,7 @@ impl Element for Text {
             );
         }
 
-        state.try_update_text_render(_text_context);
+        state.try_update_text_render(text_context);
 
         let layout = state.layout.as_ref().unwrap();
         let text_renderer = state.text_render.as_mut().unwrap();
@@ -254,6 +256,10 @@ impl Element for Text {
                 _ => {  }
             }
         }
+    }
+
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

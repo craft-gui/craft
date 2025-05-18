@@ -4,7 +4,7 @@ use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
 use craft::style::{AlignItems, Display, JustifyContent, Weight};
-use craft::{Color, WindowContext};
+use craft::{rgb, WindowContext};
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
@@ -14,7 +14,14 @@ fn create_link(label: &str, route: &str) -> Text {
         .id(format!("route_{}", route).as_str())
         .margin("0px", "12px", "0px", "0px") // Default Margin
         .font_size(16.0)
-        .color(Color::from_rgb8(220, 220, 220)) // Light text for readability
+        .disable_selection()
+        .color(rgb(220, 220, 220))
+        .hovered()
+        .color(rgb(255, 255, 255))
+        .margin("0px", "12px", "0px", "0px") // Default Margin
+        .font_size(16.0)
+        .disable_selection()
+        .normal()
 }
 
 impl Component for Navbar {
@@ -46,6 +53,9 @@ impl Component for Navbar {
                     .push(
                         create_link("Craft", "/")
                             .font_size(32.0)
+                            .font_weight(Weight::BOLD)
+                            .margin("0px", "24px", "0px", "0px")
+                            .hovered().font_size(32.0)
                             .font_weight(Weight::BOLD)
                             .margin("0px", "24px", "0px", "0px"),
                     )

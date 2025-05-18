@@ -3,7 +3,7 @@ use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::geometry::Point;
+use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
@@ -97,10 +97,11 @@ impl Element for Overlay {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-
+        self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
         
         for child in self.element_data.children.iter_mut() {
@@ -118,8 +119,13 @@ impl Element for Overlay {
                 element_state,
                 pointer,
                 text_context,
+                None,
             );
         }
+    }
+
+    fn resolve_clip(&mut self, _clip_bounds: Option<Rectangle>) {
+        self.element_data.clip_bounds = None;
     }
 
     fn as_any(&self) -> &dyn Any {

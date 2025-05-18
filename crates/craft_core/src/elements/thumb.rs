@@ -85,6 +85,7 @@ impl Thumb {
             element_state,
             pointer,
             text_context,
+            None,
         );
     }
 }

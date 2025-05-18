@@ -1,7 +1,7 @@
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::LayoutContext;
-use crate::geometry::Point;
+use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
 use std::any::Any;
@@ -68,6 +68,7 @@ impl Element for Empty {
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
+        _clip_bounds: Option<Rectangle>,
     ) {
     }
 

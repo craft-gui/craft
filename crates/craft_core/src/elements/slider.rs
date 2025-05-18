@@ -9,7 +9,7 @@ use crate::layout::layout_context::LayoutContext;
 use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::borders::BorderSpec;
-use crate::geometry::Point;
+use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::renderer::Brush;
@@ -146,10 +146,12 @@ impl Element for Slider {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let state = self.get_state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
 
         let thumb_position = self.thumb_position(state.value);

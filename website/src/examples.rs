@@ -37,7 +37,7 @@ impl Default for Examples {
 }
 
 fn create_examples_link(label: &str, example_link: &str) -> ComponentSpecification {
-    Text::new(label).id(example_link).component()
+    Text::new(label).id(example_link).disable_selection().component()
 }
 
 fn examples_sidebar() -> ComponentSpecification {

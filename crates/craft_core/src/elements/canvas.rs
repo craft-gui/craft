@@ -178,9 +178,11 @@ impl Element for Canvas {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
 
         for child in self.element_data.children.iter_mut() {
@@ -198,6 +200,7 @@ impl Element for Canvas {
                 element_state,
                 pointer,
                 text_context,
+                None,
             );
         }
     }

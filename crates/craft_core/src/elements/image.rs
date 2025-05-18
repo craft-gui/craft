@@ -4,7 +4,7 @@ use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::elements::ElementStyles;
-use crate::geometry::Point;
+use crate::geometry::{Point, Rectangle};
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
 use crate::resource_manager::ResourceIdentifier;
@@ -101,9 +101,11 @@ impl Element for Image {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
 
         self.finalize_borders(element_state);
     }

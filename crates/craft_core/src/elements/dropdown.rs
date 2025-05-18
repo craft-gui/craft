@@ -7,7 +7,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::layout::layout_context::LayoutContext;
 use crate::elements::Container;
 use crate::events::CraftMessage;
-use crate::geometry::{Point, TrblRectangle};
+use crate::geometry::{Point, Rectangle, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
@@ -197,11 +197,13 @@ impl Element for Dropdown {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let state = self.get_state(element_state);
         let is_open = state.is_open;
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
+        self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
 
         // Finalize the layout of the pseudo dropdown selection element.
@@ -216,6 +218,7 @@ impl Element for Dropdown {
                 element_state,
                 pointer,
                 text_context,
+                None,
             );
         }
 
@@ -232,6 +235,7 @@ impl Element for Dropdown {
                 element_state,
                 pointer,
                 text_context,
+                None,
             );
 
             for child in self.element_data.children.iter_mut() {
@@ -250,9 +254,14 @@ impl Element for Dropdown {
                     element_state,
                     pointer,
                     text_context,
+                    None,
                 );
             }
         }
+    }
+
+    fn resolve_clip(&mut self, _clip_bounds: Option<Rectangle>) {
+        self.element_data.clip_bounds = None;
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -286,6 +295,8 @@ impl Element for Dropdown {
                         state.is_open = false;
 
                         event.result_message(CraftMessage::DropdownItemSelected(state.selected_item.unwrap()));
+                        event.prevent_defaults();
+                        event.prevent_propagate();
                         return;
                     }
                 }

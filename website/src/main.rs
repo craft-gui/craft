@@ -55,10 +55,10 @@ impl Component for Website {
             .background(BODY_BACKGROUND_COLOR);
 
         match global_state.route.as_str() {
-            "/examples" => wrapper.push(Examples::component().key("examples")).component(),
-            "/about" => wrapper.push(About::component().key("about")).component(),
-            _ => wrapper.push(index_page().key("index")).component(),
-        }
+            "/examples" => wrapper.push(Examples::component().key("examples")),
+            "/about" => wrapper.push(About::component().key("about")),
+            _ => wrapper.push(index_page().key("index")),
+        }.component()
     }
 }
 

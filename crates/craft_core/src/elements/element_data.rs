@@ -81,6 +81,7 @@ pub struct ElementData {
     pub(crate) on_dropdown_item_selected: Option<EventHandlerCopy<usize>>,
     pub(crate) on_switch_toggled: Option<EventHandlerCopy<bool>>,
     pub(crate) on_slider_value_changed: Option<EventHandlerCopy<f64>>,
+    pub(crate) clip_bounds: Option<Rectangle>,
 }
 
 impl ElementData {

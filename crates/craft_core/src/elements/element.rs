@@ -46,10 +46,14 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
+        let rect = element_data.computed_box_transformed.border_rectangle();
+        
+        let bounds = element_data
+            .clip_bounds
+            .and_then(|clip| clip.intersection(&rect))
+            .unwrap_or(rect);
 
-        let transformed_border_rectangle = element_data.computed_box_transformed.border_rectangle();
-
-        transformed_border_rectangle.contains(&point)
+        bounds.contains(&point)
     }
 
     fn get_id(&self) -> &Option<String> {
@@ -104,6 +108,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     );
 
     fn as_any(&self) -> &dyn Any;
@@ -143,6 +148,13 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
                 _ => {}
             }
         }
+    }
+    
+    fn resolve_clip(
+        &mut self,
+        clip_bounds: Option<Rectangle>,
+    ) {
+        self.element_data_mut().clip_bounds = clip_bounds;
     }
 
     fn resolve_box(
@@ -489,6 +501,12 @@ macro_rules! generate_component_methods_no_children {
             self.element_data.id = Some(id.to_string());
             self
         }
+        
+        #[allow(dead_code)]
+        pub fn normal(mut self) -> Self {
+            self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
+            self
+        }
 
         #[allow(dead_code)]
         pub fn hovered(mut self) -> Self {
@@ -828,12 +846,6 @@ macro_rules! generate_component_methods_private_push {
 
             self
         }
-
-        #[allow(dead_code)]
-        fn normal(mut self) -> Self {
-            self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
-            self
-        }
     };
 }
 
@@ -876,11 +888,19 @@ macro_rules! generate_component_methods {
         pub fn push_in_place(&mut self, component_specification: ComponentSpecification) {
             self.element_data.child_specs.push(component_specification);
         }
-
-        #[allow(dead_code)]
-        pub fn normal(mut self) -> Self {
-            self.element_data.current_state = $crate::elements::element_states::ElementState::Normal;
-            self
-        }
     };
+}
+
+pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn Element, clip_bounds: Option<Rectangle>) {
+    let element_data = element.element_data_mut();
+    if element_data.is_scrollable() {
+        let scroll_clip_bounds = element_data.computed_box_transformed.padding_rectangle();
+        if let Some(clip_bounds) = clip_bounds {
+            element_data.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
+        } else {
+            element_data.clip_bounds = Some(scroll_clip_bounds);
+        }
+    } else {
+        element_data.clip_bounds = clip_bounds;
+    }
 }

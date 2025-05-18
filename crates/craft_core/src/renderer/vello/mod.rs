@@ -8,7 +8,7 @@ use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceManager};
 use std::sync::Arc;
 use peniko::BrushRef;
-use vello::kurbo::{Affine, Rect};
+use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
@@ -154,8 +154,8 @@ impl Renderer for VelloRenderer<'_> {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
-                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
-                    // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
+                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
+                    self.scene.stroke(&Stroke::new(1.0), Affine::IDENTITY, outline_color, None, &rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);

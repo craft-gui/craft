@@ -1,13 +1,13 @@
 use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::components::Event;
-use crate::elements::element::Element;
+use crate::elements::element::{resolve_clip_for_scrollable, Element};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::layout::layout_context::LayoutContext;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use crate::geometry::{Point, Size};
+use crate::geometry::{Point, Rectangle, Size};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::style::Style;
 use crate::{generate_component_methods};
@@ -104,6 +104,7 @@ impl Element for Container {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -122,8 +123,10 @@ impl Element for Container {
         };
 
         self.finalize_scrollbar(scroll_y);
+        self.resolve_clip(clip_bounds);
+        
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
-
+        
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().taffy_node_id;
             if taffy_child_node_id.is_none() {
@@ -139,8 +142,13 @@ impl Element for Container {
                 element_state,
                 pointer,
                 text_context,
+                self.element_data.clip_bounds,
             );
         }
+    }
+
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn as_any(&self) -> &dyn Any {

@@ -10,7 +10,7 @@ use crate::resource_manager::ResourceManager;
 use std::sync::Arc;
 use peniko::kurbo::Shape;
 use vello_common::glyph::Glyph;
-use vello_common::paint::Paint;
+use vello_common::paint::{Paint};
 use vello_common::peniko::Blob;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::RenderSize;
@@ -145,8 +145,10 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
-                RenderCommand::DrawRectOutline(_rectangle, _outline_color) => {
-                    // vello_draw_rect_outline(&mut self.scene, rectangle, outline_color);
+                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
+                    self.scene.set_stroke(vello_common::kurbo::Stroke::new(1.0));
+                    self.scene.set_paint(Paint::from(*outline_color));
+                    self.scene.stroke_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(_rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
@@ -266,7 +268,6 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                 RenderCommand::PushLayer(rect) => {
                     let clip_path = Some(peniko::kurbo::Rect::from_origin_size(peniko::kurbo::Point::new(rect.x as f64, rect.y as f64), peniko::kurbo::Size::new(rect.width as f64, rect.height as f64)).into_path(0.1));
                     scene.push_layer(clip_path.as_ref(), None, None, None);
-
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();
