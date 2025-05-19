@@ -559,9 +559,9 @@ impl Element for TextInput {
         &mut self,
         element_state: &mut ElementStateStore,
         _reload_fonts: bool,
-        _scaling_factor: f64,
+        scaling_factor: f64,
     ) {
-        let _state: &mut TextInputState = element_state
+        let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.element_data.component_id)
             .unwrap()
@@ -569,6 +569,14 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
+        
+        if let Some(layout) = state.editor.try_layout() {
+            if layout.scale() != scaling_factor as f32 {
+                state.editor.set_scale(scaling_factor as f32);
+                state.cache.clear();
+                state.new_text = std::mem::take(&mut self.text);
+            }
+        }
     }
 
     fn default_style(&self) -> Style {
@@ -610,7 +618,7 @@ impl TextInputState {
         available_space: taffy::Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> taffy::Size<f32> {
-        if self.editor.try_layout().is_none() {
+        if self.editor.try_layout().is_none() || self.new_text.is_some() {
             let text = std::mem::take(&mut self.new_text).unwrap();
             self.editor.set_text(text.as_str());
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);

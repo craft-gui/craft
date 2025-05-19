@@ -38,6 +38,7 @@ pub struct Text {
 }
 
 pub struct TextState {
+    scale_factor: f32,
     selection: Selection,
     text: Option<String>,
     text_hash: Option<u64>,
@@ -262,9 +263,10 @@ impl Element for Text {
         resolve_clip_for_scrollable(self, clip_bounds);
     }
 
-    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
+    fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
         let hash = hash_string(self.text.as_ref().unwrap());
         let text_state = TextState {
+            scale_factor: scaling_factor as f32,
             selection: Selection::default(),
             text: std::mem::take(&mut self.text),
             text_hash: Some(hash),
@@ -292,7 +294,7 @@ impl Element for Text {
         }
     }
 
-    fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, _scaling_factor: f64) {
+    fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let text_hash = hash_string(self.text.as_ref().unwrap());
 
         let base_state: &mut ElementStateStoreItem = element_state
@@ -300,11 +302,21 @@ impl Element for Text {
             .get_mut(&self.element_data.component_id)
             .unwrap();
 
-
         let state: &mut TextState = base_state.data
             .as_mut()
             .downcast_mut()
             .unwrap();
+
+        let scale_factor_changed = if let Some(layout) = &state.layout {
+            if layout.scale() != scaling_factor as f32 {
+                state.scale_factor = scaling_factor as f32;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         let last_style = &state.last_text_style;
 
@@ -325,7 +337,7 @@ impl Element for Text {
 
         let text = std::mem::take(&mut self.text);
 
-        if state.text_hash != Some(text_hash) || reload_fonts || style_changed {
+        if state.text_hash != Some(text_hash) || reload_fonts || style_changed || scale_factor_changed {
             state.text_hash = Some(text_hash);
             state.text = text;
             state.layout = None;
@@ -363,7 +375,7 @@ impl TextState {
         text_context: &mut TextContext,
     ) -> Size<f32> {
         if self.layout.is_none() {
-            let mut builder = text_context.tree_builder(&self.last_text_style.to_text_style());
+            let mut builder = text_context.tree_builder(self.scale_factor, &self.last_text_style.to_text_style());
             let text = std::mem::take(&mut self.text).unwrap();
             builder.push_text(&text);
             let (layout, _) = builder.build();
