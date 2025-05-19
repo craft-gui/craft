@@ -224,7 +224,7 @@ impl Renderer for VelloCpuRenderer {
                                 }
                             }
 
-                            self.render_context.set_paint(PaintType::from(item.brush.color));
+                            self.render_context.set_paint(PaintType::from(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)));
                             self.render_context.reset_transform();
 
                             let glyph_run_builder = self.render_context

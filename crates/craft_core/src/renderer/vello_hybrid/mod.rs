@@ -236,7 +236,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                                 }
                             }
 
-                            scene.set_paint(Paint::from(item.brush.color));
+                            scene.set_paint(Paint::from(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)));
                             scene.reset_transform();
 
                             let glyph_run_builder = scene
