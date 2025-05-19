@@ -135,8 +135,6 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
     }
 
     fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, window: Rectangle) {
-        // Draw the bg color.
-        vello_draw_rect(&mut self.scene, window, self.surface_clear_color);
         
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;

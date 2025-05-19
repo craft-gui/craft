@@ -125,7 +125,6 @@ impl Renderer for VelloCpuRenderer {
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
-        self.render_context.fill_rect(&Rect::new(0.0, 0.0, self.pixmap.width() as f64, self.pixmap.height() as f64));
 
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
