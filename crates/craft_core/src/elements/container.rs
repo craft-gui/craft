@@ -87,8 +87,20 @@ impl Element for Container {
         }
 
         let base_state = self.get_base_state_mut(element_state);
-        let current_style = base_state.base.current_style(self.element_data());
+        let current_style = base_state.base.current_style_mut(self.element_data_mut());
+
+        // FIXME: We need to do this for all elements, this is a quick hack.
+        let border_radius = current_style.border_radius();
+        *current_style.border_radius_mut() = [
+            (border_radius[0].0 * scale_factor as f32, border_radius[0].1 * scale_factor as f32),
+            (border_radius[1].0 * scale_factor as f32, border_radius[1].1 * scale_factor as f32),
+            (border_radius[2].0 * scale_factor as f32, border_radius[2].1 * scale_factor as f32),
+            (border_radius[3].0 * scale_factor as f32, border_radius[3].1 * scale_factor as f32)
+        ];
+
         let style: taffy::Style = current_style.to_taffy_style_with_scale_factor(scale_factor);
+
+
 
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.element_data().taffy_node_id

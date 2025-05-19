@@ -14,9 +14,9 @@ pub struct BaseElementState {
     pub(crate) pointer_capture: HashMap<i64, bool>,
 }
 
-impl BaseElementState {
+impl<'a> BaseElementState {
     
-    pub fn current_style<'a>(&self, element_data: &'a ElementData) -> &'a Style {
+    pub fn current_style(&self, element_data: &'a ElementData) -> &'a Style {
         if self.active {
             if let Some(pressed_style) = &element_data.pressed_style {
                 return pressed_style;
@@ -28,6 +28,20 @@ impl BaseElementState {
             }
         }
         &element_data.style
+    }
+
+    pub fn current_style_mut(&self, element_data: &'a mut ElementData) -> &'a mut Style {
+        if self.active {
+            if let Some(pressed_style) = &mut element_data.pressed_style {
+                return pressed_style;
+            }
+        }
+        if self.hovered {
+            if let Some(hover_style) = &mut element_data.hover_style {
+                return hover_style;
+            }
+        }
+        &mut element_data.style
     }
     
 }
