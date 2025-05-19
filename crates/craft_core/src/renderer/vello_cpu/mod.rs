@@ -5,7 +5,7 @@ use crate::renderer::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
-use peniko::kurbo::{Affine, Rect};
+use peniko::kurbo::Affine;
 use peniko::{kurbo, Blob, Color, Fill};
 use std::num::NonZero;
 use softbuffer::Buffer;
