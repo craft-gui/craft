@@ -135,7 +135,8 @@ impl Element for DevTools {
             }
         }
 
-        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        self.element_data.style.scale(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.element_data().taffy_node_id

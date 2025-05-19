@@ -97,20 +97,12 @@ impl Element for Switch {
         }
 
         let child_node = self.thumb.compute_layout(taffy_tree, element_state, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
-
-        // FIXME: We need to do this for all elements, this is a quick hack.
-        let border_radius = self.element_data_mut().style.border_radius();
-        *self.element_data_mut().style.border_radius_mut() = [
-            (border_radius[0].0 * scale_factor as f32, border_radius[0].1 * scale_factor as f32),
-            (border_radius[1].0 * scale_factor as f32, border_radius[1].1 * scale_factor as f32),
-            (border_radius[2].0 * scale_factor as f32, border_radius[2].1 * scale_factor as f32),
-            (border_radius[3].0 * scale_factor as f32, border_radius[3].1 * scale_factor as f32)
-        ];
         
         self.thumb.size *= scale_factor as f32;
         self.spacing *= scale_factor as f32;
-        
-        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+
+        self.element_data.style.scale(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style();
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
         self.element_data().taffy_node_id
     }

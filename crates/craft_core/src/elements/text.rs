@@ -128,7 +128,10 @@ impl Element for Text {
         _element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
-        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        self.merge_default_style();
+        
+        self.element_data.style.scale(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data_mut().taffy_node_id = Some(
             taffy_tree

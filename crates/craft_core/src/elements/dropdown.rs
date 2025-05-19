@@ -171,9 +171,10 @@ impl Element for Dropdown {
                 &self.pseudo_dropdown_list_element.element_data.style,
             );
 
+            self.pseudo_dropdown_list_element.element_data.style.scale(scale_factor);
             let dropdown_list_node_id = taffy_tree
                 .new_with_children(
-                    self.pseudo_dropdown_list_element.element_data.style.to_taffy_style_with_scale_factor(scale_factor),
+                    self.pseudo_dropdown_list_element.element_data.style.to_taffy_style(),
                     &dropdown_list_child_nodes,
                 )
                 .unwrap();
@@ -182,7 +183,8 @@ impl Element for Dropdown {
             child_nodes.push(dropdown_list_node_id);
         }
 
-        let style: taffy::Style = self.element_data.style.to_taffy_style_with_scale_factor(scale_factor);
+        self.element_data.style.scale(scale_factor);
+        let style: taffy::Style = self.element_data.style.to_taffy_style();
         self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
         self.element_data().taffy_node_id
     }
