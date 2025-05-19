@@ -569,12 +569,12 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-        
+
         if let Some(layout) = state.editor.try_layout() {
             if layout.scale() != scaling_factor as f32 {
                 state.editor.set_scale(scaling_factor as f32);
                 state.cache.clear();
-                state.new_text = std::mem::take(&mut self.text);
+                state.new_text = Some(state.editor.text().to_string());
             }
         }
     }
