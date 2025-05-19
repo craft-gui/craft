@@ -17,7 +17,7 @@ web-sys = "0.3.77"
 [dependencies.craft]
 path = "../crates/craft"
 default-features = false
-features = ["vello_renderer", "devtools", "http_client"]
+features = ["vello_cpu_renderer", "devtools", "http_client"]
 package = "craft_gui"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

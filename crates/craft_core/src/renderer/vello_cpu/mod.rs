@@ -6,7 +6,8 @@ use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use peniko::kurbo::{Affine, Rect};
-use peniko::{kurbo, Color, Fill};
+use peniko::{kurbo, Blob, Color, Fill};
+use std::num::NonZero;
 use softbuffer::Buffer;
 use std::num::NonZeroU32;
 use std::ops::Deref;
@@ -19,6 +20,7 @@ use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
 use peniko::kurbo::Shape;
 use crate::geometry::Rectangle;
+use crate::renderer::image_adapter::ImageAdapter;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
@@ -33,6 +35,9 @@ impl Surface {
         }
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+unsafe impl Send for Surface {}
 
 // Implement Deref to expose all methods from the inner Surface
 impl Deref for Surface {
@@ -74,7 +79,7 @@ impl VelloCpuRenderer {
 
         let mut surface = Surface::new(window.clone());
         surface
-            .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
+            .resize(NonZeroU32::new(width as u32).unwrap_or(NonZero::new(1).unwrap()), NonZeroU32::new(height as u32).unwrap_or(NonZero::new(1).unwrap()))
             .expect("TODO: panic message");
 
         Self {
@@ -139,17 +144,20 @@ impl Renderer for VelloCpuRenderer {
                     if let Some(resource) = resource {
                         if let Resource::Image(resource) = resource.as_ref() {
                             let image = &resource.image;
-                            for (x, y, pixel) in image.enumerate_pixels() {
-                                let color = Color::from_rgba8(pixel.0[0], pixel.0[1], pixel.0[2], pixel.0[3]);
-                                self.render_context.set_paint(PaintType::Solid(color));
-                                let pixel = Rect::new(
-                                    rectangle.x as f64 + x as f64,
-                                    rectangle.y as f64 + y as f64,
-                                    rectangle.x as f64 + x as f64 + 1.0,
-                                    rectangle.y as f64 + y as f64 + 1.0,
-                                );
-                                self.render_context.fill_rect(&pixel);
-                            }
+                            let data = Arc::new(ImageAdapter::new(resource.clone()));
+                            let blob = Blob::new(data);
+                            let vello_image = peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+
+                            let mut transform = Affine::IDENTITY;
+                            transform = transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                            transform = transform.pre_scale_non_uniform(
+                                rectangle.width as f64 / image.width() as f64,
+                                rectangle.height as f64 / image.height() as f64,
+                            );
+                            self.render_context.set_transform(transform);
+                            self.render_context.set_paint(PaintType::Image(vello_common::paint::Image::from_peniko_image(&vello_image)));
+                            self.render_context.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.width() as f64, image.height() as f64));
+                            self.render_context.reset_transform();
                         }
                     }
                 }
