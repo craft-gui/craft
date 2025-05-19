@@ -126,8 +126,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
             RenderState::Active(state) => state,
             _ => return,
         };
-
         self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
+        self.scene = Scene::new(width as u16, height as u16);
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
