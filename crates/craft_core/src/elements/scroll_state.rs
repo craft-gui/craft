@@ -23,10 +23,15 @@ impl ScrollState {
             match message {
                 CraftMessage::MouseWheelEvent(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
-                        MouseScrollDelta::LineDelta(_x, y) => y,
-                        MouseScrollDelta::PixelDelta(y) => y.y as f32,
+                        MouseScrollDelta::LineDelta(_x, y) => {
+                            y * element.style.font_size().max(12.0) * 1.2
+                        },
+                        MouseScrollDelta::PixelDelta(y) => {
+                            y.y as f32
+                        },
                     };
-                    let delta = -delta * element.style.font_size().max(12.0) * 1.2;
+                    let delta = -delta;
+                    // Todo: Scroll physics
                     let max_scroll_y = element.max_scroll_y;
 
                     self.scroll_y = (self.scroll_y + delta).clamp(0.0, max_scroll_y);
