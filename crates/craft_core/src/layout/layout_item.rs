@@ -1,6 +1,6 @@
-use crate::geometry::{ElementBox, Rectangle, Size};
+use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
 use crate::layout::layout_context::LayoutContext;
-use taffy::{NodeId, TaffyTree};
+use taffy::{NodeId, Position, TaffyTree};
 
 #[derive(Clone, Default)]
 pub struct LayoutItem {
@@ -45,5 +45,49 @@ impl LayoutItem {
                                    layout_context: LayoutContext) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_leaf_with_context(style, layout_context).unwrap());
         self.taffy_node_id.clone()
+    }
+
+    pub fn resolve_box(
+        &mut self,
+        relative_position: Point,
+        scroll_transform: glam::Mat4,
+        result: &taffy::Layout,
+        layout_order: &mut u32,
+        position: Position
+    ) {
+        self.layout_order = *layout_order;
+        *layout_order += 1;
+
+        let at_position = match position {
+            Position::Relative => relative_position + result.location.into(),
+            // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
+            Position::Absolute => relative_position + result.location.into(),
+        };
+
+        let mut size = result.size.into();
+        // FIXME: Don't use the content size for position absolute containers.
+        // The following is a broken layout using result.size.
+        // └──  FLEX COL [x: 1    y: 44   w: 140  h: 45   content_w: 139  content_h: 142  border: l:1 r:1 t:1 b:1, padding: l:12 r:12 t:8 b:8] (NodeId(4294967303))
+        //     ├──  LEAF [x: 13   y: 9    w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967298))
+        //     ├──  LEAF [x: 13   y: 34   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967299))
+        //     ├──  LEAF [x: 13   y: 59   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967300))
+        //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
+        //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
+        if position == Position::Absolute {
+            size = Size::new(
+                f32::max(result.size.width, result.content_size.width),
+                f32::max(result.size.height, result.content_size.height),
+            );
+        }
+
+        self.content_size = Size::new(result.content_size.width, result.content_size.height);
+        self.computed_box = ElementBox {
+            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
+            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
+            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
+            position: at_position,
+            size,
+        };
+        self.computed_box_transformed = self.computed_box.transform(scroll_transform);
     }
 }
