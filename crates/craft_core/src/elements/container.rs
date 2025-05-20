@@ -110,7 +110,6 @@ impl Element for Container {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-
         self.finalize_borders(element_state);
 
         self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);

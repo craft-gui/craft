@@ -3,7 +3,6 @@ use crate::components::{Event, Props};
 use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
-use crate::geometry::borders::ComputedBorderSpec;
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use std::any::Any;
@@ -19,8 +18,6 @@ pub(crate) type EventHandlerCopy<Arg> = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &
 #[derive(Clone, Default)]
 pub struct ElementData {
     pub current_state: ElementState,
-
-    pub computed_border: ComputedBorderSpec,
 
     /// The style of the element.
     pub style: Style,

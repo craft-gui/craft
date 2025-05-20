@@ -3,7 +3,7 @@ use crate::components::Event;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::events::CraftMessage;
-use crate::geometry::borders::BorderSpec;
+use crate::geometry::borders::ComputedBorderSpec;
 use crate::geometry::side::Side;
 use crate::geometry::{ElementBox, Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
@@ -15,7 +15,7 @@ use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
-use taffy::{NodeId, Overflow, TaffyTree};
+use taffy::{CoreStyle, NodeId, Overflow, TaffyTree};
 use winit::event::MouseButton;
 use winit::window::Window;
 
@@ -206,7 +206,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             return;
         }
 
-        let computed_border_spec = &element_data.computed_border;
+        let computed_border_spec = self.computed_border();
 
         let background_path = computed_border_spec.build_background_path();
         renderer.fill_bez_path(background_path, Brush::Color(background_color));
@@ -250,23 +250,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn finalize_borders(&mut self, element_state: &ElementStateStore) {
         let base_state = self.get_base_state(element_state);
-        let current_style = base_state.base.current_style(self.element_data());
+        let (has_border, border_radius, border_color) = {
+            let current_style = base_state.base.current_style(&self.element_data());
+            (current_style.has_border(), current_style.border_radius(), current_style.border_color())
+        };
 
-        // OPTIMIZATION: Don't compute the border if no border style values have been modified.
-        if !current_style.has_border() {
-            return;
-        }
-
-        let element_rect = self.computed_box_transformed();
-        let borders = element_rect.border;
-        let border_spec = BorderSpec::new(
-            element_rect.border_rectangle(),
-            [borders.top, borders.right, borders.bottom, borders.left],
-            current_style.border_radius(),
-            current_style.border_color(),
-        );
-        let element_data = self.element_data_mut();
-        element_data.computed_border = border_spec.compute_border_spec();
+        self.element_data_mut().layout_item.finalize_borders(has_border, border_radius, border_color);
     }
 
     fn draw_scrollbar(&mut self, renderer: &mut RenderList) {
@@ -375,6 +364,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     
     fn computed_box_transformed(&self) -> ElementBox {
         self.element_data().layout_item.computed_box_transformed
+    }
+
+    fn computed_border(&self) -> &ComputedBorderSpec {
+        &self.element_data().layout_item.computed_border
     }
 }
 

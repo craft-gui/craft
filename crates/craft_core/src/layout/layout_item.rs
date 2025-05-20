@@ -1,5 +1,7 @@
-use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
+use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
+use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree};
 
 #[derive(Clone, Default)]
@@ -17,28 +19,29 @@ pub struct LayoutItem {
     pub scrollbar_size: Size<f32>,
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
+    pub computed_border: ComputedBorderSpec,
     pub(crate) max_scroll_y: f32,
-    
+
     pub layout_order: u32,
     pub clip_bounds: Option<Rectangle>,
-    
+
     //  ---
     pub child_nodes: Vec<NodeId>,
 }
 
 impl LayoutItem {
-    
+
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
-            self.child_nodes.push(*taffy_node_id);   
+            self.child_nodes.push(*taffy_node_id);
         }
     }
-    
+
     pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.child_nodes).unwrap());
         self.taffy_node_id.clone()
     }
-    
+
     pub fn build_tree_with_context(&mut self,
                                    taffy_tree: &mut TaffyTree<LayoutContext>,
                                    style: taffy::Style,
@@ -89,5 +92,22 @@ impl LayoutItem {
             size,
         };
         self.computed_box_transformed = self.computed_box.transform(scroll_transform);
+    }
+
+    pub fn finalize_borders(&mut self, has_border: bool, border_radius: [(f32, f32); 4], border_color: TrblRectangle<Color>) {
+        // OPTIMIZATION: Don't compute the border if no border style values have been modified.
+        if !has_border {
+            return;
+        }
+
+        let element_rect = self.computed_box_transformed;
+        let borders = element_rect.border;
+        let border_spec = BorderSpec::new(
+            element_rect.border_rectangle(),
+            [borders.top, borders.right, borders.bottom, borders.left],
+            border_radius,
+            border_color,
+        );
+        self.computed_border = border_spec.compute_border_spec();
     }
 }
