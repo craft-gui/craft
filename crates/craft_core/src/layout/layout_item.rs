@@ -1,6 +1,9 @@
 use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use crate::geometry::side::Side;
 use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
+use crate::renderer::{Brush, RenderList};
+use crate::style::Style;
 use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree};
 
@@ -109,5 +112,39 @@ impl LayoutItem {
             border_color,
         );
         self.computed_border = border_spec.compute_border_spec();
+    }
+
+    pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        self.clip_bounds = clip_bounds;
+    }
+    
+    pub fn draw_borders(&self, renderer: &mut RenderList, current_style: &Style) {
+        let background_color = current_style.background();
+
+        // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
+        if !current_style.has_border() {
+            renderer.draw_rect(self.computed_box_transformed.padding_rectangle(), background_color);
+            return;
+        }
+
+        let computed_border_spec = &self.computed_border;
+
+        let background_path = computed_border_spec.build_background_path();
+        renderer.fill_bez_path(background_path, Brush::Color(background_color));
+
+        let top = computed_border_spec.get_side(Side::Top);
+        let right = computed_border_spec.get_side(Side::Right);
+        let bottom = computed_border_spec.get_side(Side::Bottom);
+        let left = computed_border_spec.get_side(Side::Left);
+
+        let border_top_path = computed_border_spec.build_side_path(Side::Top);
+        let border_right_path = computed_border_spec.build_side_path(Side::Right);
+        let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
+        let border_left_path = computed_border_spec.build_side_path(Side::Left);
+
+        renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
+        renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
+        renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
+        renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
     }
 }

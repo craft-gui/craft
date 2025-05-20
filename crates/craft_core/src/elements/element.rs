@@ -4,18 +4,16 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::events::CraftMessage;
 use crate::geometry::borders::ComputedBorderSpec;
-use crate::geometry::side::Side;
 use crate::geometry::{ElementBox, Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
-use crate::renderer::Brush;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
-use taffy::{CoreStyle, NodeId, Overflow, TaffyTree};
+use taffy::{NodeId, Overflow, TaffyTree};
 use winit::event::MouseButton;
 use winit::window::Window;
 
@@ -152,7 +150,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         clip_bounds: Option<Rectangle>,
     ) {
-        self.element_data_mut().layout_item.clip_bounds = clip_bounds;
+        self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
 
     fn resolve_box(
@@ -197,34 +195,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         let base_state = self.get_base_state(element_state);
         let current_style = base_state.base.current_style(self.element_data());
 
-        let element_data = self.element_data();
-        let background_color = current_style.background();
-
-        // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
-        if !current_style.has_border() {
-            renderer.draw_rect(element_data.layout_item.computed_box_transformed.padding_rectangle(), background_color);
-            return;
-        }
-
-        let computed_border_spec = self.computed_border();
-
-        let background_path = computed_border_spec.build_background_path();
-        renderer.fill_bez_path(background_path, Brush::Color(background_color));
-
-        let top = computed_border_spec.get_side(Side::Top);
-        let right = computed_border_spec.get_side(Side::Right);
-        let bottom = computed_border_spec.get_side(Side::Bottom);
-        let left = computed_border_spec.get_side(Side::Left);
-
-        let border_top_path = computed_border_spec.build_side_path(Side::Top);
-        let border_right_path = computed_border_spec.build_side_path(Side::Right);
-        let border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
-        let border_left_path = computed_border_spec.build_side_path(Side::Left);
-
-        renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
-        renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
-        renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
-        renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
+        self.element_data().layout_item.draw_borders(renderer, current_style);
     }
 
     fn should_start_new_layer(&self) -> bool {
