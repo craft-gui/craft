@@ -95,22 +95,22 @@ impl Element for DevTools {
                 let padding_box_highlight_color = Color::from_rgba8(102, 87, 166, 125);
                 let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
 
-                let margin_rectangle = selected_element.element_data().computed_box_transformed.margin_rectangle();
+                let margin_rectangle = selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
-                let padding_rectangle = selected_element.element_data().computed_box_transformed.padding_rectangle();
+                let padding_rectangle = selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
-                let content_rectangle = selected_element.element_data().computed_box_transformed.content_rectangle();
+                let content_rectangle = selected_element.element_data().layout_item.computed_box_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
 
-                if let Some(clip_bounds) = selected_element.element_data().clip_bounds {
+                if let Some(clip_bounds) = selected_element.element_data().layout_item.clip_bounds {
                     renderer.push_layer(clip_bounds);
                     renderer.draw_rect_outline(clip_bounds, Color::from_rgba8(255, 0, 0, 200));
                     renderer.pop_layer();
@@ -126,20 +126,16 @@ impl Element for DevTools {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
-            if let Some(child_node) = child_node {
-                child_nodes.push(child_node);
-            }
+            self.element_data.layout_item.push_child(&child_node);
         }
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        self.element_data().taffy_node_id
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
     fn finalize_layout(
@@ -161,7 +157,7 @@ impl Element for DevTools {
         self.finalize_borders(element_state);
 
         for child in self.element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.element_data().taffy_node_id;
+            let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
@@ -169,7 +165,7 @@ impl Element for DevTools {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.element_data.computed_box.position,
+                self.element_data.layout_item.computed_box.position,
                 z_index,
                 transform,
                 element_state,

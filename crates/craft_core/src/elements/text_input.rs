@@ -117,7 +117,7 @@ impl Element for TextInput {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed = self.element_data.computed_box_transformed;
+        let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, element_state);
@@ -125,7 +125,7 @@ impl Element for TextInput {
         let is_scrollable = self.element_data.is_scrollable();
 
         let element_data = self.element_data();
-        let padding_rectangle = element_data.computed_box_transformed.padding_rectangle();
+        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
         renderer.push_layer(padding_rectangle);
 
         let scroll_y = if let Some(state) =
@@ -137,7 +137,7 @@ impl Element for TextInput {
         };
 
         let text_scroll = if is_scrollable {
-            Some(TextScroll::new(scroll_y, self.element_data.computed_scroll_track.height))
+            Some(TextScroll::new(scroll_y, self.element_data.layout_item.computed_scroll_track.height))
         } else {
             None
         };
@@ -165,16 +165,11 @@ impl Element for TextInput {
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        self.element_data_mut().taffy_node_id = Some(
-            taffy_tree
-                .new_leaf_with_context(
-                    style,
-                    LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id)),
-                )
-                .unwrap(),
-        );
-
-        self.element_data().taffy_node_id
+        self.element_data.layout_item.build_tree_with_context(
+            taffy_tree,
+            style,
+            LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id))
+        )
     }
 
     fn finalize_layout(
@@ -222,8 +217,8 @@ impl Element for TextInput {
         });
         text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
 
-        self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
         let scroll_y = if let Some(state) =
             element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
@@ -266,7 +261,7 @@ impl Element for TextInput {
 
         let scroll_y = state.scroll_state.scroll_y;
 
-        let text_position = self.element_data().computed_box_transformed.content_rectangle();
+        let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
         let state: &mut TextInputState = element_state

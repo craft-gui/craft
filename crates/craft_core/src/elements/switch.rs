@@ -58,18 +58,18 @@ impl Element for Switch {
     fn draw(
         &mut self,
         renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        _text_context: &mut TextContext,
+        _taffy_tree: &mut TaffyTree<LayoutContext>,
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
-        pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        _pointer: Option<Point>,
+        _window: Option<Arc<dyn Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
         }
         self.draw_borders(renderer, element_state);
-        self.thumb.pseudo_thumb.draw(renderer, text_context, taffy_tree, _root_node, element_state, pointer, window);
+        self.thumb.draw(renderer);
     }
 
     fn compute_layout(
@@ -96,15 +96,16 @@ impl Element for Switch {
             set_toggled_styles();
         }
 
-        let child_node = self.thumb.compute_layout(taffy_tree, element_state, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
+        let child_node = self.thumb.compute_layout(taffy_tree, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
+        self.element_data.layout_item.push_child(&Some(child_node));
         
         self.thumb.size *= scale_factor as f32;
         self.spacing *= scale_factor as f32;
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
-        self.element_data().taffy_node_id
+        
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
     fn finalize_layout(
@@ -126,11 +127,11 @@ impl Element for Switch {
         self.finalize_borders(element_state);
         
         let x = if state.toggled.unwrap_or(self.default_toggled) {
-            self.element_data.computed_box.content_rectangle().right() - self.spacing - self.thumb.size
+            self.computed_box().content_rectangle().right() - self.spacing - self.thumb.size
         } else {
-            self.element_data.computed_box.content_rectangle().left() + self.spacing
+            self.computed_box().content_rectangle().left() + self.spacing
         };
-        let y = self.element_data.computed_box.content_rectangle().top() + self.spacing;
+        let y = self.computed_box().content_rectangle().top() + self.spacing;
         
         self.thumb.finalize_layout(
             taffy_tree,
@@ -140,6 +141,7 @@ impl Element for Switch {
             element_state,
             pointer,
             text_context,
+            clip_bounds
         );
     }
 
@@ -261,7 +263,8 @@ impl Switch {
             element_data: Default::default(),
             default_toggled: false,
             thumb: Thumb {
-                pseudo_thumb: Default::default(),
+                layout_item: Default::default(),
+                thumb_style: Default::default(),
                 toggled_thumb_style: Default::default(),
                 size,
             },

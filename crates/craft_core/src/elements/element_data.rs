@@ -3,12 +3,10 @@ use crate::components::{Event, Props};
 use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
 use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
-use crate::geometry::borders::ComputedBorderSpec;
-use crate::geometry::{ElementBox, Rectangle, Size};
+use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use std::any::Any;
 use std::sync::Arc;
-use taffy::NodeId;
 use winit::event::{Ime, Modifiers};
 
 pub(crate) type EventHandler = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event) + Send + Sync + 'static>;
@@ -21,10 +19,10 @@ pub(crate) type EventHandlerCopy<Arg> = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &
 pub struct ElementData {
     pub current_state: ElementState,
 
-    pub computed_border: ComputedBorderSpec,
-
     /// The style of the element.
     pub style: Style,
+    
+    pub layout_item: LayoutItem,
 
     /// The style of the element when it is hovered.
     pub hover_style: Option<Box<Style>>,
@@ -40,28 +38,12 @@ pub struct ElementData {
 
     /// The children of the element.
     pub children: Vec<ElementBoxed>,
-
-    /// The taffy node id after this element is laid out.
-    /// This may be None if this is a non-visual element like Font.
-    pub taffy_node_id: Option<NodeId>,
-
-    pub content_size: Size<f32>,
-    // The computed values after transforms are applied.
-    pub computed_box_transformed: ElementBox,
-    // The computed values without any transforms applied to them.
-    pub computed_box: ElementBox,
-
+    
     /// A user-defined id for the element.
     pub id: Option<String>,
 
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
-    pub computed_scrollbar_size: Size<f32>,
-    pub scrollbar_size: Size<f32>,
-    pub computed_scroll_track: Rectangle,
-    pub computed_scroll_thumb: Rectangle,
-    pub(crate) max_scroll_y: f32,
-    pub layout_order: u32,
 
     // Used for converting the element to a component specification.
     pub child_specs: Vec<ComponentSpecification>,
@@ -81,7 +63,6 @@ pub struct ElementData {
     pub(crate) on_dropdown_item_selected: Option<EventHandlerCopy<usize>>,
     pub(crate) on_switch_toggled: Option<EventHandlerCopy<bool>>,
     pub(crate) on_slider_value_changed: Option<EventHandlerCopy<f64>>,
-    pub(crate) clip_bounds: Option<Rectangle>,
 }
 
 impl ElementData {
