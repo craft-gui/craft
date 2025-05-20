@@ -78,7 +78,7 @@ impl Thumb {
     ) {
         self.pseudo_thumb.finalize_layout(
             taffy_tree,
-            self.pseudo_thumb.element_data.taffy_node_id.unwrap(),
+            self.pseudo_thumb.element_data.layout_item.taffy_node_id.unwrap(),
             position,
             z_index,
             transform,

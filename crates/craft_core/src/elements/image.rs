@@ -61,7 +61,7 @@ impl Element for Image {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed = self.element_data.computed_box_transformed;
+        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer, element_state);
 
@@ -77,19 +77,14 @@ impl Element for Image {
         self.merge_default_style();
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
-
-        self.element_data_mut().taffy_node_id = Some(
-            taffy_tree
-                .new_leaf_with_context(
-                    style,
-                    LayoutContext::Image(ImageContext {
-                        resource_identifier: self.resource_identifier.clone(),
-                    }),
-                )
-                .unwrap(),
-        );
-
-        self.element_data().taffy_node_id
+        
+        self.element_data.layout_item.build_tree_with_context(
+            taffy_tree,
+            style,
+            LayoutContext::Image(ImageContext {
+                resource_identifier: self.resource_identifier.clone(),
+            }),
+        )
     }
 
     fn finalize_layout(

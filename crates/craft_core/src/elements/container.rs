@@ -77,24 +77,24 @@ impl Element for Container {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
-
-        for child in self.element_data.children.iter_mut() {
-            let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
-            if let Some(child_node) = child_node {
-                child_nodes.push(child_node);
-            }
-        }
-
-        let base_state = self.get_base_state_mut(element_state);
-        let current_style = base_state.base.current_style_mut(self.element_data_mut());
         
-        current_style.scale(scale_factor);
-        let style: taffy::Style = current_style.to_taffy_style();
-
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        self.element_data().taffy_node_id
+        for child in &mut self.element_data.children {
+            let child_node =
+                child.internal.compute_layout(taffy_tree, element_state, scale_factor);
+            self.element_data.layout_item.push_child(&child_node);
+        }
+        
+        let base_state = self.get_base_state_mut(element_state);
+        base_state.base.current_style_mut(&mut self.element_data).scale(scale_factor);
+        
+        let current_style = {
+            let base_state = self.get_base_state(element_state);
+            base_state.base.current_style(&self.element_data).to_taffy_style()
+        };
+        
+        self.element_data.layout_item.build_tree(taffy_tree, current_style)
     }
+
 
     fn finalize_layout(
         &mut self,
@@ -113,8 +113,8 @@ impl Element for Container {
 
         self.finalize_borders(element_state);
 
-        self.element_data.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
         let scroll_y = if let Some(container_state) =
             element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<ContainerState>()
@@ -130,7 +130,7 @@ impl Element for Container {
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
         
         for child in self.element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.element_data().taffy_node_id;
+            let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
@@ -138,13 +138,13 @@ impl Element for Container {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.element_data.computed_box.position,
+                self.element_data.layout_item.computed_box.position,
                 z_index,
                 transform * child_transform,
                 element_state,
                 pointer,
                 text_context,
-                self.element_data.clip_bounds,
+                self.element_data.layout_item.clip_bounds,
             );
         }
     }

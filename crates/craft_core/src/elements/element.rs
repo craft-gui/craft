@@ -46,9 +46,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
-        let rect = element_data.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
 
-        if let Some(clip) = element_data.clip_bounds {
+        if let Some(clip) = element_data.layout_item.clip_bounds {
             match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,
@@ -67,7 +67,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     }
 
     fn taffy_node_id(&self) -> Option<NodeId> {
-        self.element_data().taffy_node_id
+        self.element_data().layout_item.taffy_node_id
     }
 
     fn set_component_id(&mut self, id: u64) {
@@ -156,7 +156,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         clip_bounds: Option<Rectangle>,
     ) {
-        self.element_data_mut().clip_bounds = clip_bounds;
+        self.element_data_mut().layout_item.clip_bounds = clip_bounds;
     }
 
     fn resolve_box(
@@ -167,7 +167,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         layout_order: &mut u32,
     ) {
         let element_data_mut = self.element_data_mut();
-        element_data_mut.layout_order = *layout_order;
+        element_data_mut.layout_item.layout_order = *layout_order;
         *layout_order += 1;
 
         let position = match element_data_mut.style.position() {
@@ -192,15 +192,15 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             );
         }
 
-        element_data_mut.content_size = Size::new(result.content_size.width, result.content_size.height);
-        element_data_mut.computed_box = ElementBox {
+        element_data_mut.layout_item.content_size = Size::new(result.content_size.width, result.content_size.height);
+        element_data_mut.layout_item.computed_box = ElementBox {
             margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
             border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
             padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
             position,
             size,
         };
-        element_data_mut.computed_box_transformed = element_data_mut.computed_box.transform(scroll_transform);
+        element_data_mut.layout_item.computed_box_transformed = element_data_mut.layout_item.computed_box.transform(scroll_transform);
     }
 
     fn draw_children(
@@ -239,7 +239,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         if !current_style.has_border() {
-            renderer.draw_rect(element_data.computed_box_transformed.padding_rectangle(), background_color);
+            renderer.draw_rect(element_data.layout_item.computed_box_transformed.padding_rectangle(), background_color);
             return;
         }
 
@@ -272,7 +272,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn maybe_start_layer(&self, renderer: &mut RenderList) {
         let element_data = self.element_data();
-        let padding_rectangle = element_data.computed_box_transformed.padding_rectangle();
+        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -294,7 +294,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             return;
         }
 
-        let element_rect = self.element_data().computed_box_transformed;
+        let element_rect = self.element_data().layout_item.computed_box_transformed;
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
@@ -310,10 +310,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
 
         // track
-        renderer.draw_rect(self.element_data_mut().computed_scroll_track, scrollbar_color.track_color);
+        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_track, scrollbar_color.track_color);
 
         // thumb
-        renderer.draw_rect(self.element_data_mut().computed_scroll_thumb, scrollbar_color.thumb_color);
+        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_thumb, scrollbar_color.thumb_color);
     }
 
     fn finalize_scrollbar(&mut self, scroll_y: f32) {
@@ -321,7 +321,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         if element_data.style.overflow()[1] != Overflow::Scroll {
             return;
         }
-        let box_transformed = element_data.computed_box_transformed;
+        let box_transformed = element_data.layout_item.computed_box_transformed;
 
         // Client Height = padding box height.
         let client_height = box_transformed.padding_rectangle().height;
@@ -329,21 +329,21 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         // Taffy is not adding the padding bottom to the content height, so we'll add it here.
         // Content Size = overflowed content size + padding
         // Scroll Height = Content Size
-        let scroll_height = element_data.content_size.height + box_transformed.padding.bottom;
-        let scroll_track_width = element_data.scrollbar_size.width;
+        let scroll_height = element_data.layout_item.content_size.height + box_transformed.padding.bottom;
+        let scroll_track_width = element_data.layout_item.scrollbar_size.width;
 
         // The scroll track height is the height of the padding box.
         let scroll_track_height = client_height;
 
         let max_scroll_y = (scroll_height - client_height).max(0.0);
-        element_data.max_scroll_y = max_scroll_y;
+        element_data.layout_item.max_scroll_y = max_scroll_y;
 
         let visible_y = client_height / scroll_height;
         let scroll_thumb_height = scroll_track_height * visible_y;
         let remaining_height = scroll_track_height - scroll_thumb_height;
         let scroll_thumb_offset = if max_scroll_y != 0.0 { scroll_y / max_scroll_y * remaining_height } else { 0.0 };
 
-        element_data.computed_scroll_track = Rectangle::new(
+        element_data.layout_item.computed_scroll_track = Rectangle::new(
             box_transformed.position.x + box_transformed.size.width - scroll_track_width - box_transformed.border.right,
             box_transformed.position.y + box_transformed.border.top,
             scroll_track_width,
@@ -351,10 +351,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         );
 
         let scroll_thumb_width = scroll_track_width;
-        element_data.computed_scroll_thumb = element_data.computed_scroll_track;
-        element_data.computed_scroll_thumb.y += scroll_thumb_offset;
-        element_data.computed_scroll_thumb.width = scroll_thumb_width;
-        element_data.computed_scroll_thumb.height = scroll_thumb_height;
+        element_data.layout_item.computed_scroll_thumb = element_data.layout_item.computed_scroll_track;
+        element_data.layout_item.computed_scroll_thumb.y += scroll_thumb_offset;
+        element_data.layout_item.computed_scroll_thumb.width = scroll_thumb_width;
+        element_data.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
     }
 
     /// Called when the element is assigned a unique component id.
@@ -371,7 +371,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         let element_state = element_state.storage.get_mut(&element_data.component_id).unwrap();
         element_state.base.current_state = ElementState::Normal;
 
-        let border_rectangle = element_data.computed_box_transformed.border_rectangle();
+        let border_rectangle = element_data.layout_item.computed_box_transformed.border_rectangle();
 
         if let Some(pointer) = pointer {
             if border_rectangle.contains(&pointer) {
@@ -896,13 +896,13 @@ macro_rules! generate_component_methods {
 pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn Element, clip_bounds: Option<Rectangle>) {
     let element_data = element.element_data_mut();
     if element_data.is_scrollable() {
-        let scroll_clip_bounds = element_data.computed_box_transformed.padding_rectangle();
+        let scroll_clip_bounds = element_data.layout_item.computed_box_transformed.padding_rectangle();
         if let Some(clip_bounds) = clip_bounds {
-            element_data.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
+            element_data.layout_item.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
         } else {
-            element_data.clip_bounds = Some(scroll_clip_bounds);
+            element_data.layout_item.clip_bounds = Some(scroll_clip_bounds);
         }
     } else {
-        element_data.clip_bounds = clip_bounds;
+        element_data.layout_item.clip_bounds = clip_bounds;
     }
 }

@@ -85,13 +85,13 @@ impl Element for Slider {
         // Draw the value track color to the left of the thumb.
         if let Some(value_track_color) = self.value_track_color {
             let element_data = self.element_data();
-            let mut element_rect = self.element_data().computed_box_transformed;
+            let mut element_rect = self.element_data().layout_item.computed_box_transformed;
 
             let borders = element_rect.border;
             let border_radius = element_data.current_style().border_radius();
 
             if self.direction == SliderDirection::Horizontal {
-                element_rect.size.width = self.thumb.pseudo_thumb.element_data.computed_box_transformed.position.x - self.element_data().computed_box_transformed.position.x;
+                element_rect.size.width = self.thumb.pseudo_thumb.element_data.layout_item.computed_box_transformed.position.x - self.element_data().layout_item.computed_box_transformed.position.x;
 
                 // HACK: When the value track is visible add some extra width to make sure there are no gaps in the value track color.
                 // The background track may show through on the left edge if the thumb is round.
@@ -99,7 +99,7 @@ impl Element for Slider {
                     element_rect.size.width += self.thumb.size / 2.0;
                 }
             } else {
-                element_rect.size.height = self.thumb.pseudo_thumb.element_data.computed_box_transformed.position.y - self.element_data().computed_box_transformed.position.y;
+                element_rect.size.height = self.thumb.pseudo_thumb.element_data.layout_item.computed_box_transformed.position.y - self.element_data().layout_item.computed_box_transformed.position.y;
 
                 // HACK: When the value track is visible add some extra height to make sure there are no gaps in the value track color.
                 // The background track may show through on the top edge if the thumb is round.
@@ -130,14 +130,13 @@ impl Element for Slider {
     ) -> Option<NodeId> {
         self.merge_default_style();
         let child_node = self.thumb.compute_layout(taffy_tree, element_state, scale_factor, false, self.rounded);
-
+        self.element_data.layout_item.push_child(&Some(child_node));
+        
         self.thumb.size *= scale_factor as f32;
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
         
-        
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
-        self.element_data().taffy_node_id
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
     
     fn finalize_layout(
@@ -252,7 +251,7 @@ impl Slider {
     }
 
     fn thumb_position(&self, thumb_value: f64) -> Point {
-        let content_rectangle = self.element_data.computed_box.content_rectangle();
+        let content_rectangle = self.element_data.layout_item.computed_box.content_rectangle();
         
         let mut normalized_value = thumb_value / self.max;
         normalized_value = normalized_value.clamp(0.0, 1.0);
@@ -323,7 +322,7 @@ impl Slider {
     }
 
     fn compute_slider_value(&self, pointer_position: &Point) -> f64 {
-        let content_rectangle = self.element_data.computed_box.content_rectangle();
+        let content_rectangle = self.element_data.layout_item.computed_box.content_rectangle();
         let start = if self.direction == SliderDirection::Horizontal { content_rectangle.left() as f64 } else { content_rectangle.top() as f64 };
         let end = if self.direction == SliderDirection::Horizontal { content_rectangle.right() as f64 } else { content_rectangle.bottom() as f64 };
 

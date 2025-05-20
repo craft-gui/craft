@@ -53,21 +53,21 @@ impl Element for Canvas {
             return;
         }
         let _border_color: Color = self.style().border_color().top;
-        let computed_box_transformed = self.element_data.computed_box_transformed;
+        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
         let _border_rectangle = computed_box_transformed.border_rectangle();
         let _content_rectangle = computed_box_transformed.content_rectangle();
 
         // background
-        let computed_x_transformed = self.element_data.computed_box_transformed.position.x;
-        let computed_y_transformed = self.element_data.computed_box_transformed.position.y;
+        let computed_x_transformed = self.element_data.layout_item.computed_box_transformed.position.x;
+        let computed_y_transformed = self.element_data.layout_item.computed_box_transformed.position.y;
 
-        let computed_width = self.element_data.computed_box_transformed.size.width;
-        let computed_height = self.element_data.computed_box_transformed.size.height;
+        let computed_width = self.element_data.layout_item.computed_box_transformed.size.width;
+        let computed_height = self.element_data.layout_item.computed_box_transformed.size.height;
 
-        let border_top = self.element_data.computed_box_transformed.border.top;
-        let border_right = self.element_data.computed_box_transformed.border.right;
-        let border_bottom = self.element_data.computed_box_transformed.border.bottom;
-        let border_left = self.element_data.computed_box_transformed.border.left;
+        let border_top = self.element_data.layout_item.computed_box_transformed.border.top;
+        let border_right = self.element_data.layout_item.computed_box_transformed.border.right;
+        let border_bottom = self.element_data.layout_item.computed_box_transformed.border.bottom;
+        let border_left = self.element_data.layout_item.computed_box_transformed.border.left;
 
         self.draw_borders(renderer, element_state);
 
@@ -153,20 +153,16 @@ impl Element for Canvas {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
-
+        
         for child in self.element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
-            if let Some(child_node) = child_node {
-                child_nodes.push(child_node);
-            }
+            self.element_data.layout_item.push_child(&child_node);
         }
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        self.element_data().taffy_node_id
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
     fn finalize_layout(
@@ -195,7 +191,7 @@ impl Element for Canvas {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.element_data.computed_box.position,
+                self.element_data.layout_item.computed_box.position,
                 z_index,
                 transform,
                 element_state,

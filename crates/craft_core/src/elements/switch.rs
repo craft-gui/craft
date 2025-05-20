@@ -97,14 +97,15 @@ impl Element for Switch {
         }
 
         let child_node = self.thumb.compute_layout(taffy_tree, element_state, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
+        self.element_data.layout_item.push_child(&Some(child_node));
         
         self.thumb.size *= scale_factor as f32;
         self.spacing *= scale_factor as f32;
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &[child_node]).unwrap());
-        self.element_data().taffy_node_id
+        
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
     fn finalize_layout(
@@ -126,11 +127,11 @@ impl Element for Switch {
         self.finalize_borders(element_state);
         
         let x = if state.toggled.unwrap_or(self.default_toggled) {
-            self.element_data.computed_box.content_rectangle().right() - self.spacing - self.thumb.size
+            self.element_data.layout_item.computed_box.content_rectangle().right() - self.spacing - self.thumb.size
         } else {
-            self.element_data.computed_box.content_rectangle().left() + self.spacing
+            self.element_data.layout_item.computed_box.content_rectangle().left() + self.spacing
         };
-        let y = self.element_data.computed_box.content_rectangle().top() + self.spacing;
+        let y = self.element_data.layout_item.computed_box.content_rectangle().top() + self.spacing;
         
         self.thumb.finalize_layout(
             taffy_tree,

@@ -113,7 +113,7 @@ pub(crate) fn dispatch_event(
 
                                 parent_component_targets.push_back(Target {
                                     component_id: node.id,
-                                    layout_order: element.element_data().layout_order as usize,
+                                    layout_order: element.element_data().layout_item.layout_order as usize,
                                     overlay_depth,
                                     element: Some(element),
                                     component: Some(node),
@@ -150,7 +150,7 @@ pub(crate) fn dispatch_event(
 
                         targets.push_back(Target {
                             component_id: element.component_id(),
-                            layout_order: element.element_data().layout_order as usize,
+                            layout_order: element.element_data().layout_item.layout_order as usize,
                             overlay_depth,
                             element: Some(element),
                             component: None,

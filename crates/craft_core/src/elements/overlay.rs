@@ -72,20 +72,16 @@ impl Element for Overlay {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(self.children().len());
 
         for child in self.element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
-            if let Some(child_node) = child_node {
-                child_nodes.push(child_node);
-            }
+            self.element_data.layout_item.push_child(&child_node);
         }
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        self.element_data_mut().taffy_node_id = Some(taffy_tree.new_with_children(style, &child_nodes).unwrap());
-        self.element_data().taffy_node_id
+        self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
     fn finalize_layout(
@@ -106,7 +102,7 @@ impl Element for Overlay {
         self.finalize_borders(element_state);
         
         for child in self.element_data.children.iter_mut() {
-            let taffy_child_node_id = child.internal.element_data().taffy_node_id;
+            let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
@@ -114,7 +110,7 @@ impl Element for Overlay {
             child.internal.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
-                self.element_data.computed_box.position,
+                self.element_data.layout_item.computed_box.position,
                 z_index,
                 transform,
                 element_state,
@@ -126,7 +122,7 @@ impl Element for Overlay {
     }
 
     fn resolve_clip(&mut self, _clip_bounds: Option<Rectangle>) {
-        self.element_data.clip_bounds = None;
+        self.element_data.layout_item.clip_bounds = None;
     }
 
     fn as_any(&self) -> &dyn Any {
