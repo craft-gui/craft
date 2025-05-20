@@ -66,10 +66,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         self.element_data().component_id
     }
 
-    fn taffy_node_id(&self) -> Option<NodeId> {
-        self.element_data().layout_item.taffy_node_id
-    }
-
     fn set_component_id(&mut self, id: u64) {
         self.element_data_mut().component_id = id;
     }
@@ -294,7 +290,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             return;
         }
 
-        let element_rect = self.element_data().layout_item.computed_box_transformed;
+        let element_rect = self.computed_box_transformed();
         let borders = element_rect.border;
         let border_spec = BorderSpec::new(
             element_rect.border_rectangle(),
@@ -398,6 +394,20 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn merge_default_style(&mut self) {
         self.element_data_mut().style = Style::merge(&self.default_style(), &self.element_data().style);
+    }
+
+    
+    // Easy ways to access common items from layout item:
+    fn taffy_node_id(&self) -> Option<NodeId> {
+        self.element_data().layout_item.taffy_node_id
+    }
+    
+    fn computed_box(&self) -> ElementBox {
+        self.element_data().layout_item.computed_box
+    }
+    
+    fn computed_box_transformed(&self) -> ElementBox {
+        self.element_data().layout_item.computed_box_transformed
     }
 }
 

@@ -53,21 +53,21 @@ impl Element for Canvas {
             return;
         }
         let _border_color: Color = self.style().border_color().top;
-        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
+        let computed_box_transformed = self.computed_box_transformed();
         let _border_rectangle = computed_box_transformed.border_rectangle();
         let _content_rectangle = computed_box_transformed.content_rectangle();
 
         // background
-        let computed_x_transformed = self.element_data.layout_item.computed_box_transformed.position.x;
-        let computed_y_transformed = self.element_data.layout_item.computed_box_transformed.position.y;
+        let computed_x_transformed = self.computed_box_transformed().position.x;
+        let computed_y_transformed = self.computed_box_transformed().position.y;
 
-        let computed_width = self.element_data.layout_item.computed_box_transformed.size.width;
-        let computed_height = self.element_data.layout_item.computed_box_transformed.size.height;
+        let computed_width = self.computed_box_transformed().size.width;
+        let computed_height = self.computed_box_transformed().size.height;
 
-        let border_top = self.element_data.layout_item.computed_box_transformed.border.top;
-        let border_right = self.element_data.layout_item.computed_box_transformed.border.right;
-        let border_bottom = self.element_data.layout_item.computed_box_transformed.border.bottom;
-        let border_left = self.element_data.layout_item.computed_box_transformed.border.left;
+        let border_top = self.computed_box_transformed().border.top;
+        let border_right = self.computed_box_transformed().border.right;
+        let border_bottom = self.computed_box_transformed().border.bottom;
+        let border_left = self.computed_box_transformed().border.left;
 
         self.draw_borders(renderer, element_state);
 
@@ -153,7 +153,7 @@ impl Element for Canvas {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        
+
         for child in self.element_data.children.iter_mut() {
             let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             self.element_data.layout_item.push_child(&child_node);

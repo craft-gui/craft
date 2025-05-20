@@ -27,19 +27,18 @@ pub struct LayoutItem {
 }
 
 impl LayoutItem {
-    pub fn new() {
-        
-    }
     
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
             self.child_nodes.push(*taffy_node_id);   
         }
     }
+    
     pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.child_nodes).unwrap());
         self.taffy_node_id.clone()
     }
+    
     pub fn build_tree_with_context(&mut self,
                                    taffy_tree: &mut TaffyTree<LayoutContext>,
                                    style: taffy::Style,

@@ -127,11 +127,11 @@ impl Element for Switch {
         self.finalize_borders(element_state);
         
         let x = if state.toggled.unwrap_or(self.default_toggled) {
-            self.element_data.layout_item.computed_box.content_rectangle().right() - self.spacing - self.thumb.size
+            self.computed_box().content_rectangle().right() - self.spacing - self.thumb.size
         } else {
-            self.element_data.layout_item.computed_box.content_rectangle().left() + self.spacing
+            self.computed_box().content_rectangle().left() + self.spacing
         };
-        let y = self.element_data.layout_item.computed_box.content_rectangle().top() + self.spacing;
+        let y = self.computed_box().content_rectangle().top() + self.spacing;
         
         self.thumb.finalize_layout(
             taffy_tree,

@@ -103,7 +103,7 @@ impl Element for Text {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
+        let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, element_state);
@@ -207,11 +207,11 @@ impl Element for Text {
             .downcast_mut()
             .unwrap();
 
-        let _content_rect = self.element_data.layout_item.computed_box.content_rectangle();
+        let _content_rect = self.computed_box().content_rectangle();
 
         // Handle selection.
         if self.selectable {
-            let text_position = self.element_data().layout_item.computed_box_transformed.content_rectangle();
+            let text_position = self.computed_box_transformed().content_rectangle();
 
             match message {
                 CraftMessage::PointerButtonEvent(pointer_button) => {

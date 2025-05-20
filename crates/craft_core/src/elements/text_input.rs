@@ -117,7 +117,7 @@ impl Element for TextInput {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
+        let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, element_state);
@@ -261,7 +261,7 @@ impl Element for TextInput {
 
         let scroll_y = state.scroll_state.scroll_y;
 
-        let text_position = self.element_data().layout_item.computed_box_transformed.content_rectangle();
+        let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
         let state: &mut TextInputState = element_state

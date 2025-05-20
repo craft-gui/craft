@@ -77,21 +77,21 @@ impl Element for Container {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        
+
         for child in &mut self.element_data.children {
             let child_node =
                 child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             self.element_data.layout_item.push_child(&child_node);
         }
-        
+
         let base_state = self.get_base_state_mut(element_state);
         base_state.base.current_style_mut(&mut self.element_data).scale(scale_factor);
-        
+
         let current_style = {
             let base_state = self.get_base_state(element_state);
             base_state.base.current_style(&self.element_data).to_taffy_style()
         };
-        
+
         self.element_data.layout_item.build_tree(taffy_tree, current_style)
     }
 

@@ -61,7 +61,7 @@ impl Element for Image {
         if !self.element_data.style.visible() {
             return;
         }
-        let computed_box_transformed = self.element_data.layout_item.computed_box_transformed;
+        let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer, element_state);
 

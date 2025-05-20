@@ -229,7 +229,7 @@ impl Element for Dropdown {
             self.pseudo_dropdown_list_element.finalize_layout(
                 taffy_tree,
                 dropdown_list,
-                self.element_data.layout_item.computed_box.position,
+                self.computed_box().position,
                 z_index,
                 transform,
                 element_state,
