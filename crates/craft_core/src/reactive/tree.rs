@@ -95,7 +95,7 @@ pub(crate) fn diff_trees(
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
-            is_element: false,
+            is_element: true,
             key: None,
             tag: "root".to_string(),
             update: dummy_update,

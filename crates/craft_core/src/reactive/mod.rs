@@ -1,5 +1,5 @@
 pub mod element_id;
-pub(crate) mod fiber_node;
+pub(crate) mod fiber_tree;
 pub mod tree;
 
 pub mod element_state_store;

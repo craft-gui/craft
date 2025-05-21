@@ -1,11 +1,14 @@
+use std::cell::RefCell;
 use crate::elements::element::Element;
 use crate::elements::{Font, Image, TinyVg};
-use crate::reactive::fiber_node::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
+use crate::reactive::fiber_tree;
+use crate::reactive::fiber_tree::FiberNode;
 
 /// Introspect the view.
 ///
@@ -16,13 +19,21 @@ pub async fn scan_view_for_resources(
     resource_manager: Arc<ResourceManager>,
     resources_collected: &mut HashMap<ResourceIdentifier, bool>
 ) {
-    let fiber: FiberNode = FiberNode {
-        element: Some(element),
-        component: Some(component),
-    };
+    let fiber: Rc<RefCell<FiberNode>> =
+        fiber_tree::new(component, element);
 
-    for fiber_node in fiber.level_order_iter().collect::<Vec<FiberNode>>().iter().rev() {
-        if let Some(element) = fiber_node.element {
+    let mut nodes: Vec<Rc<RefCell<FiberNode>>> = Vec::new();
+    let mut to_visit: Vec<Rc<RefCell<FiberNode>>> = vec![fiber.clone()];
+
+    while let Some(node) = to_visit.pop() {
+        nodes.push(node.clone());
+        for child in node.borrow().children.iter().rev() {
+            to_visit.push(child.clone());
+        }
+    }
+
+    for fiber_node in nodes {
+        if let Some(element) = fiber_node.borrow().element {
             let image_resource =
                 element.as_any().downcast_ref::<Image>().map(|image| image.resource_identifier.clone());
 
