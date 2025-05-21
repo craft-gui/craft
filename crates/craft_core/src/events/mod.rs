@@ -8,6 +8,9 @@ pub(crate) mod resource_event;
 pub mod update_queue_entry;
 pub(crate) mod event_dispatch;
 
+//#[cfg(test)]
+//mod tests;
+
 pub use keyboard_input::KeyboardInput;
 pub use mouse_wheel::MouseWheel;
 pub use pointer_button::PointerButton;
