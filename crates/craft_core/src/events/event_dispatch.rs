@@ -53,22 +53,6 @@ pub(crate) fn dispatch_event(
         }
     }
 
-    nodes.retain_mut(|node| node.borrow().element.is_some());
-
-    // Sort by layout order descending.
-    nodes.sort_by(|a, b| {
-        b.borrow()
-            .element
-            .unwrap()
-            .element_data()
-            .layout_item
-            .layout_order
-            .cmp(&a.borrow().element.unwrap().element_data().layout_item.layout_order)
-    });
-
-    // Sort by overlay order descending.
-    nodes.sort_by(|a, b| b.borrow().overlay_order.cmp(&a.borrow().overlay_order));
-
     let is_pointer_event = matches!(
         message,
         Message::CraftMessage(CraftMessage::PointerMovedEvent(_))
@@ -82,6 +66,22 @@ pub(crate) fn dispatch_event(
 
     match dispatch_type {
         EventDispatchType::Bubbling => {
+            nodes.retain_mut(|node| node.borrow().element.is_some());
+
+            // Sort by layout order descending.
+            nodes.sort_by(|a, b| {
+                b.borrow()
+                    .element
+                    .unwrap()
+                    .element_data()
+                    .layout_item
+                    .layout_order
+                    .cmp(&a.borrow().element.unwrap().element_data().layout_item.layout_order)
+            });
+
+            // Sort by overlay order descending.
+            nodes.sort_by(|a, b| b.borrow().overlay_order.cmp(&a.borrow().overlay_order));
+
             // 1. Do a hit test to find the target element.
             // We order by the overlay depth descending and layout order descending.
             let mut target: Option<Rc<RefCell<FiberNode>>> = None;
