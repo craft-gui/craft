@@ -2,7 +2,7 @@ use crate::elements::element::Element;
 use crate::reactive::tree::ComponentTreeNode;
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::elements::Overlay;
+use crate::elements::{Dropdown, Overlay};
 
 #[derive(Clone)]
 /// Links the ComponentTree with the ElementTree.
@@ -48,7 +48,7 @@ pub fn new<'a>(
         let element = if component.is_element {
             let element = element_stack.pop()
                 .expect("component / element stacks out of sync");
-            if element.as_any().is::<Overlay>() {
+            if element.as_any().is::<Overlay>() || element.as_any().is::<Dropdown>()  {
                 overlay_order += 1;
             }
             for &child_element in element.children().iter().rev() {

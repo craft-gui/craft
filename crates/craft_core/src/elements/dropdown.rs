@@ -276,6 +276,9 @@ impl Element for Dropdown {
         should_style: bool,
         event: &mut Event,
     ) {
+        event.propagate = true;
+        event.prevent_defaults = true;
+
         self.on_style_event(message, element_state, should_style, event);
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();

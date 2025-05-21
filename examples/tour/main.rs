@@ -145,10 +145,10 @@ impl Component for Tour {
                 section(
                     "Dropdown",
                     Dropdown::new()
-                        .push(Text::new(Self::DROPDOWN_ITEMS[0]))
-                        .push(Text::new(Self::DROPDOWN_ITEMS[1]))
-                        .push(Text::new(Self::DROPDOWN_ITEMS[2]))
-                        .push(Text::new(Self::DROPDOWN_ITEMS[3]))
+                        .push(Text::new(Self::DROPDOWN_ITEMS[0]).disable_selection())
+                        .push(Text::new(Self::DROPDOWN_ITEMS[1]).disable_selection())
+                        .push(Text::new(Self::DROPDOWN_ITEMS[2]).disable_selection())
+                        .push(Text::new(Self::DROPDOWN_ITEMS[3]).disable_selection())
                         .min_width("200px")
                         .component()
                 )
