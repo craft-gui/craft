@@ -28,6 +28,7 @@ use time::{Duration, Instant};
 
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use winit::window::Window;
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -98,7 +99,7 @@ impl Element for Text {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -191,17 +192,16 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool, event: &mut Event,) {
-        self.on_style_event(message, _element_state, should_style, event);
+    fn on_event(&self, message: &CraftMessage, element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool, event: &mut Event,) {
+        self.on_style_event(message, element_state, should_style, event);
 
         if !self.selectable {
             return;
         }
+
+        let base_state = self.get_base_state_mut(element_state);
         
-        let state: &mut TextState = _element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
+        let state: &mut TextState = base_state
             .data
             .as_mut()
             .downcast_mut()
@@ -214,11 +214,10 @@ impl Element for Text {
             let text_position = self.computed_box_transformed().content_rectangle();
 
             match message {
-                CraftMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == winit::event::MouseButton::Left {
-                        state.pointer_down = pointer_button.state.is_pressed();
+                CraftMessage::PointerButtonDown(pointer_button) => {
+                    if pointer_button.is_primary() {
+                        state.pointer_down = true;
                         state.cursor_reset();
-                        if state.pointer_down {
                             let now = Instant::now();
                             if let Some(last) = state.last_click_time.take() {
                                 if now.duration_since(last).as_secs_f64() < 0.25 {
@@ -237,14 +236,25 @@ impl Element for Text {
                                 3 => state.select_line_at_point(cursor_pos.0, cursor_pos.1),
                                 _ => state.move_to_point(cursor_pos.0, cursor_pos.1),
                             }
+                        if click_count == 1 {
+                            base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
                         }
+                        event.prevent_defaults();
                     }
-                    event.prevent_defaults();
+                }
+                CraftMessage::PointerButtonUp(pointer_button) => {
+                    if pointer_button.is_primary() {
+                        state.pointer_down = false;
+                        state.click_count = 0;
+                        state.cursor_reset();
+                        base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, false);
+                        event.prevent_defaults();
+                    }
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
-                    state.cursor_pos = (pointer_moved.position.x - text_position.x, pointer_moved.position.y - text_position.y);
+                    state.cursor_pos = (pointer_moved.current.position.x as f32 - text_position.x, pointer_moved.current.position.y as f32 - text_position.y);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
                         state.cursor_reset();

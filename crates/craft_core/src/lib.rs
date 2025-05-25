@@ -28,7 +28,7 @@ pub use renderer::color::Color;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
-use crate::events::{CraftMessage, EventDispatchType, KeyboardInput, MouseWheel, PointerButton, PointerMoved};
+use crate::events::{CraftMessage, EventDispatchType};
 pub use crate::options::RendererType;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
@@ -58,10 +58,8 @@ use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize};
+use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use winit::event_loop::EventLoop;
-#[cfg(feature = "dev_tools")]
-use winit::keyboard::{Key, NamedKey};
 use winit::window::{Window};
 pub use winit::window::{Cursor, CursorIcon};
 
@@ -75,7 +73,9 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use winit::event::{Ime, Modifiers};
+use ui_events::keyboard::{KeyState, KeyboardEvent};
+use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
+use winit::event::{Ime};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
@@ -148,11 +148,11 @@ impl WindowContext {
     }
     
     pub fn mouse_position_x(&self) -> Option<f32> {
-        self.mouse_position.map(|pos| pos.x)
+        self.mouse_position.map(|pos| pos.x as f32)
     }
 
     pub fn mouse_position_y(&self) -> Option<f32> {
-        self.mouse_position.map(|pos| pos.y)
+        self.mouse_position.map(|pos| pos.y as f32)
     }
 
     pub fn set_window_width(&mut self, width: f32) {
@@ -190,7 +190,7 @@ impl WindowContext {
     }
 }
 
-pub(crate) fn get_scale_factor(window: &Option<Arc<dyn Window>>) -> f64 {
+pub(crate) fn get_scale_factor(window: &Option<Arc<Window>>) -> f64 {
     if let Some(window) = window {
         window.scale_factor()
     } else { 
@@ -201,7 +201,7 @@ pub(crate) fn get_scale_factor(window: &Option<Arc<dyn Window>>) -> f64 {
 struct App {
     app: ComponentSpecification,
     global_state: GlobalState,
-    window: Option<Arc<dyn Window>>,
+    window: Option<Arc<Window>>,
     text_context: Option<TextContext>,
     renderer: Option<Box<dyn Renderer + Send>>,
     mouse_position: Option<Point>,
@@ -350,7 +350,7 @@ fn internal_craft_main_with_options(
 }
 
 fn craft_main_with_options_2(
-    event_loop: EventLoop,
+    event_loop: EventLoop<()>,
     application: ComponentSpecification,
     global_state: GlobalState,
     craft_options: Option<CraftOptions>,
@@ -469,16 +469,20 @@ async fn async_main(
                     on_resize(&mut app, new_size).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
-                InternalMessage::MouseWheel(mouse_wheel) => {
-                    on_mouse_wheel(&mut app, mouse_wheel).await;
+                InternalMessage::PointerScroll(pointer_scroll_update) => {
+                    on_pointer_scroll(&mut app, pointer_scroll_update).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
-                InternalMessage::PointerButton(pointer_button) => {
-                    on_pointer_button(&mut app, pointer_button).await;
+                InternalMessage::PointerButtonUp(pointer_button) => {
+                    on_pointer_button(&mut app, pointer_button, true).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
-                InternalMessage::PointerMoved(pointer_moved) => {
-                    on_pointer_moved(&mut app, pointer_moved.clone()).await;
+                InternalMessage::PointerButtonDown(pointer_button) => {
+                    on_pointer_button(&mut app, pointer_button, false).await;
+                    send_response(dummy_message, &mut app.winit_sender).await;
+                }
+                InternalMessage::PointerMoved(pointer_update) => {
+                    on_pointer_moved(&mut app, pointer_update.clone()).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Ime(ime) => {
@@ -532,17 +536,13 @@ async fn async_main(
                     on_keyboard_input(&mut app, keyboard_input).await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
-                InternalMessage::ModifiersChanged(modifiers) => {
-                    on_modifiers_input(&mut app, modifiers).await;
-                    send_response(dummy_message, &mut app.winit_sender).await;
-                }
             }
         }
     }
 }
 
 fn on_process_user_events(
-    window: Option<Arc<dyn Window>>,
+    window: Option<Arc<Window>>,
     app_sender: &mut Sender<AppMessage>,
     reactive_tree: &mut ReactiveTree,
 ) {
@@ -569,13 +569,10 @@ fn on_process_user_events(
     }
 }
 
-async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
-    app.mouse_position = Some(Point::new(mouse_moved.position.x, mouse_moved.position.y));
+async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerUpdate) {
+    app.mouse_position = Some(mouse_moved.current.position);
+    app.window_context.mouse_position = Some(mouse_moved.current.position);
 
-    let scale_factor = get_scale_factor(&app.window);
-    let logical_mouse_position: LogicalPosition<f32> = LogicalPosition::from_physical(PhysicalPosition::new(mouse_moved.position.x, mouse_moved.position.y), scale_factor);
-    app.window_context.mouse_position = Some(Point::new(logical_mouse_position.x, logical_mouse_position.y));
-    
     let message = Message::CraftMessage(CraftMessage::PointerMovedEvent(mouse_moved));
 
     dispatch_event(
@@ -608,8 +605,8 @@ async fn on_pointer_moved(app: &mut Box<App>, mouse_moved: PointerMoved) {
     }
 }
 
-async fn on_mouse_wheel(app: &mut Box<App>, mouse_wheel: MouseWheel) {
-    let event = CraftMessage::MouseWheelEvent(mouse_wheel);
+async fn on_pointer_scroll(app: &mut Box<App>, pointer_scroll_update: PointerScrollUpdate) {
+    let event = CraftMessage::PointerScroll(pointer_scroll_update);
     let message = Message::CraftMessage(event);
 
     dispatch_event(
@@ -672,39 +669,7 @@ async fn on_ime(app: &mut Box<App>, ime: Ime) {
     app.window.as_ref().unwrap().request_redraw();
 }
 
-async fn on_modifiers_input(app: &mut Box<App>, modifiers: Modifiers) {
-    let modifiers_event = CraftMessage::ModifiersChangedEvent(modifiers);
-    let message = Message::CraftMessage(modifiers_event);
-    dispatch_event(
-        &message,
-        EventDispatchType::Bubbling,
-        &mut app.resource_manager,
-        app.mouse_position,
-        &mut app.user_tree,
-        &mut app.global_state,
-        &mut app.text_context,
-        &mut app.window_context,
-        false,
-    );
-
-    #[cfg(feature = "dev_tools")]
-    {
-        dispatch_event(
-            &message,
-            EventDispatchType::Bubbling,
-            &mut app.resource_manager,
-            app.mouse_position,
-            &mut app.dev_tree,
-            &mut app.global_state,
-            &mut app.text_context,
-            &mut app.window_context,
-            false,
-        );
-    }
-    app.window.as_ref().unwrap().request_redraw();
-}
-
-async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
+async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardEvent) {
     let keyboard_event = CraftMessage::KeyboardInputEvent(keyboard_input.clone());
     let message = Message::CraftMessage(keyboard_event);
 
@@ -734,11 +699,11 @@ async fn on_keyboard_input(app: &mut Box<App>, keyboard_input: KeyboardInput) {
             false,
         );
 
-        let logical_key = keyboard_input.event.logical_key;
-        let key_state = keyboard_input.event.state;
+        let logical_key = keyboard_input.key;
+        let key_state = keyboard_input.state;
 
-        if key_state.is_pressed() {
-            if let Key::Named(NamedKey::F12) = logical_key {
+        if KeyState::Down == key_state {
+            if let ui_events::keyboard::Key::Named(ui_events::keyboard::NamedKey::F12) = logical_key {
                 app.is_dev_tools_open = !app.is_dev_tools_open;
             }
         }
@@ -761,15 +726,17 @@ async fn on_resize(app: &mut Box<App>, new_size: PhysicalSize<u32>) {
     }
 }
 
-async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
-    let event = CraftMessage::PointerButtonEvent(pointer_button);
+async fn on_pointer_button(app: &mut Box<App>, pointer_event: PointerButtonUpdate, is_up: bool) {
+    let cursor_position = pointer_event.state.position;
+
+    let event = if is_up {
+        CraftMessage::PointerButtonUp(pointer_event)
+    } else {
+        CraftMessage::PointerButtonDown(pointer_event)
+    };
     let message = Message::CraftMessage(event);
 
-    app.mouse_position = Some(Point::new(pointer_button.position.x, pointer_button.position.y));
-
-    let scale_factor = get_scale_factor(&app.window);
-    let logical_mouse_position: LogicalPosition<f32> = LogicalPosition::from_physical(PhysicalPosition::new(pointer_button.position.x, pointer_button.position.y), scale_factor);
-    app.window_context.mouse_position = Some(Point::new(logical_mouse_position.x, logical_mouse_position.y));
+    app.window_context.mouse_position = Some(Point::new(cursor_position.x, cursor_position.y));
     
     dispatch_event(
         &message,
@@ -799,7 +766,7 @@ async fn on_pointer_button(app: &mut Box<App>, pointer_button: PointerButton) {
     app.window.as_ref().unwrap().request_redraw();
 }
 
-async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<dyn Renderer + Send>>) {
+async fn on_resume(app: &mut App, window: Arc<Window>, renderer: Option<Box<dyn Renderer + Send>>) {
     if app.user_tree.element_tree.is_none() {
         reset_unique_element_id();
         //let new_view = app.app.view();
@@ -816,7 +783,7 @@ async fn on_resume(app: &mut App, window: Arc<dyn Window>, renderer: Option<Box<
         app.renderer
             .as_mut()
             .unwrap()
-            .resize_surface(window.surface_size().width as f32, window.surface_size().height as f32);
+            .resize_surface(window.inner_size().width as f32, window.inner_size().height as f32);
     }
 
     app.window = Some(window.clone());
@@ -881,7 +848,7 @@ async fn draw_reactive_tree(
     text_context: &mut TextContext,
     scale_factor: f64,
     mouse_position: Option<Point>,
-    window: Option<Arc<dyn Window>>,
+    window: Option<Arc<Window>>,
 ) {
     let root = reactive_tree.element_tree.as_mut().unwrap();
 
@@ -969,11 +936,11 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size<
         };
         
         if let Some(requested_window_width) = window_context.requested_window_width {
-            let _ = window.request_surface_size(winit::dpi::Size::Logical(LogicalSize::new(requested_window_width as f64, window_context.window_size.height as f64)));
+            let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(requested_window_width as f64, window_context.window_size.height as f64)));
         };
         
         if let Some(requested_window_height) = window_context.requested_window_height {
-            let _ = window.request_surface_size(winit::dpi::Size::Logical(LogicalSize::new(window_context.window_size.width as f64, requested_window_height as f64)));
+            let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(window_context.window_size.width as f64, requested_window_height as f64)));
         };
         
         if let Some(requested_mouse_position_x) = window_context.requested_mouse_position_x {
@@ -1052,7 +1019,7 @@ async fn on_request_redraw(app: &mut App, scale_factor: f64, surface_size: Size<
                 app.resource_manager.clone(),
                 renderer,
                 Size::new(surface_size.width - root_size.width, root_size.height),
-                Point::new(root_size.width, 0.0),
+                Point::new(root_size.width as f64, 0.0),
                 text_context,
                 scale_factor,
                 app.mouse_position,

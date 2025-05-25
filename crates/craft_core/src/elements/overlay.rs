@@ -46,7 +46,7 @@ impl Element for Overlay {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;

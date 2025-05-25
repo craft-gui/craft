@@ -25,7 +25,7 @@ impl Rectangle {
     ///
     /// `true` if the rectangle contains the point, `false` otherwise.
     pub fn contains(&self, point: &Point) -> bool {
-        point.x >= self.left() && point.x <= self.right() && point.y >= self.top() && point.y <= self.bottom()
+        point.x as f32 >= self.left() && point.x as f32 <= self.right() && point.y as f32 >= self.top() && point.y as f32 <= self.bottom()
     }
 }
 
@@ -53,7 +53,7 @@ impl Rectangle {
 
     /// Returns the position of the top-left corner of the rectangle.
     pub fn position(&self) -> Point {
-        Point::new(self.x, self.y)
+        Point::new(self.x as f64, self.y as f64)
     }
 
     /// Returns the y-coordinate of the top edge of the rectangle.

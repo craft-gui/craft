@@ -57,7 +57,7 @@ impl Element for TinyVg {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;

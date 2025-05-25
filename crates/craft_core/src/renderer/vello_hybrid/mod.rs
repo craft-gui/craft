@@ -27,7 +27,7 @@ use vello_hybrid::Scene;
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
-    window: Arc<dyn Window>,
+    window: Arc<Window>,
 }
 
 // This enum is only a few hundred bytes.
@@ -67,9 +67,9 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
 }
 
 impl<'a> VelloHybridRenderer<'a> {
-    pub(crate) async fn new(window: Arc<dyn Window>) -> VelloHybridRenderer<'a> {
+    pub(crate) async fn new(window: Arc<Window>) -> VelloHybridRenderer<'a> {
         // Create a vello Surface
-        let surface_size = window.surface_size();
+        let surface_size = window.inner_size();
 
         let mut vello_renderer = VelloHybridRenderer {
             context: RenderContext::new(),
@@ -109,14 +109,14 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 impl CraftRenderer for VelloHybridRenderer<'_> {
     fn surface_width(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.surface_size().width as f32,
+            RenderState::Active(active_render_state) => active_render_state.window.inner_size().width as f32,
             RenderState::Suspended => 0.0,
         }
     }
 
     fn surface_height(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.surface_size().height as f32,
+            RenderState::Active(active_render_state) => active_render_state.window.inner_size().height as f32,
             RenderState::Suspended => 0.0,
         }
     }

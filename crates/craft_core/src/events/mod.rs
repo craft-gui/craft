@@ -1,29 +1,24 @@
-mod keyboard_input;
 mod mouse_wheel;
-mod pointer_button;
-mod pointer_moved;
 
 pub(crate) mod internal;
 pub(crate) mod resource_event;
 pub mod update_queue_entry;
 pub(crate) mod event_dispatch;
-
 //#[cfg(test)]
 //mod tests;
 
-pub use keyboard_input::KeyboardInput;
 pub use mouse_wheel::MouseWheel;
-pub use pointer_button::PointerButton;
-pub use pointer_moved::PointerMoved;
-pub use winit::event::ButtonSource;
 pub use winit::event::ElementState;
 
 use crate::components::ComponentId;
-use crate::events::CraftMessage::PointerButtonEvent;
+use crate::events::CraftMessage::PointerButtonUp;
 use std::any::Any;
 use std::sync::Arc;
-pub use winit::event::Modifiers;
+pub use ui_events;
+use ui_events::keyboard::KeyboardEvent;
+use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 pub use winit::event::Ime;
+pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
 
 #[derive(Clone, Copy, Debug)]
@@ -35,11 +30,11 @@ pub enum EventDispatchType {
 #[derive(Clone, Debug)]
 pub enum CraftMessage {
     Initialized,
-    PointerButtonEvent(PointerButton),
-    KeyboardInputEvent(KeyboardInput),
-    PointerMovedEvent(PointerMoved),
-    MouseWheelEvent(MouseWheel),
-    ModifiersChangedEvent(winit::event::Modifiers),
+    PointerButtonUp(PointerButtonUpdate),
+    PointerButtonDown(PointerButtonUpdate),
+    KeyboardInputEvent(KeyboardEvent),
+    PointerMovedEvent(PointerUpdate),
+    PointerScroll(PointerScrollUpdate),
     ImeEvent(Ime),
     TextInputChanged(String),
     /// Generated when a dropdown is opened or closed. The boolean is the status of is_open after the event has occurred.
@@ -55,21 +50,13 @@ pub enum CraftMessage {
 
 impl CraftMessage {
     pub fn clicked(&self) -> bool {
-        if let PointerButtonEvent(pointer_button) = self {
-            if pointer_button.button.mouse_button() == MouseButton::Left
-                && pointer_button.state == ElementState::Released
-            {
+        if let PointerButtonUp(pointer_button) = self {
+            if pointer_button.is_primary() {
                 return true;
             }
         }
 
         false
-    }
-}
-
-impl PointerButton {
-    pub fn clicked(&self) -> bool {
-        self.button.mouse_button() == MouseButton::Left && self.state == ElementState::Released
     }
 }
 

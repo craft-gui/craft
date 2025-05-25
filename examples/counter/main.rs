@@ -1,11 +1,11 @@
 use craft::{
     components::{Component, ComponentId, ComponentSpecification, Event},
     elements::{Container, ElementStyles, Text},
-    events::PointerButton,
     rgb,
     style::{AlignItems, Display, FlexDirection, JustifyContent},
     Color, WindowContext,
 };
+use craft::events::ui_events::pointer::PointerButtonUpdate;
 
 #[derive(Default)]
 pub struct Counter {
@@ -59,8 +59,8 @@ fn create_button(label: &str, base_color: Color, hover_color: Color, delta: i64)
         .background(base_color)
         .hovered()
         .background(hover_color)
-        .on_pointer_button(move |state: &mut Counter, _: &mut (), event: &mut Event, pointer_button: &PointerButton| {
-            if pointer_button.clicked() {
+        .on_pointer_button_up(move |state: &mut Counter, _: &mut (), event: &mut Event, pointer_button: &PointerButtonUpdate| {
+            if pointer_button.is_primary() {
                 state.count += delta;
                 event.prevent_propagate();
             }

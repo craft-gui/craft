@@ -54,7 +54,7 @@ impl Element for Font {
         _root_node: NodeId,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
     }
 

@@ -9,7 +9,6 @@ use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::{craft_main, WindowContext};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::{PointerButton};
 use craft::style::FlexDirection;
 use craft::style::{Display, Overflow, Unit, Wrap};
 use craft::CraftOptions;
@@ -18,6 +17,7 @@ use reqwest::Client;
 use serde_json::json;
 
 use std::result::Result;
+use craft::events::ui_events::pointer::PointerButtonUpdate;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum State {
@@ -61,8 +61,8 @@ impl Component for AniList {
             .push(
                 Container::new()
                     .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
-                    .push(Text::new("Get Data").on_pointer_button(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButton| {
-                        if state.state != State::Loading && pointer_button.clicked() {
+                    .push(Text::new("Get Data").on_pointer_button_up(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
+                        if pointer_button.is_primary() {
                             state.state = State::Loading;
 
                             let get_ani_list_data = async {

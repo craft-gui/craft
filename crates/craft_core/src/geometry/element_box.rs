@@ -12,13 +12,13 @@ pub struct ElementBox {
 impl ElementBox {
     pub fn transform(&self, transform: glam::Mat4) -> Self {
         let mut transformed_box = *self;
-        let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x, self.position.y, 1.0, 1.0));
-        transformed_box.position = Point::new(transformed_xy.x, transformed_xy.y);
+        let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x as f32, self.position.y as f32, 1.0, 1.0));
+        transformed_box.position = Point::new(transformed_xy.x as f64, transformed_xy.y as f64);
         transformed_box
     }
 
     pub fn margin_rectangle_position(&self) -> Point {
-        Point::new(self.position.x - self.margin.left, self.position.y - self.margin.top)
+        Point::new(self.position.x - self.margin.left as f64, self.position.y - self.margin.top as f64)
     }
 
     pub fn margin_rectangle_size(&self) -> Size<f32> {
@@ -35,8 +35,8 @@ impl ElementBox {
         let margin_size = self.margin_rectangle_size();
 
         Rectangle {
-            x: margin_position.x,
-            y: margin_position.y,
+            x: margin_position.x as f32,
+            y: margin_position.y as f32,
             width: margin_size.width,
             height: margin_size.height,
         }
@@ -58,8 +58,8 @@ impl ElementBox {
         let border_size = self.padding_rectangle_size();
 
         Rectangle {
-            x: border_position.x,
-            y: border_position.y,
+            x: border_position.x as f32,
+            y: border_position.y as f32,
             width: border_size.width,
             height: border_size.height,
         }
@@ -75,8 +75,8 @@ impl ElementBox {
     }
 
     pub fn padding_rectangle_position(&self) -> Point {
-        let padding_x = self.position.x + self.border.left;
-        let padding_y = self.position.y + self.border.top;
+        let padding_x = self.position.x + self.border.left as f64;
+        let padding_y = self.position.y + self.border.top as f64;
         Point::new(padding_x, padding_y)
     }
 
@@ -85,8 +85,8 @@ impl ElementBox {
         let padding_size = self.padding_rectangle_size();
 
         Rectangle {
-            x: padding_position.x,
-            y: padding_position.y,
+            x: padding_position.x as f32,
+            y: padding_position.y as f32,
             width: padding_size.width,
             height: padding_size.height,
         }
@@ -101,15 +101,15 @@ impl ElementBox {
     }
 
     pub fn content_rectangle_position(&self) -> Point {
-        let content_x = self.position.x + self.border.left + self.padding.left;
-        let content_y = self.position.y + self.border.top + self.padding.top;
-        Point::new(content_x, content_y)
+        let content_x = self.position.x as f32 + self.border.left + self.padding.left;
+        let content_y = self.position.y as f32 + self.border.top + self.padding.top;
+        Point::new(content_x as f64, content_y as f64)
     }
 
     pub fn content_rectangle(&self) -> Rectangle {
         let content_position = self.content_rectangle_position();
         let content_size = self.content_rectangle_size();
 
-        Rectangle::new(content_position.x, content_position.y, content_size.width, content_size.height)
+        Rectangle::new(content_position.x as f32, content_position.y as f32, content_size.width, content_size.height)
     }
 }

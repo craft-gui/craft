@@ -50,7 +50,7 @@ impl Element for Container {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         let base_state = self.get_base_state_mut(element_state);
         let current_style = base_state.base.current_style(self.element_data());

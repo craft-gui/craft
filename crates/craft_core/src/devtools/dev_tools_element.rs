@@ -68,7 +68,7 @@ impl Element for DevTools {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         self.draw_borders(renderer, element_state);
         self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);

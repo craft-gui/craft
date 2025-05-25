@@ -14,7 +14,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
-use winit::event::{ElementState, Ime, MouseButton};
+use winit::event::{Ime};
 use craft_logging::{span, Level};
 
 #[allow(clippy::too_many_arguments)]
@@ -56,7 +56,8 @@ pub(crate) fn dispatch_event(
     let is_pointer_event = matches!(
         message,
         Message::CraftMessage(CraftMessage::PointerMovedEvent(_))
-            | Message::CraftMessage(CraftMessage::PointerButtonEvent(_))
+            | Message::CraftMessage(CraftMessage::PointerButtonUp(_))
+            | Message::CraftMessage(CraftMessage::PointerButtonDown(_))
     );
     let is_ime_event = matches!(
         message,
@@ -198,10 +199,8 @@ pub(crate) fn dispatch_event(
                         CraftMessage::PointerMovedEvent(..) => {
                             element_state.base.hovered = false;
                         }
-                        CraftMessage::PointerButtonEvent(pointer_button) => {
-                            if pointer_button.button.mouse_button() == MouseButton::Left
-                                && pointer_button.state == ElementState::Released
-                            {
+                        CraftMessage::PointerButtonUp(pointer_button) => {
+                            if pointer_button.is_primary() {
                                 element_state.base.active = false;
                             }
                         }

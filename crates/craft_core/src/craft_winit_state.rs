@@ -1,7 +1,7 @@
 #[cfg(target_arch = "wasm32")]
 use {
     std::cell::RefCell, std::ops::AddAssign, std::rc::Rc, wasm_bindgen::JsCast,
-    winit::platform::web::WindowAttributesExtWeb,
+    winit::platform::web::WindowAttributesExtWebSys,
 };
 
 #[cfg(feature = "vello_renderer")]
@@ -15,7 +15,6 @@ use crate::renderer::vello_hybrid::VelloHybridRenderer;
 
 use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
-use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::geometry::Size;
 use crate::renderer::blank_renderer::BlankRenderer;
 use crate::renderer::renderer::Renderer;
@@ -41,6 +40,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc::error::SendError;
+use ui_events::pointer::{PointerEvent};
+use ui_events::{UiEvent};
+use ui_events_winit::{WindowEventReducer};
 use winit::dpi::LogicalSize;
 
 /// Stores state related to Winit.
@@ -56,23 +58,24 @@ pub(crate) struct CraftWinitState {
     request_redraw: bool,
     wait_cancelled: bool,
     close_requested: bool,
-    window: Option<Arc<dyn Window>>,
+    window: Option<Arc<Window>>,
     #[allow(dead_code)]
     winit_receiver: Receiver<AppMessage>,
     app_sender: Sender<AppMessage>,
     craft_options: CraftOptions,
+    event_reducer: WindowEventReducer,
 }
 
 impl ApplicationHandler for CraftWinitState {
-    fn new_events(&mut self, _event_loop: &dyn ActiveEventLoop, cause: StartCause) {
+    fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         self.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
     }
 
-    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let mut window_attributes = WindowAttributes::default().with_title(self.craft_options.window_title.as_str());
         
         if let Some(window_size) = &self.craft_options.window_size {
-            window_attributes = window_attributes.with_surface_size(LogicalSize::new(window_size.width, window_size.height));
+            window_attributes = window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
         }
         
         #[cfg(target_arch = "wasm32")]
@@ -89,7 +92,7 @@ impl ApplicationHandler for CraftWinitState {
             window_attributes.with_canvas(Some(canvas))
         };
 
-        let window: Arc<dyn Window> =
+        let window: Arc<Window> =
             Arc::from(event_loop.create_window(window_attributes).expect("Failed to create window."));
         info!("Created window");
 
@@ -137,57 +140,56 @@ impl ApplicationHandler for CraftWinitState {
         }
     }
 
-    fn window_event(&mut self, _event_loop: &dyn ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+        if !matches!(
+            event,
+            WindowEvent::KeyboardInput {
+                is_synthetic: true,
+                ..
+            }
+        ) {
+            match self.event_reducer.reduce(&event) {
+                UiEvent::Keyboard(k) => {
+                    use ui_events::keyboard::{Key, NamedKey};
+                    if k.state.is_down() && matches!(k.key, Key::Named(NamedKey::Escape)) {
+                        event_loop.exit();
+                    } else {
+                        self.send_message(InternalMessage::KeyboardInput(k), false);
+                    }
+                    return;
+                }
+                UiEvent::Pointer(pointer_event) => {
+                    match pointer_event {
+                        PointerEvent::Down(pointer_button_update) => {
+                            self.send_message(InternalMessage::PointerButtonDown(pointer_button_update), false);
+                        }
+                        PointerEvent::Up(pointer_button_update) => {
+                            self.send_message(InternalMessage::PointerButtonUp(pointer_button_update), false);
+                        }
+                        PointerEvent::Move(pointer_update) => {
+                            self.send_message(InternalMessage::PointerMoved(pointer_update), false);
+                        }
+                        PointerEvent::Cancel(_) => {}
+                        PointerEvent::Enter(_) => {}
+                        PointerEvent::Leave(_) => {}
+                        PointerEvent::Scroll(pointer_scroll_update) => {
+                            self.send_message(InternalMessage::PointerScroll(pointer_scroll_update), true);
+                        }
+                    }
+                    return;
+                }
+                _ => {}
+            }
+        }
+
         match event {
             WindowEvent::ScaleFactorChanged { .. } => {}
             WindowEvent::CloseRequested => {
                 self.send_message(InternalMessage::Close, true);
                 self.close_requested = true;
             }
-            WindowEvent::ModifiersChanged(modifiers) => {
-                self.send_message(InternalMessage::ModifiersChanged(modifiers), true);
-            }
-            WindowEvent::PointerButton {
-                device_id,
-                state,
-                position,
-                button,
-                primary,
-            } => {
-                let event = PointerButton::new(device_id, state, position, button, primary);
-                self.send_message(InternalMessage::PointerButton(event), false);
-            }
-            WindowEvent::PointerMoved {
-                device_id,
-                position,
-                source,
-                primary,
-            } => {
-                self.send_message(
-                    InternalMessage::PointerMoved(PointerMoved::new(device_id, position, source, primary)),
-                    true,
-                );
-            }
-            WindowEvent::MouseWheel {
-                device_id,
-                delta,
-                phase,
-            } => {
-                let event = MouseWheel::new(device_id, delta, phase);
-                self.send_message(InternalMessage::MouseWheel(event), true);
-            }
-            WindowEvent::SurfaceResized(new_size) => {
+            WindowEvent::Resized(new_size) => {
                 self.send_message(InternalMessage::Resize(new_size), true);
-            }
-            WindowEvent::KeyboardInput {
-                device_id,
-                event,
-                is_synthetic,
-            } => {
-                self.send_message(
-                    InternalMessage::KeyboardInput(KeyboardInput::new(device_id, event, is_synthetic)),
-                    true,
-                );
             }
             WindowEvent::Ime(ime) => {
                 self.send_message(InternalMessage::Ime(ime), true);
@@ -197,7 +199,7 @@ impl ApplicationHandler for CraftWinitState {
                 // On some operating systems, the window is not thread-safe.
                 let window = self.window.clone().unwrap();
                 let scale_factor = window.scale_factor();
-                let surface_size = Size::new(window.surface_size().width as f32, window.surface_size().height as f32);
+                let surface_size = Size::new(window.inner_size().width as f32, window.inner_size().height as f32);
 
                 self.send_message(InternalMessage::RequestRedraw(scale_factor, surface_size), true);
                 window.pre_present_notify();
@@ -206,7 +208,7 @@ impl ApplicationHandler for CraftWinitState {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         if event_loop.exiting() {
             return;
         }
@@ -253,6 +255,7 @@ impl CraftWinitState {
             winit_receiver,
             app_sender,
             craft_options,
+            event_reducer: Default::default(),
         }
     }
 

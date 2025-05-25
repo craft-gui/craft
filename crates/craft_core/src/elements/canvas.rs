@@ -47,7 +47,7 @@ impl Element for Canvas {
         _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -58,8 +58,8 @@ impl Element for Canvas {
         let _content_rectangle = computed_box_transformed.content_rectangle();
 
         // background
-        let computed_x_transformed = self.computed_box_transformed().position.x;
-        let computed_y_transformed = self.computed_box_transformed().position.y;
+        let computed_x_transformed = self.computed_box_transformed().position.x as f32;
+        let computed_y_transformed = self.computed_box_transformed().position.y as f32;
 
         let computed_width = self.computed_box_transformed().size.width;
         let computed_height = self.computed_box_transformed().size.height;

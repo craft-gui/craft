@@ -2,11 +2,12 @@ use crate::components::{ComponentId, ComponentSpecification};
 use crate::components::{Event, Props};
 use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
-use crate::events::{KeyboardInput, MouseWheel, PointerButton, PointerMoved};
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use std::any::Any;
 use std::sync::Arc;
+use ui_events::keyboard::KeyboardEvent;
+use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::{Ime, Modifiers};
 
 pub(crate) type EventHandler = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event) + Send + Sync + 'static>;
@@ -50,11 +51,12 @@ pub struct ElementData {
     pub(crate) key: Option<String>,
     pub(crate) props: Option<Props>,
 
-    pub(crate) on_pointer_button: Option<EventHandlerWithRef<PointerButton>>,
+    pub(crate) on_pointer_button_up: Option<EventHandlerWithRef<PointerButtonUpdate>>,
+    pub(crate) on_pointer_button_down: Option<EventHandlerWithRef<PointerButtonUpdate>>,
     pub(crate) on_initialized: Option<EventHandler>,
-    pub(crate) on_keyboard_input: Option<EventHandlerWithRef<KeyboardInput>>,
-    pub(crate) on_pointer_move: Option<EventHandlerWithRef<PointerMoved>>,
-    pub(crate) on_mouse_wheel: Option<EventHandlerWithRef<MouseWheel>>,
+    pub(crate) on_keyboard_input: Option<EventHandlerWithRef<KeyboardEvent>>,
+    pub(crate) on_pointer_move: Option<EventHandlerWithRef<PointerUpdate>>,
+    pub(crate) on_pointer_scroll: Option<EventHandlerWithRef<PointerScrollUpdate>>,
     pub(crate) on_modifiers_changed: Option<EventHandlerWithRef<Modifiers>>,
     pub(crate) on_ime: Option<EventHandlerWithRef<Ime>>,
     pub(crate) on_text_input_changed: Option<EventHandlerWithRef<str>>,

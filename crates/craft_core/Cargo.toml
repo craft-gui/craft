@@ -33,6 +33,11 @@ cfg-if = "1.0.0"
 version = "2.9.0"
 features = ["std"]
 
+[dependencies.kurbo]
+version = "0.11.2"
+default-features = false
+features = ["std"]
+
 
 [dependencies.peniko]
 version = "0.4.0"
@@ -101,14 +106,20 @@ features = ["wgsl"]
 optional = true
 
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]
-package = "winit_craft"
-version = "0.30.10"
+version = "0.30.11"
 features = []
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
-package = "winit_craft"
-version = "0.30.10"
+version = "0.30.11"
 features = ["android-native-activity"]
+
+[dependencies.ui-events]
+git = "https://github.com/AustinMReppert/ui-events"
+branch = "experiment"
+
+[dependencies.ui-events-winit]
+git = "https://github.com/AustinMReppert/ui-events"
+branch = "experiment"
 
 [dependencies.parley]
 version = "0.4.0"
