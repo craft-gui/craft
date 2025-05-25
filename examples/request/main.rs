@@ -62,7 +62,7 @@ impl Component for AniList {
                 Container::new()
                     .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
                     .push(Text::new("Get Data").on_pointer_button_up(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
-                        if pointer_button.is_primary() {
+                        if state.state != State::Loading && pointer_button.is_primary() {
                             state.state = State::Loading;
 
                             let get_ani_list_data = async {
