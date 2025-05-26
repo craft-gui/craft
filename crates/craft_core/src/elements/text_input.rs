@@ -16,7 +16,7 @@ use crate::{generate_component_methods_no_children};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parley::{PlainEditor, PlainEditorDriver};
+use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 #[cfg(target_arch = "wasm32")]
@@ -30,7 +30,7 @@ use winit::keyboard::{Key, NamedKey};
 use winit::window::Window;
 use crate::layout::layout_context::TextHashKey;
 use crate::text::text_context::{ColorBrush, TextContext};
-use crate::text::text_render_data;
+use crate::text::{text_render_data, TextStyle};
 use crate::text::text_render_data::TextRender;
 
 // A stateful element that shows text.
@@ -61,6 +61,7 @@ pub struct TextInputState {
     last_requested_key: Option<TextHashKey>,
     text_render: Option<TextRender>,
     new_text: Option<String>,
+    new_style: TextStyle,
 
     last_click_time: Option<Instant>,
     click_count: u32,
@@ -535,6 +536,7 @@ impl Element for TextInput {
             last_requested_key: None,
             text_render: None,
             new_text: std::mem::take(&mut self.text),
+            new_style: TextStyle::from(self.style()),
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -572,6 +574,14 @@ impl Element for TextInput {
                 state.cache.clear();
                 state.new_text = Some(state.editor.text().to_string());
             }
+        }
+
+        if TextStyle::from(self.style()) != state.new_style {
+            state.new_style = TextStyle::from(self.style());
+            state.cache.clear();
+            state.new_text = Some(state.editor.text().to_string());
+            let styles = state.editor.edit_styles();
+            styles.insert(StyleProperty::FontSize(state.new_style.font_size));
         }
     }
 
