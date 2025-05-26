@@ -24,8 +24,8 @@ default = ["vello_renderer", "http_client"]
 craft_logging = { path = "../craft_logger", version = "0.1.0" }
 
 # Add at the next stable release.
-#accesskit = "0.17.1"
-#accesskit_winit = { version = "0.23.1", features = ["tokio"] }
+accesskit = "0.19.0"
+accesskit_winit = { version = "0.27.0", features = ["tokio"] }
 
 cfg-if = "1.0.0"
 

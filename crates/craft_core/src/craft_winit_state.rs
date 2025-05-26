@@ -18,7 +18,7 @@ use crate::events::internal::InternalMessage;
 use crate::geometry::Size;
 use crate::renderer::blank_renderer::BlankRenderer;
 use crate::renderer::renderer::Renderer;
-use crate::{CraftOptions, CraftRuntime, RendererType, WAIT_TIME};
+use crate::{App, CraftOptions, CraftRuntime, RendererType, WAIT_TIME};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
@@ -27,22 +27,24 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowAttributes;
 use winit::window::{Window, WindowId};
 
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
 
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
+use accesskit::{ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, TreeUpdate};
+use accesskit_winit::Adapter;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use tokio::sync::mpsc::error::SendError;
-use ui_events::pointer::{PointerEvent};
-use ui_events::{UiEvent};
-use ui_events_winit::{WindowEventReducer};
+use ui_events::pointer::PointerEvent;
+use ui_events::UiEvent;
+use ui_events_winit::WindowEventReducer;
 use winit::dpi::LogicalSize;
 
 /// Stores state related to Winit.
@@ -64,6 +66,30 @@ pub(crate) struct CraftWinitState {
     app_sender: Sender<AppMessage>,
     craft_options: CraftOptions,
     event_reducer: WindowEventReducer,
+    accesskit_adapter: Option<Adapter>,
+    craft_activation_handler: Option<CraftActivationHandler>,
+    craft_app: Option<Box<App>>,
+}
+
+struct CraftActivationHandler {
+}
+
+impl ActivationHandler for CraftActivationHandler {
+    fn request_initial_tree(&mut self) -> Option<TreeUpdate> {
+        None
+    }
+}
+
+struct CraftAccessHandler {}
+
+impl ActionHandler for CraftAccessHandler {
+    fn do_action(&mut self, request: ActionRequest) {}
+}
+
+struct CraftDeactivationHandler {}
+
+impl DeactivationHandler for CraftDeactivationHandler {
+    fn deactivate_accessibility(&mut self) {}
 }
 
 impl ApplicationHandler for CraftWinitState {
@@ -72,12 +98,14 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let mut window_attributes = WindowAttributes::default().with_title(self.craft_options.window_title.as_str());
-        
+        let mut window_attributes =
+            WindowAttributes::default().with_title(self.craft_options.window_title.as_str()).with_visible(false);
+
         if let Some(window_size) = &self.craft_options.window_size {
-            window_attributes = window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
+            window_attributes =
+                window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
         }
-        
+
         #[cfg(target_arch = "wasm32")]
         let window_attributes = {
             let canvas = web_sys::window()
@@ -97,6 +125,15 @@ impl ApplicationHandler for CraftWinitState {
         info!("Created window");
 
         window.set_ime_allowed(true);
+
+        let action_handler = CraftAccessHandler {};
+        let deactivation_handler = CraftDeactivationHandler {};
+
+        let app = self.craft_app.take().unwrap();
+        let a = Adapter::with_direct_handlers(event_loop, &window, self.craft_activation_handler.take().unwrap(), action_handler, deactivation_handler);
+        self.send_message(InternalMessage::TakeApp(app), false);
+
+        window.set_visible(true);
 
         self.window = Some(window.clone());
         info!("Creating renderer");
@@ -244,6 +281,7 @@ impl CraftWinitState {
         winit_receiver: Receiver<AppMessage>,
         app_sender: Sender<AppMessage>,
         craft_options: CraftOptions,
+        craft_app: Box<App>
     ) -> Self {
         Self {
             id: Default::default(),
@@ -256,6 +294,10 @@ impl CraftWinitState {
             app_sender,
             craft_options,
             event_reducer: Default::default(),
+            accesskit_adapter: None,
+            craft_activation_handler: Some(CraftActivationHandler {
+            }),
+            craft_app: Some(craft_app),
         }
     }
 
