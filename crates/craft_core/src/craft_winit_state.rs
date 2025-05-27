@@ -151,8 +151,11 @@ impl ApplicationHandler for CraftWinitState {
         let deactivation_handler = CraftDeactivationHandler {};
 
         let scale_factor = window.scale_factor();
+        let surface_size = Size::new(window.inner_size().width as f32, window.inner_size().height as f32);
+
         let mut app = self.craft_app.take().unwrap();
-        app.update_view(scale_factor);
+        app.on_request_redraw(scale_factor, surface_size);
+        println!("Size: {:?}", surface_size);
 
         let tree = accesskit::Tree {
             root: NodeId(0),

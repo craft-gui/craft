@@ -312,11 +312,14 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         if self.element_data().on_pointer_button_up.is_some() {
             current_node.set_role(Role::Button);
         }
+
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+
         current_node.set_bounds(accesskit::Rect {
-            x0: 0.0,
-            y0: 0.0,
-            x1: 100.0,
-            y1: 100.0,
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
         });
         current_node.set_label(current_node_id.0.to_string());
 

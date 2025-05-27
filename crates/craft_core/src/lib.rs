@@ -319,11 +319,10 @@ impl App {
     }
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
-    async fn on_request_redraw(&mut self, scale_factor: f64, surface_size: Size<f32>) {
+    fn on_request_redraw(&mut self, scale_factor: f64, surface_size: Size<f32>) {
         self.setup_text_context();
 
         self.update_view(scale_factor);
-        self.view_introspection().await;
 
         let window_context = &mut self.window_context;
 
@@ -367,10 +366,6 @@ impl App {
         // Reset the requested values:
         window_context.reset();
 
-        if self.renderer.is_none() {
-            return;
-        }
-
         cfg_if! {
             if #[cfg(feature = "dev_tools")] {
                 let mut root_size = surface_size;
@@ -379,8 +374,10 @@ impl App {
             }
         }
 
-        self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
-
+        if self.renderer.is_some() {
+            self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
+        }
+        
         #[cfg(feature = "dev_tools")]
         {
             if self.is_dev_tools_open {
@@ -399,11 +396,13 @@ impl App {
                     self.mouse_position,
                 );
 
-            self.draw_reactive_tree(
-                false,
-                self.mouse_position,
-                self.window.clone(),
-            );
+            if self.renderer.is_some() {
+                self.draw_reactive_tree(
+                    false,
+                    self.mouse_position,
+                    self.window.clone(),
+                );
+            }
         }
 
         #[cfg(feature = "dev_tools")]
@@ -428,15 +427,19 @@ impl App {
                         self.mouse_position,
                     );
 
-                self.draw_reactive_tree(
-                    true,
-                    self.mouse_position,
-                    self.window.clone(),
-                );
+                if self.renderer.is_some() {
+                    self.draw_reactive_tree(
+                        true,
+                        self.mouse_position,
+                        self.window.clone(),
+                    );
+                }
             }
         }
 
-        self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
+        if self.renderer.is_some() {
+            self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
+        }
     }
 
     fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
@@ -764,7 +767,7 @@ fn craft_main_with_options_2(
     let resource_manager = Arc::new(ResourceManager::new(app_sender.clone()));
 
     let app_sender_copy = app_sender.clone();
-    
+
     let future = async_main(app_receiver, app_sender_copy);
 
     runtime.runtime_spawn(future);
@@ -863,7 +866,8 @@ async fn async_main(
             match app_message.data {
                 InternalMessage::TakeApp(_) => {}
                 InternalMessage::RequestRedraw(scale_factor, surface_size) => {
-                    app.on_request_redraw(scale_factor, surface_size).await;
+                    app.on_request_redraw(scale_factor, surface_size);
+                    app.view_introspection().await;
                     send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Close => {
