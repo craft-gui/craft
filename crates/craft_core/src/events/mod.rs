@@ -25,12 +25,15 @@ use std::sync::Arc;
 pub use winit::event::Modifiers;
 pub use winit::event::Ime;
 pub use winit::event::MouseButton;
+use crate::elements::Element;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum EventDispatchType {
     Bubbling,
     Direct(ComponentId),
-    DirectByUserId(String),
+    /// Sends the message to all elements that satisfy the given predicate function.
+    /// The predicate should return `true` for an element to receive the message.
+    DirectToMatchingElements(Arc<dyn Fn(&dyn Element) -> bool + Send + Sync + 'static>),
 }
 
 #[derive(Clone, Debug)]

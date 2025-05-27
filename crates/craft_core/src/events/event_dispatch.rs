@@ -330,10 +330,10 @@ pub(crate) fn dispatch_event(
                 }
             }
         }
-        EventDispatchType::DirectByUserId(id) => {
+        EventDispatchType::DirectToMatchingElements(user_by_predicate_fn) => {
             for node in nodes {
                 if let Some(element) = node.borrow().element {
-                    if *element.get_id() != Some(id.clone()) {
+                    if !user_by_predicate_fn(element) {
                         continue;
                     }
 
@@ -350,8 +350,7 @@ pub(crate) fn dispatch_event(
                         effects.append(&mut res.effects);
                     }
 
-                    break;
-              }
+                }
         }
     }
 }
