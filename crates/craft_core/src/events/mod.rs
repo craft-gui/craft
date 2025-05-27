@@ -69,6 +69,13 @@ impl CraftMessage {
 
         false
     }
+
+    pub fn new_element_message<T>(data: T) -> CraftMessage
+    where
+        T: Any + Send + Sync,
+    {
+        Self::ElementMessage(Arc::new(data))
+    }
 }
 
 impl PointerButton {
