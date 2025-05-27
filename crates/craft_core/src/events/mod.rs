@@ -26,10 +26,11 @@ pub use winit::event::Modifiers;
 pub use winit::event::Ime;
 pub use winit::event::MouseButton;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum EventDispatchType {
     Bubbling,
     Direct(ComponentId),
+    DirectByUserId(String),
 }
 
 #[derive(Clone, Debug)]

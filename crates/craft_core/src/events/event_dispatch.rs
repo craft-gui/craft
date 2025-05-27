@@ -330,13 +330,37 @@ pub(crate) fn dispatch_event(
                 }
             }
         }
-    }
+        EventDispatchType::DirectByUserId(id) => {
+            for node in nodes {
+                if let Some(element) = node.borrow().element {
+                    if *element.get_id() != Some(id.clone()) {
+                        continue;
+                    }
 
-    // Handle effects.
+                    if let Message::CraftMessage(message) = message {
+                        let mut res = Event::new();
+                        element.on_event(
+                            message,
+                            &mut reactive_tree.element_state,
+                            text_context.as_mut().unwrap(),
+                            false,
+                            &mut res,
+                        );
+
+                        effects.append(&mut res.effects);
+                    }
+
+                    break;
+              }
+        }
+    }
+}
+
+// Handle effects.
     for (dispatch_type, message) in effects.iter() {
         dispatch_event(
             message,
-            *dispatch_type,
+            dispatch_type.clone(),
             _resource_manager,
             mouse_position,
             reactive_tree,
