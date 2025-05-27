@@ -155,7 +155,6 @@ impl ApplicationHandler for CraftWinitState {
 
         let mut app = self.craft_app.take().unwrap();
         app.on_request_redraw(scale_factor, surface_size);
-        println!("Size: {:?}", surface_size);
 
         let tree = accesskit::Tree {
             root: NodeId(0),
