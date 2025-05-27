@@ -297,7 +297,8 @@ impl App {
     }
 
     /// Updates the view by applying the latest changes to the reactive tree.
-    async fn update_view(&mut self, scale_factor: f64) {
+    pub(crate) fn update_view(&mut self, scale_factor: f64) {
+        self.setup_text_context();
         let text_context = self.text_context.as_mut().unwrap();
 
         let old_element_ids = self.user_tree.element_ids.clone();
@@ -306,14 +307,11 @@ impl App {
             self.app.clone(),
             &mut self.user_tree,
             &mut self.global_state,
-            self.resource_manager.clone(),
             &mut self.reload_fonts,
             text_context,
             scale_factor,
-            &mut self.resources_collected,
             &mut self.window_context,
-        )
-        .await;
+        );
 
         // Cleanup unmounted components and elements.
         self.user_tree.user_state.remove_unused_state(&old_component_ids, &self.user_tree.component_ids);
@@ -324,9 +322,8 @@ impl App {
     async fn on_request_redraw(&mut self, scale_factor: f64, surface_size: Size<f32>) {
         self.setup_text_context();
 
-        self.update_view(scale_factor).await;
-
-        let text_context = self.text_context.as_mut().unwrap();
+        self.update_view(scale_factor);
+        self.view_introspection().await;
 
         let window_context = &mut self.window_context;
 
@@ -374,8 +371,6 @@ impl App {
             return;
         }
 
-        let renderer = self.renderer.as_mut().unwrap();
-
         cfg_if! {
             if #[cfg(feature = "dev_tools")] {
                 let mut root_size = surface_size;
@@ -384,7 +379,7 @@ impl App {
             }
         }
 
-        renderer.surface_set_clear_color(Color::WHITE);
+        self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
 
         #[cfg(feature = "dev_tools")]
         {
@@ -394,18 +389,22 @@ impl App {
             }
         }
 
-        draw_reactive_tree(
-            &mut self.user_tree,
-            self.resource_manager.clone(),
-            renderer,
-            root_size,
-            Point::new(0.0, 0.0),
-            text_context,
-            scale_factor,
-            self.mouse_position,
-            self.window.clone(),
-        )
-        .await;
+        {
+            self
+                .layout_tree(
+                    false,
+                    root_size,
+                    Point::new(0.0, 0.0),
+                    scale_factor,
+                    self.mouse_position,
+                );
+
+            self.draw_reactive_tree(
+                false,
+                self.mouse_position,
+                self.window.clone(),
+            );
+        }
 
         #[cfg(feature = "dev_tools")]
         {
@@ -414,31 +413,30 @@ impl App {
                     dev_tools_view(self.user_tree.element_tree.clone().unwrap()),
                     &mut self.dev_tree,
                     &mut self.global_state,
-                    self.resource_manager.clone(),
                     &mut self.reload_fonts,
-                    text_context,
+                    &mut self.text_context.as_mut().unwrap(),
                     scale_factor,
-                    &mut self.resources_collected,
                     &mut self.window_context,
-                )
-                .await;
+                );
 
-                draw_reactive_tree(
-                    &mut self.dev_tree,
-                    self.resource_manager.clone(),
-                    renderer,
-                    Size::new(surface_size.width - root_size.width, root_size.height),
-                    Point::new(root_size.width as f64, 0.0),
-                    text_context,
-                    scale_factor,
+                self
+                    .layout_tree(
+                        true,
+                        Size::new(surface_size.width - root_size.width, root_size.height),
+                        Point::new(root_size.width as f64, 0.0),
+                        scale_factor,
+                        self.mouse_position,
+                    );
+
+                self.draw_reactive_tree(
+                    true,
                     self.mouse_position,
                     self.window.clone(),
-                )
-                .await;
+                );
             }
         }
 
-        renderer.submit(self.resource_manager.clone());
+        self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
     }
 
     fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
@@ -536,7 +534,7 @@ impl App {
         }
         self.window.as_ref().unwrap().request_redraw();
     }
-    
+
     /// Processes async messages sent from the user.
     fn on_user_message(&mut self, message: InternalUserMessage) {
         let state = self.user_tree.user_state.storage.get_mut(&message.source_component_id).unwrap().as_mut();
@@ -547,6 +545,103 @@ impl App {
         self.window_context = event.window;
 
         self.window.as_ref().unwrap().request_redraw();
+    }
+
+    async fn view_introspection(
+        &mut self,
+    ) {
+        scan_view_for_resources(
+            self.user_tree.element_tree.as_ref().unwrap().as_ref(),
+            &self.user_tree.component_tree.as_ref().unwrap(),
+            self.resource_manager.clone(),
+            &mut self.resources_collected,
+        ).await;
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn layout_tree(
+        &mut self,
+        is_dev_tree: bool,
+        viewport_size: Size<f32>,
+        origin: Point,
+        scale_factor: f64,
+        mouse_position: Option<Point>,
+    ) {
+        let reactive_tree = if !is_dev_tree {
+            &mut self.user_tree
+        } else {
+            &mut self.dev_tree
+        };
+        let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+        let mut root_size = viewport_size;
+
+        // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
+        // We do not want to scale the window size.
+        {
+            root_size.width /= scale_factor as f32;
+            root_size.height /= scale_factor as f32;
+        }
+
+        style_root_element(root_element, root_size);
+        let text_context = self.text_context.as_mut().unwrap();
+
+        {
+            let span = span!(Level::INFO, "layout");
+            let _enter = span.enter();
+            layout(
+                &mut reactive_tree.element_state,
+                root_size.width,
+                root_size.height,
+                text_context,
+                root_element.as_mut(),
+                origin,
+                self.resource_manager.clone(),
+                scale_factor,
+                mouse_position,
+            )
+        };
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn draw_reactive_tree(
+        &mut self,
+        is_dev_tree: bool,
+        mouse_position: Option<Point>,
+        window: Option<Arc<Window>>,
+    ) {
+        let reactive_tree = if !is_dev_tree {
+            &mut self.user_tree
+        } else {
+            &mut self.dev_tree
+        };
+        let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+        let text_context = self.text_context.as_mut().unwrap();
+        {
+            let span = span!(Level::INFO, "render");
+            let _enter = span.enter();
+            let mut render_list = RenderList::new();
+            root_element.draw(
+                &mut render_list,
+                text_context,
+                &mut reactive_tree.element_state,
+                mouse_position,
+                window,
+            );
+
+
+            let renderer = self.renderer.as_mut().unwrap();
+            renderer.sort_and_cull_render_list(&mut render_list);
+
+            let window = Rectangle {
+                x: 0.0,
+                y: 0.0,
+                width: renderer.surface_width(),
+                height: renderer.surface_height(),
+            };
+            renderer.prepare_render_list(render_list, self.resource_manager.clone(), window);
+        }
     }
 }
 
@@ -669,9 +764,8 @@ fn craft_main_with_options_2(
     let resource_manager = Arc::new(ResourceManager::new(app_sender.clone()));
 
     let app_sender_copy = app_sender.clone();
-    let resource_manager_copy = resource_manager.clone();
-
-    let future = async_main(app_receiver, winit_sender.clone(), app_sender_copy, resource_manager_copy);
+    
+    let future = async_main(app_receiver, app_sender_copy);
 
     runtime.runtime_spawn(future);
 
@@ -739,9 +833,7 @@ async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>)
 
 async fn async_main(
     mut app_receiver: Receiver<AppMessage>,
-    winit_sender: Sender<AppMessage>,
     mut app_sender: Sender<AppMessage>,
-    resource_manager: Arc<ResourceManager>,
 ) {
     let mut user_state = StateStore::default();
 
@@ -766,7 +858,7 @@ async fn async_main(
                 continue;
             }
 
-            let mut app = craft_app.as_mut().expect("Craft app not initialized").as_mut();
+            let app = craft_app.as_mut().expect("Craft app not initialized").as_mut();
 
             match app_message.data {
                 InternalMessage::TakeApp(_) => {}
@@ -885,15 +977,13 @@ fn on_process_user_events(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn update_reactive_tree(
+fn update_reactive_tree(
     component_spec_to_generate_tree: ComponentSpecification,
     reactive_tree: &mut ReactiveTree,
     global_state: &mut GlobalState,
-    resource_manager: Arc<ResourceManager>,
     should_reload_fonts: &mut bool,
     text_context: &mut TextContext,
     scaling_factor: f64,
-    resources_collected: &mut HashMap<ResourceIdentifier, bool>,
     window_context: &mut WindowContext,
 ) {
     let window_element = Container::new().into();
@@ -919,86 +1009,11 @@ async fn update_reactive_tree(
 
     *should_reload_fonts = false;
 
-    scan_view_for_resources(
-        new_tree.element_tree.internal.as_ref(),
-        &new_tree.component_tree,
-        resource_manager.clone(),
-        resources_collected,
-    )
-    .await;
     reactive_tree.element_tree = Some(new_tree.element_tree.internal);
     reactive_tree.component_tree = Some(new_tree.component_tree);
     reactive_tree.component_ids = new_tree.component_ids;
     reactive_tree.element_ids = new_tree.element_ids;
     reactive_tree.pointer_captures = new_tree.pointer_captures;
-}
-
-#[allow(clippy::too_many_arguments)]
-async fn draw_reactive_tree(
-    reactive_tree: &mut ReactiveTree,
-    resource_manager: Arc<ResourceManager>,
-    renderer: &mut Box<dyn Renderer + Send>,
-    viewport_size: Size<f32>,
-    origin: Point,
-    text_context: &mut TextContext,
-    scale_factor: f64,
-    mouse_position: Option<Point>,
-    window: Option<Arc<Window>>,
-) {
-    let root = reactive_tree.element_tree.as_mut().unwrap();
-
-    let mut root_size = viewport_size;
-
-    // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
-    // We do not want to scale the window size.
-    {
-        root_size.width /= scale_factor as f32;
-        root_size.height /= scale_factor as f32;
-    }
-
-    style_root_element(root, root_size);
-
-    let (mut taffy_tree, taffy_root) = {
-        let span = span!(Level::INFO, "layout");
-        let _enter = span.enter();
-        layout(
-            &mut reactive_tree.element_state,
-            root_size.width,
-            root_size.height,
-            text_context,
-            root.as_mut(),
-            origin,
-            resource_manager.clone(),
-            scale_factor,
-            mouse_position,
-        )
-    };
-
-    let renderer = renderer.as_mut();
-
-    {
-        let span = span!(Level::INFO, "render");
-        let _enter = span.enter();
-        let mut render_list = RenderList::new();
-        root.draw(
-            &mut render_list,
-            text_context,
-            &mut taffy_tree,
-            taffy_root,
-            &mut reactive_tree.element_state,
-            mouse_position,
-            window,
-        );
-        renderer.sort_and_cull_render_list(&mut render_list);
-
-        let window = Rectangle {
-            x: 0.0,
-            y: 0.0,
-            width: renderer.surface_width(),
-            height: renderer.surface_height(),
-        };
-        renderer.prepare_render_list(render_list, resource_manager, window);
-    }
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: Size<f32>) {

@@ -10,6 +10,7 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
+use accesskit::Role;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
@@ -74,8 +75,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
@@ -165,7 +164,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
@@ -179,8 +177,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             child.internal.draw(
                 renderer,
                 text_context,
-                taffy_tree,
-                taffy_child_node_id.unwrap(),
                 element_state,
                 pointer,
                 window.clone(),
@@ -307,6 +303,35 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
+    }
+
+    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>) {
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(Role::GenericContainer);
+        if self.element_data().on_pointer_button_up.is_some() {
+            current_node.set_role(Role::Button);
+        }
+        current_node.set_bounds(accesskit::Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 100.0,
+            y1: 100.0,
+        });
+        current_node.set_label(current_node_id.0.to_string());
+
+        let current_index = tree.nodes.len(); // The current node is the last one added.
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+
+        for child in self.element_data_mut().children.iter_mut() {
+            child.internal.compute_accessibility_tree(tree, Some(current_index));
+        }
     }
 
     /// Called on sequential renders to update any state that the element may have.

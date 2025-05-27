@@ -82,8 +82,6 @@ impl Element for Dropdown {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
@@ -102,8 +100,6 @@ impl Element for Dropdown {
                 pseudo_dropdown_selection.internal.draw(
                     renderer,
                     text_context,
-                    taffy_tree,
-                    pseudo_dropdown_selection.internal.element_data().layout_item.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
@@ -118,13 +114,11 @@ impl Element for Dropdown {
                 self.pseudo_dropdown_list_element.draw(
                     renderer,
                     text_context,
-                    taffy_tree,
-                    self.pseudo_dropdown_list_element.element_data.layout_item.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
                 );
-                self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window.clone());
+                self.draw_children(renderer, text_context, element_state, pointer, window.clone());
             }
             renderer.end_overlay();
         }

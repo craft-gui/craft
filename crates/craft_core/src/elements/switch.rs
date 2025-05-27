@@ -59,8 +59,6 @@ impl Element for Switch {
         &mut self,
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,

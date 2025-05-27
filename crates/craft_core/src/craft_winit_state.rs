@@ -35,7 +35,7 @@ use web_time as time;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
-use accesskit::{ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, TreeUpdate};
+use accesskit::{ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, NodeId, Role, TreeUpdate};
 use accesskit_winit::Adapter;
 use std::future::Future;
 use std::pin::Pin;
@@ -67,23 +67,44 @@ pub(crate) struct CraftWinitState {
     craft_options: CraftOptions,
     event_reducer: WindowEventReducer,
     accesskit_adapter: Option<Adapter>,
-    craft_activation_handler: Option<CraftActivationHandler>,
     craft_app: Option<Box<App>>,
 }
 
 struct CraftActivationHandler {
+    tree_update: Option<TreeUpdate>,
 }
 
 impl ActivationHandler for CraftActivationHandler {
     fn request_initial_tree(&mut self) -> Option<TreeUpdate> {
-        None
+        /*let mut window_node = accesskit::Node::new(Role::Window);
+        let mut button_node = accesskit::Node::new(Role::Button);
+        button_node.set_bounds(accesskit::Rect::new(0.0, 0.0, 100.0, 100.0));
+        button_node.set_description("silly button".to_string());
+        button_node.set_label("Button".to_string());
+        button_node.add_action(Action::Focus);
+        button_node.add_action(Action::Click);
+
+        let tree = Tree::new(NodeId(0));
+        window_node.set_children(vec![NodeId(1)]);
+        let tree_update = TreeUpdate {
+            nodes: vec![
+                (NodeId(0), window_node),
+                (NodeId(1), button_node)
+            ],
+            tree: Some(tree),
+            focus: NodeId(1),
+        };
+*/
+        Some(self.tree_update.take().unwrap())
     }
 }
 
 struct CraftAccessHandler {}
 
 impl ActionHandler for CraftAccessHandler {
-    fn do_action(&mut self, request: ActionRequest) {}
+    fn do_action(&mut self, request: ActionRequest) {
+        println!("Action requested: {:?}", request);
+    }
 }
 
 struct CraftDeactivationHandler {}
@@ -129,8 +150,31 @@ impl ApplicationHandler for CraftWinitState {
         let action_handler = CraftAccessHandler {};
         let deactivation_handler = CraftDeactivationHandler {};
 
-        let app = self.craft_app.take().unwrap();
-        let a = Adapter::with_direct_handlers(event_loop, &window, self.craft_activation_handler.take().unwrap(), action_handler, deactivation_handler);
+        let scale_factor = window.scale_factor();
+        let mut app = self.craft_app.take().unwrap();
+        app.update_view(scale_factor);
+
+        let tree = accesskit::Tree {
+            root: NodeId(0),
+            toolkit_name: Some("Craft".to_string()),
+            toolkit_version: None,
+        };
+
+        let mut tree_update = TreeUpdate {
+            nodes: vec![],
+            tree: Some(tree),
+            focus: NodeId(0),
+        };
+        app.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None);
+
+        tree_update.nodes[0].1.set_role(Role::Window);
+        println!("{:?}", tree_update);
+
+        let craft_activation_handler = CraftActivationHandler {
+            tree_update: Some(tree_update),
+        };
+
+        self.accesskit_adapter = Some(Adapter::with_direct_handlers(event_loop, &window, craft_activation_handler, action_handler, deactivation_handler));
         self.send_message(InternalMessage::TakeApp(app), false);
 
         window.set_visible(true);
@@ -178,6 +222,11 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+        if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
+            //println!("Processing event: {:?}", event);
+            accesskit_adapter.process_event(self.window.as_ref().unwrap(), &event);
+        }
+
         if !matches!(
             event,
             WindowEvent::KeyboardInput {
@@ -295,8 +344,6 @@ impl CraftWinitState {
             craft_options,
             event_reducer: Default::default(),
             accesskit_adapter: None,
-            craft_activation_handler: Some(CraftActivationHandler {
-            }),
             craft_app: Some(craft_app),
         }
     }

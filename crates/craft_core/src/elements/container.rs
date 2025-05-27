@@ -46,8 +46,6 @@ impl Element for Container {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
@@ -63,7 +61,7 @@ impl Element for Container {
         self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
         {
-            self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
+            self.draw_children(renderer, text_context, element_state, pointer, window);
         }
         self.maybe_end_layer(renderer);
 
