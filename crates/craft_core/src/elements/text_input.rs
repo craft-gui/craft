@@ -49,6 +49,14 @@ pub(crate) struct ImeState {
     pub is_ime_active: bool,
 }
 
+/// An external message that allows others to command the TextInput.
+pub enum TextInputMessage {
+    Copy,
+    Paste,
+    Cut,
+    // TODO: Add more messages.
+}
+
 pub struct TextInputState {
     pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
@@ -273,6 +281,60 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
+        
+        fn copy(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                if let Some(text) = drv.editor.selected_text() {
+                    let cb = ClipboardContext::new().unwrap();
+                    cb.set_text(text.to_owned()).ok();
+                }   
+            }
+        }
+        
+        fn paste(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                let cb = ClipboardContext::new().unwrap();
+                let text = cb.get_text().unwrap_or_default();
+                drv.insert_or_replace_selection(&text);
+            }
+        }
+
+        fn cut(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                if let Some(text) = drv.editor.selected_text() {
+                    let cb = ClipboardContext::new().unwrap();
+                    cb.set_text(text.to_owned()).ok();
+                    drv.delete_selection();
+                }
+            }
+        }
+
+        
+        if let CraftMessage::ElementMessage(msg) = message {
+            if let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
+                let mut drv = state.driver(_text_context);
+                match msg {
+                    TextInputMessage::Copy => {
+                        copy(&mut drv);
+                    }
+                    TextInputMessage::Paste => {
+                        paste(&mut drv);
+                        state.cache.clear();
+                    }
+                    TextInputMessage::Cut => {
+                        cut(&mut drv);
+                        state.cache.clear();
+                    }
+                }
+            } 
+        }
+        
         match message {
             CraftMessage::ModifiersChangedEvent(modifiers) => {
                 state.modifiers = Some(*modifiers);
@@ -299,31 +361,19 @@ impl Element for TextInput {
                     .unwrap_or_default();
 
                 let mut drv = state.driver(_text_context);
+                
                 match &keyboard_input.event.logical_key {
-                    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                     Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
-                        use clipboard_rs::{Clipboard, ClipboardContext};
                         match c.to_lowercase().as_str() {
-                            "c" => {
-                                if let Some(text) = drv.editor.selected_text() {
-                                    let cb = ClipboardContext::new().unwrap();
-                                    cb.set_text(text.to_owned()).ok();
-                                }
-                            }
+                            "c" => copy(&mut drv),
                             "x" => {
-                                if let Some(text) = drv.editor.selected_text() {
-                                    let cb = ClipboardContext::new().unwrap();
-                                    cb.set_text(text.to_owned()).ok();
-                                    drv.delete_selection();
-                                    state.cache.clear();
-                                }
-                            }
-                            "v" => {
-                                let cb = ClipboardContext::new().unwrap();
-                                let text = cb.get_text().unwrap_or_default();
-                                drv.insert_or_replace_selection(&text);
+                                cut(&mut drv);
                                 state.cache.clear();
-                            }
+                            },
+                            "v" => { 
+                                paste(&mut drv);
+                                state.cache.clear();
+                            },
                             _ => (),
                         }
                     }

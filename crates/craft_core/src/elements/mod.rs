@@ -40,4 +40,5 @@ pub use crate::elements::slider::SliderDirection;
 pub use crate::elements::switch::Switch;
 pub use crate::elements::text::Text;
 pub use crate::elements::text_input::TextInput;
+pub use crate::elements::text_input::TextInputMessage;
 pub use crate::elements::tinyvg::TinyVg;
