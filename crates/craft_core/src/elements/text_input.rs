@@ -315,6 +315,11 @@ impl Element for TextInput {
             }
         }
 
+        let mut generate_text_changed_event = |editor: &mut PlainEditor<ColorBrush>| {
+            event.prevent_defaults();
+            event.prevent_propagate();
+            event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
+        };
         
         if let CraftMessage::ElementMessage(msg) = message {
             if let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
@@ -326,10 +331,12 @@ impl Element for TextInput {
                     TextInputMessage::Paste => {
                         paste(&mut drv);
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                     TextInputMessage::Cut => {
                         cut(&mut drv);
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                 }
             } 
@@ -369,10 +376,12 @@ impl Element for TextInput {
                             "x" => {
                                 cut(&mut drv);
                                 state.cache.clear();
+                                generate_text_changed_event(&mut state.editor);
                             },
                             "v" => { 
                                 paste(&mut drv);
                                 state.cache.clear();
+                                generate_text_changed_event(&mut state.editor);
                             },
                             _ => (),
                         }
@@ -460,6 +469,7 @@ impl Element for TextInput {
                             drv.delete();
                             state.cache.clear();
                         }
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Backspace) => {
                         if action_mod {
@@ -469,23 +479,20 @@ impl Element for TextInput {
                             drv.backdelete();
                             state.cache.clear();
                         }
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Enter) => {
                         drv.insert_or_replace_selection("\n");
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Character(s) => {
                         drv.insert_or_replace_selection(s);
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                     _ => (),
                 }
-
-
-                // FIXME: This is more of a hack, we should be doing this somewhere else.
-                event.prevent_defaults();
-                event.prevent_propagate();
-                event.result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
             }
             // WindowEvent::Touch(Touch {
             //     phase, location, ..
@@ -555,6 +562,7 @@ impl Element for TextInput {
             CraftMessage::ImeEvent(Ime::Commit(text)) => {
                 state.driver(_text_context).insert_or_replace_selection(text);
                 state.cache.clear();
+                generate_text_changed_event(&mut state.editor);
             }
             CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
                 if text.is_empty() {
