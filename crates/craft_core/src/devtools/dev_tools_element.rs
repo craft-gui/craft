@@ -91,15 +91,21 @@ impl Element for DevTools {
             // Highlight the hovered element and draw their margin, padding, and content box.
             if let Some(selected_element) = hovered_inspector_element {
                 // FIXME: Make use of layers, so that the boxes only mix with the element's colors.
-                let content_box_highlight_color = Color::from_rgba8(184, 226, 243, 125);
-                let padding_box_highlight_color = Color::from_rgba8(102, 87, 166, 125);
-                let margin_box_highlight_color = Color::from_rgba8(115, 118, 240, 50);
+                let margin_box_highlight_color = Color::from_rgba8(255, 0, 0, 200);
+                let border_box_highlight_color = Color::from_rgba8(0, 255, 0, 200);
+                let padding_box_highlight_color = Color::from_rgba8(0, 0, 255, 200);
+                let content_box_highlight_color = Color::from_rgba8(0, 255, 255, 200);
 
                 let margin_rectangle = selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
-
+                
+                let border_rectangle = selected_element.element_data().layout_item.computed_box_transformed.border_rectangle();
+                renderer.push_layer(border_rectangle);
+                renderer.draw_rect(border_rectangle, border_box_highlight_color);
+                renderer.pop_layer();
+                
                 let padding_rectangle = selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
@@ -112,7 +118,7 @@ impl Element for DevTools {
 
                 if let Some(clip_bounds) = selected_element.element_data().layout_item.clip_bounds {
                     renderer.push_layer(clip_bounds);
-                    renderer.draw_rect_outline(clip_bounds, Color::from_rgba8(255, 0, 0, 200));
+                    renderer.draw_rect_outline(clip_bounds, Color::from_rgba8(255, 0, 0, 255));
                     renderer.pop_layer();
                 }
             }
