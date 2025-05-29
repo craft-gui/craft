@@ -16,13 +16,14 @@ use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
 use craft::style::Display::Flex;
-use craft::style::FlexDirection;
+use craft::style::{FlexDirection, Unit};
 use craft::{palette, WindowContext};
 
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
 use crate::examples::text::TextState;
 use crate::examples::tour::Tour;
+use crate::navbar::NAVBAR_HEIGHT;
 
 pub(crate) struct Examples {
     pub(crate) example_to_show: String,
@@ -67,7 +68,7 @@ impl Component for Examples {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext,
+        window: &WindowContext,
     ) -> ComponentSpecification {
         let wrapper = Container::new().display(Flex).width("100%").height("100%").push(examples_sidebar()).component();
 
@@ -77,9 +78,11 @@ impl Component for Examples {
             "request" => AniList::component().key("example_request"),
             _ => Counter::component().key("example_counter"),
         };
-
+        
+        let container_height = (window.window_height() - NAVBAR_HEIGHT).max(0.0);
+        
         wrapper.push(
-            Container::new().width("100%").height("100%").background(palette::css::WHITE).push(content).component(),
+            Container::new().width("100%").height(Unit::Px(container_height)).background(palette::css::WHITE).push(content).component(),
         )
     }
 

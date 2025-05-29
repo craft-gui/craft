@@ -3,11 +3,13 @@ use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
-use craft::style::{AlignItems, Display, JustifyContent, Weight};
+use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
 use craft::{rgb, WindowContext};
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
+
+pub const NAVBAR_HEIGHT: f32 = 48.0;
 
 fn create_link(label: &str, route: &str) -> Text {
     Text::new(label)
@@ -42,6 +44,7 @@ impl Component for Navbar {
             .justify_content(JustifyContent::SpaceBetween)
             .align_items(AlignItems::Center)
             .width("100%")
+            .height(Unit::Px(NAVBAR_HEIGHT))
             .padding("5px", "25px", "5px", "25px")
             .background(NAVBAR_BACKGROUND_COLOR)
             // Left
