@@ -229,15 +229,11 @@ impl Element for TextInput {
         self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(state) =
-            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
+        if let Some(state) =
+            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
         {
-            state.scroll_state.scroll_y
-        } else {
-            0.0
-        };
-
-        self.finalize_scrollbar(scroll_y);
+            self.finalize_scrollbar(&mut state.scroll_state);
+        }
     }
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {

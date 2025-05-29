@@ -1,9 +1,11 @@
+use taffy::Overflow;
 use crate::components::Event;
 use crate::elements::base_element_state::{BaseElementState, DUMMY_DEVICE_ID};
 use crate::elements::element_data::ElementData;
 use crate::events::CraftMessage;
 use winit::event::ElementState as WinitElementState;
 use winit::event::{ButtonSource, MouseButton, MouseScrollDelta, PointerSource};
+use crate::geometry::Rectangle;
 
 #[derive(Debug, Clone, Default, Copy)]
 pub struct ScrollState {
@@ -112,5 +114,45 @@ impl ScrollState {
                 _ => {  }
             }
         }
+    }
+    
+    pub(crate) fn finalize_layout(&mut self, element_data: &mut ElementData) {
+        if element_data.style.overflow()[1] != Overflow::Scroll {
+            return;
+        }
+        let box_transformed = element_data.layout_item.computed_box_transformed;
+
+        // Client Height = padding box height.
+        let client_height = box_transformed.padding_rectangle().height;
+
+        // Taffy is not adding the padding bottom to the content height, so we'll add it here.
+        // Content Size = overflowed content size + padding
+        // Scroll Height = Content Size
+        let scroll_height = element_data.layout_item.content_size.height + box_transformed.padding.bottom;
+        let scroll_track_width = element_data.layout_item.scrollbar_size.width;
+
+        // The scroll track height is the height of the padding box.
+        let scroll_track_height = client_height;
+
+        let max_scroll_y = (scroll_height - client_height).max(0.0);
+        element_data.layout_item.max_scroll_y = max_scroll_y;
+
+        let visible_y = client_height / scroll_height;
+        let scroll_thumb_height = scroll_track_height * visible_y;
+        let remaining_height = scroll_track_height - scroll_thumb_height;
+        let scroll_thumb_offset = if max_scroll_y != 0.0 { self.scroll_y / max_scroll_y * remaining_height } else { 0.0 };
+
+        element_data.layout_item.computed_scroll_track = Rectangle::new(
+            box_transformed.position.x + box_transformed.size.width - scroll_track_width - box_transformed.border.right,
+            box_transformed.position.y + box_transformed.border.top,
+            scroll_track_width,
+            scroll_track_height,
+        );
+
+        let scroll_thumb_width = scroll_track_width;
+        element_data.layout_item.computed_scroll_thumb = element_data.layout_item.computed_scroll_track;
+        element_data.layout_item.computed_scroll_thumb.y += scroll_thumb_offset;
+        element_data.layout_item.computed_scroll_thumb.width = scroll_thumb_width;
+        element_data.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
     }
 }
