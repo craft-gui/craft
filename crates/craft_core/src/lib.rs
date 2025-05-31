@@ -12,7 +12,6 @@ pub mod style;
 mod tests;
 pub mod text;
 
-pub mod app_message;
 #[cfg(feature = "dev_tools")]
 pub(crate) mod devtools;
 pub mod geometry;
@@ -32,7 +31,6 @@ use crate::events::{CraftMessage, EventDispatchType};
 pub use crate::options::RendererType;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::style::{Display, Unit, Wrap};
-use app_message::AppMessage;
 use components::component::{ComponentId, ComponentSpecification};
 use elements::container::Container;
 use elements::element::Element;
@@ -73,6 +71,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+use accesskit::{Role, TreeUpdate};
 use ui_events::keyboard::{KeyState, KeyboardEvent};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::Ime;
@@ -205,7 +204,7 @@ struct App {
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     text_context: Option<TextContext>,
     /// The renderer is used to draw the view. It is only valid between resume and pause.
-    renderer: Option<Box<dyn Renderer + Send>>,
+    renderer: Option<RendererBox>,
     mouse_position: Option<Point>,
     reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
@@ -217,7 +216,7 @@ struct App {
     /// of a resource too many times.
     resources_collected: HashMap<ResourceIdentifier, bool>,
     /// Used to send messages to the winit event loop.
-    winit_sender: Sender<AppMessage>,
+    winit_sender: Sender<InternalMessage>,
     // The user's reactive tree.
     user_tree: ReactiveTree,
     /// Provides a way for the user to get and set common window properties during view and update.
@@ -231,9 +230,14 @@ struct App {
     dev_tree: ReactiveTree,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+type RendererBox = Box<dyn Renderer + Send>;
+#[cfg(target_arch = "wasm32")]
+type RendererBox = Box<dyn Renderer>;
+
 impl App {
 
-    fn on_resume(&mut self, window: Arc<Window>, renderer: Option<Box<dyn Renderer + Send>>) {
+    fn on_resume(&mut self, window: Arc<Window>, renderer: Option<RendererBox>) {
         if self.user_tree.element_tree.is_none() {
             reset_unique_element_id();
         }
@@ -245,10 +249,13 @@ impl App {
             // We can't guarantee the order of events on wasm.
             // This ensures a resize is not missed if the renderer was not finished creating when resize is called.
             #[cfg(target_arch = "wasm32")]
-            self.renderer
-                .as_mut()
-                .unwrap()
-                .resize_surface(window.inner_size().width as f32, window.inner_size().height as f32);
+            {
+                self.renderer
+                    .as_mut()
+                    .unwrap()
+                    .resize_surface(window.inner_size().width as f32, window.inner_size().height as f32);
+                window.request_redraw();
+            }
         }
 
         self.window = Some(window.clone());
@@ -377,7 +384,7 @@ impl App {
         if self.renderer.is_some() {
             self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
         }
-        
+
         #[cfg(feature = "dev_tools")]
         {
             if self.is_dev_tools_open {
@@ -451,7 +458,7 @@ impl App {
         self.window.as_ref().unwrap().request_redraw();
     }
 
-    fn on_pointer_button(&mut self, pointer_event: PointerButtonUpdate, is_up: bool) {
+    fn on_pointer_button(&mut self, pointer_event: PointerButtonUpdate, is_up: bool, dispatch_type: EventDispatchType) {
         let cursor_position = pointer_event.state.position;
 
         let event = if is_up {
@@ -463,7 +470,11 @@ impl App {
 
         self.window_context.mouse_position = Some(Point::new(cursor_position.x, cursor_position.y));
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, true);
+        if let EventDispatchType::Direct(component) = dispatch_type {
+            self.dispatch_event(&message, EventDispatchType::Direct(component), false);
+        } else {
+            self.dispatch_event(&message, EventDispatchType::Bubbling, true);
+        }
 
         self.window.as_ref().unwrap().request_redraw();
     }
@@ -646,6 +657,31 @@ impl App {
             renderer.prepare_render_list(render_list, self.resource_manager.clone(), window);
         }
     }
+
+    fn compute_accessibility_tree(&mut self) -> accesskit::TreeUpdate {
+        let tree = accesskit::Tree {
+            root: accesskit::NodeId(0),
+            toolkit_name: Some("Craft".to_string()),
+            toolkit_version: None,
+        };
+
+        let mut tree_update = TreeUpdate {
+            nodes: vec![],
+            tree: Some(tree),
+            focus: accesskit::NodeId(0),
+        };
+        
+        let state = &mut self.user_tree.element_state;
+        
+        self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None, state);
+        tree_update.nodes[0].1.set_role(Role::Window);
+        
+        tree_update
+    }
+
+    async fn send_winit_message(&self, message: InternalMessage) {
+        self.winit_sender.send(message).await.expect("Failed to send message to winit event loop");
+    }
 }
 
 #[cfg(target_os = "android")]
@@ -677,6 +713,7 @@ use crate::resource_manager::ResourceIdentifier;
 use crate::text::text_context::TextContext;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
+use crate::craft_runtime::CraftRuntimeHandle;
 use crate::events::internal::InternalUserMessage;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
@@ -759,18 +796,37 @@ fn craft_main_with_options_2(
 ) {
     let craft_options = craft_options.unwrap_or_default();
 
-    let runtime = CraftRuntime::new();
-    info!("Created async runtime");
-
-    let (app_sender, app_receiver) = channel::<AppMessage>(100);
-    let (winit_sender, winit_receiver) = channel::<AppMessage>(100);
-    let resource_manager = Arc::new(ResourceManager::new(app_sender.clone()));
-
+    let (app_sender, app_receiver) = channel::<InternalMessage>(100);
+    let (runtime_sender, mut runtime_receiver) = channel::<CraftRuntimeHandle>(1);
     let app_sender_copy = app_sender.clone();
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    std::thread::spawn(move || {
+        let runtime = CraftRuntime::new();
+        runtime_sender
+            .blocking_send(runtime.handle()).expect("Failed to send runtime handle");
+        info!("Created async runtime");
 
-    let future = async_main(app_receiver, app_sender_copy);
+        let future = async_main(app_receiver, app_sender_copy);
 
-    runtime.runtime_spawn(future);
+        runtime.maybe_block_on(future);
+    });
+    #[cfg(target_arch = "wasm32")]
+    {
+        let runtime = CraftRuntime::new();
+        runtime_sender
+            .blocking_send(runtime.handle()).expect("Failed to send runtime handle");
+        info!("Created async runtime");
+
+        let future = crate::async_main(app_receiver, app_sender_copy);
+
+        runtime.maybe_block_on(future);
+    }
+
+    let runtime = runtime_receiver.blocking_recv().expect("Failed to receive runtime handle");
+
+    let (winit_sender, winit_receiver) = channel::<InternalMessage>(100);
+    let resource_manager = Arc::new(ResourceManager::new(app_sender.clone()));
 
     let mut user_state = StateStore::default();
 
@@ -824,19 +880,9 @@ fn craft_main_with_options_2(
     event_loop.run_app(&mut app).expect("run_app failed");
 }
 
-#[cfg(target_arch = "wasm32")]
-async fn send_response(_app_message: AppMessage, _sender: &mut Sender<AppMessage>) {}
-
-#[cfg(not(target_arch = "wasm32"))]
-async fn send_response(app_message: AppMessage, sender: &mut Sender<AppMessage>) {
-    if app_message.blocking {
-        sender.send(app_message).await.expect("send failed");
-    }
-}
-
 async fn async_main(
-    mut app_receiver: Receiver<AppMessage>,
-    mut app_sender: Sender<AppMessage>,
+    mut app_receiver: Receiver<InternalMessage>,
+    mut app_sender: Sender<InternalMessage>,
 ) {
     let mut user_state = StateStore::default();
 
@@ -851,59 +897,46 @@ async fn async_main(
     info!("starting main event loop");
     loop {
         if let Some(app_message) = app_receiver.recv().await {
-            let mut dummy_message = AppMessage::new(app_message.id, InternalMessage::Confirmation);
-            dummy_message.blocking = app_message.blocking;
-
-            if let InternalMessage::TakeApp(app) = app_message.data {
+            if let InternalMessage::TakeApp(app) = app_message {
                 craft_app = Some(app);
-                let app = craft_app.as_mut().unwrap();
-                send_response(dummy_message, &mut app.winit_sender).await;
                 continue;
             }
 
             let app = craft_app.as_mut().expect("Craft app not initialized").as_mut();
 
-            match app_message.data {
+            match app_message {
                 InternalMessage::TakeApp(_) => {}
                 InternalMessage::RequestRedraw(scale_factor, surface_size) => {
                     app.on_request_redraw(scale_factor, surface_size);
                     app.view_introspection().await;
-                    send_response(dummy_message, &mut app.winit_sender).await;
+                    let tree_update = app.compute_accessibility_tree();
+                    #[cfg(not(target_arch = "wasm32"))]
+                    app.send_winit_message(InternalMessage::AccesskitTreeUpdate(tree_update)).await;
                 }
                 InternalMessage::Close => {
                     info!("Craft Closing");
-
-                    send_response(dummy_message, &mut app.winit_sender).await;
                     break;
                 }
-                InternalMessage::Confirmation => {}
                 InternalMessage::Resume(window, renderer) => {
                     app.on_resume(window, renderer);
-                    send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Resize(new_size) => {
                     app.on_resize(new_size);
-                    send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::PointerScroll(pointer_scroll_update) => {
                     app.on_pointer_scroll(pointer_scroll_update);
-                    send_response(dummy_message, &mut app.winit_sender).await;
                 }
-                InternalMessage::PointerButtonUp(pointer_button) => {
-                    app.on_pointer_button(pointer_button, true);
-                    send_response(dummy_message, &mut app.winit_sender).await;
+                InternalMessage::PointerButtonUp(pointer_button, dispatch_type) => {
+                    app.on_pointer_button(pointer_button, true,  dispatch_type);
                 }
-                InternalMessage::PointerButtonDown(pointer_button) => {
-                    app.on_pointer_button(pointer_button, false);
-                    send_response(dummy_message, &mut app.winit_sender).await;
+                InternalMessage::PointerButtonDown(pointer_button, dispatch_type) => {
+                    app.on_pointer_button(pointer_button, false, dispatch_type);
                 }
                 InternalMessage::PointerMoved(pointer_update) => {
                     app.on_pointer_moved(pointer_update);
-                    send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::Ime(ime) => {
                     app.on_ime(ime);
-                    send_response(dummy_message, &mut app.winit_sender).await;
                 }
                 InternalMessage::ProcessUserEvents => {
                     on_process_user_events(app.window.clone(), &mut app_sender, &mut app.user_tree);
@@ -940,7 +973,10 @@ async fn async_main(
                 }
                 InternalMessage::KeyboardInput(keyboard_input) => {
                     app.on_keyboard_input(keyboard_input).await;
-                    send_response(dummy_message, &mut app.winit_sender).await;
+                }
+                #[cfg(not(target_arch = "wasm32"))]
+                InternalMessage::AccesskitTreeUpdate(_) => {
+                    panic!("Do not send this message to the Craft app. It is handled by the winit event loop.");
                 }
             }
         }
@@ -949,7 +985,7 @@ async fn async_main(
 
 fn on_process_user_events(
     window: Option<Arc<Window>>,
-    app_sender: &mut Sender<AppMessage>,
+    app_sender: &mut Sender<InternalMessage>,
     reactive_tree: &mut ReactiveTree,
 ) {
     if reactive_tree.update_queue.is_empty() {
@@ -963,15 +999,13 @@ fn on_process_user_events(
             let update_result = event.update_result.unwrap();
             let res = update_result.await;
             app_sender_copy
-                .send(AppMessage::new(
-                    0,
+                .send(
                     InternalMessage::GotUserMessage(InternalUserMessage {
                         update_fn: event.update_function,
                         source_component_id: event.source_component,
                         message: res,
                         props: event.props,
-                    }),
-                ))
+                    }))
                 .await
                 .expect("send failed");
             window_clone.request_redraw();

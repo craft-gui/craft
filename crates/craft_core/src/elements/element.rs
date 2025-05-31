@@ -10,7 +10,7 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
-use accesskit::Role;
+use accesskit::{Action, Role};
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
@@ -305,12 +305,13 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
 
-    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>) {
+    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>, element_state: &mut ElementStateStore) {
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
         let mut current_node = accesskit::Node::new(Role::GenericContainer);
         if self.element_data().on_pointer_button_up.is_some() {
             current_node.set_role(Role::Button);
+            current_node.add_action(Action::Click);
         }
 
         let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
@@ -321,7 +322,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             x1: padding_box.right() as f64,
             y1: padding_box.bottom() as f64,
         });
-        current_node.set_label(current_node_id.0.to_string());
 
         let current_index = tree.nodes.len(); // The current node is the last one added.
 
@@ -333,7 +333,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         tree.nodes.push((current_node_id, current_node));
 
         for child in self.element_data_mut().children.iter_mut() {
-            child.internal.compute_accessibility_tree(tree, Some(current_index));
+            child.internal.compute_accessibility_tree(tree, Some(current_index), element_state);
         }
     }
 

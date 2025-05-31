@@ -13,7 +13,7 @@ use crate::style::Style;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use parley::{Alignment, AlignmentOptions, Selection};
+use parley::{Alignment, AlignmentOptions, LayoutAccessibility, Selection};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -25,10 +25,11 @@ use web_time as time;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time as time;
 use time::{Duration, Instant};
-
+use accesskit::{Action, Role, TreeUpdate};
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use winit::window::Window;
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
+use crate::reactive::element_id::create_unique_element_id;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -119,6 +120,54 @@ impl Element for Text {
         if let Some(text_render) = state.text_render.as_ref() {
             renderer.draw_text(text_render.clone(), content_rectangle, None, false);
         }
+    }
+
+    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>, element_state: &mut ElementStateStore) {
+        let state: &mut TextState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+
+        let layout = state.layout.as_mut().unwrap();
+        let mut access = LayoutAccessibility::default();
+        let text = state.text.as_ref().unwrap();
+
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(Role::Label);
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+        current_node.set_value(*Box::new(state.text.clone().unwrap()));
+        current_node.add_action(Action::SetTextSelection);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        access.build_nodes(
+            text,
+            layout,
+            tree,
+            &mut current_node,
+            || {
+                accesskit::NodeId(create_unique_element_id())
+            },
+            padding_box.x as f64,
+            padding_box.y as f64,
+        );
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
     }
 
     fn compute_layout(
@@ -383,8 +432,8 @@ impl TextState {
     ) -> Size<f32> {
         if self.layout.is_none() {
             let mut builder = text_context.tree_builder(self.scale_factor, &self.last_text_style.to_text_style());
-            let text = std::mem::take(&mut self.text).unwrap();
-            builder.push_text(&text);
+            let text = &self.text.as_ref().unwrap();
+            builder.push_text(text);
             let (layout, _) = builder.build();
             self.layout = Some(layout);
         }

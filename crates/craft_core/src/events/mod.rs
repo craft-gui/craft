@@ -25,6 +25,7 @@ pub use winit::event::MouseButton;
 pub enum EventDispatchType {
     Bubbling,
     Direct(ComponentId),
+    Accesskit(ComponentId),
 }
 
 #[derive(Clone, Debug)]

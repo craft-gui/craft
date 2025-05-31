@@ -2577,6 +2577,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e28dadbe655332fd7d996794ec8d0c376695f6ca47bc75aa01e0967c7f28e42a"
 dependencies = [
+ "accesskit",
  "fontique",
  "hashbrown",
  "peniko",
@@ -3835,7 +3836,7 @@ dependencies = [
 [[package]]
 name = "ui-events"
 version = "0.1.0"
-source = "git+https://github.com/AustinMReppert/ui-events?branch=experiment#91c3f1dd83afaa69ba6ad2c2102fc49626b2c2a7"
+source = "git+https://github.com/AustinMReppert/ui-events?branch=experiment#7a77ef227bf9c3099412efd5ec94093add3a1c87"
 dependencies = [
  "dpi",
  "keyboard-types",
@@ -3845,10 +3846,11 @@ dependencies = [
 [[package]]
 name = "ui-events-winit"
 version = "0.1.0"
-source = "git+https://github.com/AustinMReppert/ui-events?branch=experiment#91c3f1dd83afaa69ba6ad2c2102fc49626b2c2a7"
+source = "git+https://github.com/AustinMReppert/ui-events?branch=experiment#7a77ef227bf9c3099412efd5ec94093add3a1c87"
 dependencies = [
  "kurbo",
  "ui-events",
+ "web-time",
  "winit",
 ]
 

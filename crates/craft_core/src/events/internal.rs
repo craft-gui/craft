@@ -12,6 +12,7 @@ use winit::dpi::PhysicalSize;
 use winit::event::Ime;
 use winit::window::Window;
 use crate::App;
+use crate::events::EventDispatchType;
 
 pub(crate) struct InternalUserMessage {
     pub update_fn: UpdateFn,
@@ -26,11 +27,13 @@ pub(crate) struct InternalUserMessage {
 pub(crate) enum InternalMessage {
     RequestRedraw(f64, Size<f32>),
     Close,
-    Confirmation,
+    #[cfg(target_arch = "wasm32")]
+    Resume(Arc<Window>, Option<Box<dyn Renderer>>),
+    #[cfg(not(target_arch = "wasm32"))]
     Resume(Arc<Window>, Option<Box<dyn Renderer + Send>>),
     Resize(PhysicalSize<u32>),
-    PointerButtonUp(PointerButtonUpdate),
-    PointerButtonDown(PointerButtonUpdate),
+    PointerButtonUp(PointerButtonUpdate, EventDispatchType),
+    PointerButtonDown(PointerButtonUpdate, EventDispatchType),
     PointerMoved(PointerUpdate),
     PointerScroll(PointerScrollUpdate),
     KeyboardInput(KeyboardEvent),
@@ -39,4 +42,6 @@ pub(crate) enum InternalMessage {
     GotUserMessage(InternalUserMessage),
     ResourceEvent(ResourceEvent),
     TakeApp(Box<App>),
+    #[cfg(not(target_arch = "wasm32"))]
+    AccesskitTreeUpdate(accesskit::TreeUpdate),
 }

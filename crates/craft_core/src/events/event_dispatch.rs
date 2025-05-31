@@ -328,6 +328,8 @@ pub(crate) fn dispatch_event(
                     }
                 }
             }
+        },
+        EventDispatchType::Accesskit(_) => {
         }
     }
 
