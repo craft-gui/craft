@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::{Props, Event};
+use crate::components::{Event, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementStyles;
@@ -22,14 +22,14 @@ use std::sync::Arc;
 
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time as time;
-use time::{Duration, Instant};
-use accesskit::{Action, Role, TreeUpdate};
-use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
-use winit::window::Window;
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::reactive::element_id::create_unique_element_id;
+use accesskit::{Action, Role};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time as time;
+use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
+use time::{Duration, Instant};
+use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]

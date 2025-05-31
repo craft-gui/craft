@@ -420,7 +420,7 @@ impl App {
                     &mut self.dev_tree,
                     &mut self.global_state,
                     &mut self.reload_fonts,
-                    &mut self.text_context.as_mut().unwrap(),
+                    self.text_context.as_mut().unwrap(),
                     scale_factor,
                     &mut self.window_context,
                 );
@@ -566,7 +566,7 @@ impl App {
     ) {
         scan_view_for_resources(
             self.user_tree.element_tree.as_ref().unwrap().as_ref(),
-            &self.user_tree.component_tree.as_ref().unwrap(),
+            self.user_tree.component_tree.as_ref().unwrap(),
             self.resource_manager.clone(),
             &mut self.resources_collected,
         ).await;
@@ -658,7 +658,7 @@ impl App {
         }
     }
 
-    fn compute_accessibility_tree(&mut self) -> accesskit::TreeUpdate {
+    fn compute_accessibility_tree(&mut self) -> TreeUpdate {
         let tree = accesskit::Tree {
             root: accesskit::NodeId(0),
             toolkit_name: Some("Craft".to_string()),
@@ -720,7 +720,7 @@ pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
 /// Starts the Craft application with the provided component specification, global state, and configuration options.
 ///
-/// This function serves as the main entry point for launching an Craft application. It accepts a component
+/// This function serves as the main entry point for launching a Craft application. It accepts a component
 /// specification, a boxed global state, and optional configuration options, then delegates to the internal
 /// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
 /// behavior via [`CraftOptions`] without interacting directly with lower-level details.
@@ -746,7 +746,7 @@ pub fn craft_main<GlobalState: Send + 'static>(
 
 /// Starts the Craft application with the provided component specification, global state, and configuration options.
 ///
-/// This function serves as the main entry point for launching an Craft application. It accepts a component
+/// This function serves as the main entry point for launching a Craft application. It accepts a component
 /// specification, a boxed global state, and optional configuration options, then delegates to the internal
 /// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
 /// behavior via [`CraftOptions`] without interacting directly with lower-level details.
@@ -799,7 +799,7 @@ fn craft_main_with_options_2(
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
     let (runtime_sender, mut runtime_receiver) = channel::<CraftRuntimeHandle>(1);
     let app_sender_copy = app_sender.clone();
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     std::thread::spawn(move || {
         let runtime = CraftRuntime::new();
@@ -1135,10 +1135,10 @@ fn layout(
     (taffy_tree, root_node)
 }
 
-pub fn rgb(r: u8, g: u8, b: u8) -> crate::Color {
+pub fn rgb(r: u8, g: u8, b: u8) -> Color {
     Color::from_rgb8(r, g, b)
 }
 
-pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> crate::Color {
+pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color::from_rgba8(r, g, b, a)
 }

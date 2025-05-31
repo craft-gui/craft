@@ -17,7 +17,7 @@ use crate::events::internal::InternalMessage;
 use crate::geometry::Size;
 use crate::renderer::blank_renderer::BlankRenderer;
 use crate::renderer::renderer::Renderer;
-use crate::{App, CraftOptions, CraftRuntime, RendererType, WAIT_TIME};
+use crate::{App, CraftOptions, RendererType, WAIT_TIME};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
@@ -36,27 +36,20 @@ use tokio::sync::mpsc::Sender;
 
 use crate::craft_runtime::CraftRuntimeHandle;
 use accesskit::{
-    Action, ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, NodeId, Role, TreeUpdate,
+    Action, ActionHandler, ActionRequest, ActivationHandler, DeactivationHandler, TreeUpdate,
 };
 use accesskit_winit::Adapter;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
 use ui_events::pointer::{PointerButton, PointerButtonUpdate, PointerEvent, PointerInfo, PointerState, PointerType};
 use ui_events::UiEvent;
 use ui_events_winit::WindowEventReducer;
 use winit::dpi::LogicalSize;
-use crate::CursorIcon::Pointer;
 use crate::events::EventDispatchType;
 
 /// Stores state related to Winit.
 ///
 /// Forwards most events to the main Craft Event Loop.
 pub(crate) struct CraftWinitState {
-    #[cfg(not(target_arch = "wasm32"))]
-    id: u64,
-    #[cfg(target_arch = "wasm32")]
-    id: Rc<RefCell<u64>>,
     #[allow(dead_code)]
     runtime: CraftRuntimeHandle,
     request_redraw: bool,
@@ -420,7 +413,6 @@ impl CraftWinitState {
         craft_app: Box<App>,
     ) -> Self {
         Self {
-            id: Default::default(),
             runtime,
             request_redraw: false,
             wait_cancelled: false,
