@@ -67,11 +67,11 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use accesskit::{Role, TreeUpdate};
 use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use accesskit::{Role, TreeUpdate};
 use ui_events::keyboard::{KeyState, KeyboardEvent};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::Ime;
@@ -107,7 +107,8 @@ struct ReactiveTree {
 /// User-level API to get and set common window properties.
 /// All values are in logical pixels.
 pub struct WindowContext {
-    window_size: Size<f32>,
+    scale_factor: f64,
+    window_size: PhysicalSize<u32>,
     mouse_position: Option<Point>,
     cursor: Option<Cursor>,
 
@@ -119,8 +120,47 @@ pub struct WindowContext {
 }
 
 impl WindowContext {
+    pub(crate) fn apply_requests(&self, window: &Window) {
+        if let Some(requested_cursor) = &self.requested_cursor {
+            window.set_cursor(requested_cursor.clone());
+        };
+
+        if let Some(requested_window_width) = self.requested_window_width {
+            let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(
+                requested_window_width as f64,
+                self.window_size.height as f64,
+            )));
+        };
+
+        if let Some(requested_window_height) = self.requested_window_height {
+            let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(
+                self.window_size.width as f64,
+                requested_window_height as f64,
+            )));
+        };
+
+        if let Some(requested_mouse_position_x) = self.requested_mouse_position_x {
+            let mouse_y = self.requested_mouse_position_y.unwrap_or_default() as f64;
+            let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(
+                requested_mouse_position_x as f64,
+                mouse_y,
+            )));
+        };
+
+        if let Some(requested_mouse_position_y) = self.requested_mouse_position_y {
+            let mouse_x = self.requested_mouse_position_x.unwrap_or_default() as f64;
+            let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(
+                mouse_x,
+                requested_mouse_position_y as f64,
+            )));
+        };
+    }
+}
+
+impl WindowContext {
     pub(crate) fn new() -> WindowContext {
         Self {
+            scale_factor: 1.0,
             window_size: Default::default(),
             mouse_position: None,
             cursor: None,
@@ -132,15 +172,15 @@ impl WindowContext {
         }
     }
 
-    pub fn cursor(&self) -> Option<Cursor> {
-        self.cursor.clone()
+    pub fn cursor(&self) -> Option<&Cursor> {
+        self.cursor.as_ref()
     }
 
     pub fn window_width(&self) -> f32 {
-        self.window_size.width
+        self.window_size.to_logical(self.scale_factor).width
     }
     pub fn window_height(&self) -> f32 {
-        self.window_size.height
+        self.window_size.to_logical(self.scale_factor).height
     }
 
     pub fn mouse_position_x(&self) -> Option<f32> {
@@ -172,25 +212,11 @@ impl WindowContext {
     }
 
     pub(crate) fn reset(&mut self) {
-        *self = WindowContext {
-            window_size: self.window_size,
-            mouse_position: self.mouse_position,
-            cursor: None,
-
-            requested_window_width: None,
-            requested_window_height: None,
-            requested_mouse_position_x: None,
-            requested_mouse_position_y: None,
-            requested_cursor: None,
-        }
-    }
-}
-
-pub(crate) fn get_scale_factor(window: &Option<Arc<Window>>) -> f64 {
-    if let Some(window) = window {
-        window.scale_factor()
-    } else {
-        1.0
+        self.requested_window_width = None;
+        self.requested_window_height = None;
+        self.requested_mouse_position_x = None;
+        self.requested_mouse_position_y = None;
+        self.requested_cursor = None;
     }
 }
 
@@ -228,6 +254,8 @@ struct App {
     /// The dev tools tree is used to display the reactive tree in the dev tools.
     #[cfg(feature = "dev_tools")]
     dev_tree: ReactiveTree,
+    app_sender: Sender<InternalMessage>,
+    unrendered_user_events: bool,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -236,6 +264,31 @@ type RendererBox = Box<dyn Renderer + Send>;
 type RendererBox = Box<dyn Renderer>;
 
 impl App {
+    fn on_process_user_events(&mut self, is_dev_tree: bool) {
+        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
+
+        if reactive_tree.update_queue.is_empty() {
+            return;
+        }
+
+        for event in reactive_tree.update_queue.drain(..) {
+            let app_sender_copy = self.app_sender.clone();
+            let f = async move {
+                let update_result = event.update_result.unwrap();
+                let res = update_result.await;
+                app_sender_copy
+                    .send(InternalMessage::GotUserMessage(InternalUserMessage {
+                        update_fn: event.update_function,
+                        source_component_id: event.source_component,
+                        message: res,
+                        props: event.props,
+                    }))
+                    .await
+                    .expect("Failed to send user message");
+            };
+            CraftRuntime::native_spawn(f);
+        }
+    }
 
     fn on_resume(&mut self, window: Arc<Window>, renderer: Option<RendererBox>) {
         if self.user_tree.element_tree.is_none() {
@@ -250,30 +303,22 @@ impl App {
             // This ensures a resize is not missed if the renderer was not finished creating when resize is called.
             #[cfg(target_arch = "wasm32")]
             {
-                self.renderer
-                    .as_mut()
-                    .unwrap()
-                    .resize_surface(window.inner_size().width as f32, window.inner_size().height as f32);
-                window.request_redraw();
+                self.renderer.as_mut().unwrap().resize_surface(
+                    self.window_context.window_size.width.max(1) as f32,
+                    self.window_context.window_size.height.max(1) as f32,
+                );
+                self.window.as_ref().unwrap().request_redraw();
             }
         }
 
         self.window = Some(window.clone());
     }
 
-    ///
+    /// Handles the window resize event.
     fn on_resize(&mut self, new_size: PhysicalSize<u32>) {
-        let scale_factor = get_scale_factor(&self.window);
-        let window_size: LogicalSize<f32> = new_size.to_logical(scale_factor);
-        self.window_context.window_size = Size::new(window_size.width, window_size.height);
+        self.window_context.window_size = new_size;
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
-        }
-
-        // On macOS the window needs to be redrawn manually after resizing
-        #[cfg(target_os = "macos")]
-        {
-            self.window.as_ref().unwrap().request_redraw();
         }
     }
 
@@ -331,48 +376,6 @@ impl App {
 
         self.update_view(scale_factor);
 
-        let window_context = &mut self.window_context;
-
-        // Handle window requests:
-        if let Some(window) = self.window.clone() {
-            if let Some(requested_cursor) = &window_context.requested_cursor {
-                window.set_cursor(requested_cursor.clone());
-            };
-
-            if let Some(requested_window_width) = window_context.requested_window_width {
-                let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(
-                    requested_window_width as f64,
-                    window_context.window_size.height as f64,
-                )));
-            };
-
-            if let Some(requested_window_height) = window_context.requested_window_height {
-                let _ = window.request_inner_size(winit::dpi::Size::Logical(LogicalSize::new(
-                    window_context.window_size.width as f64,
-                    requested_window_height as f64,
-                )));
-            };
-
-            if let Some(requested_mouse_position_x) = window_context.requested_mouse_position_x {
-                let mouse_y = window_context.requested_mouse_position_y.unwrap_or_default() as f64;
-                let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(
-                    requested_mouse_position_x as f64,
-                    mouse_y,
-                )));
-            };
-
-            if let Some(requested_mouse_position_y) = window_context.requested_mouse_position_y {
-                let mouse_x = window_context.requested_mouse_position_x.unwrap_or_default() as f64;
-                let _ = window.set_cursor_position(winit::dpi::Position::Logical(LogicalPosition::new(
-                    mouse_x,
-                    requested_mouse_position_y as f64,
-                )));
-            };
-        }
-
-        // Reset the requested values:
-        window_context.reset();
-
         cfg_if! {
             if #[cfg(feature = "dev_tools")] {
                 let mut root_size = surface_size;
@@ -394,21 +397,10 @@ impl App {
         }
 
         {
-            self
-                .layout_tree(
-                    false,
-                    root_size,
-                    Point::new(0.0, 0.0),
-                    scale_factor,
-                    self.mouse_position,
-                );
+            self.layout_tree(false, root_size, Point::new(0.0, 0.0), scale_factor, self.mouse_position);
 
             if self.renderer.is_some() {
-                self.draw_reactive_tree(
-                    false,
-                    self.mouse_position,
-                    self.window.clone(),
-                );
+                self.draw_reactive_tree(false, self.mouse_position, self.window.clone());
             }
         }
 
@@ -425,21 +417,16 @@ impl App {
                     &mut self.window_context,
                 );
 
-                self
-                    .layout_tree(
-                        true,
-                        Size::new(surface_size.width - root_size.width, root_size.height),
-                        Point::new(root_size.width as f64, 0.0),
-                        scale_factor,
-                        self.mouse_position,
-                    );
+                self.layout_tree(
+                    true,
+                    Size::new(surface_size.width - root_size.width, root_size.height),
+                    Point::new(root_size.width as f64, 0.0),
+                    scale_factor,
+                    self.mouse_position,
+                );
 
                 if self.renderer.is_some() {
-                    self.draw_reactive_tree(
-                        true,
-                        self.mouse_position,
-                        self.window.clone(),
-                    );
+                    self.draw_reactive_tree(true, self.mouse_position, self.window.clone());
                 }
             }
         }
@@ -454,8 +441,6 @@ impl App {
         let message = Message::CraftMessage(event);
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, false);
-
-        self.window.as_ref().unwrap().request_redraw();
     }
 
     fn on_pointer_button(&mut self, pointer_event: PointerButtonUpdate, is_up: bool, dispatch_type: EventDispatchType) {
@@ -475,8 +460,6 @@ impl App {
         } else {
             self.dispatch_event(&message, EventDispatchType::Bubbling, true);
         }
-
-        self.window.as_ref().unwrap().request_redraw();
     }
 
     fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
@@ -486,10 +469,6 @@ impl App {
         let message = Message::CraftMessage(CraftMessage::PointerMovedEvent(mouse_moved));
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, true);
-
-        if let Some(window) = self.window.as_ref() {
-            window.request_redraw();
-        }
     }
 
     fn on_ime(&mut self, ime: Ime) {
@@ -497,8 +476,6 @@ impl App {
         let message = Message::CraftMessage(event);
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, false);
-
-        self.window.as_ref().unwrap().request_redraw();
     }
 
     /// Dispatch messages to the reactive tree.
@@ -546,7 +523,6 @@ impl App {
                 }
             }
         }
-        self.window.as_ref().unwrap().request_redraw();
     }
 
     /// Processes async messages sent from the user.
@@ -555,21 +531,52 @@ impl App {
 
         let mut event = Event::with_window_context(self.window_context.clone());
 
-        (message.update_fn)(state, &mut self.global_state, message.props, &mut event, &Message::UserMessage(message.message));
+        (message.update_fn)(
+            state,
+            &mut self.global_state,
+            message.props,
+            &mut event,
+            &Message::UserMessage(message.message),
+        );
         self.window_context = event.window;
-
-        self.window.as_ref().unwrap().request_redraw();
     }
 
-    async fn view_introspection(
-        &mut self,
-    ) {
+    async fn request_winit_redraw(&mut self, should_redraw: bool) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if !should_redraw {
+                return;
+            }
+            self.window.as_ref().unwrap().request_redraw();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let message = InternalMessage::RequestWinitRedraw(should_redraw);
+            self.send_winit_message(message).await;
+        }
+    }
+
+    async fn view_introspection(&mut self) {
         scan_view_for_resources(
             self.user_tree.element_tree.as_ref().unwrap().as_ref(),
             self.user_tree.component_tree.as_ref().unwrap(),
             self.resource_manager.clone(),
             &mut self.resources_collected,
-        ).await;
+        )
+        .await;
+    }
+
+    async fn handle_window_context_requests(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let window = self.window.as_ref().unwrap();
+            self.window_context.apply_requests(window);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.winit_sender.send(InternalMessage::HandleWindowContextRequest(self.window_context.clone())).await.expect("Failed to send window context request");
+        }
+        self.window_context.reset();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -581,11 +588,7 @@ impl App {
         scale_factor: f64,
         mouse_position: Option<Point>,
     ) {
-        let reactive_tree = if !is_dev_tree {
-            &mut self.user_tree
-        } else {
-            &mut self.dev_tree
-        };
+        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
         let mut root_size = viewport_size;
@@ -618,17 +621,8 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_reactive_tree(
-        &mut self,
-        is_dev_tree: bool,
-        mouse_position: Option<Point>,
-        window: Option<Arc<Window>>,
-    ) {
-        let reactive_tree = if !is_dev_tree {
-            &mut self.user_tree
-        } else {
-            &mut self.dev_tree
-        };
+    fn draw_reactive_tree(&mut self, is_dev_tree: bool, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
+        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
         let text_context = self.text_context.as_mut().unwrap();
@@ -636,14 +630,7 @@ impl App {
             let span = span!(Level::INFO, "render");
             let _enter = span.enter();
             let mut render_list = RenderList::new();
-            root_element.draw(
-                &mut render_list,
-                text_context,
-                &mut reactive_tree.element_state,
-                mouse_position,
-                window,
-            );
-
+            root_element.draw(&mut render_list, text_context, &mut reactive_tree.element_state, mouse_position, window);
 
             let renderer = self.renderer.as_mut().unwrap();
             renderer.sort_and_cull_render_list(&mut render_list);
@@ -670,12 +657,12 @@ impl App {
             tree: Some(tree),
             focus: accesskit::NodeId(0),
         };
-        
+
         let state = &mut self.user_tree.element_state;
-        
+
         self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None, state);
         tree_update.nodes[0].1.set_role(Role::Window);
-        
+
         tree_update
     }
 
@@ -704,7 +691,9 @@ pub fn internal_craft_main_with_options(
 use crate::devtools::dev_tools_component::dev_tools_view;
 
 use crate::components::Event;
+use crate::craft_runtime::CraftRuntimeHandle;
 use crate::events::event_dispatch::dispatch_event;
+use crate::events::internal::InternalUserMessage;
 use crate::geometry::{Point, Rectangle, Size};
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::renderer::renderer::RenderList;
@@ -713,8 +702,6 @@ use crate::resource_manager::ResourceIdentifier;
 use crate::text::text_context::TextContext;
 use crate::view_introspection::scan_view_for_resources;
 use craft_winit_state::CraftWinitState;
-use crate::craft_runtime::CraftRuntimeHandle;
-use crate::events::internal::InternalUserMessage;
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
@@ -798,27 +785,24 @@ fn craft_main_with_options_2(
 
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
     let (runtime_sender, mut runtime_receiver) = channel::<CraftRuntimeHandle>(1);
-    let app_sender_copy = app_sender.clone();
 
     #[cfg(not(target_arch = "wasm32"))]
     std::thread::spawn(move || {
         let runtime = CraftRuntime::new();
-        runtime_sender
-            .blocking_send(runtime.handle()).expect("Failed to send runtime handle");
+        runtime_sender.blocking_send(runtime.handle()).expect("Failed to send runtime handle");
         info!("Created async runtime");
 
-        let future = async_main(app_receiver, app_sender_copy);
+        let future = async_main(app_receiver);
 
         runtime.maybe_block_on(future);
     });
     #[cfg(target_arch = "wasm32")]
     {
         let runtime = CraftRuntime::new();
-        runtime_sender
-            .blocking_send(runtime.handle()).expect("Failed to send runtime handle");
+        runtime_sender.blocking_send(runtime.handle()).expect("Failed to send runtime handle");
         info!("Created async runtime");
 
-        let future = crate::async_main(app_receiver, app_sender_copy);
+        let future = crate::async_main(app_receiver );
 
         runtime.maybe_block_on(future);
     }
@@ -837,6 +821,7 @@ fn craft_main_with_options_2(
     dev_tools_user_state.storage.insert(0, Box::new(()));
 
     let craft_app = Box::new(App {
+        app_sender: app_sender.clone(),
         app: application,
         global_state,
         window: None,
@@ -873,6 +858,7 @@ fn craft_main_with_options_2(
             pointer_captures: Default::default(),
         },
         mouse_position: None,
+        unrendered_user_events: false,
     });
 
     let mut app = CraftWinitState::new(runtime, winit_receiver, app_sender, craft_options, craft_app);
@@ -880,10 +866,7 @@ fn craft_main_with_options_2(
     event_loop.run_app(&mut app).expect("run_app failed");
 }
 
-async fn async_main(
-    mut app_receiver: Receiver<InternalMessage>,
-    mut app_sender: Sender<InternalMessage>,
-) {
+async fn async_main(mut app_receiver: Receiver<InternalMessage>) {
     let mut user_state = StateStore::default();
 
     let dummy_root_value: Box<StateStoreItem> = Box::new(());
@@ -909,6 +892,7 @@ async fn async_main(
                 InternalMessage::RequestRedraw(scale_factor, surface_size) => {
                     app.on_request_redraw(scale_factor, surface_size);
                     app.view_introspection().await;
+                    app.handle_window_context_requests().await;
                     let tree_update = app.compute_accessibility_tree();
                     #[cfg(not(target_arch = "wasm32"))]
                     app.send_winit_message(InternalMessage::AccesskitTreeUpdate(tree_update)).await;
@@ -922,29 +906,50 @@ async fn async_main(
                 }
                 InternalMessage::Resize(new_size) => {
                     app.on_resize(new_size);
+                    // On macOS the window needs to be redrawn manually after resizing
+                    #[cfg(target_os = "macos")]
+                    {
+                        app.request_winit_redraw().await;
+                    }
+                }
+                InternalMessage::ScaleFactorChanged(new_scale_factor) => {
+                    app.window_context.scale_factor = new_scale_factor;
+                    app.on_resize(app.window.as_ref().unwrap().inner_size());
+                    #[cfg(target_os = "macos")]
+                    {
+                        app.request_winit_redraw().await;
+                    }
                 }
                 InternalMessage::PointerScroll(pointer_scroll_update) => {
                     app.on_pointer_scroll(pointer_scroll_update);
+                    app.request_winit_redraw(true).await;
                 }
                 InternalMessage::PointerButtonUp(pointer_button, dispatch_type) => {
-                    app.on_pointer_button(pointer_button, true,  dispatch_type);
+                    app.on_pointer_button(pointer_button, true, dispatch_type);
+                    app.request_winit_redraw(true).await;
                 }
                 InternalMessage::PointerButtonDown(pointer_button, dispatch_type) => {
                     app.on_pointer_button(pointer_button, false, dispatch_type);
+                    app.request_winit_redraw(true).await;
                 }
                 InternalMessage::PointerMoved(pointer_update) => {
                     app.on_pointer_moved(pointer_update);
+                    app.request_winit_redraw(true).await;
                 }
                 InternalMessage::Ime(ime) => {
                     app.on_ime(ime);
+                    app.request_winit_redraw(true).await;
                 }
                 InternalMessage::ProcessUserEvents => {
-                    on_process_user_events(app.window.clone(), &mut app_sender, &mut app.user_tree);
+                    app.on_process_user_events(false);
                     #[cfg(feature = "dev_tools")]
-                    on_process_user_events(app.window.clone(), &mut app_sender, &mut app.dev_tree);
+                    app.on_process_user_events(true);
+                    app.request_winit_redraw(app.unrendered_user_events).await;
+                    app.unrendered_user_events = false;
                 }
                 InternalMessage::GotUserMessage(message) => {
                     app.on_user_message(message);
+                    app.unrendered_user_events = true;
                 }
                 InternalMessage::ResourceEvent(resource_event) => {
                     let resource_manager = &mut app.resource_manager;
@@ -962,55 +967,26 @@ async fn async_main(
                                 }
 
                                 app.reload_fonts = true;
-                                app.window.as_ref().unwrap().request_redraw();
                             } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                                 resource_manager.resources.insert(resource_identifier, Arc::new(resource));
-                                app.window.as_ref().unwrap().request_redraw();
                             }
                         }
                         ResourceEvent::UnLoaded(_) => {}
                     }
+                    app.unrendered_user_events = true;
                 }
                 InternalMessage::KeyboardInput(keyboard_input) => {
                     app.on_keyboard_input(keyboard_input).await;
+                    app.request_winit_redraw(true).await;
                 }
                 #[cfg(not(target_arch = "wasm32"))]
                 InternalMessage::AccesskitTreeUpdate(_) => {
                     panic!("Do not send this message to the Craft app. It is handled by the winit event loop.");
                 }
+                InternalMessage::RequestWinitRedraw(_) => {}
+                InternalMessage::HandleWindowContextRequest(_) => {}
             }
         }
-    }
-}
-
-fn on_process_user_events(
-    window: Option<Arc<Window>>,
-    app_sender: &mut Sender<InternalMessage>,
-    reactive_tree: &mut ReactiveTree,
-) {
-    if reactive_tree.update_queue.is_empty() {
-        return;
-    }
-
-    for event in reactive_tree.update_queue.drain(..) {
-        let app_sender_copy = app_sender.clone();
-        let window_clone = window.clone().unwrap();
-        let f = async move {
-            let update_result = event.update_result.unwrap();
-            let res = update_result.await;
-            app_sender_copy
-                .send(
-                    InternalMessage::GotUserMessage(InternalUserMessage {
-                        update_fn: event.update_function,
-                        source_component_id: event.source_component,
-                        message: res,
-                        props: event.props,
-                    }))
-                .await
-                .expect("send failed");
-            window_clone.request_redraw();
-        };
-        CraftRuntime::native_spawn(f);
     }
 }
 

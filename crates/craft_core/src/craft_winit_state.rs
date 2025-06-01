@@ -208,7 +208,13 @@ impl ApplicationHandler for CraftWinitState {
         let surface_size = Size::new(window.inner_size().width as f32, window.inner_size().height as f32);
 
         let mut app = self.craft_app.take().unwrap();
+        app.window = Some(window.clone());
+        app.on_resize(window.inner_size());
+        app.window_context.scale_factor = scale_factor;
         app.on_request_redraw(scale_factor, surface_size);
+        app.window_context.apply_requests(&window);
+        app.window_context.reset();
+
 
         let tree_update = app.compute_accessibility_tree();
 
@@ -292,6 +298,7 @@ impl ApplicationHandler for CraftWinitState {
                         self.runtime.spawn(async move {
                             app_sender.send(InternalMessage::KeyboardInput(k)).await.unwrap();
                         });
+                        self.wait_for_redraw();
                     }
                     return;
                 }
@@ -301,16 +308,19 @@ impl ApplicationHandler for CraftWinitState {
                             self.runtime.spawn(async move {
                                 app_sender.send(InternalMessage::PointerButtonDown(pointer_button_update, EventDispatchType::Bubbling)).await.unwrap();
                             });
+                            self.wait_for_redraw();
                         }
                         PointerEvent::Up(pointer_button_update) => {
                             self.runtime.spawn(async move {
                                 app_sender.send(InternalMessage::PointerButtonUp(pointer_button_update, EventDispatchType::Bubbling)).await.unwrap();
                             });
+                            self.wait_for_redraw();
                         }
                         PointerEvent::Move(pointer_update) => {
                             self.runtime.spawn(async move {
                                 app_sender.send(InternalMessage::PointerMoved(pointer_update)).await.unwrap();
                             });
+                            self.wait_for_redraw();
                         }
                         PointerEvent::Cancel(_) => {}
                         PointerEvent::Enter(_) => {}
@@ -319,6 +329,7 @@ impl ApplicationHandler for CraftWinitState {
                             self.runtime.spawn(async move {
                                 app_sender.send(InternalMessage::PointerScroll(pointer_scroll_update)).await.unwrap();
                             });
+                            self.wait_for_redraw();
                         }
                     }
                     return;
@@ -328,22 +339,36 @@ impl ApplicationHandler for CraftWinitState {
         }
 
         match event {
-            WindowEvent::ScaleFactorChanged { .. } => {}
             WindowEvent::CloseRequested => {
                 self.close_requested = true;
                 self.runtime.spawn(async move {
                     app_sender.send(InternalMessage::Close).await.unwrap();
                 });
             }
+            WindowEvent::ScaleFactorChanged {
+                scale_factor,
+                ..
+            } => {
+                self.runtime.spawn(async move {
+                    app_sender.send(InternalMessage::ScaleFactorChanged(scale_factor)).await.unwrap();
+                });
+                self.wait_for_redraw();
+            }
             WindowEvent::Resized(new_size) => {
                 self.runtime.spawn(async move {
                     app_sender.send(InternalMessage::Resize(new_size)).await.unwrap();
                 });
+                // On macOS the window needs to be redrawn manually after resizing
+                #[cfg(target_os = "macos")]
+                {
+                    self.wait_for_redraw();
+                }
             }
             WindowEvent::Ime(ime) => {
                 self.runtime.spawn(async move {
                     app_sender.send(InternalMessage::Ime(ime)).await.unwrap();
                 });
+                self.wait_for_redraw();
             }
             WindowEvent::RedrawRequested => {
                 // Ideally redraws should be completed synchronously.
@@ -355,7 +380,16 @@ impl ApplicationHandler for CraftWinitState {
 
                 #[cfg(not(target_arch = "wasm32"))]
                 self.runtime.maybe_block_on(async {
-                    app_sender.send(InternalMessage::RequestRedraw(scale_factor.clone(), surface_size)).await.unwrap();
+                    app_sender.send(InternalMessage::RequestRedraw(scale_factor, surface_size)).await.unwrap();
+                    if let Some(app_message) = self.winit_receiver.recv().await {
+                        if let InternalMessage::HandleWindowContextRequest(window_context) = app_message {
+                            if let Some(window) = self.window.as_ref() {
+                                window_context.apply_requests(window);
+                            }
+                        } else {
+                            panic!("Expected HandleWindowContextRequest message, but received something else");
+                        }
+                    }
 
                     if let Some(app_message) = self.winit_receiver.recv().await {
                         if let InternalMessage::AccesskitTreeUpdate(tree_update) = app_message {
@@ -397,6 +431,7 @@ impl ApplicationHandler for CraftWinitState {
         self.runtime.spawn(async move {
             app_sender.send(InternalMessage::ProcessUserEvents).await.unwrap();
         });
+        self.wait_for_redraw();
 
         if !self.wait_cancelled {
             event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
@@ -424,6 +459,25 @@ impl CraftWinitState {
             event_reducer: Default::default(),
             accesskit_adapter: None,
             craft_app: Some(craft_app),
+        }
+    }
+
+    fn wait_for_redraw(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.runtime.maybe_block_on(async {
+                if let Some(app_message) = self.winit_receiver.recv().await {
+                    if let InternalMessage::RequestWinitRedraw(redraw) = app_message {
+                        if redraw {
+                            if let Some(window) = self.window.as_ref() {
+                                window.request_redraw();
+                            }
+                        }
+                    } else {
+                        panic!("Expected RequestWinitRedraw message, but received something else");
+                    }
+                }
+            })
         }
     }
 }

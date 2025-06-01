@@ -11,7 +11,7 @@ use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate
 use winit::dpi::PhysicalSize;
 use winit::event::Ime;
 use winit::window::Window;
-use crate::App;
+use crate::{App, WindowContext};
 use crate::events::EventDispatchType;
 
 pub(crate) struct InternalUserMessage {
@@ -25,6 +25,7 @@ pub(crate) struct InternalUserMessage {
 }
 
 pub(crate) enum InternalMessage {
+    ScaleFactorChanged(f64),
     RequestRedraw(f64, Size<f32>),
     Close,
     #[cfg(target_arch = "wasm32")]
@@ -44,4 +45,6 @@ pub(crate) enum InternalMessage {
     TakeApp(Box<App>),
     #[cfg(not(target_arch = "wasm32"))]
     AccesskitTreeUpdate(accesskit::TreeUpdate),
+    RequestWinitRedraw(bool),
+    HandleWindowContextRequest(WindowContext),
 }
