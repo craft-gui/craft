@@ -20,6 +20,8 @@ pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
     window: Arc<Window>,
+    window_width: f32,
+    window_height: f32,
 }
 
 // This enum is only a few hundred bytes.
@@ -102,7 +104,7 @@ impl<'a> VelloRenderer<'a> {
         vello_renderer.renderers[0].get_or_insert_with(|| create_vello_renderer(&vello_renderer.context, &surface));
 
         // Save the Window and Surface to a state variable
-        vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface });
+        vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface, window_width: surface_size.width as f32, window_height: surface_size.height as f32});
 
         vello_renderer
     }
@@ -121,14 +123,14 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 impl Renderer for VelloRenderer<'_> {
     fn surface_width(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.inner_size().width as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_width,
             RenderState::Suspended => 0.0,
         }
     }
 
     fn surface_height(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.inner_size().height as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_height,
             RenderState::Suspended => 0.0,
         }
     }
@@ -138,7 +140,8 @@ impl Renderer for VelloRenderer<'_> {
             RenderState::Active(state) => state,
             _ => return,
         };
-
+        render_state.window_width = width;
+        render_state.window_height = height;
         self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
     }
 

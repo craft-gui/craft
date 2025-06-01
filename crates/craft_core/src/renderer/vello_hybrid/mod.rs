@@ -28,6 +28,8 @@ pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
     window: Arc<Window>,
+    window_width: f32,
+    window_height: f32,
 }
 
 // This enum is only a few hundred bytes.
@@ -77,6 +79,8 @@ impl<'a> VelloHybridRenderer<'a> {
             state: RenderState::Suspended,
             scene: Scene::new(surface_size.width as u16, surface_size.height as u16),
             surface_clear_color: Color::WHITE,
+            window_width: surface_size.width as f32,
+            window_height: surface_size.height as f32,
         };
 
         let surface = vello_renderer
@@ -109,14 +113,14 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 impl CraftRenderer for VelloHybridRenderer<'_> {
     fn surface_width(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.inner_size().width as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_width as f32,
             RenderState::Suspended => 0.0,
         }
     }
 
     fn surface_height(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window.inner_size().height as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_height as f32,
             RenderState::Suspended => 0.0,
         }
     }

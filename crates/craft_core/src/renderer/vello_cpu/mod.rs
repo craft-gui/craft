@@ -61,11 +61,12 @@ fn vello_draw_rect(scene: &mut RenderContext, rectangle: Rectangle, fill_color: 
 }
 
 pub(crate) struct VelloCpuRenderer {
-    window: Arc<Window>,
     render_context: RenderContext,
     pixmap: Pixmap,
     surface: Surface,
     clear_color: Color,
+    window_width: u16,
+    window_height: u16,
 }
 
 impl VelloCpuRenderer {
@@ -83,27 +84,30 @@ impl VelloCpuRenderer {
             .expect("TODO: panic message");
 
         Self {
-            window,
             render_context,
             pixmap,
             surface,
             clear_color: Color::WHITE,
+            window_width: width,
+            window_height: height,
         }
     }
 }
 
 impl Renderer for VelloCpuRenderer {
     fn surface_width(&self) -> f32 {
-        self.window.inner_size().width as f32
+        self.window_width as f32
     }
 
     fn surface_height(&self) -> f32 {
-        self.window.inner_size().height as f32
+        self.window_height as f32
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
         let width = width.max(1.0);
         let height = height.max(1.0);
+        self.window_width = width as u16;
+        self.window_height = height as u16;
         self.surface
             .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
             .expect("TODO: panic message");

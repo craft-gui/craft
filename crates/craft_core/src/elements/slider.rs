@@ -202,7 +202,6 @@ impl Element for Slider {
                 let value = self.compute_slider_value(&pointer_button_update.state.position);
                 state.value = value;
                 event.result_message(CraftMessage::SliderValueChanged(value));
-                return;
             }
             CraftMessage::PointerMovedEvent(pointer_update) => {
                 if !state.dragging {
@@ -213,7 +212,7 @@ impl Element for Slider {
                 state.value = value;
                 event.result_message(CraftMessage::SliderValueChanged(value));
             },
-            _ => todo!()
+            _ => {}
         }
     }
 
