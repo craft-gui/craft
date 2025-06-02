@@ -54,8 +54,8 @@ impl ElementBox {
     }
 
     pub fn border_rectangle(&self) -> Rectangle {
-        let border_position = self.padding_rectangle_position();
-        let border_size = self.padding_rectangle_size();
+        let border_position = self.border_rectangle_position();
+        let border_size = self.border_rectangle_size();
 
         Rectangle {
             x: border_position.x as f32,

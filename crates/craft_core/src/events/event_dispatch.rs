@@ -331,13 +331,36 @@ pub(crate) fn dispatch_event(
         },
         EventDispatchType::Accesskit(_) => {
         }
-    }
+        EventDispatchType::DirectToMatchingElements(user_by_predicate_fn) => {
+            for node in nodes {
+                if let Some(element) = node.borrow().element {
+                    if !user_by_predicate_fn(element) {
+                        continue;
+                    }
 
-    // Handle effects.
+                    if let Message::CraftMessage(message) = message {
+                        let mut res = Event::new();
+                        element.on_event(
+                            message,
+                            &mut reactive_tree.element_state,
+                            text_context.as_mut().unwrap(),
+                            false,
+                            &mut res,
+                        );
+
+                        effects.append(&mut res.effects);
+                    }
+
+                }
+        }
+    }
+}
+
+// Handle effects.
     for (dispatch_type, message) in effects.iter() {
         dispatch_event(
             message,
-            *dispatch_type,
+            dispatch_type.clone(),
             _resource_manager,
             mouse_position,
             reactive_tree,

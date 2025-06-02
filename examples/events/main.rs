@@ -1,14 +1,13 @@
 use craft::components::ComponentId;
 use craft::components::{Component, ComponentSpecification, Event};
-use craft::craft_main;
 use craft::elements::Container;
 use craft::elements::ElementStyles;
 use craft::events::Message;
 use craft::palette;
-use craft::style::Position;
-use craft::style::Unit;
+use craft::style::{BoxSizing, Display, FlexDirection, Overflow};
 use craft::CraftOptions;
 use craft::WindowContext;
+use craft::{craft_main, Color};
 use util::setup_logging;
 
 #[derive(Default, Copy, Clone)]
@@ -29,29 +28,82 @@ impl Component for EventsExample {
         _id: ComponentId,
         _window: &WindowContext
     ) -> ComponentSpecification {
-        Container::new()
-            .background(palette::css::RED)
-            .width(Unit::Px(400.0))
-            .height(Unit::Px(400.0))
-            .id("red")
+
+        let scroll_example = Container::new()
+            .display(Display::Block)
+            .width("200px")
+            .height("100px")
+            .overflow_y(Overflow::Scroll)
+            .border_width(4, 4, 4, 4)
+            .border_color(Color::BLACK)
             .push(
                 Container::new()
+                    .height("300px")
+                    .display(Display::Block)
+                    .background(Color::from_rgb8(170, 170, 255))
+                    .component()
+            )
+            .component();
+
+        let padded_scroll = Container::new()
+            .display(Display::Block)
+            .width("200px")
+            .height("100px")
+            .padding("20px", "20px", "20px", "20px")
+            .overflow_y(Overflow::Scroll)
+            .border_width(10, 10, 10, 10)
+            .border_color(Color::BLACK)
+            .box_sizing(BoxSizing::BorderBox)
+            .push(
+                Container::new()
+                    .height("300px")
+                    .display(Display::Block)
+                    .background(palette::css::LAVENDER)
+                    .component()
+            )
+            .component();
+
+        let nested_scroll = Container::new()
+            .width("300px")
+            .height("150px")
+            .display(Display::Block)
+            .overflow_y(Overflow::Scroll)
+            .padding(20, 20, 20, 20)
+            .border_width(2, 2, 2, 2)
+            .border_color(palette::css::PURPLE)
+            .push(
+                Container::new()
+                    .display(Display::Block)
+                    .width("220px")
+                    .height("300px")
+                    .overflow_y(Overflow::Scroll)
+                    .border_width(4, 4, 4, 4)
+                    .border_color(palette::css::GOLD)
+                    .padding(10, 10, 10, 10)
                     .background(palette::css::GREEN)
-                    .inset(Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0))
-                    .position(Position::Absolute)
-                    .width(Unit::Px(200.0))
-                    .height(Unit::Px(200.0))
-                    .id("green")
                     .push(
                         Container::new()
+                            .display(Display::Block)
+                            .width("150px")
+                            .height("900px")
                             .background(palette::css::BLUE)
-                            .inset(Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0), Unit::Px(50.0))
-                            .position(Position::Absolute)
-                            .width(Unit::Px(100.0))
-                            .height(Unit::Px(100.0))
-                            .id("blue"),
-                    ),
+                            .component()
+                    )
+                    .component()
             )
+            .component();
+
+
+        Container::new()
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Column)
+            // .overflow_y(Overflow::Scroll)
+            .height("100%")
+            .max_height("100%")
+            .gap("50px")
+            .push(scroll_example)
+            .push(padded_scroll)
+            .push(nested_scroll)
             .component()
     }
     fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {

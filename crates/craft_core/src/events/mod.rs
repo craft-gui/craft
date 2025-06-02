@@ -20,11 +20,15 @@ use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
+use crate::elements::Element;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 pub enum EventDispatchType {
     Bubbling,
     Direct(ComponentId),
+    /// Sends the message to all elements that satisfy the given predicate function.
+    /// The predicate should return `true` for an element to receive the message.
+    DirectToMatchingElements(Arc<dyn Fn(&dyn Element) -> bool + Send + Sync + 'static>),
     Accesskit(ComponentId),
 }
 
@@ -58,6 +62,13 @@ impl CraftMessage {
         }
 
         false
+    }
+
+    pub fn new_element_message<T>(data: T) -> CraftMessage
+    where
+        T: Any + Send + Sync,
+    {
+        Self::ElementMessage(Arc::new(data))
     }
 }
 

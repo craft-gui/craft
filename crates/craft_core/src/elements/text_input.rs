@@ -16,7 +16,7 @@ use crate::{generate_component_methods_no_children};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parley::{PlainEditor, PlainEditorDriver};
+use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 #[cfg(target_arch = "wasm32")]
@@ -29,7 +29,7 @@ use winit::event::{Ime};
 use winit::window::Window;
 use crate::layout::layout_context::TextHashKey;
 use crate::text::text_context::{ColorBrush, TextContext};
-use crate::text::text_render_data;
+use crate::text::{text_render_data, TextStyle};
 use crate::text::text_render_data::TextRender;
 
 // A stateful element that shows text.
@@ -48,6 +48,14 @@ pub(crate) struct ImeState {
     pub is_ime_active: bool,
 }
 
+/// An external message that allows others to command the TextInput.
+pub enum TextInputMessage {
+    Copy,
+    Paste,
+    Cut,
+    // TODO: Add more messages.
+}
+
 pub struct TextInputState {
     pub is_active: bool,
     pub(crate) scroll_state: ScrollState,
@@ -60,6 +68,7 @@ pub struct TextInputState {
     last_requested_key: Option<TextHashKey>,
     text_render: Option<TextRender>,
     new_text: Option<String>,
+    new_style: TextStyle,
 
     last_click_time: Option<Instant>,
     click_count: u32,
@@ -217,15 +226,11 @@ impl Element for TextInput {
         self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
         self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(state) =
-            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
+        if let Some(state) =
+            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
         {
-            state.scroll_state.scroll_y
-        } else {
-            0.0
-        };
-
-        self.finalize_scrollbar(scroll_y);
+            self.finalize_scrollbar(&mut state.scroll_state);
+        }
     }
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -269,6 +274,67 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
+        
+        fn copy(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                if let Some(text) = drv.editor.selected_text() {
+                    let cb = ClipboardContext::new().unwrap();
+                    cb.set_text(text.to_owned()).ok();
+                }   
+            }
+        }
+        
+        fn paste(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                let cb = ClipboardContext::new().unwrap();
+                let text = cb.get_text().unwrap_or_default();
+                drv.insert_or_replace_selection(&text);
+            }
+        }
+
+        fn cut(drv: &mut PlainEditorDriver<ColorBrush>) {
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            {
+                use clipboard_rs::{Clipboard, ClipboardContext};
+                if let Some(text) = drv.editor.selected_text() {
+                    let cb = ClipboardContext::new().unwrap();
+                    cb.set_text(text.to_owned()).ok();
+                    drv.delete_selection();
+                }
+            }
+        }
+
+        let mut generate_text_changed_event = |editor: &mut PlainEditor<ColorBrush>| {
+            event.prevent_defaults();
+            event.prevent_propagate();
+            event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
+        };
+        
+        if let CraftMessage::ElementMessage(msg) = message {
+            if let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
+                let mut drv = state.driver(_text_context);
+                match msg {
+                    TextInputMessage::Copy => {
+                        copy(&mut drv);
+                    }
+                    TextInputMessage::Paste => {
+                        paste(&mut drv);
+                        state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
+                    }
+                    TextInputMessage::Cut => {
+                        cut(&mut drv);
+                        state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
+                    }
+                }
+            } 
+        }
+        
         match message {
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
                 state.modifiers = Some(keyboard_input.modifiers);
@@ -293,31 +359,21 @@ impl Element for TextInput {
                     .unwrap_or_default();
 
                 let mut drv = state.driver(_text_context);
+                
                 match &keyboard_input.key {
-                    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                     Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
-                        use clipboard_rs::{Clipboard, ClipboardContext};
                         match c.to_lowercase().as_str() {
-                            "c" => {
-                                if let Some(text) = drv.editor.selected_text() {
-                                    let cb = ClipboardContext::new().unwrap();
-                                    cb.set_text(text.to_owned()).ok();
-                                }
-                            }
+                            "c" => copy(&mut drv),
                             "x" => {
-                                if let Some(text) = drv.editor.selected_text() {
-                                    let cb = ClipboardContext::new().unwrap();
-                                    cb.set_text(text.to_owned()).ok();
-                                    drv.delete_selection();
-                                    state.cache.clear();
-                                }
-                            }
-                            "v" => {
-                                let cb = ClipboardContext::new().unwrap();
-                                let text = cb.get_text().unwrap_or_default();
-                                drv.insert_or_replace_selection(&text);
+                                cut(&mut drv);
                                 state.cache.clear();
-                            }
+                                generate_text_changed_event(&mut state.editor);
+                            },
+                            "v" => { 
+                                paste(&mut drv);
+                                state.cache.clear();
+                                generate_text_changed_event(&mut state.editor);
+                            },
                             _ => (),
                         }
                     }
@@ -404,6 +460,7 @@ impl Element for TextInput {
                             drv.delete();
                             state.cache.clear();
                         }
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Backspace) => {
                         if action_mod {
@@ -413,23 +470,20 @@ impl Element for TextInput {
                             drv.backdelete();
                             state.cache.clear();
                         }
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Enter) => {
                         drv.insert_or_replace_selection("\n");
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                     Key::Character(s) => {
                         drv.insert_or_replace_selection(s);
                         state.cache.clear();
+                        generate_text_changed_event(&mut state.editor);
                     }
                     _ => (),
                 }
-
-
-                // FIXME: This is more of a hack, we should be doing this somewhere else.
-                event.prevent_defaults();
-                event.prevent_propagate();
-                event.result_message(CraftMessage::TextInputChanged(state.editor.text().to_string()))
             }
             // WindowEvent::Touch(Touch {
             //     phase, location, ..
@@ -505,6 +559,7 @@ impl Element for TextInput {
             CraftMessage::ImeEvent(Ime::Commit(text)) => {
                 state.driver(_text_context).insert_or_replace_selection(text);
                 state.cache.clear();
+                generate_text_changed_event(&mut state.editor);
             }
             CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
                 if text.is_empty() {
@@ -536,6 +591,7 @@ impl Element for TextInput {
             last_requested_key: None,
             text_render: None,
             new_text: std::mem::take(&mut self.text),
+            new_style: TextStyle::from(self.style()),
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -573,6 +629,14 @@ impl Element for TextInput {
                 state.cache.clear();
                 state.new_text = Some(state.editor.text().to_string());
             }
+        }
+
+        if TextStyle::from(self.style()) != state.new_style {
+            state.new_style = TextStyle::from(self.style());
+            state.cache.clear();
+            state.new_text = Some(state.editor.text().to_string());
+            let styles = state.editor.edit_styles();
+            styles.insert(StyleProperty::FontSize(state.new_style.font_size));
         }
     }
 

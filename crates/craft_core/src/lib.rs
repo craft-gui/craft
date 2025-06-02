@@ -482,7 +482,7 @@ impl App {
     fn dispatch_event(&mut self, message: &Message, dispatch_type: EventDispatchType, is_style: bool) {
         dispatch_event(
             message,
-            dispatch_type,
+            dispatch_type.clone(),
             &mut self.resource_manager,
             self.mouse_position,
             &mut self.user_tree,

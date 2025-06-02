@@ -114,14 +114,13 @@ impl Element for Container {
         self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
 
         let scroll_y = if let Some(container_state) =
-            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<ContainerState>()
+            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<ContainerState>()
         {
+            self.finalize_scrollbar(&mut container_state.scroll_state);
             container_state.scroll_state.scroll_y
         } else {
             0.0
         };
-
-        self.finalize_scrollbar(scroll_y);
         self.resolve_clip(clip_bounds);
         
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
