@@ -909,7 +909,7 @@ async fn async_main(mut app_receiver: Receiver<InternalMessage>) {
                     // On macOS the window needs to be redrawn manually after resizing
                     #[cfg(target_os = "macos")]
                     {
-                        app.request_winit_redraw().await;
+                        app.request_winit_redraw(true).await;
                     }
                 }
                 InternalMessage::ScaleFactorChanged(new_scale_factor) => {
@@ -917,7 +917,7 @@ async fn async_main(mut app_receiver: Receiver<InternalMessage>) {
                     app.on_resize(app.window.as_ref().unwrap().inner_size());
                     #[cfg(target_os = "macos")]
                     {
-                        app.request_winit_redraw().await;
+                        app.request_winit_redraw(true).await;
                     }
                 }
                 InternalMessage::PointerScroll(pointer_scroll_update) => {
