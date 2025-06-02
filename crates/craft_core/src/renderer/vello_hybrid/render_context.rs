@@ -17,18 +17,18 @@ use winit::event_loop::ActiveEventLoop;
 
 /// Helper function that creates a Winit window and returns it (wrapped in an Arc for sharing)
 pub(crate) fn create_winit_window(
-    event_loop: &dyn ActiveEventLoop,
+    event_loop: &ActiveEventLoop,
     width: u32,
     height: u32,
     initially_visible: bool,
-) -> Box<dyn Window> {
-    let attr = <dyn Window>::default_attributes()
-        .with_surface_size(winit::dpi::PhysicalSize::new(width, height))
+) -> Box<Window> {
+    let attr = <Window>::default_attributes()
+        .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
         .with_resizable(true)
         .with_title("Vello SVG Renderer")
         .with_visible(initially_visible)
         .with_active(true);
-    event_loop.create_window(attr).unwrap()
+    Box::new(event_loop.create_window(attr).unwrap())
 }
 
 /// Helper function that creates a Vello Hybrid renderer

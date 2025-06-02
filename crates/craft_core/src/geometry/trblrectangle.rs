@@ -36,3 +36,10 @@ impl From<taffy::Rect<f32>> for TrblRectangle<f32> {
         TrblRectangle::new(rect.top, rect.right, rect.bottom, rect.left)
     }
 }
+
+
+impl From<taffy::Rect<f64>> for TrblRectangle<f64> {
+    fn from(rect: taffy::Rect<f64>) -> Self {
+        TrblRectangle::new(rect.top, rect.right, rect.bottom, rect.left)
+    }
+}

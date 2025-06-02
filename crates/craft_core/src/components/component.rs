@@ -1,13 +1,15 @@
 use crate::components::props::Props;
 use crate::elements::element::ElementBoxed;
-use crate::events::{CraftMessage, KeyboardInput, Message, MouseWheel, PointerButton, PointerMoved};
+use crate::events::{CraftMessage, Message};
 use crate::reactive::state_store::StateStoreItem;
 use crate::{GlobalState, WindowContext};
 
 use crate::components::update_result::Event;
-use crate::elements::{Container};
+use crate::elements::Container;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
+use ui_events::keyboard::KeyboardEvent;
+use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::{Ime, Modifiers};
 
 /// A Component's view function.
@@ -183,8 +185,11 @@ where
                 CraftMessage::Initialized => {
                     self.on_initialize(global_state, props, event);
                 }
-                CraftMessage::PointerButtonEvent(pointer_button) => {
-                    self.on_pointer_button(global_state, props, event, pointer_button);
+                CraftMessage::PointerButtonUp(pointer_message) => {
+                    self.on_pointer_button_up(global_state, props, event, pointer_message);
+                }
+                CraftMessage::PointerButtonDown(pointer_message) => {
+                    self.on_pointer_button_down(global_state, props, event, pointer_message);
                 }
                 CraftMessage::KeyboardInputEvent(keyboard_input) => {
                     self.on_keyboard_input(global_state, props, event, keyboard_input);
@@ -192,11 +197,8 @@ where
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     self.on_pointer_move(global_state, props, event, pointer_moved);
                 }
-                CraftMessage::MouseWheelEvent(mouse_wheel) => {
-                    self.on_mouse_wheel(global_state, props, event, mouse_wheel);
-                }
-                CraftMessage::ModifiersChangedEvent(modifiers) => {
-                    self.on_modifiers_changed(global_state, props, event, modifiers);
+                CraftMessage::PointerScroll(pointer_scroll_update) => {
+                    self.on_pointer_scroll(global_state, props, event, pointer_scroll_update);
                 }
                 CraftMessage::ImeEvent(ime) => {
                     self.on_ime(global_state, props, event, ime);
@@ -216,7 +218,7 @@ where
                 CraftMessage::SliderValueChanged(slider_value) => {
                     self.on_slider_value_changed(global_state, props, event, *slider_value);
                 }
-                CraftMessage::ElementMessage(_) => {}
+                CraftMessage::ElementMessage(_) => {},
             },
             crate::events::Message::UserMessage(user_message) => {
                 let user_message = user_message.downcast_ref::<Self::Message>();
@@ -227,10 +229,18 @@ where
         }
     }
 
-    fn on_pointer_button(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_button: &PointerButton) {
+    fn on_pointer_button_up(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_event: &PointerButtonUpdate) {
         if let Some(element) = event.current_target {
-            if let Some(on_pointer_button) = &element.element_data().on_pointer_button {
-                on_pointer_button(self, global_state, event, pointer_button);
+            if let Some(on_pointer_button_up) = &element.element_data().on_pointer_button_up {
+                on_pointer_button_up(self, global_state, event, pointer_event);
+            }
+        }
+    }
+
+    fn on_pointer_button_down(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_event: &PointerButtonUpdate) {
+        if let Some(element) = event.current_target {
+            if let Some(on_pointer_button_down) = &element.element_data().on_pointer_button_down {
+                on_pointer_button_down(self, global_state, event, pointer_event);
             }
         }
     }
@@ -243,7 +253,7 @@ where
         }
     }
 
-    fn on_keyboard_input(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, keyboard_input: &KeyboardInput) {
+    fn on_keyboard_input(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, keyboard_input: &KeyboardEvent) {
         if let Some(element) = event.current_target {
             if let Some(on_keyboard_input) = &element.element_data().on_keyboard_input {
                 on_keyboard_input(self, global_state, event, keyboard_input);
@@ -251,20 +261,20 @@ where
         }
     }
 
-    fn on_pointer_move(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_moved: &PointerMoved) {
+    fn on_pointer_move(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_update: &PointerUpdate) {
         if let Some(element) = event.current_target {
             if let Some(on_pointer_move) = &element.element_data().on_pointer_move {
-                on_pointer_move(self, global_state, event, pointer_moved);
+                on_pointer_move(self, global_state, event, pointer_update);
             }
         }
     }
     
     fn on_user_message(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, _event: &mut Event, _user_message: &Self::Message) {}
 
-    fn on_mouse_wheel(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, mouse_wheel: &MouseWheel) {
+    fn on_pointer_scroll(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_scroll_update: &PointerScrollUpdate) {
         if let Some(element) = event.current_target {
-            if let Some(on_mouse_wheel) = &element.element_data().on_mouse_wheel {
-                on_mouse_wheel(self, global_state, event, mouse_wheel);
+            if let Some(on_pointer_scroll) = &element.element_data().on_pointer_scroll {
+                on_pointer_scroll(self, global_state, event, pointer_scroll_update);
             }
         }
     }

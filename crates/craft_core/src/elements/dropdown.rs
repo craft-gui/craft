@@ -6,7 +6,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
 use crate::layout::layout_context::LayoutContext;
 use crate::elements::Container;
-use crate::events::CraftMessage;
+use crate::events::{CraftMessage};
 use crate::geometry::{Point, Rectangle, TrblRectangle};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
@@ -82,11 +82,9 @@ impl Element for Dropdown {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -102,8 +100,6 @@ impl Element for Dropdown {
                 pseudo_dropdown_selection.internal.draw(
                     renderer,
                     text_context,
-                    taffy_tree,
-                    pseudo_dropdown_selection.internal.element_data().layout_item.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
@@ -118,13 +114,11 @@ impl Element for Dropdown {
                 self.pseudo_dropdown_list_element.draw(
                     renderer,
                     text_context,
-                    taffy_tree,
-                    self.pseudo_dropdown_list_element.element_data.layout_item.taffy_node_id.unwrap(),
                     element_state,
                     pointer,
                     window.clone(),
                 );
-                self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window.clone());
+                self.draw_children(renderer, text_context, element_state, pointer, window.clone());
             }
             renderer.end_overlay();
         }
@@ -284,7 +278,7 @@ impl Element for Dropdown {
         let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
 
         match message {
-            CraftMessage::PointerButtonEvent(pointer_button) => {
+            CraftMessage::PointerButtonUp(pointer_button) => {
                 if !message.clicked() {
                     return;
                 }
@@ -292,7 +286,7 @@ impl Element for Dropdown {
                 for child in self.children().iter().enumerate() {
                     // Emit an event when a dropdown list item is selected and close the dropdown list.
                     // The emission of this event implies a DropdownToggled(false) event.
-                    if child.1.in_bounds(pointer_button.position) {
+                    if child.1.in_bounds(pointer_button.state.position) {
                         // We need to retain the index of the selected item to render the `pseudo_dropdown_selection` element.
                         state.selected_item = Some(child.0);
                         state.is_open = false;
@@ -307,7 +301,7 @@ impl Element for Dropdown {
                 // Emit an event when the dropdown list is opened or closed.
                 let element_data = self.element_data();
                 let transformed_border_rectangle = element_data.layout_item.computed_box_transformed.border_rectangle();
-                let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.position);
+                let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.state.position);
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;
                     event.result_message(CraftMessage::DropdownToggled(state.is_open));

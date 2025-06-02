@@ -42,11 +42,9 @@ impl Element for Overlay {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -57,7 +55,7 @@ impl Element for Overlay {
         self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
         {
-            self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
+            self.draw_children(renderer, text_context, element_state, pointer, window);
         }
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer);

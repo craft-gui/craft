@@ -64,14 +64,12 @@ impl Element for DevTools {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         self.draw_borders(renderer, element_state);
-        self.draw_children(renderer, text_context, taffy_tree, element_state, pointer, window);
+        self.draw_children(renderer, text_context, element_state, pointer, window);
 
         // Find the element we are hovering over and draw an overlay.
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {

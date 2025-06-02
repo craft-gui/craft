@@ -6,7 +6,6 @@ pub mod resource_type;
 pub(crate) mod tinyvg_resource;
 mod lock_free_map;
 
-use crate::app_message::AppMessage;
 use crate::events::internal::InternalMessage;
 use crate::events::resource_event::ResourceEvent;
 pub use crate::resource_manager::identifier::ResourceIdentifier;
@@ -33,11 +32,11 @@ pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>
 
 pub struct ResourceManager {
     pub(crate) resources: LockFreeMap<ResourceIdentifier, Resource>,
-    pub(crate) app_sender: Sender<AppMessage>,
+    pub(crate) app_sender: Sender<InternalMessage>,
 }
 
 impl ResourceManager {
-    pub(crate) fn new(app_sender: Sender<AppMessage>) -> Self {
+    pub(crate) fn new(app_sender: Sender<InternalMessage>) -> Self {
         Self {
             resources: LockFreeMap::new(),
             app_sender,
@@ -78,13 +77,12 @@ impl ResourceManager {
                             let resource =
                                 Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
                             app_sender_copy
-                                .send(AppMessage::new(
-                                    0,
+                                .send(
                                     InternalMessage::ResourceEvent(ResourceEvent::Loaded(
                                         resource_identifier_copy,
                                         ResourceType::Image,
                                         resource,
-                                    )),
+                                    ),
                                 ))
                                 .await
                                 .expect("Failed to send added resource event");
@@ -102,14 +100,13 @@ impl ResourceManager {
                             let resource = Resource::Font(font_bytes);
 
                             app_sender_copy
-                                .send(AppMessage::new(
-                                    0,
+                                .send(
                                     InternalMessage::ResourceEvent(ResourceEvent::Loaded(
                                         resource_identifier_copy,
                                         ResourceType::Font,
                                         resource,
-                                    )),
-                                ))
+                                    ))
+                                )
                                 .await
                                 .expect("Failed to send added resource event");
                         }
@@ -132,15 +129,13 @@ impl ResourceManager {
                             let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
 
                             app_sender_copy
-                                .send(AppMessage::new(
-                                    0,
+                                .send(
                                     InternalMessage::ResourceEvent(ResourceEvent::Loaded(
                                         resource_identifier_copy,
                                         ResourceType::TinyVg,
                                         resource,
                                     )),
-                                ))
-                                .await
+                                ).await
                                 .expect("Failed to send added resource event");
                         }
                     };

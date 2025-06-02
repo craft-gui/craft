@@ -24,9 +24,8 @@ use web_time as time;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time as time;
 use time::{Duration, Instant};
-
-use winit::event::{Ime, Modifiers};
-use winit::keyboard::{Key, NamedKey};
+use ui_events::keyboard::{Key, Modifiers, NamedKey};
+use winit::event::{Ime};
 use winit::window::Window;
 use crate::layout::layout_context::TextHashKey;
 use crate::text::text_context::{ColorBrush, TextContext};
@@ -117,11 +116,9 @@ impl Element for TextInput {
         &mut self,
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -339,11 +336,9 @@ impl Element for TextInput {
         }
         
         match message {
-            CraftMessage::ModifiersChangedEvent(modifiers) => {
-                state.modifiers = Some(*modifiers);
-            }
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
-                if !keyboard_input.event.state.is_pressed() {
+                state.modifiers = Some(keyboard_input.modifiers);
+                if !keyboard_input.state.is_down() {
                     return;
                 }
 
@@ -353,11 +348,11 @@ impl Element for TextInput {
                     .modifiers
                     .map(|mods| {
                         (
-                            mods.state().shift_key(),
+                            mods.shift(),
                             if cfg!(target_os = "macos") {
-                                mods.state().meta_key()
+                                mods.meta()
                             } else {
-                                mods.state().control_key()
+                                mods.ctrl()
                             },
                         )
                     })
@@ -365,7 +360,7 @@ impl Element for TextInput {
 
                 let mut drv = state.driver(_text_context);
                 
-                match &keyboard_input.event.logical_key {
+                match &keyboard_input.key {
                     Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                         match c.to_lowercase().as_str() {
                             "c" => copy(&mut drv),
@@ -513,11 +508,11 @@ impl Element for TextInput {
             //         Ended => (),
             //     }
             // }
-            CraftMessage::PointerButtonEvent(pointer_button) => {
-                if pointer_button.button.mouse_button() == winit::event::MouseButton::Left {
-                    state.pointer_down = pointer_button.state.is_pressed();
+            CraftMessage::PointerButtonDown(pointer_button) => {
+                if pointer_button.is_primary() {
+                    state.pointer_down = true;
                     state.cursor_reset();
-                    if state.pointer_down && !state.editor.is_composing() {
+                    if !state.editor.is_composing() {
                         let now = Instant::now();
                         if let Some(last) = state.last_click_time.take() {
                             if now.duration_since(last).as_secs_f64() < 0.25 {
@@ -540,10 +535,16 @@ impl Element for TextInput {
                     }
                 }
             }
+            CraftMessage::PointerButtonUp(pointer_button) => {
+                if pointer_button.is_primary() {
+                    state.pointer_down = false;
+                    state.cursor_reset();
+                }
+            }
             CraftMessage::PointerMovedEvent(pointer_moved) => {
                 let prev_pos = state.cursor_pos;
                 // NOTE: Cursor position should be relative to the top left of the text box.
-                state.cursor_pos = (pointer_moved.position.x - text_x, pointer_moved.position.y - text_y + scroll_y);
+                state.cursor_pos = (pointer_moved.current.position.x as f32 - text_x, pointer_moved.current.position.y as f32 - text_y + scroll_y);
                 // macOS seems to generate a spurious move after selecting word?
                 if state.pointer_down && prev_pos != state.cursor_pos && !state.editor.is_composing() {
                     state.cursor_reset();

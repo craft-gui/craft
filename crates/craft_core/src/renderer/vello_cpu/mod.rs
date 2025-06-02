@@ -23,12 +23,12 @@ use crate::geometry::Rectangle;
 use crate::renderer::image_adapter::ImageAdapter;
 
 pub struct Surface {
-    inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
+    inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
 }
 
 impl Surface {
     // Constructor for the SurfaceWrapper
-    pub fn new(window: Arc<dyn Window>) -> Self {
+    pub fn new(window: Arc<Window>) -> Self {
         let context = softbuffer::Context::new(window.clone()).expect("Failed to create softbuffer context");
         Self {
             inner_surface: softbuffer::Surface::new(&context, window.clone()).expect("Failed to create surface"),
@@ -41,7 +41,7 @@ unsafe impl Send for Surface {}
 
 // Implement Deref to expose all methods from the inner Surface
 impl Deref for Surface {
-    type Target = softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>;
+    type Target = softbuffer::Surface<Arc<Window>, Arc<Window>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner_surface
@@ -61,17 +61,18 @@ fn vello_draw_rect(scene: &mut RenderContext, rectangle: Rectangle, fill_color: 
 }
 
 pub(crate) struct VelloCpuRenderer {
-    window: Arc<dyn Window>,
     render_context: RenderContext,
     pixmap: Pixmap,
     surface: Surface,
     clear_color: Color,
+    window_width: u16,
+    window_height: u16,
 }
 
 impl VelloCpuRenderer {
-    pub fn new(window: Arc<dyn Window>) -> Self {
-        let width = window.surface_size().width as u16;
-        let height = window.surface_size().height as u16;
+    pub fn new(window: Arc<Window>) -> Self {
+        let width = window.inner_size().width as u16;
+        let height = window.inner_size().height as u16;
 
         let render_context = RenderContext::new(width, height);
 
@@ -83,27 +84,30 @@ impl VelloCpuRenderer {
             .expect("TODO: panic message");
 
         Self {
-            window,
             render_context,
             pixmap,
             surface,
             clear_color: Color::WHITE,
+            window_width: width,
+            window_height: height,
         }
     }
 }
 
 impl Renderer for VelloCpuRenderer {
     fn surface_width(&self) -> f32 {
-        self.window.surface_size().width as f32
+        self.window_width as f32
     }
 
     fn surface_height(&self) -> f32 {
-        self.window.surface_size().height as f32
+        self.window_height as f32
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
         let width = width.max(1.0);
         let height = height.max(1.0);
+        self.window_width = width as u16;
+        self.window_height = height as u16;
         self.surface
             .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
             .expect("TODO: panic message");
@@ -277,7 +281,7 @@ impl Renderer for VelloCpuRenderer {
 }
 
 impl VelloCpuRenderer {
-    fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<Arc<dyn Window>, Arc<dyn Window>> {
+    fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<Arc<Window>, Arc<Window>> {
         let mut buffer = self.surface.buffer_mut().unwrap();
 
         let pixmap = &self.pixmap.data_as_u8_slice();

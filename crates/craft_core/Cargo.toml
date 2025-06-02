@@ -24,13 +24,18 @@ default = ["vello_renderer", "http_client"]
 craft_logging = { path = "../craft_logger", version = "0.1.0" }
 
 # Add at the next stable release.
-#accesskit = "0.17.1"
-#accesskit_winit = { version = "0.23.1", features = ["tokio"] }
+accesskit = "0.19.0"
+accesskit_winit = { version = "0.27.0", features = ["tokio"] }
 
 cfg-if = "1.0.0"
 
 [dependencies.bitflags]
 version = "2.9.0"
+features = ["std"]
+
+[dependencies.kurbo]
+version = "0.11.2"
+default-features = false
 features = ["std"]
 
 
@@ -101,19 +106,25 @@ features = ["wgsl"]
 optional = true
 
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]
-package = "winit_craft"
-version = "0.30.10"
+version = "0.30.11"
 features = []
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
-package = "winit_craft"
-version = "0.30.10"
+version = "0.30.11"
 features = ["android-native-activity"]
+
+[dependencies.ui-events]
+git = "https://github.com/AustinMReppert/ui-events"
+branch = "experiment"
+
+[dependencies.ui-events-winit]
+git = "https://github.com/AustinMReppert/ui-events"
+branch = "experiment"
 
 [dependencies.parley]
 version = "0.4.0"
 default-features = false
-features = ["std", "system"]
+features = ["std", "system", "accesskit"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 version = "0.12.15"

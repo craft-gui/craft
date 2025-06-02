@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::{Props, Event};
+use crate::components::{Event, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementStyles;
@@ -13,20 +13,22 @@ use crate::style::Style;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use parley::{Alignment, AlignmentOptions, Selection};
+use parley::{Alignment, AlignmentOptions, LayoutAccessibility, Selection};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use crate::elements::base_element_state::DUMMY_DEVICE_ID;
+use crate::reactive::element_id::create_unique_element_id;
+use accesskit::{Action, Role};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
+use time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time as time;
-use time::{Duration, Instant};
-
-use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use winit::window::Window;
 
 // A stateful element that shows text.
@@ -94,11 +96,9 @@ impl Element for Text {
         &mut self,
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
-        _taffy_tree: &mut TaffyTree<LayoutContext>,
-        _root_node: NodeId,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
-        _window: Option<Arc<dyn Window>>,
+        _window: Option<Arc<Window>>,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -122,6 +122,63 @@ impl Element for Text {
         }
     }
 
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        element_state: &mut ElementStateStore,
+    ) {
+        let state: &mut TextState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+
+        if state.layout.is_none() {
+            return;
+        }
+
+        let layout = state.layout.as_mut();
+        let mut access = LayoutAccessibility::default();
+        let text = state.text.as_ref().unwrap();
+
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(Role::Label);
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+        current_node.set_value(*Box::new(state.text.clone().unwrap()));
+        current_node.add_action(Action::SetTextSelection);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        if let Some(layout) = layout {
+            access.build_nodes(
+                text,
+                layout,
+                tree,
+                &mut current_node,
+                || accesskit::NodeId(create_unique_element_id()),
+                padding_box.x as f64,
+                padding_box.y as f64,
+            );
+        }
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+    }
+
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -129,15 +186,14 @@ impl Element for Text {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        
+
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        
         self.element_data.layout_item.build_tree_with_context(
-            taffy_tree, 
+            taffy_tree,
             style,
-            LayoutContext::Text(TaffyTextContext::new(self.element_data.component_id))
+            LayoutContext::Text(TaffyTextContext::new(self.element_data.component_id)),
         )
     }
 
@@ -191,21 +247,23 @@ impl Element for Text {
         self
     }
 
-    fn on_event(&self, message: &CraftMessage, _element_state: &mut ElementStateStore, _text_context: &mut TextContext, should_style: bool, event: &mut Event,) {
-        self.on_style_event(message, _element_state, should_style, event);
+    fn on_event(
+        &self,
+        message: &CraftMessage,
+        element_state: &mut ElementStateStore,
+        _text_context: &mut TextContext,
+        should_style: bool,
+        event: &mut Event,
+    ) {
+        self.on_style_event(message, element_state, should_style, event);
 
         if !self.selectable {
             return;
         }
-        
-        let state: &mut TextState = _element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+
+        let base_state = self.get_base_state_mut(element_state);
+
+        let state: &mut TextState = base_state.data.as_mut().downcast_mut().unwrap();
 
         let _content_rect = self.computed_box().content_rectangle();
 
@@ -214,37 +272,50 @@ impl Element for Text {
             let text_position = self.computed_box_transformed().content_rectangle();
 
             match message {
-                CraftMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == winit::event::MouseButton::Left {
-                        state.pointer_down = pointer_button.state.is_pressed();
+                CraftMessage::PointerButtonDown(pointer_button) => {
+                    if pointer_button.is_primary() {
+                        state.pointer_down = true;
                         state.cursor_reset();
-                        if state.pointer_down {
-                            let now = Instant::now();
-                            if let Some(last) = state.last_click_time.take() {
-                                if now.duration_since(last).as_secs_f64() < 0.25 {
-                                    state.click_count = (state.click_count + 1) % 4;
-                                } else {
-                                    state.click_count = 1;
-                                }
+                        let now = Instant::now();
+                        if let Some(last) = state.last_click_time.take() {
+                            if now.duration_since(last).as_secs_f64() < 0.25 {
+                                state.click_count = (state.click_count + 1) % 4;
                             } else {
                                 state.click_count = 1;
                             }
-                            state.last_click_time = Some(now);
-                            let click_count = state.click_count;
-                            let cursor_pos = state.cursor_pos;
-                            match click_count {
-                                2 => state.select_word_at_point(cursor_pos.0, cursor_pos.1),
-                                3 => state.select_line_at_point(cursor_pos.0, cursor_pos.1),
-                                _ => state.move_to_point(cursor_pos.0, cursor_pos.1),
-                            }
+                        } else {
+                            state.click_count = 1;
                         }
+                        state.last_click_time = Some(now);
+                        let click_count = state.click_count;
+                        let cursor_pos = state.cursor_pos;
+                        match click_count {
+                            2 => state.select_word_at_point(cursor_pos.0, cursor_pos.1),
+                            3 => state.select_line_at_point(cursor_pos.0, cursor_pos.1),
+                            _ => state.move_to_point(cursor_pos.0, cursor_pos.1),
+                        }
+                        if click_count == 1 {
+                            base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                        }
+                        event.prevent_defaults();
                     }
-                    event.prevent_defaults();
+                }
+                CraftMessage::PointerButtonUp(pointer_button) => {
+                    if pointer_button.is_primary() {
+                        state.pointer_down = false;
+                        state.click_count = 0;
+                        state.cursor_reset();
+                        base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, false);
+                        event.prevent_defaults();
+                    }
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
-                    state.cursor_pos = (pointer_moved.position.x - text_position.x, pointer_moved.position.y - text_position.y);
+                    state.cursor_pos = (
+                        pointer_moved.current.position.x as f32 - text_position.x,
+                        pointer_moved.current.position.y as f32 - text_position.y,
+                    );
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
                         state.cursor_reset();
@@ -252,8 +323,8 @@ impl Element for Text {
                         state.extend_selection_to_point(cursor_pos.0, cursor_pos.1);
                     }
                     event.prevent_defaults();
-                },
-                _ => {  }
+                }
+                _ => {}
             }
         }
     }
@@ -296,15 +367,10 @@ impl Element for Text {
     fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let text_hash = hash_string(self.text.as_ref().unwrap());
 
-        let base_state: &mut ElementStateStoreItem = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap();
+        let base_state: &mut ElementStateStoreItem =
+            element_state.storage.get_mut(&self.element_data.component_id).unwrap();
 
-        let state: &mut TextState = base_state.data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let state: &mut TextState = base_state.data.as_mut().downcast_mut().unwrap();
 
         let scale_factor_changed = if let Some(layout) = &state.layout {
             if layout.scale() != scaling_factor as f32 {
@@ -331,7 +397,8 @@ impl Element for Text {
 
             current_style.font_size() != last_style.font_size()
                 || current_style.font_weight() != last_style.font_weight()
-                || current_style.font_style() != last_style.font_style() || current_style.font_family() != last_style.font_family()
+                || current_style.font_style() != last_style.font_style()
+                || current_style.font_family() != last_style.font_family()
         };
 
         let text = std::mem::take(&mut self.text);
@@ -375,8 +442,8 @@ impl TextState {
     ) -> Size<f32> {
         if self.layout.is_none() {
             let mut builder = text_context.tree_builder(self.scale_factor, &self.last_text_style.to_text_style());
-            let text = std::mem::take(&mut self.text).unwrap();
-            builder.push_text(&text);
+            let text = &self.text.as_ref().unwrap();
+            builder.push_text(text);
             let (layout, _) = builder.build();
             self.layout = Some(layout);
         }
@@ -392,11 +459,7 @@ impl TextState {
         self.layout(known_dimensions, available_space)
     }
 
-    pub fn layout(
-        &mut self,
-        known_dimensions: Size<Option<f32>>,
-        available_space: Size<AvailableSpace>,
-    ) -> Size<f32> {
+    pub fn layout(&mut self, known_dimensions: Size<Option<f32>>, available_space: Size<AvailableSpace>) -> Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
 
         let layout = self.layout.as_mut().unwrap();
@@ -429,7 +492,7 @@ impl TextState {
         if self.current_render_key == self.current_layout_key {
             return;
         }
-        
+
         let layout = self.layout.as_ref().unwrap();
         self.text_render = Some(text_render_data::from_editor(layout));
         self.current_render_key = self.current_layout_key;

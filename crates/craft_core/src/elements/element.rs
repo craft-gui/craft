@@ -10,11 +10,11 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
+use accesskit::{Action, Role};
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, TaffyTree};
-use winit::event::MouseButton;
 use winit::window::Window;
 use crate::elements::scroll_state::ScrollState;
 
@@ -76,11 +76,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     );
 
     fn compute_layout(
@@ -131,14 +129,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         if should_style {
             let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
 
-            match message {
+           match message {
                 CraftMessage::PointerMovedEvent(..) => {
                     state.base.hovered = true;
                 }
-                CraftMessage::PointerButtonEvent(pointer_button) => {
-                    if pointer_button.button.mouse_button() == MouseButton::Left
-                        && pointer_button.state == winit::event::ElementState::Pressed
-                    {
+                CraftMessage::PointerButtonDown(pointer_button) => {
+                    if pointer_button.is_primary() {
                         state.base.active = true;
                     }
                 }
@@ -169,10 +165,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &mut self,
         renderer: &mut RenderList,
         text_context: &mut TextContext,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
-        window: Option<Arc<dyn Window>>,
+        window: Option<Arc<Window>>,
     ) {
         for child in self.element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -183,8 +178,6 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             child.internal.draw(
                 renderer,
                 text_context,
-                taffy_tree,
-                taffy_child_node_id.unwrap(),
                 element_state,
                 pointer,
                 window.clone(),
@@ -275,6 +268,38 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     #[allow(dead_code)]
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
+    }
+
+    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>, element_state: &mut ElementStateStore) {
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(Role::GenericContainer);
+        if self.element_data().on_pointer_button_up.is_some() {
+            current_node.set_role(Role::Button);
+            current_node.add_action(Action::Click);
+        }
+
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        let current_index = tree.nodes.len(); // The current node is the last one added.
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+
+        for child in self.element_data_mut().children.iter_mut() {
+            child.internal.compute_accessibility_tree(tree, Some(current_index), element_state);
+        }
     }
 
     /// Called on sequential renders to update any state that the element may have.
@@ -441,31 +466,60 @@ macro_rules! generate_component_methods_no_children {
         }
 
         #[allow(dead_code)]
-        /// Sets the on_pointer_button handler for the element.
-        pub fn on_pointer_button<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
+        /// Sets the on_pointer_button_down handler for the element.
+        pub fn on_pointer_button_down<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerButton)
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &ui_events::pointer::PointerButtonUpdate)
                 + Send
                 + Sync
                 + 'static,
         {
             use $crate::components::Event;
             use $crate::elements::element_data::EventHandlerWithRef;
-            use $crate::events::PointerButton;
+            use ui_events::pointer::PointerButtonUpdate;
 
-            let callback: EventHandlerWithRef<PointerButton> = Arc::new(
+            let callback: EventHandlerWithRef<PointerButtonUpdate> = Arc::new(
                 move |state_any: &mut dyn Any,
                       global_any: &mut dyn Any,
                       event: &mut Event,
-                      pointer_button: &PointerButton| {
+                      pointer_button_update: &PointerButtonUpdate| {
                     let state = state_any.downcast_mut::<State>().unwrap();
                     let global = global_any.downcast_mut::<GlobalState>().unwrap();
-                    handler(state, global, event, pointer_button);
+                    handler(state, global, event, pointer_button_update);
                 },
             );
-            self.element_data_mut().on_pointer_button = Some(callback);
+            self.element_data_mut().on_pointer_button_down = Some(callback);
+            self
+        }
+
+        #[allow(dead_code)]
+        /// Sets the on_pointer_button_up handler for the element.
+        pub fn on_pointer_button_up<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
+        where
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &ui_events::pointer::PointerButtonUpdate)
+                + Send
+                + Sync
+                + 'static,
+        {
+            use $crate::components::Event;
+            use $crate::elements::element_data::EventHandlerWithRef;
+            use ui_events::pointer::PointerButtonUpdate;
+
+            let callback: EventHandlerWithRef<PointerButtonUpdate> = Arc::new(
+                move |state_any: &mut dyn Any,
+                      global_any: &mut dyn Any,
+                      event: &mut Event,
+                      pointer_button_update: &PointerButtonUpdate| {
+                    let state = state_any.downcast_mut::<State>().unwrap();
+                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                    handler(state, global, event, pointer_button_update);
+                },
+            );
+            self.element_data_mut().on_pointer_button_up = Some(callback);
             self
         }
 
@@ -496,20 +550,20 @@ macro_rules! generate_component_methods_no_children {
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::KeyboardInput)
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::ui_events::keyboard::KeyboardEvent)
                 + Send
                 + Sync
                 + 'static,
         {
             use $crate::components::Event;
             use $crate::elements::element_data::EventHandlerWithRef;
-            use $crate::events::KeyboardInput;
+            use $crate::events::ui_events::keyboard::KeyboardEvent;
 
-            let callback: EventHandlerWithRef<KeyboardInput> = Arc::new(
+            let callback: EventHandlerWithRef<KeyboardEvent> = Arc::new(
                 move |state_any: &mut dyn Any,
                       global_any: &mut dyn Any,
                       event: &mut Event,
-                      keyboard_input: &KeyboardInput| {
+                      keyboard_input: &KeyboardEvent| {
                     let state = state_any.downcast_mut::<State>().unwrap();
                     let global = global_any.downcast_mut::<GlobalState>().unwrap();
                     handler(state, global, event, keyboard_input);
@@ -520,60 +574,31 @@ macro_rules! generate_component_methods_no_children {
         }
 
         #[allow(dead_code)]
-        /// Sets the on_pointer_move handler for the element.
-        pub fn on_pointer_move<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
+        /// Sets the on_pointer_scroll handler for the element.
+        pub fn on_pointer_scroll<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::PointerMoved)
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::ui_events::pointer::PointerScrollUpdate)
                 + Send
                 + Sync
                 + 'static,
         {
             use $crate::components::Event;
             use $crate::elements::element_data::EventHandlerWithRef;
-            use $crate::events::PointerMoved;
+            use $crate::events::ui_events::pointer::PointerScrollUpdate;
 
-            let callback: EventHandlerWithRef<PointerMoved> = Arc::new(
+            let callback: EventHandlerWithRef<PointerScrollUpdate> = Arc::new(
                 move |state_any: &mut dyn Any,
                       global_any: &mut dyn Any,
                       event: &mut Event,
-                      pointer_moved: &PointerMoved| {
+                      pointer_scroll_update: &PointerScrollUpdate| {
                     let state = state_any.downcast_mut::<State>().unwrap();
                     let global = global_any.downcast_mut::<GlobalState>().unwrap();
-                    handler(state, global, event, pointer_moved);
+                    handler(state, global, event, pointer_scroll_update);
                 },
             );
-            self.element_data_mut().on_pointer_move = Some(callback);
-            self
-        }
-
-        #[allow(dead_code)]
-        /// Sets the on_mouse_wheel handler for the element.
-        pub fn on_mouse_wheel<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
-        where
-            State: Any + Send + Sync + 'static,
-            GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::MouseWheel)
-                + Send
-                + Sync
-                + 'static,
-        {
-            use $crate::components::Event;
-            use $crate::elements::element_data::EventHandlerWithRef;
-            use $crate::events::MouseWheel;
-
-            let callback: EventHandlerWithRef<MouseWheel> = Arc::new(
-                move |state_any: &mut dyn Any,
-                      global_any: &mut dyn Any,
-                      event: &mut Event,
-                      mouse_wheel: &MouseWheel| {
-                    let state = state_any.downcast_mut::<State>().unwrap();
-                    let global = global_any.downcast_mut::<GlobalState>().unwrap();
-                    handler(state, global, event, mouse_wheel);
-                },
-            );
-            self.element_data_mut().on_mouse_wheel = Some(callback);
+            self.element_data_mut().on_pointer_scroll = Some(callback);
             self
         }
 

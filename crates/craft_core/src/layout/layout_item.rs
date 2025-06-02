@@ -1,5 +1,6 @@
 use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
 use crate::geometry::side::Side;
+use crate::geometry::PointConverter;
 use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::renderer::{Brush, RenderList};
@@ -65,9 +66,9 @@ impl LayoutItem {
         *layout_order += 1;
 
         let at_position = match position {
-            Position::Relative => relative_position + result.location.into(),
+            Position::Relative => relative_position + Point::from_taffy_point(result.location).to_vec2(),
             // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
-            Position::Absolute => relative_position + result.location.into(),
+            Position::Absolute => relative_position + Point::from_taffy_point(result.location).to_vec2(),
         };
 
         let mut size = result.size.into();
