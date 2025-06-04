@@ -839,8 +839,6 @@ fn internal_craft_main_with_options(
 ) {
     info!("Craft started");
 
-    info!("Creating winit event loop.");
-
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 

@@ -780,7 +780,7 @@ dependencies = [
  "vello",
  "vello_common",
  "vello_cpu",
- "vello_hybrid_craft",
+ "vello_hybrid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -3926,8 +3926,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vello"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df026e62e8b0d12d55ff5e91ae9114a20f82d9b856bedfdbf3abd5d1472dceed"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
@@ -3945,8 +3944,7 @@ dependencies = [
 [[package]]
 name = "vello_common"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b5e49f2836e87b6bd3d8f70324696f22b5f7dfdc836caeab463fff05957c1b1"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "bytemuck",
  "peniko",
@@ -3958,8 +3956,7 @@ dependencies = [
 [[package]]
 name = "vello_cpu"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a45e0a6b777abb4354e15146ecf95bac03aada7a85024fd47762f56095b32896"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "vello_common",
 ]
@@ -3967,8 +3964,7 @@ dependencies = [
 [[package]]
 name = "vello_encoding"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c5702642f6ea77eedc12d119e1eebead0dba3cf91fe5c5d1f3efc12bf0cfaf1"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -3978,28 +3974,34 @@ dependencies = [
 ]
 
 [[package]]
-name = "vello_hybrid_craft"
+name = "vello_hybrid"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f872ebce90693d5cd1f8440542440eb526dca5caf02717fbe62a730297df3cb"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "bytemuck",
+ "log",
  "thiserror 2.0.12",
  "vello_common",
+ "vello_sparse_shaders",
  "wgpu",
 ]
 
 [[package]]
 name = "vello_shaders"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "381790a3779021edd9f88267c1b13b49546cb0fb164f329ee2f2587869ddf459"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 dependencies = [
  "bytemuck",
+ "log",
  "naga",
  "thiserror 2.0.12",
  "vello_encoding",
 ]
+
+[[package]]
+name = "vello_sparse_shaders"
+version = "0.0.1"
+source = "git+https://github.com/linebender/vello.git?rev=cfee557bc53eef4a7efc9ebee2620d1369b9bfba#cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
 
 [[package]]
 name = "version_check"

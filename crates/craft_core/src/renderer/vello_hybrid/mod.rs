@@ -7,10 +7,10 @@ use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
-use std::sync::Arc;
 use peniko::kurbo::Shape;
+use std::sync::Arc;
 use vello_common::glyph::Glyph;
-use vello_common::paint::{Paint};
+use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::RenderSize;
@@ -27,7 +27,6 @@ use vello_hybrid::Scene;
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
-    window: Arc<Window>,
     window_width: f32,
     window_height: f32,
 }
@@ -51,7 +50,7 @@ pub struct VelloHybridRenderer<'a> {
     state: RenderState<'a>,
 
     // A vello Scene which is a data structure which allows one to build up a
-    // description a scene to be drawn (with paths, fills, images, text, etc)
+    // description a scene to be drawn (with paths, fills, images, text, etc.)
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
@@ -79,8 +78,6 @@ impl<'a> VelloHybridRenderer<'a> {
             state: RenderState::Suspended,
             scene: Scene::new(surface_size.width as u16, surface_size.height as u16),
             surface_clear_color: Color::WHITE,
-            window_width: surface_size.width as f32,
-            window_height: surface_size.height as f32,
         };
 
         let surface = vello_renderer
@@ -99,7 +96,11 @@ impl<'a> VelloHybridRenderer<'a> {
         vello_renderer.renderers[0].get_or_insert_with(|| create_vello_renderer(&vello_renderer.context, &surface));
 
         // Save the Window and Surface to a state variable
-        vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface });
+        vello_renderer.state = RenderState::Active(ActiveRenderState {
+            surface,
+            window_width: surface_size.width as f32,
+            window_height: surface_size.height as f32,
+        });
 
         vello_renderer
     }
@@ -130,6 +131,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
             RenderState::Active(state) => state,
             _ => return,
         };
+        render_state.window_height = height as f32;
+        render_state.window_width = width as f32;
         self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
         self.scene = Scene::new(width as u16, height as u16);
     }
@@ -138,8 +141,12 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, window: Rectangle) {
-        
+    fn prepare_render_list(
+        &mut self,
+        render_list: RenderList,
+        resource_manager: Arc<ResourceManager>,
+        window: Rectangle,
+    ) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
@@ -164,12 +171,12 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                                 peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
                             /*   let mut transform = Affine::IDENTITY;
-                               transform =
-                                   transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                               transform = transform.pre_scale_non_uniform(
-                                   rectangle.width as f64 / image.width() as f64,
-                                   rectangle.height as f64 / image.height() as f64,
-                               );*/
+                            transform =
+                                transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                            transform = transform.pre_scale_non_uniform(
+                                rectangle.width as f64 / image.width() as f64,
+                                rectangle.height as f64 / image.height() as f64,
+                            );*/
 
                             //scene.draw_image(&vello_image, transform);
                         }
@@ -238,13 +245,13 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                                 }
                             }
 
-                            scene.set_paint(Paint::from(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)));
+                            scene.set_paint(Paint::from(
+                                text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                            ));
                             scene.reset_transform();
 
-                            let glyph_run_builder = scene
-                                .glyph_run(&item.font)
-                                .font_size(item.font_size)
-                                .glyph_transform(text_transform);
+                            let glyph_run_builder =
+                                scene.glyph_run(&item.font).font_size(item.font_size).glyph_transform(text_transform);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id as u32,
                                 x: glyph.x,
@@ -268,7 +275,13 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     draw_tiny_vg(scene, *rectangle, &resource_manager, resource_identifier.clone(), override_color);
                 }
                 RenderCommand::PushLayer(rect) => {
-                    let clip_path = Some(peniko::kurbo::Rect::from_origin_size(peniko::kurbo::Point::new(rect.x as f64, rect.y as f64), peniko::kurbo::Size::new(rect.width as f64, rect.height as f64)).into_path(0.1));
+                    let clip_path = Some(
+                        peniko::kurbo::Rect::from_origin_size(
+                            peniko::kurbo::Point::new(rect.x as f64, rect.y as f64),
+                            peniko::kurbo::Size::new(rect.width as f64, rect.height as f64),
+                        )
+                        .into_path(0.1),
+                    );
                     scene.push_layer(clip_path.as_ref(), None, None, None);
                 }
                 RenderCommand::PopLayer => {
@@ -311,18 +324,11 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
             label: Some("Vello Render to Surface pass"),
         });
         let texture_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         self.renderers[surface.dev_id]
             .as_mut()
             .unwrap()
-            .render(
-                &self.scene,
-                &device_handle.device,
-                &device_handle.queue,
-                &mut encoder,
-                &render_size,
-                &texture_view,
-            )
+            .render(&self.scene, &device_handle.device, &device_handle.queue, &mut encoder, &render_size, &texture_view)
             .unwrap();
 
         device_handle.queue.submit([encoder.finish()]);
@@ -336,9 +342,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
 
 fn brush_to_paint(brush: &Brush) -> Paint {
     match brush {
-        Brush::Color(color) => {
-            Paint::from(*color)
-        }
+        Brush::Color(color) => Paint::from(*color),
         Brush::Gradient(gradient) => {
             // Paint::Gradient does not exist yet, so we need to come back and fix this later.
             let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
