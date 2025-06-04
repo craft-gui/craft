@@ -39,9 +39,10 @@ mod tests {
     use crate::reactive::element_state_store::ElementStateStore;
     use crate::reactive::state_store::StateStore;
     use crate::reactive::tree::diff_trees;
-    use crate::{GlobalState, WindowContext};
+    use crate::GlobalState;
     use crate::events::update_queue_entry::UpdateQueueEntry;
     use crate::text::text_context::TextContext;
+    use crate::window_context::WindowContext;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {

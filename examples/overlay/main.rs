@@ -4,7 +4,7 @@ use craft::elements::{Container, Text};
 use craft::events::Message;
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
-use craft::Color;
+use craft::{Color, WindowContext};
 use craft::CraftOptions;
 use craft::{craft_main, palette};
 use util::setup_logging;
@@ -113,7 +113,6 @@ use craft::elements::Overlay;
 use craft::style::{Position, Unit};
 #[cfg(target_os = "android")]
 use craft::AndroidApp;
-use craft::WindowContext;
 
 #[allow(dead_code)]
 #[cfg(target_os = "android")]

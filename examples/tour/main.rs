@@ -13,8 +13,9 @@ use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
-use craft::{craft_main, WindowContext};
+use craft::craft_main;
 use craft::{Color, CraftOptions};
+use craft::WindowContext;
 
 #[derive(Clone)]
 pub struct Tour {

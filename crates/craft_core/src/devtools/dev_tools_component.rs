@@ -9,7 +9,7 @@ use crate::elements::ElementStyles;
 use crate::events::{CraftMessage, Message};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
-use crate::WindowContext;
+use crate::window_context::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct DevToolsComponent {

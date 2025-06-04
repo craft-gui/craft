@@ -2,7 +2,7 @@ use crate::components::props::Props;
 use crate::elements::element::ElementBoxed;
 use crate::events::{CraftMessage, Message};
 use crate::reactive::state_store::StateStoreItem;
-use crate::{GlobalState, WindowContext};
+use crate::GlobalState;
 
 use crate::components::update_result::Event;
 use crate::elements::Container;
@@ -11,6 +11,7 @@ use std::ops::Deref;
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::{Ime, Modifiers};
+use crate::window_context::WindowContext;
 
 /// A Component's view function.
 pub type ViewFn = fn(

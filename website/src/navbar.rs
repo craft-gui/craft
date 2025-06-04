@@ -4,7 +4,8 @@ use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
 use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
-use craft::{rgb, WindowContext};
+use craft::rgb;
+use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct Navbar {}

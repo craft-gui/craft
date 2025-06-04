@@ -10,8 +10,9 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::text::text_context::TextContext;
-use crate::{GlobalState, WindowContext};
+use crate::GlobalState;
 use std::collections::{HashMap, HashSet, VecDeque};
+use crate::window_context::WindowContext;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {

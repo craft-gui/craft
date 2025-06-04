@@ -1,8 +1,9 @@
 use crate::events::{CraftMessage, EventDispatchType, Message};
-use crate::{PinnedFutureAny, WindowContext};
+use crate::PinnedFutureAny;
 use std::any::Any;
 use crate::elements::Element;
 use crate::geometry::Rectangle;
+use crate::window_context::WindowContext;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum PointerCapture {

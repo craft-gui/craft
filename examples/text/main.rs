@@ -12,7 +12,8 @@ use craft::style::FlexDirection;
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::CraftOptions;
-use craft::{craft_main, WindowContext};
+use craft::craft_main;
+use craft::WindowContext;
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}

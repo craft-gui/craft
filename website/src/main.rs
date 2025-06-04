@@ -15,7 +15,8 @@ use craft::elements::Container;
 use craft::elements::ElementStyles;
 use craft::style::Display;
 use craft::style::FlexDirection;
-use craft::{craft_main, CraftOptions, WindowContext};
+use craft::{craft_main, CraftOptions};
+use craft::WindowContext;
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.

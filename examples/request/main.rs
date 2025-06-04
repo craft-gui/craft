@@ -6,7 +6,7 @@ use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
-use craft::{craft_main, WindowContext};
+use craft::craft_main;
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::style::FlexDirection;
@@ -18,6 +18,7 @@ use serde_json::json;
 
 use std::result::Result;
 use craft::events::ui_events::pointer::PointerButtonUpdate;
+use craft::WindowContext;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum State {

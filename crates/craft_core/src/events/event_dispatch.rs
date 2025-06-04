@@ -9,13 +9,14 @@ use crate::reactive::fiber_tree::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::ResourceManager;
 use crate::text::text_context::TextContext;
-use crate::{GlobalState, ReactiveTree, WindowContext};
+use crate::{GlobalState, ReactiveTree};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
-use winit::event::{Ime};
+use winit::event::Ime;
 use craft_logging::{span, Level};
+use crate::window_context::WindowContext;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn dispatch_event(

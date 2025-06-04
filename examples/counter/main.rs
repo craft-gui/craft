@@ -3,9 +3,10 @@ use craft::{
     elements::{Container, ElementStyles, Text},
     rgb,
     style::{AlignItems, Display, FlexDirection, JustifyContent},
-    Color, WindowContext,
+    Color,
 };
 use craft::events::ui_events::pointer::PointerButtonUpdate;
+use craft::WindowContext;
 
 #[derive(Default)]
 pub struct Counter {

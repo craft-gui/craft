@@ -7,8 +7,9 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::text::text_context::TextContext;
-use crate::{GlobalState, ReactiveTree, WindowContext};
+use crate::{GlobalState, ReactiveTree};
 use std::collections::{HashSet, VecDeque};
+use crate::window_context::WindowContext;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {

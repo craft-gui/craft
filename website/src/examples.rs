@@ -17,8 +17,8 @@ use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
 use craft::style::Display::Flex;
 use craft::style::{FlexDirection, Unit};
-use craft::{palette, WindowContext};
-
+use craft::palette;
+use craft::WindowContext;
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
 use crate::examples::text::TextState;
