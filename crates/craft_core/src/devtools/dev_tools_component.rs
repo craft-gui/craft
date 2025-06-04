@@ -28,7 +28,7 @@ impl Component for DevToolsComponent {
         props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
         let element_tree = element_tree_view(root.as_ref(), self.selected_element);
@@ -63,8 +63,13 @@ impl Component for DevToolsComponent {
             .component()
     }
 
-
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+    fn update(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        message: &Message,
+    ) {
         if let Some(element) = event.target {
             if let Some(id) = element.get_id() {
                 // Set the selected element in the element tree inspector.
@@ -77,7 +82,7 @@ impl Component for DevToolsComponent {
                 if let Message::CraftMessage(CraftMessage::PointerMovedEvent(_pointer_moved_event)) = message {
                     let component_id: ComponentId = id.parse().unwrap();
                     self.inspector_hovered_element = Some(component_id);
-                }   
+                }
             }
         } else {
             self.inspector_hovered_element = None;

@@ -1,9 +1,9 @@
 mod about;
 mod examples;
 mod index;
+mod link;
 mod navbar;
 mod theme;
-mod link;
 
 use crate::about::About;
 use crate::examples::Examples;
@@ -15,8 +15,8 @@ use craft::elements::Container;
 use craft::elements::ElementStyles;
 use craft::style::Display;
 use craft::style::FlexDirection;
-use craft::{craft_main, CraftOptions};
 use craft::WindowContext;
+use craft::{craft_main, CraftOptions};
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -45,7 +45,7 @@ impl Component for Website {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)
@@ -59,7 +59,8 @@ impl Component for Website {
             "/examples" => wrapper.push(Examples::component().key("examples")),
             "/about" => wrapper.push(About::component().key("about")),
             _ => wrapper.push(index_page().key("index")),
-        }.component()
+        }
+        .component()
     }
 }
 

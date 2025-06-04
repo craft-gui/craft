@@ -10,20 +10,20 @@ mod request;
 #[path = "../../examples/tour/main.rs"]
 mod tour;
 
-use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
-use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
-use craft::elements::{Container, ElementStyles, Text};
-use craft::events::Message;
-use craft::style::Display::Flex;
-use craft::style::{FlexDirection, Unit};
-use craft::palette;
-use craft::WindowContext;
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
 use crate::examples::text::TextState;
 use crate::examples::tour::Tour;
 use crate::navbar::NAVBAR_HEIGHT;
+use crate::theme::EXAMPLES_SIDEBAR_BACKGROUND_COLOR;
+use crate::WebsiteGlobalState;
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::elements::{Container, ElementStyles, Text};
+use craft::events::Message;
+use craft::palette;
+use craft::style::Display::Flex;
+use craft::style::{FlexDirection, Unit};
+use craft::WindowContext;
 
 pub(crate) struct Examples {
     pub(crate) example_to_show: String,
@@ -78,11 +78,16 @@ impl Component for Examples {
             "request" => AniList::component().key("example_request"),
             _ => Counter::component().key("example_counter"),
         };
-        
+
         let container_height = (window.window_height() - NAVBAR_HEIGHT).max(0.0);
-        
+
         wrapper.push(
-            Container::new().width("100%").height(Unit::Px(container_height)).background(palette::css::WHITE).push(content).component(),
+            Container::new()
+                .width("100%")
+                .height(Unit::Px(container_height))
+                .background(palette::css::WHITE)
+                .push(content)
+                .component(),
         )
     }
 

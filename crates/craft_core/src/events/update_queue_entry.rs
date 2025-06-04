@@ -1,6 +1,6 @@
 use crate::components::component::UpdateFn;
 use crate::components::ComponentId;
-use crate::components::{Props, Event};
+use crate::components::{Event, Props};
 use crate::PinnedFutureAny;
 
 pub struct UpdateQueueEntry {

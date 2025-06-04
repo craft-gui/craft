@@ -2,6 +2,7 @@ use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::Event;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
+use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
 use crate::geometry::borders::ComputedBorderSpec;
 use crate::geometry::{ElementBox, Point, Rectangle};
@@ -16,7 +17,6 @@ use std::mem;
 use std::sync::Arc;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
-use crate::elements::scroll_state::ScrollState;
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -129,7 +129,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         if should_style {
             let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
 
-           match message {
+            match message {
                 CraftMessage::PointerMovedEvent(..) => {
                     state.base.hovered = true;
                 }
@@ -143,10 +143,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         }
     }
 
-    fn resolve_clip(
-        &mut self,
-        clip_bounds: Option<Rectangle>,
-    ) {
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
 
@@ -158,7 +155,13 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         layout_order: &mut u32,
     ) {
         let position = self.element_data().style.position();
-        self.element_data_mut().layout_item.resolve_box(relative_position, scroll_transform, result, layout_order, position);
+        self.element_data_mut().layout_item.resolve_box(
+            relative_position,
+            scroll_transform,
+            result,
+            layout_order,
+            position,
+        );
     }
 
     fn draw_children(
@@ -175,13 +178,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            child.internal.draw(
-                renderer,
-                text_context,
-                element_state,
-                pointer,
-                window.clone(),
-            );
+            child.internal.draw(renderer, text_context, element_state, pointer, window.clone());
         }
     }
 
@@ -270,7 +267,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
 
-    fn compute_accessibility_tree(&mut self, tree: &mut accesskit::TreeUpdate, parent_index: Option<usize>, element_state: &mut ElementStateStore) {
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        element_state: &mut ElementStateStore,
+    ) {
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
         let mut current_node = accesskit::Node::new(Role::GenericContainer);
@@ -313,16 +315,15 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         self.element_data_mut().style = Style::merge(&self.default_style(), &self.element_data().style);
     }
 
-    
     // Easy ways to access common items from layout item:
     fn taffy_node_id(&self) -> Option<NodeId> {
         self.element_data().layout_item.taffy_node_id
     }
-    
+
     fn computed_box(&self) -> ElementBox {
         self.element_data().layout_item.computed_box
     }
-    
+
     fn computed_box_transformed(&self) -> ElementBox {
         self.element_data().layout_item.computed_box_transformed
     }
@@ -471,14 +472,18 @@ macro_rules! generate_component_methods_no_children {
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &ui_events::pointer::PointerButtonUpdate)
-                + Send
+            Handler: Fn(
+                    &mut State,
+                    &mut GlobalState,
+                    &mut $crate::components::Event,
+                    &ui_events::pointer::PointerButtonUpdate,
+                ) + Send
                 + Sync
                 + 'static,
         {
+            use ui_events::pointer::PointerButtonUpdate;
             use $crate::components::Event;
             use $crate::elements::element_data::EventHandlerWithRef;
-            use ui_events::pointer::PointerButtonUpdate;
 
             let callback: EventHandlerWithRef<PointerButtonUpdate> = Arc::new(
                 move |state_any: &mut dyn Any,
@@ -500,14 +505,18 @@ macro_rules! generate_component_methods_no_children {
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &ui_events::pointer::PointerButtonUpdate)
-                + Send
+            Handler: Fn(
+                    &mut State,
+                    &mut GlobalState,
+                    &mut $crate::components::Event,
+                    &ui_events::pointer::PointerButtonUpdate,
+                ) + Send
                 + Sync
                 + 'static,
         {
+            use ui_events::pointer::PointerButtonUpdate;
             use $crate::components::Event;
             use $crate::elements::element_data::EventHandlerWithRef;
-            use ui_events::pointer::PointerButtonUpdate;
 
             let callback: EventHandlerWithRef<PointerButtonUpdate> = Arc::new(
                 move |state_any: &mut dyn Any,
@@ -550,8 +559,12 @@ macro_rules! generate_component_methods_no_children {
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::ui_events::keyboard::KeyboardEvent)
-                + Send
+            Handler: Fn(
+                    &mut State,
+                    &mut GlobalState,
+                    &mut $crate::components::Event,
+                    &$crate::events::ui_events::keyboard::KeyboardEvent,
+                ) + Send
                 + Sync
                 + 'static,
         {
@@ -579,8 +592,12 @@ macro_rules! generate_component_methods_no_children {
         where
             State: Any + Send + Sync + 'static,
             GlobalState: Any + Send + Sync + Default + 'static,
-            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &$crate::events::ui_events::pointer::PointerScrollUpdate)
-                + Send
+            Handler: Fn(
+                    &mut State,
+                    &mut GlobalState,
+                    &mut $crate::components::Event,
+                    &$crate::events::ui_events::pointer::PointerScrollUpdate,
+                ) + Send
                 + Sync
                 + 'static,
         {

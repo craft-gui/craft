@@ -1,9 +1,9 @@
+use crate::geometry::TrblRectangle;
 use crate::renderer::color::Color;
 use crate::style::{
     AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap,
 };
 use taffy::Position;
-use crate::geometry::TrblRectangle;
 
 pub trait ElementStyles
 where
@@ -27,7 +27,8 @@ where
     }
 
     fn border_width<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().border_width_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
+        *self.styles_mut().border_width_mut() =
+            TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
         self
     }
 
@@ -258,9 +259,13 @@ pub trait IntoF32 {
 }
 
 impl IntoF32 for f32 {
-    fn into_f32(self) -> f32 { self }
+    fn into_f32(self) -> f32 {
+        self
+    }
 }
 
 impl IntoF32 for i32 {
-    fn into_f32(self) -> f32 { self as f32 }
+    fn into_f32(self) -> f32 {
+        self as f32
+    }
 }

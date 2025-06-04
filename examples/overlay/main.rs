@@ -4,9 +4,9 @@ use craft::elements::{Container, Text};
 use craft::events::Message;
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
-use craft::{Color, WindowContext};
 use craft::CraftOptions;
 use craft::{craft_main, palette};
+use craft::{Color, WindowContext};
 use util::setup_logging;
 
 #[derive(Default, Clone)]
@@ -90,8 +90,8 @@ impl Component for OverlayExample {
         _message: &Message,
     ) {
         println!("{:?}", event.window);
-        
-        if let Some(target) = event.target{
+
+        if let Some(target) = event.target {
             self.hovered_element_id = target.get_id().clone();
             if let Some(_id) = target.get_id() {
                 event.prevent_propagate();

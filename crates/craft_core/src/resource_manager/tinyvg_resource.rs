@@ -22,7 +22,7 @@ impl TinyVgResource {
 
             TinyVgResource {
                 common_data: data,
-                tinyvg: None
+                tinyvg: None,
             }
         }
     }

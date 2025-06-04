@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::geometry::Size;
+use std::fmt::{Display, Formatter};
 
 /// Configuration options for the Craft application.
 ///
@@ -17,7 +17,7 @@ pub struct CraftOptions {
     /// Defaults to `"craft"`.
     pub window_title: String,
     /// The initial size of the window.
-    pub window_size: Option<Size<f32>>
+    pub window_size: Option<Size<f32>>,
 }
 
 impl Default for CraftOptions {
@@ -78,7 +78,6 @@ impl Display for RendererType {
 }
 
 impl CraftOptions {
-    
     pub fn basic(title: &str) -> Self {
         Self {
             renderer: RendererType::default(),
@@ -86,5 +85,4 @@ impl CraftOptions {
             window_size: None,
         }
     }
-    
 }

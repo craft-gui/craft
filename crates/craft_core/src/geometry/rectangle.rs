@@ -25,7 +25,10 @@ impl Rectangle {
     ///
     /// `true` if the rectangle contains the point, `false` otherwise.
     pub fn contains(&self, point: &Point) -> bool {
-        point.x as f32 >= self.left() && point.x as f32 <= self.right() && point.y as f32 >= self.top() && point.y as f32 <= self.bottom()
+        point.x as f32 >= self.left()
+            && point.x as f32 <= self.right()
+            && point.y as f32 >= self.top()
+            && point.y as f32 <= self.bottom()
     }
 }
 
@@ -83,7 +86,7 @@ impl Rectangle {
     pub fn to_kurbo(&self) -> kurbo::Rect {
         kurbo::Rect::new(self.x as f64, self.y as f64, self.right() as f64, self.bottom() as f64)
     }
-    
+
     pub fn intersection(&self, other: &Rectangle) -> Option<Rectangle> {
         let x0 = self.x.max(other.x);
         let y0 = self.y.max(other.y);

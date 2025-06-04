@@ -9,14 +9,14 @@ use crate::reactive::fiber_tree::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::ResourceManager;
 use crate::text::text_context::TextContext;
+use crate::window_context::WindowContext;
 use crate::{GlobalState, ReactiveTree};
+use craft_logging::{span, Level};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
 use winit::event::Ime;
-use craft_logging::{span, Level};
-use crate::window_context::WindowContext;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn dispatch_event(
@@ -119,11 +119,11 @@ pub(crate) fn dispatch_event(
                 targets.push_back(current_target.clone().unwrap());
                 current_target = current_target.clone().unwrap().borrow().parent.clone();
             }
-            
+
             if targets.is_empty() {
                 return;
             }
-            
+
             let mut element_events: VecDeque<(CraftMessage, &dyn Element)> = VecDeque::new();
 
             let target = targets[0].clone();
@@ -133,7 +133,7 @@ pub(crate) fn dispatch_event(
                 if !propagate {
                     break;
                 }
-                
+
                 if current_target.borrow().element.is_none() {
                     continue;
                 }
@@ -329,9 +329,8 @@ pub(crate) fn dispatch_event(
                     }
                 }
             }
-        },
-        EventDispatchType::Accesskit(_) => {
         }
+        EventDispatchType::Accesskit(_) => {}
         EventDispatchType::DirectToMatchingElements(user_by_predicate_fn) => {
             for node in nodes {
                 if let Some(element) = node.borrow().element {
@@ -351,13 +350,12 @@ pub(crate) fn dispatch_event(
 
                         effects.append(&mut res.effects);
                     }
-
                 }
+            }
         }
     }
-}
 
-// Handle effects.
+    // Handle effects.
     for (dispatch_type, message) in effects.iter() {
         dispatch_event(
             message,

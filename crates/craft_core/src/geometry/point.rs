@@ -16,7 +16,10 @@ pub trait PointConverter {
 
 impl PointConverter for Point {
     fn new(x: f32, y: f32) -> Self {
-        Point { x: x as f64, y: y as f64 }
+        Point {
+            x: x as f64,
+            y: y as f64,
+        }
     }
 
     fn from_physical_pos(pos: PhysicalPosition<f64>) -> Self {
@@ -24,6 +27,9 @@ impl PointConverter for Point {
     }
 
     fn from_taffy_point(p: taffy::Point<f32>) -> Self {
-        Point { x: p.x as f64, y: p.y as f64 }
+        Point {
+            x: p.x as f64,
+            y: p.y as f64,
+        }
     }
 }

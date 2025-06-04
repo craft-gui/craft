@@ -26,9 +26,8 @@ impl Component for EventsExample {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
-
         let scroll_example = Container::new()
             .display(Display::Block)
             .width("200px")
@@ -41,7 +40,7 @@ impl Component for EventsExample {
                     .height("300px")
                     .display(Display::Block)
                     .background(Color::from_rgb8(170, 170, 255))
-                    .component()
+                    .component(),
             )
             .component();
 
@@ -55,11 +54,7 @@ impl Component for EventsExample {
             .border_color(Color::BLACK)
             .box_sizing(BoxSizing::BorderBox)
             .push(
-                Container::new()
-                    .height("300px")
-                    .display(Display::Block)
-                    .background(palette::css::LAVENDER)
-                    .component()
+                Container::new().height("300px").display(Display::Block).background(palette::css::LAVENDER).component(),
             )
             .component();
 
@@ -87,12 +82,11 @@ impl Component for EventsExample {
                             .width("150px")
                             .height("900px")
                             .background(palette::css::BLUE)
-                            .component()
+                            .component(),
                     )
-                    .component()
+                    .component(),
             )
             .component();
-
 
         Container::new()
             .display(Display::Flex)
@@ -106,18 +100,17 @@ impl Component for EventsExample {
             .push(nested_scroll)
             .component()
     }
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+    fn update(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        message: &Message,
+    ) {
         if message.clicked() {
-            let target = if let Some(target) = event.target {
-                target.get_id().clone()
-            } else {
-                None
-            };
-            let current_target = if let Some(current_target) = event.current_target {
-                current_target.get_id().clone()
-            } else {
-                None
-            };
+            let target = if let Some(target) = event.target { target.get_id().clone() } else { None };
+            let current_target =
+                if let Some(current_target) = event.current_target { current_target.get_id().clone() } else { None };
             println!("Target: {:?}, Current Target: {:?}", target, current_target);
         }
     }

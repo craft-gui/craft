@@ -1,22 +1,22 @@
-use crate::components::Props;
 use crate::components::Event;
+use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
 use crate::elements::thumb::Thumb;
 use crate::events::CraftMessage;
 use crate::geometry::{Point, Rectangle};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::style::{Display, Style, Unit};
+use crate::text::text_context::TextContext;
 use crate::ComponentSpecification;
 use crate::{generate_component_methods_no_children, palette};
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 /// An element that represents an on or off state.
 #[derive(Clone)]
@@ -94,15 +94,16 @@ impl Element for Switch {
             set_toggled_styles();
         }
 
-        let child_node = self.thumb.compute_layout(taffy_tree, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
+        let child_node =
+            self.thumb.compute_layout(taffy_tree, scale_factor, state.toggled.unwrap_or(default_toggled), self.rounded);
         self.element_data.layout_item.push_child(&Some(child_node));
-        
+
         self.thumb.size *= scale_factor as f32;
         self.spacing *= scale_factor as f32;
 
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
-        
+
         self.element_data.layout_item.build_tree(taffy_tree, style)
     }
 
@@ -123,14 +124,14 @@ impl Element for Switch {
         self.resolve_box(position, transform, result, z_index);
         self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
-        
+
         let x = if state.toggled.unwrap_or(self.default_toggled) {
             self.computed_box().content_rectangle().right() - self.spacing - self.thumb.size
         } else {
             self.computed_box().content_rectangle().left() + self.spacing
         };
         let y = self.computed_box().content_rectangle().top() + self.spacing;
-        
+
         self.thumb.finalize_layout(
             taffy_tree,
             Point::new(x as f64, y as f64),
@@ -139,7 +140,7 @@ impl Element for Switch {
             element_state,
             pointer,
             text_context,
-            clip_bounds
+            clip_bounds,
         );
     }
 
@@ -187,9 +188,9 @@ impl Element for Switch {
         let thumb_diameter = self.thumb.size;
         let padding = self.spacing;
 
-        let width  = thumb_diameter * 2.25;
+        let width = thumb_diameter * 2.25;
         let height = thumb_diameter + padding * 2.0;
-        
+
         *style.display_mut() = Display::Flex;
         *style.width_mut() = Unit::Px(width);
         *style.min_width_mut() = Unit::Px(width);
@@ -199,9 +200,10 @@ impl Element for Switch {
 
         if self.rounded {
             let rounding = self.thumb.size / 1.5;
-            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            *style.border_radius_mut() =
+                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
         }
-        
+
         style
     }
 }
@@ -213,18 +215,17 @@ impl Default for Switch {
 }
 
 impl Switch {
-
     /// Sets the padding around the thumb and the track in pixels.
     pub fn spacing(mut self, amount: f32) -> Self {
         self.spacing = amount;
         self
     }
-    
+
     pub fn round(mut self) -> Self {
         self.rounded = true;
         self
     }
-    
+
     fn default_toggled_style(&self) -> Style {
         let mut style = Style::default();
         *style.background_mut() = palette::css::DODGER_BLUE;

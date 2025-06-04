@@ -1,22 +1,22 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::Props;
 use crate::components::Event;
+use crate::components::Props;
 use crate::elements::element::{resolve_clip_for_scrollable, Element};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
+use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle, Size};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::renderer::renderer::RenderList;
 use crate::style::Style;
-use crate::{generate_component_methods};
+use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::renderer::renderer::RenderList;
-use crate::text::text_context::TextContext;
 
 /// An element for storing related elements.
 #[derive(Clone, Default)]
@@ -52,11 +52,11 @@ impl Element for Container {
     ) {
         let base_state = self.get_base_state_mut(element_state);
         let current_style = base_state.base.current_style(self.element_data());
-        
+
         if !current_style.visible() {
             return;
         }
-        
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
@@ -77,8 +77,7 @@ impl Element for Container {
         self.merge_default_style();
 
         for child in &mut self.element_data.children {
-            let child_node =
-                child.internal.compute_layout(taffy_tree, element_state, scale_factor);
+            let child_node = child.internal.compute_layout(taffy_tree, element_state, scale_factor);
             self.element_data.layout_item.push_child(&child_node);
         }
 
@@ -92,7 +91,6 @@ impl Element for Container {
 
         self.element_data.layout_item.build_tree(taffy_tree, current_style)
     }
-
 
     fn finalize_layout(
         &mut self,
@@ -110,11 +108,17 @@ impl Element for Container {
         self.resolve_box(position, transform, result, z_index);
         self.finalize_borders(element_state);
 
-        self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.element_data.layout_item.scrollbar_size =
+            Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.element_data.layout_item.computed_scrollbar_size =
+            Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(container_state) =
-            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<ContainerState>()
+        let scroll_y = if let Some(container_state) = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_mut::<ContainerState>()
         {
             self.finalize_scrollbar(&mut container_state.scroll_state);
             container_state.scroll_state.scroll_y
@@ -122,9 +126,9 @@ impl Element for Container {
             0.0
         };
         self.resolve_clip(clip_bounds);
-        
+
         let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
-        
+
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {

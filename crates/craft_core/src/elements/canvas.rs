@@ -3,19 +3,19 @@ use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
+use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
 use crate::renderer::RenderCommand;
 use crate::style::Style;
+use crate::text::text_context::TextContext;
 use crate::Color;
-use crate::generate_component_methods_no_children;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default)]
 pub struct Canvas {
@@ -105,7 +105,7 @@ impl Element for Canvas {
                     );
                     renderer.draw_image(translated_rectangle, resource_identifier.clone());
                 }
-                RenderCommand::DrawText(text_renderer, rectangle, text_scroll, show_cursor,) => {
+                RenderCommand::DrawText(text_renderer, rectangle, text_scroll, show_cursor) => {
                     let translated_rectangle = Rectangle::new(
                         rectangle.x + computed_x_transformed,
                         rectangle.y + computed_y_transformed,
@@ -137,7 +137,7 @@ impl Element for Canvas {
                 }
                 RenderCommand::EndOverlay => {
                     renderer.end_overlay();
-                }    
+                }
             }
         }
 

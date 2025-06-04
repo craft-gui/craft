@@ -1,7 +1,7 @@
-use parley::{Layout, PositionedLayoutItem};
-use peniko::kurbo::{Affine, Line};
 use crate::geometry::Rectangle;
 use crate::text::text_context::ColorBrush;
+use parley::{Layout, PositionedLayoutItem};
+use peniko::kurbo::{Affine, Line};
 
 #[derive(Clone, Debug)]
 pub struct TextRender {
@@ -46,10 +46,17 @@ pub struct TextRenderGlyph {
 }
 
 pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
-    let mut text_render = TextRender { lines: Vec::new(), cursor: None, override_brush: None };
+    let mut text_render = TextRender {
+        lines: Vec::new(),
+        cursor: None,
+        override_brush: None,
+    };
 
     for line in layout.lines() {
-        let mut text_render_line = TextRenderLine { items: Vec::new(), selections: Vec::new(), };
+        let mut text_render_line = TextRenderLine {
+            items: Vec::new(),
+            selections: Vec::new(),
+        };
 
         for item in line.items() {
             let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
@@ -145,6 +152,6 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
         }
         text_render.lines.push(text_render_line);
     }
-    
+
     text_render
 }

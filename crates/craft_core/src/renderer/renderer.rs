@@ -2,9 +2,9 @@ use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::text::text_render_data::TextRender;
+use peniko::kurbo::Shape;
 use peniko::{kurbo, BrushRef, Gradient};
 use std::sync::Arc;
-use peniko::kurbo::Shape;
 
 #[derive(Debug, Clone)]
 pub enum RenderCommand {
@@ -53,7 +53,7 @@ impl TextScroll {
 #[derive(Debug)]
 enum SortedItem {
     Overlay(SortedCommands),
-    Other(u32)
+    Other(u32),
 }
 
 #[derive(Debug)]
@@ -102,7 +102,10 @@ impl Default for RenderList {
 
 impl RenderList {
     pub fn new() -> Self {
-        Self { commands: Vec::new(), overlay: SortedCommands { children: vec![] } }
+        Self {
+            commands: Vec::new(),
+            overlay: SortedCommands { children: vec![] },
+        }
     }
 
     pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
@@ -129,7 +132,12 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
-    pub fn draw_tiny_vg(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier, override_color: Option<Color>) {
+    pub fn draw_tiny_vg(
+        &mut self,
+        rectangle: Rectangle,
+        resource_identifier: ResourceIdentifier,
+        override_color: Option<Color>,
+    ) {
         self.commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color));
     }
 
@@ -160,9 +168,7 @@ pub trait Renderer {
     fn surface_set_clear_color(&mut self, color: Color);
 
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
-        let mut overlay_render = SortedCommands {
-            children: vec![],
-        };
+        let mut overlay_render = SortedCommands { children: vec![] };
 
         fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
             let cull_top = (rectangle.y + rectangle.height) < 0.0;
@@ -193,7 +199,7 @@ pub trait Renderer {
                     // Overlay Start
                     unsafe {
                         (*current).children.push(SortedItem::Overlay(SortedCommands { children: vec![] }));
-                        match (*current).children.last_mut(){
+                        match (*current).children.last_mut() {
                             Some(SortedItem::Overlay(overlay)) => {
                                 stack.push(overlay);
                             }
@@ -223,11 +229,10 @@ pub trait Renderer {
                     if !should_cull(&bounding_rect, window_height) {
                         unsafe {
                             (*current).children.push(SortedItem::Other(index as u32));
-                        }   
+                        }
                     }
                 }
             }
-
         }
         render_list.overlay = overlay_render;
     }

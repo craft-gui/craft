@@ -16,9 +16,9 @@ use craft::CraftOptions;
 use reqwest::Client;
 use serde_json::json;
 
-use std::result::Result;
 use craft::events::ui_events::pointer::PointerButtonUpdate;
 use craft::WindowContext;
+use std::result::Result;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum State {
@@ -49,7 +49,7 @@ impl Component for AniList {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         let mut root = Container::new()
             .display(Display::Flex)
@@ -62,42 +62,48 @@ impl Component for AniList {
             .push(
                 Container::new()
                     .push(Text::new("Ani List Example").font_size(48.0).width("100%"))
-                    .push(Text::new("Get Data").on_pointer_button_up(|state: &mut Self, _global_state: &mut Self::GlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
-                        if state.state != State::Loading && pointer_button.is_primary() {
-                            state.state = State::Loading;
+                    .push(Text::new("Get Data").on_pointer_button_up(
+                        |state: &mut Self,
+                         _global_state: &mut Self::GlobalState,
+                         event: &mut Event,
+                         pointer_button: &PointerButtonUpdate| {
+                            if state.state != State::Loading && pointer_button.is_primary() {
+                                state.state = State::Loading;
 
-                            let get_ani_list_data = async {
-                                let client = Client::new();
-                                let json = json!({"query": QUERY});
+                                let get_ani_list_data = async {
+                                    let client = Client::new();
+                                    let json = json!({"query": QUERY});
 
-                                let response = client
-                                    .post("https://graphql.anilist.co/")
-                                    .header("Content-Type", "application/json")
-                                    .header("Accept", "application/json")
-                                    .body(json.to_string())
-                                    .send()
-                                    .await;
+                                    let response = client
+                                        .post("https://graphql.anilist.co/")
+                                        .header("Content-Type", "application/json")
+                                        .header("Accept", "application/json")
+                                        .body(json.to_string())
+                                        .send()
+                                        .await;
 
-                                if let Err(response) = response {
-                                    tracing::error!("Error fetching data: {:?}", response);
-                                    return Event::async_result(StateChange(State::Error));
-                                }
+                                    if let Err(response) = response {
+                                        tracing::error!("Error fetching data: {:?}", response);
+                                        return Event::async_result(StateChange(State::Error));
+                                    }
 
-                                let result: Result<AniListResponse, reqwest::Error> = response.unwrap().json().await;
+                                    let result: Result<AniListResponse, reqwest::Error> =
+                                        response.unwrap().json().await;
 
-                                if let Err(response) = &result {
-                                    tracing::error!("Error parsing data: {:?}", response);
-                                    return Event::async_result(StateChange(State::Error));
-                                }
+                                    if let Err(response) = &result {
+                                        tracing::error!("Error parsing data: {:?}", response);
+                                        return Event::async_result(StateChange(State::Error));
+                                    }
 
-                                let result = result.unwrap();
-                                tracing::info!("Loaded data: ");
-                                Event::async_result(StateChange(State::Loaded(result)))
-                            };
+                                    let result = result.unwrap();
+                                    tracing::info!("Loaded data: ");
+                                    Event::async_result(StateChange(State::Loaded(result)))
+                                };
 
-                            event.future(get_ani_list_data);
-                        }
-                    }))
+                                event.future(get_ani_list_data);
+                            }
+                        },
+                    ))
                     .width("100%")
                     .display(Display::Flex)
                     .flex_direction(FlexDirection::Column),
@@ -122,7 +128,13 @@ impl Component for AniList {
         root.component()
     }
 
-    fn on_user_message(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, _event: &mut Event, message: &Self::Message) {
+    fn on_user_message(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        _event: &mut Event,
+        message: &Self::Message,
+    ) {
         let StateChange(new_state) = message;
         self.state = new_state.clone();
     }

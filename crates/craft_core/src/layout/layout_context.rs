@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use std::sync::Arc;
 
 use taffy::{AvailableSpace, Size};
 
@@ -137,12 +137,8 @@ pub fn measure_content(
         Some(LayoutContext::Text(taffy_text_context)) => {
             let text_state: &mut TextState =
                 element_state.storage.get_mut(&taffy_text_context.id).unwrap().data.downcast_mut().unwrap();
-            
-            text_state.measure(
-                known_dimensions,
-                available_space,
-                text_context,
-            )
+
+            text_state.measure(known_dimensions, available_space, text_context)
         }
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
@@ -151,11 +147,7 @@ pub fn measure_content(
             let text_input_state: &mut TextInputState =
                 element_state.storage.get_mut(&taffy_text_input_context.id).unwrap().data.downcast_mut().unwrap();
 
-            text_input_state.measure(
-                known_dimensions,
-                available_space,
-                text_context,
-            )
+            text_input_state.measure(known_dimensions, available_space, text_context)
         }
         Some(LayoutContext::TinyVg(tinyvg_context)) => {
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)

@@ -1,14 +1,14 @@
-use std::cell::RefCell;
 use crate::elements::element::Element;
 use crate::elements::{Font, Image, TinyVg};
+use crate::reactive::fiber_tree;
+use crate::reactive::fiber_tree::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
 use crate::resource_manager::resource_type::ResourceType;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
-use crate::reactive::fiber_tree;
-use crate::reactive::fiber_tree::FiberNode;
 
 /// Introspect the view.
 ///
@@ -17,10 +17,9 @@ pub fn scan_view_for_resources(
     element: &dyn Element,
     component: &ComponentTreeNode,
     resource_manager: Arc<ResourceManager>,
-    resources_collected: &mut HashMap<ResourceIdentifier, bool>
+    resources_collected: &mut HashMap<ResourceIdentifier, bool>,
 ) {
-    let fiber: Rc<RefCell<FiberNode>> =
-        fiber_tree::new(component, element);
+    let fiber: Rc<RefCell<FiberNode>> = fiber_tree::new(component, element);
 
     let mut nodes: Vec<Rc<RefCell<FiberNode>>> = Vec::new();
     let mut to_visit: Vec<Rc<RefCell<FiberNode>>> = vec![fiber.clone()];
@@ -38,31 +37,36 @@ pub fn scan_view_for_resources(
                 element.as_any().downcast_ref::<Image>().map(|image| image.resource_identifier.clone());
 
             let font_resource = element.as_any().downcast_ref::<Font>().map(|font| font.resource_identifier.clone());
-            let tinyvg_resource = element.as_any().downcast_ref::<TinyVg>().map(|tinyvg| tinyvg.resource_identifier.clone());
+            let tinyvg_resource =
+                element.as_any().downcast_ref::<TinyVg>().map(|tinyvg| tinyvg.resource_identifier.clone());
 
             if image_resource.is_some() || font_resource.is_some() || tinyvg_resource.is_some() {
-
                 if let Some(image_resource) = image_resource {
                     resource_manager.async_download_resource_and_send_message_on_finish(
                         image_resource.clone(),
                         ResourceType::Image,
-                        resources_collected
+                        resources_collected,
                     );
                     resources_collected.insert(image_resource.clone(), true);
                 }
 
                 if let Some(font_resource) = font_resource {
-                    resource_manager
-                        .async_download_resource_and_send_message_on_finish(font_resource.clone(), ResourceType::Font, resources_collected);
+                    resource_manager.async_download_resource_and_send_message_on_finish(
+                        font_resource.clone(),
+                        ResourceType::Font,
+                        resources_collected,
+                    );
                     resources_collected.insert(font_resource.clone(), true);
                 }
-                
+
                 if let Some(tinyvg_resource) = tinyvg_resource {
-                    resource_manager
-                        .async_download_resource_and_send_message_on_finish(tinyvg_resource.clone(), ResourceType::TinyVg, resources_collected);
+                    resource_manager.async_download_resource_and_send_message_on_finish(
+                        tinyvg_resource.clone(),
+                        ResourceType::TinyVg,
+                        resources_collected,
+                    );
                     resources_collected.insert(tinyvg_resource.clone(), true);
                 }
-                
             }
         }
     }

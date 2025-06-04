@@ -18,14 +18,15 @@ pub struct Inner<K: Clone + Hash + PartialEq, V> {
 impl<K: Clone + Hash + PartialEq, V> Inner<K, V> {
     pub fn new(size: usize) -> Self {
         let size = size.next_power_of_two().max(1);
-        let buckets = (0..size)
-            .map(|_| AtomicPtr::new(ptr::null_mut()))
-            .collect::<Vec<_>>()
-            .into_boxed_slice();
-        Inner { mask: size - 1, buckets }
+        let buckets = (0..size).map(|_| AtomicPtr::new(ptr::null_mut())).collect::<Vec<_>>().into_boxed_slice();
+        Inner {
+            mask: size - 1,
+            buckets,
+        }
     }
     pub fn bucket(&self, key: &K) -> usize {
-        let mut h = DefaultHasher::new(); key.hash(&mut h);
+        let mut h = DefaultHasher::new();
+        key.hash(&mut h);
         (h.finish() as usize) & self.mask
     }
 }
@@ -44,7 +45,10 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             count: AtomicUsize::new(0),
         }
     }
-    fn with_root<F, R>(&self, f: F) -> R where F: FnOnce(&Arc<Inner<K, V>>) -> R {
+    fn with_root<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Arc<Inner<K, V>>) -> R,
+    {
         let ptr = self.root.load(Ordering::Acquire);
         unsafe {
             Arc::increment_strong_count(ptr);
@@ -82,7 +86,9 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
                 }
                 let new_ptr = Arc::into_raw(new_inner) as *mut _;
                 let old = self.root.swap(new_ptr, Ordering::AcqRel);
-                unsafe { drop(Arc::from_raw(old)); }
+                unsafe {
+                    drop(Arc::from_raw(old));
+                }
             }
         });
     }
@@ -91,7 +97,11 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
         self.with_root(|inner| {
             let idx = inner.bucket(&key);
             let head = inner.buckets[idx].load(Ordering::Acquire);
-            let node = Box::new(Node { key, value, next: head });
+            let node = Box::new(Node {
+                key,
+                value,
+                next: head,
+            });
             inner.buckets[idx].store(Box::into_raw(node), Ordering::Release);
         });
         self.count.fetch_add(1, Ordering::Relaxed);

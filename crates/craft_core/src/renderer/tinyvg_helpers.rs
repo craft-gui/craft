@@ -1,10 +1,10 @@
+use crate::renderer::Brush;
 use peniko::color::AlphaColor;
-use peniko::kurbo::SvgArc;
 use peniko::kurbo::BezPath;
+use peniko::kurbo::SvgArc;
 use peniko::{kurbo, Color, Gradient};
 use tinyvg_rs::color_table::ColorTable;
 use tinyvg_rs::commands::{Path, PathCommand, Point, Style};
-use crate::renderer::Brush;
 
 pub(crate) struct TinyVgHelpers;
 
@@ -22,8 +22,12 @@ impl TinyVgHelpers {
     }
 
     /// Assemble a kurbo bez path from a TinyVG path.
-    pub(crate) fn assemble_path(path: &Path, fill_style: &Style, color_table: &ColorTable, override_color: &Option<Color>) -> (BezPath, Brush) {
-
+    pub(crate) fn assemble_path(
+        path: &Path,
+        fill_style: &Style,
+        color_table: &ColorTable,
+        override_color: &Option<Color>,
+    ) -> (BezPath, Brush) {
         let brush = Self::get_brush(fill_style, color_table, override_color);
         let mut bezier_path = BezPath::new();
 
@@ -38,12 +42,18 @@ impl TinyVgHelpers {
                         current = current.move_to(point);
                     }
                     PathCommand::HorizontalLine(horizontal, _line_width) => {
-                        let horizontal_end_point = Point {x : *horizontal, y: current.y };
+                        let horizontal_end_point = Point {
+                            x: *horizontal,
+                            y: current.y,
+                        };
                         bezier_path.line_to(Self::to_kurbo_point(horizontal_end_point));
                         current = current.move_to(&horizontal_end_point);
                     }
                     PathCommand::VerticalLine(vertical, _line_width) => {
-                        let vertical_end_point = Point {x : current.x, y: *vertical };
+                        let vertical_end_point = Point {
+                            x: current.x,
+                            y: *vertical,
+                        };
                         bezier_path.line_to(Self::to_kurbo_point(vertical_end_point));
                         current = current.move_to(&vertical_end_point);
                     }
@@ -52,7 +62,7 @@ impl TinyVgHelpers {
                         bezier_path.curve_to(
                             (cubic_bezier.control_point_0.x.0, cubic_bezier.control_point_0.y.0),
                             (cubic_bezier.control_point_1.x.0, cubic_bezier.control_point_1.y.0),
-                            (end.x.0, end.y.0)
+                            (end.x.0, end.y.0),
                         );
                         current = current.move_to(&end);
                     }
@@ -105,7 +115,10 @@ impl TinyVgHelpers {
                     PathCommand::QuadraticBezier(quadratic_bezier, _line_width) => {
                         let end = quadratic_bezier.point_1;
                         bezier_path.quad_to(
-                            (Self::to_kurbo_point(quadratic_bezier.control_point).x, Self::to_kurbo_point(quadratic_bezier.control_point).y),
+                            (
+                                Self::to_kurbo_point(quadratic_bezier.control_point).x,
+                                Self::to_kurbo_point(quadratic_bezier.control_point).y,
+                            ),
                             (Self::to_kurbo_point(end).x, Self::to_kurbo_point(end).y),
                         );
 
@@ -123,7 +136,7 @@ impl TinyVgHelpers {
         if let Some(override_color) = override_color {
             return Brush::Color(*override_color);
         }
-        
+
         match fill_style {
             Style::FlatColor(flat_colored) => {
                 let color = color_table[flat_colored.color_index as usize];
@@ -136,10 +149,8 @@ impl TinyVgHelpers {
                 let start = Self::to_kurbo_point(linear_gradient.point_0);
                 let end = Self::to_kurbo_point(linear_gradient.point_1);
 
-                let linear = Gradient::new_linear(
-                    start,
-                    end
-                ).with_stops([Self::to_peniko_color(color_0), Self::to_peniko_color(color_1)]);
+                let linear = Gradient::new_linear(start, end)
+                    .with_stops([Self::to_peniko_color(color_0), Self::to_peniko_color(color_1)]);
                 Brush::Gradient(linear)
             }
             Style::RadialGradient(radial_gradient) => {
@@ -150,13 +161,11 @@ impl TinyVgHelpers {
                 let edge = Self::to_kurbo_point(radial_gradient.point_1);
                 let radius = center.distance(edge);
 
-                let radial = Gradient::new_radial(
-                    center,
-                    radius as f32
-                ).with_stops([Self::to_peniko_color(color_0), Self::to_peniko_color(color_1)]);
+                let radial = Gradient::new_radial(center, radius as f32)
+                    .with_stops([Self::to_peniko_color(color_0), Self::to_peniko_color(color_1)]);
 
                 Brush::Gradient(radial)
             }
         }
-    }   
+    }
 }

@@ -1,7 +1,7 @@
-use crate::elements::element_states::ElementState;
-use std::collections::HashMap;
 use crate::elements::element_data::ElementData;
+use crate::elements::element_states::ElementState;
 use crate::style::Style;
+use std::collections::HashMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseElementState {
@@ -15,7 +15,6 @@ pub struct BaseElementState {
 }
 
 impl<'a> BaseElementState {
-    
     pub fn current_style(&self, element_data: &'a ElementData) -> &'a Style {
         if self.active {
             if let Some(pressed_style) = &element_data.pressed_style {
@@ -43,7 +42,6 @@ impl<'a> BaseElementState {
         }
         &mut element_data.style
     }
-    
 }
 
 // HACK: Remove this and all usages when pointer capture per device works.

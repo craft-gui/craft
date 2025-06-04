@@ -38,7 +38,11 @@ impl TextContext {
         }
     }
 
-    pub fn tree_builder<'a>(&'a mut self, scale: f32, raw_style: &TextStyle<'_, ColorBrush>) -> TreeBuilder<'a, ColorBrush> {
+    pub fn tree_builder<'a>(
+        &'a mut self,
+        scale: f32,
+        raw_style: &TextStyle<'_, ColorBrush>,
+    ) -> TreeBuilder<'a, ColorBrush> {
         self.layout_context.tree_builder(&mut self.font_context, scale, true, raw_style)
     }
 }

@@ -1,7 +1,7 @@
 #![cfg(target_os = "android")]
 
-use craft::{AndroidApp, craft_main, CraftOptions};
 use craft::components::Component;
+use craft::{craft_main, AndroidApp, CraftOptions};
 use util::setup_logging;
 
 #[path = "main.rs"]
@@ -11,10 +11,5 @@ use counter::Counter;
 #[unsafe(no_mangle)]
 pub unsafe fn android_main(app: AndroidApp) {
     setup_logging();
-    craft_main(
-        Counter::component(),
-        (),
-        CraftOptions::basic("Counter"),
-        app,
-    );
+    craft_main(Counter::component(), (), CraftOptions::basic("Counter"), app);
 }

@@ -24,7 +24,8 @@ impl Renderer for BlankRenderer {
         _render_list: RenderList,
         _resource_manager: Arc<ResourceManager>,
         _window: Rectangle,
-    ) {}
+    ) {
+    }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}
 }

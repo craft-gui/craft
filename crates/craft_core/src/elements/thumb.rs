@@ -32,7 +32,8 @@ impl Thumb {
 
         if rounded {
             let rounding = self.size / 2.0;
-            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            *style.border_radius_mut() =
+                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
         }
 
         style
@@ -51,8 +52,13 @@ impl Thumb {
         self.toggled_thumb_style = toggled_thumb_style;
     }
 
-    pub(crate) fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>,
-                          scale_factor: f64, toggled: bool, rounded: bool) -> NodeId {
+    pub(crate) fn compute_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        scale_factor: f64,
+        toggled: bool,
+        rounded: bool,
+    ) -> NodeId {
         self.thumb_style = Style::merge(&self.default_thumb_style(rounded), &self.thumb_style);
 
         if toggled {
@@ -65,7 +71,8 @@ impl Thumb {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn finalize_layout(&mut self,
+    pub(crate) fn finalize_layout(
+        &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         position: Point,
         z_index: &mut u32,
@@ -77,15 +84,19 @@ impl Thumb {
     ) {
         let result = taffy_tree.layout(self.layout_item.taffy_node_id.unwrap()).unwrap();
         self.layout_item.resolve_box(position, transform, result, z_index, self.thumb_style.position());
-        self.layout_item.finalize_borders(self.thumb_style.has_border(), self.thumb_style.border_radius(), self.thumb_style.border_color());
+        self.layout_item.finalize_borders(
+            self.thumb_style.has_border(),
+            self.thumb_style.border_radius(),
+            self.thumb_style.border_color(),
+        );
         self.layout_item.resolve_clip(clip_bounds);
     }
-    
+
     pub(crate) fn draw(&mut self, renderer: &mut RenderList) {
         if !self.thumb_style.visible() {
             return;
         }
-        
+
         self.layout_item.draw_borders(renderer, &self.thumb_style);
     }
 }

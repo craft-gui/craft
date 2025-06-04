@@ -35,7 +35,7 @@ pub(crate) fn element_tree_view(
         let row_name = element.name().to_string();
 
         let id = element.component_id().to_string();
-        
+
         let mut row = Container::new()
             .push(
                 Text::new(row_name.as_str())
@@ -72,7 +72,7 @@ pub(crate) fn element_tree_view(
                     .component(),
             );
         }
-        
+
         let user_id_color = Color::from_rgb8(68, 147, 248);
         row = row.push(
             Container::new()

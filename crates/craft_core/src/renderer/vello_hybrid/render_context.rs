@@ -10,8 +10,8 @@ use winit::window::Window;
 
 use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::{
-    Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration,
-    SurfaceTarget, TextureFormat,
+    Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTarget,
+    TextureFormat,
 };
 use winit::event_loop::ActiveEventLoop;
 
@@ -32,10 +32,7 @@ pub(crate) fn create_winit_window(
 }
 
 /// Helper function that creates a Vello Hybrid renderer
-pub(crate) fn create_vello_renderer(
-    render_cx: &RenderContext,
-    surface: &RenderSurface<'_>,
-) -> Renderer {
+pub(crate) fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface<'_>) -> Renderer {
     Renderer::new(
         &render_cx.devices[surface.dev_id].device,
         &RenderTargetConfig {
@@ -93,15 +90,13 @@ impl RenderContext {
         format: TextureFormat,
     ) -> RenderSurface<'w> {
         self.create_render_surface(
-            self.instance
-                .create_surface(window.into())
-                .expect("Error creating surface"),
+            self.instance.create_surface(window.into()).expect("Error creating surface"),
             width,
             height,
             present_mode,
             format,
         )
-            .await
+        .await
     }
 
     /// Creates a new render surface for the specified window and dimensions.
@@ -113,10 +108,7 @@ impl RenderContext {
         present_mode: wgpu::PresentMode,
         format: TextureFormat,
     ) -> RenderSurface<'w> {
-        let dev_id = self
-            .device(Some(&surface))
-            .await
-            .expect("No compatible device");
+        let dev_id = self.device(Some(&surface)).await.expect("No compatible device");
 
         let config = SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -145,11 +137,7 @@ impl RenderContext {
     }
 
     /// Sets the present mode for the surface
-    pub(crate) fn set_present_mode(
-        &self,
-        surface: &mut RenderSurface<'_>,
-        present_mode: wgpu::PresentMode,
-    ) {
+    pub(crate) fn set_present_mode(&self, surface: &mut RenderSurface<'_>, present_mode: wgpu::PresentMode) {
         surface.config.present_mode = present_mode;
         self.configure_surface(surface);
     }
@@ -160,17 +148,9 @@ impl RenderContext {
     }
 
     /// Finds or creates a compatible device handle id.
-    pub(crate) async fn device(
-        &mut self,
-        compatible_surface: Option<&Surface<'_>>,
-    ) -> Option<usize> {
+    pub(crate) async fn device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
         let compatible = match compatible_surface {
-            Some(s) => self
-                .devices
-                .iter()
-                .enumerate()
-                .find(|(_, d)| d.adapter.is_surface_supported(s))
-                .map(|(i, _)| i),
+            Some(s) => self.devices.iter().enumerate().find(|(_, d)| d.adapter.is_surface_supported(s)).map(|(i, _)| i),
             None => (!self.devices.is_empty()).then_some(0),
         };
         if compatible.is_none() {
@@ -181,9 +161,7 @@ impl RenderContext {
 
     /// Creates a compatible device handle id.
     async fn new_device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
-        let adapter =
-            wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface)
-                .await?;
+        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await?;
         let limits = Limits::default();
 
         let (device, queue) = adapter

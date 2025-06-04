@@ -34,7 +34,6 @@ pub struct LayoutItem {
 }
 
 impl LayoutItem {
-
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
             self.child_nodes.push(*taffy_node_id);
@@ -46,10 +45,12 @@ impl LayoutItem {
         self.taffy_node_id.clone()
     }
 
-    pub fn build_tree_with_context(&mut self,
-                                   taffy_tree: &mut TaffyTree<LayoutContext>,
-                                   style: taffy::Style,
-                                   layout_context: LayoutContext) -> Option<NodeId> {
+    pub fn build_tree_with_context(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        style: taffy::Style,
+        layout_context: LayoutContext,
+    ) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_leaf_with_context(style, layout_context).unwrap());
         self.taffy_node_id.clone()
     }
@@ -60,7 +61,7 @@ impl LayoutItem {
         scroll_transform: glam::Mat4,
         result: &taffy::Layout,
         layout_order: &mut u32,
-        position: Position
+        position: Position,
     ) {
         self.layout_order = *layout_order;
         *layout_order += 1;
@@ -98,7 +99,12 @@ impl LayoutItem {
         self.computed_box_transformed = self.computed_box.transform(scroll_transform);
     }
 
-    pub fn finalize_borders(&mut self, has_border: bool, border_radius: [(f32, f32); 4], border_color: TrblRectangle<Color>) {
+    pub fn finalize_borders(
+        &mut self,
+        has_border: bool,
+        border_radius: [(f32, f32); 4],
+        border_color: TrblRectangle<Color>,
+    ) {
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
         if !has_border {
             return;
@@ -118,7 +124,7 @@ impl LayoutItem {
     pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.clip_bounds = clip_bounds;
     }
-    
+
     pub fn draw_borders(&self, renderer: &mut RenderList, current_style: &Style) {
         let background_color = current_style.background();
 

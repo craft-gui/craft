@@ -3,6 +3,7 @@ use util::setup_logging;
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, Event};
+use craft::craft_main;
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
@@ -13,9 +14,8 @@ use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
-use craft::craft_main;
-use craft::{Color, CraftOptions};
 use craft::WindowContext;
+use craft::{Color, CraftOptions};
 
 #[derive(Clone)]
 pub struct Tour {
@@ -54,9 +54,8 @@ impl Component for Tour {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
-
         let section = |title: &str, content: ComponentSpecification| {
             Container::new()
                 .padding("16px", "16px", "16px", "16px")
@@ -65,7 +64,9 @@ impl Component for Tour {
                 .background(Color::WHITE)
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
-                .push(Text::new(title).font_size(20.0).font_weight(Weight::SEMIBOLD).margin("0px", "0px", "12px", "0px"))
+                .push(
+                    Text::new(title).font_size(20.0).font_weight(Weight::SEMIBOLD).margin("0px", "0px", "12px", "0px"),
+                )
                 .push(content)
                 .component()
         };
@@ -89,14 +90,16 @@ impl Component for Tour {
             Container::new()
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
+                .push(labeled_row(
+                    "Input:",
+                    TextInput::new(self.text_input_value.as_str()).min_width("200px").component(),
+                ))
                 .push(
-                    labeled_row("Input:", TextInput::new(self.text_input_value.as_str()).min_width("200px").component())
+                    Text::new(format!("Preview: {}", self.text_input_value).as_str())
+                        .font_size(14.0)
+                        .color(secondary_text_color),
                 )
-                .push(Text::new(format!("Preview: {}", self.text_input_value).as_str())
-                    .font_size(14.0)
-                    .color(secondary_text_color)
-                )
-                .component()
+                .component(),
         );
 
         let switch_section = section(
@@ -104,18 +107,14 @@ impl Component for Tour {
             Container::new()
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
+                .push(labeled_row(
+                    "Enabled:",
+                    Switch::new(24.0).default_toggled(DEFAULT_SWITCH_VALUE).spacing(4.0).round().component(),
+                ))
                 .push(
-                    labeled_row(
-                        "Enabled:",
-                        Switch::new(24.0)
-                            .default_toggled(DEFAULT_SWITCH_VALUE)
-                            .spacing(4.0)
-                            .round()
-                            .component()
-                    )
+                    Text::new(if self.switch_value { "On" } else { "Off" }).font_size(14.0).color(secondary_text_color),
                 )
-                .push(Text::new(if self.switch_value { "On" } else { "Off" }).font_size(14.0).color(secondary_text_color))
-                .component()
+                .component(),
         );
 
         let slider_section = section(
@@ -123,18 +122,12 @@ impl Component for Tour {
             Container::new()
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
-                .push(
-                    labeled_row(
-                        "Level:",
-                        Slider::new(16.0)
-                            .direction(SliderDirection::Horizontal)
-                            .step(1.0)
-                            .round()
-                            .component()
-                    )
-                )
+                .push(labeled_row(
+                    "Level:",
+                    Slider::new(16.0).direction(SliderDirection::Horizontal).step(1.0).round().component(),
+                ))
                 .push(Text::new(format!("{}", self.slider_value).as_str()).font_size(14.0).color(secondary_text_color))
-                .component()
+                .component(),
         );
 
         let bottom_section = Container::new()
@@ -151,25 +144,25 @@ impl Component for Tour {
                         .push(Text::new(Self::DROPDOWN_ITEMS[2]).disable_selection())
                         .push(Text::new(Self::DROPDOWN_ITEMS[3]).disable_selection())
                         .min_width("200px")
-                        .component()
+                        .component(),
                 )
                 .push(
                     Text::new(
-                        format!("Selected: {}", self.dropdown_value.map(|index| Self::DROPDOWN_ITEMS[index]).unwrap_or("None")).as_str()
+                        format!(
+                            "Selected: {}",
+                            self.dropdown_value.map(|index| Self::DROPDOWN_ITEMS[index]).unwrap_or("None")
+                        )
+                        .as_str(),
                     )
                     .font_size(14.0)
                     .margin("12px", "0px", "0px", "0px")
-                    .color(secondary_text_color)
-                )
+                    .color(secondary_text_color),
+                ),
             )
-            .push(
-                section(
-                    "TinyVG",
-                    TinyVg::new(ResourceIdentifier::Bytes(include_bytes!("tiger.tvg")))
-                        .max_width("200px")
-                        .component()
-                )
-            )
+            .push(section(
+                "TinyVG",
+                TinyVg::new(ResourceIdentifier::Bytes(include_bytes!("tiger.tvg"))).max_width("200px").component(),
+            ))
             .component();
 
         Container::new()
@@ -190,7 +183,13 @@ impl Component for Tour {
             .component()
     }
 
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+    fn update(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        message: &Message,
+    ) {
         if let CraftMessage(TextInputChanged(str)) = message {
             self.text_input_value = str.clone();
             event.prevent_defaults();

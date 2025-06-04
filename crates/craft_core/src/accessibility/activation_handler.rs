@@ -12,8 +12,6 @@ impl ActivationHandler for CraftActivationHandler {
 
 impl CraftActivationHandler {
     pub fn new(tree_update: Option<TreeUpdate>) -> Self {
-        CraftActivationHandler {
-            tree_update,
-        }
+        CraftActivationHandler { tree_update }
     }
 }

@@ -10,9 +10,9 @@ use crate::reactive::state_store::{StateStore, StateStoreItem};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::text::text_context::TextContext;
+use crate::window_context::WindowContext;
 use crate::GlobalState;
 use std::collections::{HashMap, HashSet, VecDeque};
-use crate::window_context::WindowContext;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -259,11 +259,8 @@ pub(crate) fn diff_trees(
                             *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
                         } else if let Some(old_tag) = old_tag {
                             let same_key = new_spec.key.as_ref()
-                                == tree_node
-                                .old_component_node
-                                .as_ref()
-                                .and_then(|node| (**node).key.as_ref());
-                            
+                                == tree_node.old_component_node.as_ref().and_then(|node| (**node).key.as_ref());
+
                             if component_data.tag.as_str() == old_tag && same_key {
                                 // If the old tag is the same as the new tag AND they have the same key, then we can reuse the old id.
                                 is_new_component = false;
@@ -307,8 +304,14 @@ pub(crate) fn diff_trees(
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component =
-                        (component_data.view_fn)(state, global_state, props.clone(), new_spec.children, id, window_context);
+                    let new_component = (component_data.view_fn)(
+                        state,
+                        global_state,
+                        props.clone(),
+                        new_spec.children,
+                        id,
+                        window_context,
+                    );
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {

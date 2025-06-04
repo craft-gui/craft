@@ -2,20 +2,20 @@ use crate::components::component::ComponentSpecification;
 use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::elements::ElementStyles;
+use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle};
+use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
 use crate::resource_manager::ResourceIdentifier;
 use crate::style::Style;
-use crate::generate_component_methods_no_children;
+use crate::text::text_context::TextContext;
+use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
-use peniko::Color;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct TinyVg {
@@ -63,8 +63,7 @@ impl Element for TinyVg {
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer, element_state);
-        
-        
+
         let mut color = None;
         if self.style().color() != Color::TRANSPARENT {
             color = Some(self.style().color());
@@ -82,13 +81,12 @@ impl Element for TinyVg {
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
-        
         self.element_data.layout_item.build_tree_with_context(
             taffy_tree,
             style,
             LayoutContext::TinyVg(TinyVgContext {
                 resource_identifier: self.resource_identifier.clone(),
-            })
+            }),
         )
     }
 
@@ -118,7 +116,7 @@ impl Element for TinyVg {
     fn default_style(&self) -> Style {
         let mut style = Style::default();
         *style.color_mut() = Color::TRANSPARENT;
-        
+
         style
     }
 }

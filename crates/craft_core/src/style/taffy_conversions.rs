@@ -3,9 +3,7 @@ use taffy::{FlexWrap, Overflow};
 
 fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     match unit {
-        Unit::Px(px) => taffy::Dimension::length(
-            px
-        ),
+        Unit::Px(px) => taffy::Dimension::length(px),
         Unit::Percentage(percentage) => taffy::Dimension::percent(percentage / 100.0),
         Unit::Auto => taffy::Dimension::auto(),
     }
@@ -13,9 +11,7 @@ fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
 
 fn unit_to_taffy_lengthpercentageauto(unit: Unit) -> taffy::LengthPercentageAuto {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentageAuto::length(
-            px
-        ),
+        Unit::Px(px) => taffy::LengthPercentageAuto::length(px),
         Unit::Percentage(percentage) => taffy::LengthPercentageAuto::percent(percentage / 100.0),
         Unit::Auto => taffy::LengthPercentageAuto::auto(),
     }
@@ -23,9 +19,7 @@ fn unit_to_taffy_lengthpercentageauto(unit: Unit) -> taffy::LengthPercentageAuto
 
 fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
     match unit {
-        Unit::Px(px) => taffy::LengthPercentage::length(
-            px
-        ),
+        Unit::Px(px) => taffy::LengthPercentage::length(px),
         Unit::Percentage(percentage) => taffy::LengthPercentage::percent(percentage / 100.0),
         Unit::Auto => panic!("Auto is not a valid value for LengthPercentage"),
     }

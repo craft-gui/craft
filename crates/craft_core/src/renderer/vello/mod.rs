@@ -1,20 +1,20 @@
 mod tinyvg;
 
-use crate::geometry::{Rectangle};
+use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
-use crate::renderer::renderer::{SortedCommands, RenderCommand, RenderList, Renderer, TextScroll};
+use crate::renderer::renderer::{RenderCommand, RenderList, Renderer, SortedCommands, TextScroll};
+use crate::renderer::vello::tinyvg::draw_tiny_vg;
 use crate::resource_manager::resource::Resource;
-use crate::resource_manager::{ResourceManager};
-use std::sync::Arc;
+use crate::resource_manager::ResourceManager;
 use peniko::BrushRef;
+use std::sync::Arc;
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::util::{RenderContext, RenderSurface};
 use vello::{kurbo, peniko, AaConfig, RendererOptions};
 use vello::{Glyph, Scene};
 use winit::window::Window;
-use crate::renderer::vello::tinyvg::draw_tiny_vg;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -89,12 +89,7 @@ impl<'a> VelloRenderer<'a> {
 
         let surface = vello_renderer
             .context
-            .create_surface(
-                window.clone(),
-                surface_size.width,
-                surface_size.height,
-                wgpu::PresentMode::AutoVsync,
-            )
+            .create_surface(window.clone(), surface_size.width, surface_size.height, wgpu::PresentMode::AutoVsync)
             .await
             .unwrap();
 
@@ -103,7 +98,11 @@ impl<'a> VelloRenderer<'a> {
         vello_renderer.renderers[0].get_or_insert_with(|| create_vello_renderer(&vello_renderer.context, &surface));
 
         // Save the Window and Surface to a state variable
-        vello_renderer.state = RenderState::Active(ActiveRenderState { surface, window_width: surface_size.width as f32, window_height: surface_size.height as f32});
+        vello_renderer.state = RenderState::Active(ActiveRenderState {
+            surface,
+            window_width: surface_size.width as f32,
+            window_height: surface_size.height as f32,
+        });
 
         vello_renderer
     }
@@ -148,7 +147,12 @@ impl Renderer for VelloRenderer<'_> {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(&mut self, render_list: RenderList, resource_manager: Arc<ResourceManager>, window: Rectangle) {
+    fn prepare_render_list(
+        &mut self,
+        render_list: RenderList,
+        resource_manager: Arc<ResourceManager>,
+        window: Rectangle,
+    ) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
@@ -237,7 +241,7 @@ impl Renderer for VelloRenderer<'_> {
                                 let gy = first_glyph.y + rect.y - scroll;
                                 if gy < window.y {
                                     skip_line = true;
-                                  break;
+                                    break;
                                 } else if gy > (window.y + window.height) {
                                     skip_remaining_lines = true;
                                     break;
@@ -247,7 +251,9 @@ impl Renderer for VelloRenderer<'_> {
                             scene
                                 .draw_glyphs(&item.font)
                                 .font_size(item.font_size)
-                                .brush(BrushRef::Solid(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)))
+                                .brush(BrushRef::Solid(
+                                    text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                                ))
                                 .transform(text_transform)
                                 .glyph_transform(item.glyph_transform)
                                 .draw(
@@ -273,7 +279,13 @@ impl Renderer for VelloRenderer<'_> {
                     }
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
-                    draw_tiny_vg(scene, *rectangle, resource_manager.clone(), resource_identifier.clone(), override_color);
+                    draw_tiny_vg(
+                        scene,
+                        *rectangle,
+                        resource_manager.clone(),
+                        resource_identifier.clone(),
+                        override_color,
+                    );
                 }
                 RenderCommand::PushLayer(rect) => {
                     let clip = Rect::new(
@@ -292,7 +304,6 @@ impl Renderer for VelloRenderer<'_> {
                 }
                 _ => {}
             }
-            
         });
     }
 

@@ -7,9 +7,9 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::diff_trees;
 use crate::text::text_context::TextContext;
+use crate::window_context::WindowContext;
 use crate::{GlobalState, ReactiveTree};
 use std::collections::{HashSet, VecDeque};
-use crate::window_context::WindowContext;
 
 #[test]
 fn diff_trees_same_tag_same_id_are_equal() {
@@ -77,7 +77,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let mut element_state = ElementStateStore::default();
     let mut global_state = GlobalState::from(Box::new(()));
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
-    
+
     let mut window_context = WindowContext::new();
     let tree_1 = diff_trees(
         root_node_1,
@@ -104,7 +104,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
         &mut text_context,
         1.0,
         &mut window_context,
-        &mut update_queue
+        &mut update_queue,
     );
 
     let initial_id = &tree_1.component_tree.children[0].children[0].id;
@@ -126,7 +126,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
     let mut global_state = GlobalState::from(Box::new(()));
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
-    
+
     let tree_1 = diff_trees(
         root_component_1,
         root_element.clone(),
@@ -211,7 +211,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
     let mut global_state = GlobalState::from(Box::new(()));
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
-    
+
     let tree_1 = diff_trees(
         root_component_1,
         root_element.clone(),
@@ -277,7 +277,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let mut global_state = GlobalState::from(Box::new(()));
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
-    
+
     let tree_1 = diff_trees(
         root_node_1,
         root_element.clone(),
@@ -356,8 +356,11 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
 
     let initial_id = &tree_1.component_tree.children[0].id;
     let updated_id = &tree_2.component_tree.children[0].id;
-    
-    assert_ne!(initial_id, updated_id, "Components in the same position with different keys, should have different ids.");
+
+    assert_ne!(
+        initial_id, updated_id,
+        "Components in the same position with different keys, should have different ids."
+    );
 }
 
 #[test]
@@ -374,7 +377,7 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
     let mut global_state = GlobalState::from(Box::new(()));
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
-    
+
     let tree_1 = diff_trees(
         root_node_1,
         root_element.clone(),
@@ -406,5 +409,8 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
     let initial_id = &tree_1.component_tree.children[0].children[0].id;
     let updated_id = &tree_2.component_tree.children[0].children[0].id;
 
-    assert_ne!(initial_id, updated_id, "Different Components in the same position should not have the same element child id.");
+    assert_ne!(
+        initial_id, updated_id,
+        "Different Components in the same position should not have the same element child id."
+    );
 }

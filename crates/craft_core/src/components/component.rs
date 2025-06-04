@@ -6,12 +6,12 @@ use crate::GlobalState;
 
 use crate::components::update_result::Event;
 use crate::elements::Container;
+use crate::window_context::WindowContext;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use winit::event::{Ime, Modifiers};
-use crate::window_context::WindowContext;
 
 /// A Component's view function.
 pub type ViewFn = fn(
@@ -219,7 +219,7 @@ where
                 CraftMessage::SliderValueChanged(slider_value) => {
                     self.on_slider_value_changed(global_state, props, event, *slider_value);
                 }
-                CraftMessage::ElementMessage(_) => {},
+                CraftMessage::ElementMessage(_) => {}
             },
             crate::events::Message::UserMessage(user_message) => {
                 let user_message = user_message.downcast_ref::<Self::Message>();
@@ -230,7 +230,13 @@ where
         }
     }
 
-    fn on_pointer_button_up(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_event: &PointerButtonUpdate) {
+    fn on_pointer_button_up(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        pointer_event: &PointerButtonUpdate,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_pointer_button_up) = &element.element_data().on_pointer_button_up {
                 on_pointer_button_up(self, global_state, event, pointer_event);
@@ -238,7 +244,13 @@ where
         }
     }
 
-    fn on_pointer_button_down(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_event: &PointerButtonUpdate) {
+    fn on_pointer_button_down(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        pointer_event: &PointerButtonUpdate,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_pointer_button_down) = &element.element_data().on_pointer_button_down {
                 on_pointer_button_down(self, global_state, event, pointer_event);
@@ -254,7 +266,13 @@ where
         }
     }
 
-    fn on_keyboard_input(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, keyboard_input: &KeyboardEvent) {
+    fn on_keyboard_input(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        keyboard_input: &KeyboardEvent,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_keyboard_input) = &element.element_data().on_keyboard_input {
                 on_keyboard_input(self, global_state, event, keyboard_input);
@@ -262,17 +280,36 @@ where
         }
     }
 
-    fn on_pointer_move(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_update: &PointerUpdate) {
+    fn on_pointer_move(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        pointer_update: &PointerUpdate,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_pointer_move) = &element.element_data().on_pointer_move {
                 on_pointer_move(self, global_state, event, pointer_update);
             }
         }
     }
-    
-    fn on_user_message(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, _event: &mut Event, _user_message: &Self::Message) {}
 
-    fn on_pointer_scroll(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, pointer_scroll_update: &PointerScrollUpdate) {
+    fn on_user_message(
+        &mut self,
+        _global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        _event: &mut Event,
+        _user_message: &Self::Message,
+    ) {
+    }
+
+    fn on_pointer_scroll(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        pointer_scroll_update: &PointerScrollUpdate,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_pointer_scroll) = &element.element_data().on_pointer_scroll {
                 on_pointer_scroll(self, global_state, event, pointer_scroll_update);
@@ -280,7 +317,13 @@ where
         }
     }
 
-    fn on_modifiers_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, modifiers: &Modifiers) {
+    fn on_modifiers_changed(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        modifiers: &Modifiers,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_modifiers_changed) = &element.element_data().on_modifiers_changed {
                 on_modifiers_changed(self, global_state, event, modifiers);
@@ -296,7 +339,13 @@ where
         }
     }
 
-    fn on_text_input_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, new_string: &str) {
+    fn on_text_input_changed(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        new_string: &str,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_text_input_changed) = &element.element_data().on_text_input_changed {
                 on_text_input_changed(self, global_state, event, new_string);
@@ -304,7 +353,13 @@ where
         }
     }
 
-    fn on_dropdown_toggled(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, dropdown_toggled: bool) {
+    fn on_dropdown_toggled(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        dropdown_toggled: bool,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_dropdown_toggled) = &element.element_data().on_dropdown_toggled {
                 on_dropdown_toggled(self, global_state, event, dropdown_toggled);
@@ -312,7 +367,13 @@ where
         }
     }
 
-    fn on_dropdown_item_selected(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, index: usize) {
+    fn on_dropdown_item_selected(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        index: usize,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_dropdown_item_selected) = &element.element_data().on_dropdown_item_selected {
                 on_dropdown_item_selected(self, global_state, event, index);
@@ -320,7 +381,13 @@ where
         }
     }
 
-    fn on_switch_toggled(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, switch_state: bool) {
+    fn on_switch_toggled(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        switch_state: bool,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_switch_toggled) = &element.element_data().on_switch_toggled {
                 on_switch_toggled(self, global_state, event, switch_state);
@@ -328,7 +395,13 @@ where
         }
     }
 
-    fn on_slider_value_changed(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, slider_value: f64) {
+    fn on_slider_value_changed(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        slider_value: f64,
+    ) {
         if let Some(element) = event.current_target {
             if let Some(on_slider_value_changed) = &element.element_data().on_slider_value_changed {
                 on_slider_value_changed(self, global_state, event, slider_value);

@@ -1,14 +1,17 @@
 pub(crate) mod tinyvg;
 
+use crate::geometry::Rectangle;
+use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
 use crate::renderer::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::renderer::{Brush, RenderCommand};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use peniko::kurbo::Affine;
+use peniko::kurbo::Shape;
 use peniko::{kurbo, Blob, Color, Fill};
-use std::num::NonZero;
 use softbuffer::Buffer;
+use std::num::NonZero;
 use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -18,9 +21,6 @@ use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
-use peniko::kurbo::Shape;
-use crate::geometry::Rectangle;
-use crate::renderer::image_adapter::ImageAdapter;
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
@@ -80,7 +80,10 @@ impl VelloCpuRenderer {
 
         let mut surface = Surface::new(window.clone());
         surface
-            .resize(NonZeroU32::new(width as u32).unwrap_or(NonZero::new(1).unwrap()), NonZeroU32::new(height as u32).unwrap_or(NonZero::new(1).unwrap()))
+            .resize(
+                NonZeroU32::new(width as u32).unwrap_or(NonZero::new(1).unwrap()),
+                NonZeroU32::new(height as u32).unwrap_or(NonZero::new(1).unwrap()),
+            )
             .expect("TODO: panic message");
 
         Self {
@@ -123,7 +126,7 @@ impl Renderer for VelloCpuRenderer {
         &mut self,
         render_list: RenderList,
         resource_manager: Arc<ResourceManager>,
-        window: Rectangle
+        window: Rectangle,
     ) {
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
@@ -149,17 +152,26 @@ impl Renderer for VelloCpuRenderer {
                             let image = &resource.image;
                             let data = Arc::new(ImageAdapter::new(resource.clone()));
                             let blob = Blob::new(data);
-                            let vello_image = peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                            let vello_image =
+                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
                             let mut transform = Affine::IDENTITY;
-                            transform = transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                            transform =
+                                transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
                             transform = transform.pre_scale_non_uniform(
                                 rectangle.width as f64 / image.width() as f64,
                                 rectangle.height as f64 / image.height() as f64,
                             );
                             self.render_context.set_transform(transform);
-                            self.render_context.set_paint(PaintType::Image(vello_common::paint::Image::from_peniko_image(&vello_image)));
-                            self.render_context.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.width() as f64, image.height() as f64));
+                            self.render_context.set_paint(PaintType::Image(
+                                vello_common::paint::Image::from_peniko_image(&vello_image),
+                            ));
+                            self.render_context.fill_rect(&kurbo::Rect::new(
+                                0.0,
+                                0.0,
+                                image.width() as f64,
+                                image.height() as f64,
+                            ));
                             self.render_context.reset_transform();
                         }
                     }
@@ -200,7 +212,11 @@ impl Renderer for VelloCpuRenderer {
                                     width: selection.width,
                                     height: selection.height,
                                 };
-                                vello_draw_rect(&mut self.render_context, selection_rect, Color::from_rgb8(0, 120, 215));
+                                vello_draw_rect(
+                                    &mut self.render_context,
+                                    selection_rect,
+                                    Color::from_rgb8(0, 120, 215),
+                                );
                             }
                         }
                     }
@@ -227,10 +243,13 @@ impl Renderer for VelloCpuRenderer {
                                 }
                             }
 
-                            self.render_context.set_paint(PaintType::from(text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color)));
+                            self.render_context.set_paint(PaintType::from(
+                                text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                            ));
                             self.render_context.reset_transform();
 
-                            let glyph_run_builder = self.render_context
+                            let glyph_run_builder = self
+                                .render_context
                                 .glyph_run(&item.font)
                                 .font_size(item.font_size)
                                 .glyph_transform(text_transform);
@@ -254,7 +273,13 @@ impl Renderer for VelloCpuRenderer {
                     }
                 }
                 RenderCommand::PushLayer(rect) => {
-                    let clip_path = Some(peniko::kurbo::Rect::from_origin_size(peniko::kurbo::Point::new(rect.x as f64, rect.y as f64), peniko::kurbo::Size::new(rect.width as f64, rect.height as f64)).into_path(0.1));
+                    let clip_path = Some(
+                        peniko::kurbo::Rect::from_origin_size(
+                            peniko::kurbo::Point::new(rect.x as f64, rect.y as f64),
+                            peniko::kurbo::Size::new(rect.width as f64, rect.height as f64),
+                        )
+                        .into_path(0.1),
+                    );
                     self.render_context.push_layer(clip_path.as_ref(), None, None, None);
                 }
                 RenderCommand::PopLayer => {
@@ -265,7 +290,13 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.fill_path(&path);
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
-                    draw_tiny_vg(&mut self.render_context, *rectangle, &resource_manager, resource_identifier.clone(), override_color);
+                    draw_tiny_vg(
+                        &mut self.render_context,
+                        *rectangle,
+                        &resource_manager,
+                        resource_identifier.clone(),
+                        override_color,
+                    );
                 }
                 _ => {}
             }
@@ -301,12 +332,8 @@ impl VelloCpuRenderer {
 
 fn brush_to_paint(brush: &Brush) -> PaintType {
     match brush {
-        Brush::Color(color) => {
-            PaintType::Solid(*color)
-        }
-        Brush::Gradient(gradient) => {
-            PaintType::Gradient(gradient.clone())
-        }
+        Brush::Color(color) => PaintType::Solid(*color),
+        Brush::Gradient(gradient) => PaintType::Gradient(gradient.clone()),
     }
 }
 

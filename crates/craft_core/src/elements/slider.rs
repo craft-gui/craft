@@ -76,7 +76,7 @@ impl Element for Slider {
         if !self.element_data.style.visible() {
             return;
         }
-        
+
         self.draw_borders(renderer, element_state);
 
         // Draw the value track color to the left of the thumb.
@@ -88,7 +88,8 @@ impl Element for Slider {
             let border_radius = element_data.current_style().border_radius();
 
             if self.direction == SliderDirection::Horizontal {
-                element_rect.size.width = (self.thumb.layout_item.computed_box_transformed.position.x - self.computed_box_transformed().position.x) as f32;
+                element_rect.size.width = (self.thumb.layout_item.computed_box_transformed.position.x
+                    - self.computed_box_transformed().position.x) as f32;
 
                 // HACK: When the value track is visible add some extra width to make sure there are no gaps in the value track color.
                 // The background track may show through on the left edge if the thumb is round.
@@ -96,7 +97,8 @@ impl Element for Slider {
                     element_rect.size.width += self.thumb.size / 2.0;
                 }
             } else {
-                element_rect.size.height = (self.thumb.layout_item.computed_box_transformed.position.y - self.computed_box_transformed().position.y) as f32;
+                element_rect.size.height = (self.thumb.layout_item.computed_box_transformed.position.y
+                    - self.computed_box_transformed().position.y) as f32;
 
                 // HACK: When the value track is visible add some extra height to make sure there are no gaps in the value track color.
                 // The background track may show through on the top edge if the thumb is round.
@@ -128,14 +130,14 @@ impl Element for Slider {
         self.merge_default_style();
         let child_node = self.thumb.compute_layout(taffy_tree, scale_factor, false, self.rounded);
         self.element_data.layout_item.push_child(&Some(child_node));
-        
+
         self.thumb.size *= scale_factor as f32;
         self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
-        
+
         self.element_data.layout_item.build_tree(taffy_tree, style)
     }
-    
+
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -211,7 +213,7 @@ impl Element for Slider {
                 let value = self.compute_slider_value(&pointer_update.current.position);
                 state.value = value;
                 event.result_message(CraftMessage::SliderValueChanged(value));
-            },
+            }
             _ => {}
         }
     }
@@ -233,14 +235,14 @@ impl Element for Slider {
             *style.height_mut() = Unit::Px(150.0);
             *style.width_mut() = Unit::Px(10.0);
         }
-        
+
         *style.display_mut() = Display::Block;
 
         if self.rounded {
             let rounding = self.thumb.size / 1.5;
-            *style.border_radius_mut() = [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            *style.border_radius_mut() =
+                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
         }
-
 
         style
     }
@@ -254,30 +256,37 @@ impl Slider {
 
     fn thumb_position(&self, thumb_value: f64) -> Point {
         let content_rectangle = self.computed_box().content_rectangle();
-        
+
         let mut normalized_value = thumb_value / self.max;
         normalized_value = normalized_value.clamp(0.0, 1.0);
-        
+
         let value = if self.direction == SliderDirection::Horizontal {
             normalized_value * content_rectangle.width as f64
         } else {
             normalized_value * content_rectangle.height as f64
         };
-        
+
         let thumb_offset = self.thumb.size / 2.0;
         let x = if self.direction == SliderDirection::Horizontal {
-            f32::clamp(content_rectangle.left() + value as f32 - thumb_offset, content_rectangle.left(), content_rectangle.right() - self.thumb.size)
+            f32::clamp(
+                content_rectangle.left() + value as f32 - thumb_offset,
+                content_rectangle.left(),
+                content_rectangle.right() - self.thumb.size,
+            )
         } else {
             content_rectangle.left() - thumb_offset + content_rectangle.width / 2.0
         };
-        
+
         let y = if self.direction == SliderDirection::Horizontal {
-            content_rectangle.top() +
-                content_rectangle.height / 2.0 - thumb_offset
+            content_rectangle.top() + content_rectangle.height / 2.0 - thumb_offset
         } else {
-            f32::clamp(content_rectangle.top() + value as f32 - thumb_offset, content_rectangle.top(), content_rectangle.bottom() - self.thumb.size)
+            f32::clamp(
+                content_rectangle.top() + value as f32 - thumb_offset,
+                content_rectangle.top(),
+                content_rectangle.bottom() - self.thumb.size,
+            )
         };
-        
+
         Point::new(x as f64, y as f64)
     }
 
@@ -325,10 +334,19 @@ impl Slider {
 
     fn compute_slider_value(&self, pointer_position: &Point) -> f64 {
         let content_rectangle = self.computed_box().content_rectangle();
-        let start = if self.direction == SliderDirection::Horizontal { content_rectangle.left() as f64 } else { content_rectangle.top() as f64 };
-        let end = if self.direction == SliderDirection::Horizontal { content_rectangle.right() as f64 } else { content_rectangle.bottom() as f64 };
+        let start = if self.direction == SliderDirection::Horizontal {
+            content_rectangle.left() as f64
+        } else {
+            content_rectangle.top() as f64
+        };
+        let end = if self.direction == SliderDirection::Horizontal {
+            content_rectangle.right() as f64
+        } else {
+            content_rectangle.bottom() as f64
+        };
 
-        let pointer_position_component = if self.direction == SliderDirection::Horizontal { pointer_position.x } else { pointer_position.y };
+        let pointer_position_component =
+            if self.direction == SliderDirection::Horizontal { pointer_position.x } else { pointer_position.y };
 
         // [0, 1]
         let mut normalized_value = (pointer_position_component as f64 - start) / (end - start);
@@ -352,7 +370,7 @@ impl Slider {
         let mut style = Style::default();
         *style.background_mut() = palette::css::DODGER_BLUE;
         thumb.thumb_style(style);
-        
+
         Slider {
             element_data: Default::default(),
             step: 1.0,

@@ -3,6 +3,7 @@ use util::setup_logging;
 use craft::components::Component;
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
+use craft::craft_main;
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
@@ -12,7 +13,6 @@ use craft::style::FlexDirection;
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::CraftOptions;
-use craft::craft_main;
 use craft::WindowContext;
 
 #[derive(Default, Copy, Clone)]
@@ -32,7 +32,7 @@ impl Component for TextState {
         _global_state: &Self::GlobalState,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Container::new()
             .height(Unit::Px(500.0))
@@ -45,7 +45,7 @@ impl Component for TextState {
                 TextInput::new(include_str!("../../Cargo.lock"))
                     .height(Unit::Px(500.0))
                     .display(Block)
-                    .overflow(Scroll)
+                    .overflow(Scroll),
             )
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .component()

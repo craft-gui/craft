@@ -1,14 +1,14 @@
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::layout::layout_context::LayoutContext;
 use crate::geometry::{Point, Rectangle};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::renderer::renderer::RenderList;
+use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default)]
 pub struct Empty {

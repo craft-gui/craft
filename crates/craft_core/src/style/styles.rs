@@ -1,15 +1,15 @@
-use std::borrow::Cow;
 use crate::renderer::color::Color;
 use crate::style::style_flags::StyleFlags;
+use std::borrow::Cow;
 
 pub use taffy::BoxSizing;
 pub use taffy::Overflow;
 pub use taffy::Position;
 
-use std::fmt;
-use parley::{FontFamily, FontSettings, FontStack, GenericFamily, StyleProperty, StyleSet, TextStyle};
 use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
+use parley::{FontFamily, FontSettings, FontStack, GenericFamily, StyleProperty, StyleSet, TextStyle};
+use std::fmt;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -760,15 +760,13 @@ impl Style {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
                 FontFamily::Named(Cow::Borrowed(font_family)),
-                FontFamily::Generic(GenericFamily::SystemUi)
+                FontFamily::Generic(GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![
-                FontFamily::Generic(GenericFamily::SystemUi)
-            ])
+            Cow::Owned(vec![FontFamily::Generic(GenericFamily::SystemUi)])
         };
-        
+
         let font_stack = FontStack::List(font_stack_cow_list);
         TextStyle {
             font_stack,
@@ -795,7 +793,7 @@ impl Style {
             overflow_wrap: Default::default(),
         }
     }
-    
+
     pub fn add_styles_to_style_set(&self, style_set: &mut StyleSet<ColorBrush>) {
         let font_size = self.font_size();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
@@ -813,16 +811,13 @@ impl Style {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
                 FontFamily::Named(Cow::Owned(font_family.to_string())),
-                FontFamily::Generic(GenericFamily::SystemUi)
+                FontFamily::Generic(GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![
-                FontFamily::Generic(GenericFamily::SystemUi)
-            ])
+            Cow::Owned(vec![FontFamily::Generic(GenericFamily::SystemUi)])
         };
 
-        
         style_set.insert(StyleProperty::from(FontStack::List(font_stack_cow_list)));
         style_set.insert(StyleProperty::FontSize(font_size));
         style_set.insert(StyleProperty::FontStyle(font_style));
@@ -831,21 +826,20 @@ impl Style {
         style_set.insert(StyleProperty::LineHeight(1.2));
     }
 
-
     fn scale_unit(unit: &Unit, scaling_factor: f32) -> Unit {
         match unit {
             Unit::Px(px) => Unit::Px(px * scaling_factor),
             Unit::Percentage(percentage) => Unit::Percentage(*percentage),
-            Unit::Auto => Unit::Auto
+            Unit::Auto => Unit::Auto,
         }
     }
 
     fn scale_trlb_unit(rect: &TrblRectangle<Unit>, scaling_factor: f32) -> TrblRectangle<Unit> {
         TrblRectangle {
-            top:    Self::scale_unit(&rect.top, scaling_factor),
-            right:  Self::scale_unit(&rect.right, scaling_factor),
+            top: Self::scale_unit(&rect.top, scaling_factor),
+            right: Self::scale_unit(&rect.right, scaling_factor),
             bottom: Self::scale_unit(&rect.bottom, scaling_factor),
-            left:   Self::scale_unit(&rect.left, scaling_factor),
+            left: Self::scale_unit(&rect.left, scaling_factor),
         }
     }
 
@@ -857,21 +851,21 @@ impl Style {
         let padding = Self::scale_trlb_unit(&self.padding, scaling_factor);
         let gap = [Self::scale_unit(&self.gap[0], scaling_factor), Self::scale_unit(&self.gap[1], scaling_factor)];
         let inset = Self::scale_trlb_unit(&self.inset, scaling_factor);
-        
+
         let width = Self::scale_unit(&self.width, scaling_factor);
         let height = Self::scale_unit(&self.height, scaling_factor);
         let max_width = Self::scale_unit(&self.max_width, scaling_factor);
         let max_height = Self::scale_unit(&self.max_height, scaling_factor);
         let min_width = Self::scale_unit(&self.min_width, scaling_factor);
         let min_height = Self::scale_unit(&self.min_height, scaling_factor);
-        
+
         let x = self.x * scaling_factor;
         let y = self.y * scaling_factor;
 
         // We probably shouldn't scale these.
         let flex_grow = self.flex_grow;
         let flex_shrink = self.flex_shrink;
-        
+
         let flex_basis = Self::scale_unit(&self.flex_basis, scaling_factor);
         let border_width = Self::scale_trlb_unit(&self.border_width, scaling_factor);
         let border_radius = self.border_radius;
@@ -879,9 +873,9 @@ impl Style {
             (border_radius[0].0 * scaling_factor, border_radius[0].1 * scaling_factor),
             (border_radius[1].0 * scaling_factor, border_radius[1].1 * scaling_factor),
             (border_radius[2].0 * scaling_factor, border_radius[2].1 * scaling_factor),
-            (border_radius[3].0 * scaling_factor, border_radius[3].1 * scaling_factor)
+            (border_radius[3].0 * scaling_factor, border_radius[3].1 * scaling_factor),
         ];
-        
+
         *self = Style {
             font_family_length: self.font_family_length,
             font_family: self.font_family,

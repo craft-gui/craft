@@ -1,6 +1,6 @@
 use crate::resource_manager::image::ImageResource;
-use std::sync::Arc;
 use crate::resource_manager::tinyvg_resource::TinyVgResource;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum Resource {

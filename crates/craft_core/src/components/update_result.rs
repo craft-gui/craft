@@ -1,9 +1,9 @@
-use crate::events::{CraftMessage, EventDispatchType, Message};
-use crate::PinnedFutureAny;
-use std::any::Any;
 use crate::elements::Element;
+use crate::events::{CraftMessage, EventDispatchType, Message};
 use crate::geometry::Rectangle;
 use crate::window_context::WindowContext;
+use crate::PinnedFutureAny;
+use std::any::Any;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum PointerCapture {
@@ -30,7 +30,7 @@ pub struct Event<'a> {
 
     pub target: Option<&'a dyn Element>,
     pub window: WindowContext,
-    pub current_target: Option<&'a dyn Element>
+    pub current_target: Option<&'a dyn Element>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -48,7 +48,7 @@ impl<'a> Event<'a> {
             ..Default::default()
         }
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     pub fn async_result<T: Send + Sync + 'static>(t: T) -> Box<dyn Any + Send + Sync + 'static> {
         Box::new(t)

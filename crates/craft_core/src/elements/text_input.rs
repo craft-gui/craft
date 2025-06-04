@@ -1,36 +1,36 @@
-use crate::CraftMessage;
 use crate::components::component::ComponentSpecification;
-use crate::components::{ImeAction, Props};
 use crate::components::Event;
+use crate::components::{ImeAction, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
-use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::ElementStyles;
+use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle, Size, TrblRectangle};
+use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
 use crate::style::{Display, Style, Unit};
-use crate::{generate_component_methods_no_children};
+use crate::CraftMessage;
+use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time as time;
-use time::{Duration, Instant};
-use ui_events::keyboard::{Key, Modifiers, NamedKey};
-use winit::event::{Ime};
-use winit::window::Window;
 use crate::layout::layout_context::TextHashKey;
 use crate::text::text_context::{ColorBrush, TextContext};
-use crate::text::{text_render_data, TextStyle};
 use crate::text::text_render_data::TextRender;
+use crate::text::{text_render_data, TextStyle};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+use time::{Duration, Instant};
+use ui_events::keyboard::{Key, Modifiers, NamedKey};
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+use winit::event::Ime;
+use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -148,8 +148,12 @@ impl Element for TextInput {
             None
         };
 
-        if let Some(state) =
-            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
+        if let Some(state) = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_mut::<TextInputState>()
         {
             if let Some(text_render) = state.text_render.as_ref() {
                 renderer.draw_text(text_render.clone(), content_rectangle, text_scroll, state.cursor_visible);
@@ -174,7 +178,7 @@ impl Element for TextInput {
         self.element_data.layout_item.build_tree_with_context(
             taffy_tree,
             style,
-            LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id))
+            LayoutContext::TextInput(TaffyTextInputContext::new(self.element_data.component_id)),
         )
     }
 
@@ -218,16 +222,22 @@ impl Element for TextInput {
         for line in text_renderer.lines.iter_mut() {
             line.selections.clear();
         }
-        state.editor.selection_geometry_with( |rect, line| {
+        state.editor.selection_geometry_with(|rect, line| {
             text_renderer.lines[line].selections.push(rect.into());
         });
         text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
 
-        self.element_data.layout_item.scrollbar_size = Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.element_data.layout_item.scrollbar_size =
+            Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
+        self.element_data.layout_item.computed_scrollbar_size =
+            Size::new(result.scroll_width(), result.scroll_height());
 
-        if let Some(state) =
-            element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.downcast_mut::<TextInputState>()
+        if let Some(state) = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .downcast_mut::<TextInputState>()
         {
             self.finalize_scrollbar(&mut state.scroll_state);
         }
@@ -274,7 +284,7 @@ impl Element for TextInput {
             .as_mut()
             .downcast_mut()
             .unwrap();
-        
+
         fn copy(drv: &mut PlainEditorDriver<ColorBrush>) {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             {
@@ -282,10 +292,10 @@ impl Element for TextInput {
                 if let Some(text) = drv.editor.selected_text() {
                     let cb = ClipboardContext::new().unwrap();
                     cb.set_text(text.to_owned()).ok();
-                }   
+                }
             }
         }
-        
+
         fn paste(drv: &mut PlainEditorDriver<ColorBrush>) {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             {
@@ -313,7 +323,7 @@ impl Element for TextInput {
             event.prevent_propagate();
             event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
         };
-        
+
         if let CraftMessage::ElementMessage(msg) = message {
             if let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
                 let mut drv = state.driver(_text_context);
@@ -332,9 +342,9 @@ impl Element for TextInput {
                         generate_text_changed_event(&mut state.editor);
                     }
                 }
-            } 
+            }
         }
-        
+
         match message {
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
                 state.modifiers = Some(keyboard_input.modifiers);
@@ -346,20 +356,11 @@ impl Element for TextInput {
                 #[allow(unused)]
                 let (shift, action_mod) = state
                     .modifiers
-                    .map(|mods| {
-                        (
-                            mods.shift(),
-                            if cfg!(target_os = "macos") {
-                                mods.meta()
-                            } else {
-                                mods.ctrl()
-                            },
-                        )
-                    })
+                    .map(|mods| (mods.shift(), if cfg!(target_os = "macos") { mods.meta() } else { mods.ctrl() }))
                     .unwrap_or_default();
 
                 let mut drv = state.driver(_text_context);
-                
+
                 match &keyboard_input.key {
                     Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                         match c.to_lowercase().as_str() {
@@ -368,12 +369,12 @@ impl Element for TextInput {
                                 cut(&mut drv);
                                 state.cache.clear();
                                 generate_text_changed_event(&mut state.editor);
-                            },
-                            "v" => { 
+                            }
+                            "v" => {
                                 paste(&mut drv);
                                 state.cache.clear();
                                 generate_text_changed_event(&mut state.editor);
-                            },
+                            }
                             _ => (),
                         }
                     }
@@ -544,7 +545,10 @@ impl Element for TextInput {
             CraftMessage::PointerMovedEvent(pointer_moved) => {
                 let prev_pos = state.cursor_pos;
                 // NOTE: Cursor position should be relative to the top left of the text box.
-                state.cursor_pos = (pointer_moved.current.position.x as f32 - text_x, pointer_moved.current.position.y as f32 - text_y + scroll_y);
+                state.cursor_pos = (
+                    pointer_moved.current.position.x as f32 - text_x,
+                    pointer_moved.current.position.y as f32 - text_y + scroll_y,
+                );
                 // macOS seems to generate a spurious move after selecting word?
                 if state.pointer_down && prev_pos != state.cursor_pos && !state.editor.is_composing() {
                     state.cursor_reset();
@@ -572,7 +576,12 @@ impl Element for TextInput {
             _ => {}
         }
         let ime = state.editor.ime_cursor_area();
-        event.ime_action(ImeAction::Set(Rectangle::new(ime.x0 as f32, ime.y0 as f32, ime.width() as f32, ime.height() as f32)));
+        event.ime_action(ImeAction::Set(Rectangle::new(
+            ime.x0 as f32,
+            ime.y0 as f32,
+            ime.width() as f32,
+            ime.height() as f32,
+        )));
     }
 
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
@@ -580,7 +589,7 @@ impl Element for TextInput {
         editor.set_scale(scaling_factor as f32);
         let style_set = editor.edit_styles();
         self.style().add_styles_to_style_set(style_set);
-        
+
         let text_input_state = TextInputState {
             ime_state: ImeState::default(),
             is_active: false,
@@ -608,12 +617,7 @@ impl Element for TextInput {
         }
     }
 
-    fn update_state(
-        &mut self,
-        element_state: &mut ElementStateStore,
-        _reload_fonts: bool,
-        scaling_factor: f64,
-    ) {
+    fn update_state(&mut self, element_state: &mut ElementStateStore, _reload_fonts: bool, scaling_factor: f64) {
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.element_data.component_id)
@@ -670,7 +674,6 @@ impl ElementStyles for TextInput {
         self.element_data.current_style_mut()
     }
 }
-
 
 impl TextInputState {
     pub fn measure(
@@ -756,9 +759,8 @@ impl TextInputState {
 
             start_time
                 + Duration::from_nanos(
-                ((phase.as_nanos() / self.blink_period.as_nanos() + 1)
-                    * self.blink_period.as_nanos()) as u64,
-            )
+                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
+                )
         })
     }
 
@@ -773,5 +775,4 @@ impl TextInputState {
     fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a, ColorBrush> {
         self.editor.driver(&mut text_context.font_context, &mut text_context.layout_context)
     }
-
 }

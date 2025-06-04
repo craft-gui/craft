@@ -12,9 +12,11 @@ use winit::event::{Ime, Modifiers};
 
 pub(crate) type EventHandler = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event) + Send + Sync + 'static>;
 
-pub(crate) type EventHandlerWithRef<Arg> = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &Arg) + Send + Sync + 'static>;
+pub(crate) type EventHandlerWithRef<Arg> =
+    Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &Arg) + Send + Sync + 'static>;
 
-pub(crate) type EventHandlerCopy<Arg> = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, Arg) + Send + Sync + 'static>;
+pub(crate) type EventHandlerCopy<Arg> =
+    Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, Arg) + Send + Sync + 'static>;
 
 #[derive(Clone, Default)]
 pub struct ElementData {
@@ -22,7 +24,7 @@ pub struct ElementData {
 
     /// The style of the element.
     pub style: Style,
-    
+
     pub layout_item: LayoutItem,
 
     /// The style of the element when it is hovered.
@@ -39,7 +41,7 @@ pub struct ElementData {
 
     /// The children of the element.
     pub children: Vec<ElementBoxed>,
-    
+
     /// A user-defined id for the element.
     pub id: Option<String>,
 

@@ -18,7 +18,7 @@ impl Component for About {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -26,12 +26,7 @@ impl Component for About {
             .justify_content(JustifyContent::Center)
             .width("100%")
             .height("100%")
-            .push(
-                Text::new("Coming Soon...")
-                    .font_size(48.0)
-                    .font_weight(Weight::BOLD)
-                    .component(),
-            )
+            .push(Text::new("Coming Soon...").font_size(48.0).font_weight(Weight::BOLD).component())
             .component()
     }
 }

@@ -23,7 +23,7 @@ impl Component for Link {
         _props: &Self::Props,
         children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         children.first().unwrap_or(&Text::new("Invalid Link").component()).clone()
     }
@@ -43,7 +43,8 @@ impl Component for Link {
                 }
             }
 
-            #[cfg(not(target_arch = "wasm32"))] {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
                 open::that(props.href.as_str()).unwrap();
             }
         }

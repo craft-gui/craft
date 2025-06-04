@@ -1,3 +1,5 @@
+use craft::events::ui_events::pointer::PointerButtonUpdate;
+use craft::WindowContext;
 use craft::{
     components::{Component, ComponentId, ComponentSpecification, Event},
     elements::{Container, ElementStyles, Text},
@@ -5,8 +7,6 @@ use craft::{
     style::{AlignItems, Display, FlexDirection, JustifyContent},
     Color,
 };
-use craft::events::ui_events::pointer::PointerButtonUpdate;
-use craft::WindowContext;
 
 #[derive(Default)]
 pub struct Counter {
@@ -60,12 +60,14 @@ fn create_button(label: &str, base_color: Color, hover_color: Color, delta: i64)
         .background(base_color)
         .hovered()
         .background(hover_color)
-        .on_pointer_button_up(move |state: &mut Counter, _: &mut (), event: &mut Event, pointer_button: &PointerButtonUpdate| {
-            if pointer_button.is_primary() {
-                state.count += delta;
-                event.prevent_propagate();
-            }
-        })
+        .on_pointer_button_up(
+            move |state: &mut Counter, _: &mut (), event: &mut Event, pointer_button: &PointerButtonUpdate| {
+                if pointer_button.is_primary() {
+                    state.count += delta;
+                    event.prevent_propagate();
+                }
+            },
+        )
         .push(Text::new(label).font_size(24).color(Color::WHITE).disable_selection())
 }
 

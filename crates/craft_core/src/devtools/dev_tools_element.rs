@@ -4,19 +4,19 @@ use crate::components::{ComponentId, Event};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
 use crate::events::CraftMessage;
+use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
-use crate::generate_component_methods;
+use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 #[derive(Clone, Default)]
 pub struct DevTools {
@@ -94,22 +94,26 @@ impl Element for DevTools {
                 let padding_box_highlight_color = Color::from_rgba8(0, 0, 255, 200);
                 let content_box_highlight_color = Color::from_rgba8(0, 255, 255, 200);
 
-                let margin_rectangle = selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle();
+                let margin_rectangle =
+                    selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle();
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
-                
-                let border_rectangle = selected_element.element_data().layout_item.computed_box_transformed.border_rectangle();
+
+                let border_rectangle =
+                    selected_element.element_data().layout_item.computed_box_transformed.border_rectangle();
                 renderer.push_layer(border_rectangle);
                 renderer.draw_rect(border_rectangle, border_box_highlight_color);
                 renderer.pop_layer();
-                
-                let padding_rectangle = selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle();
+
+                let padding_rectangle =
+                    selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle();
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
-                let content_rectangle = selected_element.element_data().layout_item.computed_box_transformed.content_rectangle();
+                let content_rectangle =
+                    selected_element.element_data().layout_item.computed_box_transformed.content_rectangle();
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();

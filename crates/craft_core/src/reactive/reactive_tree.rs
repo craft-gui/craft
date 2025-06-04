@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use crate::components::ComponentId;
 use crate::elements::Element;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::ComponentTreeNode;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Default)]
 pub(crate) struct ReactiveTree {

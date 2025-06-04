@@ -54,7 +54,6 @@ fn hero_intro() -> ComponentSpecification {
 }
 
 fn hero_features() -> ComponentSpecification {
-
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)

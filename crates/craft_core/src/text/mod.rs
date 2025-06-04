@@ -2,9 +2,9 @@ pub mod text_context;
 pub(crate) mod text_render_data;
 pub use parley;
 
-pub use text_render_data::TextRender;
-pub use text_render_data::from_editor;
 use crate::style::Style;
+pub use text_render_data::from_editor;
+pub use text_render_data::TextRender;
 
 #[derive(PartialEq)]
 pub(crate) struct TextStyle {

@@ -1,23 +1,23 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::Props;
 use crate::components::Event;
+use crate::components::Props;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::layout::layout_context::LayoutContext;
 use crate::elements::Container;
-use crate::events::{CraftMessage};
+use crate::events::CraftMessage;
+use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle, TrblRectangle};
+use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::style::{AlignItems, Display, FlexDirection, Style, Unit};
-use crate::generate_component_methods;
+use crate::text::text_context::TextContext;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 use winit::window::Window;
-use crate::text::text_context::TextContext;
 
 /// The index of the dropdown list in the layout tree.
 const DROPDOWN_LIST_INDEX: usize = 1;
@@ -97,13 +97,7 @@ impl Element for Dropdown {
         {
             // Draw the dropdown selection.
             if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
-                pseudo_dropdown_selection.internal.draw(
-                    renderer,
-                    text_context,
-                    element_state,
-                    pointer,
-                    window.clone(),
-                );
+                pseudo_dropdown_selection.internal.draw(renderer, text_context, element_state, pointer, window.clone());
             }
 
             // CLEANUP: We could make pseudo_dropdown_list_element an Overlay, but below we draw the overlay then the children.
@@ -111,13 +105,7 @@ impl Element for Dropdown {
             renderer.start_overlay();
             // Draw the dropdown list if it is open.
             if is_open && !self.children().is_empty() {
-                self.pseudo_dropdown_list_element.draw(
-                    renderer,
-                    text_context,
-                    element_state,
-                    pointer,
-                    window.clone(),
-                );
+                self.pseudo_dropdown_list_element.draw(renderer, text_context, element_state, pointer, window.clone());
                 self.draw_children(renderer, text_context, element_state, pointer, window.clone());
             }
             renderer.end_overlay();
@@ -132,7 +120,7 @@ impl Element for Dropdown {
         scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        
+
         let state = self.get_state(element_state);
         let is_open = state.is_open;
 
@@ -149,7 +137,11 @@ impl Element for Dropdown {
 
         // Add the pseudo dropdown element to the Dropdown's layout tree.
         if let Some(selected_node) = self.pseudo_dropdown_selection.as_mut() {
-            self.element_data.layout_item.push_child(&selected_node.internal.compute_layout(taffy_tree, element_state, scale_factor));
+            self.element_data.layout_item.push_child(&selected_node.internal.compute_layout(
+                taffy_tree,
+                element_state,
+                scale_factor,
+            ));
         }
 
         // Compute the layout of the pseudo dropdown list if open.
@@ -202,7 +194,8 @@ impl Element for Dropdown {
 
         // Finalize the layout of the pseudo dropdown selection element.
         if let Some(dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
-            let dropdown_selection_taffy = dropdown_selection.internal.element_data().layout_item.taffy_node_id.unwrap();
+            let dropdown_selection_taffy =
+                dropdown_selection.internal.element_data().layout_item.taffy_node_id.unwrap();
             dropdown_selection.internal.finalize_layout(
                 taffy_tree,
                 dropdown_selection_taffy,
@@ -218,7 +211,8 @@ impl Element for Dropdown {
 
         // Finalize the layout of the pseudo dropdown list element when the list is open.
         if is_open && !self.children().is_empty() {
-            let dropdown_list = taffy_tree.get_child_id(self.element_data.layout_item.taffy_node_id.unwrap(), DROPDOWN_LIST_INDEX);
+            let dropdown_list =
+                taffy_tree.get_child_id(self.element_data.layout_item.taffy_node_id.unwrap(), DROPDOWN_LIST_INDEX);
             self.pseudo_dropdown_list_element.element_data.layout_item.taffy_node_id = Some(dropdown_list);
             self.pseudo_dropdown_list_element.finalize_layout(
                 taffy_tree,
@@ -301,7 +295,8 @@ impl Element for Dropdown {
                 // Emit an event when the dropdown list is opened or closed.
                 let element_data = self.element_data();
                 let transformed_border_rectangle = element_data.layout_item.computed_box_transformed.border_rectangle();
-                let dropdown_selection_in_bounds = transformed_border_rectangle.contains(&pointer_button.state.position);
+                let dropdown_selection_in_bounds =
+                    transformed_border_rectangle.contains(&pointer_button.state.position);
                 if dropdown_selection_in_bounds {
                     state.is_open = !state.is_open;
                     event.result_message(CraftMessage::DropdownToggled(state.is_open));
@@ -327,7 +322,8 @@ impl Element for Dropdown {
         *default_style.align_items_mut() = Some(AlignItems::Center);
         let vertical_padding = Unit::Px(8.0);
         let horizontal_padding = Unit::Px(12.0);
-        *default_style.padding_mut() = TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
+        *default_style.padding_mut() =
+            TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
 
         *default_style.min_width_mut() = Unit::Px(140.0);
         *default_style.min_height_mut() = Unit::Px(45.0);
@@ -357,7 +353,8 @@ impl Dropdown {
 
         let vertical_padding = Unit::Px(8.0);
         let horizontal_padding = Unit::Px(12.0);
-        *default_style.padding_mut() = TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
+        *default_style.padding_mut() =
+            TrblRectangle::new(vertical_padding, horizontal_padding, vertical_padding, horizontal_padding);
         *default_style.min_width_mut() = Unit::Px(140.0);
         *default_style.min_height_mut() = Unit::Px(45.0);
         *default_style.background_mut() = Color::from_rgb8(220, 220, 220);

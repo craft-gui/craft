@@ -1,6 +1,6 @@
-use winit::window::{Cursor, Window};
-use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use kurbo::Point;
+use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
+use winit::window::{Cursor, Window};
 
 #[derive(Debug, Clone)]
 /// User-level API to get and set common window properties.

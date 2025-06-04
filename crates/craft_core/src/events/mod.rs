@@ -1,9 +1,9 @@
 mod mouse_wheel;
 
+pub(crate) mod event_dispatch;
 pub(crate) mod internal;
 pub(crate) mod resource_event;
 pub mod update_queue_entry;
-pub(crate) mod event_dispatch;
 //#[cfg(test)]
 //mod tests;
 
@@ -11,6 +11,7 @@ pub use mouse_wheel::MouseWheel;
 pub use winit::event::ElementState;
 
 use crate::components::ComponentId;
+use crate::elements::Element;
 use crate::events::CraftMessage::PointerButtonUp;
 use std::any::Any;
 use std::sync::Arc;
@@ -20,7 +21,6 @@ use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
-use crate::elements::Element;
 
 #[derive(Clone)]
 pub enum EventDispatchType {

@@ -14,10 +14,7 @@ use crate::renderer::vello_cpu::VelloCpuRenderer;
 use crate::renderer::vello_hybrid::VelloHybridRenderer;
 
 #[cfg(target_arch = "wasm32")]
-use {
-    crate::resource_manager::wasm_queue::WasmQueue,
-    crate::resource_manager::wasm_queue::WASM_QUEUE,
-};
+use {crate::resource_manager::wasm_queue::WasmQueue, crate::resource_manager::wasm_queue::WASM_QUEUE};
 
 use crate::events::internal::InternalMessage;
 use crate::renderer::blank_renderer::BlankRenderer;
@@ -39,14 +36,14 @@ use web_time as time;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
+use crate::app::App;
 use crate::craft_runtime::CraftRuntimeHandle;
+use crate::events::EventDispatchType;
 use std::sync::Arc;
 use ui_events::pointer::PointerEvent;
 use ui_events::UiEvent;
 use ui_events_winit::WindowEventReducer;
 use winit::dpi::LogicalSize;
-use crate::app::App;
-use crate::events::EventDispatchType;
 
 /// Stores state related to Winit.
 ///
@@ -174,7 +171,7 @@ impl ApplicationHandler for CraftWinitState {
                         PointerEvent::Enter(_) => {}
                         PointerEvent::Leave(_) => {}
                         PointerEvent::Scroll(pointer_scroll_update) => {
-                           self.craft_app.on_pointer_scroll(pointer_scroll_update);
+                            self.craft_app.on_pointer_scroll(pointer_scroll_update);
                         }
                     }
                     return;
@@ -188,10 +185,7 @@ impl ApplicationHandler for CraftWinitState {
                 self.close_requested = true;
                 self.craft_app.on_close_requested();
             }
-            WindowEvent::ScaleFactorChanged {
-                scale_factor,
-                ..
-            } => {
+            WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 self.craft_app.on_scale_factor_changed(scale_factor);
             }
             WindowEvent::Resized(new_size) => {
@@ -254,7 +248,7 @@ impl ApplicationHandler for CraftWinitState {
             }
         }
 
-    if self.close_requested {
+        if self.close_requested {
             info!("Exiting winit event loop");
 
             event_loop.exit();

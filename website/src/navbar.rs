@@ -3,8 +3,8 @@ use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
-use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
 use craft::rgb;
+use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
 use craft::WindowContext;
 
 #[derive(Default)]
@@ -38,7 +38,7 @@ impl Component for Navbar {
         _props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
-        _window: &WindowContext
+        _window: &WindowContext,
     ) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
@@ -59,7 +59,8 @@ impl Component for Navbar {
                             .font_size(32.0)
                             .font_weight(Weight::BOLD)
                             .margin("0px", "24px", "0px", "0px")
-                            .hovered().font_size(32.0)
+                            .hovered()
+                            .font_size(32.0)
                             .font_weight(Weight::BOLD)
                             .margin("0px", "24px", "0px", "0px"),
                     )

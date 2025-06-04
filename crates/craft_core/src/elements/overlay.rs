@@ -3,13 +3,13 @@ use crate::components::Props;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
+use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
-use crate::generate_component_methods;
 use std::any::Any;
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -22,8 +22,7 @@ pub struct Overlay {
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct OverlayState {
-}
+pub struct OverlayState {}
 
 impl Element for Overlay {
     fn element_data(&self) -> &ElementData {
@@ -50,7 +49,7 @@ impl Element for Overlay {
             return;
         }
         renderer.start_overlay();
-        
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, element_state);
         self.maybe_start_layer(renderer);
@@ -59,7 +58,7 @@ impl Element for Overlay {
         }
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer);
-        
+
         renderer.end_overlay();
     }
 
@@ -98,7 +97,7 @@ impl Element for Overlay {
         self.resolve_box(position, transform, result, z_index);
         self.resolve_clip(clip_bounds);
         self.finalize_borders(element_state);
-        
+
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {

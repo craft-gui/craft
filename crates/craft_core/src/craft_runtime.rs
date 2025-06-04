@@ -138,9 +138,7 @@ impl CraftRuntime {
     }
 }
 
-
 impl CraftRuntimeHandle {
-
     #[allow(dead_code)]
     #[cfg(target_arch = "wasm32")]
     pub fn spawn<F>(&self, future: F)

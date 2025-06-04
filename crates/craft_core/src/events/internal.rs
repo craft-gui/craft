@@ -5,11 +5,7 @@ use crate::events::resource_event::ResourceEvent;
 use std::any::Any;
 
 #[cfg(target_arch = "wasm32")]
-use {
-    crate::renderer::renderer::Renderer,
-    winit::window::Window,
-    std::sync::Arc,
-};
+use {crate::renderer::renderer::Renderer, std::sync::Arc, winit::window::Window};
 
 pub(crate) struct InternalUserMessage {
     pub update_fn: UpdateFn,

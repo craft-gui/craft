@@ -2,5 +2,5 @@
 pub enum ResourceType {
     Image,
     Font,
-    TinyVg
+    TinyVg,
 }

@@ -12,7 +12,7 @@ pub enum ResourceIdentifier {
     #[cfg(feature = "http_client")]
     Url(String),
     File(PathBuf),
-    Bytes(&'static[u8]),
+    Bytes(&'static [u8]),
 }
 
 impl Display for ResourceIdentifier {
@@ -54,9 +54,7 @@ impl ResourceIdentifier {
                 //tracing::warn!("Failed to find the local file: {:?}", path.as_os_str().to_str());
                 None
             }
-            Bytes(bytes) => {
-                Some(bytes.to_vec())
-            }
+            Bytes(bytes) => Some(bytes.to_vec()),
         }
     }
 }

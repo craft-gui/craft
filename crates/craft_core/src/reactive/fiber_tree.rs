@@ -1,8 +1,8 @@
 use crate::elements::element::Element;
+use crate::elements::{Dropdown, Overlay};
 use crate::reactive::tree::ComponentTreeNode;
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::elements::{Dropdown, Overlay};
 
 #[derive(Clone)]
 /// Links the ComponentTree with the ElementTree.
@@ -19,10 +19,7 @@ pub(crate) struct FiberNode<'a> {
     pub(crate) overlay_order: u32,
 }
 
-pub fn new<'a>(
-    root_component: &'a ComponentTreeNode,
-    root_element: &'a dyn Element,
-) -> Rc<RefCell<FiberNode<'a>>> {
+pub fn new<'a>(root_component: &'a ComponentTreeNode, root_element: &'a dyn Element) -> Rc<RefCell<FiberNode<'a>>> {
     // Dummy lets us treat the real root like any other child.
     let dummy_root = Rc::new(RefCell::new(FiberNode {
         component: root_component,
@@ -35,20 +32,17 @@ pub fn new<'a>(
     // ┌──────────────────┬────────────────────────┬──────────────────┐
     // │ component_stack  │ parent_fiber_stack     │ element_stack    │
     // └──────────────────┴────────────────────────┴──────────────────┘
-    let mut component_stack:      Vec<&'a ComponentTreeNode>  = vec![root_component];
-    let mut parent_fiber_stack:   Vec<Rc<RefCell<FiberNode>>> = vec![dummy_root.clone()];
-    let mut element_stack:        Vec<&'a dyn Element>        = vec![root_element];
+    let mut component_stack: Vec<&'a ComponentTreeNode> = vec![root_component];
+    let mut parent_fiber_stack: Vec<Rc<RefCell<FiberNode>>> = vec![dummy_root.clone()];
+    let mut element_stack: Vec<&'a dyn Element> = vec![root_element];
 
-    while let (Some(component), Some(parent_fiber)) =
-        (component_stack.pop(), parent_fiber_stack.pop())
-    {
+    while let (Some(component), Some(parent_fiber)) = (component_stack.pop(), parent_fiber_stack.pop()) {
         let mut overlay_order = parent_fiber.borrow().overlay_order;
         // If the component *is* an element, pop the matching element and
         // push its children so the two stacks stay aligned.
         let element = if component.is_element {
-            let element = element_stack.pop()
-                .expect("component / element stacks out of sync");
-            if element.as_any().is::<Overlay>() || element.as_any().is::<Dropdown>()  {
+            let element = element_stack.pop().expect("component / element stacks out of sync");
+            if element.as_any().is::<Overlay>() || element.as_any().is::<Dropdown>() {
                 overlay_order += 1;
             }
             for &child_element in element.children().iter().rev() {
@@ -91,10 +85,7 @@ pub fn new<'a>(
     }
 
     // The dummy now has exactly one child: the tree’s true root.
-    let root = dummy_root.borrow().children
-        .first()
-        .expect("component tree was empty")
-        .clone();
+    let root = dummy_root.borrow().children.first().expect("component tree was empty").clone();
     root.borrow_mut().parent = None;
 
     root
