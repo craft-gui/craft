@@ -163,7 +163,7 @@ impl App {
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
-            self.wait_for_redraw();
+            self.window.as_ref().unwrap().request_redraw();
         }
     }
 

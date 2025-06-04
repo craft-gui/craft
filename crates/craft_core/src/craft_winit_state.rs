@@ -282,23 +282,4 @@ impl CraftWinitState {
             craft_app,
         }
     }
-
-    /*fn wait_for_redraw(&mut self) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.runtime.maybe_block_on(async {
-                if let Some(app_message) = self.winit_receiver.recv().await {
-                    if let InternalMessage::RequestWinitRedraw(redraw) = app_message {
-                        if redraw {
-                            if let Some(window) = self.window.as_ref() {
-                                window.request_redraw();
-                            }
-                        }
-                    } else {
-                        panic!("Expected RequestWinitRedraw message, but received something else");
-                    }
-                }
-            })
-        }
-    }*/
 }
