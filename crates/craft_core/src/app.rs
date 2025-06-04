@@ -3,6 +3,7 @@ use crate::accessibility::activation_handler::CraftActivationHandler;
 use crate::accessibility::deactivation_handler::CraftDeactivationHandler;
 use crate::components::{ComponentSpecification, Event};
 use crate::craft_runtime::CraftRuntimeHandle;
+#[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 use crate::elements::{Container, Element};
 use crate::events::event_dispatch::dispatch_event;
@@ -38,6 +39,23 @@ use winit::dpi::PhysicalSize;
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
+
+macro_rules! get_tree {
+        ($self:expr, $is_dev_tree:expr) => {{
+            if !$is_dev_tree {
+                &mut $self.user_tree
+            } else {
+                #[cfg(not(feature = "dev_tools"))]
+                {
+                    panic!("Dev tools are not enabled, but a dev tree was requested.");
+                }
+                #[cfg(feature = "dev_tools")]
+                {
+                    &mut $self.dev_tree
+                }
+            }
+        }};
+    }
 
 pub(crate) struct App {
     /// The user's view specification. This is lazily evaluated and will be called each time the view is redrawn.
@@ -87,7 +105,7 @@ impl App {
     }
 
     pub(crate) fn on_process_user_events(&mut self, is_dev_tree: bool) {
-        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
+        let reactive_tree = get_tree!(self, is_dev_tree);
 
         if reactive_tree.update_queue.is_empty() {
             return;
@@ -479,7 +497,7 @@ impl App {
         scale_factor: f64,
         mouse_position: Option<Point>,
     ) {
-        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
+        let reactive_tree = get_tree!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
         let mut root_size = viewport_size;
@@ -513,7 +531,7 @@ impl App {
 
     #[allow(clippy::too_many_arguments)]
     fn draw_reactive_tree(&mut self, is_dev_tree: bool, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
-        let reactive_tree = if !is_dev_tree { &mut self.user_tree } else { &mut self.dev_tree };
+        let reactive_tree = get_tree!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
         let text_context = self.text_context.as_mut().unwrap();
