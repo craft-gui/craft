@@ -15,14 +15,14 @@ use crate::renderer::vello_hybrid::VelloHybridRenderer;
 
 #[cfg(target_arch = "wasm32")]
 use {
-    crate::resource_manager::wasm_queue::WASM_QUEUE,
     crate::resource_manager::wasm_queue::WasmQueue,
+    crate::resource_manager::wasm_queue::WASM_QUEUE,
 };
 
 use crate::events::internal::InternalMessage;
 use crate::renderer::blank_renderer::BlankRenderer;
 use crate::renderer::renderer::Renderer;
-use crate::{App, CraftOptions, RendererType, WAIT_TIME};
+use crate::{CraftOptions, RendererType, WAIT_TIME};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
@@ -41,10 +41,11 @@ use tokio::sync::mpsc::Sender;
 
 use crate::craft_runtime::CraftRuntimeHandle;
 use std::sync::Arc;
-use ui_events::pointer::{PointerEvent};
+use ui_events::pointer::PointerEvent;
 use ui_events::UiEvent;
 use ui_events_winit::WindowEventReducer;
 use winit::dpi::LogicalSize;
+use crate::app::App;
 use crate::events::EventDispatchType;
 
 /// Stores state related to Winit.
