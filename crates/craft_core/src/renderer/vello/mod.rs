@@ -19,7 +19,6 @@ use crate::renderer::vello::tinyvg::draw_tiny_vg;
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
     surface: RenderSurface<'s>,
-    window: Arc<Window>,
     window_width: f32,
     window_height: f32,
 }
@@ -104,7 +103,7 @@ impl<'a> VelloRenderer<'a> {
         vello_renderer.renderers[0].get_or_insert_with(|| create_vello_renderer(&vello_renderer.context, &surface));
 
         // Save the Window and Surface to a state variable
-        vello_renderer.state = RenderState::Active(ActiveRenderState { window, surface, window_width: surface_size.width as f32, window_height: surface_size.height as f32});
+        vello_renderer.state = RenderState::Active(ActiveRenderState { surface, window_width: surface_size.width as f32, window_height: surface_size.height as f32});
 
         vello_renderer
     }

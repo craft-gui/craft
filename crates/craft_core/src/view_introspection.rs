@@ -13,7 +13,7 @@ use crate::reactive::fiber_tree::FiberNode;
 /// Introspect the view.
 ///
 // Scans through the component tree and diffs it for resources that need to be updated.
-pub async fn scan_view_for_resources(
+pub fn scan_view_for_resources(
     element: &dyn Element,
     component: &ComponentTreeNode,
     resource_manager: Arc<ResourceManager>,
