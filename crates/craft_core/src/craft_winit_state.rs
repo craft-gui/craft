@@ -19,7 +19,7 @@ use {crate::resource_manager::wasm_queue::WasmQueue, crate::resource_manager::wa
 use crate::events::internal::InternalMessage;
 use crate::renderer::blank_renderer::BlankRenderer;
 use crate::renderer::renderer::Renderer;
-use crate::{CraftOptions, RendererType, WAIT_TIME};
+use crate::{CraftOptions, RendererType};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
@@ -44,6 +44,8 @@ use ui_events::pointer::PointerEvent;
 use ui_events::UiEvent;
 use ui_events_winit::WindowEventReducer;
 use winit::dpi::LogicalSize;
+
+const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
 /// Stores state related to Winit.
 ///

@@ -58,16 +58,12 @@ use craft_winit_state::CraftWinitState;
 
 use cfg_if::cfg_if;
 use craft_logging::info;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
+
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
-#[cfg(target_arch = "wasm32")]
-use {parley::GenericFamily, peniko::Blob};
 
-const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
 
