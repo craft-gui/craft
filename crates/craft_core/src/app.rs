@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::sync::mpsc::Sender;
-use ui_events::keyboard::{KeyState, KeyboardEvent};
+use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
@@ -446,6 +446,9 @@ impl App {
 
     pub(crate) fn on_keyboard_input(&mut self, keyboard_input: KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
+        if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
+            self.modifiers.set(Modifiers::CONTROL, false);
+        }
         if keyboard_input.modifiers.ctrl() {
             if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
                 self.window_context.zoom_in();
