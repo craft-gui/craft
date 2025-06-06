@@ -67,9 +67,10 @@ impl Element for DevTools {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
-        self.draw_borders(renderer, element_state);
-        self.draw_children(renderer, text_context, element_state, pointer, window);
+        self.draw_borders(renderer, element_state, scale_factor);
+        self.draw_children(renderer, text_context, element_state, pointer, window, scale_factor);
 
         // Find the element we are hovering over and draw an overlay.
         if let Some(hovered_inspector_element_component_id) = self.hovered_inspector_element {
@@ -95,30 +96,31 @@ impl Element for DevTools {
                 let content_box_highlight_color = Color::from_rgba8(0, 255, 255, 200);
 
                 let margin_rectangle =
-                    selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle();
+                    selected_element.element_data().layout_item.computed_box_transformed.margin_rectangle().scale(scale_factor);
                 renderer.push_layer(margin_rectangle);
                 renderer.draw_rect(margin_rectangle, margin_box_highlight_color);
                 renderer.pop_layer();
 
                 let border_rectangle =
-                    selected_element.element_data().layout_item.computed_box_transformed.border_rectangle();
+                    selected_element.element_data().layout_item.computed_box_transformed.border_rectangle().scale(scale_factor);
                 renderer.push_layer(border_rectangle);
                 renderer.draw_rect(border_rectangle, border_box_highlight_color);
                 renderer.pop_layer();
 
                 let padding_rectangle =
-                    selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle();
+                    selected_element.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
                 renderer.push_layer(padding_rectangle);
                 renderer.draw_rect(padding_rectangle, padding_box_highlight_color);
                 renderer.pop_layer();
 
                 let content_rectangle =
-                    selected_element.element_data().layout_item.computed_box_transformed.content_rectangle();
+                    selected_element.element_data().layout_item.computed_box_transformed.content_rectangle().scale(scale_factor);
                 renderer.push_layer(content_rectangle);
                 renderer.draw_rect(content_rectangle, content_box_highlight_color);
                 renderer.pop_layer();
 
                 if let Some(clip_bounds) = selected_element.element_data().layout_item.clip_bounds {
+                    let clip_bounds = clip_bounds.scale(scale_factor);
                     renderer.push_layer(clip_bounds);
                     renderer.draw_rect_outline(clip_bounds, Color::from_rgba8(255, 0, 0, 255));
                     renderer.pop_layer();
@@ -140,7 +142,6 @@ impl Element for DevTools {
             self.element_data.layout_item.push_child(&child_node);
         }
 
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree(taffy_tree, style)

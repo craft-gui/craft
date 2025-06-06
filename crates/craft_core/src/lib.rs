@@ -249,6 +249,7 @@ fn craft_main_with_options_2(
         },
         mouse_position: None,
         runtime: runtime_copy,
+        modifiers: Default::default(),
     });
 
     let mut app = CraftWinitState::new(runtime, winit_receiver, app_sender, craft_options, craft_app);

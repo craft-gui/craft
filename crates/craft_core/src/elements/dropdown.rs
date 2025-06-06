@@ -85,6 +85,7 @@ impl Element for Dropdown {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -92,12 +93,12 @@ impl Element for Dropdown {
         let is_open = self.get_state(element_state).is_open;
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, element_state);
-        self.maybe_start_layer(renderer);
+        self.draw_borders(renderer, element_state, scale_factor);
+        self.maybe_start_layer(renderer, scale_factor);
         {
             // Draw the dropdown selection.
             if let Some(pseudo_dropdown_selection) = self.pseudo_dropdown_selection.as_mut() {
-                pseudo_dropdown_selection.internal.draw(renderer, text_context, element_state, pointer, window.clone());
+                pseudo_dropdown_selection.internal.draw(renderer, text_context, element_state, pointer, window.clone(), scale_factor);
             }
 
             // CLEANUP: We could make pseudo_dropdown_list_element an Overlay, but below we draw the overlay then the children.
@@ -105,8 +106,8 @@ impl Element for Dropdown {
             renderer.start_overlay();
             // Draw the dropdown list if it is open.
             if is_open && !self.children().is_empty() {
-                self.pseudo_dropdown_list_element.draw(renderer, text_context, element_state, pointer, window.clone());
-                self.draw_children(renderer, text_context, element_state, pointer, window.clone());
+                self.pseudo_dropdown_list_element.draw(renderer, text_context, element_state, pointer, window.clone(), scale_factor);
+                self.draw_children(renderer, text_context, element_state, pointer, window.clone(), scale_factor);
             }
             renderer.end_overlay();
         }
@@ -156,7 +157,7 @@ impl Element for Dropdown {
                 &self.pseudo_dropdown_list_element.element_data.style,
             );
 
-            self.pseudo_dropdown_list_element.element_data.style.scale(scale_factor);
+            self.pseudo_dropdown_list_element.element_data.style;
             let dropdown_list_node_id = taffy_tree
                 .new_with_children(
                     self.pseudo_dropdown_list_element.element_data.style.to_taffy_style(),
@@ -167,8 +168,7 @@ impl Element for Dropdown {
             // Add the pseudo dropdown list to the Dropdown's layout tree.
             self.element_data.layout_item.push_child(&Some(dropdown_list_node_id));
         }
-
-        self.element_data.style.scale(scale_factor);
+        
         let style: taffy::Style = self.element_data.style.to_taffy_style();
         self.element_data.layout_item.build_tree(taffy_tree, style)
     }

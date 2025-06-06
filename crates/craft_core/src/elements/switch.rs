@@ -62,12 +62,13 @@ impl Element for Switch {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
         }
-        self.draw_borders(renderer, element_state);
-        self.thumb.draw(renderer);
+        self.draw_borders(renderer, element_state, scale_factor);
+        self.thumb.draw(renderer, scale_factor);
     }
 
     fn compute_layout(
@@ -101,7 +102,6 @@ impl Element for Switch {
         self.thumb.size *= scale_factor as f32;
         self.spacing *= scale_factor as f32;
 
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree(taffy_tree, style)

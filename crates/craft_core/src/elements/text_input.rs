@@ -27,6 +27,7 @@ use crate::text::{text_render_data, TextStyle};
 use std::time;
 use time::{Duration, Instant};
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
+use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::event::Ime;
@@ -73,7 +74,7 @@ pub struct TextInputState {
     last_click_time: Option<Instant>,
     click_count: u32,
     pointer_down: bool,
-    cursor_pos: (f32, f32),
+    cursor_pos: Point,
     cursor_visible: bool,
     modifiers: Option<Modifiers>,
     start_time: Option<Instant>,
@@ -119,6 +120,7 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -126,13 +128,13 @@ impl Element for TextInput {
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer, element_state);
+        self.draw_borders(renderer, element_state, scale_factor);
 
         let is_scrollable = self.element_data.is_scrollable();
 
         let element_data = self.element_data();
         let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
-        renderer.push_layer(padding_rectangle);
+        renderer.push_layer(padding_rectangle.scale(scale_factor));
 
         let scroll_y = if let Some(state) =
             element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
@@ -156,23 +158,22 @@ impl Element for TextInput {
             .downcast_mut::<TextInputState>()
         {
             if let Some(text_render) = state.text_render.as_ref() {
-                renderer.draw_text(text_render.clone(), content_rectangle, text_scroll, state.cursor_visible);
+                renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), text_scroll, state.cursor_visible);
             }
         }
 
         renderer.pop_layer();
 
-        self.draw_scrollbar(renderer);
+        self.draw_scrollbar(renderer, scale_factor);
     }
 
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _element_state: &mut ElementStateStore,
-        scale_factor: f64,
+        _scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree_with_context(
@@ -273,6 +274,7 @@ impl Element for TextInput {
 
         let scroll_y = state.scroll_state.scroll_y;
 
+        let scale_factor = state.editor.try_layout().unwrap().scale() as f64;
         let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
@@ -528,10 +530,12 @@ impl Element for TextInput {
                         let click_count = state.click_count;
                         let cursor_pos = state.cursor_pos;
                         let mut drv = state.driver(_text_context);
+                        let cursor_x = cursor_pos.x as f32;
+                        let cursor_y = cursor_pos.y as f32;
                         match click_count {
-                            2 => drv.select_word_at_point(cursor_pos.0, cursor_pos.1),
-                            3 => drv.select_line_at_point(cursor_pos.0, cursor_pos.1),
-                            _ => drv.move_to_point(cursor_pos.0, cursor_pos.1),
+                            2 => drv.select_word_at_point(cursor_x, cursor_y),
+                            3 => drv.select_line_at_point(cursor_x, cursor_y),
+                            _ => drv.move_to_point(cursor_x, cursor_y),
                         }
                     }
                 }
@@ -545,15 +549,19 @@ impl Element for TextInput {
             CraftMessage::PointerMovedEvent(pointer_moved) => {
                 let prev_pos = state.cursor_pos;
                 // NOTE: Cursor position should be relative to the top left of the text box.
-                state.cursor_pos = (
-                    pointer_moved.current.position.x as f32 - text_x,
-                    pointer_moved.current.position.y as f32 - text_y + scroll_y,
-                );
+                let cursor_pos = pointer_moved.current.position;
+                let cursor_pos: Point = (
+                    cursor_pos.x as f32 - text_x,
+                    cursor_pos.y as f32 - text_y,
+                ).into();
+                let mut cursor_pos = Point::new(cursor_pos.x * scale_factor, cursor_pos.y * scale_factor);
+                cursor_pos.y += scroll_y as f64;
+                state.cursor_pos = cursor_pos;
                 // macOS seems to generate a spurious move after selecting word?
                 if state.pointer_down && prev_pos != state.cursor_pos && !state.editor.is_composing() {
                     state.cursor_reset();
                     let cursor_pos = state.cursor_pos;
-                    state.driver(_text_context).extend_selection_to_point(cursor_pos.0, cursor_pos.1);
+                    state.driver(_text_context).extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
                 }
             }
             CraftMessage::ImeEvent(Ime::Disabled) => {
@@ -604,7 +612,7 @@ impl Element for TextInput {
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
-            cursor_pos: (0.0, 0.0),
+            cursor_pos: Point::default(),
             cursor_visible: false,
             modifiers: None,
             start_time: None,
@@ -712,16 +720,27 @@ impl TextInputState {
             return *value;
         }
 
+
+        let scale_factor = {
+            self.editor.try_layout().unwrap().scale() as f64
+        };
+
         let width_constraint = known_dimensions.width.or(match available_space.width {
             AvailableSpace::MinContent => Some(self.editor.try_layout().unwrap().min_content_width()),
             AvailableSpace::MaxContent => Some(self.editor.try_layout().unwrap().max_content_width()),
-            AvailableSpace::Definite(width) => Some(width),
+            AvailableSpace::Definite(width) => {
+                let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0;
+                Some(scaled_width)
+            },
         });
         // Some(self.text_style.font_size * self.text_style.line_height)
         let _height_constraint = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
-            AvailableSpace::Definite(height) => Some(height),
+            AvailableSpace::Definite(height) => {
+                let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, scale_factor).0;
+                Some(scaled_height)
+            },
         });
 
         self.editor.set_width(width_constraint);
@@ -733,7 +752,13 @@ impl TextInputState {
 
         self.text_render = Some(text_render_data::from_editor(layout));
 
-        let size = taffy::Size { width, height };
+        let sw = dpi::LogicalUnit::from_physical::<f32, f32>(width, scale_factor).0;
+        let sh = dpi::LogicalUnit::from_physical::<f32, f32>(height, scale_factor).0;
+
+        let size = taffy::Size {
+            width: sw,
+            height: sh,
+        };
 
         self.cache.insert(key, size);
         self.current_key = Some(key);

@@ -55,7 +55,7 @@ impl Thumb {
     pub(crate) fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        scale_factor: f64,
+        _scale_factor: f64,
         toggled: bool,
         rounded: bool,
     ) -> NodeId {
@@ -66,7 +66,6 @@ impl Thumb {
             self.thumb_style = Style::merge(&self.thumb_style, &self.toggled_thumb_style);
         }
 
-        self.thumb_style.scale(scale_factor);
         self.layout_item.build_tree(taffy_tree, self.thumb_style.to_taffy_style()).unwrap()
     }
 
@@ -92,11 +91,11 @@ impl Thumb {
         self.layout_item.resolve_clip(clip_bounds);
     }
 
-    pub(crate) fn draw(&mut self, renderer: &mut RenderList) {
+    pub(crate) fn draw(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         if !self.thumb_style.visible() {
             return;
         }
 
-        self.layout_item.draw_borders(renderer, &self.thumb_style);
+        self.layout_item.draw_borders(renderer, &self.thumb_style, scale_factor);
     }
 }

@@ -19,6 +19,7 @@ use crate::{generate_component_methods, palette};
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
@@ -72,12 +73,13 @@ impl Element for Slider {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
         }
 
-        self.draw_borders(renderer, element_state);
+        self.draw_borders(renderer, element_state, scale_factor);
 
         // Draw the value track color to the left of the thumb.
         if let Some(value_track_color) = self.value_track_color {
@@ -114,11 +116,13 @@ impl Element for Slider {
                 element_data.current_style().border_color(),
             );
             let computed_border_spec = border_spec.compute_border_spec();
-            let background_path = computed_border_spec.build_background_path();
+            let mut background_path = computed_border_spec.build_background_path();
+            let scale_factor = Affine::scale(scale_factor);
+            background_path.apply_affine(scale_factor);
             renderer.fill_bez_path(background_path, Brush::Color(value_track_color));
         }
 
-        self.thumb.draw(renderer);
+        self.thumb.draw(renderer, scale_factor);
     }
 
     fn compute_layout(
@@ -130,9 +134,7 @@ impl Element for Slider {
         self.merge_default_style();
         let child_node = self.thumb.compute_layout(taffy_tree, scale_factor, false, self.rounded);
         self.element_data.layout_item.push_child(&Some(child_node));
-
-        self.thumb.size *= scale_factor as f32;
-        self.element_data.style.scale(scale_factor);
+        
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree(taffy_tree, style)

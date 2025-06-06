@@ -46,6 +46,7 @@ impl Element for Canvas {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -67,7 +68,7 @@ impl Element for Canvas {
         let border_bottom = self.computed_box_transformed().border.bottom;
         let border_left = self.computed_box_transformed().border.left;
 
-        self.draw_borders(renderer, element_state);
+        self.draw_borders(renderer, element_state, scale_factor);
 
         renderer.push_layer(Rectangle::new(
             computed_x_transformed + border_left,
@@ -157,7 +158,6 @@ impl Element for Canvas {
             self.element_data.layout_item.push_child(&child_node);
         }
 
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree(taffy_tree, style)

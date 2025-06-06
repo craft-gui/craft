@@ -27,6 +27,7 @@ use accesskit::{Action, Role};
 use std::time;
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use time::{Duration, Instant};
+use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::window::Window;
@@ -55,7 +56,7 @@ pub struct TextState {
     pub(crate) last_click_time: Option<Instant>,
     pub(crate) click_count: u32,
     pub(crate) pointer_down: bool,
-    pub(crate) cursor_pos: (f32, f32),
+    pub(crate) cursor_pos: Point,
     pub(crate) start_time: Option<Instant>,
     pub(crate) blink_period: Duration,
 }
@@ -99,6 +100,7 @@ impl Element for Text {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -106,7 +108,7 @@ impl Element for Text {
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer, element_state);
+        self.draw_borders(renderer, element_state, scale_factor);
 
         let state: &mut TextState = element_state
             .storage
@@ -118,7 +120,7 @@ impl Element for Text {
             .unwrap();
 
         if let Some(text_render) = state.text_render.as_ref() {
-            renderer.draw_text(text_render.clone(), content_rectangle, None, false);
+            renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), None, false);
         }
     }
 
@@ -127,6 +129,7 @@ impl Element for Text {
         tree: &mut accesskit::TreeUpdate,
         parent_index: Option<usize>,
         element_state: &mut ElementStateStore,
+        scale_factor: f64,
     ) {
         let state: &mut TextState = element_state
             .storage
@@ -148,7 +151,7 @@ impl Element for Text {
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
         let mut current_node = accesskit::Node::new(Role::Label);
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
         current_node.set_value(*Box::new(state.text.clone().unwrap()));
         current_node.add_action(Action::SetTextSelection);
 
@@ -183,11 +186,10 @@ impl Element for Text {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _element_state: &mut ElementStateStore,
-        scale_factor: f64,
+        _scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
 
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree_with_context(
@@ -290,9 +292,9 @@ impl Element for Text {
                         let click_count = state.click_count;
                         let cursor_pos = state.cursor_pos;
                         match click_count {
-                            2 => state.select_word_at_point(cursor_pos.0, cursor_pos.1),
-                            3 => state.select_line_at_point(cursor_pos.0, cursor_pos.1),
-                            _ => state.move_to_point(cursor_pos.0, cursor_pos.1),
+                            2 => state.select_word_at_point(cursor_pos),
+                            3 => state.select_line_at_point(cursor_pos),
+                            _ => state.move_to_point(cursor_pos),
                         }
                         if click_count == 1 {
                             base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
@@ -303,7 +305,6 @@ impl Element for Text {
                 CraftMessage::PointerButtonUp(pointer_button) => {
                     if pointer_button.is_primary() {
                         state.pointer_down = false;
-                        state.click_count = 0;
                         state.cursor_reset();
                         base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, false);
                         event.prevent_defaults();
@@ -312,15 +313,12 @@ impl Element for Text {
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
-                    state.cursor_pos = (
-                        pointer_moved.current.position.x as f32 - text_position.x,
-                        pointer_moved.current.position.y as f32 - text_position.y,
-                    );
+                    state.cursor_pos = pointer_moved.current.position - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
                         state.cursor_reset();
                         let cursor_pos = state.cursor_pos;
-                        state.extend_selection_to_point(cursor_pos.0, cursor_pos.1);
+                        state.extend_selection_to_point(cursor_pos);
                     }
                     event.prevent_defaults();
                 }
@@ -350,7 +348,7 @@ impl Element for Text {
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
-            cursor_pos: (0.0, 0.0),
+            cursor_pos: Point::new(0.0, 0.0),
             start_time: None,
             blink_period: Default::default(),
         };
@@ -411,6 +409,7 @@ impl Element for Text {
             state.current_layout_key = None;
             state.last_requested_measure_key = None;
             state.current_render_key = None;
+            state.text_render = None;
         }
 
         state.last_text_style = current_style;
@@ -453,10 +452,21 @@ impl TextState {
         self.last_requested_measure_key = Some(key);
 
         if let Some(value) = self.cache.get(&key) {
-            return *value;
+            let sw = dpi::LogicalUnit::from_physical::<f32, f32>(value.width, self.scale_factor as f64).0;
+            let sh = dpi::LogicalUnit::from_physical::<f32, f32>(value.height, self.scale_factor as f64).0;
+            return Size {
+                width: sw,
+                height: sh,
+            }
         }
 
-        self.layout(known_dimensions, available_space)
+        let size = self.layout(known_dimensions, available_space);
+        let sw = dpi::LogicalUnit::from_physical::<f32, f32>(size.width, self.scale_factor as f64).0;
+        let sh = dpi::LogicalUnit::from_physical::<f32, f32>(size.height, self.scale_factor as f64).0;
+        Size {
+            width: sw,
+            height: sh,
+        }
     }
 
     pub fn layout(&mut self, known_dimensions: Size<Option<f32>>, available_space: Size<AvailableSpace>) -> Size<f32> {
@@ -467,13 +477,19 @@ impl TextState {
         let width_constraint = known_dimensions.width.or(match available_space.width {
             AvailableSpace::MinContent => Some(layout.min_content_width()),
             AvailableSpace::MaxContent => Some(layout.max_content_width()),
-            AvailableSpace::Definite(width) => Some(width),
+            AvailableSpace::Definite(width) => {
+                let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
+                Some(scaled_width)
+            },
         });
         // Some(self.text_style.font_size * self.text_style.line_height)
         let height_constraint = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
-            AvailableSpace::Definite(height) => Some(height),
+            AvailableSpace::Definite(height) => {
+                let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor as f64).0;
+                Some(scaled_height)
+            },
         });
         layout.break_all_lines(width_constraint);
         layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
@@ -503,19 +519,27 @@ impl TextState {
         self.blink_period = Duration::from_millis(500);
     }
 
-    pub fn extend_selection_to_point(&mut self, x: f32, y: f32) {
-        self.selection = self.selection.extend_to_point(self.layout.as_ref().unwrap(), x, y);
+    pub fn extend_selection_to_point(&mut self, point: Point) {
+        let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
+        let point = Point::new(point.x * scale_factor, point.y * scale_factor);
+        self.selection = self.selection.extend_to_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
     }
 
-    pub fn select_word_at_point(&mut self, x: f32, y: f32) {
-        self.selection = Selection::word_from_point(self.layout.as_ref().unwrap(), x, y);
+    pub fn select_word_at_point(&mut self, point: Point) {
+        let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
+        let point = Point::new(point.x * scale_factor, point.y * scale_factor);
+        self.selection = Selection::word_from_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
     }
 
-    pub fn select_line_at_point(&mut self, x: f32, y: f32) {
-        self.selection = Selection::line_from_point(self.layout.as_ref().unwrap(), x, y);
+    pub fn select_line_at_point(&mut self, point: Point) {
+        let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
+        let point = Point::new(point.x * scale_factor, point.y * scale_factor);
+        self.selection = Selection::line_from_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
     }
 
-    pub fn move_to_point(&mut self, x: f32, y: f32) {
-        self.selection = Selection::from_point(self.layout.as_ref().unwrap(), x, y);
+    pub fn move_to_point(&mut self, point: Point) {
+        let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
+        let point = Point::new(point.x * scale_factor, point.y * scale_factor);
+        self.selection = Selection::from_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
     }
 }

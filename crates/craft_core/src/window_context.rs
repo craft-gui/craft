@@ -7,6 +7,7 @@ use winit::window::{Cursor, Window};
 /// All values are in logical pixels.
 pub struct WindowContext {
     pub(crate) scale_factor: f64,
+    pub(crate) zoom_factor: f64,
     pub(crate) window_size: PhysicalSize<u32>,
     pub(crate) mouse_position: Option<Point>,
     pub(crate) cursor: Option<Cursor>,
@@ -54,12 +55,21 @@ impl WindowContext {
             )));
         };
     }
+    
+    pub(crate) fn zoom_in(&mut self) {
+        self.zoom_factor += 0.01;
+    }
+
+    pub(crate) fn zoom_out(&mut self) {
+        self.zoom_factor = (self.zoom_factor - 0.01).max(1.0);
+    }
 }
 
 impl WindowContext {
     pub(crate) fn new() -> WindowContext {
         Self {
             scale_factor: 1.0,
+            zoom_factor: 1.0,
             window_size: Default::default(),
             mouse_position: None,
             cursor: None,
@@ -76,10 +86,14 @@ impl WindowContext {
     }
 
     pub fn window_width(&self) -> f32 {
-        self.window_size.to_logical(self.scale_factor).width
+        self.window_size.to_logical(self.effective_scale_factor()).width
     }
     pub fn window_height(&self) -> f32 {
-        self.window_size.to_logical(self.scale_factor).height
+        self.window_size.to_logical(self.effective_scale_factor()).height
+    }
+    
+    pub fn window_size(&self) -> LogicalSize<f32> {
+        self.window_size.to_logical(self.effective_scale_factor())
     }
 
     pub fn mouse_position_x(&self) -> Option<f32> {
@@ -108,6 +122,10 @@ impl WindowContext {
 
     pub fn set_cursor(&mut self, cursor: Cursor) {
         self.requested_cursor = Some(cursor);
+    }
+    
+    pub fn effective_scale_factor(&self) -> f64 {
+        self.scale_factor * self.zoom_factor
     }
 
     pub(crate) fn reset(&mut self) {

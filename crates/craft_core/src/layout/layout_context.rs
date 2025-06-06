@@ -79,8 +79,7 @@ impl ImageContext {
                 original_image_height = image_data.height as f32;
             }
         }
-        // println!("image size: {} {}", original_image_width, original_image_height);
-        // println!("known dims: {:?}", known_dimensions);
+
         match (known_dimensions.width, known_dimensions.height) {
             (Some(width), Some(height)) => Size { width, height },
             (Some(width), None) => Size {

@@ -35,7 +35,9 @@ use taffy::{AvailableSpace, NodeId, TaffyTree};
 use tokio::sync::mpsc::Sender;
 use ui_events::keyboard::{KeyState, KeyboardEvent};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
-use winit::dpi::PhysicalSize;
+use ui_events::ScrollDelta;
+use ui_events::ScrollDelta::PixelDelta;
+use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
@@ -92,6 +94,7 @@ pub(crate) struct App {
     pub(crate) app_sender: Sender<InternalMessage>,
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
+    pub(crate) modifiers: ui_events::keyboard::Modifiers,
 }
 
 impl App {
@@ -224,7 +227,7 @@ impl App {
             &mut self.global_state,
             &mut self.reload_fonts,
             text_context,
-            self.window_context.scale_factor,
+            self.window_context.effective_scale_factor(),
             &mut self.window_context,
         );
 
@@ -239,7 +242,7 @@ impl App {
 
         let window = self.window.as_mut().unwrap().clone();
 
-        let surface_size = Size::new(window.inner_size().width as f32, window.inner_size().height as f32);
+        let surface_size = self.window_context.window_size();
 
         self.setup_text_context();
 
@@ -247,7 +250,7 @@ impl App {
 
         cfg_if! {
             if #[cfg(feature = "dev_tools")] {
-                let mut root_size = surface_size;
+                let mut root_size = self.window_context.window_size();
             } else {
                 let root_size = surface_size;
             }
@@ -270,7 +273,7 @@ impl App {
                 false,
                 root_size,
                 Point::new(0.0, 0.0),
-                self.window_context.scale_factor,
+                self.window_context.effective_scale_factor(),
                 self.mouse_position,
             );
 
@@ -288,15 +291,15 @@ impl App {
                     &mut self.global_state,
                     &mut self.reload_fonts,
                     self.text_context.as_mut().unwrap(),
-                    self.window_context.scale_factor,
+                    self.window_context.effective_scale_factor(),
                     &mut self.window_context,
                 );
 
                 self.layout_tree(
                     true,
-                    Size::new(surface_size.width - root_size.width, root_size.height),
+                    LogicalSize::new(surface_size.width - root_size.width, root_size.height),
                     Point::new(root_size.width as f64, 0.0),
-                    self.window_context.scale_factor,
+                    self.window_context.effective_scale_factor(),
                     self.mouse_position,
                 );
 
@@ -335,6 +338,21 @@ impl App {
     }
 
     pub(crate) fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
+        if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse {
+            let y: f32 = match pointer_scroll_update.delta {
+                ScrollDelta::PageDelta(_, y) => y,
+                ScrollDelta::LineDelta(_, y) => y,
+                PixelDelta(_, y) => y as f32,
+            };
+            if y < 0.0 {
+                self.window_context.zoom_out();
+            } else {
+                self.window_context.zoom_in();
+            }
+            self.request_redraw();
+            return;
+        }
+
         let event = CraftMessage::PointerScroll(pointer_scroll_update);
         let message = Message::CraftMessage(event);
 
@@ -348,6 +366,11 @@ impl App {
         is_up: bool,
         dispatch_type: EventDispatchType,
     ) {
+        let mut pointer_event = pointer_event;
+        let zoom = self.window_context.zoom_factor;
+        pointer_event.state.position.x /= zoom;
+        pointer_event.state.position.y /= zoom;
+
         let cursor_position = pointer_event.state.position;
 
         let event = if is_up {
@@ -369,6 +392,11 @@ impl App {
     }
 
     pub(crate) fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
+        let mut mouse_moved = mouse_moved;
+        let zoom = self.window_context.zoom_factor;
+        mouse_moved.current.position.x /= zoom;
+        mouse_moved.current.position.y /= zoom;
+
         self.mouse_position = Some(mouse_moved.current.position);
         self.window_context.mouse_position = Some(mouse_moved.current.position);
 
@@ -417,6 +445,19 @@ impl App {
     }
 
     pub(crate) fn on_keyboard_input(&mut self, keyboard_input: KeyboardEvent) {
+        self.modifiers = keyboard_input.modifiers;
+        if keyboard_input.modifiers.ctrl() {
+            if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
+                self.window_context.zoom_in();
+                self.request_redraw();
+                return;
+            } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
+                self.window_context.zoom_out();
+                self.request_redraw();
+                return;
+            }
+        }
+
         let keyboard_event = CraftMessage::KeyboardInputEvent(keyboard_input.clone());
         let message = Message::CraftMessage(keyboard_event);
 
@@ -492,7 +533,7 @@ impl App {
     fn layout_tree(
         &mut self,
         is_dev_tree: bool,
-        viewport_size: Size<f32>,
+        viewport_size: LogicalSize<f32>,
         origin: Point,
         scale_factor: f64,
         mouse_position: Option<Point>,
@@ -500,16 +541,7 @@ impl App {
         let reactive_tree = get_tree!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
-        let mut root_size = viewport_size;
-
-        // When we lay out the root element it scales up the values by the scale factor, so we need to scale it down here.
-        // We do not want to scale the window size.
-        {
-            root_size.width /= scale_factor as f32;
-            root_size.height /= scale_factor as f32;
-        }
-
-        style_root_element(root_element, root_size);
+        style_root_element(root_element, viewport_size);
         let text_context = self.text_context.as_mut().unwrap();
 
         {
@@ -517,8 +549,7 @@ impl App {
             let _enter = span.enter();
             layout(
                 &mut reactive_tree.element_state,
-                root_size.width,
-                root_size.height,
+                viewport_size,
                 text_context,
                 root_element.as_mut(),
                 origin,
@@ -539,7 +570,8 @@ impl App {
             let span = span!(Level::INFO, "render");
             let _enter = span.enter();
             let mut render_list = RenderList::new();
-            root_element.draw(&mut render_list, text_context, &mut reactive_tree.element_state, mouse_position, window);
+            let scale_factor = self.window_context.effective_scale_factor();
+            root_element.draw(&mut render_list, text_context, &mut reactive_tree.element_state, mouse_position, window, scale_factor);
 
             let renderer = self.renderer.as_mut().unwrap();
             renderer.sort_and_cull_render_list(&mut render_list);
@@ -569,7 +601,7 @@ impl App {
 
         let state = &mut self.user_tree.element_state;
 
-        self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None, state);
+        self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None, state, self.window_context.effective_scale_factor());
         tree_update.nodes[0].1.set_role(Role::Window);
 
         tree_update
@@ -616,7 +648,7 @@ fn update_reactive_tree(
     reactive_tree.pointer_captures = new_tree.pointer_captures;
 }
 
-fn style_root_element(root: &mut Box<dyn Element>, root_size: Size<f32>) {
+fn style_root_element(root: &mut Box<dyn Element>, root_size: LogicalSize<f32>) {
     *root.style_mut().width_mut() = Unit::Px(root_size.width);
     *root.style_mut().wrap_mut() = Wrap::Wrap;
     *root.style_mut().display_mut() = Display::Block;
@@ -641,8 +673,7 @@ fn style_root_element(root: &mut Box<dyn Element>, root_size: Size<f32>) {
 #[allow(clippy::too_many_arguments)]
 fn layout(
     element_state: &mut ElementStateStore,
-    window_width: f32,
-    window_height: f32,
+    window_size: LogicalSize<f32>,
     text_context: &mut TextContext,
     root_element: &mut dyn Element,
     origin: Point,
@@ -654,8 +685,8 @@ fn layout(
     let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
-        width: AvailableSpace::Definite(window_width),
-        height: AvailableSpace::Definite(window_height),
+        width: AvailableSpace::Definite(window_size.width),
+        height: AvailableSpace::Definite(window_size.height),
     };
 
     taffy_tree

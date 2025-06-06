@@ -49,6 +49,7 @@ impl Element for Container {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         let base_state = self.get_base_state_mut(element_state);
         let current_style = base_state.base.current_style(self.element_data());
@@ -58,14 +59,14 @@ impl Element for Container {
         }
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, element_state);
-        self.maybe_start_layer(renderer);
+        self.draw_borders(renderer, element_state, scale_factor);
+        self.maybe_start_layer(renderer, scale_factor);
         {
-            self.draw_children(renderer, text_context, element_state, pointer, window);
+            self.draw_children(renderer, text_context, element_state, pointer, window, scale_factor);
         }
         self.maybe_end_layer(renderer);
 
-        self.draw_scrollbar(renderer);
+        self.draw_scrollbar(renderer, scale_factor);
     }
 
     fn compute_layout(
@@ -82,7 +83,7 @@ impl Element for Container {
         }
 
         let base_state = self.get_base_state_mut(element_state);
-        base_state.base.current_style_mut(&mut self.element_data).scale(scale_factor);
+        base_state.base.current_style_mut(&mut self.element_data);
 
         let current_style = {
             let base_state = self.get_base_state(element_state);
@@ -149,10 +150,6 @@ impl Element for Container {
         }
     }
 
-    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
-    }
-
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -170,6 +167,10 @@ impl Element for Container {
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 
         container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
+    }
+
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {

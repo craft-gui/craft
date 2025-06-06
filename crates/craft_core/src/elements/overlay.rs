@@ -44,6 +44,7 @@ impl Element for Overlay {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
@@ -51,13 +52,13 @@ impl Element for Overlay {
         renderer.start_overlay();
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, element_state);
-        self.maybe_start_layer(renderer);
+        self.draw_borders(renderer, element_state, scale_factor);
+        self.maybe_start_layer(renderer, scale_factor);
         {
-            self.draw_children(renderer, text_context, element_state, pointer, window);
+            self.draw_children(renderer, text_context, element_state, pointer, window, scale_factor);
         }
         self.maybe_end_layer(renderer);
-        self.draw_scrollbar(renderer);
+        self.draw_scrollbar(renderer, scale_factor);
 
         renderer.end_overlay();
     }
@@ -75,7 +76,6 @@ impl Element for Overlay {
             self.element_data.layout_item.push_child(&child_node);
         }
 
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree(taffy_tree, style)

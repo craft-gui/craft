@@ -55,25 +55,25 @@ impl Element for Image {
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         if !self.element_data.style.visible() {
             return;
         }
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
-        self.draw_borders(renderer, element_state);
+        self.draw_borders(renderer, element_state, scale_factor);
 
-        renderer.draw_image(content_rectangle, self.resource_identifier.clone());
+        renderer.draw_image(content_rectangle.scale(scale_factor), self.resource_identifier.clone());
     }
 
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _element_state: &mut ElementStateStore,
-        scale_factor: f64,
+        _scale_factor: f64,
     ) -> Option<NodeId> {
         self.merge_default_style();
-        self.element_data.style.scale(scale_factor);
         let style: taffy::Style = self.element_data.style.to_taffy_style();
 
         self.element_data.layout_item.build_tree_with_context(

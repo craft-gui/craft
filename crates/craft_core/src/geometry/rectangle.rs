@@ -1,5 +1,6 @@
 use crate::geometry::Point;
 use peniko::kurbo;
+use winit::dpi;
 
 /// A structure representing a rectangle in 2D space.
 #[derive(Debug, Clone, Copy, Default)]
@@ -29,6 +30,15 @@ impl Rectangle {
             && point.x as f32 <= self.right()
             && point.y as f32 >= self.top()
             && point.y as f32 <= self.bottom()
+    }
+    
+    pub fn scale(&self, scale_factor: f64) -> Self {
+        Rectangle {
+            x: dpi::PhysicalUnit::from_logical::<f32, f32>(self.x, scale_factor).0,
+            y: dpi::PhysicalUnit::from_logical::<f32, f32>(self.y, scale_factor).0,
+            width: dpi::PhysicalUnit::from_logical::<f32, f32>(self.width, scale_factor).0,
+            height: dpi::PhysicalUnit::from_logical::<f32, f32>(self.height, scale_factor).0,
+        }
     }
 }
 

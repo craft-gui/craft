@@ -79,6 +79,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     );
 
     fn compute_layout(
@@ -171,6 +172,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         window: Option<Arc<Window>>,
+        scale_factor: f64,
     ) {
         for child in self.element_data_mut().children.iter_mut() {
             let taffy_child_node_id = child.internal.taffy_node_id();
@@ -178,15 +180,15 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             if taffy_child_node_id.is_none() {
                 continue;
             }
-            child.internal.draw(renderer, text_context, element_state, pointer, window.clone());
+            child.internal.draw(renderer, text_context, element_state, pointer, window.clone(), scale_factor);
         }
     }
 
-    fn draw_borders(&self, renderer: &mut RenderList, element_state: &mut ElementStateStore) {
+    fn draw_borders(&self, renderer: &mut RenderList, element_state: &mut ElementStateStore, scale_factor: f64) {
         let base_state = self.get_base_state(element_state);
         let current_style = base_state.base.current_style(self.element_data());
 
-        self.element_data().layout_item.draw_borders(renderer, current_style);
+        self.element_data().layout_item.draw_borders(renderer, current_style, scale_factor);
     }
 
     fn should_start_new_layer(&self) -> bool {
@@ -195,9 +197,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_data.current_style().overflow()[1] == Overflow::Scroll
     }
 
-    fn maybe_start_layer(&self, renderer: &mut RenderList) {
+    fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
         let element_data = self.element_data();
-        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
+        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -220,14 +222,14 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         self.element_data_mut().layout_item.finalize_borders(has_border, border_radius, border_color);
     }
 
-    fn draw_scrollbar(&mut self, renderer: &mut RenderList) {
+    fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
 
         // track
-        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_track, scrollbar_color.track_color);
+        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor), scrollbar_color.track_color);
 
         // thumb
-        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_thumb, scrollbar_color.thumb_color);
+        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor), scrollbar_color.thumb_color);
     }
 
     fn finalize_scrollbar(&mut self, scroll_state: &mut ScrollState) {
@@ -272,6 +274,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         tree: &mut accesskit::TreeUpdate,
         parent_index: Option<usize>,
         element_state: &mut ElementStateStore,
+        scale_factor: f64,
     ) {
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
@@ -281,7 +284,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             current_node.add_action(Action::Click);
         }
 
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle();
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         current_node.set_bounds(accesskit::Rect {
             x0: padding_box.left() as f64,
@@ -300,7 +303,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         tree.nodes.push((current_node_id, current_node));
 
         for child in self.element_data_mut().children.iter_mut() {
-            child.internal.compute_accessibility_tree(tree, Some(current_index), element_state);
+            child.internal.compute_accessibility_tree(tree, Some(current_index), element_state, scale_factor);
         }
     }
 

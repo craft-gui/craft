@@ -53,6 +53,7 @@ impl Element for Font {
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _window: Option<Arc<Window>>,
+        _scale_factor: f64,
     ) {
     }
 
