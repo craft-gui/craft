@@ -17,6 +17,7 @@ use craft::style::Display;
 use craft::style::FlexDirection;
 use craft::WindowContext;
 use craft::{craft_main, CraftOptions};
+use craft::geometry::Size;
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -65,5 +66,17 @@ impl Component for Website {
 }
 
 fn main() {
-    craft_main(Website::component(), WebsiteGlobalState::default(), CraftOptions::basic("Craft"));
+    let window_title = "Craft";
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    let options = CraftOptions {
+        window_title: window_title.to_string(),
+        window_size: Some(Size::new(1600.0, 900.0)),
+        ..Default::default()
+    };
+
+    #[cfg(target_arch = "wasm32")]
+    let options = CraftOptions::basic(window_title);
+    
+    craft_main(Website::component(), WebsiteGlobalState::default(), options);
 }
