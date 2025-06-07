@@ -32,6 +32,7 @@ impl dyn Element {
 
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
     use crate::elements::element::ElementBoxed;
     use crate::elements::{Container, Text};
     use crate::events::update_queue_entry::UpdateQueueEntry;
@@ -60,7 +61,7 @@ mod tests {
 
         let mut user_state = StateStore::default();
         let mut element_state = ElementStateStore::default();
-        let mut global_state = GlobalState::from(Box::new(()));
+        let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
         let mut window_context = WindowContext::new();
         let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 

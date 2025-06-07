@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::components::{Component, ComponentId, ComponentSpecification};
 use crate::elements::element::ElementBoxed;
 use crate::elements::{Container, Text};
@@ -24,7 +25,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
 
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
     let mut window_context = WindowContext::new();
@@ -75,7 +76,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
     let mut window_context = WindowContext::new();
@@ -123,7 +124,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
     let root_element: ElementBoxed = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
@@ -208,7 +209,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
     let root_element: ElementBoxed = Container::new().into();
 
     let mut reactive_tree = ReactiveTree::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
@@ -274,7 +275,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
@@ -323,7 +324,7 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
     let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
     let tree_1 = diff_trees(
@@ -374,7 +375,7 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
     let root_element: ElementBoxed = Container::new().into();
     let mut user_state = StateStore::default();
     let mut element_state = ElementStateStore::default();
-    let mut global_state = GlobalState::from(Box::new(()));
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
     let mut window_context = WindowContext::new();
     let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
 
