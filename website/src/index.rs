@@ -3,14 +3,10 @@ use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight};
 use craft::{palette, Color};
+use crate::theme::MAX_CONTAINER_WIDTH;
 
 fn hero_intro() -> ComponentSpecification {
-    #[cfg(not(target_arch = "wasm32"))]
-    let craft_text = "📜 Craft";
-
-    // FIXME: Emojis aren't showing on the web.
-    #[cfg(target_arch = "wasm32")]
-    let craft_text = "Craft";
+    let craft_text = "A reactive GUI framework for Rust";
 
     Container::new()
         .display(Display::Flex)
@@ -18,20 +14,20 @@ fn hero_intro() -> ComponentSpecification {
         .margin("100px", "5%", "100px", "5%")
         .width("600px")
         .min_width("330px")
-        .max_width("100%")
+        .max_width(Unit::Px(MAX_CONTAINER_WIDTH))
         .push(Text::new(craft_text)
             .font_size(32.0)
             .font_weight(Weight::BOLD)
             .margin("0px", "0px", "8px", "0px")
         )
         .push(
-            Text::new("A reactive GUI framework that allows developers to build interactive graphical user interfaces efficiently and elegantly.")
-                .font_size(24.0)
-            ,
+            Text::new("Build your UI with regular Rust code.")
+                .font_size(20.0)
+                .color(Color::from_rgb8(60, 60, 60))
         )
         .push(
             Container::new()
-                .margin("16px", "0px", "0px", "0px")
+                .margin("32px", "0px", "0px", "0px")
                 .push(
                     Link::component()
                         .props(Props::new(LinkProps {
@@ -54,30 +50,36 @@ fn hero_intro() -> ComponentSpecification {
 }
 
 fn hero_features() -> ComponentSpecification {
+    fn hero_item(title: &str, text: &str) -> Container {
+        let sub_title_color = Color::from_rgb8(70, 70,70);
+        
+        Container::new()
+            .gap("10px")
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Column)
+            .push(Text::new(title).font_size(24.0))
+            .push(Text::new(text).font_size(16.0).color(sub_title_color))
+    }
+    
     Container::new()
         .display(Display::Flex)
-        .flex_direction(FlexDirection::Column)
-        .padding("5%", "5%", "0%", "5%")
+        .background(Color::from_rgb8(177, 200, 211))
+        .padding("5%", "5%", "5%", "5%")
         .width("100%")
         .gap("50px")
         .push(
 
             Container::new()
-                .gap("10px")
+                .max_width(Unit::Px(MAX_CONTAINER_WIDTH))
+                .gap("20px")
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
-                .push(Text::new("Goals:").font_size(32.0)
-                    .font_weight(Weight::SEMIBOLD).margin("0px", "0px", "10px", "0px"))
-                .push(Text::new("1. Reactive").font_size(24.0))
-                .push(Text::new("When your data changes, we automatically re-run your view function.").font_size(16.0).color(palette::css::GRAY))
-                .push(Text::new("2. Components").font_size(24.0))
-                .push(Text::new("Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates.").font_size(16.0).color(palette::css::GRAY))
-                .push(Text::new("3. Pure Rust without macros").font_size(24.0))
-                .push(Text::new("No macros.").font_size(16.0).color(palette::css::GRAY))
-                .push(Text::new("4. Web-like styling").font_size(24.0))
-                .push(Text::new("We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.").font_size(16.0).color(palette::css::GRAY))
-                .push(Text::new("5. Cross Platform").font_size(24.0))
-                .push(Text::new("Currently we support Windows, macOS, Linux, Web, and Android.").font_size(16.0).color(palette::css::GRAY))
+                .push(Text::new("Goals").font_size(32.0).font_weight(Weight::SEMIBOLD).margin("0px", "0px", "10px", "0px"))
+                .push(hero_item("1. Reactive", "When your data changes, we automatically re-run your view function."))
+                .push(hero_item("2. Components", "Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates."))
+                .push(hero_item("3. Pure Rust without macros", "No macros."))
+                .push(hero_item("4. Web-like styling", "We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling."))
+                .push(hero_item("5. Cross Platform", "Currently we support Windows, macOS, Linux, Web, and Android."))
 
         )
         .component()
@@ -85,13 +87,16 @@ fn hero_features() -> ComponentSpecification {
 
 pub(crate) fn index_page() -> ComponentSpecification {
     Container::new()
-        .display(Display::Flex)
         .width("100%")
-        .flex_direction(FlexDirection::Column)
-        .flex_grow(1.0) // Take up remaining space
-        .overflow(Overflow::Scroll) // Allow content overflow to scroll
-        .padding(Unit::Px(20.0), Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0))
-        .push(hero_intro())
-        .push(hero_features())
-        .component()
+        .overflow(Overflow::Scroll)
+        .push(
+            Container::new()
+                .display(Display::Flex)
+                .width("100%")
+                .margin(Unit::Px(0.0), Unit::Auto, Unit::Px(0.0), Unit::Auto)
+                .flex_direction(FlexDirection::Column)
+                .flex_grow(1.0)
+                .push(hero_intro())
+                .push(hero_features())
+        ) .component()
 }

@@ -1,8 +1,6 @@
 use crate::geometry::TrblRectangle;
 use crate::renderer::color::Color;
-use crate::style::{
-    AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Unit, Weight, Wrap,
-};
+use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Underline, Unit, Weight, Wrap};
 use taffy::Position;
 
 pub trait ElementStyles
@@ -164,6 +162,17 @@ where
 
     fn font_weight(mut self, font_weight: Weight) -> Self {
         *self.styles_mut().font_weight_mut() = font_weight;
+        self
+    }
+    
+    fn underline(mut self, thickness: f32, color: Color, offset: Option<f32>) -> Self {
+        *self.styles_mut().underline_mut() = Some(
+            Underline {
+                thickness: Some(thickness),
+                color,
+                offset
+            }
+        );
         self
     }
 

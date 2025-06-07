@@ -39,5 +39,6 @@ bitflags! {
         const BORDER_RADIUS = 1 << 33;
         const SCROLLBAR_COLOR = 1 << 34;
         const VISIBLE = 1 << 35;
+        const UNDERLINE = 1 << 36;
     }
 }

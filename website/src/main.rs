@@ -1,11 +1,11 @@
-mod about;
+mod docs;
 mod examples;
 mod index;
 mod link;
 mod navbar;
 mod theme;
 
-use crate::about::About;
+use crate::docs::Docs;
 use crate::examples::Examples;
 use crate::index::index_page;
 use crate::navbar::Navbar;
@@ -58,7 +58,7 @@ impl Component for Website {
 
         match global_state.route.as_str() {
             "/examples" => wrapper.push(Examples::component().key("examples")),
-            "/about" => wrapper.push(About::component().key("about")),
+            "/docs" => wrapper.push(Docs::component().key("docs")),
             _ => wrapper.push(index_page().key("index")),
         }
         .component()
@@ -67,7 +67,7 @@ impl Component for Website {
 
 fn main() {
     let window_title = "Craft";
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     let options = CraftOptions {
         window_title: window_title.to_string(),
@@ -77,6 +77,6 @@ fn main() {
 
     #[cfg(target_arch = "wasm32")]
     let options = CraftOptions::basic(window_title);
-    
+
     craft_main(Website::component(), WebsiteGlobalState::default(), options);
 }

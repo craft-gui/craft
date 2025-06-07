@@ -1,11 +1,10 @@
-use crate::theme::NAVBAR_BACKGROUND_COLOR;
+use crate::theme::{NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, NAVBAR_TEXT_HOVERED_COLOR};
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
-use craft::rgb;
 use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
-use craft::WindowContext;
+use craft::{Color, WindowContext};
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
@@ -15,14 +14,15 @@ pub const NAVBAR_HEIGHT: f32 = 48.0;
 fn create_link(label: &str, route: &str) -> Text {
     Text::new(label)
         .id(format!("route_{}", route).as_str())
-        .margin("0px", "12px", "0px", "0px") // Default Margin
+        .margin("0px", "12px", "0px", "0px")
         .font_size(16.0)
         .disable_selection()
-        .color(rgb(220, 220, 220))
+        .color(NAVBAR_TEXT_COLOR)
         .hovered()
-        .color(rgb(255, 255, 255))
-        .margin("0px", "12px", "0px", "0px") // Default Margin
-        .font_size(16.0)
+        .color(NAVBAR_TEXT_HOVERED_COLOR)
+        .underline(1.0, Color::BLACK, None)
+        .margin("0px", "12px", "0px", "0px")
+        .font_size(16.5)
         .disable_selection()
         .normal()
 }
@@ -65,8 +65,8 @@ impl Component for Navbar {
                             .margin("0px", "24px", "0px", "0px"),
                     )
                     .push(create_link("Home", "/").margin("0px", "12px", "0px", "0px"))
+                    .push(create_link("Docs", "/docs").margin("0px", "12px", "0px", "0px"))
                     .push(create_link("Examples", "/examples").margin("0px", "12px", "0px", "0px"))
-                    .push(create_link("About", "/about").margin("0px", "12px", "0px", "0px")),
             )
             .component()
     }

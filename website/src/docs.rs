@@ -5,9 +5,9 @@ use craft::style::{AlignItems, Display, JustifyContent, Weight};
 use craft::WindowContext;
 
 #[derive(Default)]
-pub(crate) struct About {}
+pub(crate) struct Docs {}
 
-impl Component for About {
+impl Component for Docs {
     type Props = ();
     type GlobalState = WebsiteGlobalState;
     type Message = ();
@@ -26,7 +26,7 @@ impl Component for About {
             .justify_content(JustifyContent::Center)
             .width("100%")
             .height("100%")
-            .push(Text::new("Coming Soon...").font_size(48.0).font_weight(Weight::BOLD).component())
+            .push(Text::new("Coming Soon").font_size(48.0).font_weight(Weight::BOLD).component())
             .component()
     }
 }

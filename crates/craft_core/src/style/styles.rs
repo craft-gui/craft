@@ -136,6 +136,13 @@ impl Default for Weight {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Underline {
+    pub thickness: Option<f32>,
+    pub color: Color,
+    pub offset: Option<f32>,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FontStyle {
     Normal,
@@ -183,6 +190,7 @@ pub struct Style {
     font_size: f32,
     font_weight: Weight,
     font_style: FontStyle,
+    underline: Option<Underline>,
     overflow: [Overflow; 2],
 
     border_color: TrblRectangle<Color>,
@@ -231,6 +239,7 @@ impl Default for Style {
             font_size: 16.0,
             font_weight: Default::default(),
             font_style: Default::default(),
+            underline: None,
             overflow: [Overflow::default(), Overflow::default()],
             border_radius: [(0.0, 0.0); 4],
             scrollbar_color: ScrollbarColor {
@@ -530,6 +539,15 @@ impl Style {
         &mut self.font_style
     }
 
+    pub fn underline(&self) -> Option<Underline> {
+        self.underline
+    }
+
+    pub fn underline_mut(&mut self) -> &mut Option<Underline> {
+        self.dirty_flags.insert(StyleFlags::UNDERLINE);
+        &mut self.underline
+    }
+
     pub fn overflow(&self) -> [Overflow; 2] {
         self.overflow
     }
@@ -699,6 +717,8 @@ impl Style {
 
         let visible = if new_dirty_flags.contains(StyleFlags::VISIBLE) { new.visible } else { old.visible };
 
+        let underline = if new_dirty_flags.contains(StyleFlags::UNDERLINE) { new.underline } else { old.underline };
+        
         let dirty_flags = old_dirty_flags | new_dirty_flags;
 
         Self {
@@ -732,6 +752,7 @@ impl Style {
             font_size,
             font_weight,
             font_style,
+            underline,
             overflow,
             border_color,
             border_width,
@@ -766,6 +787,19 @@ impl Style {
             // Just default to system UI fonts.
             Cow::Owned(vec![FontFamily::Generic(GenericFamily::SystemUi)])
         };
+        
+        let has_underline = self.underline.is_some();
+        let mut underline_offset = None;
+        let mut underline_size = None;
+        let mut underline_brush = None;
+        
+        if let Some(underline) = self.underline {
+            underline_offset = underline.offset;
+            underline_size = underline.thickness;
+            underline_brush = Some(ColorBrush {
+                color: underline.color,
+            });
+        }
 
         let font_stack = FontStack::List(font_stack_cow_list);
         TextStyle {
@@ -778,10 +812,10 @@ impl Style {
             font_features: FontSettings::List(Cow::Borrowed(&[])),
             locale: Default::default(),
             brush,
-            has_underline: Default::default(),
-            underline_offset: Default::default(),
-            underline_size: Default::default(),
-            underline_brush: Default::default(),
+            has_underline,
+            underline_offset,
+            underline_size,
+            underline_brush,
             has_strikethrough: Default::default(),
             strikethrough_offset: Default::default(),
             strikethrough_size: Default::default(),
@@ -807,6 +841,19 @@ impl Style {
             color: self.color(),
         };
 
+        let has_underline = self.underline.is_some();
+        let mut underline_offset = None;
+        let mut underline_size = None;
+        let mut underline_brush = None;
+
+        if let Some(underline) = self.underline {
+            underline_offset = underline.offset;
+            underline_size = underline.thickness;
+            underline_brush = Some(ColorBrush {
+                color: underline.color,
+            });
+        }
+
         let font_stack_cow_list = if let Some(font_family) = self.font_family() {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
@@ -824,6 +871,10 @@ impl Style {
         style_set.insert(StyleProperty::FontWeight(font_weight));
         style_set.insert(StyleProperty::Brush(brush));
         style_set.insert(StyleProperty::LineHeight(1.2));
+        style_set.insert(StyleProperty::Underline(has_underline));
+        style_set.insert(StyleProperty::UnderlineBrush(underline_brush));
+        style_set.insert(StyleProperty::UnderlineOffset(underline_offset));
+        style_set.insert(StyleProperty::UnderlineSize(underline_size));
     }
     
 }

@@ -32,6 +32,7 @@ pub struct TextRenderItem {
 
 #[derive(Clone, Copy, Debug)]
 pub struct TextRenderItemLine {
+    pub brush: ColorBrush,
     #[allow(dead_code)]
     pub line: Line,
     #[allow(dead_code)]
@@ -67,7 +68,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             // We draw underlines under the text, then the strikethrough on top, following:
             // https://drafts.csswg.org/css-text-decor/#painting-order
             let underline: Option<TextRenderItemLine> = if let Some(underline) = &style.underline {
-                let _underline_brush = &style.brush;
+                let underline_brush = underline.brush;
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match underline.offset {
                     Some(offset) => offset,
@@ -88,7 +89,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
                     (glyph_run.offset() as f64, y as f64),
                     ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
                 );
-                Some(TextRenderItemLine { line, width })
+                Some(TextRenderItemLine { line, width, brush: underline_brush })
             } else {
                 None
             };
@@ -113,7 +114,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             });
 
             let strikethrough = if let Some(strikethrough) = &style.strikethrough {
-                let _strikethrough_brush = &style.brush;
+                let strikethrough_brush = strikethrough.brush;
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match strikethrough.offset {
                     Some(offset) => offset,
@@ -133,7 +134,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
                     (glyph_run.offset() as f64, y as f64),
                     ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
                 );
-                Some(TextRenderItemLine { line, width })
+                Some(TextRenderItemLine { line, width, brush: strikethrough_brush })
             } else {
                 None
             };

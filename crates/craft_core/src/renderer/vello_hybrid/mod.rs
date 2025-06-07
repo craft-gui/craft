@@ -9,6 +9,7 @@ use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use peniko::kurbo::Shape;
 use std::sync::Arc;
+use kurbo::Stroke;
 use vello_common::glyph::Glyph;
 use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
@@ -23,6 +24,7 @@ use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::renderer::Brush;
 use vello_hybrid::Scene;
+use crate::text::text_render_data::TextRenderLine;
 
 pub struct ActiveRenderState<'s> {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -188,61 +190,56 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    let mut skip_remaining_lines = false;
-                    let mut skip_line = false;
-                    for line in &text_render.lines {
-                        if skip_remaining_lines {
-                            break;
-                        }
-                        if skip_line {
-                            skip_line = false;
-                            continue;
-                        }
-                        for item in &line.items {
-                            if let Some(first_glyph) = item.glyphs.first() {
-                                // Cull the selections vertically that are outside the window
-                                let gy = first_glyph.y + rect.y - scroll;
-                                if gy < window.y {
-                                    skip_line = true;
-                                    break;
-                                } else if gy > (window.y + window.height) {
-                                    skip_remaining_lines = true;
-                                    break;
+                    let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
+                        let mut skip_remaining_lines = false;
+                        let mut skip_line = false;
+
+                        for line in &text_render.lines {
+                            if skip_remaining_lines {
+                                break;
+                            }
+                            if skip_line {
+                                skip_line = false;
+                                continue;
+                            }
+                            for item in &line.items {
+                                if let Some(first_glyph) = item.glyphs.first() {
+                                    // Cull the glyphs vertically that are outside the window
+                                    let gy = first_glyph.y + rect.y - scroll;
+                                    if gy < window.y {
+                                        skip_line = true;
+                                        break;
+                                    } else if gy > (window.y + window.height) {
+                                        skip_remaining_lines = true;
+                                        break;
+                                    }
                                 }
                             }
 
-                            for selection in &line.selections {
-                                let selection_rect = Rectangle {
-                                    x: selection.x + rect.x,
-                                    y: -scroll + selection.y + rect.y,
-                                    width: selection.width,
-                                    height: selection.height,
-                                };
-                                vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
-                            }
+                            process_line(line);
                         }
-                    }
-                    skip_remaining_lines = false;
-                    skip_line = false;
-                    for line in &text_render.lines {
-                        if skip_remaining_lines {
-                            break;
+                    };
+
+
+                    cull_and_process(&mut |line: &TextRenderLine| {
+                        for selection in &line.selections {
+                            let selection_rect = Rectangle {
+                                x: selection.x + rect.x,
+                                y: -scroll + selection.y + rect.y,
+                                width: selection.width,
+                                height: selection.height,
+                            };
+                            vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
                         }
-                        if skip_line {
-                            skip_line = false;
-                            continue;
-                        }
+                    });
+
+                    cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
-                            if let Some(first_glyph) = item.glyphs.first() {
-                                // Cull the glyphs vertically that are outside the window
-                                let gy = first_glyph.y + rect.y - scroll;
-                                if gy < window.y {
-                                    skip_line = true;
-                                    break;
-                                } else if gy > (window.y + window.height) {
-                                    skip_remaining_lines = true;
-                                    break;
-                                }
+                            if let Some(underline) = &item.underline {
+                                scene.set_transform(text_transform);
+                                scene.set_stroke(Stroke::new(underline.width.into()));
+                                scene.set_paint(Paint::from(underline.brush.color));
+                                scene.stroke_path(&underline.line.to_path(0.1));
                             }
 
                             scene.set_paint(Paint::from(
@@ -258,7 +255,8 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                                 y: glyph.y,
                             }));
                         }
-                    }
+                    });
+
                     if *show_cursor {
                         if let Some(cursor) = &text_render.cursor {
                             let cursor_rect = Rectangle {
