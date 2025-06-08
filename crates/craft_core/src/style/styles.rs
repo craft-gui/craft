@@ -10,6 +10,7 @@ use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
 use parley::{FontFamily, FontSettings, FontStack, GenericFamily, StyleProperty, StyleSet, TextStyle};
 use std::fmt;
+use parley::LineHeight::FontSizeRelative;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -820,7 +821,7 @@ impl Style {
             strikethrough_offset: Default::default(),
             strikethrough_size: Default::default(),
             strikethrough_brush: Default::default(),
-            line_height: 1.2,
+            line_height: FontSizeRelative(1.2),
             word_spacing: Default::default(),
             letter_spacing: Default::default(),
             word_break: Default::default(),
@@ -870,7 +871,7 @@ impl Style {
         style_set.insert(StyleProperty::FontStyle(font_style));
         style_set.insert(StyleProperty::FontWeight(font_weight));
         style_set.insert(StyleProperty::Brush(brush));
-        style_set.insert(StyleProperty::LineHeight(1.2));
+        style_set.insert(StyleProperty::LineHeight(FontSizeRelative(1.2)));
         style_set.insert(StyleProperty::Underline(has_underline));
         style_set.insert(StyleProperty::UnderlineBrush(underline_brush));
         style_set.insert(StyleProperty::UnderlineOffset(underline_offset));
