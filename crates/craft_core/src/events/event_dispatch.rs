@@ -225,13 +225,16 @@ pub(crate) fn dispatch_event(
             // Handle element events if prevent defaults was not set to true.
             if !prevent_defaults {
                 let mut propagate = true;
-                for target in targets.iter() {
+                let target = targets[0].clone();
+                for current_target in targets.iter() {
                     if !propagate || prevent_defaults {
                         break;
                     }
-                    if let Some(element) = target.borrow().element {
+                    if let Some(element) = current_target.borrow().element {
                         if let Message::CraftMessage(event) = message {
                             let mut res = Event::new();
+                            res.target = target.borrow().element;
+                            res.current_target = Some(element);
                             element.on_event(
                                 event,
                                 &mut reactive_tree.element_state,

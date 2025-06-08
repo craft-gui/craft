@@ -265,6 +265,7 @@ impl Element for Text {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
 
         if !self.selectable {
             return;

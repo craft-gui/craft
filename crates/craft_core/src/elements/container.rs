@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::Event;
+use crate::components::{Event, FocusAction};
 use crate::components::Props;
 use crate::elements::element::{resolve_clip_for_scrollable, Element};
 use crate::elements::element_data::ElementData;
@@ -164,6 +164,7 @@ impl Element for Container {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
         let base_state = self.get_base_state_mut(element_state);
         let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 

@@ -258,6 +258,7 @@ impl Element for TextInput {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
 
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
@@ -350,11 +351,12 @@ impl Element for TextInput {
 
         match message {
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
-                if !focused {
-                    return;;
-                }
                 state.modifiers = Some(keyboard_input.modifiers);
                 if !keyboard_input.state.is_down() {
+                    return;
+                }
+
+                if !focused {
                     return;
                 }
 

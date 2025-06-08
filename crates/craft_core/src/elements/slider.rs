@@ -179,12 +179,15 @@ impl Element for Slider {
     fn on_event(
         &self,
         message: &CraftMessage,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         _text_context: &mut TextContext,
-        _should_style: bool,
+        should_style: bool,
         event: &mut Event,
     ) {
-        let base_state = self.get_base_state_mut(_element_state);
+        self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
+        
+        let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
 
         match message {

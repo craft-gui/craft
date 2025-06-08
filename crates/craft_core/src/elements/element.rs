@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
-use crate::components::Event;
+use crate::components::{Event, FocusAction};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
@@ -120,6 +120,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
     }
 
     fn on_style_event(
@@ -148,6 +149,16 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
+    }
+    
+    fn maybe_unset_focus(&self, message: &CraftMessage, event: &mut Event) {
+        if let CraftMessage::PointerButtonDown(_) = &message {
+            if let Some(target) = event.target {
+                if target.element_data().component_id == self.element_data().component_id {
+                    event.focus_action(FocusAction::Unset);
+                }
+            }
+        }
     }
 
     fn resolve_box(
