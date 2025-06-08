@@ -28,6 +28,6 @@ strip = true
 debug = false
 
 [workspace.dependencies]
-reqwest = { version = "0.12.15", default-features = false }
+reqwest = { version = "0.12.19", default-features = false }
 tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19"}

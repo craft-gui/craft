@@ -726,8 +726,8 @@ impl TextInputState {
         };
 
         let width_constraint = known_dimensions.width.or(match available_space.width {
-            AvailableSpace::MinContent => Some(self.editor.try_layout().unwrap().min_content_width()),
-            AvailableSpace::MaxContent => Some(self.editor.try_layout().unwrap().max_content_width()),
+            AvailableSpace::MinContent => Some(self.editor.try_layout().unwrap().calculate_content_widths().min),
+            AvailableSpace::MaxContent => Some(self.editor.try_layout().unwrap().calculate_content_widths().max),
             AvailableSpace::Definite(width) => {
                 let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0;
                 Some(scaled_width)

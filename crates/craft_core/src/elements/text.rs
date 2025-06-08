@@ -475,8 +475,8 @@ impl TextState {
         let layout = self.layout.as_mut().unwrap();
 
         let width_constraint = known_dimensions.width.or(match available_space.width {
-            AvailableSpace::MinContent => Some(layout.min_content_width()),
-            AvailableSpace::MaxContent => Some(layout.max_content_width()),
+            AvailableSpace::MinContent => Some(layout.calculate_content_widths().min),
+            AvailableSpace::MaxContent => Some(layout.calculate_content_widths().max),
             AvailableSpace::Definite(width) => {
                 let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
                 Some(scaled_width)
