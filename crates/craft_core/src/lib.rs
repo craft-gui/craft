@@ -1,3 +1,4 @@
+#[cfg(feature = "accesskit")]
 pub mod accessibility;
 pub mod components;
 pub mod craft_runtime;
@@ -212,6 +213,7 @@ fn craft_main_with_options_2(
 
     let craft_app = Box::new(App {
         app_sender: app_sender.clone(),
+        #[cfg(feature = "accesskit")]
         accesskit_adapter: None,
         app: application,
         global_state,

@@ -1,6 +1,9 @@
-use crate::accessibility::access_handler::CraftAccessHandler;
-use crate::accessibility::activation_handler::CraftActivationHandler;
-use crate::accessibility::deactivation_handler::CraftDeactivationHandler;
+#[cfg(feature = "accesskit")]
+use {
+    crate::accessibility::access_handler::CraftAccessHandler,
+    crate::accessibility::activation_handler::CraftActivationHandler,
+    crate::accessibility::deactivation_handler::CraftDeactivationHandler,
+};
 use crate::components::{ComponentSpecification, Event};
 use crate::craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
@@ -23,11 +26,15 @@ use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::view_introspection::scan_view_for_resources;
 use crate::{GlobalState, RendererBox, WindowContext};
-use accesskit::{Role, TreeUpdate};
-use accesskit_winit::Adapter;
+#[cfg(feature = "accesskit")]
+use
+{
+    accesskit::{Role, TreeUpdate},
+    accesskit_winit::Adapter,
+};
 use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
-use kurbo::Point;
+use kurbo::{Affine, Point};
 use peniko::Color;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -92,6 +99,7 @@ pub(crate) struct App {
     #[cfg(feature = "dev_tools")]
     pub(crate) dev_tree: ReactiveTree,
     pub(crate) app_sender: Sender<InternalMessage>,
+    #[cfg(feature = "accesskit")]
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: ui_events::keyboard::Modifiers,
@@ -145,11 +153,12 @@ impl App {
 
         self.window = Some(window.clone());
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         let action_handler = CraftAccessHandler {
             runtime_handle: self.runtime.clone(),
             app_sender: self.app_sender.clone(),
         };
+        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         let deactivation_handler = CraftDeactivationHandler::new();
 
         let scale_factor = window.scale_factor();
@@ -159,14 +168,16 @@ impl App {
         self.on_resize(window.inner_size());
         let tree_update = self.on_request_redraw();
 
+        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         let craft_activation_handler = CraftActivationHandler::new(tree_update);
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         {
             self.accesskit_adapter = Some(Adapter::with_direct_handlers(
                 event_loop,
                 &window,
                 craft_activation_handler,
+                #[cfg(feature = "accesskit")]
                 action_handler,
                 deactivation_handler,
             ));
@@ -237,9 +248,34 @@ impl App {
     }
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(feature = "accesskit")]
     pub(crate) fn on_request_redraw(&mut self) -> Option<TreeUpdate> {
-        self.window.as_ref()?;
+        self.on_request_redraw_internal();
+        if self.window.is_none() {
+            return None;
+        }
+        let window = self.window.as_mut().unwrap().clone();
 
+        let tree_update = self.compute_accessibility_tree();
+        if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
+            accesskit_adapter.update_if_active(|| tree_update);
+            window.pre_present_notify();
+            None
+        } else {
+            window.pre_present_notify();
+            Some(tree_update)
+        }
+    }
+
+    #[cfg(not(feature = "accesskit"))]
+    pub(crate) fn on_request_redraw(&mut self) {
+        self.on_request_redraw_internal();
+    }
+
+    fn on_request_redraw_internal(&mut self) {
+        if self.window.is_none() {
+            return;
+        }
         let window = self.window.as_mut().unwrap().clone();
 
         let surface_size = self.window_context.window_size();
@@ -325,16 +361,6 @@ impl App {
         }
 
         self.view_introspection();
-
-        let tree_update = self.compute_accessibility_tree();
-        if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
-            accesskit_adapter.update_if_active(|| tree_update);
-            window.pre_present_notify();
-            None
-        } else {
-            window.pre_present_notify();
-            Some(tree_update)
-        }
     }
 
     pub(crate) fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
@@ -589,6 +615,7 @@ impl App {
         }
     }
 
+    #[cfg(feature = "accesskit")]
     fn compute_accessibility_tree(&mut self) -> TreeUpdate {
         let tree = accesskit::Tree {
             root: accesskit::NodeId(0),
@@ -710,7 +737,7 @@ fn layout(
         )
         .unwrap();
 
-    let transform = glam::Mat4::IDENTITY;
+    let transform = Affine::IDENTITY;
 
     let mut layout_order: u32 = 0;
     root_element.finalize_layout(

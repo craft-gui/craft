@@ -146,7 +146,7 @@ impl Element for Slider {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,

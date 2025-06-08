@@ -11,13 +11,19 @@ repository = "https://github.com/craft-gui/craft"
 [features]
 dev_tools = []
 dynamic_linking = []
+clipboard = ["dep:clipboard-rs"]
+
+png = ["image/png"]
+jpeg = ["image/jpeg"]
+
+accesskit = ["dep:accesskit", "dep:accesskit_winit", "parley/accesskit"]
 
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
 
-default = ["vello_renderer", "http_client"]
+default = ["vello_renderer", "http_client", "clipboard", "accesskit"]
 
 
 [dependencies]
@@ -29,10 +35,12 @@ cfg-if = "1.0.0"
 version = "0.27.0"
 default-features = false
 features = ["tokio", "rwh_06", "accesskit_unix"]
+optional = true
 
 [dependencies.accesskit]
 version = "0.19.0"
 default-features = false
+optional = true
 
 [dependencies.bitflags]
 version = "2.9.1"
@@ -53,11 +61,6 @@ features = ["std"]
 version = "0.0.1"
 default-features = false
 
-[dependencies.glam]
-version = "0.30.3"
-default-features = false
-features = ["std"]
-
 [dependencies.rustc-hash]
 version = "2.1.1"
 default-features = false
@@ -65,11 +68,12 @@ features = ["std"]
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies.clipboard-rs]
 version = "0.2.4"
+optional = true
 
 [dependencies.image]
 version = "0.25.6"
 default-features = false
-features = ["jpeg", "png"]
+features = []
 
 [dependencies.taffy]
 version = "0.8.2"
@@ -134,7 +138,7 @@ branch = "experiment"
 [dependencies.parley]
 version = "0.5.0"
 default-features = false
-features = ["std", "system", "accesskit"]
+features = ["std", "system"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 workspace = true

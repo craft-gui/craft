@@ -1,3 +1,4 @@
+use kurbo::Affine;
 use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::LayoutItem;
@@ -75,7 +76,7 @@ impl Thumb {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,

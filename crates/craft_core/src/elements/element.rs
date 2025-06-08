@@ -11,10 +11,12 @@ use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreI
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
+#[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
 
@@ -100,7 +102,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
@@ -151,7 +153,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn resolve_box(
         &mut self,
         relative_position: Point,
-        scroll_transform: glam::Mat4,
+        scroll_transform: Affine,
         result: &taffy::Layout,
         layout_order: &mut u32,
     ) {
@@ -269,6 +271,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
 
+    #[cfg(feature = "accesskit")]
     fn compute_accessibility_tree(
         &mut self,
         tree: &mut accesskit::TreeUpdate,

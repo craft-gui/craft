@@ -15,6 +15,7 @@ use crate::style::Style;
 use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
@@ -99,7 +100,7 @@ impl Element for Container {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,
@@ -128,7 +129,7 @@ impl Element for Container {
         };
         self.resolve_clip(clip_bounds);
 
-        let child_transform = glam::Mat4::from_translation(glam::Vec3::new(0.0, -scroll_y, 0.0));
+        let child_transform = Affine::translate((0.0, -scroll_y as f64));
 
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.internal.element_data().layout_item.taffy_node_id;

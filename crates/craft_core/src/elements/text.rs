@@ -13,20 +13,26 @@ use crate::style::Style;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use parley::{Alignment, AlignmentOptions, LayoutAccessibility, Selection};
+use parley::{Alignment, AlignmentOptions, Selection};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
+#[cfg(feature = "accesskit")]
+use {
+    parley::LayoutAccessibility,
+    crate::reactive::element_id::create_unique_element_id,
+};
 
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
-use crate::reactive::element_id::create_unique_element_id;
+#[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use time::{Duration, Instant};
+use kurbo::Affine;
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
@@ -124,6 +130,7 @@ impl Element for Text {
         }
     }
 
+    #[cfg(feature = "accesskit")]
     fn compute_accessibility_tree(
         &mut self,
         tree: &mut accesskit::TreeUpdate,
@@ -205,7 +212,7 @@ impl Element for Text {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         text_context: &mut TextContext,

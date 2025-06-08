@@ -26,6 +26,7 @@ use crate::text::{text_render_data, TextStyle};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use time::{Duration, Instant};
+use kurbo::Affine;
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
@@ -189,7 +190,7 @@ impl Element for TextInput {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         text_context: &mut TextContext,
@@ -288,7 +289,7 @@ impl Element for TextInput {
             .unwrap();
 
         fn copy(drv: &mut PlainEditorDriver<ColorBrush>) {
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
                 if let Some(text) = drv.editor.selected_text() {
@@ -299,7 +300,7 @@ impl Element for TextInput {
         }
 
         fn paste(drv: &mut PlainEditorDriver<ColorBrush>) {
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
                 let cb = ClipboardContext::new().unwrap();
@@ -309,7 +310,7 @@ impl Element for TextInput {
         }
 
         fn cut(drv: &mut PlainEditorDriver<ColorBrush>) {
-            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
                 if let Some(text) = drv.editor.selected_text() {

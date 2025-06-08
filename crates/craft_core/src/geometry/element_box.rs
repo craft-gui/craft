@@ -1,3 +1,4 @@
+use kurbo::Affine;
 use crate::geometry::{Border, Margin, Padding, Point, Rectangle, Size};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -10,10 +11,9 @@ pub struct ElementBox {
 }
 
 impl ElementBox {
-    pub fn transform(&self, transform: glam::Mat4) -> Self {
+    pub fn transform(&self, transform: Affine) -> Self {
         let mut transformed_box = *self;
-        let transformed_xy = transform.mul_vec4(glam::vec4(self.position.x as f32, self.position.y as f32, 1.0, 1.0));
-        transformed_box.position = Point::new(transformed_xy.x as f64, transformed_xy.y as f64);
+        transformed_box.position = transform * self.position;
         transformed_box
     }
 

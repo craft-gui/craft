@@ -14,6 +14,7 @@ use crate::text::text_context::TextContext;
 use peniko::Color;
 use std::any::Any;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
@@ -96,7 +97,7 @@ impl Element for TinyVg {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,

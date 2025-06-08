@@ -15,6 +15,7 @@ use crate::style::Style;
 use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
@@ -153,7 +154,7 @@ impl Element for DevTools {
         root_node: NodeId,
         position: Point,
         z_index: &mut u32,
-        transform: glam::Mat4,
+        transform: Affine,
         element_state: &mut ElementStateStore,
         pointer: Option<Point>,
         text_context: &mut TextContext,

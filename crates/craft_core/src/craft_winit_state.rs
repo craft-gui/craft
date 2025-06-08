@@ -137,6 +137,7 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+        #[cfg(feature = "accesskit")]
         if let Some(accesskit_adapter) = &mut self.craft_app.accesskit_adapter {
             accesskit_adapter.process_event(self.craft_app.window.as_ref().unwrap(), &event);
         }

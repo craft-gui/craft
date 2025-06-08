@@ -7,6 +7,7 @@ use crate::renderer::renderer::RenderList;
 use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;
+use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 
@@ -63,7 +64,7 @@ impl Element for Empty {
         _root_node: NodeId,
         _position: Point,
         _z_index: &mut u32,
-        _transform: glam::Mat4,
+        _transform: Affine,
         _element_state: &mut ElementStateStore,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
