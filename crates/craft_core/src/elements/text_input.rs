@@ -275,6 +275,10 @@ impl Element for TextInput {
         let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
+        let focused = element_state
+            .storage
+            .get(&self.element_data.component_id)
+            .unwrap().base.focused;
         let state: &mut TextInputState = element_state
             .storage
             .get_mut(&self.element_data.component_id)
@@ -346,6 +350,9 @@ impl Element for TextInput {
 
         match message {
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
+                if !focused {
+                    return;;
+                }
                 state.modifiers = Some(keyboard_input.modifiers);
                 if !keyboard_input.state.is_down() {
                     return;

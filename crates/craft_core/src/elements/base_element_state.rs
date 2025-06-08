@@ -12,6 +12,7 @@ pub struct BaseElementState {
     /// Whether this element should receive pointer events regardless of hit testing.
     /// Useful for scroll thumbs.
     pub(crate) pointer_capture: HashMap<i64, bool>,
+    pub(crate) focused: bool,
 }
 
 impl<'a> BaseElementState {

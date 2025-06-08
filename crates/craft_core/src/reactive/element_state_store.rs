@@ -1,4 +1,4 @@
-use crate::components::ComponentId;
+use crate::components::{ComponentId, FocusAction};
 use crate::elements::base_element_state::BaseElementState;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
@@ -15,6 +15,26 @@ pub struct ElementStateStore {
 }
 
 impl ElementStateStore {
+    pub(crate) fn update_element_focus(&mut self, focus: FocusAction) {
+        match focus {
+            FocusAction::None => {}
+            FocusAction::Set(id) => {
+                for (element_id, value) in self.storage.iter_mut() {
+                    if *element_id == id {
+                        value.base.focused = true;
+                    } else {
+                        value.base.focused = false;
+                    }
+                }
+            }
+            FocusAction::Unset => {
+                for value in self.storage.values_mut() {
+                    value.base.focused = false;
+                }
+            }
+        }
+    }
+
     pub(crate) fn remove_unused_state(
         &mut self,
         old_element_ids: &HashSet<ComponentId>,

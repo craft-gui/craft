@@ -240,6 +240,7 @@ pub(crate) fn dispatch_event(
                                 &mut res,
                             );
                             focus = focus.merge(res.focus);
+                            reactive_tree.element_state.update_element_focus(res.focus);
 
                             if let Some(result_message) = res.result_message {
                                 element_events.push_back((result_message, element));
@@ -273,6 +274,7 @@ pub(crate) fn dispatch_event(
                             &mut event,
                         );
                         focus = focus.merge(event.focus);
+                        reactive_tree.element_state.update_element_focus(event.focus);
                     } else {
                         let state =
                             reactive_tree.user_state.storage.get_mut(&current_target.component.id).unwrap().as_mut();
@@ -317,6 +319,7 @@ pub(crate) fn dispatch_event(
                                 &mut res,
                             );
                             focus = focus.merge(res.focus);
+                            reactive_tree.element_state.update_element_focus(res.focus);
 
                             effects.append(&mut res.effects);
                         }
@@ -363,6 +366,7 @@ pub(crate) fn dispatch_event(
                             &mut res,
                         );
                         focus = focus.merge(res.focus);
+                        reactive_tree.element_state.update_element_focus(res.focus);
 
                         effects.append(&mut res.effects);
                     }
