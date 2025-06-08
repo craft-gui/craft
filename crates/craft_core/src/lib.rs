@@ -233,6 +233,7 @@ fn craft_main_with_options_2(
             update_queue: VecDeque::new(),
             user_state,
             element_state: Default::default(),
+            focus: None,
         },
 
         #[cfg(feature = "dev_tools")]
@@ -248,6 +249,7 @@ fn craft_main_with_options_2(
             element_ids: Default::default(),
             component_ids: Default::default(),
             pointer_captures: Default::default(),
+            focus: None,
         },
         mouse_position: None,
         runtime: runtime_copy,

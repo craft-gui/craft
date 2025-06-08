@@ -1,4 +1,4 @@
-use crate::components::ComponentId;
+use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::Element;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::reactive::element_state_store::ElementStateStore;
@@ -17,4 +17,19 @@ pub(crate) struct ReactiveTree {
     pub(crate) update_queue: VecDeque<UpdateQueueEntry>,
     pub(crate) user_state: StateStore,
     pub(crate) element_state: ElementStateStore,
+    pub(crate) focus: Option<ComponentId>,
+}
+
+impl ReactiveTree {
+    pub(crate) fn update_focus(&mut self, focus: FocusAction) {
+        match focus {
+            FocusAction::None => {}
+            FocusAction::Set(id) => {
+                self.focus = Some(id);
+            }
+            FocusAction::Unset => {
+                self.focus = None;
+            }
+        }
+    }
 }

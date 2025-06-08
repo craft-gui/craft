@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::Event;
+use crate::components::{Event, FocusAction};
 use crate::components::{ImeAction, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
@@ -243,10 +243,6 @@ impl Element for TextInput {
         {
             self.finalize_scrollbar(&mut state.scroll_state);
         }
-    }
-
-    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -514,6 +510,7 @@ impl Element for TextInput {
             // }
             CraftMessage::PointerButtonDown(pointer_button) => {
                 if pointer_button.is_primary() {
+                    event.focus_action(FocusAction::Set(self.component_id()));
                     state.pointer_down = true;
                     state.cursor_reset();
                     if !state.editor.is_composing() {
@@ -591,6 +588,10 @@ impl Element for TextInput {
             ime.width() as f32,
             ime.height() as f32,
         )));
+    }
+
+    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {

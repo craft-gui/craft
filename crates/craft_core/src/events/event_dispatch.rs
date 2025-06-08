@@ -1,4 +1,4 @@
-use crate::components::{Event, PointerCapture};
+use crate::components::{Event, FocusAction, PointerCapture};
 use crate::elements::base_element_state::DUMMY_DEVICE_ID;
 use crate::elements::Element;
 use crate::events::update_queue_entry::UpdateQueueEntry;
@@ -30,6 +30,7 @@ pub(crate) fn dispatch_event(
     window_context: &mut WindowContext,
     is_style: bool,
 ) {
+    let mut focus = FocusAction::None;
     let span = span!(Level::INFO, "dispatch event");
     let _enter = span.enter();
 
@@ -59,6 +60,10 @@ pub(crate) fn dispatch_event(
         Message::CraftMessage(CraftMessage::PointerMovedEvent(_))
             | Message::CraftMessage(CraftMessage::PointerButtonUp(_))
             | Message::CraftMessage(CraftMessage::PointerButtonDown(_))
+    );
+    let is_keyboard_event = matches!(
+        message,
+        Message::CraftMessage(CraftMessage::KeyboardInputEvent(_))
     );
     let is_ime_event = matches!(
         message,
@@ -105,6 +110,13 @@ pub(crate) fn dispatch_event(
                                 target = Some(node.clone());
                                 break;
                             }
+                        }
+                    }
+
+                    if let Some(focus_id) = reactive_tree.focus {
+                        if is_keyboard_event && element.component_id() == focus_id {
+                            target = Some(node.clone());
+                            break;
                         }
                     }
                 }
@@ -227,6 +239,7 @@ pub(crate) fn dispatch_event(
                                 is_style,
                                 &mut res,
                             );
+                            focus = focus.merge(res.focus);
 
                             if let Some(result_message) = res.result_message {
                                 element_events.push_back((result_message, element));
@@ -259,6 +272,7 @@ pub(crate) fn dispatch_event(
                             is_style,
                             &mut event,
                         );
+                        focus = focus.merge(event.focus);
                     } else {
                         let state =
                             reactive_tree.user_state.storage.get_mut(&current_target.component.id).unwrap().as_mut();
@@ -302,6 +316,7 @@ pub(crate) fn dispatch_event(
                                 false,
                                 &mut res,
                             );
+                            focus = focus.merge(res.focus);
 
                             effects.append(&mut res.effects);
                         }
@@ -347,6 +362,7 @@ pub(crate) fn dispatch_event(
                             false,
                             &mut res,
                         );
+                        focus = focus.merge(res.focus);
 
                         effects.append(&mut res.effects);
                     }
@@ -354,6 +370,8 @@ pub(crate) fn dispatch_event(
             }
         }
     }
+
+    reactive_tree.update_focus(focus);
 
     // Handle effects.
     for (dispatch_type, message) in effects.iter() {

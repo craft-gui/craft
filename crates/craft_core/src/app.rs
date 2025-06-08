@@ -4,7 +4,7 @@ use {
     crate::accessibility::activation_handler::CraftActivationHandler,
     crate::accessibility::deactivation_handler::CraftDeactivationHandler,
 };
-use crate::components::{ComponentSpecification, Event};
+use crate::components::{ComponentId, ComponentSpecification, Event};
 use crate::craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;

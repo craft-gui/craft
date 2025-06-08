@@ -42,8 +42,9 @@ impl Component for TextState {
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .push(
-                TextInput::new(include_str!("../../Cargo.lock"))
-                    .height(Unit::Px(500.0))
+                TextInput::new(include_str!("../counter/main.rs"))
+                    .height(Unit::Px(600.0))
+                    .width(Unit::Px(800.0))
                     .display(Block)
                     .overflow(Scroll),
             )

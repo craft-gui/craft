@@ -4,6 +4,7 @@ use crate::geometry::Rectangle;
 use crate::window_context::WindowContext;
 use crate::PinnedFutureAny;
 use std::any::Any;
+use crate::components::ComponentId;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum PointerCapture {
@@ -27,6 +28,7 @@ pub struct Event<'a> {
     pub(crate) pointer_capture: PointerCapture,
     pub(crate) effects: Vec<(EventDispatchType, Message)>,
     pub(crate) ime: ImeAction,
+    pub focus: FocusAction,
 
     pub target: Option<&'a dyn Element>,
     pub window: WindowContext,
@@ -39,6 +41,26 @@ pub enum ImeAction {
     None,
     Set(Rectangle),
     Unset,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum FocusAction {
+    #[default]
+    None,
+    Set(ComponentId),
+    Unset,
+}
+
+impl FocusAction {
+
+    pub(crate) fn merge(&self, other: FocusAction) -> FocusAction {
+        match other {
+            FocusAction::None => *self,
+            FocusAction::Set(id) => FocusAction::Set(id),
+            FocusAction::Unset => FocusAction::Unset,
+        }
+    }
+
 }
 
 impl<'a> Event<'a> {
@@ -72,6 +94,10 @@ impl<'a> Event<'a> {
     pub fn ime_action(&mut self, action: ImeAction) {
         self.ime = action;
     }
+
+    pub fn focus_action(&mut self, action: FocusAction) {
+        self.focus = action;
+    }
 }
 
 impl<'a> Default for Event<'a> {
@@ -84,6 +110,7 @@ impl<'a> Default for Event<'a> {
             pointer_capture: Default::default(),
             effects: Vec::new(),
             ime: ImeAction::None,
+            focus: FocusAction::None,
             target: None,
             current_target: None,
             window: WindowContext::new(),
