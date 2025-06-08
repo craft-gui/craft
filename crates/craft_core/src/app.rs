@@ -202,12 +202,12 @@ impl App {
     /// Initialize any data needed to layout/render text.
     fn setup_text_context(&mut self) {
         if self.text_context.is_none() {
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
             let mut text_context = TextContext::new();
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), feature = "system_fonts"))]
             let text_context = TextContext::new();
 
-            #[cfg(target_arch = "wasm32")]
+            #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
             {
                 let variable_roboto = include_bytes!("../../../fonts/Roboto-VariableFont_wdth,wght.ttf");
                 let roboto_blog = peniko::Blob::new(Arc::new(variable_roboto));

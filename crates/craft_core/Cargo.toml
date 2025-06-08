@@ -13,6 +13,8 @@ dev_tools = []
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
 
+system_fonts = ["parley/system"]
+
 png = ["image/png"]
 jpeg = ["image/jpeg"]
 
@@ -138,7 +140,7 @@ branch = "experiment"
 [dependencies.parley]
 version = "0.5.0"
 default-features = false
-features = ["std", "system"]
+features = ["std"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
 workspace = true
