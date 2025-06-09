@@ -1,4 +1,4 @@
-use crate::theme::{NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, NAVBAR_TEXT_HOVERED_COLOR};
+use crate::theme::{wrapper, NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, NAVBAR_TEXT_HOVERED_COLOR};
 use crate::WebsiteGlobalState;
 use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
@@ -9,7 +9,7 @@ use craft::{Color, WindowContext};
 #[derive(Default)]
 pub(crate) struct Navbar {}
 
-pub const NAVBAR_HEIGHT: f32 = 48.0;
+pub const NAVBAR_HEIGHT: f32 = 60.0;
 
 fn create_link(label: &str, route: &str) -> Text {
     Text::new(label)
@@ -40,14 +40,17 @@ impl Component for Navbar {
         _id: ComponentId,
         _window: &WindowContext,
     ) -> ComponentSpecification {
-        Container::new()
+        let container = Container::new()
+            .width("100%")
+            .height(Unit::Px(NAVBAR_HEIGHT))
+            .border_width("0px", "0px", "2px", "0px")
+            .border_color(Color::from_rgb8(240, 240, 240))
+            .background(NAVBAR_BACKGROUND_COLOR);
+        
+        let wrapper = wrapper()
             .display(Display::Flex)
             .justify_content(JustifyContent::SpaceBetween)
             .align_items(AlignItems::Center)
-            .width("100%")
-            .height(Unit::Px(NAVBAR_HEIGHT))
-            .padding("5px", "25px", "5px", "25px")
-            .background(NAVBAR_BACKGROUND_COLOR)
             // Left
             .push(
                 Container::new()
@@ -68,7 +71,9 @@ impl Component for Navbar {
                     .push(create_link("Docs", "/docs").margin("0px", "12px", "0px", "0px"))
                     .push(create_link("Examples", "/examples").margin("0px", "12px", "0px", "0px"))
             )
-            .component()
+            .component();
+        
+        container.push(wrapper).component()
     }
 
     fn update(

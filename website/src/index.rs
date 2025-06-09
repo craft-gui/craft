@@ -3,18 +3,15 @@ use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight};
 use craft::{palette, Color};
-use crate::theme::MAX_CONTAINER_WIDTH;
+use crate::theme::{wrapper, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 
 fn hero_intro() -> ComponentSpecification {
     let craft_text = "A reactive GUI framework for Rust";
 
-    Container::new()
+    wrapper()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .margin("100px", "5%", "100px", "5%")
-        .width("600px")
-        .min_width("330px")
-        .max_width(Unit::Px(MAX_CONTAINER_WIDTH))
+        .padding(Unit::Px(100.0), WRAPPER_PADDING_LEFT, Unit::Px(100.0), WRAPPER_PADDING_RIGHT)
         .push(Text::new(craft_text)
             .font_size(32.0)
             .font_weight(Weight::BOLD)
@@ -62,18 +59,14 @@ fn hero_features() -> ComponentSpecification {
     }
     
     Container::new()
-        .display(Display::Flex)
         .background(Color::from_rgb8(177, 200, 211))
-        .padding("5%", "5%", "5%", "5%")
         .width("100%")
-        .gap("50px")
         .push(
-
-            Container::new()
-                .max_width(Unit::Px(MAX_CONTAINER_WIDTH))
-                .gap("20px")
+            wrapper()
+                .padding(Unit::Px(100.0), WRAPPER_PADDING_LEFT, Unit::Px(100.0), WRAPPER_PADDING_RIGHT)
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
+                .gap("20px")
                 .push(Text::new("Goals").font_size(32.0).font_weight(Weight::SEMIBOLD).margin("0px", "0px", "10px", "0px"))
                 .push(hero_item("1. Reactive", "When your data changes, we automatically re-run your view function."))
                 .push(hero_item("2. Components", "Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates."))
