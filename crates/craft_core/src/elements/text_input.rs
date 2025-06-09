@@ -13,7 +13,7 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
 use crate::style::{Display, Style, Unit};
 use crate::CraftMessage;
-use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
+use parley::{LayoutAccessibility, PlainEditor, PlainEditorDriver, StyleProperty};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -33,6 +33,8 @@ use winit::dpi;
 use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
+use crate::elements::text::TextState;
+use crate::reactive::element_id::create_unique_element_id;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -634,6 +636,57 @@ impl Element for TextInput {
             base: Default::default(),
             data: Box::new(text_input_state),
         }
+    }
+
+    #[cfg(feature = "accesskit")]
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        element_state: &mut ElementStateStore,
+        scale_factor: f64,
+    ) {
+        let state: &mut TextInputState = element_state
+            .storage
+            .get_mut(&self.element_data.component_id)
+            .unwrap()
+            .data
+            .as_mut()
+            .downcast_mut()
+            .unwrap();
+
+        if state.editor.try_layout().is_none() {
+            return;
+        }
+
+        let editor = &mut state.editor;
+
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(accesskit::Role::TextInput);
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        editor.try_accessibility(
+            tree,
+            &mut current_node,
+            || accesskit::NodeId(create_unique_element_id()),
+            padding_box.x as f64,
+            padding_box.y as f64,
+        );
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
     }
 
     fn update_state(&mut self, element_state: &mut ElementStateStore, _reload_fonts: bool, scaling_factor: f64) {

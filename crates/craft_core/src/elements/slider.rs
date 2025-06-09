@@ -230,6 +230,43 @@ impl Element for Slider {
         }
     }
 
+    #[cfg(feature = "accesskit")]
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        element_state: &mut ElementStateStore,
+        scale_factor: f64,
+    ) {
+        let base_state = self.get_base_state_mut(element_state);
+        let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
+        
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(accesskit::Role::Slider);
+        current_node.set_value(*Box::new(state.value.to_string()));
+        current_node.add_action(accesskit::Action::Click);
+        current_node.add_action(accesskit::Action::Decrement);
+        current_node.add_action(accesskit::Action::Increment);
+        current_node.add_action(accesskit::Action::Focus);
+
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+        
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+    }
+
     fn default_style(&self) -> Style {
         let mut style = Style::default();
         *style.background_mut() = palette::css::LIGHT_GRAY;

@@ -623,10 +623,11 @@ impl App {
             toolkit_version: None,
         };
 
+        let focus_id = self.user_tree.focus.unwrap_or(0);
         let mut tree_update = TreeUpdate {
             nodes: vec![],
             tree: Some(tree),
-            focus: accesskit::NodeId(0),
+            focus: accesskit::NodeId(focus_id),
         };
 
         let state = &mut self.user_tree.element_state;
