@@ -199,6 +199,7 @@ impl Element for DevTools {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
+        self.maybe_unset_focus(message, event);
     }
 
     fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
