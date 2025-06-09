@@ -83,15 +83,15 @@ impl Component for Navbar {
         event: &mut Event,
         message: &Message,
     ) {
-        if message.clicked() {
-            if let Some(current_target) = event.target.as_ref() {
-                if let Some(id) = current_target.get_id() {
-                    if id.starts_with("route_") {
-                        let route = id.trim_start_matches("route_");
-                        global_state.route = route.to_string();
-                        event.prevent_propagate();
-                    }
-                }
+        if !message.clicked() {
+            return;
+        }
+
+        if let Some(current_target) = event.target.and_then(|e| e.get_id().as_ref()) {
+            if current_target.starts_with("route_") {
+                let route = current_target.trim_start_matches("route_");
+                global_state.set_route(route);
+                event.prevent_propagate();
             }
         }
     }

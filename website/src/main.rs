@@ -7,7 +7,6 @@ mod theme;
 
 use crate::docs::Docs;
 use crate::examples::Examples;
-use crate::index::index_page;
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
 use craft::components::{Component, ComponentId, ComponentSpecification};
@@ -21,7 +20,27 @@ use craft::geometry::Size;
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
-    pub(crate) route: String,
+    route: String,
+}
+
+impl WebsiteGlobalState {
+    pub(crate) fn get_route(&self) -> String {
+        self.route.clone()
+    }
+
+    pub(crate) fn set_route(&mut self, route: &str) {
+        self.route = route.to_string();
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let window = web_sys::window().unwrap();
+            let history = window.history().unwrap();
+            
+            history
+                .push_state_with_url(&web_sys::wasm_bindgen::JsValue::NULL, "", Some(route))
+                .unwrap();
+        }
+    }
 }
 
 impl Default for WebsiteGlobalState {
@@ -56,10 +75,26 @@ impl Component for Website {
             .push(Navbar::component())
             .background(BODY_BACKGROUND_COLOR);
 
-        match global_state.route.as_str() {
-            "/examples" => wrapper.push(Examples::component().key("examples")),
-            "/docs" => wrapper.push(Docs::component().key("docs")),
-            _ => wrapper.push(index_page().key("index")),
+        #[cfg(target_arch = "wasm32")]
+        {
+            use crate::index::index_page;
+            let window = web_sys::window().expect("No window available.");
+            let path = window.location().pathname().map(|s| s.to_string()).unwrap_or("/".to_string());
+
+            match path.as_str() {
+                "/examples" => wrapper.push(Examples::component().key("examples")),
+                "/docs" => wrapper.push(Docs::component().key("docs")),
+                _ => wrapper.push(index_page().key("index")),
+            }.component()
+        }
+        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            match global_state.get_route().as_str() {
+                "/examples" => wrapper.push(Examples::component().key("examples")),
+                "/docs" => wrapper.push(Docs::component().key("docs")),
+                _ => wrapper.push(crate::index::index_page().key("index")),
+            }   
         }
         .component()
     }
@@ -77,6 +112,15 @@ fn main() {
 
     #[cfg(target_arch = "wasm32")]
     let options = CraftOptions::basic(window_title);
-
-    craft_main(Website::component(), WebsiteGlobalState::default(), options);
+    
+    #[allow(unused_mut)]
+    let mut global_state = WebsiteGlobalState::default();
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // NOTE: In Git Bash, use `cargo run -- //examples`.
+        let route = std::env::args().nth(1).unwrap_or_else(|| "/".to_string());
+        global_state.set_route(route.as_str());
+    }
+    
+    craft_main(Website::component(), global_state, options);
 }
