@@ -13,7 +13,7 @@ use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
 use crate::style::{Display, Style, Unit};
 use crate::CraftMessage;
-use parley::{LayoutAccessibility, PlainEditor, PlainEditorDriver, StyleProperty};
+use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
