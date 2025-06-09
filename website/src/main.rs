@@ -79,7 +79,16 @@ impl Component for Website {
         {
             use crate::index::index_page;
             let window = web_sys::window().expect("No window available.");
-            let path = window.location().pathname().map(|s| s.to_string()).unwrap_or("/".to_string());
+            let path = window.location().pathname().map(
+                |s|  {
+                    let trimmed_path = s.trim_end_matches('/');
+                    if trimmed_path.is_empty() {
+                        "/".to_string()
+                    } else {
+                        trimmed_path.to_string()
+                    }
+                }
+            ).unwrap_or("/".to_string());
 
             match path.as_str() {
                 "/examples" => wrapper.push(Examples::component().key("examples")),
@@ -87,14 +96,14 @@ impl Component for Website {
                 _ => wrapper.push(index_page().key("index")),
             }.component()
         }
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         {
             match global_state.get_route().as_str() {
                 "/examples" => wrapper.push(Examples::component().key("examples")),
                 "/docs" => wrapper.push(Docs::component().key("docs")),
                 _ => wrapper.push(crate::index::index_page().key("index")),
-            }   
+            }
         }
         .component()
     }
@@ -112,7 +121,7 @@ fn main() {
 
     #[cfg(target_arch = "wasm32")]
     let options = CraftOptions::basic(window_title);
-    
+
     #[allow(unused_mut)]
     let mut global_state = WebsiteGlobalState::default();
     #[cfg(not(target_arch = "wasm32"))]
@@ -121,6 +130,6 @@ fn main() {
         let route = std::env::args().nth(1).unwrap_or_else(|| "/".to_string());
         global_state.set_route(route.as_str());
     }
-    
+
     craft_main(Website::component(), global_state, options);
 }
