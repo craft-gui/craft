@@ -33,7 +33,6 @@ impl Component for Counter {
             .align_items(AlignItems::Center)
             .width("100%")
             .height("100%")
-            .background(rgb(250, 250, 250))
             .gap(20)
             .push(Text::new(&format!("Count: {}", self.count)).font_size(72).color(rgb(50, 50, 50)))
             .push(

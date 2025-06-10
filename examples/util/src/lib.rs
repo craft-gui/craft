@@ -1,3 +1,13 @@
+pub struct ExampleProps {
+    pub show_scrollbar: bool,
+}
+
+impl Default for ExampleProps {
+    fn default() -> Self {
+        ExampleProps { show_scrollbar: true }
+    }
+}
+
 #[allow(dead_code)]
 pub fn setup_logging() {
     #[cfg(target_arch = "wasm32")]

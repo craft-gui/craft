@@ -1,6 +1,6 @@
 mod ani_list;
 
-use util::setup_logging;
+use util::{setup_logging, ExampleProps};
 
 use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
@@ -40,13 +40,13 @@ pub struct AniList {
 
 impl Component for AniList {
     type GlobalState = ();
-    type Props = ();
+    type Props = ExampleProps;
     type Message = AniListMessage;
 
     fn view(
         &self,
         _global_state: &Self::GlobalState,
-        _props: &Self::Props,
+        props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
         _window: &WindowContext,
@@ -56,7 +56,7 @@ impl Component for AniList {
             .wrap(Wrap::Wrap)
             .width("100%")
             .height("100%")
-            .overflow(Overflow::Scroll)
+            .overflow_y(if props.show_scrollbar { Overflow::Scroll } else { Overflow::Visible })
             .gap("40px")
             .padding(Unit::Px(20.0), Unit::Percentage(10.0), Unit::Px(20.0), Unit::Px(20.0))
             .push(

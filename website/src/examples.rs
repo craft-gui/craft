@@ -17,13 +17,14 @@ use crate::examples::tour::Tour;
 use crate::navbar::NAVBAR_HEIGHT;
 use crate::theme::{wrapper, ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event, Props};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::ui_events::pointer::PointerButtonUpdate;
 use craft::palette;
 use craft::style::Display::Flex;
-use craft::style::{FlexDirection, Unit, Weight};
+use craft::style::{FlexDirection, Overflow, Unit, Weight};
 use craft::WindowContext;
+use util::ExampleProps;
 
 const COUNTER_EXAMPLE_LINK: &str = "/examples/counter";
 const TOUR_EXAMPLE_LINK: &str = "/examples/tour";
@@ -39,7 +40,7 @@ fn create_examples_link(label: &str, example_link: &str, example_to_show: &Strin
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
         .on_pointer_button_up(
-            move |state: &mut Examples, global_state: &mut WebsiteGlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
+            move |_state: &mut Examples, global_state: &mut WebsiteGlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
                 if pointer_button.is_primary() {
                     global_state.set_route(example_link_captured.as_str());
                     event.prevent_propagate();
@@ -92,22 +93,29 @@ impl Component for Examples {
             .padding(Unit::Px(vertical_padding), WRAPPER_PADDING_RIGHT, Unit::Px(vertical_padding), WRAPPER_PADDING_LEFT)
             .push(examples_sidebar(&example_to_show)).component();
 
+        let example_props = ExampleProps {
+            show_scrollbar: false,
+        };
         let content = match example_to_show.as_str() {
             TEXT_EXAMPLE_LINK => TextState::component().key(TEXT_EXAMPLE_LINK),
-            TOUR_EXAMPLE_LINK => Tour::component().key(TOUR_EXAMPLE_LINK),
-            REQUEST_EXAMPLE_LINK => AniList::component().key(REQUEST_EXAMPLE_LINK),
+            TOUR_EXAMPLE_LINK => Tour::component().key(TOUR_EXAMPLE_LINK).props(Props::new(example_props)),
+            REQUEST_EXAMPLE_LINK => AniList::component().key(REQUEST_EXAMPLE_LINK).props(Props::new(example_props)),
             _ => Counter::component().key(COUNTER_EXAMPLE_LINK),
         };
 
         let container_height = (window.window_height() - NAVBAR_HEIGHT - vertical_padding * 2.0).max(0.0);
 
-        wrapper.push(
+        let wrapper = wrapper.push(
             Container::new()
                 .width("100%")
                 .height(Unit::Px(container_height))
                 .background(palette::css::WHITE)
                 .push(content)
                 .component(),
-        )
+        );
+        
+        Container::new() 
+            .overflow_y(Overflow::Scroll)
+            .push(wrapper).component()
     }
 }

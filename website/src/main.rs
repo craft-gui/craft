@@ -6,8 +6,6 @@ mod navbar;
 mod theme;
 mod router;
 
-use crate::docs::Docs;
-use crate::examples::Examples;
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
 use craft::components::{Component, ComponentId, ComponentSpecification};
@@ -43,7 +41,7 @@ impl WebsiteGlobalState {
                 }
             ).unwrap_or("/".to_string());
         }
-        
+
         path
     }
 
@@ -94,7 +92,7 @@ impl Component for Website {
             .push(Navbar::component())
             .background(BODY_BACKGROUND_COLOR);
 
-        
+
         let path = global_state.get_route();
         let matched_mapped_path = resolve_route(path.as_str());
         if let Some(rule) = matched_mapped_path {

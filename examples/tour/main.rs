@@ -1,4 +1,4 @@
-use util::setup_logging;
+use util::{setup_logging, ExampleProps};
 
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
@@ -44,14 +44,14 @@ impl Tour {
 const DEFAULT_SWITCH_VALUE: bool = true;
 
 impl Component for Tour {
-    type Props = ();
+    type Props = ExampleProps;
     type Message = ();
     type GlobalState = ();
 
     fn view(
         &self,
         _global_state: &Self::GlobalState,
-        _props: &Self::Props,
+        props: &Self::Props,
         _children: Vec<ComponentSpecification>,
         _id: ComponentId,
         _window: &WindowContext,
@@ -60,8 +60,10 @@ impl Component for Tour {
             Container::new()
                 .padding("16px", "16px", "16px", "16px")
                 .margin("0px", "0px", "20px", "0px")
+                .border_width("1px", "1px", "1px", "1px")
                 .border_radius(8.0, 8.0, 8.0, 8.0)
                 .background(Color::WHITE)
+                .border_color(Color::from_rgb8(220, 220, 222))
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
                 .push(
@@ -166,14 +168,13 @@ impl Component for Tour {
             .component();
 
         Container::new()
-            .overflow_y(Overflow::Scroll)
+            .overflow_y(if props.show_scrollbar { Overflow::Scroll } else { Overflow::Visible })
             .padding("24px", "24px", "24px", "24px")
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
             .width("100%")
             .height("100%")
             .max_height("100%")
-            .background(Color::from_rgb8(220, 220, 222))
             .gap("16px")
             .push(Text::new("Tour").font_size(28.0).font_weight(Weight::BOLD).margin("0px", "0px", "16px", "0px"))
             .push(text_section)
