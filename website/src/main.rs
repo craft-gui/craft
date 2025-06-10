@@ -1,10 +1,10 @@
-mod docs;
 mod examples;
 mod index;
 mod link;
 mod navbar;
 mod theme;
 mod router;
+mod docs;
 
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;

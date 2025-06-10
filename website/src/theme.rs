@@ -20,6 +20,7 @@ pub(crate) const WRAPPER_PADDING_RIGHT: Unit = Unit::Px(20.0);
 
 
 pub(crate) const MOBILE_MEDIA_QUERY_WIDTH: f32 = 850.0;
+pub(crate) const MAX_DOCS_CONTENT_WIDTH: f32 = 750.0;
 
 pub(crate) fn wrapper() -> Container {
     Container::new()

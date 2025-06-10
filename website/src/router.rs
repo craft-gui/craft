@@ -1,5 +1,5 @@
 use craft::components::{Component, ComponentSpecification};
-use crate::docs::Docs;
+use crate::docs::docs::Docs;
 use crate::examples::Examples;
 use crate::index::index_page;
 
@@ -18,7 +18,7 @@ impl<'a> MappedPath<'a> {
 pub fn resolve_route(path: &str) -> Option<MappedPath> {
     let mut mapped_paths: Vec<MappedPath> = Vec::new();
     mapped_paths.push(MappedPath::new("/examples/*", Examples::component().key("examples")));
-    mapped_paths.push(MappedPath::new("/docs", Docs::component().key("docs")));
+    mapped_paths.push(MappedPath::new("/docs/*", Docs::component().key("docs")));
     mapped_paths.push(MappedPath::new("/*", index_page().key("index")));
 
     for mapped_path in &mapped_paths {
