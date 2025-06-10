@@ -4,6 +4,7 @@ mod index;
 mod link;
 mod navbar;
 mod theme;
+mod router;
 
 use crate::docs::Docs;
 use crate::examples::Examples;
@@ -17,6 +18,8 @@ use craft::style::FlexDirection;
 use craft::WindowContext;
 use craft::{craft_main, CraftOptions};
 use craft::geometry::Size;
+use crate::index::index_page;
+use crate::router::resolve_route;
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -25,7 +28,23 @@ pub(crate) struct WebsiteGlobalState {
 
 impl WebsiteGlobalState {
     pub(crate) fn get_route(&self) -> String {
-        self.route.clone()
+        let mut path = self.route.clone();
+        #[cfg(target_arch = "wasm32")]
+        {
+            let window = web_sys::window().expect("No window available.");
+            path = window.location().pathname().map(
+                |s|  {
+                    let trimmed_path = s.trim_end_matches('/');
+                    if trimmed_path.is_empty() {
+                        "/".to_string()
+                    } else {
+                        trimmed_path.to_string()
+                    }
+                }
+            ).unwrap_or("/".to_string());
+        }
+        
+        path
     }
 
     pub(crate) fn set_route(&mut self, route: &str) {
@@ -75,37 +94,14 @@ impl Component for Website {
             .push(Navbar::component())
             .background(BODY_BACKGROUND_COLOR);
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            use crate::index::index_page;
-            let window = web_sys::window().expect("No window available.");
-            let path = window.location().pathname().map(
-                |s|  {
-                    let trimmed_path = s.trim_end_matches('/');
-                    if trimmed_path.is_empty() {
-                        "/".to_string()
-                    } else {
-                        trimmed_path.to_string()
-                    }
-                }
-            ).unwrap_or("/".to_string());
-
-            match path.as_str() {
-                "/examples" => wrapper.push(Examples::component().key("examples")),
-                "/docs" => wrapper.push(Docs::component().key("docs")),
-                _ => wrapper.push(index_page().key("index")),
-            }.component()
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            match global_state.get_route().as_str() {
-                "/examples" => wrapper.push(Examples::component().key("examples")),
-                "/docs" => wrapper.push(Docs::component().key("docs")),
-                _ => wrapper.push(crate::index::index_page().key("index")),
-            }
-        }
-        .component()
+        
+        let path = global_state.get_route();
+        let matched_mapped_path = resolve_route(path.as_str());
+        if let Some(rule) = matched_mapped_path {
+            wrapper.push(rule.component_specification.clone())
+        } else {
+            wrapper.push(index_page().key("index"))
+        }.component()
     }
 }
 
