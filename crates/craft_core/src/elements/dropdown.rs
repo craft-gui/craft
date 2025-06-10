@@ -32,6 +32,8 @@ pub struct Dropdown {
     pseudo_dropdown_selection: Option<ElementBoxed>,
     /// An element not in the user tree. Created, so that we can utilize our existing functionality (like scrollbars).
     pseudo_dropdown_list_element: Container,
+    
+    default_item: usize,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -125,6 +127,7 @@ impl Element for Dropdown {
 
         let state = self.get_state(element_state);
         let is_open = state.is_open;
+        let default_item = self.default_item;
 
         // Find the `pseudo_dropdown_selection` element from the selected index.
         self.pseudo_dropdown_selection = if let Some(selected_index) = state.selected_item {
@@ -134,7 +137,7 @@ impl Element for Dropdown {
                 self.children_mut().first().cloned()
             }
         } else {
-            self.children_mut().first().cloned()
+            self.children_mut().get(default_item).cloned()
         };
 
         // Add the pseudo dropdown element to the Dropdown's layout tree.
@@ -387,7 +390,13 @@ impl Dropdown {
             element_data: Default::default(),
             pseudo_dropdown_selection: Default::default(),
             pseudo_dropdown_list_element: Default::default(),
+            default_item: 0,
         }
+    }
+    
+    pub fn set_default(mut self, index: usize) -> Self {
+        self.default_item = index;
+        self
     }
 
     generate_component_methods!();
