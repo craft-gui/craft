@@ -405,6 +405,7 @@ impl Element for Text {
                 || current_style.font_weight() != last_style.font_weight()
                 || current_style.font_style() != last_style.font_style()
                 || current_style.font_family() != last_style.font_family()
+                || current_style.underline() != last_style.underline()
         };
 
         let text = std::mem::take(&mut self.text);
