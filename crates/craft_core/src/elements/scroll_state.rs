@@ -93,10 +93,11 @@ impl ScrollState {
 
                         let max_scroll_y = element.layout_item.max_scroll_y;
 
-                        let mut delta = max_scroll_y
-                            * (delta
-                                / (element.layout_item.computed_scroll_track.height
-                                    - element.layout_item.computed_scroll_thumb.height));
+                        let click_y_offset = element.layout_item.computed_scroll_track.height - element.layout_item.computed_scroll_thumb.height;
+                        if click_y_offset <= 0.0 {
+                            return;
+                        }
+                        let mut delta = max_scroll_y * (delta / (click_y_offset));
 
                         // DEVICE(TOUCH): Reverse the direction on touch based input devices.
                         if pointer_motion.pointer.pointer_type == PointerType::Touch {
