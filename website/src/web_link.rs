@@ -5,16 +5,16 @@ use craft::events::Message;
 use craft::WindowContext;
 
 #[derive(Default)]
-pub(crate) struct Link;
+pub(crate) struct WebLink;
 
 #[derive(Default)]
-pub(crate) struct LinkProps {
+pub(crate) struct WebLinkProps {
     pub(crate) href: String,
 }
 
-impl Component for Link {
-    type Props = LinkProps;
+impl Component for WebLink {
     type GlobalState = WebsiteGlobalState;
+    type Props = WebLinkProps;
     type Message = ();
 
     fn view(

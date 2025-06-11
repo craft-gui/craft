@@ -1,4 +1,4 @@
-use crate::link::{Link, LinkProps};
+use crate::web_link::{WebLink, WebLinkProps};
 use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight};
@@ -26,8 +26,8 @@ fn hero_intro() -> ComponentSpecification {
             Container::new()
                 .margin("32px", "0px", "0px", "0px")
                 .push(
-                    Link::component()
-                        .props(Props::new(LinkProps {
+                    WebLink::component()
+                        .props(Props::new(WebLinkProps {
                             href: "https://github.com/craft-gui/craft".to_string(),
                         }))
                         .push(Text::new("GitHub")

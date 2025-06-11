@@ -43,6 +43,8 @@ impl Component for Navbar {
         let container = Container::new()
             .width("100%")
             .height(Unit::Px(NAVBAR_HEIGHT))
+            .min_height(Unit::Px(NAVBAR_HEIGHT))
+            .max_height(Unit::Px(NAVBAR_HEIGHT))
             .border_width("0px", "0px", "2px", "0px")
             .border_color(Color::from_rgb8(240, 240, 240))
             .background(NAVBAR_BACKGROUND_COLOR);
