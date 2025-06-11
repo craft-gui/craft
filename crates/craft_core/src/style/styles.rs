@@ -137,7 +137,7 @@ impl Default for Weight {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Underline {
     pub thickness: Option<f32>,
     pub color: Color,
