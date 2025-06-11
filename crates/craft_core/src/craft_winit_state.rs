@@ -96,6 +96,8 @@ impl ApplicationHandler for CraftWinitState {
             Arc::from(event_loop.create_window(window_attributes).expect("Failed to create window."));
         info!("Created window");
 
+        self.event_reducer.set_scale_factor(&window);
+
         let renderer_type = self.craft_options.renderer;
         let window_copy = window.clone();
 
@@ -141,6 +143,8 @@ impl ApplicationHandler for CraftWinitState {
         if let Some(accesskit_adapter) = &mut self.craft_app.accesskit_adapter {
             accesskit_adapter.process_event(self.craft_app.window.as_ref().unwrap(), &event);
         }
+
+        info!("scale factor: {:?}", self.event_reducer.scale_factor);
 
         if !matches!(
             event,
