@@ -19,6 +19,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
+use crate::layout::layout_item::LayoutItem;
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -39,6 +40,14 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn style(&self) -> &Style {
         &self.element_data().style
+    }
+
+    fn layout_item_mut(&mut self) -> &mut LayoutItem {
+        &mut self.element_data_mut().layout_item
+    }
+
+    fn layout_item(&self) -> &LayoutItem {
+        &self.element_data().layout_item
     }
 
     fn style_mut(&mut self) -> &mut Style {

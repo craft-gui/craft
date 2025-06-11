@@ -2,8 +2,8 @@ use crate::components::Props;
 use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
 use crate::devtools::dev_tools_element::DevTools;
-use crate::devtools::tree_view::element_tree_view;
-use crate::devtools::layout_view::layout_window_view;
+use crate::devtools::tree_window::tree_window;
+use crate::devtools::layout_window::{LayoutWindow, LayoutWindowProps};
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
 use crate::events::{CraftMessage, Message};
@@ -31,7 +31,7 @@ impl Component for DevToolsComponent {
         _window: &WindowContext,
     ) -> ComponentSpecification {
         let root = props.as_ref().unwrap().clone();
-        let element_tree = element_tree_view(root.as_ref(), self.selected_element);
+        let element_tree = tree_window(root.as_ref(), self.selected_element);
 
         // Find the selected element in the element tree, so that we can inspect their style values.
         let mut selected_element: Option<&dyn Element> = None;
@@ -46,7 +46,9 @@ impl Component for DevToolsComponent {
             }
         }
 
-        let styles_window = layout_window_view(selected_element);
+        let styles_window = LayoutWindow::component().props(Props::new(LayoutWindowProps {
+            selected_element: selected_element.map(|e| e.clone_box()),
+        }));
 
         DevTools::new()
             .display(Flex)
@@ -70,22 +72,24 @@ impl Component for DevToolsComponent {
         event: &mut Event,
         message: &Message,
     ) {
-        if let Some(element) = event.target {
-            if let Some(id) = element.get_id() {
-                // Set the selected element in the element tree inspector.
-                if message.clicked() {
-                    let component_id: ComponentId = id.parse().unwrap();
-                    self.selected_element = Some(component_id);
-                }
-
-                // Update the hovered element in the inspector tree, so that the DevTools widget can draw a debug overlay.
-                if let Message::CraftMessage(CraftMessage::PointerMovedEvent(_pointer_moved_event)) = message {
-                    let component_id: ComponentId = id.parse().unwrap();
-                    self.inspector_hovered_element = Some(component_id);
-                }
+        if let Some(id) = event.current_target.and_then(|e| e.get_id().clone()) {
+            if !id.contains("tree_view_") {
+                return;
             }
-        } else {
-            self.inspector_hovered_element = None;
+            
+            let id = id.trim_start_matches("tree_view_").to_owned();
+            
+            // Set the selected element in the element tree inspector.
+            if message.clicked() {
+                let component_id: ComponentId = id.parse().unwrap();
+                self.selected_element = Some(component_id);
+            }
+
+            // Update the hovered element in the inspector tree, so that the DevTools widget can draw a debug overlay.
+            if let Message::CraftMessage(CraftMessage::PointerMovedEvent(_pointer_moved_event)) = message {
+                let component_id: ComponentId = id.parse().unwrap();
+                self.inspector_hovered_element = Some(component_id);
+            }
         }
     }
 }

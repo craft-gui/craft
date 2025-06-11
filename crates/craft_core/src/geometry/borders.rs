@@ -72,7 +72,7 @@ pub struct ComputedBorderSpec {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SideData {
-    width: f64,
+    pub(crate) width: f64,
     pub(crate) color: Color,
 }
 
