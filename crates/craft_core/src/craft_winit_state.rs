@@ -144,8 +144,6 @@ impl ApplicationHandler for CraftWinitState {
             accesskit_adapter.process_event(self.craft_app.window.as_ref().unwrap(), &event);
         }
 
-        info!("scale factor: {:?}", self.event_reducer.scale_factor);
-
         if !matches!(
             event,
             WindowEvent::KeyboardInput {
