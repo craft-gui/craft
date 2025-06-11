@@ -25,7 +25,7 @@ fn field_row(
         .component()
 }
 
-pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> ComponentSpecification {
+pub(crate) fn layout_window_view(selected_element: Option<&dyn Element>) -> ComponentSpecification {
     let mut styles_window = Container::new()
         .width(Unit::Percentage(100.0))
         .display(Flex)
@@ -34,9 +34,10 @@ pub(crate) fn styles_window_view(selected_element: Option<&dyn Element>) -> Comp
         .max_height("50%")
         .overflow(Overflow::Scroll)
         .background(ROW_BACKGROUND_COLOR)
-        .push(Container::new().border_width("2px", "0px", "2px", "0px").border_color(BORDER_COLOR).push(
-            Text::new("Styles Window").color(Color::from_rgb8(230, 230, 230)).padding("10px", "0px", "10px", "10px"),
-        ))
+        .push(Container::new().border_width("2px", "0px", "2px", "0px").border_color(BORDER_COLOR)
+            .push(Text::new("Styles").color(Color::from_rgb8(230, 230, 230)).padding("10px", "0px", "10px", "10px"), )
+            .push(Text::new("Computed").color(Color::from_rgb8(230, 230, 230)).padding("10px", "0px", "10px", "10px"), )
+        )
         .component();
 
     if let Some(selected_element) = selected_element {

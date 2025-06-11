@@ -2,8 +2,8 @@ use crate::components::Props;
 use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
 use crate::devtools::dev_tools_element::DevTools;
-use crate::devtools::element_tree_view::element_tree_view;
-use crate::devtools::style_window::styles_window_view;
+use crate::devtools::tree_view::element_tree_view;
+use crate::devtools::layout_view::layout_window_view;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
 use crate::events::{CraftMessage, Message};
@@ -46,7 +46,7 @@ impl Component for DevToolsComponent {
             }
         }
 
-        let styles_window = styles_window_view(selected_element);
+        let styles_window = layout_window_view(selected_element);
 
         DevTools::new()
             .display(Flex)
