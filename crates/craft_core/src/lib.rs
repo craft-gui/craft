@@ -251,7 +251,6 @@ fn craft_main_with_options_2(
             pointer_captures: Default::default(),
             focus: None,
         },
-        mouse_position: None,
         runtime: runtime_copy,
         modifiers: Default::default(),
     });

@@ -77,7 +77,6 @@ pub(crate) struct App {
     pub(crate) text_context: Option<TextContext>,
     /// The renderer is used to draw the view. It is only valid between resume and pause.
     pub(crate) renderer: Option<RendererBox>,
-    pub(crate) mouse_position: Option<Point>,
     pub(crate) reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
@@ -310,11 +309,11 @@ impl App {
                 root_size,
                 Point::new(0.0, 0.0),
                 self.window_context.effective_scale_factor(),
-                self.mouse_position,
+                self.window_context.mouse_position,
             );
 
             if self.renderer.is_some() {
-                self.draw_reactive_tree(false, self.mouse_position, self.window.clone());
+                self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
             }
         }
 
@@ -336,11 +335,11 @@ impl App {
                     LogicalSize::new(surface_size.width - root_size.width, root_size.height),
                     Point::new(root_size.width as f64, 0.0),
                     self.window_context.effective_scale_factor(),
-                    self.mouse_position,
+                    self.window_context.mouse_position,
                 );
 
                 if self.renderer.is_some() {
-                    self.draw_reactive_tree(true, self.mouse_position, self.window.clone());
+                    self.draw_reactive_tree(true, self.window_context.mouse_position, self.window.clone());
                 }
             }
         }
@@ -405,7 +404,6 @@ impl App {
             CraftMessage::PointerButtonDown(pointer_event)
         };
         let message = Message::CraftMessage(event);
-
         self.window_context.mouse_position = Some(Point::new(cursor_position.x, cursor_position.y));
 
         if let EventDispatchType::Direct(component) = dispatch_type {
@@ -423,7 +421,6 @@ impl App {
         mouse_moved.current.position.x /= zoom;
         mouse_moved.current.position.y /= zoom;
 
-        self.mouse_position = Some(mouse_moved.current.position);
         self.window_context.mouse_position = Some(mouse_moved.current.position);
 
         let message = Message::CraftMessage(CraftMessage::PointerMovedEvent(mouse_moved));
@@ -448,7 +445,7 @@ impl App {
             message,
             dispatch_type.clone(),
             &mut self.resource_manager,
-            self.mouse_position,
+            self.window_context.mouse_position,
             &mut self.user_tree,
             &mut self.global_state,
             &mut self.text_context,
@@ -461,7 +458,7 @@ impl App {
             message,
             dispatch_type,
             &mut self.resource_manager,
-            self.mouse_position,
+            self.window_context.mouse_position,
             &mut self.dev_tree,
             &mut self.global_state,
             &mut self.text_context,
