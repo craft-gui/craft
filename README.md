@@ -44,7 +44,7 @@ Updates are performed by handling messages from a Component.
 * ⬜️ Tests
 * ⬜ Videos
 * ⬜ SVGs
-* ⬜ Accessibility
+* ✅ Accessibility (Very Basic)
 
 ## Run Examples:
 
