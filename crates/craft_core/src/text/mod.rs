@@ -1,5 +1,8 @@
 pub mod text_context;
 pub(crate) mod text_render_data;
+mod editor;
+mod parley_editor;
+
 pub use parley;
 
 use crate::style::Style;
