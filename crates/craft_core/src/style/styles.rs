@@ -8,9 +8,9 @@ pub use taffy::Position;
 
 use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
-use parley::{FontFamily, FontSettings, FontStack, GenericFamily, StyleProperty, StyleSet, TextStyle};
 use std::fmt;
-use parley::LineHeight::FontSizeRelative;
+use std::fmt::Debug;
+use parley::Brush;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -158,10 +158,118 @@ impl Default for FontStyle {
     }
 }
 
+#[derive(Clone)]
+pub enum TextStyleProperty {
+    Color(Color),
+    FontFamily([u8; 64], u32),
+    FontSize(f32),
+    FontWeight(Weight),
+    FontStyle(FontStyle),
+    UnderlineOffset(f32),
+    UnderlineSize(f32),
+    UnderlineBrush(Color),
+}
+
+impl TextStyleProperty {
+    pub(crate) fn to_parley_style_property(&self) -> parley::StyleProperty<'static, ColorBrush> {
+        // let font_size = self.font_size();
+        // let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
+        // let font_style = match self.font_style() {
+        //     FontStyle::Normal => parley::FontStyle::Normal,
+        //     FontStyle::Italic => parley::FontStyle::Italic,
+        //     // FIXME: Allow an angle when setting the obliqueness.
+        //     FontStyle::Oblique => parley::FontStyle::Oblique(None),
+        // };
+        // let brush = ColorBrush {
+        //     color: self.color(),
+        // };
+        // 
+        // let has_underline = self.underline.is_some();
+        // let mut underline_offset = None;
+        // let mut underline_size = None;
+        // let mut underline_brush = None;
+        // 
+        // if let Some(underline) = self.underline {
+        //     underline_offset = underline.offset;
+        //     underline_size = underline.thickness;
+        //     underline_brush = Some(ColorBrush {
+        //         color: underline.color,
+        //     });
+        // }
+        
+        match self {
+            TextStyleProperty::FontFamily(font_family, font_family_length) => {
+                
+                let font_family = if *font_family_length == 0 {
+                    None
+                } else {
+                    Some(std::str::from_utf8(&font_family[..*font_family_length as usize]).unwrap())
+                };
+                
+
+                let font_stack_cow_list = if let Some(font_family) = font_family {
+                    // Use the user-provided font and fallback to system UI fonts as needed.
+                    Cow::Owned(vec![
+                        parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
+                        parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
+                    ])
+                } else {
+                    // Just default to system UI fonts.
+                    Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
+                };
+                let font_stack = parley::FontStack::List(font_stack_cow_list);
+
+                parley::StyleProperty::FontStack(font_stack)
+            }
+            
+            TextStyleProperty::FontSize(font_size) => {
+                parley::StyleProperty::FontSize(*font_size)
+            }
+            
+            TextStyleProperty::Color(color) => {
+                let brush = ColorBrush {
+                    color: *color,
+                };
+
+                parley::StyleProperty::Brush(brush)
+            }
+            
+            TextStyleProperty::FontStyle(font_style) => {
+                let font_style = match font_style {
+                    FontStyle::Normal => parley::FontStyle::Normal,
+                    FontStyle::Italic => parley::FontStyle::Italic,
+                    // FIXME: Allow an angle when setting the obliqueness.
+                    FontStyle::Oblique => parley::FontStyle::Oblique(None),
+                };
+
+                parley::StyleProperty::FontStyle(font_style)
+            }
+
+            TextStyleProperty::FontWeight(font_weight) => {
+                parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32))
+            }
+
+            TextStyleProperty::UnderlineOffset(offset) => {
+                parley::StyleProperty::UnderlineOffset(Some(*offset))
+            }
+
+            TextStyleProperty::UnderlineSize(size) => {
+                parley::StyleProperty::UnderlineSize(Some(*size))
+            }
+
+            TextStyleProperty::UnderlineBrush(color) => {
+                let brush = ColorBrush {
+                    color: *color,
+                };
+
+                parley::StyleProperty::UnderlineBrush(Some(brush))
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
-    font_family_length: u8,
-    font_family: [u8; 64],
     box_sizing: BoxSizing,
     scrollbar_width: f32,
     position: Position,
@@ -186,6 +294,8 @@ pub struct Style {
     flex_shrink: f32,
     flex_basis: Unit,
 
+    font_family_length: u8,
+    font_family: [u8; 64],
     color: Color,
     background: Color,
     font_size: f32,
@@ -765,7 +875,7 @@ impl Style {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_text_style(&self) -> TextStyle<ColorBrush> {
+    pub fn to_text_style(&self) -> parley::TextStyle<ColorBrush> {
         let font_size = self.font_size();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
         let font_style = match self.font_style() {
@@ -781,12 +891,12 @@ impl Style {
         let font_stack_cow_list = if let Some(font_family) = self.font_family() {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
-                FontFamily::Named(Cow::Borrowed(font_family)),
-                FontFamily::Generic(GenericFamily::SystemUi),
+                parley::FontFamily::Named(Cow::Borrowed(font_family)),
+                parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![FontFamily::Generic(GenericFamily::SystemUi)])
+            Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
         };
         
         let has_underline = self.underline.is_some();
@@ -802,15 +912,15 @@ impl Style {
             });
         }
 
-        let font_stack = FontStack::List(font_stack_cow_list);
-        TextStyle {
+        let font_stack = parley::FontStack::List(font_stack_cow_list);
+        parley::TextStyle {
             font_stack,
             font_size,
             font_width: Default::default(),
             font_style,
             font_weight,
-            font_variations: FontSettings::List(Cow::Borrowed(&[])),
-            font_features: FontSettings::List(Cow::Borrowed(&[])),
+            font_variations: parley::FontSettings::List(Cow::Borrowed(&[])),
+            font_features: parley::FontSettings::List(Cow::Borrowed(&[])),
             locale: Default::default(),
             brush,
             has_underline,
@@ -821,7 +931,7 @@ impl Style {
             strikethrough_offset: Default::default(),
             strikethrough_size: Default::default(),
             strikethrough_brush: Default::default(),
-            line_height: FontSizeRelative(1.2),
+            line_height: parley::LineHeight::FontSizeRelative(1.2),
             word_spacing: Default::default(),
             letter_spacing: Default::default(),
             word_break: Default::default(),
@@ -829,7 +939,7 @@ impl Style {
         }
     }
 
-    pub fn add_styles_to_style_set(&self, style_set: &mut StyleSet<ColorBrush>) {
+    pub fn add_styles_to_style_set(&self, style_set: &mut parley::StyleSet<ColorBrush>) {
         let font_size = self.font_size();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
         let font_style = match self.font_style() {
@@ -858,24 +968,24 @@ impl Style {
         let font_stack_cow_list = if let Some(font_family) = self.font_family() {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
-                FontFamily::Named(Cow::Owned(font_family.to_string())),
-                FontFamily::Generic(GenericFamily::SystemUi),
+                parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
+                parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![FontFamily::Generic(GenericFamily::SystemUi)])
+            Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
         };
 
-        style_set.insert(StyleProperty::from(FontStack::List(font_stack_cow_list)));
-        style_set.insert(StyleProperty::FontSize(font_size));
-        style_set.insert(StyleProperty::FontStyle(font_style));
-        style_set.insert(StyleProperty::FontWeight(font_weight));
-        style_set.insert(StyleProperty::Brush(brush));
-        style_set.insert(StyleProperty::LineHeight(FontSizeRelative(1.2)));
-        style_set.insert(StyleProperty::Underline(has_underline));
-        style_set.insert(StyleProperty::UnderlineBrush(underline_brush));
-        style_set.insert(StyleProperty::UnderlineOffset(underline_offset));
-        style_set.insert(StyleProperty::UnderlineSize(underline_size));
+        style_set.insert(parley::StyleProperty::from(parley::FontStack::List(font_stack_cow_list)));
+        style_set.insert(parley::StyleProperty::FontSize(font_size));
+        style_set.insert(parley::StyleProperty::FontStyle(font_style));
+        style_set.insert(parley::StyleProperty::FontWeight(font_weight));
+        style_set.insert(parley::StyleProperty::Brush(brush));
+        style_set.insert(parley::StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(1.2)));
+        style_set.insert(parley::StyleProperty::Underline(has_underline));
+        style_set.insert(parley::StyleProperty::UnderlineBrush(underline_brush));
+        style_set.insert(parley::StyleProperty::UnderlineOffset(underline_offset));
+        style_set.insert(parley::StyleProperty::UnderlineSize(underline_size));
     }
     
 }

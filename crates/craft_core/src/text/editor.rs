@@ -9,13 +9,26 @@ use crate::text::parley_editor::{Generation, SplitString};
 use parley::layout::LayoutAccessibility;
 #[cfg(feature = "accesskit")]
 use accesskit::{Node, NodeId, TreeUpdate};
+use crate::style::TextStyleProperty;
+use crate::text::text_context::ColorBrush;
 
 #[derive(Clone)]
-struct EditorData<T> where
-    T: Brush + Clone + Debug + PartialEq + Default, {
-    layout: Layout<T>,
+pub struct RangedStyles  {
+    styles: Vec<(Range<usize>, TextStyleProperty)>,
+}
+
+impl RangedStyles {
+    pub fn new(styles: Vec<(Range<usize>, TextStyleProperty)>) -> Self {
+        Self { styles }
+    }
+}
+
+#[derive(Clone)]
+struct EditorData {
+    layout: Layout<ColorBrush>,
     buffer: String,
-    default_style: StyleSet<T>,
+    default_style: StyleSet<ColorBrush>,
+    ranged_styles: RangedStyles,
     #[cfg(feature = "accesskit")]
     layout_access: LayoutAccessibility,
     selection: Selection,
@@ -41,9 +54,9 @@ struct EditorData<T> where
     generation: Generation,
 }
 
-trait Editor<T> where T: Brush + Clone + Debug + PartialEq + Default {
-    fn editor_data(&self) -> &EditorData<T>;
-    fn editor_data_mut(&mut self) -> &mut EditorData<T>;
+trait Editor {
+    fn editor_data(&self) -> &EditorData;
+    fn editor_data_mut(&mut self) -> &mut EditorData;
     
     /// Insert at cursor, or replace selection.
     fn insert_or_replace_selection(&mut self, s: &str) {
@@ -692,9 +705,7 @@ trait Editor<T> where T: Brush + Clone + Debug + PartialEq + Default {
     }
 }
 
-impl<T> EditorData<T>
-where
-    T: Brush + Clone + Debug + PartialEq + Default,
+impl EditorData
 {
     /// Borrow the current selection. The indices returned by functions
     /// such as [`Selection::text_range`] refer to the raw text buffer,
@@ -887,9 +898,15 @@ where
     }
 
     /// Modify the styles provided for this editor.
-    pub fn edit_styles(&mut self) -> &mut StyleSet<T> {
+    pub fn set_styles(&mut self, ranged_styles: &RangedStyles) {
         self.layout_dirty = true;
-        &mut self.default_style
+        self.ranged_styles = ranged_styles.clone();
+    }
+
+    /// Modify the default styles provided for this editor.
+    pub fn set_default_styles(&mut self, style: StyleSet<ColorBrush>) {
+        self.layout_dirty = true;
+        self.default_style = style;
     }
 
     /// Whether the editor is currently in IME composing mode.
@@ -1025,12 +1042,18 @@ where
         self.selection = new_sel;
     }
     /// Update the layout.
-    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<T>) {
-        let mut builder =
-            layout_cx.ranged_builder(font_cx, &self.buffer, self.scale, self.quantize);
+    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
+        let mut builder = layout_cx.ranged_builder(font_cx, &self.buffer, self.scale, self.quantize);
+        
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
         }
+        
+        for (range, style) in &self.ranged_styles.styles {
+            let parley_prop = style.to_parley_style_property();
+            builder.push(parley_prop, range.clone());
+        }
+        
         if let Some(preedit_range) = &self.compose {
             builder.push(StyleProperty::Underline(true), preedit_range.clone());
         }
