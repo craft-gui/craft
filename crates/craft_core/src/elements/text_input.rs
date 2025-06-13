@@ -74,7 +74,6 @@ pub struct TextInputState {
     text_render: Option<TextRender>,
     new_text: Option<String>,
     new_style: TextStyle,
-    new_ranged_styles: Option<RangedStyles>,
     
     last_click_time: Option<Instant>,
     click_count: u32,
@@ -618,7 +617,6 @@ impl Element for TextInput {
         editor.set_scale(scaling_factor as f32);
         let style_set = editor.edit_styles();
         self.style().add_styles_to_style_set(style_set);
-
         editor.set_ranged_styles(self.ranged_styles.clone().unwrap());
         
         let text_input_state = TextInputState {
@@ -632,7 +630,6 @@ impl Element for TextInput {
             text_render: None,
             new_text: std::mem::take(&mut self.text),
             new_style: TextStyle::from(self.style()),
-            new_ranged_styles: std::mem::take(&mut self.ranged_styles),
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -717,9 +714,9 @@ impl Element for TextInput {
                 state.new_text = Some(state.editor.text().to_string());
             }
         }
-
-        if self.ranged_styles != state.new_ranged_styles {
-            let ranged_styles = std::mem::take(&mut state.new_ranged_styles);
+        
+        if self.ranged_styles.as_ref() != Some(&state.editor.ranged_styles) {
+            let ranged_styles = std::mem::take(&mut self.ranged_styles);
             if let Some(ranged_styles) = ranged_styles {
                 state.editor.set_ranged_styles(ranged_styles);
                 state.cache.clear();
@@ -774,8 +771,9 @@ impl TextInputState {
         text_context: &mut TextContext,
     ) -> taffy::Size<f32> {
         if self.editor.try_layout().is_none() || self.new_text.is_some() {
-            let text = std::mem::take(&mut self.new_text).unwrap();
-            self.editor.set_text(text.as_str());
+            if let Some(new_text) = self.new_text.take() {
+                self.editor.set_text(new_text.as_str());
+            }
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
         }
         self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);

@@ -26,7 +26,7 @@ impl From<&Style> for TextStyle {
 #[derive(Default)]
 #[derive(PartialEq)]
 pub struct RangedStyles  {
-    styles: Vec<(Range<usize>, TextStyleProperty)>,
+    pub styles: Vec<(Range<usize>, TextStyleProperty)>,
 }
 
 impl RangedStyles {

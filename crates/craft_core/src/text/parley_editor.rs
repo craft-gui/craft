@@ -102,7 +102,7 @@ pub struct PlainEditor
     layout: Layout<ColorBrush>,
     buffer: String,
     default_style: StyleSet<ColorBrush>,
-    ranged_styles: RangedStyles,
+    pub(crate) ranged_styles: RangedStyles,
     #[cfg(feature = "accesskit")]
     layout_access: LayoutAccessibility,
     selection: Selection,
@@ -1139,11 +1139,11 @@ impl PlainEditor
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
         }
-        
+
         for (range, style) in &self.ranged_styles.styles {
             builder.push(style.to_parley_style_property(), range.clone())
         }
-        
+
         if let Some(preedit_range) = &self.compose {
             builder.push(StyleProperty::Underline(true), preedit_range.clone());
         }
