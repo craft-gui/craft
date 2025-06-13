@@ -3,7 +3,7 @@ use util::{setup_logging, ExampleProps};
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
 use craft::components::{Component, Event};
-use craft::craft_main;
+use craft::{craft_main, palette};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
@@ -12,10 +12,11 @@ use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputCh
 use craft::events::Message;
 use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
-use craft::style::{AlignItems, Weight};
+use craft::style::{AlignItems, TextStyleProperty, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
 use craft::WindowContext;
 use craft::{Color, CraftOptions};
+use craft::text::RangedStyles;
 
 #[derive(Clone)]
 pub struct Tour {
@@ -94,7 +95,9 @@ impl Component for Tour {
                 .flex_direction(FlexDirection::Column)
                 .push(labeled_row(
                     "Input:",
-                    TextInput::new(self.text_input_value.as_str()).min_width("200px").component(),
+                    TextInput::new(self.text_input_value.as_str())
+                        .min_width("200px")
+                        .component(),
                 ))
                 .push(
                     Text::new(format!("Preview: {}", self.text_input_value).as_str())
