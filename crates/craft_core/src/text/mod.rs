@@ -1,11 +1,11 @@
 pub mod text_context;
 pub(crate) mod text_render_data;
-mod editor;
-mod parley_editor;
+pub(crate) mod parley_editor;
 
+use std::ops::Range;
 pub use parley;
 
-use crate::style::Style;
+use crate::style::{Style, TextStyleProperty};
 pub use text_render_data::from_editor;
 pub use text_render_data::TextRender;
 
@@ -18,6 +18,21 @@ impl From<&Style> for TextStyle {
     fn from(style: &Style) -> Self {
         TextStyle {
             font_size: style.font_size(),
+        }
+    }
+}
+
+#[derive(Clone)]
+#[derive(Default)]
+#[derive(PartialEq)]
+pub struct RangedStyles  {
+    styles: Vec<(Range<usize>, TextStyleProperty)>,
+}
+
+impl RangedStyles {
+    pub fn new(styles: Vec<(Range<usize>, TextStyleProperty)>) -> Self {
+        Self { 
+            styles
         }
     }
 }

@@ -22,6 +22,8 @@ use core::{
 use parley::layout::LayoutAccessibility;
 #[cfg(feature = "accesskit")]
 use accesskit::{Node, NodeId, TreeUpdate};
+use crate::text::RangedStyles;
+use crate::text::text_context::ColorBrush;
 
 /// Opaque representation of a generation.
 ///
@@ -95,13 +97,12 @@ impl<'source> IntoIterator for SplitString<'source> {
 /// which is kept up-to-date as needed.
 /// This layout is invalidated by a number.
 #[derive(Clone)]
-pub struct PlainEditor<T>
-where
-    T: Brush + Clone + Debug + PartialEq + Default,
+pub struct PlainEditor
 {
-    layout: Layout<T>,
+    layout: Layout<ColorBrush>,
     buffer: String,
-    default_style: StyleSet<T>,
+    default_style: StyleSet<ColorBrush>,
+    ranged_styles: RangedStyles,
     #[cfg(feature = "accesskit")]
     layout_access: LayoutAccessibility,
     selection: Selection,
@@ -127,9 +128,7 @@ where
     generation: Generation,
 }
 
-impl<T> PlainEditor<T>
-where
-    T: Brush,
+impl PlainEditor
 {
     /// Create a new editor, with default font size `font_size`.
     pub fn new(font_size: f32) -> Self {
@@ -151,6 +150,7 @@ where
             // will choose to use that as their initial value, but will probably need
             // to redraw if they haven't already.
             generation: Generation(1),
+            ranged_styles: RangedStyles::new(vec![]),
         }
     }
 }
@@ -159,18 +159,14 @@ where
 ///
 /// This can perform operations which require the editor's layout to
 /// be up-to-date by refreshing it as necessary.
-pub struct PlainEditorDriver<'a, T>
-where
-    T: Brush + Clone + Debug + PartialEq + Default,
+pub struct PlainEditorDriver<'a>
 {
-    pub editor: &'a mut PlainEditor<T>,
+    pub editor: &'a mut PlainEditor,
     pub font_cx: &'a mut FontContext,
-    pub layout_cx: &'a mut LayoutContext<T>,
+    pub layout_cx: &'a mut LayoutContext<ColorBrush>,
 }
 
-impl<T> PlainEditorDriver<'_, T>
-where
-    T: Brush + Clone + Debug + PartialEq + Default,
+impl PlainEditorDriver<'_>
 {
     // --- MARK: Forced relayout ---
     /// Insert at cursor, or replace selection.
@@ -724,7 +720,7 @@ where
     }
 
     /// Get the up-to-date layout for this driver.
-    pub fn layout(&mut self) -> &Layout<T> {
+    pub fn layout(&mut self) -> &Layout<ColorBrush> {
         self.editor.layout(self.font_cx, self.layout_cx)
     }
 
@@ -740,9 +736,7 @@ where
     }
 }
 
-impl<T> PlainEditor<T>
-where
-    T: Brush + Clone + Debug + PartialEq + Default,
+impl PlainEditor
 {
     /// Run a series of [`PlainEditorDriver`] methods.
     ///
@@ -751,8 +745,8 @@ where
     pub fn driver<'drv>(
         &'drv mut self,
         font_cx: &'drv mut FontContext,
-        layout_cx: &'drv mut LayoutContext<T>,
-    ) -> PlainEditorDriver<'drv, T> {
+        layout_cx: &'drv mut LayoutContext<ColorBrush>,
+    ) -> PlainEditorDriver<'drv> {
         PlainEditorDriver {
             editor: self,
             font_cx,
@@ -951,10 +945,17 @@ where
     }
 
     /// Modify the styles provided for this editor.
-    pub fn edit_styles(&mut self) -> &mut StyleSet<T> {
+    pub fn edit_styles(&mut self) -> &mut StyleSet<ColorBrush> {
         self.layout_dirty = true;
         &mut self.default_style
     }
+
+    /// Sets the ranged styles provided for this editor.
+    pub fn set_ranged_styles(&mut self, ranged_styles: RangedStyles){
+        self.layout_dirty = true;
+        self.ranged_styles = ranged_styles;
+    }
+
 
     /// Whether the editor is currently in IME composing mode.
     pub fn is_composing(&self) -> bool {
@@ -969,8 +970,8 @@ where
     pub fn layout(
         &mut self,
         font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<T>,
-    ) -> &Layout<T> {
+        layout_cx: &mut LayoutContext<ColorBrush>,
+    ) -> &Layout<ColorBrush> {
         self.refresh_layout(font_cx, layout_cx);
         &self.layout
     }
@@ -983,7 +984,7 @@ where
     /// to ensure that the layout is up-to-date.
     ///
     /// The [`layout`](Self::layout) method should generally be preferred.
-    pub fn try_layout(&self) -> Option<&Layout<T>> {
+    pub fn try_layout(&self) -> Option<&Layout<ColorBrush>> {
         if self.layout_dirty {
             None
         } else {
@@ -1020,7 +1021,7 @@ where
     /// This should only be used alongside [`try_layout`](Self::try_layout)
     /// or [`try_accessibility`](Self::try_accessibility), if those will be
     /// called in a scope where the contexts are not available.
-    pub fn refresh_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<T>) {
+    pub fn refresh_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
         if self.layout_dirty {
             self.update_layout(font_cx, layout_cx);
         }
@@ -1070,7 +1071,7 @@ where
     fn replace_selection(
         &mut self,
         font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<T>,
+        layout_cx: &mut LayoutContext<ColorBrush>,
         s: &str,
     ) {
         let range = self.selection.text_range();
@@ -1132,12 +1133,17 @@ where
         self.selection = new_sel;
     }
     /// Update the layout.
-    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<T>) {
+    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
         let mut builder =
             layout_cx.ranged_builder(font_cx, &self.buffer, self.scale, self.quantize);
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
         }
+        
+        for (range, style) in &self.ranged_styles.styles {
+            builder.push(style.to_parley_style_property(), range.clone())
+        }
+        
         if let Some(preedit_range) = &self.compose {
             builder.push(StyleProperty::Underline(true), preedit_range.clone());
         }

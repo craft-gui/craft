@@ -158,7 +158,7 @@ impl Default for FontStyle {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum TextStyleProperty {
     Color(Color),
     FontFamily([u8; 64], u32),
@@ -172,31 +172,6 @@ pub enum TextStyleProperty {
 
 impl TextStyleProperty {
     pub(crate) fn to_parley_style_property(&self) -> parley::StyleProperty<'static, ColorBrush> {
-        // let font_size = self.font_size();
-        // let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
-        // let font_style = match self.font_style() {
-        //     FontStyle::Normal => parley::FontStyle::Normal,
-        //     FontStyle::Italic => parley::FontStyle::Italic,
-        //     // FIXME: Allow an angle when setting the obliqueness.
-        //     FontStyle::Oblique => parley::FontStyle::Oblique(None),
-        // };
-        // let brush = ColorBrush {
-        //     color: self.color(),
-        // };
-        // 
-        // let has_underline = self.underline.is_some();
-        // let mut underline_offset = None;
-        // let mut underline_size = None;
-        // let mut underline_brush = None;
-        // 
-        // if let Some(underline) = self.underline {
-        //     underline_offset = underline.offset;
-        //     underline_size = underline.thickness;
-        //     underline_brush = Some(ColorBrush {
-        //         color: underline.color,
-        //     });
-        // }
-        
         match self {
             TextStyleProperty::FontFamily(font_family, font_family_length) => {
                 

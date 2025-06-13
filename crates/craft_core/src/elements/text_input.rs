@@ -11,30 +11,30 @@ use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
-use crate::style::{Display, Style, Unit};
+use crate::style::{Display, Style, Unit, Weight};
 use crate::CraftMessage;
-use parley::{PlainEditor, PlainEditorDriver, StyleProperty};
 use std::any::Any;
 use std::collections::HashMap;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use crate::layout::layout_context::TextHashKey;
-use crate::text::text_context::{ColorBrush, TextContext};
+use crate::text::text_context::{TextContext};
 use crate::text::text_render_data::TextRender;
-use crate::text::{text_render_data, TextStyle};
+use crate::text::{text_render_data, RangedStyles, TextStyle};
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use time::{Duration, Instant};
 use kurbo::Affine;
+use parley::StyleProperty;
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
-use crate::elements::text::TextState;
 use crate::reactive::element_id::create_unique_element_id;
+use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -44,6 +44,7 @@ pub struct TextInput {
     /// NOTE: The editor will always use the user provided text on initialization.
     use_text_value_on_update: bool,
     pub text: Option<String>,
+    pub ranged_styles: Option<RangedStyles>,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -65,7 +66,7 @@ pub struct TextInputState {
     pub(crate) scroll_state: ScrollState,
     #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
-    pub(crate) editor: PlainEditor<ColorBrush>,
+    pub(crate) editor: PlainEditor,
 
     cache: HashMap<TextHashKey, taffy::Size<f32>>,
     current_key: Option<TextHashKey>,
@@ -73,7 +74,8 @@ pub struct TextInputState {
     text_render: Option<TextRender>,
     new_text: Option<String>,
     new_style: TextStyle,
-
+    new_ranged_styles: Option<RangedStyles>,
+    
     last_click_time: Option<Instant>,
     click_count: u32,
     pointer_down: bool,
@@ -90,9 +92,15 @@ impl TextInput {
             text: Some(text.to_string()),
             element_data: ElementData::default(),
             use_text_value_on_update: true,
+            ranged_styles: Some(RangedStyles::new(vec![])),
         }
     }
 
+    pub fn ranged_styles(mut self, ranged_styles: RangedStyles) -> Self {
+        self.ranged_styles = Some(ranged_styles);
+        self
+    }
+    
     #[allow(dead_code)]
     fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextInputState {
         element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
@@ -291,7 +299,7 @@ impl Element for TextInput {
             .downcast_mut()
             .unwrap();
 
-        fn copy(drv: &mut PlainEditorDriver<ColorBrush>) {
+        fn copy(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
@@ -302,7 +310,7 @@ impl Element for TextInput {
             }
         }
 
-        fn paste(drv: &mut PlainEditorDriver<ColorBrush>) {
+        fn paste(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
@@ -312,7 +320,7 @@ impl Element for TextInput {
             }
         }
 
-        fn cut(drv: &mut PlainEditorDriver<ColorBrush>) {
+        fn cut(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
                 use clipboard_rs::{Clipboard, ClipboardContext};
@@ -324,7 +332,7 @@ impl Element for TextInput {
             }
         }
 
-        let mut generate_text_changed_event = |editor: &mut PlainEditor<ColorBrush>| {
+        let mut generate_text_changed_event = |editor: &mut PlainEditor| {
             event.prevent_defaults();
             event.prevent_propagate();
             event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
@@ -611,6 +619,8 @@ impl Element for TextInput {
         let style_set = editor.edit_styles();
         self.style().add_styles_to_style_set(style_set);
 
+        editor.set_ranged_styles(self.ranged_styles.clone().unwrap());
+        
         let text_input_state = TextInputState {
             ime_state: ImeState::default(),
             is_active: false,
@@ -622,6 +632,7 @@ impl Element for TextInput {
             text_render: None,
             new_text: std::mem::take(&mut self.text),
             new_style: TextStyle::from(self.style()),
+            new_ranged_styles: std::mem::take(&mut self.ranged_styles),
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -707,6 +718,14 @@ impl Element for TextInput {
             }
         }
 
+        if self.ranged_styles != state.new_ranged_styles {
+            let ranged_styles = std::mem::take(&mut state.new_ranged_styles);
+            if let Some(ranged_styles) = ranged_styles {
+                state.editor.set_ranged_styles(ranged_styles);
+                state.cache.clear();
+            }
+        }
+        
         if TextStyle::from(self.style()) != state.new_style {
             state.new_style = TextStyle::from(self.style());
             state.cache.clear();
@@ -861,7 +880,7 @@ impl TextInputState {
         });
     }
 
-    fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a, ColorBrush> {
+    fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
         self.editor.driver(&mut text_context.font_context, &mut text_context.layout_context)
     }
 }
