@@ -1,5 +1,5 @@
-use crate::components::Event;
 use crate::components::Props;
+use crate::components::{Event, FocusAction};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -13,12 +13,12 @@ use crate::style::{Display, Style, Unit};
 use crate::text::text_context::TextContext;
 use crate::ComponentSpecification;
 use crate::{generate_component_methods_no_children, palette};
+use kurbo::Affine;
 use std::any::Any;
 use std::sync::Arc;
-use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
+use ui_events::keyboard::{Code, KeyState};
 use winit::window::Window;
-use crate::elements::slider::SliderState;
 
 /// An element that represents an on or off state.
 #[derive(Clone)]
@@ -158,13 +158,30 @@ impl Element for Switch {
         should_style: bool,
         event: &mut Event,
     ) {
+        let focused = element_state
+            .storage
+            .get(&self.element_data.component_id)
+            .unwrap().base.focused;
         self.on_style_event(message, element_state, should_style, event);
         self.maybe_unset_focus(message, event);
-        
+
+        if let CraftMessage::PointerButtonDown(_) = &message {
+            if let Some(target) = event.target {
+                if target.element_data().component_id == self.element_data().component_id {
+                    event.focus_action(FocusAction::Set(self.element_data().component_id));
+                }
+            }
+        }
+
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
+        let is_space_up = if let CraftMessage::KeyboardInputEvent(key) = message {
+            key.code == Code::Space && key.state == KeyState::Up
+        } else {
+            false
+        };
 
-        if message.clicked() {
+        if message.clicked() || (is_space_up && focused) {
             if let Some(toggled) = state.toggled {
                 // Negate the current toggled bool.
                 state.toggled = Some(!toggled);
