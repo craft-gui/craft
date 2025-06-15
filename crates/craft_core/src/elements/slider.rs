@@ -21,6 +21,8 @@ use std::any::Any;
 use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
+use ui_events::keyboard::{Code, KeyState};
+use ui_events::keyboard::Code::{ArrowDown, ArrowLeft, ArrowRight, ArrowUp};
 use winit::window::Window;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
@@ -185,12 +187,39 @@ impl Element for Slider {
         event: &mut Event,
     ) {
         self.on_style_event(message, element_state, should_style, event);
-        self.maybe_unset_focus(message, event);
+        self.maybe_set_focus(message, event);
+
+        let focused = element_state
+            .storage
+            .get(&self.element_data.component_id)
+            .unwrap().base.focused;
         
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
 
         match message {
+            CraftMessage::KeyboardInputEvent(key) => {
+                if key.state != KeyState::Down || !focused {
+                    return;
+                }
+                
+                let new_value = match key.code {
+                    ArrowUp | ArrowRight => Some(self.compute_step(1, state.value)),
+                    ArrowDown | ArrowLeft => Some(self.compute_step(-1, state.value)),
+                    Code::Home => Some(self.min),
+                    Code::End => Some(self.max),
+                    Code::PageUp => Some(self.compute_step(10, state.value)),
+                    Code::PageDown => Some(self.compute_step(-10, state.value)),
+                    _ => {
+                        None
+                    }
+                };
+
+                if let Some(new_value) = new_value {
+                    state.value = new_value;
+                    event.result_message(CraftMessage::SliderValueChanged(state.value));
+                }
+            }
             CraftMessage::PointerButtonUp(pointer_button_update) => {
                 state.dragging = false;
                 // FIXME: Turn pointer capture on with the correct device id.
@@ -372,6 +401,18 @@ impl Slider {
     pub fn value_track_color(mut self, color: Option<Color>) -> Self {
         self.value_track_color = color;
         self
+    }
+
+    fn compute_step(&self, by: i32, current_value: f64) -> f64 {
+        let delta = by.abs() as f64 * self.step;
+
+        let value = if by > 0 {
+            current_value + delta
+        } else {
+            current_value - delta
+        };
+
+        value.clamp(self.min, self.max)
     }
 
     fn compute_slider_value(&self, pointer_position: &Point) -> f64 {

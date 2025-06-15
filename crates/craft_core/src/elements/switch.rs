@@ -163,15 +163,7 @@ impl Element for Switch {
             .get(&self.element_data.component_id)
             .unwrap().base.focused;
         self.on_style_event(message, element_state, should_style, event);
-        self.maybe_unset_focus(message, event);
-
-        if let CraftMessage::PointerButtonDown(_) = &message {
-            if let Some(target) = event.target {
-                if target.element_data().component_id == self.element_data().component_id {
-                    event.focus_action(FocusAction::Set(self.element_data().component_id));
-                }
-            }
-        }
+        self.maybe_set_focus(message, event);
 
         let base_state = self.get_base_state_mut(element_state);
         let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();

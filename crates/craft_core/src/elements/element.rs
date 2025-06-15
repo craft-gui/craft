@@ -170,6 +170,16 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         }
     }
 
+    fn maybe_set_focus(&self, message: &CraftMessage, event: &mut Event) {
+        if let CraftMessage::PointerButtonDown(_) = &message {
+            if let Some(target) = event.target {
+                if target.element_data().component_id == self.element_data().component_id {
+                    event.focus_action(FocusAction::Set(self.element_data().component_id));
+                }
+            }
+        }
+    }
+
     fn resolve_box(
         &mut self,
         relative_position: Point,
