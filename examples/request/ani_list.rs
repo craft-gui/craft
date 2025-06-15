@@ -2,7 +2,8 @@ use craft::components::ComponentSpecification;
 use craft::elements::{Container, ElementStyles, Image, Text};
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::Unit;
-use craft::style::{AlignItems, Display, FlexDirection, JustifyContent};
+use craft::style::{Display, FlexDirection};
+use craft::Color;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -45,7 +46,7 @@ pub struct CoverImage {
 pub const QUERY: &str = "
 query {
   Page(page: 1, perPage: 10) {
-      media(type: ANIME) {
+      media(type: ANIME, sort: TRENDING_DESC) {
         id
         title {
           romaji
@@ -67,22 +68,35 @@ pub fn anime_view(media: &Media) -> ComponentSpecification {
         title = native_title;
     }
 
+    if let Some(english_title) = &media.title.english {
+        title = english_title;
+    }
+    
     if let Some(romaji_title) = &media.title.romaji {
         title = romaji_title;
     }
 
-    if let Some(english_title) = &media.title.english {
-        title = english_title;
-    }
-
+    let cover_image = Image::new(ResourceIdentifier::Url(media.cover_image.large.clone()))
+        .width("185px")
+        .max_width("185px")
+        .height("265px")
+        .max_height("265px")
+        .border_radius(4.0, 4.0, 4.0, 4.0)
+        .border_width("1px", "1px", "1px", "1px")
+        .border_color(Color::from_rgb8(150, 150, 150));
+    
+    let anime_name = Text::new(title)
+        .max_width(Unit::Percentage(100.0))
+        .font_size(14.0)
+        .color(Color::from_rgb8(50, 50, 50));
+    
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .justify_content(JustifyContent::Center)
-        .align_items(AlignItems::Center)
         .column_gap("20px")
-        .push(Image::new(ResourceIdentifier::Url(media.cover_image.large.clone())).max_width(Unit::Percentage(100.0)))
-        .push(Text::new(title).max_width(Unit::Percentage(100.0)))
-        .width(Unit::Px(230.0))
+        .push(cover_image)
+        .push(anime_name)
+        .width(Unit::Px(185.0))
+        .max_height("317px")
         .component()
 }
