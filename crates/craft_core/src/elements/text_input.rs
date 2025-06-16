@@ -4,7 +4,7 @@ use crate::components::{ImeAction, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::scroll_state::ScrollState;
-use crate::elements::ElementStyles;
+use crate::elements::{ElementStyles, StatefulElement};
 use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -85,6 +85,8 @@ pub struct TextInputState {
     blink_period: Duration,
 }
 
+impl StatefulElement<TextInputState> for TextInput {}
+
 impl TextInput {
     pub fn new(text: &str) -> Self {
         Self {
@@ -98,11 +100,6 @@ impl TextInput {
     pub fn ranged_styles(mut self, ranged_styles: RangedStyles) -> Self {
         self.ranged_styles = Some(ranged_styles);
         self
-    }
-    
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a TextInputState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 }
 
@@ -146,30 +143,16 @@ impl Element for TextInput {
         let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
         renderer.push_layer(padding_rectangle.scale(scale_factor));
 
-        let scroll_y = if let Some(state) =
-            element_state.storage.get(&self.element_data.component_id).unwrap().data.downcast_ref::<TextInputState>()
-        {
-            state.scroll_state.scroll_y
-        } else {
-            0.0
-        };
+        let state = self.state(element_state);
 
         let text_scroll = if is_scrollable {
-            Some(TextScroll::new(scroll_y, self.element_data.layout_item.computed_scroll_track.height))
+            Some(TextScroll::new(state.scroll_state.scroll_y, self.element_data.layout_item.computed_scroll_track.height))
         } else {
             None
         };
 
-        if let Some(state) = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_mut::<TextInputState>()
-        {
-            if let Some(text_render) = state.text_render.as_ref() {
-                renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), text_scroll, state.cursor_visible);
-            }
+        if let Some(text_render) = state.text_render.as_ref() {
+            renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), text_scroll, state.cursor_visible);
         }
 
         renderer.pop_layer();
@@ -211,14 +194,7 @@ impl Element for TextInput {
 
         self.finalize_borders(element_state);
 
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let state: &mut TextInputState = self.state_mut(element_state);
 
         if state.current_key != state.last_requested_key {
             state.layout(
@@ -240,18 +216,8 @@ impl Element for TextInput {
 
         self.element_data.layout_item.scrollbar_size =
             Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.layout_item.computed_scrollbar_size =
-            Size::new(result.scroll_width(), result.scroll_height());
-
-        if let Some(state) = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_mut::<TextInputState>()
-        {
-            self.finalize_scrollbar(&mut state.scroll_state);
-        }
+        self.element_data.layout_item.computed_scrollbar_size = Size::new(result.scroll_width(), result.scroll_height());
+        self.finalize_scrollbar(&mut state.scroll_state);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -269,11 +235,10 @@ impl Element for TextInput {
         self.on_style_event(message, element_state, should_style, event);
         self.maybe_unset_focus(message, event);
 
-        let base_state = self.get_base_state_mut(element_state);
-        let state = base_state.data.as_mut().downcast_mut::<TextInputState>().unwrap();
+        let (state, base_state) = self.state_and_base_mut(element_state);
         state.is_active = true;
 
-        state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
+        state.scroll_state.on_event(message, &self.element_data, base_state, event);
 
         if !event.propagate {
             return;
@@ -285,18 +250,7 @@ impl Element for TextInput {
         let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
-        let focused = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap().base.focused;
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let focused = base_state.focused;
 
         fn copy(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
@@ -346,12 +300,12 @@ impl Element for TextInput {
                     }
                     TextInputMessage::Paste => {
                         paste(&mut drv);
-                        state.cache.clear();
+                        state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
                     }
                     TextInputMessage::Cut => {
                         cut(&mut drv);
-                        state.cache.clear();
+                        state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
                     }
                 }
@@ -384,12 +338,12 @@ impl Element for TextInput {
                             "c" => copy(&mut drv),
                             "x" => {
                                 cut(&mut drv);
-                                state.cache.clear();
+                                state.clear_cache();
                                 generate_text_changed_event(&mut state.editor);
                             }
                             "v" => {
                                 paste(&mut drv);
-                                state.cache.clear();
+                                state.clear_cache();
                                 generate_text_changed_event(&mut state.editor);
                             }
                             _ => (),
@@ -473,31 +427,31 @@ impl Element for TextInput {
                     Key::Named(NamedKey::Delete) => {
                         if action_mod {
                             drv.delete_word();
-                            state.cache.clear();
+                            state.clear_cache();
                         } else {
                             drv.delete();
-                            state.cache.clear();
+                            state.clear_cache();
                         }
                         generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Backspace) => {
                         if action_mod {
                             drv.backdelete_word();
-                            state.cache.clear();
+                            state.clear_cache();
                         } else {
                             drv.backdelete();
-                            state.cache.clear();
+                            state.clear_cache();
                         }
                         generate_text_changed_event(&mut state.editor);
                     }
                     Key::Named(NamedKey::Enter) => {
                         drv.insert_or_replace_selection("\n");
-                        state.cache.clear();
+                        state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
                     }
                     Key::Character(s) => {
                         drv.insert_or_replace_selection(s);
-                        state.cache.clear();
+                        state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
                     }
                     _ => (),
@@ -582,11 +536,11 @@ impl Element for TextInput {
             }
             CraftMessage::ImeEvent(Ime::Disabled) => {
                 state.driver(_text_context).clear_compose();
-                state.cache.clear();
+                state.clear_cache();
             }
             CraftMessage::ImeEvent(Ime::Commit(text)) => {
                 state.driver(_text_context).insert_or_replace_selection(text);
-                state.cache.clear();
+                state.clear_cache();
                 generate_text_changed_event(&mut state.editor);
             }
             CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
@@ -595,7 +549,7 @@ impl Element for TextInput {
                 } else {
                     state.driver(_text_context).set_compose(text, *cursor);
                 }
-                state.cache.clear();
+                state.clear_cache();
             }
             _ => {}
         }
@@ -654,14 +608,7 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) {
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let state: &mut TextInputState = self.state_mut(element_state);
 
         if state.editor.try_layout().is_none() {
             return;
@@ -698,34 +645,27 @@ impl Element for TextInput {
     }
 
     fn update_state(&mut self, element_state: &mut ElementStateStore, _reload_fonts: bool, scaling_factor: f64) {
-        let state: &mut TextInputState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let state: &mut TextInputState = self.state_mut(element_state);
 
         if let Some(layout) = state.editor.try_layout() {
             if layout.scale() != scaling_factor as f32 {
                 state.editor.set_scale(scaling_factor as f32);
-                state.cache.clear();
+                state.clear_cache();
                 state.new_text = Some(state.editor.text().to_string());
             }
         }
-        
+
         if self.ranged_styles.as_ref() != Some(&state.editor.ranged_styles) {
             let ranged_styles = std::mem::take(&mut self.ranged_styles);
             if let Some(ranged_styles) = ranged_styles {
                 state.editor.set_ranged_styles(ranged_styles);
-                state.cache.clear();
+                state.clear_cache();
             }
         }
-        
+
         if TextStyle::from(self.style()) != state.new_style {
             state.new_style = TextStyle::from(self.style());
-            state.cache.clear();
+            state.clear_cache();
             state.new_text = Some(state.editor.text().to_string());
             let styles = state.editor.edit_styles();
             styles.insert(StyleProperty::FontSize(state.new_style.font_size));
@@ -775,6 +715,7 @@ impl TextInputState {
                 self.editor.set_text(new_text.as_str());
             }
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+            self.clear_cache();
         }
         self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
 
@@ -787,6 +728,12 @@ impl TextInputState {
         }
 
         self.layout(known_dimensions, available_space, text_context)
+    }
+
+    pub fn clear_cache(&mut self) {
+        self.cache.clear();
+        self.current_key = None;
+        self.last_requested_key = None;
     }
 
     pub fn layout(

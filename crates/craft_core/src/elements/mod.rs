@@ -1,6 +1,7 @@
 pub(crate) mod container;
 pub(crate) mod dropdown;
 pub(crate) mod element;
+pub(crate) mod stateful_element;
 pub(crate) mod empty;
 pub(crate) mod image;
 pub(crate) mod overlay;
@@ -27,6 +28,7 @@ pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
 pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::element::Element;
+pub use crate::elements::stateful_element::StatefulElement;
 pub use crate::elements::element::ElementBoxed;
 pub use crate::elements::element_data::ElementData;
 pub use crate::elements::element_states::ElementState;

@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
-use crate::components::{Event, FocusAction};
+use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
@@ -73,7 +73,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &self.element_data().id
     }
 
-    fn component_id(&self) -> u64 {
+    fn component_id(&self) -> ComponentId {
         self.element_data().component_id
     }
 
