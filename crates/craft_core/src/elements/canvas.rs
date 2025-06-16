@@ -6,7 +6,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
-use crate::reactive::element_state_store::ElementStateStore;
+use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::renderer::RenderCommand;
 use crate::style::Style;
@@ -17,6 +17,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::elements::StatefulElement;
 
 #[derive(Clone, Default)]
 pub struct Canvas {
@@ -26,6 +27,8 @@ pub struct Canvas {
 
 #[derive(Clone, Copy, Default)]
 pub struct CanvasState {}
+
+impl StatefulElement<CanvasState> for Canvas {}
 
 impl Element for Canvas {
     fn element_data(&self) -> &ElementData {
@@ -204,19 +207,16 @@ impl Element for Canvas {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
+        ElementStateStoreItem {
+            base: Default::default(),
+            data: Box::new(CanvasState::default()),
+        }
+    }
 }
 
 impl Canvas {
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a CanvasState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
-    #[allow(dead_code)]
-    fn get_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut CanvasState {
-        element_state.storage.get_mut(&self.element_data.component_id).unwrap().data.as_mut().downcast_mut().unwrap()
-    }
-
     pub fn new() -> Canvas {
         Canvas {
             element_data: Default::default(),
