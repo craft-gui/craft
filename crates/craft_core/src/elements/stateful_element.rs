@@ -1,6 +1,5 @@
 use crate::elements::base_element_state::BaseElementState;
 use crate::elements::Element;
-use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
 
 pub trait StatefulElement<State: 'static> : Element {

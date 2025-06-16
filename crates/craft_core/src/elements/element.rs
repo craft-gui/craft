@@ -136,12 +136,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn on_style_event(
         &self,
         message: &CraftMessage,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         should_style: bool,
         _event: &mut Event,
     ) {
         if should_style {
-            let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
+            let state = element_state.storage.get_mut(&self.element_data().component_id).unwrap();
 
             match message {
                 CraftMessage::PointerMovedEvent(..) => {
