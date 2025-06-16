@@ -6,7 +6,7 @@ use crate::elements::element_styles::ElementStyles;
 use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
-use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
+use crate::reactive::element_state_store::{ElementStateStore};
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
@@ -21,9 +21,6 @@ use winit::window::Window;
 pub struct Overlay {
     pub element_data: ElementData,
 }
-
-#[derive(Clone, Copy, Default)]
-pub struct OverlayState {}
 
 impl Element for Overlay {
     fn element_data(&self) -> &ElementData {
@@ -126,21 +123,9 @@ impl Element for Overlay {
     fn as_any(&self) -> &dyn Any {
         self
     }
-
-    fn initialize_state(&mut self, _scaling_factor: f64) -> ElementStateStoreItem {
-        ElementStateStoreItem {
-            base: Default::default(),
-            data: Box::new(OverlayState::default()),
-        }
-    }
 }
 
 impl Overlay {
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a OverlayState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
     pub fn new() -> Overlay {
         Overlay {
             element_data: Default::default(),
