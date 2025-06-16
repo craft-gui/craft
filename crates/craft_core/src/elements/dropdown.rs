@@ -4,7 +4,7 @@ use crate::components::Props;
 use crate::elements::element::{Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
-use crate::elements::Container;
+use crate::elements::{Container, StatefulElement};
 use crate::events::CraftMessage;
 use crate::generate_component_methods;
 use crate::geometry::{Point, Rectangle, TrblRectangle};
@@ -44,6 +44,8 @@ pub struct DropdownState {
     /// For example if you select the first item, `selected_item` will be 0.
     selected_item: Option<usize>,
 }
+
+impl StatefulElement<DropdownState> for Dropdown {}
 
 impl Element for Dropdown {
     fn element_data(&self) -> &ElementData {
@@ -93,7 +95,9 @@ impl Element for Dropdown {
         if !self.element_data.style.visible() {
             return;
         }
-        let is_open = self.get_state(element_state).is_open;
+
+        let state = self.state(element_state);
+        let is_open = state.is_open;
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, element_state, scale_factor);
@@ -125,7 +129,7 @@ impl Element for Dropdown {
     ) -> Option<NodeId> {
         self.merge_default_style();
 
-        let state = self.get_state(element_state);
+        let state = self.state(element_state);
         let is_open = state.is_open;
         let default_item = self.default_item;
 
@@ -189,7 +193,7 @@ impl Element for Dropdown {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
     ) {
-        let state = self.get_state(element_state);
+        let state = self.state(element_state);
         let is_open = state.is_open;
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
@@ -273,8 +277,7 @@ impl Element for Dropdown {
 
         self.on_style_event(message, element_state, should_style, event);
         self.maybe_unset_focus(message, event);
-        let base_state = self.get_base_state_mut(element_state);
-        let state = base_state.data.as_mut().downcast_mut::<DropdownState>().unwrap();
+        let (state, _base_state) = self.state_and_base_mut(element_state);
 
         match message {
             CraftMessage::PointerButtonUp(pointer_button) => {
@@ -378,11 +381,6 @@ impl Dropdown {
         default_style.inset_mut().top = Unit::Percentage(100.0);
 
         default_style
-    }
-
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a DropdownState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
     }
 
     pub fn new() -> Dropdown {

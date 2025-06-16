@@ -1,5 +1,5 @@
 use crate::components::Props;
-use crate::components::{Event, FocusAction};
+use crate::components::Event;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::elements::element_styles::ElementStyles;
@@ -19,6 +19,7 @@ use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use ui_events::keyboard::{Code, KeyState};
 use winit::window::Window;
+use crate::elements::StatefulElement;
 
 /// An element that represents an on or off state.
 #[derive(Clone)]
@@ -43,6 +44,8 @@ pub struct Switch {
 pub struct SwitchState {
     pub(crate) toggled: Option<bool>,
 }
+
+impl StatefulElement<SwitchState> for Switch {}
 
 impl Element for Switch {
     fn element_data(&self) -> &ElementData {
@@ -79,7 +82,7 @@ impl Element for Switch {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) -> Option<NodeId> {
-        let state = self.get_state(element_state);
+        let state = self.state(element_state);
         self.merge_default_style();
 
         let default_toggled = self.default_toggled;
@@ -121,7 +124,7 @@ impl Element for Switch {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
     ) {
-        let state = self.get_state(element_state);
+        let state = self.state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.resolve_clip(clip_bounds);
@@ -158,15 +161,12 @@ impl Element for Switch {
         should_style: bool,
         event: &mut Event,
     ) {
-        let focused = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap().base.focused;
         self.on_style_event(message, element_state, should_style, event);
+        let (state, base_state) = self.state_and_base_mut(element_state);
+        let focused = base_state.focused;
         self.maybe_set_focus(message, event);
-
-        let base_state = self.get_base_state_mut(element_state);
-        let state = base_state.data.as_mut().downcast_mut::<SwitchState>().unwrap();
+        
+        
         let is_space_up = if let CraftMessage::KeyboardInputEvent(key) = message {
             key.code == Code::Space && key.state == KeyState::Up
         } else {
@@ -299,12 +299,7 @@ impl Switch {
         self.default_toggled = default_toggled;
         self
     }
-
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SwitchState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
+    
     pub fn new(size: f32) -> Switch {
         Switch {
             element_data: Default::default(),

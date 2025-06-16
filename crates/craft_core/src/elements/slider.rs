@@ -24,6 +24,7 @@ use taffy::{NodeId, TaffyTree};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::keyboard::Code::{ArrowDown, ArrowLeft, ArrowRight, ArrowUp};
 use winit::window::Window;
+use crate::elements::StatefulElement;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -54,6 +55,8 @@ pub struct SliderState {
     pub value: f64,
     pub dragging: bool,
 }
+
+impl StatefulElement<SliderState> for Slider {}
 
 impl Element for Slider {
     fn element_data(&self) -> &ElementData {
@@ -154,7 +157,7 @@ impl Element for Slider {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
     ) {
-        let state = self.get_state(element_state);
+        let state = self.state(element_state);
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.resolve_clip(clip_bounds);
@@ -188,15 +191,9 @@ impl Element for Slider {
     ) {
         self.on_style_event(message, element_state, should_style, event);
         self.maybe_set_focus(message, event);
-
-        let focused = element_state
-            .storage
-            .get(&self.element_data.component_id)
-            .unwrap().base.focused;
+        let (state, base_state) = self.state_and_base_mut(element_state);
+        let focused = base_state.focused;
         
-        let base_state = self.get_base_state_mut(element_state);
-        let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
-
         match message {
             CraftMessage::KeyboardInputEvent(key) => {
                 if key.state != KeyState::Down || !focused {
@@ -223,7 +220,7 @@ impl Element for Slider {
             CraftMessage::PointerButtonUp(pointer_button_update) => {
                 state.dragging = false;
                 // FIXME: Turn pointer capture on with the correct device id.
-                base_state.base.pointer_capture.remove(&DUMMY_DEVICE_ID);
+                base_state.pointer_capture.remove(&DUMMY_DEVICE_ID);
 
                 let value = self.compute_slider_value(&pointer_button_update.state.position);
                 state.value = value;
@@ -233,7 +230,7 @@ impl Element for Slider {
             CraftMessage::PointerButtonDown(pointer_button_update) => {
                 state.dragging = true;
                 // FIXME: Turn pointer capture on with the correct device id.
-                base_state.base.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                base_state.pointer_capture.insert(DUMMY_DEVICE_ID, true);
 
                 let value = self.compute_slider_value(&pointer_button_update.state.position);
                 state.value = value;
@@ -267,9 +264,7 @@ impl Element for Slider {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) {
-        let base_state = self.get_base_state_mut(element_state);
-        let state = base_state.data.as_mut().downcast_mut::<SliderState>().unwrap();
-        
+        let (state, _base_state) = self.state_and_base_mut(element_state);
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
         let mut current_node = accesskit::Node::new(accesskit::Role::Slider);
@@ -320,11 +315,7 @@ impl Element for Slider {
 }
 
 impl Slider {
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a SliderState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
-
+    
     fn thumb_position(&self, thumb_value: f64) -> Point {
         let content_rectangle = self.computed_box().content_rectangle();
 
@@ -432,7 +423,7 @@ impl Slider {
             if self.direction == SliderDirection::Horizontal { pointer_position.x } else { pointer_position.y };
 
         // [0, 1]
-        let mut normalized_value = (pointer_position_component as f64 - start) / (end - start);
+        let mut normalized_value = (pointer_position_component - start) / (end - start);
         normalized_value = normalized_value.clamp(0.0, 1.0);
         let mut value = normalized_value * self.max;
 

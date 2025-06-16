@@ -1,5 +1,5 @@
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
-use crate::components::{Event, FocusAction};
+use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
@@ -73,7 +73,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         &self.element_data().id
     }
 
-    fn component_id(&self) -> u64 {
+    fn component_id(&self) -> ComponentId {
         self.element_data().component_id
     }
 
@@ -136,20 +136,20 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn on_style_event(
         &self,
         message: &CraftMessage,
-        _element_state: &mut ElementStateStore,
+        element_state: &mut ElementStateStore,
         should_style: bool,
         _event: &mut Event,
     ) {
         if should_style {
-            let state = _element_state.storage.get_mut(&self.element_data().component_id).unwrap();
+            let base_state = self.get_base_state_mut(element_state);
 
             match message {
                 CraftMessage::PointerMovedEvent(..) => {
-                    state.base.hovered = true;
+                    base_state.base.hovered = true;
                 }
                 CraftMessage::PointerButtonDown(pointer_button) => {
                     if pointer_button.is_primary() {
-                        state.base.active = true;
+                        base_state.base.active = true;
                     }
                 }
                 _ => {}
@@ -289,15 +289,17 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     #[allow(dead_code)]
     fn finalize_state(&mut self, element_state: &mut ElementStateStore, pointer: Option<Point>) {
-        let element_data = self.element_data_mut();
-        let element_state = element_state.storage.get_mut(&element_data.component_id).unwrap();
-        element_state.base.current_state = ElementState::Normal;
-
-        let border_rectangle = element_data.layout_item.computed_box_transformed.border_rectangle();
+        let border_rectangle = {
+            let element_data = self.element_data_mut();
+            element_data.layout_item.computed_box_transformed.border_rectangle()
+        };
+        
+        let base_state = self.get_base_state_mut(element_state);
+        base_state.base.current_state = ElementState::Normal;
 
         if let Some(pointer) = pointer {
             if border_rectangle.contains(&pointer) {
-                element_state.base.current_state = ElementState::Hovered;
+                base_state.base.current_state = ElementState::Hovered;
             }
         }
     }
@@ -305,8 +307,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn get_base_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ElementStateStoreItem {
         element_state.storage.get(&self.element_data().component_id).unwrap()
     }
-
-    #[allow(dead_code)]
+    
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
