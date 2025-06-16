@@ -246,7 +246,6 @@ impl TextStyleProperty {
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
     box_sizing: BoxSizing,
-    scrollbar_width: f32,
     position: Position,
     margin: TrblRectangle<Unit>,
     padding: TrblRectangle<Unit>,
@@ -282,7 +281,11 @@ pub struct Style {
     border_color: TrblRectangle<Color>,
     border_width: TrblRectangle<Unit>,
     border_radius: [(f32, f32); 4],
+
     scrollbar_color: ScrollbarColor,
+    scrollbar_thumb_margin: TrblRectangle<f32>,
+    scrollbar_radius: [(f32, f32); 4],
+    scrollbar_width: f32,
 
     /// The element is measured and occupies space, but is not drawn to the screen.
     visible: bool,
@@ -296,7 +299,6 @@ impl Default for Style {
             font_family_length: 0,
             font_family: [0; 64],
             box_sizing: BoxSizing::BorderBox,
-            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 },
             position: Position::Relative,
             margin: TrblRectangle::new_all(Unit::Px(0.0)),
             padding: TrblRectangle::new_all(Unit::Px(0.0)),
@@ -329,11 +331,14 @@ impl Default for Style {
             overflow: [Overflow::default(), Overflow::default()],
             border_radius: [(0.0, 0.0); 4],
             scrollbar_color: ScrollbarColor {
-                thumb_color: Color::from_rgb8(150, 150, 150),
-                track_color: Color::from_rgb8(100, 100, 100),
+                thumb_color: Color::from_rgb8(150, 150, 152),
+                track_color: Color::TRANSPARENT,
             },
             visible: true,
             dirty_flags: StyleFlags::empty(),
+            scrollbar_radius: [(10.0, 10.0); 4],
+            scrollbar_width: if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 },
+            scrollbar_thumb_margin: if cfg!(any(target_os = "android", target_os = "ios")) { TrblRectangle::new_all(0.0) } else { TrblRectangle::new(1.0, 2.0, 1.0, 2.0) },
         }
     }
 }
@@ -679,6 +684,24 @@ impl Style {
         &mut self.scrollbar_color
     }
 
+    pub fn scrollbar_thumb_radius(&self) -> [(f32, f32); 4] {
+        self.scrollbar_radius
+    }
+
+    pub fn scrollbar_thumb_radius_mut(&mut self) -> &mut [(f32, f32); 4] {
+        self.dirty_flags.insert(StyleFlags::SCROLLBAR_RADIUS);
+        &mut self.scrollbar_radius
+    }
+
+    pub fn scrollbar_thumb_margin(&self) -> TrblRectangle<f32> {
+        self.scrollbar_thumb_margin
+    }
+
+    pub fn scrollbar_thumb_margin_mut(&mut self) -> &mut TrblRectangle<f32> {
+        self.dirty_flags.insert(StyleFlags::SCROLLBAR_THUMB_MARGIN);
+        &mut self.scrollbar_thumb_margin
+    }
+
     pub fn visible(&self) -> bool {
         self.visible
     }
@@ -801,6 +824,18 @@ impl Style {
             old.scrollbar_color
         };
 
+        let scrollbar_radius = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_RADIUS) {
+            new.scrollbar_radius
+        } else {
+            old.scrollbar_radius
+        };
+
+        let scrollbar_thumb_margin = if new_dirty_flags.contains(StyleFlags::SCROLLBAR_THUMB_MARGIN) {
+            new.scrollbar_thumb_margin
+        } else {
+            old.scrollbar_thumb_margin
+        };
+
         let visible = if new_dirty_flags.contains(StyleFlags::VISIBLE) { new.visible } else { old.visible };
 
         let underline = if new_dirty_flags.contains(StyleFlags::UNDERLINE) { new.underline } else { old.underline };
@@ -811,7 +846,6 @@ impl Style {
             font_family_length,
             font_family,
             box_sizing,
-            scrollbar_width,
             position,
             margin,
             padding,
@@ -844,6 +878,9 @@ impl Style {
             border_width,
             border_radius,
             scrollbar_color,
+            scrollbar_radius,
+            scrollbar_width,
+            scrollbar_thumb_margin,
             visible,
             dirty_flags,
         }

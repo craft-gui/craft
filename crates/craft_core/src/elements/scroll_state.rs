@@ -152,9 +152,13 @@ impl ScrollState {
         let remaining_height = scroll_track_height - scroll_thumb_height;
         let scroll_thumb_offset =
             if max_scroll_y != 0.0 { self.scroll_y / max_scroll_y * remaining_height } else { 0.0 };
-        let scroll_thumb_width = scroll_track_width;
+
+        let thumb_margin = element_data.style.scrollbar_thumb_margin();
+        let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
+        let scroll_thumb_height = scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom);
         element_data.layout_item.computed_scroll_thumb = element_data.layout_item.computed_scroll_track;
-        element_data.layout_item.computed_scroll_thumb.y += scroll_thumb_offset;
+        element_data.layout_item.computed_scroll_thumb.x += thumb_margin.left;
+        element_data.layout_item.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
         element_data.layout_item.computed_scroll_thumb.width = scroll_thumb_width;
         element_data.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
     }

@@ -4,8 +4,8 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use crate::geometry::borders::ComputedBorderSpec;
-use crate::geometry::{ElementBox, Point, Rectangle};
+use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use crate::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
@@ -17,9 +17,10 @@ use std::any::Any;
 use std::mem;
 use std::sync::Arc;
 use kurbo::Affine;
+use peniko::Color;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
-use crate::layout::layout_item::LayoutItem;
+use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -256,12 +257,21 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
+        let scrollbar_thumb_radius = self.element_data().current_style().scrollbar_thumb_radius();
+        // let scrollbar_thumb_radius = self.element_data().current_style().
+        let track_rect = self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor);
+        let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
+        
+        let border_spec = BorderSpec::new(
+            thumb_rect,
+            [0.0, 0.0, 0.0, 0.0],
+            scrollbar_thumb_radius,
+            TrblRectangle::new_all(Color::TRANSPARENT),
+        );
+        let computed_border_spec = border_spec.compute_border_spec();
 
-        // track
-        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor), scrollbar_color.track_color);
-
-        // thumb
-        renderer.draw_rect(self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor), scrollbar_color.thumb_color);
+        renderer.draw_rect(track_rect, scrollbar_color.track_color);
+        draw_borders_generic(renderer, &computed_border_spec, scrollbar_color.thumb_color, scale_factor);
     }
 
     fn finalize_scrollbar(&mut self, scroll_state: &mut ScrollState) {

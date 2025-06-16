@@ -134,33 +134,38 @@ impl LayoutItem {
             renderer.draw_rect(self.computed_box_transformed.padding_rectangle().scale(scale_factor), background_color);
             return;
         }
-        let scale_factor = Affine::scale(scale_factor);
-
+        
         let computed_border_spec = &self.computed_border;
-
-        let mut background_path = computed_border_spec.build_background_path();
-        background_path.apply_affine(scale_factor);
-        
-        renderer.fill_bez_path(background_path, Brush::Color(background_color));
-
-        let top = computed_border_spec.get_side(Side::Top);
-        let right = computed_border_spec.get_side(Side::Right);
-        let bottom = computed_border_spec.get_side(Side::Bottom);
-        let left = computed_border_spec.get_side(Side::Left);
-        
-        let mut border_top_path = computed_border_spec.build_side_path(Side::Top);
-        let mut border_right_path = computed_border_spec.build_side_path(Side::Right);
-        let mut border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
-        let mut border_left_path = computed_border_spec.build_side_path(Side::Left);
-        
-        border_top_path.apply_affine(scale_factor);
-        border_right_path.apply_affine(scale_factor);
-        border_bottom_path.apply_affine(scale_factor);
-        border_left_path.apply_affine(scale_factor);
-
-        renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
-        renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
-        renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
-        renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
+        draw_borders_generic(renderer, computed_border_spec, background_color, scale_factor);
     }
+}
+
+pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorderSpec, bg_color: Color, scale_factor: f64) {
+    let background_color = bg_color;
+    let scale_factor = Affine::scale(scale_factor);
+
+    let mut background_path = computed_border_spec.build_background_path();
+    background_path.apply_affine(scale_factor);
+
+    renderer.fill_bez_path(background_path, Brush::Color(background_color));
+
+    let top = computed_border_spec.get_side(Side::Top);
+    let right = computed_border_spec.get_side(Side::Right);
+    let bottom = computed_border_spec.get_side(Side::Bottom);
+    let left = computed_border_spec.get_side(Side::Left);
+
+    let mut border_top_path = computed_border_spec.build_side_path(Side::Top);
+    let mut border_right_path = computed_border_spec.build_side_path(Side::Right);
+    let mut border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
+    let mut border_left_path = computed_border_spec.build_side_path(Side::Left);
+
+    border_top_path.apply_affine(scale_factor);
+    border_right_path.apply_affine(scale_factor);
+    border_bottom_path.apply_affine(scale_factor);
+    border_left_path.apply_affine(scale_factor);
+
+    renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
+    renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
+    renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
+    renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
 }
