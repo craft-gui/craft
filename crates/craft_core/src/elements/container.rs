@@ -18,6 +18,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::elements::StatefulElement;
 
 /// An element for storing related elements.
 #[derive(Clone, Default)]
@@ -29,6 +30,8 @@ pub struct Container {
 pub struct ContainerState {
     pub(crate) scroll_state: ScrollState,
 }
+
+impl StatefulElement<ContainerState> for Container {}
 
 impl Element for Container {
     fn element_data(&self) -> &ElementData {
@@ -115,20 +118,10 @@ impl Element for Container {
         self.element_data.layout_item.computed_scrollbar_size =
             Size::new(result.scroll_width(), result.scroll_height());
 
-        let scroll_y = if let Some(container_state) = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .downcast_mut::<ContainerState>()
-        {
-            self.finalize_scrollbar(&mut container_state.scroll_state);
-            container_state.scroll_state.scroll_y
-        } else {
-            0.0
-        };
+        let container_state= self.state_mut(element_state);
+        self.finalize_scrollbar(&mut container_state.scroll_state);
+        let scroll_y = container_state.scroll_state.scroll_y;
         self.resolve_clip(clip_bounds);
-
         let child_transform = Affine::translate((0.0, -scroll_y as f64));
 
         for child in self.element_data.children.iter_mut() {
@@ -165,10 +158,9 @@ impl Element for Container {
     ) {
         self.on_style_event(message, element_state, should_style, event);
         self.maybe_unset_focus(message, event);
-        let base_state = self.get_base_state_mut(element_state);
-        let container_state = base_state.data.as_mut().downcast_mut::<ContainerState>().unwrap();
 
-        container_state.scroll_state.on_event(message, &self.element_data, &mut base_state.base, event);
+        let (container_state, base_state) = self.state_and_base_mut(element_state);
+        container_state.scroll_state.on_event(message, &self.element_data, base_state, event);
     }
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -184,10 +176,6 @@ impl Element for Container {
 }
 
 impl Container {
-    #[allow(dead_code)]
-    fn get_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ContainerState {
-        element_state.storage.get(&self.element_data.component_id).unwrap().data.as_ref().downcast_ref().unwrap()
-    }
 
     pub fn new() -> Container {
         Container {
