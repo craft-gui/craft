@@ -2,7 +2,7 @@ use crate::components::component::ComponentSpecification;
 use crate::components::{Event, Props};
 use crate::elements::element::{resolve_clip_for_scrollable, Element, ElementBoxed};
 use crate::elements::element_data::ElementData;
-use crate::elements::ElementStyles;
+use crate::elements::{ElementStyles, StatefulElement};
 use crate::events::CraftMessage;
 use crate::generate_component_methods_no_children;
 use crate::geometry::{Point, Rectangle};
@@ -67,6 +67,8 @@ pub struct TextState {
     pub(crate) blink_period: Duration,
 }
 
+impl StatefulElement<TextState> for Text {}
+
 impl Text {
     pub fn new(text: &str) -> Text {
         Text {
@@ -115,15 +117,7 @@ impl Element for Text {
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, element_state, scale_factor);
-
-        let state: &mut TextState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
+        let state: &mut TextState = self.state_mut(element_state);
 
         if let Some(text_render) = state.text_render.as_ref() {
             renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), None, false);
@@ -138,15 +132,7 @@ impl Element for Text {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) {
-        let state: &mut TextState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
-
+        let state: &mut TextState = self.state_mut(element_state);
         if state.layout.is_none() {
             return;
         }
@@ -224,15 +210,7 @@ impl Element for Text {
 
         self.finalize_borders(element_state);
 
-        let state: &mut TextState = element_state
-            .storage
-            .get_mut(&self.element_data.component_id)
-            .unwrap()
-            .data
-            .as_mut()
-            .downcast_mut()
-            .unwrap();
-
+        let state: &mut TextState = self.state_mut(element_state);
         if state.current_layout_key != state.last_requested_measure_key {
             state.layout(
                 state.last_requested_measure_key.unwrap().known_dimensions(),
@@ -372,11 +350,7 @@ impl Element for Text {
 
     fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
         let text_hash = hash_string(self.text.as_ref().unwrap());
-
-        let base_state: &mut ElementStateStoreItem =
-            element_state.storage.get_mut(&self.element_data.component_id).unwrap();
-
-        let state: &mut TextState = base_state.data.as_mut().downcast_mut().unwrap();
+        let (state, base_state) = self.state_and_base_mut(element_state);
 
         let scale_factor_changed = if let Some(layout) = &state.layout {
             if layout.scale() != scaling_factor as f32 {
@@ -391,7 +365,7 @@ impl Element for Text {
 
         let last_style = &state.last_text_style;
 
-        let current_style = *base_state.base.current_style(self.element_data());
+        let current_style = *base_state.current_style(self.element_data());
         if last_style.color() != current_style.color() {
             if let Some(text_render) = state.text_render.as_mut() {
                 text_render.override_brush = Some(ColorBrush::new(current_style.color()));
