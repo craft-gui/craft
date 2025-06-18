@@ -1,18 +1,19 @@
 use util::setup_logging;
 
-use craft::components::Component;
+use craft::components::{Component, Event};
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
-use craft::craft_main;
-use craft::elements::ElementStyles;
+use craft::{craft_main, rgb};
+use craft::elements::{ElementStyles};
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::Display::Block;
-use craft::style::FlexDirection;
+use craft::style::{FlexDirection, FontStyle, TextStyleProperty, Weight};
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::CraftOptions;
+use craft::text::RangedStyles;
 use craft::WindowContext;
 
 #[derive(Default, Copy, Clone)]
@@ -34,11 +35,36 @@ impl Component for TextState {
         _id: ComponentId,
         _window: &WindowContext,
     ) -> ComponentSpecification {
+        let text = "Rich text includes color, bold, italic, links, and underline.";
+        let mut rich_text = TextInput::new(text)
+            .border_width(0, 0, 0, 0)
+            .disabled()
+            .on_link_clicked(
+                move |_: &mut Self, _: &mut Self::GlobalState, _: &mut Event, link: &str| {
+                    println!("Link clicked: {}", link);
+            });
+
+        let ranged_styles = vec![
+            (19..24, TextStyleProperty::Color(rgb(255, 0, 0))),
+            (26..30, TextStyleProperty::FontWeight(Weight::BOLD)),
+            (32..38, TextStyleProperty::FontStyle(FontStyle::Italic)),
+            (40..45, TextStyleProperty::Link("craftgui.com".to_string())),
+            (51..60, TextStyleProperty::UnderlineBrush(rgb(255, 0, 0))),
+            (51..60, TextStyleProperty::UnderlineSize(1.0)),
+            (51..60, TextStyleProperty::UnderlineOffset(-1.0)),
+            (51..60, TextStyleProperty::Underline(true)),
+
+        ];
+        let ranged_styles = RangedStyles::new(ranged_styles);
+        rich_text.ranged_styles = Some(ranged_styles);
+
+
         Container::new()
             .height(Unit::Px(500.0))
             .display(Block)
             .flex_direction(FlexDirection::Row)
             .push(Text::new("Hello, World!"))
+            .push(rich_text)
             .push(Font::new(ResourceIdentifier::Url(FONT.to_string())))
             .push(Text::new("search home").font_family("Material Symbols Outlined").font_size(24.0))
             .push(

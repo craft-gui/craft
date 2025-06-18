@@ -11,7 +11,7 @@ use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
-use crate::style::{Display, Style, Unit, Weight};
+use crate::style::{Display, Style, TextStyleProperty, Unit, Weight};
 use crate::CraftMessage;
 use std::any::Any;
 use std::collections::HashMap;
@@ -26,13 +26,14 @@ use crate::text::{text_render_data, RangedStyles, TextStyle};
 use std::time;
 use time::{Duration, Instant};
 use kurbo::Affine;
-use parley::StyleProperty;
+use parley::{Affinity, Cursor, Selection, StyleProperty};
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
+use crate::events::{EventDispatchType, Message};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 
@@ -499,9 +500,18 @@ impl Element for TextInput {
                         state.last_click_time = Some(now);
                         let click_count = state.click_count;
                         let cursor_pos = state.cursor_pos;
-                        let mut drv = state.driver(_text_context);
                         let cursor_x = cursor_pos.x as f32;
                         let cursor_y = cursor_pos.y as f32;
+
+                        if click_count == 1 {
+                            if let Some(link) = state.get_cursor_link(cursor_pos, self) {
+                                event.result_message(CraftMessage::LinkClicked(link));
+                                return;
+                            }
+                        }
+
+                        let mut drv = state.driver(_text_context);
+
                         match click_count {
                             2 => drv.select_word_at_point(cursor_x, cursor_y),
                             3 => drv.select_line_at_point(cursor_x, cursor_y),
@@ -791,6 +801,29 @@ impl TextInputState {
         self.cache.insert(key, size);
         self.current_key = Some(key);
         size
+    }
+
+    pub fn get_cursor_link(&mut self, cursor_pos: Point, element: &TextInput) -> Option<String> {
+        if let Some(ranged_styles) = &element.ranged_styles {
+            let layout = self.editor.try_layout().unwrap();
+            for (range, style) in ranged_styles.styles.iter() {
+                if let TextStyleProperty::Link(link) = style {
+                    let anchor = Cursor::from_byte_index(layout, range.start, Affinity::Downstream);
+                    let focus = Cursor::from_byte_index(layout, range.end, Affinity::Downstream);
+                    let selection = Selection::new(
+                        anchor,
+                        focus,
+                    );
+                    let link_rects = selection.geometry(layout);
+                    for link_rect in link_rects {
+                        if link_rect.0.contains(cursor_pos) {
+                            return Some(link.clone());
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn cursor_reset(&mut self) {

@@ -62,6 +62,7 @@ pub struct ElementData {
     pub(crate) on_modifiers_changed: Option<EventHandlerWithRef<Modifiers>>,
     pub(crate) on_ime: Option<EventHandlerWithRef<Ime>>,
     pub(crate) on_text_input_changed: Option<EventHandlerWithRef<str>>,
+    pub(crate) on_link_clicked: Option<EventHandlerWithRef<str>>,
 
     pub(crate) on_dropdown_toggled: Option<EventHandlerCopy<bool>>,
     pub(crate) on_dropdown_item_selected: Option<EventHandlerCopy<usize>>,

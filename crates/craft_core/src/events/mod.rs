@@ -42,6 +42,7 @@ pub enum CraftMessage {
     PointerScroll(PointerScrollUpdate),
     ImeEvent(Ime),
     TextInputChanged(String),
+    LinkClicked(String),
     /// Generated when a dropdown is opened or closed. The boolean is the status of is_open after the event has occurred.
     DropdownToggled(bool),
     /// The index of the item selected in the list.

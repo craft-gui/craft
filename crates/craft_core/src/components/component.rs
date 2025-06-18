@@ -207,6 +207,9 @@ where
                 CraftMessage::TextInputChanged(new_string) => {
                     self.on_text_input_changed(global_state, props, event, new_string);
                 }
+                CraftMessage::LinkClicked(link) => {
+                    self.on_link_clicked(global_state, props, event, link);
+                }
                 CraftMessage::DropdownToggled(dropdown_toggled) => {
                     self.on_dropdown_toggled(global_state, props, event, *dropdown_toggled);
                 }
@@ -349,6 +352,20 @@ where
         if let Some(element) = event.current_target {
             if let Some(on_text_input_changed) = &element.element_data().on_text_input_changed {
                 on_text_input_changed(self, global_state, event, new_string);
+            }
+        }
+    }
+
+    fn on_link_clicked(
+        &mut self,
+        global_state: &mut Self::GlobalState,
+        _props: &Self::Props,
+        event: &mut Event,
+        link: &str,
+    ) {
+        if let Some(element) = event.current_target {
+            if let Some(on_link_clicked) = &element.element_data().on_link_clicked {
+                on_link_clicked(self, global_state, event, link);
             }
         }
     }
