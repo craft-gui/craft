@@ -42,6 +42,7 @@ impl Component for TextState {
             .on_link_clicked(
                 move |_: &mut Self, _d: &mut (), event: &mut Event, link: &str| {
                     println!("Link clicked: {}", link);
+                    event.prevent_propagate();
             });
 
         let ranged_styles = vec![
