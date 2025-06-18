@@ -166,12 +166,14 @@ pub enum TextStyleProperty {
     FontWeight(Weight),
     FontStyle(FontStyle),
     UnderlineOffset(f32),
+    Underline(bool),
     UnderlineSize(f32),
     UnderlineBrush(Color),
+    Link(String),
 }
 
 impl TextStyleProperty {
-    pub(crate) fn to_parley_style_property(&self) -> parley::StyleProperty<'static, ColorBrush> {
+    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'static, ColorBrush>> {
         match self {
             TextStyleProperty::FontFamily(font_family, font_family_length) => {
                 
@@ -194,11 +196,11 @@ impl TextStyleProperty {
                 };
                 let font_stack = parley::FontStack::List(font_stack_cow_list);
 
-                parley::StyleProperty::FontStack(font_stack)
+                Some(parley::StyleProperty::FontStack(font_stack))
             }
             
             TextStyleProperty::FontSize(font_size) => {
-                parley::StyleProperty::FontSize(*font_size)
+                Some(parley::StyleProperty::FontSize(*font_size))
             }
             
             TextStyleProperty::Color(color) => {
@@ -206,7 +208,7 @@ impl TextStyleProperty {
                     color: *color,
                 };
 
-                parley::StyleProperty::Brush(brush)
+                Some(parley::StyleProperty::Brush(brush))
             }
             
             TextStyleProperty::FontStyle(font_style) => {
@@ -217,19 +219,21 @@ impl TextStyleProperty {
                     FontStyle::Oblique => parley::FontStyle::Oblique(None),
                 };
 
-                parley::StyleProperty::FontStyle(font_style)
+                Some(parley::StyleProperty::FontStyle(font_style))
             }
 
             TextStyleProperty::FontWeight(font_weight) => {
-                parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32))
+                Some(parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32)))
             }
-
+            TextStyleProperty::Underline(underline) => {
+                Some(parley::StyleProperty::Underline(*underline))
+            }
             TextStyleProperty::UnderlineOffset(offset) => {
-                parley::StyleProperty::UnderlineOffset(Some(*offset))
+                Some(parley::StyleProperty::UnderlineOffset(Some(*offset)))
             }
 
             TextStyleProperty::UnderlineSize(size) => {
-                parley::StyleProperty::UnderlineSize(Some(*size))
+                Some(parley::StyleProperty::UnderlineSize(Some(*size)))
             }
 
             TextStyleProperty::UnderlineBrush(color) => {
@@ -237,8 +241,9 @@ impl TextStyleProperty {
                     color: *color,
                 };
 
-                parley::StyleProperty::UnderlineBrush(Some(brush))
+                Some(parley::StyleProperty::UnderlineBrush(Some(brush)))
             }
+            TextStyleProperty::Link(_) => { None }
         }
     }
 }

@@ -1141,7 +1141,9 @@ impl PlainEditor
         }
 
         for (range, style) in &self.ranged_styles.styles {
-            builder.push(style.to_parley_style_property(), range.clone())
+            if let Some(parley_style) = style.to_parley_style_property() {
+                builder.push(parley_style, range.clone());
+            }
         }
 
         if let Some(preedit_range) = &self.compose {

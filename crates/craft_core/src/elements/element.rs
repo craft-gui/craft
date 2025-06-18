@@ -730,6 +730,25 @@ macro_rules! generate_component_methods_no_children {
             self.element_data_mut().on_text_input_changed = Some(callback);
             self
         }
+        
+        #[allow(dead_code)]
+        /// Sets the on_link_clicked handler for the element.
+        pub fn on_link_clicked<State, GlobalState, Handler>(mut self, handler: Handler) -> Self
+        where
+            State: Any + Send + Sync + 'static,
+            GlobalState: Any + Send + Sync + Default + 'static,
+            Handler: Fn(&mut State, &mut GlobalState, &mut $crate::components::Event, &str) + Send + Sync + 'static,
+        {
+            use $crate::elements::element_data::EventHandlerWithRef;
+
+            let callback: EventHandlerWithRef<str> = Arc::new(move |state_any, global_any, event, link| {
+                let state = state_any.downcast_mut::<State>().unwrap();
+                let global = global_any.downcast_mut::<GlobalState>().unwrap();
+                handler(state, global, event, link);
+            });
+            self.element_data_mut().on_link_clicked = Some(callback);
+            self
+        }
 
         #[allow(dead_code)]
         /// Sets the on_dropdown_toggled handler for the element.
