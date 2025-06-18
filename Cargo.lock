@@ -3767,9 +3767,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tinyvg-rs"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a24f31975b7aab856cf34269ec78d746f05c31919d2ee893d4461f93b82315c0"
+checksum = "64d83f49dc370d0687c368f192a16cb8697ea17ec9335fd9708e46cf7c6d9b4a"
 dependencies = [
  "byteorder",
 ]

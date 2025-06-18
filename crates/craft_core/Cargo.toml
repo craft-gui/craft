@@ -60,7 +60,7 @@ default-features = false
 features = ["std"]
 
 [dependencies.tinyvg-rs]
-version = "0.0.1"
+version = "0.0.2"
 default-features = false
 
 [dependencies.rustc-hash]
