@@ -5,7 +5,6 @@ mod navbar;
 mod theme;
 mod router;
 mod docs;
-mod code_editor;
 
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
