@@ -15,6 +15,7 @@ use crate::style::{Display, Style, TextStyleProperty, Unit, Weight};
 use crate::CraftMessage;
 use std::any::Any;
 use std::collections::HashMap;
+use std::ops::Range;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
@@ -205,8 +206,28 @@ impl Element for TextInput {
             );
         }
 
-        let _layout = state.editor.try_layout().as_ref().unwrap();
+        let backgrounds: Vec<(Range<usize>, Color)> =  state.editor.ranged_styles.styles.iter().filter_map(|(range, style)| {
+            if let TextStyleProperty::BackgroundColor(color) = style {
+                Some((range.clone(), *color))
+            } else {
+                None
+            }
+        }).collect();
+
+        let backgrounds: Vec<(Selection, Color)> = backgrounds.iter().map(|(range, color)| {
+            (Selection::new(
+                Cursor::from_byte_index(state.editor.try_layout().unwrap(), range.start, Affinity::Downstream),
+                Cursor::from_byte_index(state.editor.try_layout().unwrap(), range.end, Affinity::Downstream)
+            ), *color)
+        }).collect();
+
         let text_renderer = state.text_render.as_mut().unwrap();
+        for (selection, color) in backgrounds.iter() {
+            selection.geometry_with(state.editor.try_layout().unwrap(), |rect, line| {
+                text_renderer.lines[line].backgrounds.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), *color));
+            });
+        }
+
         for line in text_renderer.lines.iter_mut() {
             line.selections.clear();
         }

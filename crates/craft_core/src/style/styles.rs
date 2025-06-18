@@ -170,6 +170,7 @@ pub enum TextStyleProperty {
     UnderlineSize(f32),
     UnderlineBrush(Color),
     Link(String),
+    BackgroundColor(Color),
 }
 
 impl TextStyleProperty {
@@ -243,7 +244,7 @@ impl TextStyleProperty {
 
                 Some(parley::StyleProperty::UnderlineBrush(Some(brush)))
             }
-            TextStyleProperty::Link(_) => { None }
+            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundColor(_) => { None }
         }
     }
 }

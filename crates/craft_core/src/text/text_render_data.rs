@@ -1,6 +1,7 @@
 use crate::geometry::Rectangle;
 use crate::text::text_context::ColorBrush;
 use parley::{Layout, PositionedLayoutItem};
+use peniko::Color;
 use peniko::kurbo::{Affine, Line};
 
 #[derive(Clone, Debug)]
@@ -14,6 +15,7 @@ pub struct TextRender {
 pub struct TextRenderLine {
     pub items: Vec<TextRenderItem>,
     pub selections: Vec<Rectangle>,
+    pub backgrounds: Vec<(Rectangle, Color)>,
 }
 
 #[derive(Clone, Debug)]
@@ -57,6 +59,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
         let mut text_render_line = TextRenderLine {
             items: Vec::new(),
             selections: Vec::new(),
+            backgrounds: Vec::new(),
         };
 
         for item in line.items() {
