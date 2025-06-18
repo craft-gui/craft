@@ -215,6 +215,20 @@ impl Renderer for VelloCpuRenderer {
 
 
                     cull_and_process(&mut |line: &TextRenderLine| {
+                        for (background, color) in &line.backgrounds {
+                            let background_rect = Rectangle {
+                                x: background.x + rect.x,
+                                y: -scroll + background.y + rect.y,
+                                width: background.width,
+                                height: background.height,
+                            };
+                            vello_draw_rect(
+                                &mut self.render_context,
+                                background_rect,
+                                *color,
+                            );
+                        }
+                        
                         for selection in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,

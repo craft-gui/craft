@@ -1,20 +1,20 @@
 use util::setup_logging;
 
-use craft::components::{Component, Event};
 use craft::components::ComponentId;
 use craft::components::ComponentSpecification;
-use craft::{craft_main, rgb};
-use craft::elements::{ElementStyles};
+use craft::components::{Component, Event};
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
+use craft::elements::ElementStyles;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::Display::Block;
-use craft::style::{FlexDirection, FontStyle, TextStyleProperty, Weight};
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;
-use craft::CraftOptions;
+use craft::style::{FlexDirection, FontStyle, TextStyleProperty, Weight};
 use craft::text::RangedStyles;
+use craft::CraftOptions;
 use craft::WindowContext;
+use craft::{craft_main, rgb};
 
 #[derive(Default, Copy, Clone)]
 pub struct TextState {}
@@ -35,13 +35,14 @@ impl Component for TextState {
         _id: ComponentId,
         _window: &WindowContext,
     ) -> ComponentSpecification {
-        let text = "Rich text includes color, bold, italic, links, and underline.";
+        let text = "Rich text includes color, bold, italic, links, underline, and background.";
         let mut rich_text = TextInput::new(text)
             .border_width(0, 0, 0, 0)
             .disabled()
             .on_link_clicked(
-                move |_: &mut Self, _: &mut Self::GlobalState, _: &mut Event, link: &str| {
+                move |_: &mut Self, _d: &mut (), event: &mut Event, link: &str| {
                     println!("Link clicked: {}", link);
+                    event.prevent_propagate();
             });
 
         let ranged_styles = vec![
@@ -49,11 +50,11 @@ impl Component for TextState {
             (26..30, TextStyleProperty::FontWeight(Weight::BOLD)),
             (32..38, TextStyleProperty::FontStyle(FontStyle::Italic)),
             (40..45, TextStyleProperty::Link("craftgui.com".to_string())),
-            (51..60, TextStyleProperty::UnderlineBrush(rgb(255, 0, 0))),
-            (51..60, TextStyleProperty::UnderlineSize(1.0)),
-            (51..60, TextStyleProperty::UnderlineOffset(-1.0)),
-            (51..60, TextStyleProperty::Underline(true)),
-
+            (47..56, TextStyleProperty::UnderlineBrush(rgb(255, 0, 0))),
+            (47..56, TextStyleProperty::UnderlineSize(1.0)),
+            (47..56, TextStyleProperty::UnderlineOffset(-1.0)),
+            (47..56, TextStyleProperty::Underline(true)),
+            (62..72, TextStyleProperty::BackgroundColor(rgb(200, 200, 200))),
         ];
         let ranged_styles = RangedStyles::new(ranged_styles);
         rich_text.ranged_styles = Some(ranged_styles);
