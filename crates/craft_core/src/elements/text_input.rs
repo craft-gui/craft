@@ -214,16 +214,17 @@ impl Element for TextInput {
             }
         }).collect();
 
+        let layout = state.editor.try_layout().unwrap();
         let backgrounds: Vec<(Selection, Color)> = backgrounds.iter().map(|(range, color)| {
             (Selection::new(
-                Cursor::from_byte_index(state.editor.try_layout().unwrap(), range.start, Affinity::Downstream),
-                Cursor::from_byte_index(state.editor.try_layout().unwrap(), range.end, Affinity::Downstream)
+                Cursor::from_byte_index(layout, range.start, Affinity::Downstream),
+                Cursor::from_byte_index(layout, range.end, Affinity::Downstream)
             ), *color)
         }).collect();
 
         let text_renderer = state.text_render.as_mut().unwrap();
         for (selection, color) in backgrounds.iter() {
-            selection.geometry_with(state.editor.try_layout().unwrap(), |rect, line| {
+            selection.geometry_with(layout, |rect, line| {
                 text_renderer.lines[line].backgrounds.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), *color));
             });
         }
