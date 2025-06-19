@@ -50,7 +50,7 @@ const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 /// Stores state related to Winit.
 ///
 /// Forwards most events to the main Craft Event Loop.
-pub(crate) struct CraftWinitState {
+pub struct CraftState {
     #[allow(dead_code)]
     runtime: CraftRuntimeHandle,
     wait_cancelled: bool,
@@ -64,7 +64,7 @@ pub(crate) struct CraftWinitState {
     craft_app: Box<App>,
 }
 
-impl ApplicationHandler for CraftWinitState {
+impl ApplicationHandler for CraftState {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         self.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
     }
@@ -266,7 +266,7 @@ impl ApplicationHandler for CraftWinitState {
     }
 }
 
-impl CraftWinitState {
+impl CraftState {
     pub(crate) fn new(
         runtime: CraftRuntimeHandle,
         winit_receiver: Receiver<InternalMessage>,
