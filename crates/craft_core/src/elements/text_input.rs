@@ -47,6 +47,7 @@ pub struct TextInput {
     use_text_value_on_update: bool,
     pub text: Option<String>,
     pub ranged_styles: Option<RangedStyles>,
+    pub disabled: bool,
 }
 
 #[derive(Clone, Default, Debug)]
@@ -96,6 +97,7 @@ impl TextInput {
             element_data: ElementData::default(),
             use_text_value_on_update: true,
             ranged_styles: Some(RangedStyles::new(vec![])),
+            disabled: false,
         }
     }
 
@@ -322,11 +324,17 @@ impl Element for TextInput {
                         copy(&mut drv);
                     }
                     TextInputMessage::Paste => {
+                        if self.disabled {
+                            return;
+                        }
                         paste(&mut drv);
                         state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
                     }
                     TextInputMessage::Cut => {
+                        if self.disabled {
+                            return;
+                        }
                         cut(&mut drv);
                         state.clear_cache();
                         generate_text_changed_event(&mut state.editor);
@@ -338,6 +346,11 @@ impl Element for TextInput {
         match message {
             CraftMessage::KeyboardInputEvent(keyboard_input) if !state.editor.is_composing() => {
                 state.modifiers = Some(keyboard_input.modifiers);
+
+                if self.disabled {
+                    return;
+                }
+
                 if !keyboard_input.state.is_down() {
                     return;
                 }
@@ -725,6 +738,11 @@ impl TextInput {
     /// NOTE: The editor will always use the user provided text on initialization.
     pub fn use_text_value_on_update(mut self, use_initial_text_value: bool) -> Self {
         self.use_text_value_on_update = use_initial_text_value;
+        self
+    }
+
+    pub fn disable(mut self) -> Self {
+        self.disabled = true;
         self
     }
 }

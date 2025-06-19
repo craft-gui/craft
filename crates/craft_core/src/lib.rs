@@ -21,6 +21,8 @@ pub mod layout;
 pub mod resource_manager;
 mod view_introspection;
 mod window_context;
+#[cfg(feature = "markdown")]
+pub mod markdown;
 
 pub use craft_runtime::CraftRuntime;
 pub use options::CraftOptions;

@@ -1,13 +1,13 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Props};
+use craft::components::{Component, ComponentId, ComponentSpecification, Event};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::style::{Display, FlexDirection, Weight};
+use craft::events::{CraftMessage, Message};
+use craft::style::{Display, FlexDirection};
 use craft::WindowContext;
-use crate::code_editor::{CodeEditor, CodeEditorProps};
 
 #[derive(Default)]
 pub(crate) struct InstallationPage {
-
+    markdown: Option<ComponentSpecification>
 }
 
 impl Component for InstallationPage {
@@ -16,11 +16,30 @@ impl Component for InstallationPage {
     type Message = ();
 
     fn view(&self, _global_state: &Self::GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>, _id: ComponentId, _window: &WindowContext) -> ComponentSpecification {
-        Container::new()
-            .display(Display::Flex)
-            .flex_direction(FlexDirection::Column)
-            .push(Text::new("Installation").font_size(32.0).margin("0px", "0px", "25px", "0px").font_weight(Weight::BOLD))
-            .push(Text::new("Coming Soon!").font_size(16.0))
-            .component()
+        if let Some(markdown) = &self.markdown {
+            Container::new()
+                .display(Display::Flex)
+                .flex_direction(FlexDirection::Column)
+                .push(markdown.clone())
+                .component()
+        } else {
+            Container::new()
+                .display(Display::Flex)
+                .flex_direction(FlexDirection::Column)
+                .push(Text::new("Loading installation instructions..."))
+                .component()
+        }
+    }
+
+    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
+        if let Message::CraftMessage(CraftMessage::LinkClicked(link)) = message {
+            craft::components::open(link);
+            event.prevent_propagate();
+        }
+
+        if let Message::CraftMessage(CraftMessage::Initialized) = message {
+            let installation = craft::markdown::render_markdown(include_str!("markdown/installation.md"));
+            self.markdown = Some(installation);
+        }
     }
 }

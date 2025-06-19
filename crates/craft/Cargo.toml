@@ -26,6 +26,11 @@ vello_renderer = ["craft_core/vello_renderer"]
 vello_cpu_renderer = ["craft_core/vello_cpu_renderer"]
 vello_hybrid_renderer = ["craft_core/vello_hybrid_renderer"]
 
+markdown = ["craft_core/markdown"]
+link = ["craft_core/link"]
+
+code_highlighting = ["craft_core/code_highlighting"]
+
 default = ["vello_renderer", "http_client", "devtools", "png", "jpeg", "accesskit", "clipboard", "sytem_fonts"]
 
 

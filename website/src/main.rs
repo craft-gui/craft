@@ -5,7 +5,6 @@ mod navbar;
 mod theme;
 mod router;
 mod docs;
-mod code_editor;
 
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
@@ -125,6 +124,8 @@ fn main() {
         let route = std::env::args().nth(1).unwrap_or_else(|| "/".to_string());
         global_state.set_route(route.as_str());
     }
+
+    util::setup_logging();
 
     craft_main(Website::component(), global_state, options);
 }

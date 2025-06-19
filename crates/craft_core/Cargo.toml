@@ -24,6 +24,9 @@ vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wa
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 http_client = ["dep:reqwest"]
+markdown = ["dep:pulldown-cmark", "code_highlighting", "link"]
+code_highlighting = ["dep:syntect"]
+link = ["dep:open"]
 
 default = ["vello_renderer", "http_client", "clipboard", "accesskit"]
 
@@ -70,6 +73,18 @@ features = ["std"]
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies.clipboard-rs]
 version = "0.2.4"
+optional = true
+
+[dependencies.pulldown-cmark]
+version = "0.13.0"
+default-features = false
+features = []
+optional = true
+
+[dependencies.syntect]
+version = "5.2"
+default-features = false
+features = ["default-fancy", "parsing", "dump-load", "default-themes"]
 optional = true
 
 [dependencies.image]
@@ -175,7 +190,11 @@ version = "1.45.1"
 default-features = false
 features = ["sync", "time"]
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.open]
+version = "5.3.2"
+default-features = false
+optional = true
+features = []
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
 version = "1.45.1"

@@ -10,7 +10,6 @@ use crate::geometry::TrblRectangle;
 use crate::text::text_context::ColorBrush;
 use std::fmt;
 use std::fmt::Debug;
-use parley::Brush;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -161,7 +160,7 @@ impl Default for FontStyle {
 #[derive(Clone, PartialEq)]
 pub enum TextStyleProperty {
     Color(Color),
-    FontFamily([u8; 64], u32),
+    FontFamily(String),
     FontSize(f32),
     FontWeight(Weight),
     FontStyle(FontStyle),
@@ -176,25 +175,12 @@ pub enum TextStyleProperty {
 impl TextStyleProperty {
     pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'static, ColorBrush>> {
         match self {
-            TextStyleProperty::FontFamily(font_family, font_family_length) => {
-                
-                let font_family = if *font_family_length == 0 {
-                    None
-                } else {
-                    Some(std::str::from_utf8(&font_family[..*font_family_length as usize]).unwrap())
-                };
-                
-
-                let font_stack_cow_list = if let Some(font_family) = font_family {
-                    // Use the user-provided font and fallback to system UI fonts as needed.
+            TextStyleProperty::FontFamily(font_family) => {
+                let font_stack_cow_list =
                     Cow::Owned(vec![
                         parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
                         parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
-                    ])
-                } else {
-                    // Just default to system UI fonts.
-                    Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
-                };
+                    ]);
                 let font_stack = parley::FontStack::List(font_stack_cow_list);
 
                 Some(parley::StyleProperty::FontStack(font_stack))
