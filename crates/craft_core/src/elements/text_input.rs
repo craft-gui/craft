@@ -831,6 +831,7 @@ impl TextInputState {
             }
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
             self.clear_cache();
+            self.last_requested_key = Some(key);
         }
 
 
