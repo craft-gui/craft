@@ -12,3 +12,7 @@ features = ["blocking"]
 [dependencies.syntect]
 version = "5.2.0"
 features = ["dump-create"]
+
+[[bin]]
+name = "syntect-dumper"
+path = "src/main.rs"
