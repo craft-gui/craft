@@ -76,7 +76,7 @@ pub type FutureAny = dyn Future<Output = Box<dyn Any + Send + Sync>> + 'static +
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
 #[cfg(not(target_arch = "wasm32"))]
-type RendererBox = Box<dyn Renderer + Send>;
+type RendererBox = Box<dyn Renderer>;
 #[cfg(target_arch = "wasm32")]
 type RendererBox = Box<dyn Renderer>;
 

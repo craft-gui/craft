@@ -104,26 +104,26 @@ features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello.git"
-rev = "cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
+rev = "4d705c71ad3f8423444c08badfc741aee7a621bb"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello.git"
-rev = "cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
+rev = "4d705c71ad3f8423444c08badfc741aee7a621bb"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello.git"
-rev = "cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
+rev = "4d705c71ad3f8423444c08badfc741aee7a621bb"
 default-features = false
 features = ["default"]
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello.git"
-rev = "cfee557bc53eef4a7efc9ebee2620d1369b9bfba"
+rev = "4d705c71ad3f8423444c08badfc741aee7a621bb"
 optional = true
 
 [dependencies.softbuffer]
