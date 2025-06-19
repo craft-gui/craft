@@ -744,7 +744,6 @@ macro_rules! generate_component_methods_no_children {
             let callback: EventHandlerWithRef<str> = Arc::new(move |state_any, global_any, event, link| {
                 let state = state_any.downcast_mut::<State>().unwrap();
                 let global = global_any.downcast_mut::<GlobalState>().unwrap();
-                println!("Link clicked: {}", link);
                 handler(state, global, event, link);
             });
             self.element_data_mut().on_link_clicked = Some(callback);
