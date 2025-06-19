@@ -104,7 +104,7 @@ impl ApplicationHandler for CraftWinitState {
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
                     let renderer = self.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer + Send> = match renderer_type {
+                        let renderer: Box<dyn Renderer> = match renderer_type {
                         #[cfg(feature = "vello_renderer")]
                         RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
                         #[cfg(feature = "vello_cpu_renderer")]
