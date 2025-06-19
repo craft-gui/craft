@@ -1,3 +1,4 @@
+use crate::style::FontFamily;
 use crate::geometry::TrblRectangle;
 use crate::renderer::color::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Underline, Unit, Weight, Wrap};
@@ -10,227 +11,240 @@ where
     fn styles_mut(&mut self) -> &mut Style;
 
     fn background(mut self, color: Color) -> Self {
-        *self.styles_mut().background_mut() = color;
+        self.styles_mut().set_background(color);
         self
     }
 
     fn margin<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().margin_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
+        self.styles_mut().set_margin(TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into()));
         self
     }
 
     fn padding<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().padding_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
+        self.styles_mut().set_padding(TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into()));
         self
     }
 
     fn border_width<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().border_width_mut() =
-            TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
+        self.styles_mut().set_border_width(TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into()));
         self
     }
 
     fn border_radius<U: IntoF32 + Copy>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().border_radius_mut() = [
+        self.styles_mut().set_border_radius([
             (top.into_f32(), top.into_f32()),
             (right.into_f32(), right.into_f32()),
             (bottom.into_f32(), bottom.into_f32()),
             (left.into_f32(), left.into_f32()),
-        ];
+        ]);
         self
     }
 
     fn border_color(mut self, color: Color) -> Self {
-        *self.styles_mut().border_color_mut() = TrblRectangle::new_all(color);
+        self.styles_mut().set_border_color(TrblRectangle::new_all(color));
         self
     }
 
     fn border_color_top(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut().top = color;
+        let mut border = self.styles_mut().border_color();
+        border.top = color;
+        self.styles_mut().set_border_color(border);
         self
     }
 
     fn border_color_right(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut().right = color;
+        let mut border = self.styles_mut().border_color();
+        border.right = color;
+        self.styles_mut().set_border_color(border);
         self
     }
 
     fn border_color_bottom(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut().bottom = color;
+        let mut border = self.styles_mut().border_color();
+        border.bottom = color;
+        self.styles_mut().set_border_color(border);
         self
     }
 
     fn border_color_left(mut self, color: Color) -> Self {
-        self.styles_mut().border_color_mut().left = color;
+        let mut border = self.styles_mut().border_color();
+        border.left = color;
+        self.styles_mut().set_border_color(border);
         self
     }
 
     fn display(mut self, display: Display) -> Self {
-        *self.styles_mut().display_mut() = display;
+        self.styles_mut().set_display(display);
         self
     }
 
     fn wrap(mut self, wrap: Wrap) -> Self {
-        *self.styles_mut().wrap_mut() = wrap;
+        self.styles_mut().set_wrap(wrap);
         self
     }
 
     fn justify_content(mut self, justify_content: JustifyContent) -> Self {
-        *self.styles_mut().justify_content_mut() = Some(justify_content);
+        self.styles_mut().set_justify_content(Some(justify_content));
         self
     }
 
     fn align_items(mut self, align_items: AlignItems) -> Self {
-        *self.styles_mut().align_items_mut() = Some(align_items);
+        self.styles_mut().set_align_items(Some(align_items));
         self
     }
 
     fn flex_direction(mut self, flex_direction: FlexDirection) -> Self {
-        *self.styles_mut().flex_direction_mut() = flex_direction;
+        self.styles_mut().set_flex_direction(flex_direction);
         self
     }
 
     fn flex_grow(mut self, flex_grow: f32) -> Self {
-        *self.styles_mut().flex_grow_mut() = flex_grow;
+        self.styles_mut().set_flex_grow(flex_grow);
         self
     }
 
     fn flex_shrink(mut self, flex_shrink: f32) -> Self {
-        *self.styles_mut().flex_shrink_mut() = flex_shrink;
+        self.styles_mut().set_flex_shrink(flex_shrink);
         self
     }
 
     fn flex_basis<U: Into<Unit>>(mut self, flex_basis: U) -> Self {
-        *self.styles_mut().flex_basis_mut() = flex_basis.into();
+        self.styles_mut().set_flex_basis(flex_basis.into());
         self
     }
 
     fn width<U: Into<Unit>>(mut self, width: U) -> Self {
-        *self.styles_mut().width_mut() = width.into();
+        self.styles_mut().set_width(width.into());
         self
     }
 
     fn height<U: Into<Unit>>(mut self, height: U) -> Self {
-        *self.styles_mut().height_mut() = height.into();
+        self.styles_mut().set_height(height.into());
         self
     }
 
     fn max_width<U: Into<Unit>>(mut self, max_width: U) -> Self {
-        *self.styles_mut().max_width_mut() = max_width.into();
+        self.styles_mut().set_max_width(max_width.into());
         self
     }
 
     fn max_height<U: Into<Unit>>(mut self, max_height: U) -> Self {
-        *self.styles_mut().max_height_mut() = max_height.into();
+        self.styles_mut().set_max_height(max_height.into());
         self
     }
 
     fn min_width<U: Into<Unit>>(mut self, min_width: U) -> Self {
-        *self.styles_mut().min_width_mut() = min_width.into();
+        self.styles_mut().set_min_width(min_width.into());
         self
     }
 
     fn min_height<U: Into<Unit>>(mut self, min_height: U) -> Self {
-        *self.styles_mut().min_height_mut() = min_height.into();
+        self.styles_mut().set_min_height(min_height.into());
         self
     }
 
     fn overflow_x(mut self, overflow: Overflow) -> Self {
-        self.styles_mut().overflow_mut()[0] = overflow;
+        let mut val = self.styles_mut().overflow();
+        val[0] = overflow;
+        self.styles_mut().set_overflow(val);
         self
     }
 
     fn overflow_y(mut self, overflow: Overflow) -> Self {
-        self.styles_mut().overflow_mut()[1] = overflow;
+        let mut val = self.styles_mut().overflow();
+        val[1] = overflow;
+        self.styles_mut().set_overflow(val);
         self
     }
 
     fn color(mut self, color: Color) -> Self {
-        *self.styles_mut().color_mut() = color;
+        self.styles_mut().set_color(color);
         self
     }
 
     fn font_family(mut self, font_family: &str) -> Self {
-        self.styles_mut().set_font_family(font_family);
+        self.styles_mut().set_font_family(FontFamily::new(font_family));
         self
     }
 
     fn font_size<U: IntoF32 + Copy>(mut self, font_size: U) -> Self {
-        *self.styles_mut().font_size_mut() = font_size.into_f32();
+        self.styles_mut().set_font_size(font_size.into_f32());
         self
     }
 
     fn font_weight(mut self, font_weight: Weight) -> Self {
-        *self.styles_mut().font_weight_mut() = font_weight;
+        self.styles_mut().set_font_weight(font_weight);
         self
     }
-    
+
     fn underline(mut self, thickness: f32, color: Color, offset: Option<f32>) -> Self {
-        *self.styles_mut().underline_mut() = Some(
-            Underline {
-                thickness: Some(thickness),
-                color,
-                offset
-            }
-        );
+        self.styles_mut().set_underline(Some(Underline {
+            thickness: Some(thickness),
+            color,
+            offset,
+        }));
         self
     }
 
     fn font_style(mut self, font_style: FontStyle) -> Self {
-        *self.styles_mut().font_style_mut() = font_style;
+        self.styles_mut().set_font_style(font_style);
         self
     }
 
     fn overflow(mut self, overflow: Overflow) -> Self {
-        *self.styles_mut().overflow_mut() = [overflow, overflow];
+        self.styles_mut().set_overflow([overflow, overflow]);
         self
     }
 
     fn position(mut self, position: Position) -> Self {
-        *self.styles_mut().position_mut() = position;
+        self.styles_mut().set_position(position);
         self
     }
 
     fn inset<U: Into<Unit>>(mut self, top: U, right: U, bottom: U, left: U) -> Self {
-        *self.styles_mut().inset_mut() = TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into());
+        self.styles_mut().set_inset(TrblRectangle::new(top.into(), right.into(), bottom.into(), left.into()));
         self
     }
 
     fn scrollbar_width(mut self, scrollbar_width: f32) -> Self {
-        *self.styles_mut().scrollbar_width_mut() = scrollbar_width;
+        self.styles_mut().set_scrollbar_width(scrollbar_width);
         self
     }
 
     fn box_sizing(mut self, box_sizing: taffy::BoxSizing) -> Self {
-        *self.styles_mut().box_sizing_mut() = box_sizing;
+        self.styles_mut().set_box_sizing(box_sizing);
         self
     }
 
     fn gap<U: Into<Unit> + Clone>(mut self, gap: U) -> Self {
-        *self.styles_mut().gap_mut() = [gap.clone().into(), gap.into()];
+        self.styles_mut().set_gap([gap.clone().into(), gap.into()]);
         self
     }
 
     fn row_gap<U: Into<Unit>>(mut self, row_gap: U) -> Self {
-        self.styles_mut().gap_mut()[0] = row_gap.into();
+        let mut val = self.styles_mut().gap();
+        val[0] = row_gap.into();
+        self.styles_mut().set_gap(val);
         self
     }
 
     fn column_gap<U: Into<Unit>>(mut self, column_gap: U) -> Self {
-        self.styles_mut().gap_mut()[1] = column_gap.into();
+        let mut val = self.styles_mut().gap();
+        val[1] = column_gap.into();
+        self.styles_mut().set_gap(val);
         self
     }
 
     fn scrollbar_color(mut self, scroll_thumb_color: Color, scroll_track_color: Color) -> Self {
-        let colors = self.styles_mut().scrollbar_color_mut();
+        let mut colors = self.styles_mut().scrollbar_color();
         colors.thumb_color = scroll_thumb_color;
         colors.track_color = scroll_track_color;
+        self.styles_mut().set_scrollbar_color(colors);
         self
     }
 
     fn visible(mut self, visible: bool) -> Self {
-        let visible_mut = self.styles_mut().visible_mut();
-        *visible_mut = visible;
+        self.styles_mut().set_visible(visible);
         self
     }
 }

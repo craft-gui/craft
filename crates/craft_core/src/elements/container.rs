@@ -1,5 +1,5 @@
 use crate::components::component::ComponentSpecification;
-use crate::components::{Event, FocusAction};
+use crate::components::Event;
 use crate::components::Props;
 use crate::elements::element::{resolve_clip_for_scrollable, Element};
 use crate::elements::element_data::ElementData;

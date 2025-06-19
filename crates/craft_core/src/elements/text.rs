@@ -325,7 +325,7 @@ impl Element for Text {
             text: std::mem::take(&mut self.text),
             text_hash: Some(hash),
             text_render: None,
-            last_text_style: *self.style(),
+            last_text_style: self.style().clone(),
             layout: None,
             cache: Default::default(),
             current_layout_key: None,
@@ -365,7 +365,7 @@ impl Element for Text {
 
         let last_style = &state.last_text_style;
 
-        let current_style = *base_state.current_style(self.element_data());
+        let current_style = base_state.current_style(self.element_data()).clone();
         if last_style.color() != current_style.color() {
             if let Some(text_render) = state.text_render.as_mut() {
                 text_render.override_brush = Some(ColorBrush::new(current_style.color()));

@@ -4,7 +4,7 @@ use {
     crate::accessibility::activation_handler::CraftActivationHandler,
     crate::accessibility::deactivation_handler::CraftDeactivationHandler,
 };
-use crate::components::{ComponentId, ComponentSpecification, Event};
+use crate::components::{ComponentSpecification, Event};
 use crate::craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
@@ -275,7 +275,6 @@ impl App {
         if self.window.is_none() {
             return;
         }
-        let window = self.window.as_mut().unwrap().clone();
 
         let surface_size = self.window_context.window_size();
 
@@ -677,24 +676,21 @@ fn update_reactive_tree(
 }
 
 fn style_root_element(root: &mut Box<dyn Element>, root_size: LogicalSize<f32>) {
-    *root.style_mut().width_mut() = Unit::Px(root_size.width);
-    *root.style_mut().wrap_mut() = Wrap::Wrap;
-    *root.style_mut().display_mut() = Display::Block;
-
     let is_user_root_height_auto = {
-        let root_children = root.children_mut();
-        root_children[0].internal.style().height().is_auto()
+        let root_children = root.children();
+        root_children[0].style().height().is_auto()
     };
+    
+    let style = root.style_mut();
 
-    *root.style_mut().width_mut() = Unit::Px(root_size.width);
-    *root.style_mut().wrap_mut() = Wrap::Wrap;
-    *root.style_mut().display_mut() = Display::Block;
+    style.set_width(Unit::Px(root_size.width));
+    style.set_wrap(Wrap::Wrap);
+    style.set_display(Display::Block);
 
     if is_user_root_height_auto {
-        *root.style_mut().height_mut() = Unit::Auto;
+        style.set_height(Unit::Auto);
     } else {
-        *root.style_mut().height_mut() = Unit::Px(root_size.height);
-        *root.style_mut().height_mut() = Unit::Px(root_size.height);
+        style.set_height(Unit::Px(root_size.height));
     }
 }
 

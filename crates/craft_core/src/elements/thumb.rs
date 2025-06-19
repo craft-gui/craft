@@ -25,18 +25,22 @@ impl Thumb {
     pub(crate) fn default_thumb_style(&self, rounded: bool) -> Style {
         let mut style = Style::default();
 
-        *style.display_mut() = Display::Block;
-        *style.width_mut() = Unit::Px(self.size);
-        *style.height_mut() = Unit::Px(self.size);
-        *style.background_mut() = palette::css::WHITE;
-        *style.position_mut() = Position::Relative;
+        style.set_display(Display::Block);
+        style.set_width(Unit::Px(self.size));
+        style.set_height(Unit::Px(self.size));
+        style.set_background(palette::css::WHITE);
+        style.set_position(Position::Relative);
 
         if rounded {
             let rounding = self.size / 2.0;
-            *style.border_radius_mut() =
-                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            style.set_border_radius([
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+            ]);
         }
-
+        
         style
     }
 

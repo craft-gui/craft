@@ -1099,37 +1099,7 @@ impl PlainEditor
         {
             self.generation.nudge();
         }
-
-        // This debug code is quite useful when diagnosing selection problems.
-        #[cfg(feature = "std")]
-        #[allow(clippy::print_stderr)] // reason = "unreachable debug code"
-        if false {
-            let focus = new_sel.focus();
-            let cluster = focus.logical_clusters(&self.layout);
-            let dbg = (
-                cluster[0].as_ref().map(|c| &self.buffer[c.text_range()]),
-                focus.index(),
-                focus.affinity(),
-                cluster[1].as_ref().map(|c| &self.buffer[c.text_range()]),
-            );
-            eprint!("{dbg:?}");
-            let cluster = focus.visual_clusters(&self.layout);
-            let dbg = (
-                cluster[0].as_ref().map(|c| &self.buffer[c.text_range()]),
-                cluster[0]
-                    .as_ref()
-                    .map(|c| if c.is_word_boundary() { " W" } else { "" })
-                    .unwrap_or_default(),
-                focus.index(),
-                focus.affinity(),
-                cluster[1].as_ref().map(|c| &self.buffer[c.text_range()]),
-                cluster[1]
-                    .as_ref()
-                    .map(|c| if c.is_word_boundary() { " W" } else { "" })
-                    .unwrap_or_default(),
-            );
-            eprintln!(" | visual: {dbg:?}");
-        }
+        
         self.selection = new_sel;
     }
     /// Update the layout.

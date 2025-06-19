@@ -116,8 +116,7 @@ impl Element for TinyVg {
 
     fn default_style(&self) -> Style {
         let mut style = Style::default();
-        *style.color_mut() = Color::TRANSPARENT;
-
+        style.set_color(Color::TRANSPARENT);
         style
     }
 }
