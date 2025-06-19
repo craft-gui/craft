@@ -1,16 +1,23 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::cell::Cell;
 
-static ATOMIC_ELEMENT_ID: AtomicU64 = AtomicU64::new(0);
-
-pub fn get_current_element_id_counter() -> u64 {
-    ATOMIC_ELEMENT_ID.load(Ordering::SeqCst)
+thread_local! {
+    static THREAD_LOCAL_ELEMENT_ID: Cell<u64> = Cell::new(0);
 }
 
 pub fn create_unique_element_id() -> u64 {
-    ATOMIC_ELEMENT_ID.fetch_add(1, Ordering::SeqCst);
-    get_current_element_id_counter()
+    THREAD_LOCAL_ELEMENT_ID.with(|counter| {
+        let id = counter.get();
+        counter.set(id + 1);
+        id
+    })
 }
 
 pub fn reset_unique_element_id() {
-    ATOMIC_ELEMENT_ID.store(0, Ordering::SeqCst);
+    THREAD_LOCAL_ELEMENT_ID.with(|counter| {
+        counter.set(0);
+    })
+}
+
+pub fn get_current_element_id_counter() -> u64 {
+    THREAD_LOCAL_ELEMENT_ID.get()
 }
