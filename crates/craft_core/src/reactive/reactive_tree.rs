@@ -1,4 +1,4 @@
-use crate::components::{ComponentId, Event, FocusAction};
+use crate::components::{ComponentId, FocusAction};
 use crate::elements::Element;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 use crate::reactive::element_state_store::ElementStateStore;

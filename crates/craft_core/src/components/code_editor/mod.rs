@@ -11,7 +11,7 @@ use crate::{Color, WindowContext};
 use std::cell::RefCell;
 use std::rc::Rc;
 use syntect::easy::HighlightLines;
-use syntect::parsing::{SyntaxDefinition, SyntaxSet, SyntaxSetBuilder};
+use syntect::parsing::{SyntaxSet};
 use syntect::util::LinesWithEndings;
 
 pub use syntect;

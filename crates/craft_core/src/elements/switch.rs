@@ -239,17 +239,21 @@ impl Element for Switch {
         let width = thumb_diameter * 2.25;
         let height = thumb_diameter + padding * 2.0;
 
-        *style.display_mut() = Display::Flex;
-        *style.width_mut() = Unit::Px(width);
-        *style.min_width_mut() = Unit::Px(width);
-        *style.height_mut() = Unit::Px(height);
-        *style.min_height_mut() = Unit::Px(height);
-        *style.background_mut() = palette::css::LIGHT_GRAY;
+        style.set_display(Display::Flex);
+        style.set_width(Unit::Px(width));
+        style.set_min_width(Unit::Px(width));
+        style.set_height(Unit::Px(height));
+        style.set_min_height(Unit::Px(height));
+        style.set_background(palette::css::LIGHT_GRAY);
 
         if self.rounded {
             let rounding = self.thumb.size / 1.5;
-            *style.border_radius_mut() =
-                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            style.set_border_radius([
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+            ]);
         }
 
         style
@@ -276,7 +280,7 @@ impl Switch {
 
     fn default_toggled_style(&self) -> Style {
         let mut style = Style::default();
-        *style.background_mut() = palette::css::DODGER_BLUE;
+        style.set_background(palette::css::DODGER_BLUE);
         Style::merge(&self.default_style(), &style)
     }
 

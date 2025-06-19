@@ -13,7 +13,7 @@ impl<T> TrblRectangle<T>
 where
     T: Copy,
 {
-    pub fn new(top: T, right: T, bottom: T, left: T) -> Self {
+    pub const fn new(top: T, right: T, bottom: T, left: T) -> Self {
         Self {
             top,
             right,
@@ -21,7 +21,7 @@ where
             left,
         }
     }
-    pub fn new_all(value: T) -> Self {
+    pub const fn new_all(value: T) -> Self {
         Self {
             top: value,
             right: value,
@@ -31,7 +31,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub fn to_array(self) -> [T; 4] {
+    pub const fn to_array(self) -> [T; 4] {
         [self.top, self.right, self.bottom, self.left]
     }
 }

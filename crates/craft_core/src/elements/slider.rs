@@ -293,21 +293,27 @@ impl Element for Slider {
 
     fn default_style(&self) -> Style {
         let mut style = Style::default();
-        *style.background_mut() = palette::css::LIGHT_GRAY;
+
+        style.set_background(palette::css::LIGHT_GRAY);
+
         if self.direction == SliderDirection::Horizontal {
-            *style.width_mut() = Unit::Px(150.0);
-            *style.height_mut() = Unit::Px(10.0);
+            style.set_width(Unit::Px(150.0));
+            style.set_height(Unit::Px(10.0));
         } else {
-            *style.height_mut() = Unit::Px(150.0);
-            *style.width_mut() = Unit::Px(10.0);
+            style.set_height(Unit::Px(150.0));
+            style.set_width(Unit::Px(10.0));
         }
 
-        *style.display_mut() = Display::Block;
+        style.set_display(Display::Block);
 
         if self.rounded {
             let rounding = self.thumb.size / 1.5;
-            *style.border_radius_mut() =
-                [(rounding, rounding), (rounding, rounding), (rounding, rounding), (rounding, rounding)];
+            style.set_border_radius([
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+                (rounding, rounding),
+            ]);
         }
 
         style
@@ -442,7 +448,7 @@ impl Slider {
             size: thumb_size,
         };
         let mut style = Style::default();
-        *style.background_mut() = palette::css::DODGER_BLUE;
+        style.set_background(palette::css::DODGER_BLUE);
         thumb.thumb_style(style);
 
         Slider {

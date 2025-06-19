@@ -11,7 +11,7 @@ use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, TextScroll};
-use crate::style::{Display, Style, TextStyleProperty, Unit, Weight};
+use crate::style::{Display, Style, TextStyleProperty, Unit};
 use crate::CraftMessage;
 use std::any::Any;
 use std::collections::HashMap;
@@ -35,7 +35,6 @@ use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
 use crate::elements::base_element_state::BaseElementState;
-use crate::events::{EventDispatchType, Message};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 
@@ -288,6 +287,7 @@ impl Element for TextInput {
         let text_y = text_position.y;
         let focused = base_state.focused;
 
+        #[allow(dead_code)]
         fn copy(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
@@ -299,6 +299,7 @@ impl Element for TextInput {
             }
         }
 
+        #[allow(dead_code)]
         fn paste(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
@@ -309,6 +310,7 @@ impl Element for TextInput {
             }
         }
 
+        #[allow(dead_code)]
         fn cut(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
             {
@@ -731,13 +733,16 @@ impl Element for TextInput {
 
     fn default_style(&self) -> Style {
         let mut style = Style::default();
-        *style.display_mut() = Display::Block;
+
+        style.set_display(Display::Block);
+
         const BORDER_COLOR: Color = Color::from_rgb8(199, 199, 206);
-        *style.border_color_mut() = TrblRectangle::new_all(BORDER_COLOR);
-        *style.border_width_mut() = TrblRectangle::new_all(Unit::Px(1.0));
-        *style.border_radius_mut() = [(5.0, 5.0); 4];
+        style.set_border_color(TrblRectangle::new_all(BORDER_COLOR));
+        style.set_border_width(TrblRectangle::new_all(Unit::Px(1.0)));
+        style.set_border_radius([(5.0, 5.0); 4]);
+
         let padding = Unit::Px(4.0);
-        *style.padding_mut() = TrblRectangle::new_all(padding);
+        style.set_padding(TrblRectangle::new_all(padding));
 
         style
     }
