@@ -34,6 +34,7 @@ use winit::dpi;
 use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
+use crate::elements::base_element_state::BaseElementState;
 use crate::events::{EventDispatchType, Message};
 use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
@@ -198,7 +199,7 @@ impl Element for TextInput {
 
         self.finalize_borders(element_state);
 
-        let state: &mut TextInputState = self.state_mut(element_state);
+        let (state, base_state): (&mut TextInputState, &mut BaseElementState) = self.state_and_base_mut(element_state);
 
         if state.current_key != state.last_requested_key {
             state.layout(
@@ -237,7 +238,12 @@ impl Element for TextInput {
         state.editor.selection_geometry_with(|rect, line| {
             text_renderer.lines[line].selections.push(rect.into());
         });
-        text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
+        
+        if base_state.focused {
+            text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());   
+        } else {
+            text_renderer.cursor = None;
+        }
 
         self.element_data.layout_item.scrollbar_size =
             Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
