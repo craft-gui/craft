@@ -83,8 +83,8 @@ optional = true
 
 [dependencies.syntect]
 version = "5.2"
-efault-features = false
-features = ["default-fancy", "parsing", "default"]
+default-features = false
+features = ["default-fancy", "parsing", "dump-load", "default-themes"]
 optional = true
 
 [dependencies.image]

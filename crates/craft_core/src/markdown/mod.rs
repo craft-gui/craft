@@ -167,7 +167,7 @@ impl<'a> MarkdownRenderer<'a> {
 pub fn render_markdown(markdown: &str, ) -> ComponentSpecification {
     let parser = pulldown_cmark::Parser::new(markdown);
     let mut renderer = MarkdownRenderer::new();
-    
+
     for event in parser {
         match event {
             Event::Start(tag) => {

@@ -15,6 +15,7 @@ members = [
     "examples/overlay",
     "website",
     "crates/craft",
+    "crates/syntect_dumper",
 ]
 
 [workspace.package]

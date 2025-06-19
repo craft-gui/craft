@@ -125,5 +125,7 @@ fn main() {
         global_state.set_route(route.as_str());
     }
 
+    util::setup_logging();
+
     craft_main(Website::component(), global_state, options);
 }

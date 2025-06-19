@@ -1,50 +1,72 @@
-use crate::events::Message;
 use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::elements::{ElementStyles, TextInput};
+use crate::events::CraftMessage;
 use crate::events::CraftMessage::TextInputChanged;
-use crate::events::{CraftMessage};
+use crate::events::Message;
 use crate::style::FontStyle;
 use crate::style::TextStyleProperty::{FontStyle as PropFontStyle, FontWeight, UnderlineSize};
 use crate::style::{TextStyleProperty, Weight};
 use crate::text::RangedStyles;
 use crate::{Color, WindowContext};
+use std::cell::RefCell;
+use std::rc::Rc;
 use syntect::easy::HighlightLines;
 use syntect::parsing::{SyntaxDefinition, SyntaxSet, SyntaxSetBuilder};
 use syntect::util::LinesWithEndings;
 
-pub use syntect as syntect;
+pub use syntect;
+use syntect::dumps::from_reader;
 use syntect::highlighting::ThemeSet;
+
+const DEFAULT_SYNTAX_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/pack.dump");
+const DEFAULT_THEME_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/theme_pack.dump");
+
+thread_local! {
+    static SYNTAX_THEME_CACHE: RefCell<Option<(SyntaxSet, Rc<ThemeSet>)>> = RefCell::new(None);
+}
+
+fn get_syntax_and_theme() -> (SyntaxSet, Rc<ThemeSet>) {
+    SYNTAX_THEME_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some((ref ss, ref ts)) = *cache {
+            return (ss.clone(), Rc::clone(ts));
+        }
+
+        let syntax_set: SyntaxSet = from_reader(DEFAULT_SYNTAX_PACK).expect("Failed to load syntax pack");
+
+        let theme_set: ThemeSet = from_reader(DEFAULT_THEME_PACK).expect("Failed to load theme pack");
+        let theme_set = Rc::new(theme_set);
+
+        *cache = Some((syntax_set.clone(), Rc::clone(&theme_set)));
+        (syntax_set, theme_set)
+    })
+}
 
 pub struct CodeEditor {
     pub(crate) style: CodeEditorStyle,
-    pub(crate) syntax_set: SyntaxSet,
-    pub(crate) theme_set: ThemeSet,
+    pub(crate) syntax_set: Option<SyntaxSet>,
+    pub(crate) theme_set: Option<ThemeSet>,
+    pub(crate) theme: String,
 }
 
-impl CodeEditor {
-    pub fn new(style: CodeEditorStyle, syntax_set: SyntaxSet, theme_set: ThemeSet) -> Self {
+impl Default for CodeEditor {
+    fn default() -> Self {
         CodeEditor {
-            style,
-            syntax_set,
-            theme_set,
+            style: CodeEditorStyle::default(),
+            syntax_set: None,
+            theme_set: None,
+            theme: "base16-ocean.dark".to_string(),
         }
     }
 }
 
-impl Default for CodeEditor {
-    fn default() -> CodeEditor {
-        let mut syntax_set_builder = SyntaxSetBuilder::new();
-        let toml = SyntaxDefinition::load_from_str(include_str!("./TOML.sublime-syntax"), false, None).unwrap();
-        let bash = SyntaxDefinition::load_from_str(include_str!("./Bash.sublime-syntax"), false, None).unwrap();
-        let rust = SyntaxDefinition::load_from_str(include_str!("./Rust.sublime-syntax"), false, None).unwrap();
-        syntax_set_builder.add(toml);
-        syntax_set_builder.add(bash);
-        syntax_set_builder.add(rust);
-        syntax_set_builder.add_plain_text_syntax();
+impl CodeEditor {
+    pub fn new(style: CodeEditorStyle, syntax_set: SyntaxSet, theme_set: ThemeSet, theme: &str) -> Self {
         CodeEditor {
-            syntax_set: syntax_set_builder.build(),
-            theme_set: syntect::highlighting::ThemeSet::load_defaults(),
-            style: CodeEditorStyle::default(),
+            style,
+            syntax_set: Some(syntax_set),
+            theme_set: Some(theme_set),
+            theme: theme.to_string(),
         }
     }
 }
@@ -77,18 +99,26 @@ impl Default for CodeEditorStyle {
 
 fn compute_code_editor_style(
     code: &String,
-    syntax_set: &SyntaxSet,
-    theme_set: &syntect::highlighting::ThemeSet,
+    syntax_set: Option<&SyntaxSet>,
+    theme_set: Option<&ThemeSet>,
     extension: &str,
+    theme: &str,
 ) -> CodeEditorStyle {
+    let (default_syntax_set, default_themes_set) = get_syntax_and_theme();
+    let syntax_set = if let Some(syntax_set) = syntax_set { syntax_set } else { &default_syntax_set };
+
+    let theme_set = if let Some(theme_set) = theme_set { theme_set } else { &default_themes_set };
+
     let syntax = syntax_set.find_syntax_by_extension(extension).unwrap_or(syntax_set.find_syntax_plain_text());
-    let theme = &theme_set.themes["base16-ocean.dark"];
+
+    let theme = &theme_set.themes[theme];
+
     let mut highlighter = HighlightLines::new(syntax, theme);
 
     let mut ranged_styles = RangedStyles::default();
     let mut global_offset = 0;
     for line in LinesWithEndings::from(code) {
-        let styled = highlighter.highlight_line(line, syntax_set).unwrap();
+        let styled = highlighter.highlight_line(line, &syntax_set).unwrap();
 
         let mut local_offset = 0;
         for (style, text) in styled {
@@ -166,11 +196,23 @@ impl Component for CodeEditor {
         message: &Message,
     ) {
         if let Message::CraftMessage(TextInputChanged(text)) = message {
-            self.style = compute_code_editor_style(text, &self.syntax_set, &self.theme_set, &props.extension);
+            self.style = compute_code_editor_style(
+                text,
+                self.syntax_set.as_ref(),
+                self.theme_set.as_ref(),
+                &props.extension,
+                self.theme.as_str(),
+            );
         }
 
         if let Message::CraftMessage(CraftMessage::Initialized) = message {
-            self.style = compute_code_editor_style(&props.text, &self.syntax_set, &self.theme_set, &props.extension);
+            self.style = compute_code_editor_style(
+                &props.text,
+                self.syntax_set.as_ref(),
+                self.theme_set.as_ref(),
+                &props.extension,
+                self.theme.as_str(),
+            );
         }
     }
 }
