@@ -309,7 +309,7 @@ impl Element for TextInput {
                 drv.insert_or_replace_selection(&text);
             }
         }
-        
+
         #[allow(dead_code)]
         fn cut(drv: &mut PlainEditorDriver) {
             #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]

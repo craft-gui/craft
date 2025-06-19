@@ -4,8 +4,7 @@ use parley::{
     layout::{
         Affinity, Alignment, AlignmentOptions, Layout,
         cursor::{Cursor, Selection},
-    },
-    style::Brush,
+    }
 };
 
 extern crate alloc;
@@ -50,7 +49,9 @@ impl Generation {
 pub struct SplitString<'source>(pub [&'source str; 2]);
 
 impl<'source> SplitString<'source> {
+    
     /// Get the characters of this string.
+    #[allow(dead_code)]
     pub fn chars(self) -> impl Iterator<Item = char> + 'source {
         self.into_iter().flat_map(str::chars)
     }
@@ -186,6 +187,7 @@ impl PlainEditorDriver<'_>
     ///
     /// The deleted range is clamped to the start of the buffer.
     /// No-op if the start of the range is not a char boundary.
+    #[allow(dead_code)]
     pub fn delete_bytes_before_selection(&mut self, len: NonZeroUsize) {
         let old_selection = self.editor.selection;
         let selection_range = old_selection.text_range();
@@ -225,6 +227,7 @@ impl PlainEditorDriver<'_>
     ///
     /// The deleted range is clamped to the end of the buffer.
     /// No-op if the end of the range is not a char boundary.
+    #[allow(dead_code)]
     pub fn delete_bytes_after_selection(&mut self, len: NonZeroUsize) {
         let selection_range = self.editor.selection.text_range();
         let range = selection_range.end
@@ -395,6 +398,7 @@ impl PlainEditorDriver<'_>
     /// This leaves the selection and cursor unchanged.
     ///
     /// No-op if either index is not a char boundary.
+    #[allow(dead_code)]
     pub fn set_compose_byte_range(&mut self, start: usize, end: usize) {
         if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
             self.editor.compose = Some(start..end);
@@ -421,6 +425,7 @@ impl PlainEditorDriver<'_>
     ///
     /// This doesn't change the selection, but shows the cursor if
     /// it was hidden.
+    #[allow(dead_code)]
     pub fn finish_compose(&mut self) {
         if self.editor.compose.take().is_some() {
             self.editor.show_cursor = true;
@@ -439,6 +444,7 @@ impl PlainEditorDriver<'_>
     /// Move the cursor to a byte index.
     ///
     /// No-op if index is not a char boundary.
+    #[allow(dead_code)]
     pub fn move_to_byte(&mut self, index: usize) {
         if self.editor.buffer.is_char_boundary(index) {
             self.refresh_layout();
@@ -668,6 +674,7 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point to a byte index.
     ///
     /// No-op if index is not a char boundary.
+    #[allow(dead_code)]
     pub fn extend_selection_to_byte(&mut self, index: usize) {
         if self.editor.buffer.is_char_boundary(index) {
             self.refresh_layout();
@@ -679,6 +686,7 @@ impl PlainEditorDriver<'_>
     /// Select a range of byte indices.
     ///
     /// No-op if either index is not a char boundary.
+    #[allow(dead_code)]
     pub fn select_byte_range(&mut self, start: usize, end: usize) {
         if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
             self.refresh_layout();
@@ -691,6 +699,7 @@ impl PlainEditorDriver<'_>
 
     #[cfg(feature = "accesskit")]
     /// Select inside the editor based on the selection provided by accesskit.
+    #[allow(dead_code)]
     pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
         self.refresh_layout();
         if let Some(selection) = Selection::from_access_selection(
@@ -705,6 +714,7 @@ impl PlainEditorDriver<'_>
     // --- MARK: Rendering ---
     #[cfg(feature = "accesskit")]
     /// Perform an accessibility update.
+    #[allow(dead_code)]
     pub fn accessibility(
         &mut self,
         update: &mut TreeUpdate,
@@ -720,6 +730,7 @@ impl PlainEditorDriver<'_>
     }
 
     /// Get the up-to-date layout for this driver.
+    #[allow(dead_code)]
     pub fn layout(&mut self) -> &Layout<ColorBrush> {
         self.editor.layout(self.font_cx, self.layout_cx)
     }
@@ -758,18 +769,21 @@ impl PlainEditor
     /// such as [`Selection::text_range`] refer to the raw text buffer,
     /// including the IME preedit region, which can be accessed via
     /// [`PlainEditor::raw_text`].
+    #[allow(dead_code)]
     pub fn raw_selection(&self) -> &Selection {
         &self.selection
     }
 
     /// Borrow the current IME preedit range, if any. These indices refer
     /// to the raw text buffer, which can be accessed via [`PlainEditor::raw_text`].
+    #[allow(dead_code)]
     pub fn raw_compose(&self) -> &Option<Range<usize>> {
         &self.compose
     }
 
     /// If the current selection is not collapsed, returns the text content of
     /// that selection.
+    #[allow(dead_code)]
     pub fn selected_text(&self) -> Option<&str> {
         if self.is_composing() {
             return None;
@@ -783,6 +797,7 @@ impl PlainEditor
 
     /// Get rectangles, and their corresponding line indices, representing the selected portions of
     /// text.
+    #[allow(dead_code)]
     pub fn selection_geometry(&self) -> Vec<(Rect, usize)> {
         // We do not check `self.show_cursor` here, as the IME handling code collapses the
         // selection to a caret in that case.
@@ -882,6 +897,7 @@ impl PlainEditor
     /// Application authors should generally prefer [`text`](Self::text). That method excludes the
     /// IME preedit contents, which are not meaningful for applications to access; the
     /// in-progress IME content is not itself what the user intends to write.
+    #[allow(dead_code)]
     pub fn raw_text(&self) -> &str {
         &self.buffer
     }
@@ -890,6 +906,7 @@ impl PlainEditor
     ///
     /// You should store the generation the editor was at when you last drew it, and then redraw
     /// when the generation is different (`Generation` is [`PartialEq`], so supports the equality `==` operation).
+    #[allow(dead_code)]
     pub fn generation(&self) -> Generation {
         self.generation
     }
@@ -909,6 +926,7 @@ impl PlainEditor
     }
 
     /// Set the alignment of the layout.
+    #[allow(dead_code)]
     pub fn set_alignment(&mut self, alignment: Alignment) {
         self.alignment = alignment;
         self.layout_dirty = true;
@@ -939,6 +957,7 @@ impl PlainEditor
     ///
     /// Keep in mind that for the simple `f32::round` to be effective,
     /// you need to first ensure the coordinates are in physical pixel space.
+    #[allow(dead_code)]
     pub fn set_quantize(&mut self, quantize: bool) {
         self.quantize = quantize;
         self.layout_dirty = true;
