@@ -1,68 +1,20 @@
-#[cfg(target_arch = "wasm32")]
-use {
-    std::cell::RefCell, std::ops::AddAssign, std::rc::Rc, wasm_bindgen::JsCast,
-    winit::platform::web::WindowAttributesExtWebSys,
-};
-
-#[cfg(feature = "vello_renderer")]
-use crate::renderer::vello::VelloRenderer;
-
-#[cfg(feature = "vello_cpu_renderer")]
-use crate::renderer::vello_cpu::VelloCpuRenderer;
-
-#[cfg(feature = "vello_hybrid_renderer")]
-use crate::renderer::vello_hybrid::VelloHybridRenderer;
-
-#[cfg(target_arch = "wasm32")]
-use {crate::resource_manager::wasm_queue::WasmQueue, crate::resource_manager::wasm_queue::WASM_QUEUE};
-
-use crate::events::internal::InternalMessage;
-use crate::renderer::blank_renderer::BlankRenderer;
-use crate::renderer::renderer::Renderer;
-use crate::{CraftOptions, RendererType};
-use craft_logging::info;
-
 use winit::application::ApplicationHandler;
+use std::sync::Arc;
+use std::time;
+use winit::dpi::LogicalSize;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
-use winit::window::WindowAttributes;
-use winit::window::{Window, WindowId};
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-
-use tokio::sync::mpsc::Receiver;
-use tokio::sync::mpsc::Sender;
-
-use crate::app::App;
-use crate::craft_runtime::CraftRuntimeHandle;
-use crate::events::EventDispatchType;
-use std::sync::Arc;
-use ui_events::pointer::PointerEvent;
-use ui_events::UiEvent;
-use ui_events_winit::WindowEventReducer;
-use winit::dpi::LogicalSize;
-
-const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
-
-/// Stores state related to Winit.
-///
-/// Forwards most events to the main Craft Event Loop.
-pub struct CraftState {
-    #[allow(dead_code)]
-    pub runtime: CraftRuntimeHandle,
-    pub wait_cancelled: bool,
-    pub close_requested: bool,
-    #[allow(dead_code)]
-    pub winit_receiver: Receiver<InternalMessage>,
-    #[allow(dead_code)]
-    pub app_sender: Sender<InternalMessage>,
-    pub craft_options: CraftOptions,
-    pub event_reducer: WindowEventReducer,
-    pub craft_app: Box<App>,
-}
+use winit::window::{Window, WindowAttributes, WindowId};
+use craft::craft_winit_state::CraftState;
+use craft::events::EventDispatchType;
+use craft::events::internal::InternalMessage;
+use craft::events::ui_events::keyboard::{Key, NamedKey};
+use craft::events::ui_events::pointer::PointerEvent;
+use craft::events::ui_events::UiEvent;
+use craft::renderer::blank_renderer::BlankRenderer;
+use craft::renderer::renderer::Renderer;
+use craft::renderer::vello::VelloRenderer;
+use craft::RendererType;
 
 pub(crate) struct CraftWinitState {
     craft_state: CraftState,
@@ -83,7 +35,7 @@ impl ApplicationHandler for CraftWinitState {
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let craft_state = &mut self.craft_state;
-        
+
         let mut window_attributes =
             WindowAttributes::default().with_title(craft_state.craft_options.window_title.as_str()).with_visible(false);
 
@@ -108,7 +60,6 @@ impl ApplicationHandler for CraftWinitState {
 
         let window: Arc<Window> =
             Arc::from(event_loop.create_window(window_attributes).expect("Failed to create window."));
-        info!("Created window");
 
         craft_state.event_reducer.set_scale_factor(&window);
 
@@ -119,12 +70,7 @@ impl ApplicationHandler for CraftWinitState {
             if #[cfg(not(target_arch = "wasm32"))] {
                     let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
                         let renderer: Box<dyn Renderer> = match renderer_type {
-                        #[cfg(feature = "vello_renderer")]
                         RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
-                        #[cfg(feature = "vello_cpu_renderer")]
-                        RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
-                        #[cfg(feature = "vello_hybrid_renderer")]
-                        RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window_copy).await),
                         RendererType::Blank => Box::new(BlankRenderer),
                     };
                     renderer
@@ -154,11 +100,6 @@ impl ApplicationHandler for CraftWinitState {
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
         let craft_state = &mut self.craft_state;
-        
-        #[cfg(feature = "accesskit")]
-        if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
-            accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);
-        }
 
         if !matches!(
             event,
@@ -169,7 +110,6 @@ impl ApplicationHandler for CraftWinitState {
         ) {
             match craft_state.event_reducer.reduce(&event) {
                 UiEvent::Keyboard(keyboard_event) => {
-                    use ui_events::keyboard::{Key, NamedKey};
                     if keyboard_event.state.is_down() && matches!(keyboard_event.key, Key::Named(NamedKey::Escape)) {
                         event_loop.exit();
                     } else {
@@ -272,35 +212,12 @@ impl ApplicationHandler for CraftWinitState {
         }
 
         if craft_state.close_requested {
-            info!("Exiting winit event loop");
-
             event_loop.exit();
             return;
         }
 
         if !craft_state.wait_cancelled {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
-        }
-    }
-}
-
-impl CraftState {
-    pub(crate) fn new(
-        runtime: CraftRuntimeHandle,
-        winit_receiver: Receiver<InternalMessage>,
-        app_sender: Sender<InternalMessage>,
-        craft_options: CraftOptions,
-        craft_app: Box<App>,
-    ) -> Self {
-        Self {
-            runtime,
-            wait_cancelled: false,
-            close_requested: false,
-            winit_receiver,
-            app_sender,
-            craft_options,
-            event_reducer: Default::default(),
-            craft_app,
+            event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + time::Duration::from_millis(15)));
         }
     }
 }

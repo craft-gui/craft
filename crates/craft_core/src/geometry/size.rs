@@ -2,9 +2,9 @@
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Size<T> {
     /// The width of the object.
-    pub(crate) width: T,
+    pub width: T,
     /// The height of the object.
-    pub(crate) height: T,
+    pub height: T,
 }
 
 impl<T> Size<T> {

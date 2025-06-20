@@ -1,19 +1,19 @@
 pub mod color;
 
 #[allow(clippy::module_inception)]
-pub(crate) mod renderer;
+pub mod renderer;
 
 #[cfg(feature = "vello_renderer")]
-pub(crate) mod vello;
+pub mod vello;
 
 #[cfg(feature = "vello_cpu_renderer")]
-pub(crate) mod vello_cpu;
+pub mod vello_cpu;
 
-pub(crate) mod blank_renderer;
+pub mod blank_renderer;
 mod image_adapter;
 pub(crate) mod tinyvg_helpers;
 #[cfg(feature = "vello_hybrid_renderer")]
-pub(crate) mod vello_hybrid;
+pub mod vello_hybrid;
 
 pub use renderer::Brush;
 pub use renderer::RenderCommand;

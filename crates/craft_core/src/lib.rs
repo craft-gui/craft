@@ -2,7 +2,7 @@
 pub mod accessibility;
 pub mod components;
 pub mod craft_runtime;
-mod craft_winit_state;
+pub mod craft_winit_state;
 pub mod elements;
 pub mod events;
 mod options;
@@ -66,6 +66,7 @@ use craft_logging::info;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
+use crate::craft_winit_state::CraftWinitState;
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
@@ -89,12 +90,13 @@ pub fn internal_craft_main_with_options(
 ) {
     info!("Craft started");
 
-    info!("Created winit event loop");
-
     let event_loop =
         EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
-    let mut app = setup_craft(application, global_state, options);
-    event_loop.run_app(&mut app).expect("run_app failed");
+    info!("Created winit event loop.");
+
+    let craft_state = setup_craft(application, global_state, options);
+    let mut winit_craft_state = CraftWinitState::new(craft_state);
+    event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
@@ -150,8 +152,7 @@ pub fn craft_main<GlobalState: Send + 'static>(
     options: CraftOptions,
     android_app: AndroidApp,
 ) {
-    let mut app = setup_craft(application, global_state, options);
-    event_loop.run_app(&mut app).expect("run_app failed");
+    internal_craft_main_with_options(application, Box::new(global_state), Some(options), android_app);
 }
 
 #[cfg(not(target_os = "android"))]
@@ -165,8 +166,9 @@ fn internal_craft_main_with_options(
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
-    let mut app = setup_craft(application, global_state, options);
-    event_loop.run_app(&mut app).expect("run_app failed");
+    let craft_state = setup_craft(application, global_state, options);
+    let mut winit_craft_state = CraftWinitState::new(craft_state);
+    event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
 pub fn setup_craft(

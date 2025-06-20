@@ -76,7 +76,7 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
 }
 
 impl<'a> VelloRenderer<'a> {
-    pub(crate) async fn new(window: Arc<Window>) -> VelloRenderer<'a> {
+    pub async fn new(window: Arc<Window>) -> VelloRenderer<'a> {
         let mut vello_renderer = VelloRenderer {
             context: RenderContext::new(),
             renderers: vec![],
