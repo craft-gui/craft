@@ -81,12 +81,7 @@ impl ApplicationHandler for CraftWinitState {
                 let window_copy_2 = window_copy.clone();
                 craft_state.runtime.spawn(async move {
                     let renderer: Box<dyn Renderer> = match renderer_type {
-                        #[cfg(feature = "vello_renderer")]
                         RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
-                        #[cfg(feature = "vello_cpu_renderer")]
-                        RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
-                        #[cfg(feature = "vello_hybrid_renderer")]
-                        RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window_copy).await),
                         RendererType::Blank => Box::new(BlankRenderer),
                     };
                     app_sender
