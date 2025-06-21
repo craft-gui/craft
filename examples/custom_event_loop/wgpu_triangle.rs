@@ -213,9 +213,7 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
         cache: None,
     });
 
-    let surface_texture = renderer.surface
-        .get_current_texture()
-        .expect("Failed to acquire next swap chain texture");
+    let surface_texture = renderer.get_current_surface_texture();
     let view = surface_texture
         .texture
         .create_view(&wgpu::TextureViewDescriptor::default());

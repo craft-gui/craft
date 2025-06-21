@@ -14,7 +14,7 @@ use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::{kurbo, peniko, AaConfig, Error, RendererOptions};
 use vello::{Glyph, Scene};
-use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, Texture, TextureFormat, TextureView};
+use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
 use wgpu::util::TextureBlitter;
 use winit::window::Window;
 use crate::text::text_render_data::TextRenderLine;
@@ -152,6 +152,25 @@ fn new_surface_texture(device: &Device, adapter: &Adapter,  surface: &Surface, s
 }
 
 impl VelloRenderer {
+    
+    pub fn get_current_surface_texture(&mut self) -> SurfaceTexture {
+        match self.surface.get_current_texture() {
+            Ok(texture) => return texture,
+            Err(err) => match err {
+                SurfaceError::Timeout
+                | SurfaceError::Outdated
+                | SurfaceError::Lost => {
+                    self.resize_surface(self.surface_width(), self.surface_height());
+                }
+                SurfaceError::OutOfMemory | SurfaceError::Other => {
+                    panic!("Failed to allocate memory for the current surface.");
+                }
+            },
+        }
+        
+        self.surface
+            .get_current_texture().expect("Failed to get the current surface.")
+    }
     
     pub async fn new(window: Arc<Window>, render_into_texture: bool) -> VelloRenderer {
 
@@ -423,6 +442,7 @@ impl Renderer for VelloRenderer {
 
             self.offscreen_view.as_ref().unwrap()
         } else {
+            let _  = self.get_current_surface_texture();
             &self.surface_texture_view
         };
 
@@ -446,11 +466,11 @@ impl Renderer for VelloRenderer {
             .expect("failed to render to texture");
 
         if !self.render_into_texture {
-            let surface_texture  = self.surface.get_current_texture().unwrap();
             let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Surface Blit"),
             });
             let blitter = TextureBlitter::new(&self.device, self.surface_config.format);
+            let surface_texture = self.surface.get_current_texture().expect("Failed to get the current texture");
             blitter.copy(
                 &self.device,
                 &mut encoder,
