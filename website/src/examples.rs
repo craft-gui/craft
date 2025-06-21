@@ -116,7 +116,7 @@ impl Component for Examples {
             .padding(Unit::Px(vertical_padding), WRAPPER_PADDING_RIGHT, Unit::Px(vertical_padding), WRAPPER_PADDING_LEFT)
             .push(examples_sidebar(&example_to_show, context.window()));
 
-        if context.window   ().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
+        if context.window().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
             wrapper = wrapper.flex_direction(FlexDirection::Column);
             wrapper = wrapper.gap("20px");
         }
