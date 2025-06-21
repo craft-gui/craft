@@ -1,3 +1,4 @@
+use crate::events::event_handlers::EventHandlers;
 use crate::components::{ComponentId, ComponentSpecification};
 use crate::components::{Event, Props};
 use crate::elements::element::ElementBoxed;
@@ -52,22 +53,7 @@ pub struct ElementData {
     pub child_specs: Vec<ComponentSpecification>,
     pub(crate) key: Option<String>,
     pub(crate) props: Option<Props>,
-
-    pub(crate) on_pointer_button_up: Option<EventHandlerWithRef<PointerButtonUpdate>>,
-    pub(crate) on_pointer_button_down: Option<EventHandlerWithRef<PointerButtonUpdate>>,
-    pub(crate) on_initialized: Option<EventHandler>,
-    pub(crate) on_keyboard_input: Option<EventHandlerWithRef<KeyboardEvent>>,
-    pub(crate) on_pointer_move: Option<EventHandlerWithRef<PointerUpdate>>,
-    pub(crate) on_pointer_scroll: Option<EventHandlerWithRef<PointerScrollUpdate>>,
-    pub(crate) on_modifiers_changed: Option<EventHandlerWithRef<Modifiers>>,
-    pub(crate) on_ime: Option<EventHandlerWithRef<Ime>>,
-    pub(crate) on_text_input_changed: Option<EventHandlerWithRef<str>>,
-    pub(crate) on_link_clicked: Option<EventHandlerWithRef<str>>,
-
-    pub(crate) on_dropdown_toggled: Option<EventHandlerCopy<bool>>,
-    pub(crate) on_dropdown_item_selected: Option<EventHandlerCopy<usize>>,
-    pub(crate) on_switch_toggled: Option<EventHandlerCopy<bool>>,
-    pub(crate) on_slider_value_changed: Option<EventHandlerCopy<f64>>,
+    pub(crate) event_handlers: EventHandlers,
 }
 
 impl ElementData {

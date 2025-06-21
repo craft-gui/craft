@@ -4,6 +4,7 @@ pub(crate) mod event_dispatch;
 pub mod internal;
 pub(crate) mod resource_event;
 pub mod update_queue_entry;
+pub(crate) mod event_handlers;
 //#[cfg(test)]
 //mod tests;
 

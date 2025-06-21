@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentId, ComponentSpecification, Event};
+use crate::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use crate::devtools::dev_tools_colors::{BORDER_COLOR, FIELD_NAME_COLOR, FIELD_VALUE_COLOR, ROW_BACKGROUND_COLOR};
 use crate::elements::element::Element;
 use crate::elements::{Container, ElementStyles, Text, TextInput};
@@ -289,7 +289,7 @@ impl Component for LayoutWindow {
     type Props = LayoutWindowProps;
     type Message = ();
 
-    fn view(&self, _global_state: &Self::GlobalState, props: &Self::Props, _children: Vec<ComponentSpecification>, _id: ComponentId, _window: &WindowContext) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         let active_tab_color = palette::css::MEDIUM_AQUAMARINE;
         
         let mut styles_window = Container::new()
@@ -302,19 +302,19 @@ impl Component for LayoutWindow {
             .background(ROW_BACKGROUND_COLOR)
             .push(Container::new().border_width("2px", "0px", "2px", "0px").border_color(BORDER_COLOR)
                 .push(Text::new("Styles")
-                          .color(if self.layout_tab == LayoutTab::Styles { active_tab_color} else { Color::from_rgb8(230, 230, 230) })
+                          .color(if context.state().layout_tab == LayoutTab::Styles { active_tab_color} else { Color::from_rgb8(230, 230, 230) })
                           .padding("10px", "0px", "10px", "10px")
                           .id("tab_styles")
                 )
                 .push(Text::new("Computed")
-                    .color(if self.layout_tab == LayoutTab::Computed { active_tab_color} else { Color::from_rgb8(230, 230, 230) })
+                    .color(if context.state().layout_tab == LayoutTab::Computed { active_tab_color} else { Color::from_rgb8(230, 230, 230) })
                           .padding("10px", "0px", "10px", "10px")
                           .id("tab_computed")
                 )
             )
             .component();
 
-        let selected_element = props.selected_element.as_ref();
+        let selected_element = context.props().selected_element.as_ref();
 
         if let Some(selected_element) = selected_element {
             
@@ -325,19 +325,19 @@ impl Component for LayoutWindow {
                 .color(Color::WHITE)
                 .max_width("200px")
                 ;
-            match self.layout_tab {
+            match context.state().layout_tab {
                 
                 LayoutTab::Styles => {
                     styles_window.push_in_place(
                         text_input.id("style_search_query").component().key("style_search_query")
                     );
-                    styles_window.push_in_place(tab_styles(selected_element, self.style_search_query.as_str()).component())
+                    styles_window.push_in_place(tab_styles(selected_element, context.state().style_search_query.as_str()).component())
                 }
                 LayoutTab::Computed => {
                     styles_window.push_in_place(
                         text_input.id("computed_search_query").component().key("computed_search_query")
                     );
-                    styles_window.push_in_place(tab_computed_styles(selected_element, self.computed_search_query.as_str()).component())
+                    styles_window.push_in_place(tab_computed_styles(selected_element, context.state().computed_search_query.as_str()).component())
                 }
             }
         }
@@ -345,21 +345,21 @@ impl Component for LayoutWindow {
         styles_window
     }
 
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
-        if let Some(id) = event.target.and_then(|e| e.get_id().clone()) {
-            if message.clicked() {
+    fn update(context: &mut Context<Self>) {
+        if let Some(id) = context.target().and_then(|e| e.get_id().clone()) {
+            if context.message().clicked() {
                 if id == "tab_styles" {
-                    self.layout_tab = LayoutTab::Styles
+                    context.state_mut().layout_tab = LayoutTab::Styles
                 } else if id == "tab_computed" {
-                    self.layout_tab = LayoutTab::Computed
+                    context.state_mut().layout_tab = LayoutTab::Computed
                 }
             }
 
-            if let Message::CraftMessage(CraftMessage::TextInputChanged(text)) = message {
+            if let Message::CraftMessage(CraftMessage::TextInputChanged(text)) = context.message() {
                 if id == "computed_search_query" {
-                    self.computed_search_query = text.to_string();
+                    context.state_mut().computed_search_query = text.to_string();
                 } else if id == "style_search_query" {
-                    self.style_search_query = text.to_string();
+                    context.state_mut().style_search_query = text.to_string();
                 }
             }
         }

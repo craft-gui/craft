@@ -1,6 +1,6 @@
 use crate::theme::{wrapper, NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, NAVBAR_TEXT_HOVERED_COLOR};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::Message;
 use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
@@ -32,14 +32,7 @@ impl Component for Navbar {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         let container = Container::new()
             .width("100%")
             .height(Unit::Px(NAVBAR_HEIGHT))
@@ -78,22 +71,17 @@ impl Component for Navbar {
         container.push(wrapper).component()
     }
 
-    fn update(
-        &mut self,
-        global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        event: &mut Event,
-        message: &Message,
-    ) {
-        if !message.clicked() {
+    fn update(context: &mut Context<Self>) {
+        if !context.message().clicked() {
             return;
         }
 
-        if let Some(current_target) = event.target.and_then(|e| e.get_id().as_ref()) {
+        let id = context.target().and_then(|e| e.get_id().as_ref()).cloned();
+        if let Some(current_target) = id {
             if current_target.starts_with("route_") {
                 let route = current_target.trim_start_matches("route_");
-                global_state.set_route(route);
-                event.prevent_propagate();
+                context.global_state_mut().set_route(route);
+                context.event_mut().prevent_propagate();
             }
         }
     }

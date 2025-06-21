@@ -165,18 +165,17 @@ pub(crate) fn dispatch_event(
                 // Dispatch the event to the element's component.
                 if let Some(node) = closest_ancestor_component {
                     let state = reactive_tree.user_state.storage.get_mut(&node.id).unwrap().as_mut();
-                    let mut event = Event::with_window_context(window_context.clone());
-                    event.target = Some(target.borrow().element.unwrap());
-                    event.current_target = Some(current_target.borrow().element.unwrap());
-                    (node.update)(state, global_state, node.props.clone(), &mut event, message);
+                    let mut event = Event::default();
+                    let target_param = Some(target.borrow().element.unwrap());
+                    let current_target_param = Some(current_target.borrow().element.unwrap());
+                    (node.update)(state, global_state, node.props.clone(), &mut event, message, node.id, window_context, target_param, current_target_param);
 
                     if !event.prevent_defaults && event.propagate {
                         if let Some(ref result_message) = event.result_message {
-                            element_events.push_back((result_message.clone(), *event.target.as_ref().unwrap()));
+                            element_events.push_back((result_message.clone(), target.borrow().element.unwrap()));
                         }
                     }
 
-                    *window_context = event.window.clone();
                     effects.append(&mut event.effects);
                     propagate = propagate && event.propagate;
                     let element_state = &mut reactive_tree
@@ -233,14 +232,16 @@ pub(crate) fn dispatch_event(
                     if let Some(element) = current_target.borrow().element {
                         if let Message::CraftMessage(event) = message {
                             let mut res = Event::new();
-                            res.target = target.borrow().element;
-                            res.current_target = Some(element);
+                            let target_param = target.borrow().element;
+                            let current_target_param = Some(element);
                             element.on_event(
                                 event,
                                 &mut reactive_tree.element_state,
                                 text_context.as_mut().unwrap(),
                                 is_style,
                                 &mut res,
+                                target_param,
+                                current_target_param,
                             );
                             focus = focus.merge(res.focus);
                             reactive_tree.element_state.update_element_focus(res.focus);
@@ -266,7 +267,11 @@ pub(crate) fn dispatch_event(
                         break;
                     }
 
-                    let mut event = Event::with_window_context(window_context.clone());
+                    let mut event = Event::default();
+
+                    // Todo: are target and current_target correct?
+                    let target_param = Some(*target_element);
+                    let current_target_param = Some(*target_element);
                     if let Some(element) = current_target.element {
                         element.on_event(
                             message,
@@ -275,6 +280,8 @@ pub(crate) fn dispatch_event(
                             // first_element && is_style. For only the first element.
                             is_style,
                             &mut event,
+                            target_param,
+                            current_target_param,
                         );
                         focus = focus.merge(event.focus);
                         reactive_tree.element_state.update_element_focus(event.focus);
@@ -283,17 +290,20 @@ pub(crate) fn dispatch_event(
                             reactive_tree.user_state.storage.get_mut(&current_target.component.id).unwrap().as_mut();
                         // For element events the target and current target
                         // are the element the event was dispatched from.
-                        event.target = Some(*target_element);
-                        event.current_target = Some(*target_element);
+                        let target_param = Some(*target_element);
+                        let current_target_param = Some(*target_element);
                         (current_target.component.update)(
                             state,
                             global_state,
                             current_target.component.props.clone(),
                             &mut event,
                             &Message::CraftMessage(message.clone()),
+                            current_target.component.id,
+                            window_context,
+                            target_param,
+                            current_target_param,
                         );
                     }
-                    *window_context = event.window.clone();
                     effects.append(&mut event.effects);
                     propagate = propagate && event.propagate;
                     prevent_defaults = prevent_defaults || event.prevent_defaults;
@@ -320,6 +330,8 @@ pub(crate) fn dispatch_event(
                                 text_context.as_mut().unwrap(),
                                 false,
                                 &mut res,
+                                None,
+                                None,
                             );
                             focus = focus.merge(res.focus);
                             reactive_tree.element_state.update_element_focus(res.focus);
@@ -331,11 +343,8 @@ pub(crate) fn dispatch_event(
                     } else {
                         let component = node.borrow().component;
                         let state = reactive_tree.user_state.storage.get_mut(&component.id).unwrap().as_mut();
-                        let mut event = Event::with_window_context(window_context.clone());
-                        event.current_target = None;
-                        event.target = None;
-                        (component.update)(state, global_state, component.props.clone(), &mut event, message);
-                        *window_context = event.window.clone();
+                        let mut event = Event::default();
+                        (component.update)(state, global_state, component.props.clone(), &mut event, message, component.id, window_context, None, None);
                         effects.append(&mut event.effects);
                         if event.future.is_some() {
                             reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
@@ -367,6 +376,8 @@ pub(crate) fn dispatch_event(
                             text_context.as_mut().unwrap(),
                             false,
                             &mut res,
+                            None,
+                            None,
                         );
                         focus = focus.merge(res.focus);
                         reactive_tree.element_state.update_element_focus(res.focus);

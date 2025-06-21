@@ -5,7 +5,7 @@ use util::{setup_logging, ExampleProps};
 use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use craft::{craft_main, palette, Color};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
@@ -38,12 +38,9 @@ pub struct AniList {
     state: State,
 }
 
-fn fetch_trending_anime(state: &mut AniList,
-                        _global_state: &mut (),
-                        event: &mut Event,
-                        pointer_button: &PointerButtonUpdate) { {
-        if state.state != State::Loading && pointer_button.is_primary() {
-            state.state = State::Loading;
+fn fetch_trending_anime(context: &mut Context<AniList>, pointer_button: &PointerButtonUpdate) { {
+        if context.state().state != State::Loading && pointer_button.is_primary() {
+            context.state_mut().state = State::Loading;
 
             let get_ani_list_data = async {
                 let client = Client::new();
@@ -75,7 +72,7 @@ fn fetch_trending_anime(state: &mut AniList,
                 Event::async_result(StateChange(State::Loaded(result)))
             };
 
-            event.future(get_ani_list_data);
+            context.event_mut().future(get_ani_list_data);
         }
     }
 }
@@ -85,17 +82,10 @@ impl Component for AniList {
     type Props = ExampleProps;
     type Message = AniListMessage;
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         
         let mut root_wrapper = Container::new()
-            .overflow_y(if props.show_scrollbar { Overflow::Scroll } else { Overflow::Visible })
+            .overflow_y(if context.props().show_scrollbar { Overflow::Scroll } else { Overflow::Visible })
             .width("100%")
             .height("100%");
         
@@ -109,7 +99,7 @@ impl Component for AniList {
             .border_radius(4.0, 4.0, 4.0, 4.0)
             .border_width("2px", "2px", "2px", "2px")
             .border_color(palette::css::BLACK)
-            .on_pointer_button_up(fetch_trending_anime));
+            .on_pointer_up(fetch_trending_anime));
         
         let mut root = Container::new()
             .display(Display::Flex)
@@ -122,7 +112,7 @@ impl Component for AniList {
             .push(example_title)
             .push(fetch_trending_anime_button);
 
-        match &self.state {
+        match &context.state().state {
             State::Initial => {}
             State::Loading => {
                 root = root.push(Text::new("Loading...").font_size(24.0));
@@ -149,15 +139,9 @@ impl Component for AniList {
         root_wrapper.component()
     }
 
-    fn on_user_message(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        _event: &mut Event,
-        message: &Self::Message,
-    ) {
+    fn on_user_message(context: &mut Context<Self>, message: &Self::Message) {
         let StateChange(new_state) = message;
-        self.state = new_state.clone();
+        context.state_mut().state = new_state.clone();
     }
 }
 
