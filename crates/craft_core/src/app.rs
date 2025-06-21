@@ -89,7 +89,7 @@ pub struct App {
     // The user's reactive tree.
     pub user_tree: ReactiveTree,
     /// Provides a way for the user to get and set common window properties during view and update.
-    pub(crate) window_context: WindowContext,
+    pub window_context: WindowContext,
 
     #[cfg(feature = "dev_tools")]
     pub(crate) is_dev_tools_open: bool,
