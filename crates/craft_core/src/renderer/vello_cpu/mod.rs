@@ -134,6 +134,8 @@ impl Renderer for VelloCpuRenderer {
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
+        vello_draw_rect(&mut self.render_context, Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32), Color::WHITE);
+        
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);
