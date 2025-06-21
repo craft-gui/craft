@@ -1,6 +1,8 @@
 mod render_context;
 mod tinyvg;
 
+use vello_common::paint::PaintType;
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
@@ -26,21 +28,21 @@ use crate::renderer::Brush;
 use vello_hybrid::Scene;
 use crate::text::text_render_data::TextRenderLine;
 
-pub struct ActiveRenderState<'s> {
+pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
-    surface: RenderSurface<'s>,
+    surface: RenderSurface<'static>,
     window_width: f32,
     window_height: f32,
 }
 
 // This enum is only a few hundred bytes.
 #[allow(clippy::large_enum_variant)]
-enum RenderState<'a> {
-    Active(ActiveRenderState<'a>),
+enum RenderState {
+    Active(ActiveRenderState),
     Suspended,
 }
 
-pub struct VelloHybridRenderer<'a> {
+pub struct VelloHybridRenderer {
     // The vello RenderContext which is a global context that lasts for the
     // lifetime of the application
     context: RenderContext,
@@ -49,7 +51,7 @@ pub struct VelloHybridRenderer<'a> {
     renderers: Vec<Option<Renderer>>,
 
     // State for our example where we store the winit Window and the wgpu Surface
-    state: RenderState<'a>,
+    state: RenderState,
 
     // A vello Scene which is a data structure which allows one to build up a
     // description a scene to be drawn (with paths, fills, images, text, etc.)
@@ -69,8 +71,8 @@ fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> 
     )
 }
 
-impl<'a> VelloHybridRenderer<'a> {
-    pub(crate) async fn new(window: Arc<Window>) -> VelloHybridRenderer<'a> {
+impl VelloHybridRenderer {
+    pub(crate) async fn new(window: Arc<Window>) -> VelloHybridRenderer {
         // Create a vello Surface
         let surface_size = window.inner_size();
 
@@ -109,11 +111,15 @@ impl<'a> VelloHybridRenderer<'a> {
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
-    scene.set_paint(Paint::from(fill_color));
+    scene.set_paint(PaintType::from(fill_color));
     scene.fill_rect(&rectangle.to_kurbo());
 }
 
-impl CraftRenderer for VelloHybridRenderer<'_> {
+impl CraftRenderer for VelloHybridRenderer {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
     fn surface_width(&self) -> f32 {
         match &self.state {
             RenderState::Active(active_render_state) => active_render_state.window_width as f32,
@@ -149,6 +155,20 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
+        let render_state = match &mut self.state {
+            RenderState::Active(state) => state,
+            _ => panic!("!!!"),
+        };
+
+        // Get the RenderSurface (surface + config)
+        let surface = &render_state.surface;
+
+        // Get the window size
+        let width = surface.config.width;
+        let height = surface.config.height;
+
+        vello_draw_rect(&mut self.scene, Rectangle::new(0.0, 0.0, width as f32, height as f32), Color::WHITE);
+
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
@@ -158,7 +178,7 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color) => {
                     self.scene.set_stroke(vello_common::kurbo::Stroke::new(1.0));
-                    self.scene.set_paint(Paint::from(*outline_color));
+                    self.scene.set_paint(PaintType::from(*outline_color));
                     self.scene.stroke_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(_rectangle, resource_identifier) => {
@@ -248,11 +268,11 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
                             if let Some(underline) = &item.underline {
                                 scene.set_transform(text_transform);
                                 scene.set_stroke(Stroke::new(underline.width.into()));
-                                scene.set_paint(Paint::from(underline.brush.color));
+                                scene.set_paint(PaintType::from(underline.brush.color));
                                 scene.stroke_path(&underline.line.to_path(0.1));
                             }
 
-                            scene.set_paint(Paint::from(
+                            scene.set_paint(PaintType::from(
                                 text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
                             ));
                             scene.reset_transform();
@@ -348,13 +368,13 @@ impl CraftRenderer for VelloHybridRenderer<'_> {
     }
 }
 
-fn brush_to_paint(brush: &Brush) -> Paint {
+fn brush_to_paint(brush: &Brush) -> PaintType {
     match brush {
-        Brush::Color(color) => Paint::from(*color),
+        Brush::Color(color) => PaintType::from(*color),
         Brush::Gradient(gradient) => {
             // Paint::Gradient does not exist yet, so we need to come back and fix this later.
             let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
-            Paint::from(color)
+            PaintType::from(color)
         }
     }
 }
