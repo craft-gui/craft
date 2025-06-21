@@ -15,6 +15,51 @@ Updates are performed by handling messages from a Component.
   <img src="./images/counter.png" alt="The counter example." width="45%">
 </p>
 
+### Counter
+
+```rust
+use craft::components::{Context, Component, ComponentSpecification};
+use craft::elements::{Container, ElementStyles, Text};
+use craft::events::ui_events::pointer::PointerButtonUpdate;
+use craft::style::FlexDirection;
+
+#[derive(Default)]
+pub struct Counter {
+    count: i64,
+}
+
+impl Component for Counter {
+    type GlobalState = ();
+    type Props = ();
+    type Message = ();
+
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        fn button(label: &str, delta: i64) -> Container {
+            Container::new()
+                .on_pointer_up(move |c: &mut Context<Counter>, _: &PointerButtonUpdate| {
+                    c.state_mut().count += delta;
+                })
+                .push(Text::new(label).disable_selection().padding(10, 10, 10, 10))
+        }
+
+        Container::new()
+            .push(Text::new(&format!("Count: {}", context.state().count)).disable_selection())
+            .flex_direction(FlexDirection::Column)
+            .push(
+                Container::new()
+                    .flex_direction(FlexDirection::Row)
+                    .push(button("-", -1))
+                    .push(button("+", 1))
+            ).component()
+    }
+}
+
+fn main() {
+    craft::craft_main(Counter::component(), (), craft::CraftOptions::basic("Counter"));
+}
+
+```
+
 ## Goals
 
 * Reactive
