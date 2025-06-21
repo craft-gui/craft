@@ -15,7 +15,7 @@ struct TransformUniform {
     matrix: [[f32; 4]; 4],
 }
 
-pub(crate) fn draw_vello_and_canvas(renderer: &mut VelloRenderer, pos_x: f32, pos_y: f32, size_width: f32, size_height: f32, rotation_radians: f32) {
+pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f32, pos_y: f32, size_width: f32, size_height: f32, rotation_radians: f32) {
     if !renderer.render_into_texture {
         return;
     }

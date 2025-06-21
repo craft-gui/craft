@@ -7,7 +7,7 @@ pub mod resource_type;
 pub(crate) mod tinyvg_resource;
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) mod wasm_queue;
+pub mod wasm_queue;
 
 use crate::events::internal::InternalMessage;
 use crate::events::resource_event::ResourceEvent;

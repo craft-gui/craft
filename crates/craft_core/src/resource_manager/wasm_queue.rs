@@ -1,7 +1,7 @@
 use crate::events::internal::InternalMessage;
 use std::cell::RefCell;
 
-const WASM_QUEUE_SIZE: usize = 100;
+pub const WASM_QUEUE_SIZE: usize = 100;
 
 pub struct WasmQueue {
     queue: [Option<InternalMessage>; WASM_QUEUE_SIZE],
@@ -40,5 +40,5 @@ impl WasmQueue {
 }
 
 thread_local! {
-    pub(crate) static WASM_QUEUE: RefCell<WasmQueue> = RefCell::new(WasmQueue::new());
+    pub static WASM_QUEUE: RefCell<WasmQueue> = RefCell::new(WasmQueue::new());
 }

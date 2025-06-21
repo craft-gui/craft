@@ -1,27 +1,38 @@
-use std::any::Any;
-use winit::application::ApplicationHandler;
 use std::sync::Arc;
+use winit::application::ApplicationHandler;
+
+#[cfg(target_arch = "wasm32")]
+use {
+    wasm_bindgen::JsCast,
+    winit::platform::web::WindowAttributesExtWebSys,
+};  
+
+
+#[cfg(target_arch = "wasm32")]
+use {craft::resource_manager::wasm_queue::WasmQueue, craft::resource_manager::wasm_queue::WASM_QUEUE};
+
+#[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use winit::dpi::LogicalSize;
-use winit::event::{StartCause, WindowEvent};
-use winit::event_loop::{ActiveEventLoop, ControlFlow};
-use winit::window::{Window, WindowAttributes, WindowId};
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+use crate::wgpu_triangle::draw_gui_texture_and_canvas;
 use craft::craft_winit_state::CraftState;
 use craft::elements::{Canvas, Element};
-use craft::events::EventDispatchType;
 use craft::events::internal::InternalMessage;
 use craft::events::ui_events::keyboard::{Key, NamedKey};
 use craft::events::ui_events::pointer::PointerEvent;
 use craft::events::ui_events::UiEvent;
-use craft::renderer::blank_renderer::BlankRenderer;
+use craft::events::EventDispatchType;
 use craft::renderer::renderer::Renderer;
 use craft::renderer::vello::VelloRenderer;
-use craft::RendererType;
-use crate::wgpu_triangle::draw_vello_and_canvas;
+use winit::dpi::LogicalSize;
+use winit::event::{StartCause, WindowEvent};
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
+use winit::window::{Window, WindowAttributes, WindowId};
 
 pub(crate) struct CraftWinitState {
     rotation: f32,
-    pub start_time: std::time::Instant,
+    pub start_time: time::Instant,
     craft_state: CraftState,
 }
 
@@ -29,7 +40,7 @@ impl CraftWinitState {
     pub(crate) fn new(craft_state: CraftState) -> Self {
         Self {
             rotation: 0.0,
-            start_time: std::time::Instant::now(),
+            start_time: time::Instant::now(),
             craft_state,
         }
     }
@@ -70,27 +81,24 @@ impl ApplicationHandler for CraftWinitState {
 
         craft_state.event_reducer.set_scale_factor(&window);
 
-        let renderer_type = craft_state.craft_options.renderer;
+        let _renderer_type = craft_state.craft_options.renderer;
         let window_copy = window.clone();
 
+
+        let render_vello_to_texture = true;
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
-                    let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer> = match renderer_type {
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, true).await),
-                        RendererType::Blank => Box::new(BlankRenderer),
-                    };
-                    renderer
-                });
+                let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(
+                    async {
+                        Box::new(VelloRenderer::new(window_copy, render_vello_to_texture).await)
+                    }
+                );
                 craft_state.craft_app.on_resume(window, renderer, event_loop);
             } else {
                 let app_sender = craft_state.app_sender.clone();
                 let window_copy_2 = window_copy.clone();
                 craft_state.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = match renderer_type {
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, true).await),
-                        RendererType::Blank => Box::new(BlankRenderer),
-                    };
+                    let renderer: Box<dyn Renderer> = Box::new(VelloRenderer::new(window_copy, render_vello_to_texture).await);
                     app_sender
                         .send(InternalMessage::RendererCreated(window_copy_2, renderer))
                         .await
@@ -159,7 +167,7 @@ impl ApplicationHandler for CraftWinitState {
             }
             WindowEvent::RedrawRequested => {
                 self.craft_state.craft_app.on_request_redraw();
-
+                
                 let canvas = if let Some(root) = self.craft_state.craft_app.user_tree.element_tree.as_mut() {
                     let mut found = None;
                     for ele in root.pre_order_iter() {
@@ -174,19 +182,17 @@ impl ApplicationHandler for CraftWinitState {
                     None
                 };
 
-                {
-                    let renderer = self.craft_state.craft_app.renderer.as_mut().unwrap();
-
+                if let Some(renderer) = self.craft_state.craft_app.renderer.as_mut() {
                     if let Some(canvas) = canvas {
                         if let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
-                            let size = canvas.computed_box_transformed().size;
-                            let position = canvas.computed_box_transformed().position;
+                            let size = canvas.computed_box_transformed().padding_rectangle_size();
+                            let position = canvas.computed_box_transformed().padding_rectangle_position();
 
                             let elapsed = self.start_time.elapsed().as_secs_f32();
                             let angle = elapsed % (2.0 * std::f32::consts::PI);
                             self.rotation = angle;
 
-                            draw_vello_and_canvas(vello_renderer, position.x as f32, position.y as f32, size.width, size.height, self.rotation);
+                            draw_gui_texture_and_canvas(vello_renderer, position.x as f32, position.y as f32, size.width, size.height, self.rotation);
                         }
                     }
                 }
@@ -241,7 +247,6 @@ impl ApplicationHandler for CraftWinitState {
                                     window.request_redraw();
                                 }
                             }
-                            _ => {}
                         }
                     });
                 });
