@@ -72,7 +72,7 @@ pub struct App {
     /// The global state is used to store global data that can be accessed from anywhere in the user's application.
     pub(crate) global_state: GlobalState,
     /// A winit window. This is only valid between resume and pause.
-    pub(crate) window: Option<Arc<Window>>,
+    pub window: Option<Arc<Window>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     pub(crate) text_context: Option<TextContext>,
     /// The renderer is used to draw the view. It is only valid between resume and pause.
@@ -87,7 +87,7 @@ pub struct App {
     /// of a resource too many times.
     pub(crate) resources_collected: HashMap<ResourceIdentifier, bool>,
     // The user's reactive tree.
-    pub(crate) user_tree: ReactiveTree,
+    pub user_tree: ReactiveTree,
     /// Provides a way for the user to get and set common window properties during view and update.
     pub(crate) window_context: WindowContext,
 

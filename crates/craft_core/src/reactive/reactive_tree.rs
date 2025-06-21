@@ -7,8 +7,8 @@ use crate::reactive::tree::ComponentTreeNode;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Default)]
-pub(crate) struct ReactiveTree {
-    pub(crate) element_tree: Option<Box<dyn Element>>,
+pub struct ReactiveTree {
+    pub element_tree: Option<Box<dyn Element>>,
     pub(crate) component_tree: Option<ComponentTreeNode>,
     pub(crate) element_ids: HashSet<ComponentId>,
     pub(crate) component_ids: HashSet<ComponentId>,

@@ -874,9 +874,12 @@ checksum = "96a6ac251f4a2aca6b3f91340350eab87ae57c3f127ffeb585e92bd336717991"
 name = "custom_event_loop"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "cfg-if",
  "craft_gui",
+ "glam",
  "util",
+ "wgpu",
  "winit",
 ]
 
@@ -1353,6 +1356,12 @@ dependencies = [
  "log",
  "xml-rs",
 ]
+
+[[package]]
+name = "glam"
+version = "0.30.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50a99dbe56b72736564cfa4b85bf9a33079f16ae8b74983ab06af3b1a3696b11"
 
 [[package]]
 name = "glow"

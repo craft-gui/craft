@@ -20,13 +20,13 @@ use winit::window::Window;
 use crate::text::text_render_data::TextRenderLine;
 
 pub struct VelloRenderer {
-    device: Device,
+    pub device: Device,
     #[allow(dead_code)]
-    adapter: Adapter,
-    queue: Queue,
+    pub adapter: Adapter,
+    pub queue: Queue,
     #[allow(dead_code)]
     instance: Instance,
-    surface: Surface<'static>,
+    pub surface: Surface<'static>,
     pub surface_config: SurfaceConfiguration,
 
     #[allow(dead_code)]
@@ -40,6 +40,9 @@ pub struct VelloRenderer {
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
+    pub render_into_texture: bool,
+    pub offscreen_texture: Option<wgpu::Texture>,
+    pub offscreen_view:   Option<wgpu::TextureView>,
 }
 
 fn create_vello_renderer(device: &Device) -> vello::Renderer {
@@ -150,7 +153,7 @@ fn new_surface_texture(device: &Device, adapter: &Adapter,  surface: &Surface, s
 
 impl VelloRenderer {
     
-    pub async fn new(window: Arc<Window>) -> VelloRenderer {
+    pub async fn new(window: Arc<Window>, render_into_texture: bool) -> VelloRenderer {
 
         let window_size = window.inner_size();
         
@@ -171,6 +174,9 @@ impl VelloRenderer {
             surface_texture_view,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
+            render_into_texture,
+            offscreen_texture: None,
+            offscreen_view: None,
         }
     }
 }
@@ -199,7 +205,7 @@ impl Renderer for VelloRenderer {
             &self.device, &self.adapter, &self.surface,
             width as u32, height as u32
         );
-        
+
         self.surface_texture = surface_texture;
         self.surface_texture_view = surface_texture_view;
         self.surface_config = surface_config;
@@ -386,25 +392,50 @@ impl Renderer for VelloRenderer {
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
-        // Get the window size
-        let width = self.surface_config.width;
+        let width  = self.surface_config.width;
         let height = self.surface_config.height;
 
-        // Get the surface's texture
-        let surface_texture = self.surface.get_current_texture().unwrap();
+        let target_view = if self.render_into_texture {
 
-        // Render to the surface's texture
+            let recreate = match &self.offscreen_texture {
+                Some(view) => {
+                    view.dimension() == wgpu::TextureDimension::D2
+                        && view.format()    == self.surface_config.format
+                        && view.size().width  != width
+                        && view.size().height != height
+                }
+                None => true,
+            };
+            if recreate {
+                let tex = self.device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("Vello Offscreen Texture"),
+                    size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: TextureFormat::Rgba8Unorm, /*self.surface_config.format*/
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::STORAGE_BINDING,
+                    view_formats: &[],
+                });
+                self.offscreen_view = Some(tex.create_view(&Default::default()));
+            }
+
+            self.offscreen_view.as_ref().unwrap()
+        } else {
+            &self.surface_texture_view
+        };
+
         self.renderer
             .render_to_texture(
                 &self.device,
                 &self.queue,
                 &self.scene,
-                &self.surface_texture_view,
+                target_view,
                 &vello::RenderParams {
                     base_color: self.surface_clear_color,
                     width,
                     height,
-                    // FIXME: Use msaa16 by default once https://github.com/linebender/vello/issues/723 is resolved.
                     antialiasing_method: if cfg!(any(target_os = "android", target_os = "ios")) {
                         AaConfig::Area
                     } else {
@@ -412,24 +443,26 @@ impl Renderer for VelloRenderer {
                     },
                 },
             )
-            .expect("failed to render to surface");
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Surface Blit"),
-        });
-        
-        
-        let blitter = TextureBlitter::new(&self.device, self.surface_config.format);
-        blitter.copy(
-            &self.device,
-            &mut encoder,
-            &self.surface_texture_view,
-            &surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default()),
-        );
-        self.queue.submit([encoder.finish()]);
-        
-        // Queue the texture to be presented on the surface
-        surface_texture.present();
+            .expect("failed to render to texture");
+
+        if !self.render_into_texture {
+            let surface_texture  = self.surface.get_current_texture().unwrap();
+            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Surface Blit"),
+            });
+            let blitter = TextureBlitter::new(&self.device, self.surface_config.format);
+            blitter.copy(
+                &self.device,
+                &mut encoder,
+                target_view,
+                &surface_texture.texture
+                    .create_view(&wgpu::TextureViewDescriptor::default()),
+            );
+            self.queue.submit(Some(encoder.finish()));
+            surface_texture.present();
+        }
 
         self.scene.reset();
     }
+
 }

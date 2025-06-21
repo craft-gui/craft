@@ -159,14 +159,6 @@ impl RenderList {
     }
 }
 
-pub trait AsAnyArc {
-    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any>;
-}
-
-impl<'a, T: 'a + 'static> AsAnyArc for T {
-    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any> { self }
-}
-
 pub trait Renderer: Any {
     // Surface Functions
     #[allow(dead_code)]

@@ -1,5 +1,6 @@
 pub(crate) mod tinyvg;
 
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
@@ -99,6 +100,10 @@ impl VelloCpuRenderer {
 }
 
 impl Renderer for VelloCpuRenderer {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+    
     fn surface_width(&self) -> f32 {
         self.window_width as f32
     }

@@ -11,6 +11,13 @@ path = "main.rs"
 [dependencies]
 util = { path = "../util" }
 cfg-if = "1.0.0"
+bytemuck = "1.23.0"
+glam = "0.30.4"
+
+[dependencies.wgpu]
+version = "24.0.3"
+default-features = false
+features = ["wgsl"]
 
 [dependencies.craft]
 path = "../../crates/craft"

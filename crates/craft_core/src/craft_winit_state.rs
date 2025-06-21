@@ -120,7 +120,7 @@ impl ApplicationHandler for CraftWinitState {
                     let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
                         let renderer: Box<dyn Renderer> = match renderer_type {
                         #[cfg(feature = "vello_renderer")]
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, false).await),
                         #[cfg(feature = "vello_cpu_renderer")]
                         RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
                         #[cfg(feature = "vello_hybrid_renderer")]
@@ -136,7 +136,7 @@ impl ApplicationHandler for CraftWinitState {
                 craft_state.runtime.spawn(async move {
                     let renderer: Box<dyn Renderer> = match renderer_type {
                         #[cfg(feature = "vello_renderer")]
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, false).await),
                         #[cfg(feature = "vello_cpu_renderer")]
                         RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
                         #[cfg(feature = "vello_hybrid_renderer")]

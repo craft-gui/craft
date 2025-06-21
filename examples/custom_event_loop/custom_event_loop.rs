@@ -7,6 +7,7 @@ use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::{Window, WindowAttributes, WindowId};
 use craft::craft_winit_state::CraftState;
+use craft::elements::{Canvas, Element};
 use craft::events::EventDispatchType;
 use craft::events::internal::InternalMessage;
 use craft::events::ui_events::keyboard::{Key, NamedKey};
@@ -16,14 +17,19 @@ use craft::renderer::blank_renderer::BlankRenderer;
 use craft::renderer::renderer::Renderer;
 use craft::renderer::vello::VelloRenderer;
 use craft::RendererType;
+use crate::wgpu_triangle::draw_vello_and_canvas;
 
 pub(crate) struct CraftWinitState {
+    rotation: f32,
+    pub start_time: std::time::Instant,
     craft_state: CraftState,
 }
 
 impl CraftWinitState {
     pub(crate) fn new(craft_state: CraftState) -> Self {
         Self {
+            rotation: 0.0,
+            start_time: std::time::Instant::now(),
             craft_state,
         }
     }
@@ -71,7 +77,7 @@ impl ApplicationHandler for CraftWinitState {
             if #[cfg(not(target_arch = "wasm32"))] {
                     let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
                         let renderer: Box<dyn Renderer> = match renderer_type {
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, true).await),
                         RendererType::Blank => Box::new(BlankRenderer),
                     };
                     renderer
@@ -82,7 +88,7 @@ impl ApplicationHandler for CraftWinitState {
                 let window_copy_2 = window_copy.clone();
                 craft_state.runtime.spawn(async move {
                     let renderer: Box<dyn Renderer> = match renderer_type {
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy).await),
+                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, true).await),
                         RendererType::Blank => Box::new(BlankRenderer),
                     };
                     app_sender
@@ -152,12 +158,41 @@ impl ApplicationHandler for CraftWinitState {
                 craft_state.craft_app.on_ime(ime);
             }
             WindowEvent::RedrawRequested => {
-                craft_state.craft_app.on_request_redraw();
-                
-                let mut renderer = self.craft_state.craft_app.renderer.as_mut().unwrap();
+                self.craft_state.craft_app.on_request_redraw();
 
-                if let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
-                  
+                let canvas = if let Some(root) = self.craft_state.craft_app.user_tree.element_tree.as_mut() {
+                    let mut found = None;
+                    for ele in root.pre_order_iter() {
+                        if let Some(canvas) = ele.as_any().downcast_ref::<Canvas>() {
+                            found = Some(canvas);
+                            break;
+                        }
+                    };
+
+                    found
+                } else {
+                    None
+                };
+
+                {
+                    let renderer = self.craft_state.craft_app.renderer.as_mut().unwrap();
+
+                    if let Some(canvas) = canvas {
+                        if let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
+                            let size = canvas.computed_box_transformed().size;
+                            let position = canvas.computed_box_transformed().position;
+
+                            let elapsed = self.start_time.elapsed().as_secs_f32();
+                            let angle = elapsed % (2.0 * std::f32::consts::PI);
+                            self.rotation = angle;
+
+                            draw_vello_and_canvas(vello_renderer, position.x as f32, position.y as f32, size.width, size.height, self.rotation);
+                        }
+                    }
+                }
+                
+                if let Some(window) = &mut self.craft_state.craft_app.window {
+                    window.request_redraw();
                 }
             }
             _ => (),
@@ -219,7 +254,7 @@ impl ApplicationHandler for CraftWinitState {
         }
 
         if !craft_state.wait_cancelled {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + time::Duration::from_millis(15)));
+            event_loop.set_control_flow(ControlFlow::Poll);
         }
     }
 }

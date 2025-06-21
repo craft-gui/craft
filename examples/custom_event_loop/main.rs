@@ -8,6 +8,7 @@ use craft::{
     style::{AlignItems, Display, FlexDirection, JustifyContent},
     Color,
 };
+use craft::elements::Canvas;
 use crate::custom_event_loop::CraftWinitState;
 
 mod custom_event_loop;
@@ -48,6 +49,7 @@ impl Component for Counter {
                     .push(create_button("-", rgb(244, 67, 54), rgb(211, 47, 47), -1))
                     .push(create_button("+", rgb(76, 175, 80), rgb(67, 160, 71), 1)),
             )
+            .push(Canvas::new().width("300px").height("300px").min_width("300px").min_height("300px"))
             .component()
     }
 }
