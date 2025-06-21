@@ -28,10 +28,6 @@ pub struct VelloRenderer {
     instance: Instance,
     pub surface: Surface<'static>,
     pub surface_config: SurfaceConfiguration,
-
-    #[allow(dead_code)]
-    surface_texture: Texture,
-    surface_texture_view: TextureView,
     
     renderer: vello::Renderer,
 
@@ -152,25 +148,26 @@ fn new_surface_texture(device: &Device, adapter: &Adapter,  surface: &Surface, s
 }
 
 impl VelloRenderer {
-    
+
     pub fn get_current_surface_texture(&mut self) -> SurfaceTexture {
         match self.surface.get_current_texture() {
-            Ok(texture) => return texture,
-            Err(err) => match err {
-                SurfaceError::Timeout
-                | SurfaceError::Outdated
-                | SurfaceError::Lost => {
-                    self.resize_surface(self.surface_width(), self.surface_height());
+            Ok(texture) => texture,
+            Err(err) => {
+                match err {
+                    SurfaceError::Timeout | SurfaceError::Outdated | SurfaceError::Lost => {
+                        self.resize_surface(self.surface_width(), self.surface_height());
+                    }
+                    SurfaceError::OutOfMemory | SurfaceError::Other => {
+                        panic!("Failed to acquire surface texture: {:?}", err);
+                    }
                 }
-                SurfaceError::OutOfMemory | SurfaceError::Other => {
-                    panic!("Failed to allocate memory for the current surface.");
-                }
-            },
+                self.surface
+                    .get_current_texture()
+                    .expect("Failed to get surface texture after resize")
+            }
         }
-        
-        self.surface
-            .get_current_texture().expect("Failed to get the current surface.")
     }
+
     
     pub async fn new(window: Arc<Window>, render_into_texture: bool) -> VelloRenderer {
 
@@ -179,7 +176,7 @@ impl VelloRenderer {
         let instance = new_instance();
         let surface = instance.create_surface(window).expect("Failed to create a surface.");
         let (device, queue, adapter) = new_device(&instance, &surface).await;
-        let (surface_texture, surface_texture_view, surface_config) = new_surface_texture(&device, &adapter, &surface, window_size.width, window_size.height);
+        let (_surface_texture, _surface_texture_view, surface_config) = new_surface_texture(&device, &adapter, &surface, window_size.width, window_size.height);
         
         VelloRenderer {
             renderer: create_vello_renderer(&device),
@@ -189,8 +186,6 @@ impl VelloRenderer {
             instance,
             surface,
             surface_config,
-            surface_texture,
-            surface_texture_view,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             render_into_texture,
@@ -220,14 +215,8 @@ impl Renderer for VelloRenderer {
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
-        let (surface_texture, surface_texture_view, surface_config) = new_surface_texture(
-            &self.device, &self.adapter, &self.surface,
-            width as u32, height as u32
-        );
-
-        self.surface_texture = surface_texture;
-        self.surface_texture_view = surface_texture_view;
-        self.surface_config = surface_config;
+        self.surface_config.width = width as u32;
+        self.surface_config.height = height as u32;
         self.surface.configure(&self.device, &self.surface_config);
     }
 
@@ -414,44 +403,41 @@ impl Renderer for VelloRenderer {
         let width  = self.surface_config.width;
         let height = self.surface_config.height;
 
-        let target_view = if self.render_into_texture {
-
-            let recreate = match &self.offscreen_texture {
-                Some(view) => {
-                    view.dimension() == wgpu::TextureDimension::D2
-                        && view.format()    == self.surface_config.format
-                        && view.size().width  != width
-                        && view.size().height != height
-                }
-                None => true,
-            };
-            if recreate {
-                let tex = self.device.create_texture(&wgpu::TextureDescriptor {
-                    label: Some("Vello Offscreen Texture"),
-                    size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: TextureFormat::Rgba8Unorm, /*self.surface_config.format*/
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                        | wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::STORAGE_BINDING,
-                    view_formats: &[],
-                });
-                self.offscreen_view = Some(tex.create_view(&Default::default()));
+        let gui_texture_view;
+        let recreate = match &self.offscreen_texture {
+            Some(view) => {
+                view.dimension() == wgpu::TextureDimension::D2
+                    && view.format()    == self.surface_config.format
+                    && view.size().width  != width
+                    && view.size().height != height
             }
-
-            self.offscreen_view.as_ref().unwrap()
-        } else {
-            let _  = self.get_current_surface_texture();
-            &self.surface_texture_view
+            None => true,
         };
-
+        if recreate {
+            let tex = self.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("Vello Offscreen Texture"),
+                size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING
+                    | wgpu::TextureUsages::STORAGE_BINDING,
+                view_formats: &[],
+            });
+            self.offscreen_view = Some(tex.create_view(&Default::default()));
+            gui_texture_view = self.offscreen_view.as_ref().unwrap().clone();
+        } else {
+            gui_texture_view = self.offscreen_view.as_ref().unwrap().clone();
+        }
+        
         self.renderer
             .render_to_texture(
                 &self.device,
                 &self.queue,
                 &self.scene,
-                target_view,
+                &gui_texture_view,
                 &vello::RenderParams {
                     base_color: self.surface_clear_color,
                     width,
@@ -466,23 +452,25 @@ impl Renderer for VelloRenderer {
             .expect("failed to render to texture");
 
         if !self.render_into_texture {
-            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Surface Blit"),
-            });
+            let surface_texture = self.get_current_surface_texture();
+            let surface_view = surface_texture
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            let mut encoder =
+                self.device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Surface Blit"),
+                    });
+
             let blitter = TextureBlitter::new(&self.device, self.surface_config.format);
-            let surface_texture = self.surface.get_current_texture().expect("Failed to get the current texture");
-            blitter.copy(
-                &self.device,
-                &mut encoder,
-                target_view,
-                &surface_texture.texture
-                    .create_view(&wgpu::TextureViewDescriptor::default()),
-            );
+            blitter.copy(&self.device, &mut encoder, &gui_texture_view, &surface_view);
+
             self.queue.submit(Some(encoder.finish()));
             surface_texture.present();
         }
 
         self.scene.reset();
     }
+
 
 }
