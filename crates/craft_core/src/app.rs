@@ -507,7 +507,7 @@ impl App {
     pub(crate) fn on_user_message(&mut self, message: InternalUserMessage) {
         let state = self.user_tree.user_state.storage.get_mut(&message.source_component_id).unwrap().as_mut();
 
-        let mut event = Event::with_window_context(self.window_context.clone());
+        let mut event = Event::default();
 
         (message.update_fn)(
             state,
@@ -515,8 +515,11 @@ impl App {
             message.props,
             &mut event,
             &Message::UserMessage(message.message),
+            message.source_component_id,
+            &mut self.window_context,
+            None,
+            None,
         );
-        self.window_context = event.window;
     }
 
     pub(crate) fn on_resource_event(&mut self, resource_event: ResourceEvent) {

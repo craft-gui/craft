@@ -1,8 +1,7 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{Display, FlexDirection, Weight};
-use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct HelloWorldPage {
@@ -14,7 +13,7 @@ impl Component for HelloWorldPage {
     type Props = ();
     type Message = ();
 
-    fn view(&self, _global_state: &Self::GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>, _id: ComponentId, _window: &WindowContext) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)

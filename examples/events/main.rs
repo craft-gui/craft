@@ -1,4 +1,4 @@
-use craft::components::ComponentId;
+use craft::components::{ComponentId, Context};
 use craft::components::{Component, ComponentSpecification, Event};
 use craft::elements::Container;
 use craft::elements::ElementStyles;
@@ -20,14 +20,7 @@ impl Component for EventsExample {
 
     type Message = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         let scroll_example = Container::new()
             .display(Display::Block)
             .width("200px")
@@ -100,17 +93,11 @@ impl Component for EventsExample {
             .push(nested_scroll)
             .component()
     }
-    fn update(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        event: &mut Event,
-        message: &Message,
-    ) {
-        if message.clicked() {
-            let target = if let Some(target) = event.target { target.get_id().clone() } else { None };
+    fn update(context: &mut Context<Self>) {
+        if context.message().clicked() {
+            let target = if let Some(target) = context.target() { target.get_id().clone() } else { None };
             let current_target =
-                if let Some(current_target) = event.current_target { current_target.get_id().clone() } else { None };
+                if let Some(current_target) = context.current_target() { current_target.get_id().clone() } else { None };
             println!("Target: {:?}, Current Target: {:?}", target, current_target);
         }
     }

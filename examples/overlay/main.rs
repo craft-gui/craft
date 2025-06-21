@@ -1,4 +1,4 @@
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::events::Message;
@@ -19,14 +19,7 @@ impl Component for OverlayExample {
     type Message = ();
     type GlobalState = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
@@ -35,7 +28,7 @@ impl Component for OverlayExample {
             .width("100%")
             .height("100%")
             .background(Color::from_rgb8(250, 250, 250))
-            .push(Text::new(format!("Hovered Element: {:?}", self.hovered_element_id).as_str()))
+            .push(Text::new(format!("Hovered Element: {:?}", context.state().hovered_element_id).as_str()))
             .push(
                 Container::new()
                     .background(palette::css::RED)
@@ -82,22 +75,17 @@ impl Component for OverlayExample {
             .component()
     }
 
-    fn update(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        event: &mut Event,
-        _message: &Message,
-    ) {
-        println!("{:?}", event.window);
+    fn update(context: &mut Context<Self>) {
+        println!("{:?}", context.window());
 
-        if let Some(target) = event.target {
-            self.hovered_element_id = target.get_id().clone();
-            if let Some(_id) = target.get_id() {
-                event.prevent_propagate();
+        let target = context.target().map(|target| target.get_id()).cloned();
+        if let Some(target) = target {
+            context.state_mut().hovered_element_id = target.clone();
+            if let Some(_id) = target {
+                context.event_mut().prevent_propagate();
             }
         } else {
-            self.hovered_element_id = None;
+            context.state_mut().hovered_element_id = None;
         }
     }
 }

@@ -67,6 +67,10 @@ fn dummy_update(
     _props: Props,
     _event: &mut Event,
     _message: &Message,
+    _id: ComponentId,
+    _window_context: &mut WindowContext,
+    _target: Option<&dyn Element>,
+    _current_target: Option<&dyn Element>,
 ) {
 }
 
@@ -280,8 +284,7 @@ pub(crate) fn diff_trees(
                         user_state.storage.insert(id, default_state);
                         let state_mut = user_state.storage.get_mut(&id).unwrap().as_mut();
 
-                        // TODO: Remove clones.
-                        let mut event = Event::with_window_context(window_context.clone());
+                        let mut event = Event::default();
 
                         (component_data.update_fn)(
                             state_mut,
@@ -289,8 +292,11 @@ pub(crate) fn diff_trees(
                             props.clone(),
                             &mut event,
                             &Message::CraftMessage(CraftMessage::Initialized),
+                            id,
+                            window_context,
+                            None,
+                            None,
                         );
-                        *window_context = event.window.clone();
                         // TODO: Should we handle effects here?
                         if event.future.is_some() {
                             update_queue.push_back(UpdateQueueEntry::new(

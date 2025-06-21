@@ -17,7 +17,7 @@ use crate::examples::tour::Tour;
 use crate::navbar::NAVBAR_HEIGHT;
 use crate::theme::{wrapper, ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event, Props};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event, Props};
 use craft::elements::{Container, Dropdown, Element, ElementStyles, Text};
 use craft::events::ui_events::pointer::PointerButtonUpdate;
 use craft::palette;
@@ -39,11 +39,11 @@ fn create_examples_link(label: &str, example_link: &str, example_to_show: &Strin
     let example_link_captured = example_link.to_string();
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
-        .on_pointer_button_up(
-            move |_state: &mut Examples, global_state: &mut WebsiteGlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
+        .on_pointer_up(
+            move |context: &mut Context<Examples>, pointer_button: &PointerButtonUpdate| {
                 if pointer_button.is_primary() {
-                    global_state.set_route(example_link_captured.as_str());
-                    event.prevent_propagate();
+                    context.global_state_mut().set_route(example_link_captured.as_str());
+                    context.event_mut().prevent_propagate();
                 }
             },
         )
@@ -107,23 +107,16 @@ impl Component for Examples {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        window: &WindowContext,
-    ) -> ComponentSpecification {
-        let route = global_state.get_route();
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        let route = context.global_state().get_route();
         let example_to_show: String = if route == "/examples" { COUNTER_EXAMPLE_LINK.to_string() } else { route };
         
         let vertical_padding = 50.0;
         let mut wrapper = wrapper()
             .padding(Unit::Px(vertical_padding), WRAPPER_PADDING_RIGHT, Unit::Px(vertical_padding), WRAPPER_PADDING_LEFT)
-            .push(examples_sidebar(&example_to_show, window));
+            .push(examples_sidebar(&example_to_show, context.window()));
 
-        if window.window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
+        if context.window().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
             wrapper = wrapper.flex_direction(FlexDirection::Column);
             wrapper = wrapper.gap("20px");
         }
@@ -138,7 +131,7 @@ impl Component for Examples {
             _ => Counter::component().key(COUNTER_EXAMPLE_LINK),
         };
 
-        let container_height = (window.window_height() - NAVBAR_HEIGHT - vertical_padding * 2.0).max(0.0);
+        let container_height = (context.window().window_height() - NAVBAR_HEIGHT - vertical_padding * 2.0).max(0.0);
 
         let wrapper = wrapper.push(
             Container::new()

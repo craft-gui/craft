@@ -15,7 +15,7 @@ pub enum PointerCapture {
 }
 
 /// The result of an update.
-pub struct Event<'a> {
+pub struct Event {
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -29,10 +29,6 @@ pub struct Event<'a> {
     pub(crate) effects: Vec<(EventDispatchType, Message)>,
     pub(crate) ime: ImeAction,
     pub focus: FocusAction,
-
-    pub target: Option<&'a dyn Element>,
-    pub window: WindowContext,
-    pub current_target: Option<&'a dyn Element>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -63,13 +59,7 @@ impl FocusAction {
 
 }
 
-impl<'a> Event<'a> {
-    pub fn with_window_context(window: WindowContext) -> Self {
-        Event {
-            window,
-            ..Default::default()
-        }
-    }
+impl Event {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn async_result<T: Send + Sync + 'static>(t: T) -> Box<dyn Any + Send + Sync + 'static> {
@@ -100,7 +90,7 @@ impl<'a> Event<'a> {
     }
 }
 
-impl<'a> Default for Event<'a> {
+impl<'a> Default for Event {
     fn default() -> Self {
         Event {
             propagate: true,
@@ -111,15 +101,12 @@ impl<'a> Default for Event<'a> {
             effects: Vec::new(),
             ime: ImeAction::None,
             focus: FocusAction::None,
-            target: None,
-            current_target: None,
-            window: WindowContext::new(),
         }
     }
 }
 
-impl<'a> Event<'a> {
-    pub fn new() -> Event<'a> {
+impl Event {
+    pub fn new() -> Event {
         Event::default()
     }
 
