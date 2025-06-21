@@ -8,6 +8,7 @@ use craft::{
     style::{AlignItems, Display, FlexDirection, JustifyContent},
     Color,
 };
+use craft::components::Context;
 use craft::elements::Canvas;
 use crate::custom_event_loop::CraftWinitState;
 
@@ -24,14 +25,7 @@ impl Component for Counter {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        _: &Self::GlobalState,
-        _: &Self::Props,
-        _: Vec<ComponentSpecification>,
-        _: ComponentId,
-        _: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
@@ -40,7 +34,7 @@ impl Component for Counter {
             .width("100%")
             .height("100%")
             .gap(20)
-            .push(Text::new(&format!("Count: {}", self.count)).font_size(72).color(rgb(50, 50, 50)))
+            .push(Text::new(&format!("Count: {}", context.state().count)).font_size(72).color(rgb(50, 50, 50)))
             .push(
                 Container::new()
                     .display(Display::Flex)
@@ -66,11 +60,11 @@ fn create_button(label: &str, base_color: Color, hover_color: Color, delta: i64)
         .background(base_color)
         .hovered()
         .background(hover_color)
-        .on_pointer_button_up(
-            move |state: &mut Counter, _: &mut (), event: &mut Event, pointer_button: &PointerButtonUpdate| {
+        .on_pointer_up(
+            move |context: &mut Context<Counter>, pointer_button: &PointerButtonUpdate| {
                 if pointer_button.is_primary() {
-                    state.count += delta;
-                    event.prevent_propagate();
+                    context.state_mut().count += delta;
+                    context.event_mut().prevent_propagate();
                 }
             },
         )
@@ -81,7 +75,6 @@ fn create_button(label: &str, base_color: Color, hover_color: Color, delta: i64)
 #[cfg(not(target_os = "android"))]
 fn main() {
     use craft::CraftOptions;
-    util::setup_logging();
 
     let application = Counter::component();
     let global_state = ();
