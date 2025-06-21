@@ -1,5 +1,5 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{Display, FlexDirection, Weight};
 use craft::WindowContext;
@@ -14,7 +14,7 @@ impl Component for StylingPage {
     type Props = ();
     type Message = ();
 
-    fn view(&self, _global_state: &Self::GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>, _id: ComponentId, _window: &WindowContext) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)

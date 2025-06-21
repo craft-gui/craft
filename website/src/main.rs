@@ -8,7 +8,7 @@ mod docs;
 
 use crate::navbar::Navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use craft::components::{Component, ComponentId, ComponentSpecification};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context};
 use craft::elements::Container;
 use craft::elements::ElementStyles;
 use craft::style::Display;
@@ -76,14 +76,7 @@ impl Component for Website {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         let wrapper = Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
@@ -93,7 +86,7 @@ impl Component for Website {
             .background(BODY_BACKGROUND_COLOR);
 
 
-        let path = global_state.get_route();
+        let path = context.global_state().get_route();
         let matched_mapped_path = resolve_route(path.as_str());
         if let Some(rule) = matched_mapped_path {
             wrapper.push(rule.component_specification)

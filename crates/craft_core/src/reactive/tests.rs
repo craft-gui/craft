@@ -1,5 +1,5 @@
 use std::any::Any;
-use crate::components::{Component, ComponentId, ComponentSpecification};
+use crate::components::{Component, ComponentId, ComponentSpecification, Context};
 use crate::elements::element::ElementBoxed;
 use crate::elements::{Container, Text};
 use crate::events::update_queue_entry::UpdateQueueEntry;
@@ -186,14 +186,7 @@ impl Component for DummyComponent {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         Text::new("dummy").component()
     }
 }

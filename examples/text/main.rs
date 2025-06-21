@@ -1,6 +1,6 @@
 use util::setup_logging;
 
-use craft::components::ComponentId;
+use craft::components::{ComponentId, Context};
 use craft::components::ComponentSpecification;
 use craft::components::{Component, Event};
 use craft::elements::TextInput;
@@ -27,22 +27,15 @@ impl Component for TextState {
     type Props = ();
     type Message = ();
 
-    fn view(
-        &self,
-        _props: &Self::Props,
-        _global_state: &Self::GlobalState,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         let text = "Rich text includes color, bold, italic, links, underline, and background.";
         let mut rich_text = TextInput::new(text)
             .border_width(0, 0, 0, 0)
             .disabled()
             .on_link_clicked(
-                move |_: &mut Self, _d: &mut (), event: &mut Event, link: &str| {
+                move |context: &mut Context<Self>, link: &str| {
                     println!("Link clicked: {}", link);
-                    event.prevent_propagate();
+                    context.event_mut().prevent_propagate();
             });
 
         let ranged_styles = vec![

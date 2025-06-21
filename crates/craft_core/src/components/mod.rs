@@ -9,6 +9,7 @@ mod web_link;
 
 pub use crate::events::UserMessage;
 pub use component::Component;
+pub use component::Context;
 pub use component::ComponentId;
 pub use component::ComponentOrElement;
 pub use component::ComponentSpecification;

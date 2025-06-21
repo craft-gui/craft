@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentId, ComponentSpecification, Event};
+use crate::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use crate::elements::Text;
 use crate::events::Message;
 use crate::WindowContext;
@@ -16,26 +16,13 @@ impl Component for WebLink {
     type Props = WebLinkProps;
     type Message = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
-        children.first().unwrap_or(&Text::new("Invalid Link").component()).clone()
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        context.children().first().unwrap_or(&Text::new("Invalid Link").component()).clone()
     }
 
-    fn update(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        props: &Self::Props,
-        _event: &mut Event,
-        message: &Message,
-    ) {
-        if message.clicked() {
-            open(props.href.as_str())
+    fn update(context: &mut Context<Self>) {
+        if context.message().clicked() {
+            open(context.props().href.as_str())
         }
     }
 }

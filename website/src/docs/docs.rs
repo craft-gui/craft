@@ -5,11 +5,11 @@ use crate::docs::state_management::StateManagementPage;
 use crate::docs::styling::StylingPage;
 use crate::theme::{wrapper, ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, MAX_DOCS_CONTENT_WIDTH, MOBILE_MEDIA_QUERY_WIDTH};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::ui_events::pointer::PointerButtonUpdate;
 use craft::style::{Display, FlexDirection, JustifyContent, Overflow, Unit, Weight};
-use craft::{palette, WindowContext};
+use craft::palette;
 
 #[derive(Default)]
 pub(crate) struct Docs {}
@@ -25,11 +25,11 @@ fn docs_menu_link(label: &str, link: &str, is_current: bool) -> Text {
     let href = link.to_string();
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
-        .on_pointer_button_up(
-            move |_state: &mut Docs, global_state: &mut WebsiteGlobalState, event: &mut Event, pointer_button: &PointerButtonUpdate| {
+        .on_pointer_up(
+            move |context: &mut Context<Docs>, pointer_button: &PointerButtonUpdate| {
                 if pointer_button.is_primary() {
-                    global_state.set_route(href.as_str());
-                    event.prevent_propagate();
+                    context.global_state_mut().set_route(href.as_str());
+                    context.event_mut().prevent_propagate();
                 }
             },
         )
@@ -101,15 +101,8 @@ impl Component for Docs {
     type GlobalState = WebsiteGlobalState;
     type Message = ();
 
-    fn view(
-        &self,
-        global_state: &WebsiteGlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        window: &WindowContext,
-    ) -> ComponentSpecification {
-        let mut route = global_state.get_route();
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        let mut route = context.global_state().get_route();
         if route == "/docs" {
             route = "/docs/installation".to_string();
         }
@@ -122,7 +115,7 @@ impl Component for Docs {
 
         let mut wrapper = wrapper().display(Display::Flex).gap("100px");
 
-        if window.window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
+        if context.window().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
             wrapper = wrapper.flex_direction(FlexDirection::ColumnReverse);
         }
 

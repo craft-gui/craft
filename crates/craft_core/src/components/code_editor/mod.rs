@@ -1,3 +1,4 @@
+use crate::components::Context;
 use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::elements::{ElementStyles, TextInput};
 use crate::events::CraftMessage;
@@ -170,48 +171,35 @@ impl Component for CodeEditor {
     type Props = CodeEditorProps;
     type Message = ();
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
-        let code = &props.text;
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        let code = &context.props().text;
 
         TextInput::new(code)
             .margin(20, 20, 20, 0)
-            .ranged_styles(self.style.ranged_styles.clone())
-            .background(self.style.background_color)
-            .color(self.style.foreground_color)
+            .ranged_styles(context.state().style.ranged_styles.clone())
+            .background(context.state().style.background_color)
+            .color(context.state().style.foreground_color)
             .component()
     }
 
-    fn update(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        props: &Self::Props,
-        _event: &mut Event,
-        message: &Message,
-    ) {
-        if let Message::CraftMessage(TextInputChanged(text)) = message {
-            self.style = compute_code_editor_style(
+    fn update(context: &mut Context<Self>) {
+        if let Message::CraftMessage(TextInputChanged(text)) = context.message() {
+            context.state_mut().style = compute_code_editor_style(
                 text,
-                self.syntax_set.as_ref(),
-                self.theme_set.as_ref(),
-                &props.extension,
-                self.theme.as_str(),
+                context.state().syntax_set.as_ref(),
+                context.state().theme_set.as_ref(),
+                &context.props().extension,
+                context.state().theme.as_str(),
             );
         }
 
-        if let Message::CraftMessage(CraftMessage::Initialized) = message {
-            self.style = compute_code_editor_style(
-                &props.text,
-                self.syntax_set.as_ref(),
-                self.theme_set.as_ref(),
-                &props.extension,
-                self.theme.as_str(),
+        if let Message::CraftMessage(CraftMessage::Initialized) = context.message() {
+            context.state_mut().style = compute_code_editor_style(
+                &context.props().text,
+                context.state().syntax_set.as_ref(),
+                context.state().theme_set.as_ref(),
+                &context.props().extension,
+                context.state().theme.as_str(),
             );
         }
     }

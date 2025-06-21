@@ -1,5 +1,5 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Event};
+use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::{CraftMessage, Message};
 use craft::style::{Display, FlexDirection};
@@ -15,8 +15,8 @@ impl Component for InstallationPage {
     type Props = ();
     type Message = ();
 
-    fn view(&self, _global_state: &Self::GlobalState, _props: &Self::Props, _children: Vec<ComponentSpecification>, _id: ComponentId, _window: &WindowContext) -> ComponentSpecification {
-        if let Some(markdown) = &self.markdown {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+        if let Some(markdown) = &context.state().markdown {
             Container::new()
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
@@ -31,15 +31,15 @@ impl Component for InstallationPage {
         }
     }
 
-    fn update(&mut self, _global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, message: &Message) {
-        if let Message::CraftMessage(CraftMessage::LinkClicked(link)) = message {
+    fn update(context: &mut Context<Self>) {
+        if let Message::CraftMessage(CraftMessage::LinkClicked(link)) = context.message() {
             craft::components::open(link);
-            event.prevent_propagate();
+            context.event_mut().prevent_propagate();
         }
 
-        if let Message::CraftMessage(CraftMessage::Initialized) = message {
+        if let Message::CraftMessage(CraftMessage::Initialized) = context.message() {
             let installation = craft::markdown::render_markdown(include_str!("markdown/installation.md"));
-            self.markdown = Some(installation);
+            context.state_mut().markdown = Some(installation);
         }
     }
 }

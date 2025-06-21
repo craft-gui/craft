@@ -5,7 +5,7 @@ use crate::reactive::state_store::StateStoreItem;
 use crate::GlobalState;
 
 use crate::components::update_result::Event;
-use crate::elements::Container;
+use crate::elements::{Container, Element};
 use crate::window_context::WindowContext;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
@@ -24,8 +24,18 @@ pub type ViewFn = fn(
 ) -> ComponentSpecification;
 
 /// A Component's update function.
-pub type UpdateFn =
-    fn(state: &mut StateStoreItem, global_state: &mut GlobalState, props: Props, event: &mut Event, message: &Message);
+pub type UpdateFn = fn(
+    state: &mut StateStoreItem,
+    global_state: &mut GlobalState,
+    props: Props,
+    event: &mut Event,
+    message: &Message,
+    id: ComponentId,
+    window_context: &mut WindowContext,
+    target: Option<&dyn Element>,
+    current_target: Option<&dyn Element>,
+);
+
 pub type ComponentId = u64;
 
 #[derive(Clone, Debug)]
@@ -119,6 +129,185 @@ macro_rules! component {
     };
 }
 
+pub struct Context<'a, C: Component> {
+    component: Option<&'a C>,
+    component_mut: Option<&'a mut C>,
+    global_state: Option<&'a GlobalState>,
+    global_state_mut: Option<&'a mut GlobalState>,
+    props: Props,
+    children: Option<Vec<ComponentSpecification>>,
+    id: ComponentId,
+    window: Option<&'a WindowContext>,
+    window_mut: Option<&'a mut WindowContext>,
+    message: Option<&'a Message>,
+    event: Option<&'a mut Event>,
+    target: Option<&'a dyn Element>,
+    current_target: Option<&'a dyn Element>,
+}
+
+impl<'a, ComponentType: Component> Context<'a, ComponentType> {
+    pub fn new(
+        component: Option<&'a ComponentType>,
+        component_mut: Option<&'a mut ComponentType>,
+        global_state: Option<&'a GlobalState>,
+        global_state_mut: Option<&'a mut GlobalState>,
+        props: Props,
+        children: Option<Vec<ComponentSpecification>>,
+        id: ComponentId,
+        window: Option<&'a WindowContext>,
+        window_mut: Option<&'a mut WindowContext>,
+        event: Option<&'a mut Event>,
+        message: Option<&'a Message>,
+        target: Option<&'a dyn Element>,
+        current_target: Option<&'a dyn Element>,
+    ) -> Self {
+        Context {
+            component,
+            component_mut,
+            global_state,
+            global_state_mut,
+            props,
+            children,
+            id,
+            window,
+            window_mut,
+            event,
+            message,
+            target,
+            current_target,
+        }
+    }
+
+    pub fn props(&self) -> &ComponentType::Props {
+        let props: &ComponentType::Props = self.props.data.deref().downcast_ref().unwrap();
+        props
+    }
+
+    pub fn state_mut(&mut self) -> &mut ComponentType {
+        self.component_mut.as_deref_mut().unwrap()
+    }
+
+    pub fn state(&self) -> &ComponentType {
+        if self.component_mut.is_some() {
+            self.component_mut.as_deref().unwrap()
+        } else {
+            self.component.as_ref().unwrap()
+        }
+    }
+
+    pub fn global_state(&'a self) -> &ComponentType::GlobalState {
+        self.global_state.unwrap().downcast_ref::<ComponentType::GlobalState>().expect("Global state type mismatch")
+    }
+
+    pub fn global_state_mut(&mut self) -> &mut ComponentType::GlobalState {
+        self.global_state_mut
+            .as_deref_mut()
+            .expect("Global ")
+            .downcast_mut::<ComponentType::GlobalState>()
+            .expect("Global state type mismatch")
+    }
+
+    pub fn message(&self) -> &Message {
+        self.message.as_ref().expect("Message is not set")
+    }
+
+    pub fn event_mut(&mut self) -> &mut Event {
+        self.event.as_deref_mut().expect("Event is not set")
+    }
+
+    pub fn current_target(&self) -> Option<&dyn Element> {
+        self.current_target
+    }
+
+    pub fn target(&self) -> Option<&dyn Element> {
+        self.target
+    }
+
+    pub fn children(&self) -> &Vec<ComponentSpecification> {
+        self.children.as_ref().expect("Children are not set")
+    }
+
+    pub fn children_mut(&mut self) -> &mut Vec<ComponentSpecification> {
+        self.children.as_mut().expect("Children are not set")
+    }
+
+    pub fn window(&self) -> &WindowContext {
+        self.window.as_deref().unwrap()
+    }
+
+    pub fn window_mut(&mut self) -> &mut WindowContext {
+        self.window_mut.as_deref_mut().unwrap()
+    }
+}
+
+pub fn dispatch_event<ComponentType: Component>(
+    state: &mut StateStoreItem,
+    global_state: &mut GlobalState,
+    props: Props,
+    event: &mut Event,
+    message: &Message,
+    id: ComponentId,
+    window_context: &mut WindowContext,
+    target: Option<&dyn Element>,
+    current_target: Option<&dyn Element>,
+) {
+    match message {
+        Message::CraftMessage(craft_message) => match craft_message {
+            CraftMessage::Initialized => {}
+            CraftMessage::PointerButtonUp(pointer_button_update) => {
+                if let Some(element) = current_target {
+                    if let Some(on_pointer_button_up) = &element.element_data().event_handlers.on_pointer_up {
+                        on_pointer_button_up(
+                            state,
+                            global_state,
+                            props,
+                            event,
+                            message,
+                            id,
+                            window_context,
+                            target,
+                            current_target,
+                            &pointer_button_update,
+                        );
+                    }
+                }
+            }
+            CraftMessage::PointerButtonDown(_) => {}
+            CraftMessage::KeyboardInputEvent(_) => {}
+            CraftMessage::PointerMovedEvent(_) => {}
+            CraftMessage::PointerScroll(_) => {}
+            CraftMessage::ImeEvent(_) => {}
+            CraftMessage::TextInputChanged(_) => {}
+            CraftMessage::LinkClicked(_) => {}
+            CraftMessage::DropdownToggled(_) => {}
+            CraftMessage::DropdownItemSelected(_) => {}
+            CraftMessage::SwitchToggled(_) => {}
+            CraftMessage::SliderValueChanged(_) => {}
+            CraftMessage::ElementMessage(_) => {}
+        },
+        Message::UserMessage(user_message) => {
+            let casted_state: &mut ComponentType = state.downcast_mut::<ComponentType>().unwrap();
+            let mut context = Context::new(
+                None,
+                Some(casted_state),
+                None,
+                Some(global_state),
+                props,
+                None,
+                id,
+                None,
+                Some(window_context),
+                None,
+                None,
+                None,
+                None,
+            );
+            let user_message: &ComponentType::Message = user_message.downcast_ref().expect("Failed to downcast user message");
+            ComponentType::on_user_message(&mut context, user_message);
+        }
+    }
+}
+
 pub trait Component
 where
     Self: 'static + Default + Send,
@@ -136,24 +325,26 @@ where
         window_context: &WindowContext,
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
-        let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        if let Some(global_state_casted) = global_state.downcast_ref::<Self::GlobalState>() {
-            Self::view(casted_state, global_state_casted, props, children, id, window_context)
-        } else {
-            #[allow(clippy::unnecessary_mut_passed)]
-            Self::view(casted_state, &mut Self::GlobalState::default(), props, children, id, window_context)
-        }
+        let mut context = Context::new(
+            Some(casted_state),
+            None,
+            Some(global_state),
+            None,
+            props,
+            Some(children),
+            id,
+            Some(window_context),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        Self::view(&mut context)
     }
 
-    fn view(
-        &self,
-        _global_state: &Self::GlobalState,
-        _props: &Self::Props,
-        _children: Vec<ComponentSpecification>,
-        _id: ComponentId,
-        _window: &WindowContext,
-    ) -> ComponentSpecification {
+    fn view(context: &mut Context<Self>) -> ComponentSpecification {
         Container::new().component()
     }
 
@@ -163,87 +354,50 @@ where
         props: Props,
         event: &mut Event,
         message: &Message,
+        id: ComponentId,
+        window_context: &mut WindowContext,
+        target: Option<&dyn Element>,
+        current_target: Option<&dyn Element>,
     ) {
+        dispatch_event::<Self>(
+            state,
+            global_state,
+            props.clone(),
+            event,
+            message,
+            id,
+            window_context,
+            target,
+            current_target,
+        );
+
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
-        let props: &Self::Props = props.data.deref().downcast_ref().unwrap();
 
-        if let Some(global_state_casted) = global_state.downcast_mut::<Self::GlobalState>() {
-            Self::update(casted_state, global_state_casted, props, event, message)
-        } else {
-            Self::update(casted_state, &mut Self::GlobalState::default(), props, event, message)
-        }
+        let mut context = Context::new(
+            None,
+            Some(casted_state),
+            None,
+            Some(global_state),
+            props,
+            None,
+            id,
+            None,
+            Some(window_context),
+            Some(event),
+            Some(message),
+            target,
+            current_target,
+        );
+        Self::update(&mut context);
     }
 
-    fn update(
-        &mut self,
-        global_state: &mut Self::GlobalState,
-        props: &Self::Props,
-        event: &mut Event,
-        message: &Message,
-    ) {
-        match message {
-            Message::CraftMessage(craft_message) => match craft_message {
-                CraftMessage::Initialized => {
-                    self.on_initialize(global_state, props, event);
-                }
-                CraftMessage::PointerButtonUp(pointer_message) => {
-                    self.on_pointer_button_up(global_state, props, event, pointer_message);
-                }
-                CraftMessage::PointerButtonDown(pointer_message) => {
-                    self.on_pointer_button_down(global_state, props, event, pointer_message);
-                }
-                CraftMessage::KeyboardInputEvent(keyboard_input) => {
-                    self.on_keyboard_input(global_state, props, event, keyboard_input);
-                }
-                CraftMessage::PointerMovedEvent(pointer_moved) => {
-                    self.on_pointer_move(global_state, props, event, pointer_moved);
-                }
-                CraftMessage::PointerScroll(pointer_scroll_update) => {
-                    self.on_pointer_scroll(global_state, props, event, pointer_scroll_update);
-                }
-                CraftMessage::ImeEvent(ime) => {
-                    self.on_ime(global_state, props, event, ime);
-                }
-                CraftMessage::TextInputChanged(new_string) => {
-                    self.on_text_input_changed(global_state, props, event, new_string);
-                }
-                CraftMessage::LinkClicked(link) => {
-                    self.on_link_clicked(global_state, props, event, link);
-                }
-                CraftMessage::DropdownToggled(dropdown_toggled) => {
-                    self.on_dropdown_toggled(global_state, props, event, *dropdown_toggled);
-                }
-                CraftMessage::DropdownItemSelected(index) => {
-                    self.on_dropdown_item_selected(global_state, props, event, *index);
-                }
-                CraftMessage::SwitchToggled(switch_state) => {
-                    self.on_switch_toggled(global_state, props, event, *switch_state);
-                }
-                CraftMessage::SliderValueChanged(slider_value) => {
-                    self.on_slider_value_changed(global_state, props, event, *slider_value);
-                }
-                CraftMessage::ElementMessage(_) => {}
-            },
-            crate::events::Message::UserMessage(user_message) => {
-                let user_message = user_message.downcast_ref::<Self::Message>();
-                if let Some(user_message) = user_message {
-                    self.on_user_message(global_state, props, event, user_message);
-                }
-            }
-        }
-    }
+    fn update(context: &mut Context<Self>) {}
 
-    fn on_pointer_button_up(
-        &mut self,
-        global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        event: &mut Event,
-        pointer_event: &PointerButtonUpdate,
-    ) {
-        if let Some(element) = event.current_target {
-            if let Some(on_pointer_button_up) = &element.element_data().on_pointer_button_up {
-                on_pointer_button_up(self, global_state, event, pointer_event);
-            }
+    fn on_pointer_button_up(context: &mut Context<Self>, pointer_event: &PointerButtonUpdate) {
+        if let Some(element) = context.current_target() {
+            /*if let Some(on_pointer_button_up) = &element.element_data().on_pointer_button_up {
+                //on_pointer_button_up(context, pointer_event);
+            }*/
         }
     }
 
@@ -254,19 +408,19 @@ where
         event: &mut Event,
         pointer_event: &PointerButtonUpdate,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_pointer_button_down) = &element.element_data().on_pointer_button_down {
                 on_pointer_button_down(self, global_state, event, pointer_event);
             }
-        }
+        }*/
     }
 
-    fn on_initialize(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event) {
-        if let Some(element) = event.current_target {
+    fn on_initialize(context: &mut Context<Self>) {
+        /*if let Some(element) = context.event_mut().current_target {
             if let Some(on_initialized) = &element.element_data().on_initialized {
-                on_initialized(self, global_state, event);
+                //on_initialized(self, global_state, event);
             }
-        }
+        }*/
     }
 
     fn on_keyboard_input(
@@ -276,11 +430,11 @@ where
         event: &mut Event,
         keyboard_input: &KeyboardEvent,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_keyboard_input) = &element.element_data().on_keyboard_input {
                 on_keyboard_input(self, global_state, event, keyboard_input);
             }
-        }
+        }*/
     }
 
     fn on_pointer_move(
@@ -290,21 +444,14 @@ where
         event: &mut Event,
         pointer_update: &PointerUpdate,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_pointer_move) = &element.element_data().on_pointer_move {
                 on_pointer_move(self, global_state, event, pointer_update);
             }
-        }
+        }*/
     }
 
-    fn on_user_message(
-        &mut self,
-        _global_state: &mut Self::GlobalState,
-        _props: &Self::Props,
-        _event: &mut Event,
-        _user_message: &Self::Message,
-    ) {
-    }
+    fn on_user_message(context: &mut Context<Self>, message: &Self::Message) {}
 
     fn on_pointer_scroll(
         &mut self,
@@ -313,11 +460,11 @@ where
         event: &mut Event,
         pointer_scroll_update: &PointerScrollUpdate,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_pointer_scroll) = &element.element_data().on_pointer_scroll {
                 on_pointer_scroll(self, global_state, event, pointer_scroll_update);
             }
-        }
+        }*/
     }
 
     fn on_modifiers_changed(
@@ -327,19 +474,19 @@ where
         event: &mut Event,
         modifiers: &Modifiers,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_modifiers_changed) = &element.element_data().on_modifiers_changed {
                 on_modifiers_changed(self, global_state, event, modifiers);
             }
-        }
+        }*/
     }
 
     fn on_ime(&mut self, global_state: &mut Self::GlobalState, _props: &Self::Props, event: &mut Event, ime: &Ime) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_ime) = &element.element_data().on_ime {
                 on_ime(self, global_state, event, ime);
             }
-        }
+        }*/
     }
 
     fn on_text_input_changed(
@@ -349,11 +496,11 @@ where
         event: &mut Event,
         new_string: &str,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_text_input_changed) = &element.element_data().on_text_input_changed {
                 on_text_input_changed(self, global_state, event, new_string);
             }
-        }
+        }*/
     }
 
     fn on_link_clicked(
@@ -363,11 +510,11 @@ where
         event: &mut Event,
         link: &str,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_link_clicked) = &element.element_data().on_link_clicked {
                 on_link_clicked(self, global_state, event, link);
             }
-        }
+        }*/
     }
 
     fn on_dropdown_toggled(
@@ -377,11 +524,11 @@ where
         event: &mut Event,
         dropdown_toggled: bool,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_dropdown_toggled) = &element.element_data().on_dropdown_toggled {
                 on_dropdown_toggled(self, global_state, event, dropdown_toggled);
             }
-        }
+        }*/
     }
 
     fn on_dropdown_item_selected(
@@ -391,11 +538,11 @@ where
         event: &mut Event,
         index: usize,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_dropdown_item_selected) = &element.element_data().on_dropdown_item_selected {
                 on_dropdown_item_selected(self, global_state, event, index);
             }
-        }
+        }*/
     }
 
     fn on_switch_toggled(
@@ -405,11 +552,11 @@ where
         event: &mut Event,
         switch_state: bool,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_switch_toggled) = &element.element_data().on_switch_toggled {
                 on_switch_toggled(self, global_state, event, switch_state);
             }
-        }
+        }*/
     }
 
     fn on_slider_value_changed(
@@ -419,11 +566,11 @@ where
         event: &mut Event,
         slider_value: f64,
     ) {
-        if let Some(element) = event.current_target {
+        /*if let Some(element) = event.current_target {
             if let Some(on_slider_value_changed) = &element.element_data().on_slider_value_changed {
                 on_slider_value_changed(self, global_state, event, slider_value);
             }
-        }
+        }*/
     }
 
     fn default_state() -> Box<StateStoreItem> {

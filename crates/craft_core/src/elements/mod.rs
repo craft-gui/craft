@@ -23,6 +23,7 @@ pub(crate) mod element_styles;
 pub(crate) mod font;
 mod scroll_state;
 mod thumb;
+mod element_event_impls;
 
 pub use crate::elements::canvas::Canvas;
 pub use crate::elements::container::Container;
