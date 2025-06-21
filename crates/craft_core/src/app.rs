@@ -76,7 +76,7 @@ pub struct App {
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     pub(crate) text_context: Option<TextContext>,
     /// The renderer is used to draw the view. It is only valid between resume and pause.
-    pub(crate) renderer: Option<RendererBox>,
+    pub renderer: Option<RendererBox>,
     pub(crate) reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
     ///

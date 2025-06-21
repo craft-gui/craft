@@ -1,3 +1,4 @@
+use std::any::Any;
 use winit::application::ApplicationHandler;
 use std::sync::Arc;
 use std::time;
@@ -152,6 +153,12 @@ impl ApplicationHandler for CraftWinitState {
             }
             WindowEvent::RedrawRequested => {
                 craft_state.craft_app.on_request_redraw();
+                
+                let mut renderer = self.craft_state.craft_app.renderer.as_mut().unwrap();
+
+                if let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
+                  
+                }
             }
             _ => (),
         }

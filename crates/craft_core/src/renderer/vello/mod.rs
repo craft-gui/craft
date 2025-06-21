@@ -1,5 +1,6 @@
 mod tinyvg;
 
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
@@ -18,15 +19,15 @@ use wgpu::util::TextureBlitter;
 use winit::window::Window;
 use crate::text::text_render_data::TextRenderLine;
 
-pub struct VelloRenderer<'a> {
+pub struct VelloRenderer {
     device: Device,
     #[allow(dead_code)]
     adapter: Adapter,
     queue: Queue,
     #[allow(dead_code)]
     instance: Instance,
-    surface: Surface<'a>,
-    surface_config: SurfaceConfiguration,
+    surface: Surface<'static>,
+    pub surface_config: SurfaceConfiguration,
 
     #[allow(dead_code)]
     surface_texture: Texture,
@@ -147,9 +148,9 @@ fn new_surface_texture(device: &Device, adapter: &Adapter,  surface: &Surface, s
     (target_texture, target_view, config)
 }
 
-impl<'a> VelloRenderer<'a> {
+impl VelloRenderer {
     
-    pub async fn new(window: Arc<Window>) -> VelloRenderer<'a> {
+    pub async fn new(window: Arc<Window>) -> VelloRenderer {
 
         let window_size = window.inner_size();
         
@@ -184,7 +185,7 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
     scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
 }
 
-impl Renderer for VelloRenderer<'_> {
+impl Renderer for VelloRenderer {
     fn surface_width(&self) -> f32 {
         self.surface_config.width as f32
     }
@@ -207,6 +208,10 @@ impl Renderer for VelloRenderer<'_> {
 
     fn surface_set_clear_color(&mut self, color: Color) {
         self.surface_clear_color = color;
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 
     fn prepare_render_list(

@@ -11,6 +11,7 @@ use craft::{
 use crate::custom_event_loop::CraftWinitState;
 
 mod custom_event_loop;
+mod wgpu_triangle;
 
 #[derive(Default)]
 pub struct Counter {
