@@ -1,5 +1,5 @@
 use crate::elements::element::Element;
-pub(crate) struct ElementTreePreOrderIterator<'a> {
+pub struct ElementTreePreOrderIterator<'a> {
     stack: Vec<&'a dyn Element>,
 }
 
@@ -25,7 +25,7 @@ impl<'a> Iterator for ElementTreePreOrderIterator<'a> {
 }
 
 impl dyn Element {
-    pub(crate) fn pre_order_iter(&self) -> ElementTreePreOrderIterator {
+    pub fn pre_order_iter(&self) -> ElementTreePreOrderIterator {
         ElementTreePreOrderIterator::new(self)
     }
 }

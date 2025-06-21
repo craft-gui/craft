@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::renderer::{RenderList, Renderer};
@@ -18,7 +19,10 @@ impl Renderer for BlankRenderer {
     fn resize_surface(&mut self, _width: f32, _height: f32) {}
 
     fn surface_set_clear_color(&mut self, _color: Color) {}
-
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+    
     fn prepare_render_list(
         &mut self,
         _render_list: RenderList,

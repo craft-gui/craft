@@ -1,7 +1,7 @@
 mod mouse_wheel;
 
 pub(crate) mod event_dispatch;
-pub(crate) mod internal;
+pub mod internal;
 pub(crate) mod resource_event;
 pub mod update_queue_entry;
 pub(crate) mod event_handlers;

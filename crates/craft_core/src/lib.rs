@@ -2,7 +2,7 @@
 pub mod accessibility;
 pub mod components;
 pub mod craft_runtime;
-mod craft_winit_state;
+pub mod craft_winit_state;
 pub mod elements;
 pub mod events;
 mod options;
@@ -57,7 +57,7 @@ use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 #[cfg(target_arch = "wasm32")]
 use crate::resource_manager::wasm_queue::WASM_QUEUE;
-use craft_winit_state::CraftWinitState;
+use craft_winit_state::CraftState;
 
 use cfg_if::cfg_if;
 use craft_logging::info;
@@ -66,6 +66,7 @@ use craft_logging::info;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
+use crate::craft_winit_state::CraftWinitState;
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
@@ -89,11 +90,13 @@ pub fn internal_craft_main_with_options(
 ) {
     info!("Craft started");
 
-    info!("Created winit event loop");
-
     let event_loop =
         EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
-    craft_main_with_options_2(event_loop, application, global_state, options)
+    info!("Created winit event loop.");
+
+    let craft_state = setup_craft(application, global_state, options);
+    let mut winit_craft_state = CraftWinitState::new(craft_state);
+    event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
 pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
@@ -163,15 +166,16 @@ fn internal_craft_main_with_options(
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
-    craft_main_with_options_2(event_loop, application, global_state, options)
+    let craft_state = setup_craft(application, global_state, options);
+    let mut winit_craft_state = CraftWinitState::new(craft_state);
+    event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
-fn craft_main_with_options_2(
-    event_loop: EventLoop<()>,
+pub fn setup_craft(
     application: ComponentSpecification,
     global_state: GlobalState,
     craft_options: Option<CraftOptions>,
-) {
+) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
 
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
@@ -257,9 +261,7 @@ fn craft_main_with_options_2(
         modifiers: Default::default(),
     });
 
-    let mut app = CraftWinitState::new(runtime, winit_receiver, app_sender, craft_options, craft_app);
-
-    event_loop.run_app(&mut app).expect("run_app failed");
+    CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)
 }
 
 async fn async_main(mut app_receiver: Receiver<InternalMessage>, winit_sender: Sender<InternalMessage>) {

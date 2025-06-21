@@ -13,6 +13,7 @@ members = [
     "examples/tour",
     "examples/events",
     "examples/overlay",
+    "examples/custom_event_loop",
     "website",
     "crates/craft",
     "crates/syntect_dumper",

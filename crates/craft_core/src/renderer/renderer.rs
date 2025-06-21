@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
@@ -158,7 +159,7 @@ impl RenderList {
     }
 }
 
-pub trait Renderer {
+pub trait Renderer: Any {
     // Surface Functions
     #[allow(dead_code)]
     fn surface_width(&self) -> f32;
@@ -166,7 +167,9 @@ pub trait Renderer {
     fn surface_height(&self) -> f32;
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
-
+    
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+    
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
         let mut overlay_render = SortedCommands { children: vec![] };
 

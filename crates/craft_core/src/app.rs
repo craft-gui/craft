@@ -66,17 +66,17 @@ macro_rules! get_tree {
         }};
     }
 
-pub(crate) struct App {
+pub struct App {
     /// The user's view specification. This is lazily evaluated and will be called each time the view is redrawn.
     pub(crate) app: ComponentSpecification,
     /// The global state is used to store global data that can be accessed from anywhere in the user's application.
     pub(crate) global_state: GlobalState,
     /// A winit window. This is only valid between resume and pause.
-    pub(crate) window: Option<Arc<Window>>,
+    pub window: Option<Arc<Window>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     pub(crate) text_context: Option<TextContext>,
     /// The renderer is used to draw the view. It is only valid between resume and pause.
-    pub(crate) renderer: Option<RendererBox>,
+    pub renderer: Option<RendererBox>,
     pub(crate) reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
@@ -87,7 +87,7 @@ pub(crate) struct App {
     /// of a resource too many times.
     pub(crate) resources_collected: HashMap<ResourceIdentifier, bool>,
     // The user's reactive tree.
-    pub(crate) user_tree: ReactiveTree,
+    pub user_tree: ReactiveTree,
     /// Provides a way for the user to get and set common window properties during view and update.
     pub(crate) window_context: WindowContext,
 
@@ -105,16 +105,16 @@ pub(crate) struct App {
 }
 
 impl App {
-    pub(crate) fn on_close_requested(&mut self) {
+    pub fn on_close_requested(&mut self) {
         info!("Craft application is closing.");
     }
 
-    pub(crate) fn on_scale_factor_changed(&mut self, scale_factor: f64) {
+    pub fn on_scale_factor_changed(&mut self, scale_factor: f64) {
         self.window_context.scale_factor = scale_factor;
         self.on_resize(self.window.as_ref().unwrap().inner_size());
     }
 
-    pub(crate) fn on_process_user_events(&mut self, is_dev_tree: bool) {
+    pub fn on_process_user_events(&mut self, is_dev_tree: bool) {
         let reactive_tree = get_tree!(self, is_dev_tree);
 
         if reactive_tree.update_queue.is_empty() {
@@ -140,7 +140,7 @@ impl App {
         }
     }
 
-    pub(crate) fn on_resume(&mut self, window: Arc<Window>, renderer: RendererBox, event_loop: &ActiveEventLoop) {
+    pub fn on_resume(&mut self, window: Arc<Window>, renderer: RendererBox, event_loop: &ActiveEventLoop) {
         window.set_ime_allowed(true);
 
         if self.user_tree.element_tree.is_none() {
@@ -186,7 +186,7 @@ impl App {
     }
 
     /// Handles the window resize event.
-    pub(crate) fn on_resize(&mut self, new_size: PhysicalSize<u32>) {
+    pub fn on_resize(&mut self, new_size: PhysicalSize<u32>) {
         self.window_context.window_size = new_size;
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
@@ -248,7 +248,7 @@ impl App {
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(feature = "accesskit")]
-    pub(crate) fn on_request_redraw(&mut self) -> Option<TreeUpdate> {
+    pub fn on_request_redraw(&mut self) -> Option<TreeUpdate> {
         self.on_request_redraw_internal();
         if self.window.is_none() {
             return None;
@@ -361,7 +361,7 @@ impl App {
         self.view_introspection();
     }
 
-    pub(crate) fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
+    pub fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
         if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse {
             let y: f32 = match pointer_scroll_update.delta {
                 ScrollDelta::PageDelta(_, y) => y,
@@ -384,7 +384,7 @@ impl App {
         self.request_redraw();
     }
 
-    pub(crate) fn on_pointer_button(
+    pub fn on_pointer_button(
         &mut self,
         pointer_event: PointerButtonUpdate,
         is_up: bool,
@@ -414,7 +414,7 @@ impl App {
         self.request_redraw();
     }
 
-    pub(crate) fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
+    pub fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
         let mut mouse_moved = mouse_moved;
         let zoom = self.window_context.zoom_factor;
         mouse_moved.current.position.x /= zoom;
@@ -429,7 +429,7 @@ impl App {
         self.request_redraw();
     }
 
-    pub(crate) fn on_ime(&mut self, ime: Ime) {
+    pub fn on_ime(&mut self, ime: Ime) {
         let event = CraftMessage::ImeEvent(ime);
         let message = Message::CraftMessage(event);
 
@@ -466,7 +466,7 @@ impl App {
         );
     }
 
-    pub(crate) fn on_keyboard_input(&mut self, keyboard_input: KeyboardEvent) {
+    pub fn on_keyboard_input(&mut self, keyboard_input: KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
         if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
             self.modifiers.set(Modifiers::CONTROL, false);
@@ -504,7 +504,7 @@ impl App {
     }
 
     /// Processes async messages sent from the user.
-    pub(crate) fn on_user_message(&mut self, message: InternalUserMessage) {
+    pub fn on_user_message(&mut self, message: InternalUserMessage) {
         let state = self.user_tree.user_state.storage.get_mut(&message.source_component_id).unwrap().as_mut();
 
         let mut event = Event::default();
@@ -522,7 +522,7 @@ impl App {
         );
     }
 
-    pub(crate) fn on_resource_event(&mut self, resource_event: ResourceEvent) {
+    pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
         match resource_event {
             ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                 if resource_type == ResourceType::Font {

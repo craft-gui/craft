@@ -1,5 +1,6 @@
 pub(crate) mod tinyvg;
 
+use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
@@ -99,6 +100,10 @@ impl VelloCpuRenderer {
 }
 
 impl Renderer for VelloCpuRenderer {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+    
     fn surface_width(&self) -> f32 {
         self.window_width as f32
     }
@@ -129,6 +134,8 @@ impl Renderer for VelloCpuRenderer {
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
+        vello_draw_rect(&mut self.render_context, Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32), Color::WHITE);
+        
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);

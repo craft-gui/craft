@@ -7,7 +7,7 @@ use std::any::Any;
 #[cfg(target_arch = "wasm32")]
 use {crate::renderer::renderer::Renderer, std::sync::Arc, winit::window::Window};
 
-pub(crate) struct InternalUserMessage {
+pub struct InternalUserMessage {
     pub update_fn: UpdateFn,
     pub source_component_id: ComponentId,
     #[cfg(not(target_arch = "wasm32"))]
@@ -17,7 +17,7 @@ pub(crate) struct InternalUserMessage {
     pub props: Props,
 }
 
-pub(crate) enum InternalMessage {
+pub enum InternalMessage {
     GotUserMessage(InternalUserMessage),
     ResourceEvent(ResourceEvent),
     #[cfg(target_arch = "wasm32")]
