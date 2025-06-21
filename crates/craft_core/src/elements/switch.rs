@@ -160,11 +160,13 @@ impl Element for Switch {
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
+        target: Option<&dyn Element>,
+        _current_target: Option<&dyn Element>,
     ) {
         self.on_style_event(message, element_state, should_style, event);
         let (state, base_state) = self.state_and_base_mut(element_state);
         let focused = base_state.focused;
-        self.maybe_set_focus(message, event);
+        self.maybe_set_focus(message, event, target);
         
         
         let is_space_up = if let CraftMessage::KeyboardInputEvent(key) = message {

@@ -241,9 +241,11 @@ impl Element for Text {
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
+        target: Option<&dyn Element>,
+        _current_target: Option<&dyn Element>,
     ) {
         self.on_style_event(message, element_state, should_style, event);
-        self.maybe_unset_focus(message, event);
+        self.maybe_unset_focus(message, event, target);
 
         if !self.selectable {
             return;

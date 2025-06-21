@@ -155,9 +155,11 @@ impl Element for Container {
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
+        target: Option<&dyn Element>,
+        current_target: Option<&dyn Element>,
     ) {
         self.on_style_event(message, element_state, should_style, event);
-        self.maybe_unset_focus(message, event);
+        self.maybe_unset_focus(message, event, target);
 
         let (container_state, base_state) = self.state_and_base_mut(element_state);
         container_state.scroll_state.on_event(message, &self.element_data, base_state, event);

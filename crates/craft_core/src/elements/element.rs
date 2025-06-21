@@ -128,9 +128,11 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
+        target: Option<&dyn Element>,
+        _current_target: Option<&dyn Element>,
     ) {
         self.on_style_event(message, element_state, should_style, event);
-        self.maybe_unset_focus(message, event);
+        self.maybe_unset_focus(message, event, target);
     }
 
     fn on_style_event(
@@ -161,24 +163,24 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
     
-    fn maybe_unset_focus(&self, message: &CraftMessage, event: &mut Event) {
-        /*if let CraftMessage::PointerButtonDown(_) = &message {
-            if let Some(target) = event.target {
+    fn maybe_unset_focus(&self, message: &CraftMessage, event: &mut Event, target: Option<&dyn Element>) {
+        if let CraftMessage::PointerButtonDown(_) = &message {
+            if let Some(target) = target {
                 if target.element_data().component_id == self.element_data().component_id {
                     event.focus_action(FocusAction::Unset);
                 }
             }
-        }*/
+        }
     }
 
-    fn maybe_set_focus(&self, message: &CraftMessage, event: &mut Event) {
-        /*if let CraftMessage::PointerButtonDown(_) = &message {
-            if let Some(target) = event.target {
+    fn maybe_set_focus(&self, message: &CraftMessage, event: &mut Event, target: Option<&dyn Element>) {
+        if let CraftMessage::PointerButtonDown(_) = &message {
+            if let Some(target) = target {
                 if target.element_data().component_id == self.element_data().component_id {
                     event.focus_action(FocusAction::Set(self.element_data().component_id));
                 }
             }
-        }*/
+        }
     }
 
     fn resolve_box(
@@ -323,10 +325,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         let current_node_id = accesskit::NodeId(self.element_data().component_id);
 
         let mut current_node = accesskit::Node::new(Role::GenericContainer);
-        /*if self.element_data().on_pointer_button_up.is_some() {
+        if self.element_data().event_handlers.on_pointer_up.is_some() {
             current_node.set_role(Role::Button);
             current_node.add_action(Action::Click);
-        }*/
+        }
 
         let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 

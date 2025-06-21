@@ -232,14 +232,16 @@ pub(crate) fn dispatch_event(
                     if let Some(element) = current_target.borrow().element {
                         if let Message::CraftMessage(event) = message {
                             let mut res = Event::new();
-                            //res.target = target.borrow().element;
-                            //res.current_target = Some(element);
+                            let target_param = target.borrow().element;
+                            let current_target_param = Some(element);
                             element.on_event(
                                 event,
                                 &mut reactive_tree.element_state,
                                 text_context.as_mut().unwrap(),
                                 is_style,
                                 &mut res,
+                                target_param,
+                                current_target_param,
                             );
                             focus = focus.merge(res.focus);
                             reactive_tree.element_state.update_element_focus(res.focus);
@@ -266,6 +268,10 @@ pub(crate) fn dispatch_event(
                     }
 
                     let mut event = Event::default();
+
+                    // Todo: are target and current_target correct?
+                    let target_param = Some(*target_element);
+                    let current_target_param = Some(*target_element);
                     if let Some(element) = current_target.element {
                         element.on_event(
                             message,
@@ -274,6 +280,8 @@ pub(crate) fn dispatch_event(
                             // first_element && is_style. For only the first element.
                             is_style,
                             &mut event,
+                            target_param,
+                            current_target_param,
                         );
                         focus = focus.merge(event.focus);
                         reactive_tree.element_state.update_element_focus(event.focus);
@@ -322,6 +330,8 @@ pub(crate) fn dispatch_event(
                                 text_context.as_mut().unwrap(),
                                 false,
                                 &mut res,
+                                None,
+                                None,
                             );
                             focus = focus.merge(res.focus);
                             reactive_tree.element_state.update_element_focus(res.focus);
@@ -366,6 +376,8 @@ pub(crate) fn dispatch_event(
                             text_context.as_mut().unwrap(),
                             false,
                             &mut res,
+                            None,
+                            None,
                         );
                         focus = focus.merge(res.focus);
                         reactive_tree.element_state.update_element_focus(res.focus);
