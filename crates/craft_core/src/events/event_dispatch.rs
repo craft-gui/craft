@@ -127,9 +127,9 @@ pub(crate) fn dispatch_event(
             let target = target.unwrap();
 
             let mut current_target = Some(target.clone());
-            while current_target.is_some() {
-                targets.push_back(current_target.clone().unwrap());
-                current_target = current_target.clone().unwrap().borrow().parent.clone();
+            while let Some(node) = current_target {
+                targets.push_back(node.clone());
+                current_target = node.borrow().parent.as_ref().and_then(|p| p.upgrade());
             }
 
             if targets.is_empty() {
@@ -154,12 +154,12 @@ pub(crate) fn dispatch_event(
                 let mut closest_ancestor_component: Option<&ComponentTreeNode> = None;
 
                 let mut current_component = Some(current_target.clone());
-                while current_component.is_some() {
-                    if current_component.clone().unwrap().borrow().element.is_none() {
-                        closest_ancestor_component = Some(current_component.unwrap().borrow().component);
+                while let Some(node) = current_component {
+                    if node.borrow().element.is_none() {
+                        closest_ancestor_component = Some(node.borrow().component);
                         break;
                     }
-                    current_component = current_component.clone().unwrap().borrow().parent.clone();
+                    current_component = node.borrow().parent.as_ref().and_then(|p| p.upgrade());
                 }
 
                 // Dispatch the event to the element's component.

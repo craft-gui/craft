@@ -2,7 +2,7 @@ use crate::elements::element::Element;
 use crate::elements::{Dropdown, Overlay};
 use crate::reactive::tree::ComponentTreeNode;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 #[derive(Clone)]
 /// Links the ComponentTree with the ElementTree.
@@ -15,7 +15,7 @@ pub(crate) struct FiberNode<'a> {
     pub(crate) element: Option<&'a dyn Element>,
     /// The children of this node. This is a vector of FiberNode.
     pub(crate) children: Vec<Rc<RefCell<FiberNode<'a>>>>,
-    pub(crate) parent: Option<Rc<RefCell<FiberNode<'a>>>>,
+    pub(crate) parent: Option<Weak<RefCell<FiberNode<'a>>>>,
     pub(crate) overlay_order: u32,
 }
 
@@ -58,7 +58,7 @@ pub fn new<'a>(root_component: &'a ComponentTreeNode, root_element: &'a dyn Elem
             component,
             element,
             children: Vec::new(),
-            parent: Some(parent_fiber.clone()),
+            parent: Some(Rc::downgrade(&parent_fiber)),
             overlay_order,
         }));
         parent_fiber.borrow_mut().children.push(this_fiber.clone());
