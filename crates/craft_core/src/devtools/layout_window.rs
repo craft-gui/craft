@@ -317,25 +317,36 @@ impl Component for LayoutWindow {
         let selected_element = context.props().selected_element.as_ref();
 
         if let Some(selected_element) = selected_element {
+            let state = context.state();
             
-            let text_input = TextInput::new("")
-                .margin("10px", "0px", "20px", "10px")
-                .background(Color::from_rgb8(50, 50, 50))
-                .border_radius(10.0, 10.0, 10.0, 10.0)
-                .color(Color::WHITE)
-                .max_width("200px")
-                ;
             match context.state().layout_tab {
                 
                 LayoutTab::Styles => {
                     styles_window.push_in_place(
-                        text_input.id("style_search_query").component().key("style_search_query")
+                        TextInput::new(state.style_search_query.as_str())
+                            .use_text_value_on_update(true)
+                            .margin("10px", "0px", "20px", "10px")
+                            .background(Color::from_rgb8(50, 50, 50))
+                            .border_radius(10.0, 10.0, 10.0, 10.0)
+                            .color(Color::WHITE)
+                            .max_width("200px").id("style_search_query")
+                            .key("style_search_query")
+                            .component()
                     );
                     styles_window.push_in_place(tab_styles(selected_element, context.state().style_search_query.as_str()).component())
                 }
                 LayoutTab::Computed => {
                     styles_window.push_in_place(
-                        text_input.id("computed_search_query").component().key("computed_search_query")
+                        TextInput::new(state.computed_search_query.as_str())
+                            .use_text_value_on_update(true)
+                            .margin("10px", "0px", "20px", "10px")
+                            .background(Color::from_rgb8(50, 50, 50))
+                            .border_radius(10.0, 10.0, 10.0, 10.0)
+                            .color(Color::WHITE)
+                            .max_width("200px")
+                            .id("computed_search_query")
+                            .key("computed_search_query")
+                            .component()
                     );
                     styles_window.push_in_place(tab_computed_styles(selected_element, context.state().computed_search_query.as_str()).component())
                 }

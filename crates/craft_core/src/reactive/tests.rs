@@ -408,3 +408,64 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
         "Different Components in the same position should not have the same element child id."
     );
 }
+
+#[test]
+fn diff_trees_elements_swapped_keys_should_swap_ids() {
+    let mut text_context = TextContext::new();
+    reset_unique_element_id();
+
+    let root_node_1 = Container::new()
+        .component()
+        .push(Text::new("A").component().key("a"))
+        .push(Text::new("B").component().key("b"));
+
+    let root_node_2 = Container::new()
+        .component()
+        .push(Text::new("B").component().key("b"))
+        .push(Text::new("A").component().key("a"))
+        ;
+
+    let root_element: ElementBoxed = Container::new().into();
+    let mut user_state = StateStore::default();
+    let mut element_state = ElementStateStore::default();
+    let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
+    let mut window_context = WindowContext::new();
+    let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
+
+    let tree_1 = diff_trees(
+        root_node_1,
+        root_element.clone(),
+        None,
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut text_context,
+        1.0,
+        &mut window_context,
+        &mut update_queue,
+    );
+
+    let tree_2 = diff_trees(
+        root_node_2,
+        root_element,
+        Some(&tree_1.component_tree),
+        &mut user_state,
+        &mut global_state,
+        &mut element_state,
+        false,
+        &mut text_context,
+        1.0,
+        &mut window_context,
+        &mut update_queue,
+    );
+
+    let a_id_1 = &tree_1.component_tree.children[0].children[0].id;
+    let b_id_1 = &tree_1.component_tree.children[0].children[1].id;
+
+    let a_id_2 = &tree_2.component_tree.children[0].children[1].id;
+    let b_id_2 = &tree_2.component_tree.children[0].children[0].id;
+    
+    assert_eq!(a_id_1, a_id_2, "Element with key 'a' should retain its ID after being moved");
+    assert_eq!(b_id_1, b_id_2, "Element with key 'b' should retain its ID after being moved");
+}
