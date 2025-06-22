@@ -343,8 +343,13 @@ impl App {
             }
         }
 
-        if self.renderer.is_some() {
-            self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
+        {
+            let span = span!(Level::INFO, "renderer_submit");
+            let _enter = span.enter();
+
+            if self.renderer.is_some() {
+                self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
+            }
         }
 
         if let Some(window) = &self.window {

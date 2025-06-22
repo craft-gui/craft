@@ -230,6 +230,9 @@ impl Element for TextInput {
         }).collect();
 
         let text_renderer = state.text_render.as_mut().unwrap();
+        for line in text_renderer.lines.iter_mut() {
+            line.backgrounds.clear();
+        }
         for (selection, color) in backgrounds.iter() {
             selection.geometry_with(layout, |rect, line| {
                 text_renderer.lines[line].backgrounds.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), *color));
