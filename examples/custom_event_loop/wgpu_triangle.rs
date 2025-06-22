@@ -1,7 +1,6 @@
-use glam::{Mat4, Vec3};
-use wgpu::TextureViewDimension;
-use wgpu::util::DeviceExt;
 use craft::renderer::vello::VelloRenderer;
+use glam::{Mat4, Vec3};
+use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -53,7 +52,7 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
         usage: wgpu::BufferUsages::INDEX,
     });
 
-    let ortho = Mat4::orthographic_rh_gl(0.0, renderer.surface_config.width as f32, renderer.surface_config.height as f32, 0.0, -1.0, 1.0);
+    let ortho = Mat4::orthographic_rh_gl(0.0, renderer.render_surface.width() as f32, renderer.render_surface.height() as f32, 0.0, -1.0, 1.0);
     let model =
         Mat4::from_translation(Vec3::new(pos_x + size_width / 2.0, pos_y + size_height / 2.0, 0.0)) *
             Mat4::from_rotation_z(rotation_radians) *
@@ -93,97 +92,12 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
         }],
         label: Some("Transform Bind Group"),
     });
-
-    let offscreen_view = renderer
-        .offscreen_view
-        .as_ref()
-        .expect("Offscreen texture must be rendered before drawing it");
-
-    let sampler = renderer.device.create_sampler(&wgpu::SamplerDescriptor {
-        label: Some("Vello Sampler"),
-        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        address_mode_w: wgpu::AddressMode::ClampToEdge,
-        mag_filter: wgpu::FilterMode::Linear,
-        min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::FilterMode::Nearest,
-        ..Default::default()
-    });
-
-    let shader = renderer.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Textured Quad Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
-    });
-
+    
     let triangle_shader = renderer.device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Triangle Shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("triangle.wgsl").into()),
     });
-
-    let bind_group_layout = renderer.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    multisampled: false,
-                    view_dimension: TextureViewDimension::D2,
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-        ],
-        label: Some("Texture Bind Group Layout"),
-    });
-
-    let bind_group = renderer.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        layout: &bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(offscreen_view),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::Sampler(&sampler),
-            },
-        ],
-        label: Some("Texture Bind Group"),
-    });
-
-    let quad_pipeline_layout = renderer.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Quad Pipeline Layout"),
-        bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[],
-    });
-
-    let render_pipeline = renderer.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("Textured Quad Pipeline"),
-        layout: Some(&quad_pipeline_layout),
-        vertex: wgpu::VertexState {
-            module: &shader,
-            entry_point: Some("vs_main"),
-            buffers: &[],
-            compilation_options: Default::default(),
-        },
-        fragment: Some(wgpu::FragmentState {
-            module: &shader,
-            entry_point: Some("fs_main"),
-            compilation_options: Default::default(),
-            targets: &[Some(renderer.surface_config.format.into())],
-        }),
-        primitive: wgpu::PrimitiveState::default(),
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState::default(),
-        multiview: None,
-        cache: None,
-    });
+    
 
     let triangle_pipeline_layout = renderer.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Triangle Pipeline Layout"),
@@ -204,7 +118,7 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
             module: &triangle_shader,
             entry_point: Some("fs_main"),
             compilation_options: Default::default(),
-            targets: &[Some(renderer.surface_config.format.into())],
+            targets: &[Some(renderer.render_surface.surface_config.format.into())],
         }),
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
@@ -213,34 +127,31 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
         cache: None,
     });
 
-    let surface_texture = renderer.get_current_surface_texture();
-    let view = surface_texture
+    let swapchain_surface_texture = renderer.render_surface.get_swapchain_surface_texture(&renderer.device, renderer.render_surface.width(), renderer.render_surface.height());
+    let swapchain_surface_texture_view = swapchain_surface_texture
         .texture
         .create_view(&wgpu::TextureViewDescriptor::default());
 
     let mut encoder = renderer.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Blit + Triangle Encoder"),
     });
-
+    
+    renderer.texture_blitter.copy(&renderer.device, &mut encoder, &renderer.render_surface.surface_view, &swapchain_surface_texture_view);
     {
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Final Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &view,
+                view: &swapchain_surface_texture_view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    load: wgpu::LoadOp::Load,
                     store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: None,
             ..Default::default()
         });
-
-        rpass.set_pipeline(&render_pipeline);
-        rpass.set_bind_group(0, &bind_group, &[]);
-        rpass.draw(0..6, 0..1);
-
+        
         rpass.set_pipeline(&triangle_pipeline);
         rpass.set_bind_group(0, &transform_bind_group, &[]);
         rpass.set_vertex_buffer(0, vertex_buffer.slice(..));
@@ -249,5 +160,5 @@ pub(crate) fn draw_gui_texture_and_canvas(renderer: &mut VelloRenderer, pos_x: f
     }
 
     renderer.queue.submit(Some(encoder.finish()));
-    surface_texture.present();
+    swapchain_surface_texture.present();
 }

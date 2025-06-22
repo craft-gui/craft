@@ -19,6 +19,106 @@ use wgpu::util::TextureBlitter;
 use winit::window::Window;
 use crate::text::text_render_data::TextRenderLine;
 
+pub struct RenderSurface {
+    pub surface: Surface<'static>,
+    pub surface_config: SurfaceConfiguration,
+    pub surface_texture: wgpu::Texture,
+    pub surface_view:    wgpu::TextureView,
+}
+
+impl RenderSurface {
+    pub fn create_surface_textures(device: &Device, surface_width: u32, surface_height: u32) -> (Texture, TextureView) {
+        let surface_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: None,
+            size: wgpu::Extent3d {
+                width: surface_width,
+                height: surface_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
+            format: TextureFormat::Rgba8Unorm,
+            view_formats: &[],
+        });
+        let surface_texture_view = surface_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        (surface_texture, surface_texture_view)
+    }
+
+    /// Returns the current swapchain `SurfaceTexture`.
+    /// Unlike the cached textures that we store, this always fetches a fresh, up-to-date frame.
+    pub fn get_swapchain_surface_texture(&mut self, device: &Device, surface_width: u32, surface_height: u32) -> SurfaceTexture {
+        match self.surface.get_current_texture() {
+            Ok(texture) => texture,
+            Err(err) => {
+                match err {
+                    SurfaceError::Timeout | SurfaceError::Outdated | SurfaceError::Lost => {
+                        self.resize(device, surface_width, surface_height);
+                    }
+                    SurfaceError::OutOfMemory | SurfaceError::Other => {
+                        panic!("Failed to acquire surface texture: {:?}", err);
+                    }
+                }
+                self.surface
+                    .get_current_texture()
+                    .expect("Failed to get surface texture after resize")
+            }
+        }
+    }
+    
+    pub fn width(&self) -> u32 {
+        self.surface_config.width
+    }
+    
+    pub fn height(&self) -> u32 {
+        self.surface_config.height
+    }
+    
+    pub fn resize(&mut self, device: &Device, surface_width: u32, surface_height: u32) {
+        self.surface_config.width = surface_width;
+        self.surface_config.height = surface_height;
+        let (surface_texture, surface_view) = Self::create_surface_textures(device, surface_width, surface_height);
+        
+        self.surface_texture = surface_texture;
+        self.surface_view = surface_view;
+        
+        self.surface.configure(&device, &self.surface_config);
+    }
+    
+    pub fn new(device: &Device, adapter: &Adapter, surface: Surface<'static>, surface_width: u32, surface_height: u32) -> RenderSurface {
+        let capabilities = surface.get_capabilities(adapter);
+        let format = capabilities
+            .formats
+            .into_iter()
+            .find(|it| matches!(it, TextureFormat::Rgba8Unorm | TextureFormat::Bgra8Unorm))
+            .ok_or(Error::UnsupportedSurfaceFormat).expect("Unsupported surface format.");
+
+        let (surface_texture, surface_view) = Self::create_surface_textures(device, surface_width, surface_height);
+        
+        let surface_config = SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format,
+            width: surface_width,
+            height: surface_height,
+            present_mode: wgpu::PresentMode::AutoVsync,
+            desired_maximum_frame_latency: 2,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            view_formats: vec![],
+        };
+        
+        surface.configure(device, &surface_config);
+        
+        RenderSurface {
+            surface,
+            surface_config,
+            surface_texture,
+            surface_view,
+        }
+    }
+}
+
 pub struct VelloRenderer {
     pub device: Device,
     #[allow(dead_code)]
@@ -26,8 +126,7 @@ pub struct VelloRenderer {
     pub queue: Queue,
     #[allow(dead_code)]
     pub instance: Instance,
-    pub surface: Surface<'static>,
-    pub surface_config: SurfaceConfiguration,
+    pub render_surface: RenderSurface,
     pub texture_blitter: TextureBlitter,
     pub renderer: vello::Renderer,
 
@@ -37,8 +136,6 @@ pub struct VelloRenderer {
     scene: Scene,
     pub surface_clear_color: Color,
     pub render_into_texture: bool,
-    pub offscreen_texture: Option<wgpu::Texture>,
-    pub offscreen_view:   Option<wgpu::TextureView>,
 }
 
 fn create_vello_renderer(device: &Device) -> vello::Renderer {
@@ -107,67 +204,7 @@ async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queu
     )
 }
 
-fn new_surface_texture(device: &Device, adapter: &Adapter,  surface: &Surface, surface_width: u32, surface_height: u32) -> (Texture, TextureView, SurfaceConfiguration) {
-    let capabilities = surface.get_capabilities(adapter);
-    let format = capabilities
-        .formats
-        .into_iter()
-        .find(|it| matches!(it, TextureFormat::Rgba8Unorm | TextureFormat::Bgra8Unorm))
-        .ok_or(Error::UnsupportedSurfaceFormat).expect("Unsupported surface format.");
-
-    let config = SurfaceConfiguration {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        format,
-        width: surface_width,
-        height: surface_height,
-        present_mode: wgpu::PresentMode::AutoVsync,
-        desired_maximum_frame_latency: 2,
-        alpha_mode: wgpu::CompositeAlphaMode::Auto,
-        view_formats: vec![],
-    };
-
-    let target_texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: None,
-        size: wgpu::Extent3d {
-            width: surface_width,
-            height: surface_height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
-        format: TextureFormat::Rgba8Unorm,
-        view_formats: &[],
-    });
-    let target_view = target_texture.create_view(&wgpu::TextureViewDescriptor::default());
-    
-    surface.configure(device, &config);
-    
-    (target_texture, target_view, config)
-}
-
 impl VelloRenderer {
-
-    pub fn get_current_surface_texture(&mut self) -> SurfaceTexture {
-        match self.surface.get_current_texture() {
-            Ok(texture) => texture,
-            Err(err) => {
-                match err {
-                    SurfaceError::Timeout | SurfaceError::Outdated | SurfaceError::Lost => {
-                        self.resize_surface(self.surface_width(), self.surface_height());
-                    }
-                    SurfaceError::OutOfMemory | SurfaceError::Other => {
-                        panic!("Failed to acquire surface texture: {:?}", err);
-                    }
-                }
-                self.surface
-                    .get_current_texture()
-                    .expect("Failed to get surface texture after resize")
-            }
-        }
-    }
-
     
     pub async fn new(window: Arc<Window>, render_into_texture: bool) -> VelloRenderer {
 
@@ -176,22 +213,19 @@ impl VelloRenderer {
         let instance = new_instance();
         let surface = instance.create_surface(window).expect("Failed to create a surface.");
         let (device, queue, adapter) = new_device(&instance, &surface).await;
-        let (_surface_texture, _surface_texture_view, surface_config) = new_surface_texture(&device, &adapter, &surface, window_size.width, window_size.height);
+        let render_surface = RenderSurface::new(&device, &adapter, surface, window_size.width, window_size.height);
         
         VelloRenderer {
-            texture_blitter: TextureBlitter::new(&device, surface_config.format),
+            texture_blitter: TextureBlitter::new(&device, render_surface.surface_config.format),
+            render_surface,
             renderer: create_vello_renderer(&device),
             device,
             adapter,
             queue,
             instance,
-            surface,
-            surface_config,
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             render_into_texture,
-            offscreen_texture: None,
-            offscreen_view: None,
         }
     }
 }
@@ -208,17 +242,15 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 
 impl Renderer for VelloRenderer {
     fn surface_width(&self) -> f32 {
-        self.surface_config.width as f32
+        self.render_surface.width() as f32
     }
 
     fn surface_height(&self) -> f32 {
-        self.surface_config.height as f32
+        self.render_surface.height() as f32
     }
 
     fn resize_surface(&mut self, width: f32, height: f32) {
-        self.surface_config.width = width as u32;
-        self.surface_config.height = height as u32;
-        self.surface.configure(&self.device, &self.surface_config);
+        self.render_surface.resize(&self.device, width as u32, height as u32);
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
@@ -401,44 +433,15 @@ impl Renderer for VelloRenderer {
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
-        let width  = self.surface_config.width;
-        let height = self.surface_config.height;
-
-        let gui_texture_view;
-        let recreate = match &self.offscreen_texture {
-            Some(view) => {
-                view.dimension() == wgpu::TextureDimension::D2
-                    && view.format()    == self.surface_config.format
-                    && view.size().width  != width
-                    && view.size().height != height
-            }
-            None => true,
-        };
-        if recreate {
-            let tex = self.device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("Vello Offscreen Texture"),
-                size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: TextureFormat::Rgba8Unorm,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::TEXTURE_BINDING
-                    | wgpu::TextureUsages::STORAGE_BINDING,
-                view_formats: &[],
-            });
-            self.offscreen_view = Some(tex.create_view(&Default::default()));
-            gui_texture_view = self.offscreen_view.as_ref().unwrap().clone();
-        } else {
-            gui_texture_view = self.offscreen_view.as_ref().unwrap().clone();
-        }
+        let width  = self.render_surface.width();
+        let height = self.render_surface.height();
         
         self.renderer
             .render_to_texture(
                 &self.device,
                 &self.queue,
                 &self.scene,
-                &gui_texture_view,
+                &self.render_surface.surface_view,
                 &vello::RenderParams {
                     base_color: self.surface_clear_color,
                     width,
@@ -451,10 +454,10 @@ impl Renderer for VelloRenderer {
                 },
             )
             .expect("failed to render to texture");
-
+        
         if !self.render_into_texture {
-            let surface_texture = self.get_current_surface_texture();
-            let surface_view = surface_texture
+            let swapchain_surface_texture = self.render_surface.get_swapchain_surface_texture(&self.device, width, height);
+            let swapchain_surface_texture_view = swapchain_surface_texture
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());
             let mut encoder =
@@ -463,10 +466,10 @@ impl Renderer for VelloRenderer {
                         label: Some("Surface Blit"),
                     });
 
-            self.texture_blitter.copy(&self.device, &mut encoder, &gui_texture_view, &surface_view);
-
+            self.texture_blitter.copy(&self.device, &mut encoder, &self.render_surface.surface_view, &swapchain_surface_texture_view);
             self.queue.submit(Some(encoder.finish()));
-            surface_texture.present();
+
+            swapchain_surface_texture.present();
         }
 
         self.scene.reset();
