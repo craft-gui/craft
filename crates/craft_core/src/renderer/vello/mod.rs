@@ -25,17 +25,17 @@ pub struct VelloRenderer {
     pub adapter: Adapter,
     pub queue: Queue,
     #[allow(dead_code)]
-    instance: Instance,
+    pub instance: Instance,
     pub surface: Surface<'static>,
     pub surface_config: SurfaceConfiguration,
-    
-    renderer: vello::Renderer,
+    pub texture_blitter: TextureBlitter,
+    pub renderer: vello::Renderer,
 
     // A vello Scene which is a data structure which allows one to build up a
     // description a scene to be drawn (with paths, fills, images, text, etc)
     // which is then passed to a renderer for rendering
     scene: Scene,
-    surface_clear_color: Color,
+    pub surface_clear_color: Color,
     pub render_into_texture: bool,
     pub offscreen_texture: Option<wgpu::Texture>,
     pub offscreen_view:   Option<wgpu::TextureView>,
@@ -179,6 +179,7 @@ impl VelloRenderer {
         let (_surface_texture, _surface_texture_view, surface_config) = new_surface_texture(&device, &adapter, &surface, window_size.width, window_size.height);
         
         VelloRenderer {
+            texture_blitter: TextureBlitter::new(&device, surface_config.format),
             renderer: create_vello_renderer(&device),
             device,
             adapter,
@@ -462,8 +463,7 @@ impl Renderer for VelloRenderer {
                         label: Some("Surface Blit"),
                     });
 
-            let blitter = TextureBlitter::new(&self.device, self.surface_config.format);
-            blitter.copy(&self.device, &mut encoder, &gui_texture_view, &surface_view);
+            self.texture_blitter.copy(&self.device, &mut encoder, &gui_texture_view, &surface_view);
 
             self.queue.submit(Some(encoder.finish()));
             surface_texture.present();
