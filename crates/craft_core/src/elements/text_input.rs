@@ -794,6 +794,7 @@ impl TextInputState {
         self.current_layout_key = None;
         self.last_requested_key = None;
         self.current_render_key = None;
+        self.text_render = None;
     }
 
     pub fn render(&mut self) {
@@ -848,22 +849,20 @@ impl TextInputState {
         let layout = self.editor.try_layout().unwrap();
         let scale_factor = layout.scale() as f64;
 
-        let width_constraint = known_dimensions.width.or(match available_space.width {
+        let width_constraint: Option<f32> = known_dimensions.width.or(match available_space.width {
             AvailableSpace::MinContent => Some(layout.calculate_content_widths().min),
             AvailableSpace::MaxContent => Some(layout.calculate_content_widths().max),
-            AvailableSpace::Definite(width) => {
-                let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0;
-                Some(scaled_width)
-            },
+            AvailableSpace::Definite(width) => { Some(width) },
+        }).map(|width| {
+            dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0
         });
         // Some(self.text_style.font_size * self.text_style.line_height)
-        let _height_constraint = known_dimensions.height.or(match available_space.height {
+        let _height_constraint: Option<f32> = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
-            AvailableSpace::Definite(height) => {
-                let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, scale_factor).0;
-                Some(scaled_height)
-            },
+            AvailableSpace::Definite(height) => { Some(height) },
+        }).map(|height| {
+            dpi::PhysicalUnit::from_logical::<f32, f32>(height, scale_factor).0
         });
 
         if !layed_out_with_definite_width {
