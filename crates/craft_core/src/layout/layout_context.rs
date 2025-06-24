@@ -193,12 +193,12 @@ impl TextHashKey {
     pub fn available_space(&self) -> Size<taffy::AvailableSpace> {
         Size {
             width: match self.available_space_width {
-                AvailableSpaceKey::Definite(width) => taffy::AvailableSpace::Definite(width as f32),
+                AvailableSpaceKey::Definite(width) => taffy::AvailableSpace::Definite(f32::from_bits(width)),
                 AvailableSpaceKey::MinContent => taffy::AvailableSpace::MinContent,
                 AvailableSpaceKey::MaxContent => taffy::AvailableSpace::MaxContent,
             },
             height: match self.available_space_height {
-                AvailableSpaceKey::Definite(height) => taffy::AvailableSpace::Definite(height as f32),
+                AvailableSpaceKey::Definite(height) => taffy::AvailableSpace::Definite(f32::from_bits(height)),
                 AvailableSpaceKey::MinContent => taffy::AvailableSpace::MinContent,
                 AvailableSpaceKey::MaxContent => taffy::AvailableSpace::MaxContent,
             },
