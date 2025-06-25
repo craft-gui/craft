@@ -7,8 +7,8 @@ Craft is a reactive GUI. Views are created using Components and Elements.
 Updates are performed by handling messages from a Component.
 
 <p align="center">
-  <img src="./images/text_editor.png" alt="The text editor example" width="45%">
   <img src="./images/ani_list.png" alt="The ani list example." width="45%">
+  <img src="./images/svg_to_tvg.png" alt="The text editor example" width="45%">
 </p>
 <p align="center">
   <img src="./images/tour.png" alt="The inputs example." width="45%">
