@@ -13,7 +13,7 @@ use crate::style::Style;
 use crate::text::text_context::{ColorBrush, TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use parley::{Alignment, AlignmentOptions, Selection};
+use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use rustc_hash::FxHasher;
 use std::any::Any;
 use std::collections::HashMap;
@@ -58,6 +58,7 @@ pub struct TextState {
     current_layout_key: Option<TextHashKey>,
     last_requested_measure_key: Option<TextHashKey>,
     current_render_key: Option<TextHashKey>,
+    content_widths: Option<ContentWidths>,
 
     pub(crate) last_click_time: Option<Instant>,
     pub(crate) click_count: u32,
@@ -122,57 +123,6 @@ impl Element for Text {
         if let Some(text_render) = state.text_render.as_ref() {
             renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), None, false);
         }
-    }
-
-    #[cfg(feature = "accesskit")]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        element_state: &mut ElementStateStore,
-        scale_factor: f64,
-    ) {
-        let state: &mut TextState = self.state_mut(element_state);
-        if state.layout.is_none() {
-            return;
-        }
-
-        let layout = state.layout.as_mut();
-        let mut access = LayoutAccessibility::default();
-        let text = state.text.as_ref().unwrap();
-
-        let current_node_id = accesskit::NodeId(self.element_data().component_id);
-
-        let mut current_node = accesskit::Node::new(Role::Label);
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
-        current_node.set_value(*Box::new(state.text.clone().unwrap()));
-        current_node.add_action(Action::SetTextSelection);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        if let Some(layout) = layout {
-            access.build_nodes(
-                text,
-                layout,
-                tree,
-                &mut current_node,
-                || accesskit::NodeId(create_unique_element_id()),
-                padding_box.x as f64,
-                padding_box.y as f64,
-            );
-        }
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
     }
 
     fn compute_layout(
@@ -333,6 +283,7 @@ impl Element for Text {
             current_layout_key: None,
             last_requested_measure_key: None,
             current_render_key: None,
+            content_widths: None,
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -341,13 +292,61 @@ impl Element for Text {
             blink_period: Default::default(),
         };
 
-        //parley::editor::PlainEditor::new()
-        //parley::editor::PlainEditorDriver::
-
         ElementStateStoreItem {
             base: Default::default(),
             data: Box::new(text_state),
         }
+    }
+
+    #[cfg(feature = "accesskit")]
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        element_state: &mut ElementStateStore,
+        scale_factor: f64,
+    ) {
+        let state: &mut TextState = self.state_mut(element_state);
+        if state.layout.is_none() {
+            return;
+        }
+
+        let layout = state.layout.as_mut();
+        let mut access = LayoutAccessibility::default();
+        let text = state.text.as_ref().unwrap();
+
+        let current_node_id = accesskit::NodeId(self.element_data().component_id);
+
+        let mut current_node = accesskit::Node::new(Role::Label);
+        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        current_node.set_value(*Box::new(state.text.clone().unwrap()));
+        current_node.add_action(Action::SetTextSelection);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        if let Some(layout) = layout {
+            access.build_nodes(
+                text,
+                layout,
+                tree,
+                &mut current_node,
+                || accesskit::NodeId(create_unique_element_id()),
+                padding_box.x as f64,
+                padding_box.y as f64,
+            );
+        }
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
     }
 
     fn update_state(&mut self, element_state: &mut ElementStateStore, reload_fonts: bool, scaling_factor: f64) {
@@ -395,6 +394,7 @@ impl Element for Text {
             state.last_requested_measure_key = None;
             state.current_render_key = None;
             state.text_render = None;
+            state.content_widths = None;
         }
 
         state.last_text_style = current_style;
@@ -429,45 +429,33 @@ impl TextState {
             let text = &self.text.as_ref().unwrap();
             builder.push_text(text);
             let (layout, _) = builder.build();
+            self.content_widths = Some(layout.calculate_content_widths());
             self.layout = Some(layout);
         }
 
         let key = TextHashKey::new(known_dimensions, available_space);
 
         self.last_requested_measure_key = Some(key);
-
         if let Some(value) = self.cache.get(&key) {
-            let sw = dpi::LogicalUnit::from_physical::<f32, f32>(value.width, self.scale_factor as f64).0;
-            let sh = dpi::LogicalUnit::from_physical::<f32, f32>(value.height, self.scale_factor as f64).0;
-            return Size {
-                width: sw,
-                height: sh,
-            }
+            return *value;
         }
 
-        let size = self.layout(known_dimensions, available_space);
-        let sw = dpi::LogicalUnit::from_physical::<f32, f32>(size.width, self.scale_factor as f64).0;
-        let sh = dpi::LogicalUnit::from_physical::<f32, f32>(size.height, self.scale_factor as f64).0;
-        Size {
-            width: sw,
-            height: sh,
-        }
+        self.layout(known_dimensions, available_space)
     }
 
     pub fn layout(&mut self, known_dimensions: Size<Option<f32>>, available_space: Size<AvailableSpace>) -> Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
 
-        let layout = self.layout.as_mut().unwrap();
-
+        let content_widths = self.content_widths.as_ref().unwrap();
         let width_constraint = known_dimensions.width.or(match available_space.width {
-            AvailableSpace::MinContent => Some(layout.calculate_content_widths().min),
-            AvailableSpace::MaxContent => Some(layout.calculate_content_widths().max),
+            AvailableSpace::MinContent => Some(content_widths.min),
+            AvailableSpace::MaxContent => Some(content_widths.max),
             AvailableSpace::Definite(width) => {
-                let scaled_width = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
-                Some(scaled_width)
+                let scaled_width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
+                Some(scaled_width.clamp(content_widths.min, content_widths.max))
             },
         });
-        // Some(self.text_style.font_size * self.text_style.line_height)
+
         let height_constraint = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
@@ -476,13 +464,21 @@ impl TextState {
                 Some(scaled_height)
             },
         });
+
+        let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(width_constraint);
         layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
 
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));
 
-        let size = Size { width, height };
+        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(width, self.scale_factor as f64).0;
+        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(height, self.scale_factor as f64).0;
+
+        let size = Size {
+            width: logical_width,
+            height: logical_height,
+        };
 
         self.cache.insert(key, size);
         self.current_layout_key = Some(key);
