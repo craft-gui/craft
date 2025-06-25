@@ -27,7 +27,7 @@ use crate::text::{text_render_data, RangedStyles, TextStyle};
 use std::time;
 use time::{Duration, Instant};
 use kurbo::Affine;
-use parley::{Affinity, Cursor, Selection, StyleProperty};
+use parley::{Affinity, ContentWidths, Cursor, Selection, StyleProperty};
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
@@ -77,12 +77,14 @@ pub struct TextInputState {
     current_layout_key: Option<TextHashKey>,
 
     current_render_key: Option<TextHashKey>,
+    content_widths: Option<ContentWidths>,
 
     // The most recently requested key for laying out the text input.
     last_requested_key: Option<TextHashKey>,
     text_render: Option<TextRender>,
     new_text: Option<String>,
     new_style: TextStyle,
+    scale_factor: f64,
     
     last_click_time: Option<Instant>,
     click_count: u32,
@@ -286,7 +288,7 @@ impl Element for TextInput {
 
         let scroll_y = state.scroll_state.scroll_y;
 
-        let scale_factor = state.editor.try_layout().unwrap().scale() as f64;
+        let scale_factor = state.scale_factor;
         let text_position = self.computed_box_transformed().content_rectangle();
         let text_x = text_position.x;
         let text_y = text_position.y;
@@ -644,10 +646,12 @@ impl Element for TextInput {
             cache: Default::default(),
             current_layout_key: None,
             current_render_key: None,
+            content_widths: None,
             last_requested_key: None,
             text_render: None,
             new_text: std::mem::take(&mut self.text),
             new_style: TextStyle::from(self.style()),
+            scale_factor: scaling_factor,
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -711,12 +715,10 @@ impl Element for TextInput {
     fn update_state(&mut self, element_state: &mut ElementStateStore, _reload_fonts: bool, scaling_factor: f64) {
         let state: &mut TextInputState = self.state_mut(element_state);
 
-        if let Some(layout) = state.editor.try_layout() {
-            if layout.scale() != scaling_factor as f32 {
-                state.editor.set_scale(scaling_factor as f32);
-                state.clear_cache();
-                state.new_text = Some(state.editor.text().to_string());
-            }
+        if state.scale_factor != scaling_factor {
+            state.editor.set_scale(scaling_factor as f32);
+            state.clear_cache();
+            state.scale_factor = scaling_factor;
         }
 
         if self.ranged_styles.as_ref() != Some(&state.editor.ranged_styles) {
@@ -795,6 +797,7 @@ impl TextInputState {
         self.last_requested_key = None;
         self.current_render_key = None;
         self.text_render = None;
+        self.content_widths = None;
     }
 
     pub fn render(&mut self) {
@@ -831,61 +834,48 @@ impl TextInputState {
             }
         }
 
-        let mut layed_out_with_definite_width = false;
         if self.editor.try_layout().is_none() || self.new_text.is_some() {
             if let Some(new_text) = self.new_text.take() {
                 self.editor.set_text(new_text.as_str());
             }
-            if let AvailableSpace::Definite(width) = available_space.width {
-                layed_out_with_definite_width = true;
-                self.editor.set_width(Some(width));
-            }
+            self.editor.set_width(None);
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
-            self.clear_cache();
-            self.last_requested_key = Some(key);
+            self.content_widths = Some(self.editor.try_layout().unwrap().calculate_content_widths());
         }
-
-
-        let layout = self.editor.try_layout().unwrap();
-        let scale_factor = layout.scale() as f64;
-
+        
+        let content_widths = self.content_widths.unwrap();
         let width_constraint: Option<f32> = known_dimensions.width.or(match available_space.width {
-            AvailableSpace::MinContent => Some(layout.calculate_content_widths().min),
-            AvailableSpace::MaxContent => Some(layout.calculate_content_widths().max),
+            AvailableSpace::MinContent => Some(content_widths.min),
+            AvailableSpace::MaxContent => Some(content_widths.max),
             AvailableSpace::Definite(width) => { Some(width) },
         }).map(|width| {
-            dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0
+            let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
+            width.clamp(content_widths.min, content_widths.max)
         });
-        // Some(self.text_style.font_size * self.text_style.line_height)
+
         let _height_constraint: Option<f32> = known_dimensions.height.or(match available_space.height {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
             AvailableSpace::Definite(height) => { Some(height) },
         }).map(|height| {
-            dpi::PhysicalUnit::from_logical::<f32, f32>(height, scale_factor).0
+            dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor).0
         });
 
-        if !layed_out_with_definite_width {
-            self.editor.set_width(width_constraint);
-            self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
-        }
-
+        self.editor.set_width(width_constraint);
+        self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
         let layout = self.editor.try_layout().unwrap();
 
         if last_pass {
             self.current_render_key = self.current_layout_key;
             self.text_render = Some(text_render_data::from_editor(layout));
         }
-
-        let width = layout.width();
-        let height = layout.height();
-
-        let sw = dpi::LogicalUnit::from_physical::<f32, f32>(width, scale_factor).0;
-        let sh = dpi::LogicalUnit::from_physical::<f32, f32>(height, scale_factor).0;
+        
+        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor).0;
+        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor).0;
 
         let size = taffy::Size {
-            width: sw,
-            height: sh,
+            width: logical_width,
+            height: logical_height,
         };
 
         self.cache.insert(key, size);
