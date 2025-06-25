@@ -834,7 +834,7 @@ impl TextInputState {
             }
         }
 
-        if self.editor.try_layout().is_none() || self.new_text.is_some() {
+        if self.editor.try_layout().is_none() || self.new_text.is_some() || self.content_widths.is_none() {
             if let Some(new_text) = self.new_text.take() {
                 self.editor.set_text(new_text.as_str());
             }
@@ -842,7 +842,7 @@ impl TextInputState {
             self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
             self.content_widths = Some(self.editor.try_layout().unwrap().calculate_content_widths());
         }
-        
+
         let content_widths = self.content_widths.unwrap();
         let width_constraint: Option<f32> = known_dimensions.width.or(match available_space.width {
             AvailableSpace::MinContent => Some(content_widths.min),
@@ -869,7 +869,7 @@ impl TextInputState {
             self.current_render_key = self.current_layout_key;
             self.text_render = Some(text_render_data::from_editor(layout));
         }
-        
+
         let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor).0;
         let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor).0;
 
