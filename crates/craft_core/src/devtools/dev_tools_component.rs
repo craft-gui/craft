@@ -1,15 +1,14 @@
+use crate::components::{Component, ComponentId, ComponentSpecification};
 use crate::components::{Context, Props};
-use crate::components::{Component, ComponentId, ComponentSpecification, Event};
 use crate::devtools::dev_tools_colors::CONTAINER_BACKGROUND_COLOR;
 use crate::devtools::dev_tools_element::DevTools;
-use crate::devtools::tree_window::tree_window;
 use crate::devtools::layout_window::{LayoutWindow, LayoutWindowProps};
+use crate::devtools::tree_window::tree_window;
 use crate::elements::element::Element;
 use crate::elements::ElementStyles;
 use crate::events::{CraftMessage, Message};
 use crate::style::Display::Flex;
 use crate::style::{FlexDirection, Unit};
-use crate::window_context::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct DevToolsComponent {

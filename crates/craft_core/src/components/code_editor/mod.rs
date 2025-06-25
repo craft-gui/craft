@@ -1,5 +1,5 @@
 use crate::components::Context;
-use crate::components::{Component, ComponentId, ComponentSpecification, Event};
+use crate::components::{Component, ComponentSpecification};
 use crate::elements::{ElementStyles, TextInput};
 use crate::events::CraftMessage;
 use crate::events::CraftMessage::TextInputChanged;
@@ -8,7 +8,7 @@ use crate::style::FontStyle;
 use crate::style::TextStyleProperty::{FontStyle as PropFontStyle, FontWeight, UnderlineSize};
 use crate::style::{TextStyleProperty, Weight};
 use crate::text::RangedStyles;
-use crate::{Color, WindowContext};
+use crate::{Color};
 use std::cell::RefCell;
 use std::rc::Rc;
 use syntect::easy::HighlightLines;
@@ -82,7 +82,7 @@ fn syntect_color_to_color(color: syntect::highlighting::Color) -> Color {
     Color::from_rgba8(color.r, color.g, color.b, color.a)
 }
 
-pub(crate) struct CodeEditorStyle {
+pub struct CodeEditorStyle {
     pub(crate) ranged_styles: RangedStyles,
     pub(crate) foreground_color: Color,
     pub(crate) background_color: Color,

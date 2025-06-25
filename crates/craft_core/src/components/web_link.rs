@@ -1,7 +1,5 @@
-use crate::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use crate::components::{Component, ComponentSpecification, Context};
 use crate::elements::Text;
-use crate::events::Message;
-use crate::WindowContext;
 
 #[derive(Default)]
 pub struct WebLink;

@@ -1,6 +1,5 @@
 // This file is generated via build.rs. Do not modify manually!
 
-use std::any::Any;
 use std::sync::Arc;
 
 use crate::components::Event;

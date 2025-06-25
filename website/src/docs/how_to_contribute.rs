@@ -1,8 +1,7 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{Display, FlexDirection, Weight};
-use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct HowToContributePage {
@@ -14,7 +13,7 @@ impl Component for HowToContributePage {
     type Props = ();
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)

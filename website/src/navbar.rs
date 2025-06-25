@@ -1,10 +1,9 @@
 use crate::theme::{wrapper, NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, NAVBAR_TEXT_HOVERED_COLOR};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
-use craft::events::Message;
 use craft::style::{AlignItems, Display, JustifyContent, Unit, Weight};
-use craft::{Color, WindowContext};
+use craft::Color;
 
 #[derive(Default)]
 pub(crate) struct Navbar {}
@@ -32,7 +31,7 @@ impl Component for Navbar {
     type Props = ();
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         let container = Container::new()
             .width("100%")
             .height(Unit::Px(NAVBAR_HEIGHT))

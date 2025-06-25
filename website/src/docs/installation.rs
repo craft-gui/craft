@@ -1,9 +1,8 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::events::{CraftMessage, Message};
 use craft::style::{Display, FlexDirection};
-use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct InstallationPage {

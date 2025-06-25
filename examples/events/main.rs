@@ -1,12 +1,10 @@
-use craft::components::{ComponentId, Context};
-use craft::components::{Component, ComponentSpecification, Event};
+use craft::components::{Component, ComponentSpecification};
+use craft::components::Context;
 use craft::elements::Container;
 use craft::elements::ElementStyles;
-use craft::events::Message;
 use craft::palette;
 use craft::style::{BoxSizing, Display, FlexDirection, Overflow};
 use craft::CraftOptions;
-use craft::WindowContext;
 use craft::{craft_main, Color};
 use util::setup_logging;
 
@@ -20,7 +18,7 @@ impl Component for EventsExample {
 
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         let scroll_example = Container::new()
             .display(Display::Block)
             .width("200px")

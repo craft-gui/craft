@@ -6,18 +6,17 @@ mod theme;
 mod router;
 mod docs;
 
+use crate::index::index_page;
 use crate::navbar::Navbar;
+use crate::router::resolve_route;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::Container;
 use craft::elements::ElementStyles;
+use craft::geometry::Size;
 use craft::style::Display;
 use craft::style::FlexDirection;
-use craft::WindowContext;
 use craft::{craft_main, CraftOptions};
-use craft::geometry::Size;
-use crate::index::index_page;
-use crate::router::resolve_route;
 
 pub(crate) struct WebsiteGlobalState {
     /// The current route that we are viewing.
@@ -26,6 +25,7 @@ pub(crate) struct WebsiteGlobalState {
 
 impl WebsiteGlobalState {
     pub(crate) fn get_route(&self) -> String {
+        #[cfg(target_arch = "wasm32")]
         let mut path = self.route.clone();
         #[cfg(target_arch = "wasm32")]
         {
@@ -41,7 +41,8 @@ impl WebsiteGlobalState {
                 }
             ).unwrap_or("/".to_string());
         }
-
+        #[cfg(not(target_arch = "wasm32"))]
+        let path = self.route.clone();
         path
     }
 

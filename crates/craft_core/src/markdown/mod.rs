@@ -12,7 +12,6 @@ use crate::rgb;
 use crate::style::{Display, FlexDirection, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
 use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
-use crate::components::{WebLink, WebLinkProps};
 
 struct StyledText {
     pub text: String,
@@ -35,7 +34,6 @@ struct MarkdownRenderer<'a> {
     bold: Option<usize>,
     font_size: Option<usize>,
     italic: Option<usize>,
-    strikethrough: Option<usize>,
     link: Option<(usize, String)>,
     code_block_kind: Option<pulldown_cmark::CodeBlockKind<'a>>,
 }
@@ -52,7 +50,6 @@ impl<'a> MarkdownRenderer<'a> {
             bold: None,
             font_size: None,
             italic: None,
-            strikethrough: None,
             link: None,
             code_block_kind: None,
         }
@@ -117,7 +114,6 @@ impl<'a> MarkdownRenderer<'a> {
     }
 
     pub fn pop_link(&mut self) {
-        let end = self.styled_text.text.len();
         if let Some((link_start, link)) = &self.link {
             let end = self.styled_text.text.len();
             self.styled_text.style.styles.push(
@@ -137,11 +133,6 @@ impl<'a> MarkdownRenderer<'a> {
     pub fn push_italic(&mut self) {
         self.italic = Some(self.styled_text.text.len());
     }
-
-    pub fn push_strikethrough(&mut self) {
-        self.strikethrough = Some(self.styled_text.text.len());
-    }
-
 
     pub fn pop_bold(&mut self) {
         if let Some(bold_start) = self.bold {
@@ -173,7 +164,7 @@ pub fn render_markdown(markdown: &str, ) -> ComponentSpecification {
             Event::Start(tag) => {
                 match tag {
                     Tag::Paragraph => {}
-                    Tag::Heading { level, id, classes, attrs } => {
+                    Tag::Heading { .. } => {
                         renderer.push_bold();
                         renderer.font_size = Some(renderer.styled_text.text.len());
                     }
@@ -219,10 +210,10 @@ pub fn render_markdown(markdown: &str, ) -> ComponentSpecification {
                     Tag::Strikethrough => {}
                     Tag::Superscript => {}
                     Tag::Subscript => {}
-                    Tag::Link { link_type, dest_url, title, id } => {
+                    Tag::Link {dest_url, .. } => {
                         renderer.push_link(dest_url.to_string());
                     }
-                    Tag::Image { link_type, dest_url, title, id } => {
+                    Tag::Image { dest_url, .. } => {
                         let resource = if dest_url.starts_with("http") {
                             ResourceIdentifier::Url(dest_url.to_string())
                         } else {
@@ -288,7 +279,7 @@ pub fn render_markdown(markdown: &str, ) -> ComponentSpecification {
                         }
                     }
                     TagEnd::HtmlBlock => {}
-                    TagEnd::List(ordered) => {
+                    TagEnd::List(_ordered) => {
                         renderer.pop_list_id();
                         renderer.pop_container();
                     }

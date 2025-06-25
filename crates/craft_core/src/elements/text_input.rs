@@ -294,41 +294,43 @@ impl Element for TextInput {
         let text_y = text_position.y;
         let focused = base_state.focused;
 
-        #[allow(dead_code)]
+
+        #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
         fn copy(drv: &mut PlainEditorDriver) {
-            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
-            {
-                use clipboard_rs::{Clipboard, ClipboardContext};
-                if let Some(text) = drv.editor.selected_text() {
-                    let cb = ClipboardContext::new().unwrap();
-                    cb.set_text(text.to_owned()).ok();
-                }
-            }
-        }
-
-        #[allow(dead_code)]
-        fn paste(drv: &mut PlainEditorDriver) {
-            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
-            {
-                use clipboard_rs::{Clipboard, ClipboardContext};
+            use clipboard_rs::{Clipboard, ClipboardContext};
+            if let Some(text) = drv.editor.selected_text() {
                 let cb = ClipboardContext::new().unwrap();
-                let text = cb.get_text().unwrap_or_default();
-                drv.insert_or_replace_selection(&text);
+                cb.set_text(text.to_owned()).ok();
             }
         }
 
-        #[allow(dead_code)]
+        #[cfg(not(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard")))]
+        fn copy(_drv: &mut PlainEditorDriver) {}
+
+
+        #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
+        fn paste(drv: &mut PlainEditorDriver) {
+            use clipboard_rs::{Clipboard, ClipboardContext};
+            let cb = ClipboardContext::new().unwrap();
+            let text = cb.get_text().unwrap_or_default();
+            drv.insert_or_replace_selection(&text);
+        }
+
+        #[cfg(not(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard")))]
+        fn paste(_drv: &mut PlainEditorDriver) {}
+
+        #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
         fn cut(drv: &mut PlainEditorDriver) {
-            #[cfg(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard"))]
-            {
-                use clipboard_rs::{Clipboard, ClipboardContext};
-                if let Some(text) = drv.editor.selected_text() {
-                    let cb = ClipboardContext::new().unwrap();
-                    cb.set_text(text.to_owned()).ok();
-                    drv.delete_selection();
-                }
+            use clipboard_rs::{Clipboard, ClipboardContext};
+            if let Some(text) = drv.editor.selected_text() {
+                let cb = ClipboardContext::new().unwrap();
+                cb.set_text(text.to_owned()).ok();
+                drv.delete_selection();
             }
         }
+
+        #[cfg(not(all(any(target_os = "windows", target_os = "macos", target_os = "linux"), feature = "clipboard")))]
+        fn cut(_drv: &mut PlainEditorDriver) {}
 
         let mut generate_text_changed_event = |editor: &mut PlainEditor| {
             event.prevent_defaults();

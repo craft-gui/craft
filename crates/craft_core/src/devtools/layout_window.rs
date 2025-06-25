@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use crate::components::{Component, ComponentSpecification, Context};
 use crate::devtools::dev_tools_colors::{BORDER_COLOR, FIELD_NAME_COLOR, FIELD_VALUE_COLOR, ROW_BACKGROUND_COLOR};
 use crate::elements::element::Element;
 use crate::elements::{Container, ElementStyles, Text, TextInput};
@@ -7,7 +7,7 @@ use crate::geometry::side::Side;
 use crate::style::style_flags::StyleFlags;
 use crate::style::Display::Flex;
 use crate::style::{Display, FlexDirection, Unit};
-use crate::{palette, Color, WindowContext};
+use crate::{palette, Color};
 use taffy::Overflow;
 
 fn format_option<T: std::fmt::Debug>(option: Option<T>) -> String {

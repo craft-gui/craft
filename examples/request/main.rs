@@ -5,19 +5,19 @@ use util::{setup_logging, ExampleProps};
 use ani_list::{anime_view, AniListResponse, QUERY};
 use AniListMessage::StateChange;
 
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use craft::components::{Component, ComponentSpecification, Context, Event};
 use craft::{craft_main, palette, Color};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::style::FlexDirection;
-use craft::style::{Display, Overflow, Unit, Wrap};
+//noinspection ALL
+use craft::style::{Display, Overflow, Wrap};
 use craft::CraftOptions;
 
 use reqwest::Client;
 use serde_json::json;
 
 use craft::events::ui_events::pointer::PointerButtonUpdate;
-use craft::WindowContext;
 use std::result::Result;
 
 #[derive(Debug, Clone, Default, PartialEq)]

@@ -1,8 +1,6 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::Text;
-use craft::events::Message;
-use craft::WindowContext;
 
 #[derive(Default)]
 pub(crate) struct WebLink;

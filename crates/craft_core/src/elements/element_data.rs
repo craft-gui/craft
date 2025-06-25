@@ -1,23 +1,10 @@
-use crate::events::event_handlers::EventHandlers;
 use crate::components::{ComponentId, ComponentSpecification};
-use crate::components::{Event, Props};
+use crate::components::Props;
 use crate::elements::element::ElementBoxed;
 use crate::elements::element_states::ElementState;
+use crate::events::event_handlers::EventHandlers;
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
-use std::any::Any;
-use std::sync::Arc;
-use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
-use winit::event::{Ime, Modifiers};
-
-pub(crate) type EventHandler = Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event) + Send + Sync + 'static>;
-
-pub(crate) type EventHandlerWithRef<Arg> =
-    Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, &Arg) + Send + Sync + 'static>;
-
-pub(crate) type EventHandlerCopy<Arg> =
-    Arc<dyn Fn(&mut dyn Any, &mut dyn Any, &mut Event, Arg) + Send + Sync + 'static>;
 
 #[derive(Clone, Default)]
 pub struct ElementData {

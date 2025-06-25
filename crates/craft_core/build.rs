@@ -106,7 +106,6 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
     let mut file = File::create(&path).unwrap();
     writeln!(file, "// This file is generated via build.rs. Do not modify manually!").unwrap();
     writeln!(file, "").unwrap();
-    writeln!(file, "use std::any::Any;").unwrap();
     writeln!(file, "use std::sync::Arc;").unwrap();
     writeln!(file, "").unwrap();
 
@@ -143,7 +142,7 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
         &mut WindowContext,
         Option<&dyn Element>,
         Option<&dyn Element>,", handler.name).unwrap();
-        for (param_index, param) in handler.params.iter().enumerate() {
+        for (_param_index, param) in handler.params.iter().enumerate() {
             if param.is_ref {
                 write!(file, "&").unwrap();
             }

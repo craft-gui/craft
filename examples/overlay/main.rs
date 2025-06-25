@@ -1,12 +1,11 @@
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event};
+use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
-use craft::events::Message;
 use craft::style::Display;
 use craft::style::{AlignItems, FlexDirection, JustifyContent};
 use craft::CraftOptions;
 use craft::{craft_main, palette};
-use craft::{Color, WindowContext};
+use craft::Color;
 use util::setup_logging;
 
 #[derive(Default, Clone)]
@@ -15,9 +14,9 @@ pub struct OverlayExample {
 }
 
 impl Component for OverlayExample {
+    type GlobalState = ();
     type Props = ();
     type Message = ();
-    type GlobalState = ();
 
     fn view(context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()

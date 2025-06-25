@@ -13,7 +13,7 @@ impl Component for StateManagementPage {
     type Props = ();
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)

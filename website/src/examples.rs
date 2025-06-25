@@ -17,7 +17,7 @@ use crate::examples::tour::Tour;
 use crate::navbar::NAVBAR_HEIGHT;
 use crate::theme::{wrapper, ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentId, ComponentSpecification, Context, Event, Props};
+use craft::components::{Component, ComponentSpecification, Context, Props};
 use craft::elements::{Container, Dropdown, Element, ElementStyles, Text};
 use craft::events::ui_events::pointer::PointerButtonUpdate;
 use craft::palette;

@@ -101,7 +101,7 @@ pub struct App {
     #[cfg(feature = "accesskit")]
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
-    pub(crate) modifiers: ui_events::keyboard::Modifiers,
+    pub(crate) modifiers: Modifiers,
 }
 
 impl App {
@@ -499,7 +499,7 @@ impl App {
             let key_state = keyboard_input.state;
 
             if KeyState::Down == key_state {
-                if let ui_events::keyboard::Key::Named(ui_events::keyboard::NamedKey::F12) = logical_key {
+                if let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key {
                     self.is_dev_tools_open = !self.is_dev_tools_open;
                 }
             }

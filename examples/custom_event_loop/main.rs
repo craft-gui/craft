@@ -1,16 +1,16 @@
-use winit::event_loop::EventLoop;
+use crate::custom_event_loop::CraftWinitState;
+use craft::components::Context;
+use craft::elements::Canvas;
 use craft::events::ui_events::pointer::PointerButtonUpdate;
-use craft::{setup_craft, WindowContext};
 use craft::{
-    components::{Component, ComponentId, ComponentSpecification, Event},
+    components::{Component, ComponentSpecification},
     elements::{Container, ElementStyles, Text},
     rgb,
     style::{AlignItems, Display, FlexDirection, JustifyContent},
     Color,
 };
-use craft::components::Context;
-use craft::elements::Canvas;
-use crate::custom_event_loop::CraftWinitState;
+use craft::setup_craft;
+use winit::event_loop::EventLoop;
 
 mod custom_event_loop;
 mod wgpu_triangle;

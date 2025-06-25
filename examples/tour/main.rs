@@ -1,20 +1,18 @@
 use util::{setup_logging, ExampleProps};
 
-use craft::components::{ComponentId, Context};
 use craft::components::ComponentSpecification;
-use craft::components::{Component, Event};
+use craft::components::Component;
+use craft::components::Context;
+use craft::craft_main;
 use craft::elements::ElementStyles;
 use craft::elements::{Container, Text};
 use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, TinyVg};
 use craft::events::CraftMessage::DropdownItemSelected;
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
-use craft::events::Message;
 use craft::events::Message::CraftMessage;
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
-use craft::WindowContext;
-use craft::craft_main;
 use craft::{Color, CraftOptions};
 
 #[derive(Clone)]
