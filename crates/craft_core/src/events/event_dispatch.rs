@@ -222,31 +222,29 @@ pub(crate) fn dispatch_event(
                     if !propagate || prevent_defaults {
                         break;
                     }
-                    if let Some(element) = current_target.borrow().element {
-                        if let Message::CraftMessage(event) = message {
-                            let mut res = Event::new();
-                            let target_param = target.borrow().element;
-                            let current_target_param = Some(element);
-                            element.on_event(
-                                event,
-                                &mut reactive_tree.element_state,
-                                text_context.as_mut().unwrap(),
-                                is_style,
-                                &mut res,
-                                target_param,
-                                current_target_param,
-                            );
-                            focus = focus.merge(res.focus);
-                            reactive_tree.element_state.update_element_focus(res.focus);
+                    if let Some(element) = current_target.borrow().element && let Message::CraftMessage(event) = message {
+                        let mut res = Event::new();
+                        let target_param = target.borrow().element;
+                        let current_target_param = Some(element);
+                        element.on_event(
+                            event,
+                            &mut reactive_tree.element_state,
+                            text_context.as_mut().unwrap(),
+                            is_style,
+                            &mut res,
+                            target_param,
+                            current_target_param,
+                        );
+                        focus = focus.merge(res.focus);
+                        reactive_tree.element_state.update_element_focus(res.focus);
 
-                            if let Some(result_message) = res.result_message {
-                                element_events.push_back((result_message, element));
-                            }
-
-                            propagate = propagate && res.propagate;
-                            prevent_defaults = prevent_defaults || res.prevent_defaults;
+                        if let Some(result_message) = res.result_message {
+                            element_events.push_back((result_message, element));
                         }
-                    }
+
+                        propagate = propagate && res.propagate;
+                        prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    } 
                 }
             }
 
