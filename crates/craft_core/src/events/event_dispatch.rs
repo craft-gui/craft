@@ -104,11 +104,10 @@ pub(crate) fn dispatch_event(
                     }
 
                     // Unless another element has pointer capture.
-                    if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) && (is_pointer_event || is_ime_event) {
-                        if *element_id == element.component_id() {
-                            target = Some(node.clone());
-                            break;
-                        }
+                    if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) 
+                        && *element_id == element.component_id() && (is_pointer_event || is_ime_event) {
+                        target = Some(node.clone());
+                        break;
                     }
 
                     if let Some(focus_id) = reactive_tree.focus && is_keyboard_event && element.component_id() == focus_id {
