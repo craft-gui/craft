@@ -92,10 +92,8 @@ impl Element for Switch {
         };
 
         // Use the toggled styles when state.toggled is true or default_toggled is true.
-        if let Some(toggled) = state.toggled {
-            if toggled {
-                set_toggled_styles();
-            }
+        if let Some(toggled) = state.toggled && toggled {
+            set_toggled_styles();
         } else if default_toggled {
             set_toggled_styles();
         }

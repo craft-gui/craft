@@ -57,10 +57,8 @@ pub enum CraftMessage {
 
 impl CraftMessage {
     pub fn clicked(&self) -> bool {
-        if let PointerButtonUp(pointer_button) = self {
-            if pointer_button.is_primary() {
-                return true;
-            }
+        if let PointerButtonUp(pointer_button) = self && pointer_button.is_primary() {
+            return true;
         }
 
         false

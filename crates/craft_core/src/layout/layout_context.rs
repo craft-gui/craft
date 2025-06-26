@@ -73,11 +73,9 @@ impl ImageContext {
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) {
-            if let Resource::Image(image_data) = resource.as_ref() {
-                original_image_width = image_data.width as f32;
-                original_image_height = image_data.height as f32;
-            }
+        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) && let Resource::Image(image_data) = resource.as_ref() {
+            original_image_width = image_data.width as f32;
+            original_image_height = image_data.height as f32;
         }
 
         match (known_dimensions.width, known_dimensions.height) {
@@ -228,13 +226,11 @@ impl TinyVgContext {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
 
-        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) {
-            if let Resource::TinyVg(resource) = resource.as_ref() {
-                if let Some(tinyvg) = &resource.tinyvg {
-                    original_image_width = tinyvg.header.width as f32;
-                    original_image_height = tinyvg.header.height as f32;
-                }
-            }
+        if let Some(resource) = resource_manager.resources.get(&self.resource_identifier) && 
+            let Resource::TinyVg(resource) = resource.as_ref() && 
+            let Some(tinyvg) = &resource.tinyvg {
+            original_image_width = tinyvg.header.width as f32;
+            original_image_height = tinyvg.header.height as f32;
         }
 
         match (known_dimensions.width, known_dimensions.height) {

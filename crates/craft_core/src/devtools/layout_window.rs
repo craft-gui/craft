@@ -121,10 +121,8 @@ fn tab_styles(selected_element: &Box<dyn Element>, search: &str) -> Container {
         };
     }
 
-    if style.dirty_flags.contains(StyleFlags::FONT_FAMILY) {
-        if let Some(family) = style.font_family().name() {
-            push_field!("Font Family", family);
-        }
+    if style.dirty_flags.contains(StyleFlags::FONT_FAMILY) && let Some(family) = style.font_family().name() {
+        push_field!("Font Family", family);
     }
 
     if style.dirty_flags.contains(StyleFlags::BOX_SIZING) {

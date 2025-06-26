@@ -338,29 +338,27 @@ impl Element for TextInput {
             event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
         };
 
-        if let CraftMessage::ElementMessage(msg) = message {
-            if let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
-                let mut drv = state.driver(_text_context);
-                match msg {
-                    TextInputMessage::Copy => {
-                        copy(&mut drv);
+        if let CraftMessage::ElementMessage(msg) = message && let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
+            let mut drv = state.driver(_text_context);
+            match msg {
+                TextInputMessage::Copy => {
+                    copy(&mut drv);
+                }
+                TextInputMessage::Paste => {
+                    if self.disabled {
+                        return;
                     }
-                    TextInputMessage::Paste => {
-                        if self.disabled {
-                            return;
-                        }
-                        paste(&mut drv);
-                        state.clear_cache();
-                        generate_text_changed_event(&mut state.editor);
+                    paste(&mut drv);
+                    state.clear_cache();
+                    generate_text_changed_event(&mut state.editor);
+                }
+                TextInputMessage::Cut => {
+                    if self.disabled {
+                        return;
                     }
-                    TextInputMessage::Cut => {
-                        if self.disabled {
-                            return;
-                        }
-                        cut(&mut drv);
-                        state.clear_cache();
-                        generate_text_changed_event(&mut state.editor);
-                    }
+                    cut(&mut drv);
+                    state.clear_cache();
+                    generate_text_changed_event(&mut state.editor);
                 }
             }
         }

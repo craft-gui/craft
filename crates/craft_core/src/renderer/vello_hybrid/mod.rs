@@ -184,24 +184,22 @@ impl CraftRenderer for VelloHybridRenderer {
                 RenderCommand::DrawImage(_rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
 
-                    if let Some(resource) = resource {
-                        if let Resource::Image(resource) = resource.as_ref() {
-                            let image = &resource.image;
-                            let data = Arc::new(ImageAdapter::new(resource.clone()));
-                            let blob = Blob::new(data);
-                            let _vello_image =
-                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() { 
+                        let image = &resource.image;
+                        let data = Arc::new(ImageAdapter::new(resource.clone()));
+                        let blob = Blob::new(data);
+                        let _vello_image =
+                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-                            /*   let mut transform = Affine::IDENTITY;
-                            transform =
-                                transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                            transform = transform.pre_scale_non_uniform(
-                                rectangle.width as f64 / image.width() as f64,
-                                rectangle.height as f64 / image.height() as f64,
-                            );*/
+                        /*   let mut transform = Affine::IDENTITY;
+                        transform =
+                            transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                        transform = transform.pre_scale_non_uniform(
+                            rectangle.width as f64 / image.width() as f64,
+                            rectangle.height as f64 / image.height() as f64,
+                        );*/
 
-                            //scene.draw_image(&vello_image, transform);
-                        }
+                        //scene.draw_image(&vello_image, transform);
                     }
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {

@@ -155,33 +155,31 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(&resource_identifier);
 
-                    if let Some(resource) = resource {
-                        if let Resource::Image(resource) = resource.as_ref() {
-                            let image = &resource.image;
-                            let data = Arc::new(ImageAdapter::new(resource.clone()));
-                            let blob = Blob::new(data);
-                            let vello_image =
-                                peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
+                        let image = &resource.image;
+                        let data = Arc::new(ImageAdapter::new(resource.clone()));
+                        let blob = Blob::new(data);
+                        let vello_image =
+                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-                            let mut transform = Affine::IDENTITY;
-                            transform =
-                                transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-                            transform = transform.pre_scale_non_uniform(
-                                rectangle.width as f64 / image.width() as f64,
-                                rectangle.height as f64 / image.height() as f64,
-                            );
-                            self.render_context.set_transform(transform);
-                            self.render_context.set_paint(PaintType::Image(
-                                vello_common::paint::Image::from_peniko_image(&vello_image),
-                            ));
-                            self.render_context.fill_rect(&kurbo::Rect::new(
-                                0.0,
-                                0.0,
-                                image.width() as f64,
-                                image.height() as f64,
-                            ));
-                            self.render_context.reset_transform();
-                        }
+                        let mut transform = Affine::IDENTITY;
+                        transform =
+                            transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                        transform = transform.pre_scale_non_uniform(
+                            rectangle.width as f64 / image.width() as f64,
+                            rectangle.height as f64 / image.height() as f64,
+                        );
+                        self.render_context.set_transform(transform);
+                        self.render_context.set_paint(PaintType::Image(
+                            vello_common::paint::Image::from_peniko_image(&vello_image),
+                        ));
+                        self.render_context.fill_rect(&kurbo::Rect::new(
+                            0.0,
+                            0.0,
+                            image.width() as f64,
+                            image.height() as f64,
+                        ));
+                        self.render_context.reset_transform(); 
                     }
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {

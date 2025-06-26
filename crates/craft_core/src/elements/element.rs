@@ -164,11 +164,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     }
     
     fn maybe_unset_focus(&self, message: &CraftMessage, event: &mut Event, target: Option<&dyn Element>) {
-        if let CraftMessage::PointerButtonDown(_) = &message {
-            if let Some(target) = target {
-                if target.element_data().component_id == self.element_data().component_id {
-                    event.focus_action(FocusAction::Unset);
-                }
+        if let CraftMessage::PointerButtonDown(_) = &message && let Some(target) = target {
+            if target.element_data().component_id == self.element_data().component_id {
+                event.focus_action(FocusAction::Unset);
             }
         }
     }
