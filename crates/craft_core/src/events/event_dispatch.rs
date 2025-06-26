@@ -104,20 +104,15 @@ pub(crate) fn dispatch_event(
                     }
 
                     // Unless another element has pointer capture.
-                    if is_pointer_event || is_ime_event {
-                        if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) {
-                            if *element_id == element.component_id() {
-                                target = Some(node.clone());
-                                break;
-                            }
-                        }
+                    if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID) 
+                        && *element_id == element.component_id() && (is_pointer_event || is_ime_event) {
+                        target = Some(node.clone());
+                        break;
                     }
 
-                    if let Some(focus_id) = reactive_tree.focus {
-                        if is_keyboard_event && element.component_id() == focus_id {
-                            target = Some(node.clone());
-                            break;
-                        }
+                    if let Some(focus_id) = reactive_tree.focus && is_keyboard_event && element.component_id() == focus_id {
+                        target = Some(node.clone());
+                        break;
                     }
                 }
             }
@@ -170,10 +165,8 @@ pub(crate) fn dispatch_event(
                     let current_target_param = Some(current_target.borrow().element.unwrap());
                     (node.update)(state, global_state, node.props.clone(), &mut event, message, node.id, window_context, target_param, current_target_param);
 
-                    if !event.prevent_defaults && event.propagate {
-                        if let Some(ref result_message) = event.result_message {
-                            element_events.push_back((result_message.clone(), target.borrow().element.unwrap()));
-                        }
+                    if !event.prevent_defaults && event.propagate && let Some(ref result_message) = event.result_message {
+                        element_events.push_back((result_message.clone(), target.borrow().element.unwrap()));
                     }
 
                     effects.append(&mut event.effects);
@@ -229,31 +222,29 @@ pub(crate) fn dispatch_event(
                     if !propagate || prevent_defaults {
                         break;
                     }
-                    if let Some(element) = current_target.borrow().element {
-                        if let Message::CraftMessage(event) = message {
-                            let mut res = Event::new();
-                            let target_param = target.borrow().element;
-                            let current_target_param = Some(element);
-                            element.on_event(
-                                event,
-                                &mut reactive_tree.element_state,
-                                text_context.as_mut().unwrap(),
-                                is_style,
-                                &mut res,
-                                target_param,
-                                current_target_param,
-                            );
-                            focus = focus.merge(res.focus);
-                            reactive_tree.element_state.update_element_focus(res.focus);
+                    if let Some(element) = current_target.borrow().element && let Message::CraftMessage(event) = message {
+                        let mut res = Event::new();
+                        let target_param = target.borrow().element;
+                        let current_target_param = Some(element);
+                        element.on_event(
+                            event,
+                            &mut reactive_tree.element_state,
+                            text_context.as_mut().unwrap(),
+                            is_style,
+                            &mut res,
+                            target_param,
+                            current_target_param,
+                        );
+                        focus = focus.merge(res.focus);
+                        reactive_tree.element_state.update_element_focus(res.focus);
 
-                            if let Some(result_message) = res.result_message {
-                                element_events.push_back((result_message, element));
-                            }
-
-                            propagate = propagate && res.propagate;
-                            prevent_defaults = prevent_defaults || res.prevent_defaults;
+                        if let Some(result_message) = res.result_message {
+                            element_events.push_back((result_message, element));
                         }
-                    }
+
+                        propagate = propagate && res.propagate;
+                        prevent_defaults = prevent_defaults || res.prevent_defaults;
+                    } 
                 }
             }
 
@@ -320,44 +311,47 @@ pub(crate) fn dispatch_event(
         }
         EventDispatchType::Direct(id) => {
             for node in nodes {
-                if node.borrow().component.id == id {
-                    if let Some(element) = node.borrow().element {
-                        if let Message::CraftMessage(message) = message {
-                            let mut res = Event::new();
-                            element.on_event(
-                                message,
-                                &mut reactive_tree.element_state,
-                                text_context.as_mut().unwrap(),
-                                false,
-                                &mut res,
-                                None,
-                                None,
-                            );
-                            focus = focus.merge(res.focus);
-                            reactive_tree.element_state.update_element_focus(res.focus);
-
-                            effects.append(&mut res.effects);
-                        }
-
-                        break;
-                    } else {
-                        let component = node.borrow().component;
-                        let state = reactive_tree.user_state.storage.get_mut(&component.id).unwrap().as_mut();
-                        let mut event = Event::default();
-                        (component.update)(state, global_state, component.props.clone(), &mut event, message, component.id, window_context, None, None);
-                        effects.append(&mut event.effects);
-                        if event.future.is_some() {
-                            reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
-                                component.id,
-                                component.update,
-                                event,
-                                component.props.clone(),
-                            ));
-                        }
-
-                        break;
-                    }
+                if node.borrow().component.id != id {
+                    continue;   
                 }
+
+                if let Some(element) = node.borrow().element {
+                    if let Message::CraftMessage(message) = message {
+                        let mut res = Event::new();
+                        element.on_event(
+                            message,
+                            &mut reactive_tree.element_state,
+                            text_context.as_mut().unwrap(),
+                            false,
+                            &mut res,
+                            None,
+                            None,
+                        );
+                        focus = focus.merge(res.focus);
+                        reactive_tree.element_state.update_element_focus(res.focus);
+
+                        effects.append(&mut res.effects);
+                    }
+
+                    break;
+                } else {
+                    let component = node.borrow().component;
+                    let state = reactive_tree.user_state.storage.get_mut(&component.id).unwrap().as_mut();
+                    let mut event = Event::default();
+                    (component.update)(state, global_state, component.props.clone(), &mut event, message, component.id, window_context, None, None);
+                    effects.append(&mut event.effects);
+                    if event.future.is_some() {
+                        reactive_tree.update_queue.push_back(UpdateQueueEntry::new(
+                            component.id,
+                            component.update,
+                            event,
+                            component.props.clone(),
+                        ));
+                    }
+
+                    break;
+                }
+                
             }
         }
         EventDispatchType::Accesskit(_) => {}

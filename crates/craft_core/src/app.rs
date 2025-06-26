@@ -498,10 +498,8 @@ impl App {
             let logical_key = keyboard_input.key;
             let key_state = keyboard_input.state;
 
-            if KeyState::Down == key_state {
-                if let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key {
+            if KeyState::Down == key_state && let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key {
                     self.is_dev_tools_open = !self.is_dev_tools_open;
-                }
             }
         }
 
@@ -530,14 +528,9 @@ impl App {
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
         match resource_event {
             ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
-                if resource_type == ResourceType::Font {
-                    if let Some(_text_context) = self.text_context.as_mut() {
-                        if resource.data().is_some() {
-                            // Todo: Load the font into the text context.
-                            self.resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
-                        }
-                    }
-
+                if let Some(_text_context) = self.text_context.as_mut() && resource_type == ResourceType::Font && resource.data().is_some() {
+                    // Todo: Load the font into the text context.
+                    self.resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
                     self.reload_fonts = true;
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                     self.resource_manager.resources.insert(resource_identifier, Arc::new(resource));

@@ -181,27 +181,24 @@ impl ApplicationHandler for CraftWinitState {
                     None
                 };
 
-                if let Some(renderer) = self.craft_state.craft_app.renderer.as_mut() {
-                    if let Some(canvas) = canvas {
-                        if let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
-                            let scale_factor = self.craft_state.craft_app.window_context.effective_scale_factor() as f32;
-                            
-                            let size = canvas.computed_box_transformed().padding_rectangle_size();
-                            let position = canvas.computed_box_transformed().padding_rectangle_position();
+                if let Some(renderer) = self.craft_state.craft_app.renderer.as_mut() && let Some(canvas) = canvas &&
+                    let Some(vello_renderer) = renderer.as_any_mut().downcast_mut::<VelloRenderer>() {
+                    let scale_factor = self.craft_state.craft_app.window_context.effective_scale_factor() as f32;
 
-                            let elapsed = self.start_time.elapsed().as_secs_f32();
-                            let angle = elapsed % (2.0 * std::f32::consts::PI);
-                            self.rotation = angle;
+                    let size = canvas.computed_box_transformed().padding_rectangle_size();
+                    let position = canvas.computed_box_transformed().padding_rectangle_position();
 
-                            draw_gui_texture_and_canvas(vello_renderer, 
-                                                        position.x as f32 * scale_factor,
-                                                        position.y as f32 * scale_factor, 
-                                                        size.width * scale_factor, 
-                                                        size.height * scale_factor,
-                                                        self.rotation
-                            );
-                        }
-                    }
+                    let elapsed = self.start_time.elapsed().as_secs_f32();
+                    let angle = elapsed % (2.0 * std::f32::consts::PI);
+                    self.rotation = angle;
+
+                    draw_gui_texture_and_canvas(vello_renderer,
+                                                position.x as f32 * scale_factor,
+                                                position.y as f32 * scale_factor,
+                                                size.width * scale_factor,
+                                                size.height * scale_factor,
+                                                self.rotation
+                    );
                 }
                 
                 if let Some(window) = &mut self.craft_state.craft_app.window {
