@@ -7,14 +7,14 @@ use peniko::kurbo::{Affine, Line};
 #[derive(Clone, Debug)]
 pub struct TextRender {
     pub lines: Vec<TextRenderLine>,
-    pub cursor: Option<Rectangle>,
+    pub cursor: Option<(Rectangle, Color)>,
     pub override_brush: Option<ColorBrush>,
 }
 
 #[derive(Clone, Debug)]
 pub struct TextRenderLine {
     pub items: Vec<TextRenderItem>,
-    pub selections: Vec<Rectangle>,
+    pub selections: Vec<(Rectangle, Color)>,
     pub backgrounds: Vec<(Rectangle, Color)>,
 }
 

@@ -234,7 +234,7 @@ impl Renderer for VelloCpuRenderer {
                             );
                         }
                         
-                        for selection in &line.selections {
+                        for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,
                                 y: -scroll + selection.y + rect.y,
@@ -244,7 +244,7 @@ impl Renderer for VelloCpuRenderer {
                             vello_draw_rect(
                                 &mut self.render_context,
                                 selection_rect,
-                                Color::from_rgb8(0, 120, 215),
+                                *selection_color,
                             );
                         }
                     });
@@ -277,14 +277,14 @@ impl Renderer for VelloCpuRenderer {
                     });
                     
                     if *show_cursor {
-                        if let Some(cursor) = &text_render.cursor {
+                        if let Some((cursor, cursor_color)) = &text_render.cursor {
                             let cursor_rect = Rectangle {
                                 x: cursor.x + rect.x,
                                 y: -scroll + cursor.y + rect.y,
                                 width: cursor.width,
                                 height: cursor.height,
                             };
-                            vello_draw_rect(&mut self.render_context, cursor_rect, Color::from_rgb8(0, 0, 0));
+                            vello_draw_rect(&mut self.render_context, cursor_rect, *cursor_color);
                         }
                     }
                 }

@@ -42,5 +42,7 @@ bitflags! {
         const SCROLLBAR_THUMB_MARGIN = 1 << 36;
         const VISIBLE = 1 << 37;
         const UNDERLINE = 1 << 38;
+        const SELECTION_COLOR = 1 << 39;
+        const CURSOR_COLOR = 1 << 40;
     }
 }

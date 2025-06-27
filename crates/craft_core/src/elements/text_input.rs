@@ -245,11 +245,11 @@ impl Element for TextInput {
             line.selections.clear();
         }
         state.editor.selection_geometry_with(|rect, line| {
-            text_renderer.lines[line].selections.push(rect.into());
+            text_renderer.lines[line].selections.push((rect.into(), self.style().selection_color()));
         });
 
         if base_state.focused {
-            text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| r.into());
+            text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| (r.into(), self.style().cursor_color().unwrap_or(self.style().color())));
         } else {
             text_renderer.cursor = None;
         }

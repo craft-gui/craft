@@ -250,14 +250,14 @@ impl CraftRenderer for VelloHybridRenderer {
                             vello_draw_rect(scene, background_rect, *color);
                         }
                         
-                        for selection in &line.selections {
+                        for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,
                                 y: -scroll + selection.y + rect.y,
                                 width: selection.width,
                                 height: selection.height,
                             };
-                            vello_draw_rect(scene, selection_rect, Color::from_rgb8(0, 120, 215));
+                            vello_draw_rect(scene, selection_rect, *selection_color);
                         }
                     });
 
@@ -286,14 +286,14 @@ impl CraftRenderer for VelloHybridRenderer {
                     });
 
                     if *show_cursor {
-                        if let Some(cursor) = &text_render.cursor {
+                        if let Some((cursor, cursor_color)) = &text_render.cursor {
                             let cursor_rect = Rectangle {
                                 x: cursor.x + rect.x,
                                 y: -scroll + cursor.y + rect.y,
                                 width: cursor.width,
                                 height: cursor.height,
                             };
-                            vello_draw_rect(scene, cursor_rect, Color::from_rgb8(0, 0, 0));
+                            vello_draw_rect(scene, cursor_rect, *cursor_color);
                         }
                     }
                 }

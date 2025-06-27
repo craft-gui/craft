@@ -12,7 +12,7 @@ use craft::style::Overflow::Scroll;
 use craft::style::Unit;
 use craft::style::{FlexDirection, FontStyle, TextStyleProperty, Weight};
 use craft::text::RangedStyles;
-use craft::CraftOptions;
+use craft::{palette, CraftOptions};
 use craft::{craft_main, rgb};
 
 #[derive(Default, Copy, Clone)]
@@ -63,6 +63,8 @@ impl Component for TextState {
             .push(
                 TextInput::new(include_str!("../counter/main.rs"))
                     .height(Unit::Px(600.0))
+                    .selection_color(palette::css::RED)
+                    .cursor_color(palette::css::BLUE)
                     .width(Unit::Px(800.0))
                     .display(Block)
                     .overflow(Scroll),

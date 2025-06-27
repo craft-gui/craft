@@ -11,6 +11,7 @@ use crate::text::text_context::ColorBrush;
 use std::fmt;
 use std::fmt::Debug;
 use smallvec::SmallVec;
+use crate::palette;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -263,6 +264,9 @@ pub enum StyleProperty {
     
     Color(Color),
     Background(Color),
+    /// Defaults to the text color, if it is None.
+    CursorColor(Option<Color>),
+    SelectionColor(Color),
     FontFamily(FontFamily),
     FontSize(f32),
     FontWeight(Weight),
@@ -412,6 +416,8 @@ style_property!(scrollbar_thumb_radius, set_scrollbar_thumb_radius, ScrollbarRad
 style_property!(scrollbar_width, set_scrollbar_width, ScrollbarWidth, f32, SCROLLBAR_WIDTH, if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 });
 
 style_property!(visible, set_visible, Visible, bool, VISIBLE, true);
+style_property!(selection_color, set_selection_color, SelectionColor, Color, SELECTION_COLOR, Color::from_rgb8(0, 120, 215));
+style_property!(cursor_color, set_cursor_color, CursorColor, Option<Color>, CURSOR_COLOR, None);
 
 impl Style {
     fn remove_property(&mut self, f: impl Fn(&StyleProperty) -> bool) {
@@ -479,6 +485,8 @@ impl Style {
                 StyleProperty::ScrollbarThumbMargin(_) => StyleFlags::SCROLLBAR_THUMB_MARGIN,
                 StyleProperty::ScrollbarWidth(_) => StyleFlags::SCROLLBAR_WIDTH,
                 StyleProperty::Visible(_) => StyleFlags::VISIBLE,
+                StyleProperty::SelectionColor(_) => StyleFlags::SELECTION_COLOR,
+                StyleProperty::CursorColor(_) => StyleFlags::CURSOR_COLOR,
             };
 
             if new.dirty_flags.contains(flag) {

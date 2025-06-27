@@ -176,7 +176,7 @@ impl Element for Text {
             line.selections.clear();
         }
         state.selection.geometry_with(layout, |rect, line| {
-            text_renderer.lines[line].selections.push(rect.into());
+            text_renderer.lines[line].selections.push((rect.into(), self.style().selection_color()));
         });
     }
 

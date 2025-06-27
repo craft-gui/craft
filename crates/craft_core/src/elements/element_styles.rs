@@ -167,6 +167,16 @@ where
         self
     }
 
+    fn selection_color(mut self, color: Color) -> Self {
+        self.styles_mut().set_selection_color(color);
+        self
+    }
+
+    fn cursor_color(mut self, color: Color) -> Self {
+        self.styles_mut().set_cursor_color(Some(color));
+        self
+    }
+    
     fn font_size<U: IntoF32 + Copy>(mut self, font_size: U) -> Self {
         self.styles_mut().set_font_size(font_size.into_f32());
         self
