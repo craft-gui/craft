@@ -48,6 +48,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
+use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
         ($self:expr, $is_dev_tree:expr) => {{
@@ -515,7 +516,7 @@ impl App {
         (message.update_fn)(
             state,
             &mut self.global_state,
-            message.props,
+            message.props.clone(),
             &mut event,
             &Message::UserMessage(message.message),
             message.source_component_id,
@@ -523,6 +524,18 @@ impl App {
             None,
             None,
         );
+        
+        // TODO: Should we handle effects here too?
+        if event.future.is_some() {
+            self.user_tree.update_queue.push_back(UpdateQueueEntry::new(
+                message.source_component_id,
+                message.update_fn,
+                event,
+                message.props,
+            ));
+        }
+
+        self.request_redraw();
     }
 
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
