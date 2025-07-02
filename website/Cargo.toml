@@ -40,7 +40,7 @@ features = [
     "png",
     "jpeg",
     "accesskit",
-    "sytem_fonts",
+    "system_fonts",
     "markdown"
 ]
 package = "craft_gui"

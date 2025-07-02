@@ -1,12 +1,18 @@
 use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentSpecification, Context};
+use craft::components::{Component, ComponentSpecification, Context, Props};
 use craft::elements::{Container, ElementStyles, Text};
 use craft::style::{Display, FlexDirection, Weight};
+use crate::docs::docs_template;
+use crate::docs::hello_world::counter::Counter;
+use crate::docs::markdown_viewer::{MarkdownViewer, MarkdownViewerProps};
 
 #[derive(Default)]
 pub(crate) struct HelloWorldPage {
     
 }
+
+#[path = "../../../examples/counter/main.rs"]
+mod counter;
 
 impl Component for HelloWorldPage {
     type GlobalState = WebsiteGlobalState;
@@ -14,11 +20,11 @@ impl Component for HelloWorldPage {
     type Message = ();
 
     fn view(_context: &mut Context<Self>) -> ComponentSpecification {
-        Container::new()
-            .display(Display::Flex)
-            .flex_direction(FlexDirection::Column)
-            .push(Text::new("Hello World").font_size(32.0).margin("0px", "0px", "25px", "0px").font_weight(Weight::BOLD))
-            .push(Text::new("Coming Soon!").font_size(16.0))
+        docs_template()
+            .push(MarkdownViewer::component().props(Props::new(MarkdownViewerProps {
+                markdown_text: include_str!("markdown/hello_world/intro.md").to_string()
+            })))
+            .push(Counter::component())
             .component()
     }
 }

@@ -116,7 +116,8 @@ impl Component for Docs {
         let mut wrapper = wrapper().display(Display::Flex).gap("100px");
 
         if context.window().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
-            wrapper = wrapper.flex_direction(FlexDirection::ColumnReverse);
+            // FIXME: ColumnReverse will break scroll?
+            wrapper = wrapper.flex_direction(FlexDirection::Column).gap("10px");
         }
 
         let menu_sections = vec![
