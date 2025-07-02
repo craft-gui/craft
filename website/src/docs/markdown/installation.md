@@ -11,7 +11,7 @@ Next, add the `craft` crate to your `Cargo.toml` file:
 [dependencies.craft]
 git = "https://github.com/craft-gui/craft.git"
 branch = "main"
-features = ["vello_renderer", "devtools", "accesskit", "sytem_fonts"]
+features = ["vello_renderer", "devtools", "accesskit", "system_fonts"]
 package = "craft_gui"
 ```
 
