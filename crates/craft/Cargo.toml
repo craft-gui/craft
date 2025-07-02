@@ -19,7 +19,7 @@ jpeg = ["craft_core/jpeg"]
 
 accesskit = ["craft_core/accesskit"]
 
-sytem_fonts = ["craft_core/system_fonts"]
+system_fonts = ["craft_core/system_fonts"]
 
 http_client = ["craft_core/http_client"]
 vello_renderer = ["craft_core/vello_renderer"]
@@ -31,7 +31,7 @@ link = ["craft_core/link"]
 
 code_highlighting = ["craft_core/code_highlighting"]
 
-default = ["vello_renderer", "http_client", "devtools", "png", "jpeg", "accesskit", "clipboard", "sytem_fonts"]
+default = ["vello_renderer", "http_client", "devtools", "png", "jpeg", "accesskit", "clipboard", "system_fonts"]
 
 
 [dependencies]
