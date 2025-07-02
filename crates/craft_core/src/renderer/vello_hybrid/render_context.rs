@@ -66,7 +66,10 @@ pub(crate) struct DeviceHandle {
 impl RenderContext {
     /// Creates a new render context
     pub(crate) fn new() -> Self {
+        #[cfg(not(feature = "vello_hybrid_renderer_webgl"))]
         let backends = wgpu::Backends::from_env().unwrap_or_default();
+        #[cfg(feature = "vello_hybrid_renderer_webgl")]
+        let backends = wgpu::Backends::GL;
         let flags = wgpu::InstanceFlags::from_build_config().with_env();
         let backend_options = wgpu::BackendOptions::from_env_or_default();
         let instance = Instance::new(&wgpu::InstanceDescriptor {
@@ -162,6 +165,9 @@ impl RenderContext {
     /// Creates a compatible device handle id.
     async fn new_device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
         let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await?;
+        #[cfg(feature = "vello_hybrid_renderer_webgl")]
+        let limits = Limits::downlevel_webgl2_defaults();
+        #[cfg(not(feature = "vello_hybrid_renderer_webgl"))]
         let limits = Limits::default();
 
         let (device, queue) = adapter

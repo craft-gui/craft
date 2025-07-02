@@ -25,6 +25,7 @@ http_client = ["craft_core/http_client"]
 vello_renderer = ["craft_core/vello_renderer"]
 vello_cpu_renderer = ["craft_core/vello_cpu_renderer"]
 vello_hybrid_renderer = ["craft_core/vello_hybrid_renderer"]
+vello_hybrid_renderer_webgl = ["craft_core/vello_hybrid_renderer_webgl"]
 
 markdown = ["craft_core/markdown"]
 link = ["craft_core/link"]

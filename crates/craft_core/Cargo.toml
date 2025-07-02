@@ -23,6 +23,8 @@ accesskit = ["dep:accesskit", "dep:accesskit_winit", "parley/accesskit"]
 vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
 vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
 vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+vello_hybrid_renderer_webgl = ["wgpu/webgl"]
+
 http_client = ["dep:reqwest"]
 markdown = ["dep:pulldown-cmark", "code_highlighting", "link"]
 code_highlighting = ["dep:syntect"]
@@ -107,26 +109,26 @@ features = ["std"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello.git"
-rev = "7d1c2883058f47222cca525defc1a18fa0927d33"
+rev = "d97533523fef598dd3d22bce5a1e11253c405042"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello.git"
-rev = "7d1c2883058f47222cca525defc1a18fa0927d33"
+rev = "d97533523fef598dd3d22bce5a1e11253c405042"
 optional = true
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello.git"
-rev = "7d1c2883058f47222cca525defc1a18fa0927d33"
+rev = "d97533523fef598dd3d22bce5a1e11253c405042"
 default-features = false
 features = ["default"]
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello.git"
-rev = "7d1c2883058f47222cca525defc1a18fa0927d33"
+rev = "d97533523fef598dd3d22bce5a1e11253c405042"
 optional = true
 
 [dependencies.softbuffer]

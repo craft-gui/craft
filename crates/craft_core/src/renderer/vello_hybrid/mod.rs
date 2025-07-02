@@ -11,7 +11,7 @@ use crate::resource_manager::resource::Resource;
 use crate::resource_manager::ResourceManager;
 use peniko::kurbo::Shape;
 use std::sync::Arc;
-use kurbo::Stroke;
+use kurbo::{Affine, Stroke};
 use vello_common::glyph::Glyph;
 use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
@@ -76,11 +76,14 @@ impl VelloHybridRenderer {
         // Create a vello Surface
         let surface_size = window.inner_size();
 
+        let width = surface_size.width.max(1);
+        let height = surface_size.height.max(1);
+
         let mut vello_renderer = VelloHybridRenderer {
             context: RenderContext::new(),
             renderers: vec![],
             state: RenderState::Suspended,
-            scene: Scene::new(surface_size.width as u16, surface_size.height as u16),
+            scene: Scene::new(width as u16, height as u16),
             surface_clear_color: Color::WHITE,
         };
 
@@ -88,9 +91,12 @@ impl VelloHybridRenderer {
             .context
             .create_surface(
                 window.clone(),
-                surface_size.width,
-                surface_size.height,
+                width,
+                height,
                 wgpu::PresentMode::AutoVsync,
+                #[cfg(feature = "vello_hybrid_renderer_webgl")]
+                TextureFormat::Rgba8Unorm,
+                #[cfg(not(feature = "vello_hybrid_renderer_webgl"))]
                 TextureFormat::Bgra8Unorm,
             )
             .await;
@@ -102,8 +108,8 @@ impl VelloHybridRenderer {
         // Save the Window and Surface to a state variable
         vello_renderer.state = RenderState::Active(ActiveRenderState {
             surface,
-            window_width: surface_size.width as f32,
-            window_height: surface_size.height as f32,
+            window_width: width as f32,
+            window_height: height as f32,
         });
 
         vello_renderer
@@ -181,25 +187,29 @@ impl CraftRenderer for VelloHybridRenderer {
                     self.scene.set_paint(PaintType::from(*outline_color));
                     self.scene.stroke_rect(&rectangle.to_kurbo());
                 }
-                RenderCommand::DrawImage(_rectangle, resource_identifier) => {
+                RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
 
-                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() { 
+                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
                         let image = &resource.image;
-                        let data = Arc::new(ImageAdapter::new(resource.clone()));
-                        let blob = Blob::new(data);
-                        let _vello_image =
-                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
 
-                        /*   let mut transform = Affine::IDENTITY;
+                        let mut transform = Affine::IDENTITY;
                         transform =
                             transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             rectangle.width as f64 / image.width() as f64,
                             rectangle.height as f64 / image.height() as f64,
-                        );*/
+                        );
+                        scene.set_transform(transform);
 
-                        //scene.draw_image(&vello_image, transform);
+                        println!("Rectangle: {:?}", rectangle);
+                        scene.fill_rect(&kurbo::Rect::new(
+                            0.0,
+                            0.0,
+                            image.width() as f64,
+                            image.height() as f64,
+                        ));
+                        scene.reset_transform();
                     }
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
