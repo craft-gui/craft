@@ -8,7 +8,7 @@ pub struct ResourceData {
     pub(crate) resource_identifier: ResourceIdentifier,
     pub(crate) data: Option<Vec<u8>>,
     pub(crate) resource_type: ResourceType,
-    expiration_time: Option<DateTime<Utc>>,
+    pub(crate) expiration_time: Option<DateTime<Utc>>,
 }
 
 impl ResourceData {

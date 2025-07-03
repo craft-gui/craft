@@ -57,7 +57,7 @@ impl ResourceManager {
         if !resources_collected.contains_key(&resource_identifier) {
             let resource_identifier_copy = resource_identifier.clone();
             let resource_type_copy = resource_type;
-
+            
             match &resource_type_copy {
                 ResourceType::Image => {
                     let resource_identifier = resource_identifier.clone();
@@ -97,10 +97,17 @@ impl ResourceManager {
                     let resource = resource_identifier.clone();
                     let app_sender_copy = self.app_sender.clone();
                     let f = async move {
-                        let bytes = resource.clone().fetch_data_from_resource_identifier().await;
-
-                        if let Some(font_bytes) = bytes {
-                            let resource = Resource::Font(font_bytes);
+                        let mut bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                        
+                        if let Some(font_bytes) = bytes.take() {
+                            let generic_resource = ResourceData::new(
+                                resource_identifier.clone(),
+                                Some(font_bytes),
+                                None,
+                                ResourceType::Font,
+                            );
+                            info!("Font downloaded");
+                            let resource = Resource::Font(generic_resource);
 
                             app_sender_copy
                                 .send(InternalMessage::ResourceEvent(ResourceEvent::Loaded(
@@ -128,7 +135,7 @@ impl ResourceManager {
                                 ResourceType::TinyVg,
                             );
                             let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
-
+                            info!("TinyVG downloaded");
                             app_sender_copy
                                 .send(InternalMessage::ResourceEvent(ResourceEvent::Loaded(
                                     resource_identifier_copy,
