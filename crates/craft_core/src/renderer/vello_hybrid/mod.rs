@@ -1,27 +1,24 @@
 mod render_context;
 mod tinyvg;
 
-use vello_common::paint::ImageId;
-use std::collections::HashMap;
-use vello_common::paint::{ImageSource, PaintType};
-use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
-use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::resource_manager::resource::Resource;
 use crate::resource_manager::{ResourceIdentifier, ResourceManager};
-use peniko::kurbo::Shape;
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use kurbo::{Affine, Stroke};
+use peniko::kurbo::Shape;
 use peniko::ImageQuality;
-use vello_common::glyph::Glyph;
-use vello_common::paint::Paint;
-use vello_common::peniko::Blob;
-use vello_common::{kurbo, peniko};
+use std::any::Any;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use vello_common::color::PremulRgba8;
+use vello_common::glyph::Glyph;
+use vello_common::paint::ImageId;
+use vello_common::paint::{ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
+use vello_common::{kurbo, peniko};
 use vello_hybrid::RenderSize;
 use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::TextureFormat;
@@ -31,8 +28,8 @@ use crate::renderer::vello_hybrid::render_context::RenderContext;
 use crate::renderer::vello_hybrid::render_context::RenderSurface;
 use crate::renderer::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::renderer::Brush;
-use vello_hybrid::Scene;
 use crate::text::text_render_data::TextRenderLine;
+use vello_hybrid::Scene;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -65,7 +62,7 @@ pub struct VelloHybridRenderer {
     scene: Scene,
     surface_clear_color: Color,
 
-    images: HashMap<ResourceIdentifier, ImageId>,
+    images: HashMap<ResourceIdentifier, (ImageId, Option<DateTime<Utc>>)>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
@@ -137,14 +134,14 @@ impl CraftRenderer for VelloHybridRenderer {
 
     fn surface_width(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window_width as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_width,
             RenderState::Suspended => 0.0,
         }
     }
 
     fn surface_height(&self) -> f32 {
         match &self.state {
-            RenderState::Active(active_render_state) => active_render_state.window_height as f32,
+            RenderState::Active(active_render_state) => active_render_state.window_height,
             RenderState::Suspended => 0.0,
         }
     }
@@ -154,8 +151,8 @@ impl CraftRenderer for VelloHybridRenderer {
             RenderState::Active(state) => state,
             _ => return,
         };
-        render_state.window_height = height as f32;
-        render_state.window_width = width as f32;
+        render_state.window_height = height;
+        render_state.window_width = width;
         self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
         self.scene = Scene::new(width as u16, height as u16);
     }
@@ -193,15 +190,18 @@ impl CraftRenderer for VelloHybridRenderer {
         });
 
         let mut images_were_uploaded = false;
+
+        let mut seen_images: HashSet<ImageId> = HashSet::new();
+        let mut expired_images: HashSet<ImageId> = HashSet::new();
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
-            
+
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color) => {
-                    self.scene.set_stroke(vello_common::kurbo::Stroke::new(1.0));
+                    self.scene.set_stroke(Stroke::new(1.0));
                     self.scene.set_paint(PaintType::from(*outline_color));
                     self.scene.stroke_rect(&rectangle.to_kurbo());
                 }
@@ -209,13 +209,21 @@ impl CraftRenderer for VelloHybridRenderer {
                     let resource = resource_manager.resources.get(resource_identifier);
 
                     if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
+                        let expiration_time = resource.common_data.expiration_time;
+
                         let image = &resource.image;
 
-                        let image_id = if let Some(stored_image) = self.images.get(resource_identifier) {
-                            stored_image.clone()
+                        // There is an image, and it hasn't expired.
+                        let image_id = if let Some(stored_image) = self.images.get(resource_identifier) && stored_image.1 == expiration_time {
+                            stored_image.0.clone()
                         } else {
+                            // There is an image, but it expired.
+                            if let Some(stored_image) = self.images.get(resource_identifier) {
+                                expired_images.insert(stored_image.0.clone());
+                            }
+
                             images_were_uploaded = true;
-                            
+
                             // NOTE: We may be able to avoid this if we implement the AtlasWriter trait.
                             let premul_data: Vec<PremulRgba8> = image
                                 .to_vec()
@@ -238,9 +246,11 @@ impl CraftRenderer for VelloHybridRenderer {
                             );
 
                             let image_id = renderer.upload_image(&device_handle.device, &device_handle.queue, &mut encoder, &pixmap);
-                            self.images.insert(resource_identifier.clone(), image_id);
+                            self.images.insert(resource_identifier.clone(), (image_id, expiration_time));
+
                             image_id
                         };
+                        seen_images.insert(image_id);
 
                         let mut transform = Affine::IDENTITY;
                         transform =
@@ -269,7 +279,7 @@ impl CraftRenderer for VelloHybridRenderer {
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
                     let text_transform =
-                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
+                        Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
@@ -367,9 +377,9 @@ impl CraftRenderer for VelloHybridRenderer {
                 }
                 RenderCommand::PushLayer(rect) => {
                     let clip_path = Some(
-                        peniko::kurbo::Rect::from_origin_size(
-                            peniko::kurbo::Point::new(rect.x as f64, rect.y as f64),
-                            peniko::kurbo::Size::new(rect.width as f64, rect.height as f64),
+                        kurbo::Rect::from_origin_size(
+                            kurbo::Point::new(rect.x as f64, rect.y as f64),
+                            kurbo::Size::new(rect.width as f64, rect.height as f64),
                         )
                         .into_path(0.1),
                     );
@@ -385,6 +395,33 @@ impl CraftRenderer for VelloHybridRenderer {
                 _ => {}
             }
         });
+
+        let mut to_remove: Vec<ResourceIdentifier> = Vec::new();
+
+        for expired_image_id in &expired_images {
+            // Note: Expired images will have an entry in the images hashmap, but with a new ImageId.
+            // Meaning, that we need to delete the detached/abandoned expired image id here.
+            renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, *expired_image_id);
+            images_were_uploaded = true;
+        }
+
+        for (key, (image_id, _)) in &self.images {
+            let seen = seen_images.contains(&image_id);
+            let expired = expired_images.contains(&image_id);
+
+            // Delete the culled image, only if it hasn't already been deleted when we looped over the expired images.
+            if !seen && !expired {
+                renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, image_id.clone());
+                images_were_uploaded = true;
+            }
+
+            if !seen {
+                to_remove.push(key.clone());
+            }
+        }
+        for key in &to_remove {
+            self.images.remove(&key);
+        }
 
         // Submit the texture write commands.
         if images_were_uploaded {
