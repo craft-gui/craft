@@ -1,21 +1,27 @@
 mod render_context;
 mod tinyvg;
 
-use vello_common::paint::PaintType;
+use vello_common::paint::ImageId;
+use std::collections::HashMap;
+use vello_common::paint::{ImageSource, PaintType};
 use std::any::Any;
 use crate::geometry::Rectangle;
 use crate::renderer::color::Color;
 use crate::renderer::image_adapter::ImageAdapter;
 use crate::renderer::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::resource_manager::resource::Resource;
-use crate::resource_manager::ResourceManager;
+use crate::resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::Shape;
 use std::sync::Arc;
+use chrono::{DateTime, Utc};
 use kurbo::{Affine, Stroke};
+use peniko::ImageQuality;
 use vello_common::glyph::Glyph;
 use vello_common::paint::Paint;
 use vello_common::peniko::Blob;
 use vello_common::{kurbo, peniko};
+use vello_common::color::PremulRgba8;
+use vello_common::pixmap::Pixmap;
 use vello_hybrid::RenderSize;
 use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::TextureFormat;
@@ -58,6 +64,8 @@ pub struct VelloHybridRenderer {
     // which is then passed to a renderer for rendering
     scene: Scene,
     surface_clear_color: Color,
+
+    images: HashMap<ResourceIdentifier, ImageId>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
@@ -85,6 +93,7 @@ impl VelloHybridRenderer {
             state: RenderState::Suspended,
             scene: Scene::new(width as u16, height as u16),
             surface_clear_color: Color::WHITE,
+            images: HashMap::new(),
         };
 
         let surface = vello_renderer
@@ -175,9 +184,18 @@ impl CraftRenderer for VelloHybridRenderer {
 
         vello_draw_rect(&mut self.scene, Rectangle::new(0.0, 0.0, width as f32, height as f32), Color::WHITE);
 
+        let renderer = self.renderers[surface.dev_id]
+            .as_mut()
+            .unwrap();
+        let device_handle = &self.context.devices[surface.dev_id];
+        let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Blit Textures onto a Texture Atlas Encoder"),
+        });
+
+        let mut images_were_uploaded = false;
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
-
+            
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
@@ -193,6 +211,37 @@ impl CraftRenderer for VelloHybridRenderer {
                     if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
                         let image = &resource.image;
 
+                        let image_id = if let Some(stored_image) = self.images.get(resource_identifier) {
+                            stored_image.clone()
+                        } else {
+                            images_were_uploaded = true;
+                            
+                            // NOTE: We may be able to avoid this if we implement the AtlasWriter trait.
+                            let premul_data: Vec<PremulRgba8> = image
+                                .to_vec()
+                                .chunks_exact(4)
+                                .map(|rgba| {
+                                    let alpha = u16::from(rgba[3]);
+                                    let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;
+                                    PremulRgba8 {
+                                        r: premultiply(rgba[0]),
+                                        g: premultiply(rgba[1]),
+                                        b: premultiply(rgba[2]),
+                                        a: alpha as u8,
+                                    }
+                                })
+                                .collect();
+                            let pixmap = Pixmap::from_parts(
+                                premul_data,
+                                image.width() as u16,
+                                image.height() as u16,
+                            );
+
+                            let image_id = renderer.upload_image(&device_handle.device, &device_handle.queue, &mut encoder, &pixmap);
+                            self.images.insert(resource_identifier.clone(), image_id);
+                            image_id
+                        };
+
                         let mut transform = Affine::IDENTITY;
                         transform =
                             transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
@@ -202,7 +251,13 @@ impl CraftRenderer for VelloHybridRenderer {
                         );
                         scene.set_transform(transform);
 
-                        println!("Rectangle: {:?}", rectangle);
+                        scene.set_paint(PaintType::Image(vello_common::paint::Image {
+                            source: ImageSource::OpaqueId(image_id),
+                            x_extend: peniko::Extend::default(),
+                            y_extend: peniko::Extend::default(),
+                            quality: ImageQuality::High,
+                        }));
+
                         scene.fill_rect(&kurbo::Rect::new(
                             0.0,
                             0.0,
@@ -330,6 +385,11 @@ impl CraftRenderer for VelloHybridRenderer {
                 _ => {}
             }
         });
+
+        // Submit the texture write commands.
+        if images_were_uploaded {
+            device_handle.queue.submit([encoder.finish()]);
+        }
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
