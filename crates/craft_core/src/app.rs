@@ -509,7 +509,12 @@ impl App {
 
     /// Processes async messages sent from the user.
     pub fn on_user_message(&mut self, message: InternalUserMessage) {
-        let state = self.user_tree.user_state.storage.get_mut(&message.source_component_id).unwrap().as_mut();
+        let state = if let Some(state) = self.user_tree.user_state.storage.get_mut(&message.source_component_id) { 
+            state.as_mut()
+        } else {
+            // The receiving component may not be mounted anymore after an async task, so just return.
+            return;
+        };
 
         let mut event = Event::default();
 
