@@ -166,7 +166,12 @@ impl RenderContext {
     async fn new_device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
         let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await?;
         #[cfg(feature = "vello_hybrid_renderer_webgl")]
-        let limits = Limits::downlevel_webgl2_defaults();
+        let limits = Limits {
+            max_color_attachments: 4,
+            max_texture_dimension_2d: adapter.limits().max_texture_dimension_2d,
+            max_buffer_size: adapter.limits().max_buffer_size,
+            ..Limits::downlevel_webgl2_defaults()
+        };
         #[cfg(not(feature = "vello_hybrid_renderer_webgl"))]
         let limits = Limits::default();
 
