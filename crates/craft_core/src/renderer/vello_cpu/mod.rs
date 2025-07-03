@@ -320,6 +320,7 @@ impl Renderer for VelloCpuRenderer {
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
+        self.render_context.flush();
         self.render_context.render_to_pixmap(&mut self.pixmap, RenderMode::OptimizeQuality);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
