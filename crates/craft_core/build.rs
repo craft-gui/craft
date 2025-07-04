@@ -96,7 +96,6 @@ fn main() {
             ],
         },
     ];
-    // on_press: Option<Box<dyn Fn(&dyn Any, &ButtonPressContext)>>,
     generate_event_handler_struct(event_handlers.as_slice());
     generate_element_impls(event_handlers.as_slice());
 }
@@ -105,16 +104,16 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
     let path = Path::new("src").join("events").join("event_handlers.rs");
     let mut file = File::create(&path).unwrap();
     writeln!(file, "// This file is generated via build.rs. Do not modify manually!").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
     writeln!(file, "use std::sync::Arc;").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
     writeln!(file, "use crate::components::Event;").unwrap();
     writeln!(file, "use crate::events::Message;").unwrap();
     writeln!(file, "use crate::{{GlobalState, WindowContext}};").unwrap();
     writeln!(file, "use crate::elements::Element;").unwrap();
     writeln!(file, "use crate::reactive::state_store::StateStoreItem;").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
 
     let mut imports: HashSet<String> = HashSet::new();
@@ -127,9 +126,10 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
     }
 
     for import in imports {
-        writeln!(file, "use {};", import).unwrap();
+        writeln!(file, "use {import};").unwrap();
     }
 
+    writeln!(file, "#[allow(clippy::type_complexity)]").unwrap();
     writeln!(file, "#[derive(Clone, Default)]").unwrap();
     writeln!(file, "pub struct EventHandlers {{").unwrap();
     for handler in event_handlers {
@@ -142,7 +142,7 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
         &mut WindowContext,
         Option<&dyn Element>,
         Option<&dyn Element>,", handler.name).unwrap();
-        for (_param_index, param) in handler.params.iter().enumerate() {
+        for param in handler.params.iter() {
             if param.is_ref {
                 write!(file, "&").unwrap();
             }
@@ -165,12 +165,12 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
     let path = Path::new("src").join("elements").join("element_event_impls.rs");
     let mut file = File::create(&path).unwrap();
     writeln!(file, "// This file is generated via build.rs. Do not modify manually!").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
     writeln!(file, "use std::sync::Arc;").unwrap();
     writeln!(file, "use crate::components::Context;").unwrap();
     writeln!(file, "use crate::components::Component;").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
     writeln!(file, "use crate::components::Props;").unwrap();
     writeln!(file, "use crate::components::ComponentId;").unwrap();
@@ -179,18 +179,18 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
     writeln!(file, "use crate::{{GlobalState, WindowContext}};").unwrap();
     writeln!(file, "use crate::elements::Element;").unwrap();
     writeln!(file, "use crate::reactive::state_store::StateStoreItem;").unwrap();
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
     let mut imports: HashSet<String> = HashSet::new();
     for handler in event_handlers {
         for element in &handler.elements {
             imports.insert(element.type_import.clone());
         }
-        writeln!(file, "").unwrap();
+        writeln!(file).unwrap();
     }
 
     for import in imports {
-        writeln!(file, "use {};", import).unwrap();
+        writeln!(file, "use {import};").unwrap();
     }
 
     let mut type_imports: HashSet<String> = HashSet::new();
@@ -203,9 +203,9 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
     }
 
     for type_import in type_imports {
-        writeln!(file, "use {};", type_import).unwrap();
+        writeln!(file, "use {type_import};").unwrap();
     }
-    writeln!(file, "").unwrap();
+    writeln!(file).unwrap();
 
     for handler in event_handlers {
         for element in &handler.elements {
@@ -265,7 +265,7 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
                 );").unwrap();
             writeln!(file, "                callback(&mut context, ").unwrap();
             for (param_index, param) in handler.params.iter().enumerate() {
-                write!(file, "&{}{}", param.name, if param.is_mut { "mut " } else { "" }).unwrap();
+                write!(file, "{}", param.name).unwrap();
                 if param_index < handler.params.len() - 1 {
                     write!(file, ", ").unwrap();
                 }
@@ -278,7 +278,7 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
             writeln!(file, "        self").unwrap();
             writeln!(file, "    }}").unwrap();
             writeln!(file, "}}").unwrap();
-            writeln!(file, "").unwrap();
+            writeln!(file).unwrap();
         }
     }
 

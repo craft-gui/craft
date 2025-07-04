@@ -1,4 +1,4 @@
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
 pub mod components;
 pub mod craft_runtime;
@@ -209,6 +209,7 @@ pub fn setup_craft(
 
     let runtime = runtime_receiver.blocking_recv().expect("Failed to receive runtime handle");
     let runtime_copy = runtime.clone();
+    #[allow(clippy::arc_with_non_send_sync)]
     let resource_manager = Arc::new(ResourceManager::new(app_sender.clone(), runtime.clone()));
 
     let mut user_state = StateStore::default();
@@ -266,6 +267,7 @@ pub fn setup_craft(
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)
 }
 
+#[allow(unused_variables)]
 async fn async_main(mut app_receiver: Receiver<InternalMessage>, winit_sender: Sender<InternalMessage>) {
     info!("starting main event loop");
     loop {

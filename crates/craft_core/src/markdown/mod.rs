@@ -352,6 +352,5 @@ pub fn render_markdown(markdown: &str, ) -> ComponentSpecification {
         }
     }
 
-    let e = renderer.element_stack.remove(0);
-    e
+    renderer.element_stack.remove(0)
 }

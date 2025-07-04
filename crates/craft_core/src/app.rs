@@ -1,4 +1,4 @@
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use {
     crate::accessibility::access_handler::CraftAccessHandler,
     crate::accessibility::activation_handler::CraftActivationHandler,
@@ -141,6 +141,7 @@ impl App {
         }
     }
 
+    #[allow(unused_variables)]
     pub fn on_resume(&mut self, window: Arc<Window>, renderer: RendererBox, event_loop: &ActiveEventLoop) {
         window.set_ime_allowed(true);
 
@@ -259,9 +260,7 @@ impl App {
     #[cfg(feature = "accesskit")]
     pub fn on_request_redraw(&mut self) -> Option<TreeUpdate> {
         self.on_request_redraw_internal();
-        if self.window.is_none() {
-            return None;
-        }
+        self.window.as_ref()?;
         let window = self.window.as_mut().unwrap().clone();
 
         let tree_update = self.compute_accessibility_tree();

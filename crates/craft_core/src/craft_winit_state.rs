@@ -1,6 +1,6 @@
 #[cfg(target_arch = "wasm32")]
 use {
-    std::cell::RefCell, std::ops::AddAssign, std::rc::Rc, wasm_bindgen::JsCast,
+    wasm_bindgen::JsCast,
     winit::platform::web::WindowAttributesExtWebSys,
 };
 
@@ -264,7 +264,6 @@ impl ApplicationHandler for CraftWinitState {
                                     window.request_redraw();
                                 }
                             }
-                            _ => {}
                         }
                     });
                 });

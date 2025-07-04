@@ -48,7 +48,7 @@ fn docs_menu_separator() -> Container {
         .width("100%").background(palette::css::LIGHT_GRAY)
 }
 
-fn docs_menu(docs_menu_section: &Vec<DocsMenuSection>, current_route: &str) -> Container {
+fn docs_menu(docs_menu_section: &[DocsMenuSection], current_route: &str) -> Container {
     let mut container = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column);
@@ -80,8 +80,7 @@ struct DocsMenuSection {
     links: Vec<Link>,
 }
 
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Link {
     label: String,
     href: String,
@@ -97,8 +96,8 @@ impl Link {
 }
 
 impl Component for Docs {
-    type Props = ();
     type GlobalState = WebsiteGlobalState;
+    type Props = ();
     type Message = ();
 
     fn view(context: &mut Context<Self>) -> ComponentSpecification {
@@ -147,13 +146,13 @@ impl Component for Docs {
             }
         }
 
-        let prev_link: Option<Link> = if current_route_index as i64 - 1 >= 0 && all_links.len() > 0 {
+        let prev_link: Option<Link> = if current_route_index > 0 && !all_links.is_empty() {
             Some(all_links[current_route_index - 1].clone())
         } else {
             None
         };
 
-        let next_link: Option<Link> = if current_route_index + 1 <= all_links.len() - 1  {
+        let next_link: Option<Link> = if current_route_index < all_links.len() - 1  {
             Some(all_links[current_route_index + 1].clone())
         } else {
             None

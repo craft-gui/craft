@@ -61,6 +61,8 @@ impl ComponentTreeNode {
         }
     }
 }
+
+#[allow(clippy::too_many_arguments)]
 fn dummy_update(
     _state: &mut StateStoreItem,
     _global_state: &mut GlobalState,

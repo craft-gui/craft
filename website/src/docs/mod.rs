@@ -1,7 +1,7 @@
 use craft::elements::{Container, ElementStyles};
 use craft::style::{Display, FlexDirection};
 
-pub(crate) mod docs;
+pub(crate) mod docs_component;
 pub(crate) mod installation;
 pub(crate) mod hello_world;
 pub(crate) mod state_management;

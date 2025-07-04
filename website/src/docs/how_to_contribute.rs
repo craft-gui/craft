@@ -1,9 +1,7 @@
-use crate::WebsiteGlobalState;
-use craft::components::{Component, ComponentSpecification, Context, Props};
-use craft::elements::{Container, ElementStyles, Text};
-use craft::style::{Display, FlexDirection, Weight};
 use crate::docs::docs_template;
 use crate::docs::markdown_viewer::{MarkdownViewer, MarkdownViewerProps};
+use crate::WebsiteGlobalState;
+use craft::components::{Component, ComponentSpecification, Context, Props};
 
 #[derive(Default)]
 pub(crate) struct HowToContributePage {

@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use crate::craft_runtime::CraftRuntimeHandle;
 use crate::events::internal::InternalMessage;
 use accesskit::{ActionHandler, ActionRequest};

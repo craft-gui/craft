@@ -11,7 +11,6 @@ use crate::text::text_context::ColorBrush;
 use std::fmt;
 use std::fmt::Debug;
 use smallvec::SmallVec;
-use crate::palette;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {

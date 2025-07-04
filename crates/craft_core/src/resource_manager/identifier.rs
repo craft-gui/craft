@@ -19,7 +19,7 @@ impl Display for ResourceIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "http_client")]
-            Url(url) => write!(f, "URL: {}", url),
+            Url(url) => write!(f, "URL: {url}"),
             File(file_path) => write!(f, "File: {:?}", file_path.as_os_str().to_str()),
             Bytes(bytes) => write!(f, "Bytes: {:?}", bytes.as_ptr()),
         }

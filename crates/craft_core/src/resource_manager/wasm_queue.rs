@@ -8,6 +8,12 @@ pub struct WasmQueue {
     next: usize,
 }
 
+impl Default for WasmQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WasmQueue {
     pub const fn new() -> Self {
         Self {
@@ -37,8 +43,12 @@ impl WasmQueue {
     pub fn len(&self) -> usize {
         self.next
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.next == 0
+    }
 }
 
 thread_local! {
-    pub static WASM_QUEUE: RefCell<WasmQueue> = RefCell::new(WasmQueue::new());
+    pub static WASM_QUEUE: RefCell<WasmQueue> = const { RefCell::new(WasmQueue::new()) };
 }

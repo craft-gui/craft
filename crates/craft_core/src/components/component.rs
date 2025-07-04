@@ -143,6 +143,7 @@ pub struct Context<'a, C: Component> {
 }
 
 impl<'a, ComponentType: Component> Context<'a, ComponentType> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         component: Option<&'a ComponentType>,
         component_mut: Option<&'a mut ComponentType>,
@@ -229,7 +230,7 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
     }
 
     pub fn window(&self) -> &WindowContext {
-        self.window.as_deref().unwrap()
+        self.window.unwrap()
     }
 
     pub fn window_mut(&mut self) -> &mut WindowContext {
@@ -241,6 +242,7 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn dispatch_event<ComponentType: Component>(
     state: &mut StateStoreItem,
     global_state: &mut GlobalState,
@@ -268,7 +270,7 @@ pub fn dispatch_event<ComponentType: Component>(
                             window_context,
                             target,
                             current_target,
-                            &pointer_button_update,
+                            pointer_button_update,
                         );
                     }
                 }
@@ -303,7 +305,7 @@ pub fn dispatch_event<ComponentType: Component>(
                 None,
                 None,
             );
-            let user_message: Option<&ComponentType::Message> = (user_message as &dyn Any).downcast_ref();
+            let user_message: Option<&ComponentType::Message> = user_message.as_any().downcast_ref();
             if let Some(user_message) = user_message {
                 ComponentType::on_user_message(&mut context, user_message);
             }
@@ -351,6 +353,8 @@ where
         Container::new().component()
     }
 
+
+    #[allow(clippy::too_many_arguments)]
     fn update_internal(
         state: &mut StateStoreItem,
         global_state: &mut GlobalState,

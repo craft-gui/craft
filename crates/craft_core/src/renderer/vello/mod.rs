@@ -58,7 +58,7 @@ impl RenderSurface {
                         self.resize(device, surface_width, surface_height);
                     }
                     SurfaceError::OutOfMemory | SurfaceError::Other => {
-                        panic!("Failed to acquire surface texture: {:?}", err);
+                        panic!("Failed to acquire surface texture: {err:?}");
                     }
                 }
                 self.surface
@@ -84,7 +84,7 @@ impl RenderSurface {
         self.surface_texture = surface_texture;
         self.surface_view = surface_view;
         
-        self.surface.configure(&device, &self.surface_config);
+        self.surface.configure(device, &self.surface_config);
     }
     
     pub fn new(device: &Device, adapter: &Adapter, surface: Surface<'static>, surface_width: u32, surface_height: u32) -> RenderSurface {
@@ -168,12 +168,11 @@ fn new_instance() -> Instance {
     let backends = wgpu::Backends::from_env().unwrap_or_default();
     let flags = wgpu::InstanceFlags::from_build_config().with_env();
     let backend_options = wgpu::BackendOptions::from_env_or_default();
-    let instance = Instance::new(&wgpu::InstanceDescriptor {
+    Instance::new(&wgpu::InstanceDescriptor {
         backends,
         flags,
         backend_options,
-    });
-    instance
+    })
 }
 
 async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queue, Adapter) {
@@ -194,8 +193,7 @@ async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queu
             },
             None,
         )
-        .await
-        .ok().expect("Failed to create device.");
+        .await.expect("Failed to create device.");
 
     (
         device,

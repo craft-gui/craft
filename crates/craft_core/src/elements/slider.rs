@@ -227,7 +227,6 @@ impl Element for Slider {
                 let value = self.compute_slider_value(&pointer_button_update.state.position);
                 state.value = value;
                 event.result_message(CraftMessage::SliderValueChanged(value));
-                return;
             }
             CraftMessage::PointerButtonDown(pointer_button_update) => {
                 state.dragging = true;

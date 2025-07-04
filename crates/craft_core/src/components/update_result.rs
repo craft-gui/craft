@@ -89,7 +89,7 @@ impl Event {
     }
 }
 
-impl<'a> Default for Event {
+impl Default for Event {
     fn default() -> Self {
         Event {
             propagate: true,

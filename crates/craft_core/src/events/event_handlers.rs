@@ -9,6 +9,7 @@ use crate::reactive::state_store::StateStoreItem;
 use crate::{GlobalState, WindowContext};
 
 use ui_events::pointer::PointerButtonUpdate;
+#[allow(clippy::type_complexity)]
 #[derive(Clone, Default)]
 pub struct EventHandlers {
     pub(crate) on_pointer_up: Option<

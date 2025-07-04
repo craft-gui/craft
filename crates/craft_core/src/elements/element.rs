@@ -7,20 +7,20 @@ use crate::events::CraftMessage;
 use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
 use crate::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
+use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
 use crate::renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
+use kurbo::Affine;
+use peniko::Color;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
-use kurbo::Affine;
-use peniko::Color;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
-use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -121,6 +121,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn as_any(&self) -> &dyn Any;
 
+    #[allow(clippy::too_many_arguments)]
     fn on_event(
         &self,
         message: &CraftMessage,
@@ -162,20 +163,22 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
-    
+
     fn maybe_unset_focus(&self, message: &CraftMessage, event: &mut Event, target: Option<&dyn Element>) {
-        if let CraftMessage::PointerButtonDown(_) = &message && let Some(target) = target {
-            if target.element_data().component_id == self.element_data().component_id {
-                event.focus_action(FocusAction::Unset);
-            }
+        if let CraftMessage::PointerButtonDown(_) = &message
+            && let Some(target) = target
+            && target.element_data().component_id == self.element_data().component_id
+        {
+            event.focus_action(FocusAction::Unset);
         }
     }
 
     fn maybe_set_focus(&self, message: &CraftMessage, event: &mut Event, target: Option<&dyn Element>) {
-        if let CraftMessage::PointerButtonDown(_) = &message && let Some(target) = target {
-            if target.element_data().component_id == self.element_data().component_id {
-                event.focus_action(FocusAction::Set(self.element_data().component_id));
-            }
+        if let CraftMessage::PointerButtonDown(_) = &message
+            && let Some(target) = target
+            && target.element_data().component_id == self.element_data().component_id
+        {
+            event.focus_action(FocusAction::Set(self.element_data().component_id));
         }
     }
 
@@ -230,7 +233,8 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
         let element_data = self.element_data();
-        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_rectangle =
+            element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -246,7 +250,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn finalize_borders(&mut self, element_state: &ElementStateStore) {
         let base_state = self.get_base_state(element_state);
         let (has_border, border_radius, border_color) = {
-            let current_style = base_state.base.current_style(&self.element_data());
+            let current_style = base_state.base.current_style(self.element_data());
             (current_style.has_border(), current_style.border_radius(), current_style.border_color())
         };
 
@@ -259,7 +263,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         // let scrollbar_thumb_radius = self.element_data().current_style().
         let track_rect = self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor);
         let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
-        
+
         let border_spec = BorderSpec::new(
             thumb_rect,
             [0.0, 0.0, 0.0, 0.0],
@@ -291,7 +295,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             let element_data = self.element_data_mut();
             element_data.layout_item.computed_box_transformed.border_rectangle()
         };
-        
+
         let base_state = self.get_base_state_mut(element_state);
         base_state.base.current_state = ElementState::Normal;
 
@@ -305,7 +309,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn get_base_state<'a>(&self, element_state: &'a ElementStateStore) -> &'a ElementStateStoreItem {
         element_state.storage.get(&self.element_data().component_id).unwrap()
     }
-    
+
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
@@ -326,7 +330,8 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             current_node.add_action(Action::Click);
         }
 
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box =
+            self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         current_node.set_bounds(accesskit::Rect {
             x0: padding_box.left() as f64,

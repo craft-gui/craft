@@ -11,7 +11,7 @@ use crate::{palette, Color};
 use taffy::Overflow;
 
 fn format_option<T: std::fmt::Debug>(option: Option<T>) -> String {
-    option.map_or("None".to_string(), |value| format!("{:?}", value))
+    option.map_or("None".to_string(), |value| format!("{value:?}"))
 }
 
 fn field_row(
@@ -49,7 +49,7 @@ pub(crate) struct LayoutWindowProps {
 }
 
 
-fn tab_computed_styles(selected_element: &Box<dyn Element>, search: &str) -> Container {
+fn tab_computed_styles(selected_element: &dyn Element, search: &str) -> Container {
     let computed_style = selected_element.layout_item();
     let mut computed_window = Container::new()
         .display(Display::Flex)
@@ -110,7 +110,7 @@ fn tab_computed_styles(selected_element: &Box<dyn Element>, search: &str) -> Con
 }
 
 
-fn tab_styles(selected_element: &Box<dyn Element>, search: &str) -> Container {
+fn tab_styles(selected_element: &dyn Element, search: &str) -> Container {
     let style = selected_element.style();
     let mut fields = Vec::new();
     let search = search.to_ascii_lowercase();
@@ -273,13 +273,11 @@ fn tab_styles(selected_element: &Box<dyn Element>, search: &str) -> Container {
         push_field!("Border Radius", format!("{:?}", style.border_radius()));
     }
 
-    let styles_window = fields.into_iter().filter(|(label, _value)| {
+    fields.into_iter().filter(|(label, _value)| {
         label.to_ascii_lowercase().contains(&search)
     }).fold(Container::new().display(Display::Flex).flex_direction(FlexDirection::Column), |acc, (label, value)| {
         acc.push(field_row(&label, FIELD_NAME_COLOR, &value, FIELD_VALUE_COLOR))
-    });
-    
-    styles_window
+    })
 }
 
 impl Component for LayoutWindow {
@@ -331,7 +329,7 @@ impl Component for LayoutWindow {
                             .key("style_search_query")
                             .component()
                     );
-                    styles_window.push_in_place(tab_styles(selected_element, context.state().style_search_query.as_str()).component())
+                    styles_window.push_in_place(tab_styles(selected_element.as_ref(), context.state().style_search_query.as_str()).component())
                 }
                 LayoutTab::Computed => {
                     styles_window.push_in_place(
@@ -346,7 +344,7 @@ impl Component for LayoutWindow {
                             .key("computed_search_query")
                             .component()
                     );
-                    styles_window.push_in_place(tab_computed_styles(selected_element, context.state().computed_search_query.as_str()).component())
+                    styles_window.push_in_place(tab_computed_styles(selected_element.as_ref(), context.state().computed_search_query.as_str()).component())
                 }
             }
         }

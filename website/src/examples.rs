@@ -1,5 +1,5 @@
 #[path = "../../examples/counter/main.rs"]
-mod counter;
+pub mod counter;
 
 #[path = "../../examples/text/main.rs"]
 mod text;

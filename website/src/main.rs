@@ -14,6 +14,7 @@ use crate::theme::BODY_BACKGROUND_COLOR;
 use craft::components::{Component, ComponentSpecification, Context};
 use craft::elements::Container;
 use craft::elements::ElementStyles;
+#[cfg(not(target_arch = "wasm32"))]
 use craft::geometry::Size;
 use craft::style::Display;
 use craft::style::FlexDirection;
@@ -27,7 +28,7 @@ pub(crate) struct WebsiteGlobalState {
 impl WebsiteGlobalState {
     pub(crate) fn get_route(&self) -> String {
         #[cfg(target_arch = "wasm32")]
-        let mut path = self.route.clone();
+        let path: String;
         #[cfg(target_arch = "wasm32")]
         {
             let window = web_sys::window().expect("No window available.");

@@ -281,7 +281,7 @@ impl From<&str> for Unit {
                 Err(_) => Unit::Auto,
             }
         } else {
-            panic!("Invalid unit: {}", s);
+            panic!("Invalid unit: {s}");
         }
     }
 }

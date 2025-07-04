@@ -215,11 +215,11 @@ impl CraftRenderer for VelloHybridRenderer {
 
                         // There is an image, and it hasn't expired.
                         let image_id = if let Some(stored_image) = self.images.get(resource_identifier) && stored_image.1 == expiration_time {
-                            stored_image.0.clone()
+                            stored_image.0
                         } else {
                             // There is an image, but it expired.
                             if let Some(stored_image) = self.images.get(resource_identifier) {
-                                expired_images.insert(stored_image.0.clone());
+                                expired_images.insert(stored_image.0);
                             }
 
                             images_were_uploaded = true;
@@ -406,12 +406,12 @@ impl CraftRenderer for VelloHybridRenderer {
         }
 
         for (key, (image_id, _)) in &self.images {
-            let seen = seen_images.contains(&image_id);
-            let expired = expired_images.contains(&image_id);
+            let seen = seen_images.contains(image_id);
+            let expired = expired_images.contains(image_id);
 
             // Delete the culled image, only if it hasn't already been deleted when we looped over the expired images.
             if !seen && !expired {
-                renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, image_id.clone());
+                renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, *image_id);
                 images_were_uploaded = true;
             }
 
@@ -420,7 +420,7 @@ impl CraftRenderer for VelloHybridRenderer {
             }
         }
         for key in &to_remove {
-            self.images.remove(&key);
+            self.images.remove(key);
         }
 
         // Submit the texture write commands.

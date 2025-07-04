@@ -12,7 +12,7 @@ pub const NAVBAR_HEIGHT: f32 = 60.0;
 
 fn create_link(label: &str, route: &str) -> Text {
     Text::new(label)
-        .id(format!("route_{}", route).as_str())
+        .id(format!("route_{route}").as_str())
         .margin("0px", "12px", "0px", "0px")
         .font_size(16.0)
         .disable_selection()

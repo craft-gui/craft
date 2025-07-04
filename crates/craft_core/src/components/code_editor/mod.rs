@@ -23,7 +23,7 @@ const DEFAULT_SYNTAX_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/pa
 const DEFAULT_THEME_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/theme_pack.dump");
 
 thread_local! {
-    static SYNTAX_THEME_CACHE: RefCell<Option<(SyntaxSet, Rc<ThemeSet>)>> = RefCell::new(None);
+    static SYNTAX_THEME_CACHE: RefCell<Option<(SyntaxSet, Rc<ThemeSet>)>> = const { RefCell::new(None) };
 }
 
 fn get_syntax_and_theme() -> (SyntaxSet, Rc<ThemeSet>) {
@@ -99,7 +99,7 @@ impl Default for CodeEditorStyle {
 }
 
 fn compute_code_editor_style(
-    code: &String,
+    code: &str,
     syntax_set: Option<&SyntaxSet>,
     theme_set: Option<&ThemeSet>,
     extension: &str,
@@ -119,7 +119,7 @@ fn compute_code_editor_style(
     let mut ranged_styles = RangedStyles::default();
     let mut global_offset = 0;
     for line in LinesWithEndings::from(code) {
-        let styled = highlighter.highlight_line(line, &syntax_set).unwrap();
+        let styled = highlighter.highlight_line(line, syntax_set).unwrap();
 
         let mut local_offset = 0;
         for (style, text) in styled {

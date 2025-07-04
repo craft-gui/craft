@@ -33,7 +33,7 @@ impl Component for TextState {
             .disabled()
             .on_link_clicked(
                 move |context: &mut Context<Self>, link: &str| {
-                    println!("Link clicked: {}", link);
+                    println!("Link clicked: {link}");
                     context.event_mut().prevent_propagate();
             });
 

@@ -49,7 +49,7 @@ impl Container {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -91,7 +91,7 @@ impl TextInput {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -133,7 +133,7 @@ impl Text {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -175,7 +175,7 @@ impl Container {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -217,7 +217,7 @@ impl TextInput {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -259,7 +259,7 @@ impl Text {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }
@@ -301,7 +301,7 @@ impl TextInput {
                         target,
                         current_target,
                     );
-                    callback(&mut context, &press);
+                    callback(&mut context, press);
                 } else {
                     panic!("Invalid type passed to callback.");
                 }

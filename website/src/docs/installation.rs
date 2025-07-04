@@ -12,7 +12,7 @@ impl Component for InstallationPage {
     type Props = ();
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
         docs_template()
             .push(MarkdownViewer::component().props(Props::new(MarkdownViewerProps {
                 markdown_text: include_str!("markdown/installation.md").to_string()

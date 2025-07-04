@@ -15,6 +15,7 @@ pub struct ScrollState {
 }
 
 impl ScrollState {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn on_event(
         &mut self,
         message: &CraftMessage,
@@ -53,7 +54,6 @@ impl ScrollState {
                                     Some(Point::new(pointer_button.state.position.x, pointer_button.state.position.y));
                                 event.prevent_propagate();
                                 event.prevent_defaults();
-                                return;
                             }
                         } else if element.layout_item.computed_scroll_thumb.contains(&pointer_button.state.position) {
                             self.scroll_click =

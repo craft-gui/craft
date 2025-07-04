@@ -43,7 +43,7 @@ impl LayoutItem {
 
     pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.child_nodes).unwrap());
-        self.taffy_node_id.clone()
+        self.taffy_node_id
     }
 
     pub fn build_tree_with_context(
@@ -53,7 +53,7 @@ impl LayoutItem {
         layout_context: LayoutContext,
     ) -> Option<NodeId> {
         self.taffy_node_id = Some(taffy_tree.new_leaf_with_context(style, layout_context).unwrap());
-        self.taffy_node_id.clone()
+        self.taffy_node_id
     }
 
     pub fn resolve_box(

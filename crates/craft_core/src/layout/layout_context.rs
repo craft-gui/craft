@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use taffy::{AvailableSpace, Size};
 
-use crate::style::Style;
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {

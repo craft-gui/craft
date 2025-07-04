@@ -20,11 +20,7 @@ impl ElementStateStore {
             FocusAction::None => {}
             FocusAction::Set(id) => {
                 for (element_id, value) in self.storage.iter_mut() {
-                    if *element_id == id {
-                        value.base.focused = true;
-                    } else {
-                        value.base.focused = false;
-                    }
+                    value.base.focused = *element_id == id;
                 }
             }
             FocusAction::Unset => {

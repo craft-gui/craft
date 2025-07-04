@@ -23,7 +23,7 @@ impl Resource {
     pub fn common_data(&self) -> &ResourceData {
         match self {
             Resource::Image(data) => &data.common_data,
-            Resource::Font(data) => &data,
+            Resource::Font(data) => data,
             Resource::TinyVg(data) => &data.common_data,
         }
     }

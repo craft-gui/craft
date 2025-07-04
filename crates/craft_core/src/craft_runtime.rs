@@ -4,17 +4,12 @@ use std::future::Future;
 pub struct CraftRuntime {
     #[cfg(not(target_arch = "wasm32"))]
     tokio_runtime: tokio::runtime::Runtime,
-    #[cfg(target_arch = "wasm32")]
-    #[allow(dead_code)]
-    wasm_runtime: (),
 }
 
 #[derive(Clone)]
 pub struct CraftRuntimeHandle {
     #[cfg(not(target_arch = "wasm32"))]
     tokio_runtime: tokio::runtime::Handle,
-    #[cfg(target_arch = "wasm32")]
-    wasm_runtime: (),
 }
 
 #[allow(clippy::derivable_impls)]
@@ -22,7 +17,7 @@ impl Default for CraftRuntime {
     fn default() -> Self {
         cfg_if! {
             if #[cfg(target_arch = "wasm32")] {
-                Self { wasm_runtime: () }
+                Self { }
             } else {
                 Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
             }
@@ -41,7 +36,7 @@ impl CraftRuntime {
     pub fn new() -> Self {
         cfg_if::cfg_if! {
             if #[cfg(target_arch = "wasm32")] {
-                Self { wasm_runtime: () }
+                Self { }
             } else {
                 Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
             }
@@ -51,7 +46,7 @@ impl CraftRuntime {
     pub fn handle(&self) -> CraftRuntimeHandle {
         cfg_if::cfg_if! {
             if #[cfg(target_arch = "wasm32")] {
-                CraftRuntimeHandle { wasm_runtime: () }
+                CraftRuntimeHandle { }
             } else {
                 CraftRuntimeHandle { tokio_runtime: self.tokio_runtime.handle().clone() }
             }
