@@ -60,11 +60,6 @@ path = "../craft_resource_manager"
 default-features = false
 version = "0.1.1"
 
-[dependencies.craft_runtime]
-path = "../craft_runtime"
-default-features = false
-version = "0.1.1"
-
 [dependencies.winit]
 workspace = true
 
