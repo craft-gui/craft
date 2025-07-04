@@ -39,26 +39,6 @@ impl TaffyTextContext {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
-pub struct MetricsRaw {
-    /// Font size in pixels
-    pub font_size: u32,
-    /// Line height in pixels
-    pub line_height: u32,
-    pub scaling_factor: u64,
-}
-
-impl MetricsRaw {
-    #[allow(dead_code)]
-    pub(crate) fn from(style: &Style, scaling_factor: f64) -> Self {
-        Self {
-            font_size: (style.font_size() * scaling_factor as f32).to_bits(),
-            line_height: (style.font_size() * 1.2 * scaling_factor as f32).to_bits(),
-            scaling_factor: scaling_factor.to_bits(),
-        }
-    }
-}
-
 pub struct ImageContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }

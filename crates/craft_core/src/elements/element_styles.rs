@@ -182,6 +182,11 @@ where
         self
     }
 
+    fn line_height<U: IntoF32 + Copy>(mut self, line_height: U) -> Self {
+        self.styles_mut().set_line_height(line_height.into_f32());
+        self
+    }
+
     fn font_weight(mut self, font_weight: Weight) -> Self {
         self.styles_mut().set_font_weight(font_weight);
         self

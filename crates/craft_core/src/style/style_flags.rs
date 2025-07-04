@@ -44,5 +44,6 @@ bitflags! {
         const UNDERLINE = 1 << 38;
         const SELECTION_COLOR = 1 << 39;
         const CURSOR_COLOR = 1 << 40;
+        const LINE_HEIGHT = 1 << 41;
     }
 }

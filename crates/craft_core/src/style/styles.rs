@@ -269,6 +269,7 @@ pub enum StyleProperty {
     SelectionColor(Color),
     FontFamily(FontFamily),
     FontSize(f32),
+    LineHeight(f32),
     FontWeight(Weight),
     FontStyle(FontStyle),
     Underline(Option<Underline>),
@@ -400,6 +401,7 @@ style_property!(font_family, set_font_family, FontFamily, FontFamily, FONT_FAMIL
 style_property!(color, set_color, Color, Color, COLOR, Color::BLACK);
 style_property!(background, set_background, Background, Color, BACKGROUND, Color::TRANSPARENT);
 style_property!(font_size, set_font_size, FontSize, f32, FONT_SIZE, 16.0);
+style_property!(line_height, set_line_height, LineHeight, f32, LINE_HEIGHT, 1.2);
 style_property!(font_weight, set_font_weight, FontWeight, Weight, FONT_WEIGHT, Weight::default());
 style_property!(font_style, set_font_style, FontStyle, FontStyle, FONT_STYLE, FontStyle::default());
 style_property!(underline, set_underline, Underline, Option<Underline>, UNDERLINE, None);
@@ -487,6 +489,7 @@ impl Style {
                 StyleProperty::Visible(_) => StyleFlags::VISIBLE,
                 StyleProperty::SelectionColor(_) => StyleFlags::SELECTION_COLOR,
                 StyleProperty::CursorColor(_) => StyleFlags::CURSOR_COLOR,
+                StyleProperty::LineHeight(_) => StyleFlags::LINE_HEIGHT,
             };
 
             if new.dirty_flags.contains(flag) {
@@ -504,6 +507,7 @@ impl Style {
     #[allow(clippy::wrong_self_convention)]
     pub fn to_text_style(&self) -> parley::TextStyle<ColorBrush> {
         let font_size = self.font_size();
+        let line_height = self.line_height();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
         let font_style = match self.font_style() {
             FontStyle::Normal => parley::FontStyle::Normal,
@@ -559,7 +563,7 @@ impl Style {
             strikethrough_offset: Default::default(),
             strikethrough_size: Default::default(),
             strikethrough_brush: Default::default(),
-            line_height: parley::LineHeight::FontSizeRelative(1.2),
+            line_height: parley::LineHeight::FontSizeRelative(line_height),
             word_spacing: Default::default(),
             letter_spacing: Default::default(),
             word_break: Default::default(),
@@ -569,6 +573,7 @@ impl Style {
 
     pub fn add_styles_to_style_set(&self, style_set: &mut parley::StyleSet<ColorBrush>) {
         let font_size = self.font_size();
+        let line_height = self.line_height();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);
         let font_style = match self.font_style() {
             FontStyle::Normal => parley::FontStyle::Normal,
@@ -611,7 +616,7 @@ impl Style {
         style_set.insert(parley::StyleProperty::FontStyle(font_style));
         style_set.insert(parley::StyleProperty::FontWeight(font_weight));
         style_set.insert(parley::StyleProperty::Brush(brush));
-        style_set.insert(parley::StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(1.2)));
+        style_set.insert(parley::StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(line_height)));
         style_set.insert(parley::StyleProperty::Underline(has_underline));
         style_set.insert(parley::StyleProperty::UnderlineBrush(underline_brush));
         style_set.insert(parley::StyleProperty::UnderlineOffset(underline_offset));

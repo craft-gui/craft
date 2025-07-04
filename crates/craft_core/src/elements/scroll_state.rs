@@ -26,7 +26,7 @@ impl ScrollState {
             match message {
                 CraftMessage::PointerScroll(mouse_wheel) => {
                     let delta = match mouse_wheel.delta {
-                        ScrollDelta::LineDelta(_x, y) => y * element.style.font_size().max(12.0) * 1.2,
+                        ScrollDelta::LineDelta(_x, y) => y * element.style.font_size().max(12.0) * element.style.line_height(),
                         ScrollDelta::PixelDelta(_x, y) => y as f32,
                         ScrollDelta::PageDelta(_x, y) => y,
                     };
