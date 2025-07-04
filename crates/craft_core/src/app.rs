@@ -209,16 +209,24 @@ impl App {
 
             #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
             {
-                let variable_roboto = include_bytes!("../../../fonts/Roboto-VariableFont_wdth,wght.ttf");
-                let roboto_blog = peniko::Blob::new(Arc::new(variable_roboto));
-                let fonts = text_context.font_context.collection.register_fonts(roboto_blog, None);
+                let regular = include_bytes!("../../../fonts/Roboto-Regular.ttf");
+                let bold = include_bytes!("../../../fonts/Roboto-Bold.ttf");
+                let semi_bold = include_bytes!("../../../fonts/Roboto-SemiBold.ttf");
+                let medium = include_bytes!("../../../fonts/Roboto-Medium.ttf");
+             
+                fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
+                    let blob = peniko::Blob::new(Arc::new(font_data));
+                    let fonts = text_context.font_context.collection.register_fonts(blob, None);
 
-                // Register all the Roboto families under parley::GenericFamily::SystemUi.
-                // This will become the fallback font for platforms like WASM.
-                text_context
-                    .font_context
-                    .collection
-                    .append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|f| f.0));
+                    // Register all the Roboto families under parley::GenericFamily::SystemUi.
+                    // This will become the fallback font for platforms like WASM.
+                    text_context.font_context.collection.append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|f| f.0));
+                }
+                
+                register_and_append(regular, &mut text_context);
+                register_and_append(bold, &mut text_context);
+                register_and_append(semi_bold, &mut text_context);
+                register_and_append(medium, &mut text_context);
             }
 
             self.text_context = Some(text_context);
