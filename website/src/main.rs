@@ -89,11 +89,11 @@ impl Component for Website {
 
 
         let path = context.global_state().get_route();
-        let matched_mapped_path = resolve_route(path.as_str());
+        let matched_mapped_path = resolve_route(path.as_str(), context.window());
         if let Some(rule) = matched_mapped_path {
             wrapper.push(rule.component_specification)
         } else {
-            wrapper.push(index_page().key("index"))
+            wrapper.push(index_page(context.window()).key("index"))
         }.component()
     }
 }

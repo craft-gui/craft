@@ -1,14 +1,13 @@
-use crate::theme::{wrapper, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
+use crate::theme::{wrapper, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 use crate::web_link::{WebLink, WebLinkProps};
 use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text, TinyVg};
 use craft::resource_manager::ResourceIdentifier;
 use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight, Wrap};
-use craft::{palette, Color};
-use std::path::PathBuf;
+use craft::{palette, Color, WindowContext};
 use crate::link::{Link, LinkProps};
 
-fn hero_intro() -> ComponentSpecification {
+fn hero_intro(window_ctx: &WindowContext) -> ComponentSpecification {
     let bg_wrapper =
         Container::new()
             .width("100%")
@@ -24,7 +23,7 @@ fn hero_intro() -> ComponentSpecification {
     inner_wrapper.push_in_place(
         Text::new("A Reactive GUI Framework for Rust")
             .color(Color::WHITE)
-            .font_size(56.0)
+            .font_size( if window_ctx.window_width() <= MOBILE_MEDIA_QUERY_WIDTH { 36.0 } else { 56.0 })
             .line_height(1.0)
             .max_width("680px")
             .font_weight(Weight::BOLD)
@@ -160,7 +159,7 @@ fn hero_features() -> ComponentSpecification {
         .component()
 }
 
-pub(crate) fn index_page() -> ComponentSpecification {
+pub(crate) fn index_page(window_ctx: &WindowContext) -> ComponentSpecification {
     Container::new()
         .width("100%")
         .overflow(Overflow::Scroll)
@@ -171,7 +170,7 @@ pub(crate) fn index_page() -> ComponentSpecification {
                 .margin(Unit::Px(0.0), Unit::Auto, Unit::Px(0.0), Unit::Auto)
                 .flex_direction(FlexDirection::Column)
                 .flex_grow(1.0)
-                .push(hero_intro())
+                .push(hero_intro(window_ctx))
                 .push(hero_features())
         ) .component()
 }
