@@ -23,6 +23,7 @@ mod view_introspection;
 mod window_context;
 #[cfg(feature = "markdown")]
 pub mod markdown;
+mod utils;
 
 pub use craft_runtime::CraftRuntime;
 pub use options::CraftOptions;
@@ -67,12 +68,13 @@ use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBui
 
 use app::App;
 use crate::craft_winit_state::CraftWinitState;
+use crate::utils::cloneable_any::CloneableAny;
 
 #[cfg(target_arch = "wasm32")]
-pub type FutureAny = dyn Future<Output = Box<dyn Any>> + 'static;
+pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub type FutureAny = dyn Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send;
+pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send;
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 

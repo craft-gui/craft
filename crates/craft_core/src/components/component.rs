@@ -303,8 +303,10 @@ pub fn dispatch_event<ComponentType: Component>(
                 None,
                 None,
             );
-            let user_message: &ComponentType::Message = user_message.downcast_ref().expect("Failed to downcast user message");
-            ComponentType::on_user_message(&mut context, user_message);
+            let user_message: Option<&ComponentType::Message> = (user_message as &dyn Any).downcast_ref();
+            if let Some(user_message) = user_message {
+                ComponentType::on_user_message(&mut context, user_message);
+            }
         }
     }
 }

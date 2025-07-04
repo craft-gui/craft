@@ -3,6 +3,7 @@ use crate::events::{CraftMessage, EventDispatchType, Message};
 use crate::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use std::any::Any;
+use crate::utils::cloneable_any::CloneableAny;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum PointerCapture {
@@ -60,12 +61,12 @@ impl FocusAction {
 impl Event {
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_result<T: Send + Sync + 'static>(t: T) -> Box<dyn Any + Send + Sync + 'static> {
+    pub fn async_result<T: Send + Sync + 'static + Clone>(t: T) -> Box<dyn CloneableAny + Send + Sync + 'static> {
         Box::new(t)
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn async_result<T: 'static>(t: T) -> Box<dyn Any + 'static> {
+    pub fn async_result<T: 'static + Clone>(t: T) -> Box<dyn CloneableAny + 'static> {
         Box::new(t)
     }
 
@@ -113,12 +114,12 @@ impl Event {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn future<F: Future<Output = Box<dyn Any + Send + Sync>> + 'static + Send>(&mut self, future: F) {
+    pub fn future<F: Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send>(&mut self, future: F) {
         self.future = Some(Box::pin(future));
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn future<F: Future<Output = Box<dyn Any>> + 'static>(&mut self, future: F) {
+    pub fn future<F: Future<Output = Box<dyn CloneableAny>> + 'static>(&mut self, future: F) {
         self.future = Some(Box::pin(future));
     }
 

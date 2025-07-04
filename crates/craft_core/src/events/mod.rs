@@ -22,6 +22,7 @@ use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
+use crate::utils::cloneable_any::CloneableAny;
 
 #[derive(Clone)]
 pub enum EventDispatchType {
@@ -33,7 +34,7 @@ pub enum EventDispatchType {
     Accesskit(ComponentId),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum CraftMessage {
     Initialized,
     PointerButtonUp(PointerButtonUpdate),
@@ -66,16 +67,12 @@ impl CraftMessage {
 
     pub fn new_element_message<T>(data: T) -> CraftMessage
     where
-        T: Any + Send + Sync,
+        T: Any + Send + Sync + Clone,
     {
         Self::ElementMessage(Arc::new(data))
     }
 }
-
-#[cfg(target_arch = "wasm32")]
-pub type UserMessage = dyn Any;
-#[cfg(not(target_arch = "wasm32"))]
-pub type UserMessage = dyn Any + Send + Sync;
+pub type UserMessage = dyn CloneableAny;
 
 pub enum Message {
     CraftMessage(CraftMessage),
@@ -83,6 +80,15 @@ pub enum Message {
     UserMessage(Box<UserMessage>),
     #[cfg(not(target_arch = "wasm32"))]
     UserMessage(Box<UserMessage>),
+}
+
+impl Clone for Message {
+    fn clone(&self) -> Self {
+        match self {
+            Message::CraftMessage(msg) => Message::CraftMessage(msg.clone()),
+            Message::UserMessage(msg) => Message::UserMessage(msg.as_ref().clone_box()),
+        }
+    }
 }
 
 impl Message {

@@ -37,6 +37,7 @@ use winit::window::Window;
 use crate::elements::base_element_state::BaseElementState;
 use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
+use crate::utils::cloneable_any::CloneableAny;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -338,7 +339,7 @@ impl Element for TextInput {
             event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
         };
 
-        if let CraftMessage::ElementMessage(msg) = message && let Some(msg) = msg.downcast_ref::<TextInputMessage>() {
+        if let CraftMessage::ElementMessage(msg) = message && let Some(msg) = msg.as_any().downcast_ref::<TextInputMessage>() {
             let mut drv = state.driver(_text_context);
             match msg {
                 TextInputMessage::Copy => {

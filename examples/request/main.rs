@@ -29,6 +29,7 @@ pub enum State {
     Error,
 }
 
+#[derive(Clone)]
 pub enum AniListMessage {
     StateChange(State),
 }
