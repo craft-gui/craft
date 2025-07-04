@@ -1,0 +1,38 @@
+[package]
+name = "craft_resource_manager"
+version = "0.1.1"
+edition.workspace = true
+
+[features]
+http_client = ["dep:reqwest"]
+
+[dependencies.craft_logging]
+path = "../craft_logger"
+default-features = false
+version = "0.1.0"
+
+[dependencies.craft_runtime]
+path = "../craft_runtime"
+default-features = false
+version = "0.1.1"
+
+[target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
+workspace = true
+default-features = false
+features = ["native-tls"]
+optional = true
+
+[target.'cfg(target_os = "android")'.dependencies.reqwest]
+workspace = true
+default-features = false
+features = ["rustls-tls"]
+optional = true
+
+[dependencies.image]
+workspace = true
+
+[dependencies.tinyvg-rs]
+workspace = true
+
+[dependencies.chrono]
+workspace = true

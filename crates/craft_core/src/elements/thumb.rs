@@ -1,10 +1,10 @@
 use kurbo::Affine;
-use crate::geometry::{Point, Rectangle};
+use craft_primitives::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::LayoutItem;
 use crate::palette;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::RenderList;
+use craft_renderer::renderer::RenderList;
 use crate::style::{Display, Style, Unit};
 use crate::text::text_context::TextContext;
 use taffy::{NodeId, Position, TaffyTree};

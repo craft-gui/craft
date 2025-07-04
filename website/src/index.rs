@@ -2,7 +2,7 @@ use crate::theme::{wrapper, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAP
 use crate::web_link::{WebLink, WebLinkProps};
 use craft::components::{Component, ComponentSpecification, Props};
 use craft::elements::{Container, ElementStyles, Text, TinyVg};
-use craft::resource_manager::ResourceIdentifier;
+use craft::ResourceIdentifier;
 use craft::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Weight, Wrap};
 use craft::{palette, Color, WindowContext};
 use crate::link::{Link, LinkProps};

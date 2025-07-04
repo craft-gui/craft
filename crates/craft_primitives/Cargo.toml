@@ -1,0 +1,15 @@
+[package]
+name = "craft_primitives"
+version = "0.1.1"
+edition.workspace = true
+
+[dependencies]
+
+[dependencies.kurbo]
+workspace = true
+
+[dependencies.peniko]
+workspace = true
+
+[dependencies.dpi]
+workspace = true

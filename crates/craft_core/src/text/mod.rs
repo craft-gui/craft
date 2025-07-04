@@ -7,7 +7,6 @@ pub use parley;
 
 use crate::style::{Style, TextStyleProperty};
 pub use text_render_data::from_editor;
-pub use text_render_data::TextRender;
 
 #[derive(PartialEq)]
 pub(crate) struct TextStyle {

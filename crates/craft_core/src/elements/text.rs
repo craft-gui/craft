@@ -5,12 +5,12 @@ use crate::elements::element_data::ElementData;
 use crate::elements::{ElementStyles, StatefulElement};
 use crate::events::CraftMessage;
 use crate::generate_component_methods_no_children;
-use crate::geometry::{Point, Rectangle};
+use craft_primitives::geometry::{Point, Rectangle};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::renderer::renderer::RenderList;
+use craft_renderer::renderer::RenderList;
 use crate::style::Style;
-use crate::text::text_context::{ColorBrush, TextContext};
+use crate::text::text_context::{TextContext};
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
@@ -37,6 +37,7 @@ use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::window::Window;
+use craft_primitives::ColorBrush;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -176,7 +177,7 @@ impl Element for Text {
             line.selections.clear();
         }
         state.selection.geometry_with(layout, |rect, line| {
-            text_renderer.lines[line].selections.push((rect.into(), self.style().selection_color()));
+            text_renderer.lines[line].selections.push((Rectangle::from_kurbo(rect), self.style().selection_color()));
         });
     }
 

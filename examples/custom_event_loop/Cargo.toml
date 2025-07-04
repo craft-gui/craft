@@ -24,6 +24,11 @@ default-features = false
 features = ["vello_renderer", "devtools", "accesskit", "system_fonts"]
 package = "craft_gui"
 
+[dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+default-features = false
+features = ["vello_renderer"]
+
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]
 version = "0.30.11"
 features = []

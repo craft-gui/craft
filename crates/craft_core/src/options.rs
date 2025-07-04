@@ -1,5 +1,5 @@
-use crate::geometry::Size;
-use std::fmt::{Display, Formatter};
+use craft_primitives::geometry::Size;
+use craft_renderer::RendererType;
 
 /// Configuration options for the Craft application.
 ///
@@ -26,53 +26,6 @@ impl Default for CraftOptions {
             renderer: RendererType::default(),
             window_title: "craft".to_string(),
             window_size: None,
-        }
-    }
-}
-
-/// An enumeration of the available renderer types for Craft.
-///
-/// Depending on compile-time features, different renderers can be enabled.
-/// When the `vello_renderer` feature is enabled, the [`Vello`](RendererType::Vello)
-/// variant is available; otherwise, the [`Blank`](RendererType::Blank) variant is used.
-#[derive(Copy, Clone, Debug)]
-pub enum RendererType {
-    #[cfg(feature = "vello_renderer")]
-    Vello,
-    #[cfg(feature = "vello_cpu_renderer")]
-    VelloCPU,
-    #[cfg(feature = "vello_hybrid_renderer")]
-    VelloHybrid,
-    Blank,
-}
-
-#[allow(clippy::derivable_impls)]
-impl Default for RendererType {
-    fn default() -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "vello_renderer")] {
-                RendererType::Vello
-            } else if #[cfg(feature = "vello_hybrid_renderer")]{
-                RendererType::VelloHybrid
-            } else if #[cfg(feature = "vello_cpu_renderer")]{
-                RendererType::VelloCPU
-            } else {
-                RendererType::Blank
-            }
-        }
-    }
-}
-
-impl Display for RendererType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            #[cfg(feature = "vello_renderer")]
-            RendererType::Vello => write!(f, "vello/wgpu"),
-            #[cfg(feature = "vello_cpu_renderer")]
-            RendererType::VelloCPU => write!(f, "vello/cpu"),
-            #[cfg(feature = "vello_hybrid_renderer")]
-            RendererType::VelloHybrid => write!(f, "vello/hybrid"),
-            RendererType::Blank => write!(f, "blank"),
         }
     }
 }

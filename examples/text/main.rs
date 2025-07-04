@@ -6,7 +6,7 @@ use craft::components::Context;
 use craft::elements::ElementStyles;
 use craft::elements::TextInput;
 use craft::elements::{Container, Font, Text};
-use craft::resource_manager::ResourceIdentifier;
+use craft::ResourceIdentifier;
 use craft::style::Display::Block;
 use craft::style::Overflow::Scroll;
 use craft::style::Unit;

@@ -1,10 +1,9 @@
 use kurbo::Affine;
-use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
-use crate::geometry::side::Side;
-use crate::geometry::PointConverter;
-use crate::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
+use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use craft_primitives::geometry::Side;
+use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
-use crate::renderer::{Brush, RenderList};
+use craft_renderer::{Brush, RenderList};
 use crate::style::Style;
 use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree};
@@ -68,12 +67,15 @@ impl LayoutItem {
         *layout_order += 1;
 
         let at_position = match position {
-            Position::Relative => relative_position + Point::from_taffy_point(result.location).to_vec2(),
+            Position::Relative => relative_position + from_taffy_point(result.location).to_vec2(),
             // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
-            Position::Absolute => relative_position + Point::from_taffy_point(result.location).to_vec2(),
+            Position::Absolute => relative_position + from_taffy_point(result.location).to_vec2(),
         };
 
-        let mut size = result.size.into();
+        let mut size = Size {
+            width: result.size.width,
+            height: result.size.height,
+        };
         // FIXME: Don't use the content size for position absolute containers.
         // The following is a broken layout using result.size.
         // └──  FLEX COL [x: 1    y: 44   w: 140  h: 45   content_w: 139  content_h: 142  border: l:1 r:1 t:1 b:1, padding: l:12 r:12 t:8 b:8] (NodeId(4294967303))
@@ -168,4 +170,11 @@ pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_sp
     renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
     renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
     renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
+}
+
+fn from_taffy_point(p: taffy::Point<f32>) -> Point {
+    Point {
+        x: p.x as f64,
+        y: p.y as f64,
+    }
 }

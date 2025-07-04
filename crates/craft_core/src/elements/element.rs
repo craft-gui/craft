@@ -4,12 +4,12 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use crate::geometry::borders::{BorderSpec, ComputedBorderSpec};
-use crate::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
+use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::renderer::renderer::RenderList;
+use craft_renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
 #[cfg(feature = "accesskit")]

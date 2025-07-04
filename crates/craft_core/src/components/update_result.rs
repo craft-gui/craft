@@ -1,6 +1,6 @@
 use crate::components::ComponentId;
 use crate::events::{CraftMessage, EventDispatchType, Message};
-use crate::geometry::Rectangle;
+use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use std::any::Any;
 use crate::utils::cloneable_any::CloneableAny;

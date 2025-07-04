@@ -1,11 +1,11 @@
 use crate::components::component::UpdateFn;
 use crate::components::ComponentId;
 use crate::components::Props;
-use crate::events::resource_event::ResourceEvent;
+use craft_resource_manager::resource_event::ResourceEvent;
 
 use crate::events::CloneableAny;
 #[cfg(target_arch = "wasm32")]
-use {crate::renderer::renderer::Renderer, std::sync::Arc, winit::window::Window};
+use {craft_renderer::renderer::Renderer, std::sync::Arc, winit::window::Window};
 
 pub struct InternalUserMessage {
     pub update_fn: UpdateFn,
@@ -22,4 +22,10 @@ pub enum InternalMessage {
     ResourceEvent(ResourceEvent),
     #[cfg(target_arch = "wasm32")]
     RendererCreated(Arc<Window>, Box<dyn Renderer>),
+}
+
+impl From<ResourceEvent> for InternalMessage {
+    fn from(event: ResourceEvent) -> Self {
+        InternalMessage::ResourceEvent(event)
+    }
 }

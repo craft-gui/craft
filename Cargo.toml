@@ -16,7 +16,7 @@ members = [
     "examples/custom_event_loop",
     "website",
     "crates/craft",
-    "crates/syntect_dumper",
+    "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
 ]
 
 [workspace.package]
@@ -33,3 +33,47 @@ debug = false
 reqwest = { version = "0.12.19", default-features = false }
 tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19"}
+
+[workspace.dependencies.peniko]
+version = "0.4.0"
+default-features = false
+features = ["std"]
+
+
+[workspace.dependencies.kurbo]
+version = "0.11.2"
+default-features = false
+features = ["std"]
+
+[workspace.dependencies.dpi]
+version = "0.1.2"
+default-features = false
+features = []
+
+[workspace.dependencies.tokio]
+version = "1.45.1"
+default-features = false
+features = ["sync", "time"]
+
+[workspace.dependencies.image]
+version = "0.25.6"
+default-features = false
+features = []
+
+[workspace.dependencies.tinyvg-rs]
+version = "0.0.2"
+default-features = false
+features = []
+
+[workspace.dependencies.chrono]
+version = "0.4.41"
+default-features = false
+features = ["std"]
+
+[workspace.dependencies.cfg-if]
+version = "1.0.1"
+
+[workspace.dependencies.winit]
+version = "0.30.11"
+default-features = false
+features = []

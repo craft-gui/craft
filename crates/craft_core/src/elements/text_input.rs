@@ -6,11 +6,11 @@ use crate::elements::element_data::ElementData;
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::{ElementStyles, StatefulElement};
 use crate::generate_component_methods_no_children;
-use crate::geometry::{Point, Rectangle, Size, TrblRectangle};
+use craft_primitives::geometry::{Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use crate::renderer::color::Color;
-use crate::renderer::renderer::{RenderList, TextScroll};
+use craft_primitives::Color;
+use craft_renderer::renderer::{RenderList, TextScroll};
 use crate::style::{Display, Style, TextStyleProperty, Unit};
 use crate::CraftMessage;
 use std::any::Any;
@@ -246,11 +246,11 @@ impl Element for TextInput {
             line.selections.clear();
         }
         state.editor.selection_geometry_with(|rect, line| {
-            text_renderer.lines[line].selections.push((rect.into(), self.style().selection_color()));
+            text_renderer.lines[line].selections.push((Rectangle::from_kurbo(rect), self.style().selection_color()));
         });
 
         if base_state.focused {
-            text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| (r.into(), self.style().cursor_color().unwrap_or(self.style().color())));
+            text_renderer.cursor = state.editor.cursor_geometry(1.0).map(|r| (Rectangle::from_kurbo(r), self.style().cursor_color().unwrap_or(self.style().color())));
         } else {
             text_renderer.cursor = None;
         }

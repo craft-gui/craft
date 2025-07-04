@@ -1,6 +1,6 @@
 use craft::components::ComponentSpecification;
 use craft::elements::{Container, ElementStyles, Image, Text};
-use craft::resource_manager::ResourceIdentifier;
+use craft::ResourceIdentifier;
 use craft::style::Unit;
 use craft::style::{Display, FlexDirection};
 use craft::Color;

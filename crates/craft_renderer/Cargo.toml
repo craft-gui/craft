@@ -1,0 +1,79 @@
+[package]
+name = "craft_renderer"
+version = "0.1.1"
+edition.workspace = true
+
+[features]
+vello_renderer = ["dep:vello", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
+vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+vello_hybrid_renderer_webgl = ["wgpu/webgl"]
+
+[dependencies]
+
+[dependencies.vello]
+git = "https://github.com/linebender/vello.git"
+rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+default-features = false
+features = ["wgpu"]
+optional = true
+
+[dependencies.vello_cpu]
+git = "https://github.com/linebender/vello.git"
+rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+optional = true
+features = ["multithreading"]
+
+[dependencies.vello_hybrid]
+git = "https://github.com/linebender/vello.git"
+rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+default-features = false
+features = ["default"]
+optional = true
+
+[dependencies.vello_common]
+git = "https://github.com/linebender/vello.git"
+rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+optional = true
+
+[dependencies.softbuffer]
+version = "0.4.6"
+optional = true
+
+[dependencies.wgpu]
+version = "24.0.3"
+default-features = false
+features = ["wgsl"]
+optional = true
+
+[dependencies.peniko]
+workspace = true
+
+[dependencies.craft_primitives]
+path = "../craft_primitives"
+default-features = false
+version = "0.1.1"
+
+
+[dependencies.craft_resource_manager]
+path = "../craft_resource_manager"
+default-features = false
+version = "0.1.1"
+
+[dependencies.craft_runtime]
+path = "../craft_runtime"
+default-features = false
+version = "0.1.1"
+
+[dependencies.winit]
+workspace = true
+
+[dependencies.cfg-if]
+workspace = true
+
+[dependencies.tinyvg-rs]
+workspace = true
+
+[dependencies.chrono]
+workspace = true
+

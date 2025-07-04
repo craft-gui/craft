@@ -3,7 +3,7 @@ use crate::devtools::dev_tools_colors::{BORDER_COLOR, FIELD_NAME_COLOR, FIELD_VA
 use crate::elements::element::Element;
 use crate::elements::{Container, ElementStyles, Text, TextInput};
 use crate::events::{CraftMessage, Message};
-use crate::geometry::side::Side;
+use craft_primitives::geometry::Side;
 use crate::style::style_flags::StyleFlags;
 use crate::style::Display::Flex;
 use crate::style::{Display, FlexDirection, Unit};

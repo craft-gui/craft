@@ -7,7 +7,7 @@ use crate::components::{CodeEditor, CodeEditorProps};
 use crate::components::{Component, ComponentSpecification, Props};
 use crate::elements::Container;
 use crate::elements::{ElementStyles, Image, Text, TextInput};
-use crate::resource_manager::ResourceIdentifier;
+use craft_resource_manager::ResourceIdentifier;
 use crate::rgb;
 use crate::style::{Display, FlexDirection, TextStyleProperty, Unit};
 use crate::text::RangedStyles;

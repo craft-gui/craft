@@ -5,23 +5,20 @@ use {
     crate::accessibility::deactivation_handler::CraftDeactivationHandler,
 };
 use crate::components::{ComponentSpecification, Event};
-use crate::craft_runtime::CraftRuntimeHandle;
+use craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 use crate::elements::{Container, Element};
 use crate::events::event_dispatch::dispatch_event;
 use crate::events::internal::{InternalMessage, InternalUserMessage};
-use crate::events::resource_event::ResourceEvent;
 use crate::events::{CraftMessage, EventDispatchType, Message};
-use crate::geometry::{Rectangle, Size};
+use craft_primitives::geometry::{Rectangle, Size};
 use crate::layout::layout_context::{measure_content, LayoutContext};
 use crate::reactive::element_id::reset_unique_element_id;
 use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::tree::diff_trees;
-use crate::renderer::RenderList;
-use crate::resource_manager::resource_type::ResourceType;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::view_introspection::scan_view_for_resources;
@@ -39,7 +36,7 @@ use peniko::Color;
 use std::collections::HashMap;
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
-use tokio::sync::mpsc::Sender;
+use craft_runtime::Sender;
 use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use ui_events::ScrollDelta;
@@ -48,6 +45,9 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
+use craft_renderer::RenderList;
+use craft_resource_manager::resource_event::ResourceEvent;
+use craft_resource_manager::resource_type::ResourceType;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -567,6 +567,7 @@ impl App {
 
     fn view_introspection(&mut self) {
         scan_view_for_resources(
+            self.app_sender.clone(),
             self.user_tree.element_tree.as_ref().unwrap().as_ref(),
             self.user_tree.component_tree.as_ref().unwrap(),
             self.resource_manager.clone(),

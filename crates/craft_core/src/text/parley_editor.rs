@@ -22,7 +22,7 @@ use parley::layout::LayoutAccessibility;
 #[cfg(feature = "accesskit")]
 use accesskit::{Node, NodeId, TreeUpdate};
 use crate::text::RangedStyles;
-use crate::text::text_context::ColorBrush;
+use craft_primitives::ColorBrush;
 
 /// Opaque representation of a generation.
 ///

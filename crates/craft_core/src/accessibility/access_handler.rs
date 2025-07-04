@@ -1,8 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::craft_runtime::CraftRuntimeHandle;
+use craft_runtime::CraftRuntimeHandle;
 use crate::events::internal::InternalMessage;
 use accesskit::{ActionHandler, ActionRequest};
-use tokio::sync::mpsc::Sender;
+use craft_runtime::Sender;
 
 pub(crate) struct CraftAccessHandler {
     #[cfg(not(target_arch = "wasm32"))]

@@ -1,6 +1,6 @@
 use crate::style::FontFamily;
-use crate::geometry::TrblRectangle;
-use crate::renderer::color::Color;
+use craft_primitives::geometry::TrblRectangle;
+use craft_primitives::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Underline, Unit, Weight, Wrap};
 use taffy::Position;
 

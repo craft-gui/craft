@@ -1,13 +1,11 @@
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
 pub mod components;
-pub mod craft_runtime;
 pub mod craft_winit_state;
 pub mod elements;
 pub mod events;
 mod options;
 pub mod reactive;
-pub mod renderer;
 pub mod style;
 #[cfg(test)]
 mod tests;
@@ -16,31 +14,33 @@ pub mod text;
 mod app;
 #[cfg(feature = "dev_tools")]
 pub(crate) mod devtools;
-pub mod geometry;
+pub use craft_primitives::geometry as geometry;
 pub mod layout;
-pub mod resource_manager;
+pub use craft_runtime::CraftRuntime;
 mod view_introspection;
 mod window_context;
 #[cfg(feature = "markdown")]
 pub mod markdown;
 mod utils;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_queue;
 
-pub use craft_runtime::CraftRuntime;
 pub use options::CraftOptions;
-pub use renderer::color::palette;
-pub use renderer::color::Color;
+pub use craft_primitives::palette;
+pub use craft_primitives::Color;
 
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
 use crate::events::CraftMessage;
-pub use crate::options::RendererType;
+pub use craft_renderer::RendererType;
 use components::component::ComponentSpecification;
 use events::internal::InternalMessage;
-use renderer::renderer::Renderer;
-use resource_manager::ResourceManager;
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
+pub use craft_resource_manager::ResourceIdentifier;
 
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
 
 use winit::event_loop::EventLoop;
 pub use winit::window::{Cursor, CursorIcon};
@@ -53,11 +53,10 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::craft_runtime::CraftRuntimeHandle;
 use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 #[cfg(target_arch = "wasm32")]
-use crate::resource_manager::wasm_queue::WASM_QUEUE;
+use crate::wasm_queue::WASM_QUEUE;
 use craft_winit_state::CraftState;
 
 use cfg_if::cfg_if;
@@ -210,7 +209,7 @@ pub fn setup_craft(
     let runtime = runtime_receiver.blocking_recv().expect("Failed to receive runtime handle");
     let runtime_copy = runtime.clone();
     #[allow(clippy::arc_with_non_send_sync)]
-    let resource_manager = Arc::new(ResourceManager::new(app_sender.clone(), runtime.clone()));
+    let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
     let mut user_state = StateStore::default();
 

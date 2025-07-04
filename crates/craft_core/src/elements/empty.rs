@@ -1,9 +1,9 @@
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-use crate::geometry::{Point, Rectangle};
+use craft_primitives::geometry::{Point, Rectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::renderer::renderer::RenderList;
+use craft_renderer::renderer::RenderList;
 use crate::text::text_context::TextContext;
 use std::any::Any;
 use std::sync::Arc;

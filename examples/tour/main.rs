@@ -10,7 +10,7 @@ use craft::elements::{Dropdown, Slider, SliderDirection, Switch, TextInput, Tiny
 use craft::events::CraftMessage::DropdownItemSelected;
 use craft::events::CraftMessage::{SliderValueChanged, SwitchToggled, TextInputChanged};
 use craft::events::Message::CraftMessage;
-use craft::resource_manager::ResourceIdentifier;
+use craft::ResourceIdentifier;
 use craft::style::{AlignItems, Weight};
 use craft::style::{Display, FlexDirection, Overflow, Wrap};
 use craft::{Color, CraftOptions};

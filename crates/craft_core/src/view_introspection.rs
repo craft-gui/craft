@@ -3,17 +3,20 @@ use crate::elements::{Font, Image, TinyVg};
 use crate::reactive::fiber_tree;
 use crate::reactive::fiber_tree::FiberNode;
 use crate::reactive::tree::ComponentTreeNode;
-use crate::resource_manager::resource_type::ResourceType;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::resource_type::ResourceType;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use craft_runtime::Sender;
+use crate::events::internal::InternalMessage;
 
 /// Introspect the view.
 ///
 // Scans through the component tree and diffs it for resources that need to be updated.
 pub fn scan_view_for_resources(
+    app_sender: Sender<InternalMessage>,
     element: &dyn Element,
     component: &ComponentTreeNode,
     resource_manager: Arc<ResourceManager>,
@@ -43,6 +46,7 @@ pub fn scan_view_for_resources(
             if image_resource.is_some() || font_resource.is_some() || tinyvg_resource.is_some() {
                 if let Some(image_resource) = image_resource {
                     resource_manager.async_download_resource_and_send_message_on_finish(
+                        app_sender.clone(),
                         image_resource.clone(),
                         ResourceType::Image,
                         resources_collected,
@@ -52,6 +56,7 @@ pub fn scan_view_for_resources(
 
                 if let Some(font_resource) = font_resource {
                     resource_manager.async_download_resource_and_send_message_on_finish(
+                        app_sender.clone(),
                         font_resource.clone(),
                         ResourceType::Font,
                         resources_collected,
@@ -61,6 +66,7 @@ pub fn scan_view_for_resources(
 
                 if let Some(tinyvg_resource) = tinyvg_resource {
                     resource_manager.async_download_resource_and_send_message_on_finish(
+                        app_sender.clone(),
                         tinyvg_resource.clone(),
                         ResourceType::TinyVg,
                         resources_collected,

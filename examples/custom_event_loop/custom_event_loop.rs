@@ -23,7 +23,7 @@ use craft::events::ui_events::keyboard::{Key, NamedKey};
 use craft::events::ui_events::pointer::PointerEvent;
 use craft::events::ui_events::UiEvent;
 use craft::events::EventDispatchType;
-use craft::renderer::vello::VelloRenderer;
+use craft_renderer::vello::VelloRenderer;
 use winit::dpi::LogicalSize;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};

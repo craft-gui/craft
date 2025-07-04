@@ -1,27 +1,9 @@
 use parley::{FontContext, TextStyle, TreeBuilder};
+use craft_primitives::ColorBrush;
 
 pub struct TextContext {
     pub font_context: FontContext,
     pub layout_context: parley::LayoutContext<ColorBrush>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ColorBrush {
-    pub(crate) color: peniko::Color,
-}
-
-impl ColorBrush {
-    pub fn new(color: peniko::Color) -> Self {
-        Self { color }
-    }
-}
-
-impl Default for ColorBrush {
-    fn default() -> Self {
-        Self {
-            color: peniko::Color::BLACK,
-        }
-    }
 }
 
 impl Default for TextContext {

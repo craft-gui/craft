@@ -2,8 +2,8 @@ use crate::components::component::ComponentId;
 use crate::elements::text::TextState;
 use crate::elements::text_input::TextInputState;
 use crate::reactive::element_state_store::ElementStateStore;
-use crate::resource_manager::resource::Resource;
-use crate::resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::resource::Resource;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use std::sync::Arc;
 
 use taffy::{AvailableSpace, Size};

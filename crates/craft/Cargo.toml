@@ -21,11 +21,11 @@ accesskit = ["craft_core/accesskit"]
 
 system_fonts = ["craft_core/system_fonts"]
 
-http_client = ["craft_core/http_client"]
-vello_renderer = ["craft_core/vello_renderer"]
-vello_cpu_renderer = ["craft_core/vello_cpu_renderer"]
-vello_hybrid_renderer = ["craft_core/vello_hybrid_renderer"]
-vello_hybrid_renderer_webgl = ["craft_core/vello_hybrid_renderer_webgl"]
+http_client = ["craft_resource_manager/http_client"]
+vello_renderer = ["craft_renderer/vello_renderer"]
+vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
+vello_hybrid_renderer = ["craft_renderer/vello_hybrid_renderer"]
+vello_hybrid_renderer_webgl = ["craft_renderer/vello_hybrid_renderer_webgl"]
 
 markdown = ["craft_core/markdown"]
 link = ["craft_core/link"]
@@ -38,5 +38,8 @@ default = ["vello_renderer", "http_client", "devtools", "png", "jpeg", "accesski
 [dependencies]
 craft_dylib = { path = "../craft_dylib", default-features = false, optional = true, version = "0.1.1" }
 craft_core = { path = "../craft_core", default-features = false, version = "0.1.1" }
+craft_renderer = { path = "../craft_renderer", default-features = false, version = "0.1.1" }
+craft_resource_manager = { path = "../craft_resource_manager", default-features = false, version = "0.1.1" }
+
 
 [lib]

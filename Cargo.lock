@@ -608,9 +608,9 @@ checksum = "6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c"
 
 [[package]]
 name = "cfg-if"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
 name = "cfg_aliases"
@@ -793,31 +793,26 @@ dependencies = [
  "chrono",
  "clipboard-rs",
  "craft_logging",
+ "craft_primitives",
+ "craft_renderer",
+ "craft_resource_manager",
+ "craft_runtime",
  "image",
  "kurbo",
  "open",
  "parley",
  "peniko",
  "pulldown-cmark",
- "reqwest",
  "rustc-hash 2.1.1",
  "smallvec",
- "softbuffer",
  "syntect",
  "taffy",
  "tinyvg-rs",
- "tokio",
  "ui-events",
  "ui-events-winit",
- "vello",
- "vello_common",
- "vello_cpu",
- "vello_hybrid",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
  "web-time",
- "wgpu",
  "winit",
 ]
 
@@ -834,6 +829,8 @@ version = "0.1.1"
 dependencies = [
  "craft_core",
  "craft_dylib",
+ "craft_renderer",
+ "craft_resource_manager",
 ]
 
 [[package]]
@@ -841,6 +838,57 @@ name = "craft_logging"
 version = "0.1.0"
 dependencies = [
  "tracing",
+]
+
+[[package]]
+name = "craft_primitives"
+version = "0.1.1"
+dependencies = [
+ "dpi",
+ "kurbo",
+ "peniko",
+]
+
+[[package]]
+name = "craft_renderer"
+version = "0.1.1"
+dependencies = [
+ "cfg-if",
+ "chrono",
+ "craft_primitives",
+ "craft_resource_manager",
+ "craft_runtime",
+ "peniko",
+ "softbuffer",
+ "tinyvg-rs",
+ "vello",
+ "vello_common",
+ "vello_cpu",
+ "vello_hybrid",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "craft_resource_manager"
+version = "0.1.1"
+dependencies = [
+ "chrono",
+ "craft_logging",
+ "craft_runtime",
+ "image",
+ "reqwest",
+ "tinyvg-rs",
+]
+
+[[package]]
+name = "craft_runtime"
+version = "0.1.1"
+dependencies = [
+ "cfg-if",
+ "open",
+ "tokio",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -905,6 +953,7 @@ dependencies = [
  "bytemuck",
  "cfg-if",
  "craft_gui",
+ "craft_renderer",
  "glam",
  "wasm-bindgen",
  "wasm-bindgen-futures",

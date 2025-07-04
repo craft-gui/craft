@@ -1,13 +1,13 @@
-use crate::renderer::color::Color;
 use crate::style::style_flags::StyleFlags;
+use craft_primitives::Color;
 use std::borrow::Cow;
 
 pub use taffy::BoxSizing;
 pub use taffy::Overflow;
 pub use taffy::Position;
 
-use crate::geometry::TrblRectangle;
-use crate::text::text_context::ColorBrush;
+use craft_primitives::geometry::TrblRectangle;
+use craft_primitives::ColorBrush;
 use std::fmt;
 use std::fmt::Debug;
 use smallvec::SmallVec;

@@ -4,22 +4,12 @@ use {
     winit::platform::web::WindowAttributesExtWebSys,
 };
 
-#[cfg(feature = "vello_renderer")]
-use crate::renderer::vello::VelloRenderer;
-
-#[cfg(feature = "vello_cpu_renderer")]
-use crate::renderer::vello_cpu::VelloCpuRenderer;
-
-#[cfg(feature = "vello_hybrid_renderer")]
-use crate::renderer::vello_hybrid::VelloHybridRenderer;
-
 #[cfg(target_arch = "wasm32")]
-use {crate::resource_manager::wasm_queue::WasmQueue, crate::resource_manager::wasm_queue::WASM_QUEUE};
+use {crate::wasm_queue::WasmQueue, crate::wasm_queue::WASM_QUEUE};
 
 use crate::events::internal::InternalMessage;
-use crate::renderer::blank_renderer::BlankRenderer;
-use crate::renderer::renderer::Renderer;
-use crate::{CraftOptions, RendererType};
+use craft_renderer::renderer::Renderer;
+use crate::{CraftOptions};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
@@ -33,11 +23,11 @@ use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
-use tokio::sync::mpsc::Receiver;
-use tokio::sync::mpsc::Sender;
+use craft_runtime::Receiver;
+use craft_runtime::Sender;
+use craft_runtime::CraftRuntimeHandle;
 
 use crate::app::App;
-use crate::craft_runtime::CraftRuntimeHandle;
 use crate::events::EventDispatchType;
 use std::sync::Arc;
 use ui_events::pointer::PointerEvent;
@@ -118,15 +108,7 @@ impl ApplicationHandler for CraftWinitState {
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
                     let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer> = match renderer_type {
-                        #[cfg(feature = "vello_renderer")]
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, false).await),
-                        #[cfg(feature = "vello_cpu_renderer")]
-                        RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
-                        #[cfg(feature = "vello_hybrid_renderer")]
-                        RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window_copy).await),
-                        RendererType::Blank => Box::new(BlankRenderer),
-                    };
+                        let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
                     renderer
                 });
                 craft_state.craft_app.on_resume(window, renderer, event_loop);
@@ -134,15 +116,7 @@ impl ApplicationHandler for CraftWinitState {
                 let app_sender = craft_state.app_sender.clone();
                 let window_copy_2 = window_copy.clone();
                 craft_state.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = match renderer_type {
-                        #[cfg(feature = "vello_renderer")]
-                        RendererType::Vello => Box::new(VelloRenderer::new(window_copy, false).await),
-                        #[cfg(feature = "vello_cpu_renderer")]
-                        RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window_copy)),
-                        #[cfg(feature = "vello_hybrid_renderer")]
-                        RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window_copy).await),
-                        RendererType::Blank => Box::new(BlankRenderer),
-                    };
+                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
                     app_sender
                         .send(InternalMessage::RendererCreated(window_copy_2, renderer))
                         .await
