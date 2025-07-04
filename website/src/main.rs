@@ -5,6 +5,7 @@ mod navbar;
 mod theme;
 mod router;
 mod docs;
+mod link;
 
 use crate::index::index_page;
 use crate::navbar::Navbar;
