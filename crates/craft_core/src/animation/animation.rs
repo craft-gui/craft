@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::time::Duration;
+use kurbo::{CubicBez, ParamCurve, ParamCurveCurvature, Point};
+use kurbo::offset::CubicOffset;
 use peniko::color::HueDirection;
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
@@ -28,9 +30,40 @@ pub enum AnimationStatus {
 }
 
 #[derive(Clone, Debug)]
+pub struct CubicBezier {
+    cubic_bez: CubicBez,
+}
+
+impl CubicBezier {
+    pub fn new(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
+        Self {
+            cubic_bez: CubicBez::new(
+                Point::new(0.0, 0.0),
+                Point::new(x1 as f64, y1 as f64),
+                Point::new(x2 as f64, y2 as f64),
+                Point::new(1.0, 1.0),
+            )
+        }
+    }
+}
+
+
+#[derive(Default, Clone, Debug)]
+pub enum TimingFunction {
+    #[default]
+    Linear,
+    EaseIn,
+    EaseOut,
+    BezierCurve(CubicBezier),
+    EaseInOut,
+    Ease,
+}
+
+#[derive(Clone, Debug)]
 pub struct Animation {
     pub key_frames: Vec<KeyFrame>,
     pub duration: Duration,
+    pub timing_function: TimingFunction,
 }
 
 pub struct ActiveAnimation {
@@ -47,7 +80,7 @@ impl AnimationController {
     pub fn remove(&mut self, component: ComponentId) {
         self.animations.remove(&component);
     }
-    
+
     pub fn tick(&mut self, animation: &Animation, state: ElementState, component: ComponentId, delta: Duration) {
         let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
             active_animation
@@ -59,7 +92,7 @@ impl AnimationController {
             });
             self.animations.get_mut(&component).unwrap()
         };
-        
+
         if active_animation.element_state != state {
             active_animation.current = Duration::ZERO;
             active_animation.status = AnimationStatus::Playing;
@@ -82,7 +115,7 @@ impl AnimationController {
         } else {
             return element_style.clone();
         };
-        
+
         if active_animation.status != AnimationStatus::Playing || active_animation.element_state != state {
             return element_style.clone();
         }
@@ -120,16 +153,44 @@ impl AnimationController {
             let start_prop = start_map.get(key);
             let end_prop = end_map.get(key);
 
+            let start_percentage = keyframe_start.offset_percentage / 100.0;
+            let end_percentage = keyframe_end.offset_percentage / 100.0;
+            let local_t = (pos - start_percentage) / (end_percentage - start_percentage);
+
+            let t = match &animation.timing_function {
+                TimingFunction::Linear => {
+                    let linear = CubicBezier::new(0.0, 0.0, 1.0, 1.0);
+                    linear.cubic_bez.eval(local_t as f64).y
+                }
+                TimingFunction::Ease => {
+                    let ease = CubicBezier::new(0.25, 0.1, 0.25, 1.0);
+                    ease.cubic_bez.eval(local_t as f64).y
+                }
+                TimingFunction::EaseIn => {
+                    let ease_in = CubicBezier::new(0.42, 0.0, 1.0, 1.0);
+                    ease_in.cubic_bez.eval(local_t as f64).y
+                }
+                TimingFunction::EaseOut => {
+                    let ease_out = CubicBezier::new(0.0, 0.0, 0.58, 1.0);
+                    ease_out.cubic_bez.eval(local_t as f64).y
+                }
+                TimingFunction::EaseInOut => {
+                    let ease_in_out = CubicBezier::new(0.42, 0.0, 0.58, 1.0);
+                    ease_in_out.cubic_bez.eval(local_t as f64).y
+                }
+                TimingFunction::BezierCurve(cubic_bezier) => {
+                    cubic_bezier.cubic_bez.eval(local_t as f64).y
+                }
+            };
+
             match (start_prop, end_prop) {
                 (Some(StyleProperty::Background(start)), Some(StyleProperty::Background(end))) => {
-                    let start_percentage = keyframe_start.offset_percentage / 100.0;
-                    let end_percentage = keyframe_end.offset_percentage / 100.0;
-                    let local_t = (pos - start_percentage) / (end_percentage - start_percentage);
-                    let new_color = start.lerp_rect(*end, local_t.clamp(0.0, 1.0));
+                    let new_color = start.lerp_rect(*end, t as f32);
                     style.set_background(new_color);
                 }
                 _ => {}
             }
+            
         }
 
 
