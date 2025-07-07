@@ -43,6 +43,21 @@ impl<'a> BaseElementState {
         }
         &mut element_data.style
     }
+    pub fn current_style_mut_no_fallback(&self, element_data: &'a mut ElementData) -> Option<&'a mut Style> {
+        if self.active {
+            if let Some(pressed_style) = &mut element_data.pressed_style {
+                return Some(pressed_style);
+            }
+        }
+        if self.hovered {
+            if let Some(hover_style) = &mut element_data.hover_style {
+                return Some(hover_style);
+            }
+        }
+        
+        None
+    }
+    
 }
 
 // HACK: Remove this and all usages when pointer capture per device works.

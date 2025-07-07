@@ -1,14 +1,10 @@
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::time::Duration;
-use kurbo::{CubicBez, ParamCurve, ParamCurveCurvature, Point};
-use kurbo::offset::CubicOffset;
-use peniko::color::HueDirection;
-use rustc_hash::FxHashMap;
-use smallvec::SmallVec;
 use crate::components::ComponentId;
 use crate::elements::ElementState;
-use crate::style::{Style, StyleProperty};
+use crate::style::{Style, StyleProperty, Unit};
+use kurbo::{CubicBez, ParamCurve, Point};
+use rustc_hash::FxHashMap;
+use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
@@ -72,6 +68,21 @@ pub struct ActiveAnimation {
     element_state: ElementState
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct AnimationFlags {
+    needs_relayout: bool,
+}
+
+impl AnimationFlags {
+    pub fn set_needs_relayout(&mut self, needs_relayout: bool) {
+        self.needs_relayout = self.needs_relayout | needs_relayout;
+    }
+    
+    pub fn needs_relayout(&self) -> bool {
+        self.needs_relayout
+    }
+}
+
 pub struct AnimationController {
     pub(crate) animations: FxHashMap<ComponentId, ActiveAnimation>,
 }
@@ -92,7 +103,7 @@ impl AnimationController {
             });
             self.animations.get_mut(&component).unwrap()
         };
-
+        
         if active_animation.element_state != state {
             active_animation.current = Duration::ZERO;
             active_animation.status = AnimationStatus::Playing;
@@ -109,7 +120,7 @@ impl AnimationController {
         }
     }
 
-    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, component: ComponentId) -> Style {
+    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, component: ComponentId, animation_flags: &mut AnimationFlags) -> Style {
         let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
             active_animation
         } else {
@@ -183,14 +194,38 @@ impl AnimationController {
                 }
             };
 
+            fn lerp(a: f32, b: f32, t: f32) -> f32 {
+                a + (b - a) * t
+            }
+            
             match (start_prop, end_prop) {
                 (Some(StyleProperty::Background(start)), Some(StyleProperty::Background(end))) => {
                     let new_color = start.lerp_rect(*end, t as f32);
                     style.set_background(new_color);
                 }
+                (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) => {
+
+                    if std::mem::discriminant(start) != std::mem::discriminant(end) {
+                        panic!("Width must be the same Unit type.");
+                    }
+                    
+                    fn resolve_unit(unit: &Unit) -> f32 {
+                        match unit {
+                            Unit::Px(px) => *px,
+                            Unit::Percentage(percent) => *percent,
+                            Unit::Auto => panic!("Unit must not be auto.")
+                        }
+                    }
+                    
+                    let resolved_start = resolve_unit(start);
+                    let resolved_end = resolve_unit(end);
+                    let new = lerp(resolved_start, resolved_end, t as f32);
+                    style.set_width(Unit::Px(new));
+                    animation_flags.set_needs_relayout(true);
+                }
                 _ => {}
             }
-            
+
         }
 
 

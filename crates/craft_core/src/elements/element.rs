@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
-use crate::animation::animation::AnimationController;
+use crate::animation::animation::{AnimationController, AnimationFlags};
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -200,6 +200,14 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             position,
         );
     }
+    
+    fn reset_layout_item(&mut self) {
+        *self.layout_item_mut() = LayoutItem::default();
+        
+        for child in self.element_data_mut().children.iter_mut() {
+            child.internal.reset_layout_item();
+        }
+    }
 
     fn draw_children(
         &mut self,
@@ -316,31 +324,36 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
     
-    fn on_animation_frame(&mut self, element_state: &mut ElementStateStore, animation_controller: &mut AnimationController, delta_time: Duration) {
+    fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, animation_controller: &mut AnimationController, delta_time: Duration) {
         let element_id = self.component_id().clone();
         let base_state = self.get_base_state(element_state);
-        let current_style = base_state.base.current_style_mut(self.element_data_mut());
-        
-        let current_state: ElementState = {
-            if base_state.base.hovered { 
+        let mut current_state: ElementState = {
+            if base_state.base.hovered {
                 ElementState::Hovered
-            } else if base_state.base.focused { 
+            } else if base_state.base.focused {
                 ElementState::Focused
             } else {
                 ElementState::Normal
             }
         };
         
+        let current_style = if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) {
+            current_style
+        } else {
+            current_state = ElementState::Normal;
+            base_state.base.current_style_mut(self.element_data_mut())
+        };
+        
         if let Some(animation) = &current_style.animation {
             animation_controller.tick(animation, current_state, element_id, delta_time);   
-            let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id);
-            *current_style = new_style;
+            let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id, animation_flags);
+            *current_style = Style::merge(current_style, &new_style);
         } else {
             animation_controller.remove(element_id);
         }
         
         for child in self.children_mut() {
-            child.internal.on_animation_frame(element_state, animation_controller, delta_time);
+            child.internal.on_animation_frame(animation_flags, element_state, animation_controller, delta_time);
         }
     }
 

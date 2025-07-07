@@ -49,7 +49,7 @@ use winit::window::Window;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
-use crate::animation::animation::AnimationController;
+use crate::animation::animation::{AnimationController, AnimationFlags};
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -331,7 +331,21 @@ impl App {
             let reactive_tree = get_tree!(self, false);
             let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
-            root_element.on_animation_frame(&mut reactive_tree.element_state, &mut self.animation_controller, delta_time);
+            let mut animation_flags = AnimationFlags::default();
+            root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, &mut self.animation_controller, delta_time);
+            
+            if animation_flags.needs_relayout() {
+                root_element.reset_layout_item();
+                
+                self.layout_tree(
+                    false,
+                    root_size,
+                    Point::new(0.0, 0.0),
+                    self.window_context.effective_scale_factor(),
+                    self.window_context.mouse_position,
+                );
+            }
+            
             self.window.clone().unwrap().request_redraw();
 
             if self.renderer.is_some() {
