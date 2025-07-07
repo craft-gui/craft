@@ -24,6 +24,7 @@ pub mod markdown;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
+pub mod animation;
 
 pub use options::CraftOptions;
 pub use craft_primitives::palette;
@@ -52,7 +53,7 @@ use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-
+use std::time::Instant;
 use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 #[cfg(target_arch = "wasm32")]
@@ -66,6 +67,7 @@ use craft_logging::info;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
+use crate::animation::animation::AnimationController;
 use crate::craft_winit_state::CraftWinitState;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -261,6 +263,10 @@ pub fn setup_craft(
         },
         runtime: runtime_copy,
         modifiers: Default::default(),
+        animation_controller: AnimationController {
+            animations: Default::default(),
+        },
+        last_frame_time: Instant::now(),
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

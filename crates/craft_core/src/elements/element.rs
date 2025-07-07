@@ -19,8 +19,10 @@ use peniko::Color;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
+use std::time::Duration;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
+use crate::animation::animation::AnimationController;
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -312,6 +314,34 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
+    }
+    
+    fn on_animation_frame(&mut self, element_state: &mut ElementStateStore, animation_controller: &mut AnimationController, delta_time: Duration) {
+        let element_id = self.component_id().clone();
+        let base_state = self.get_base_state(element_state);
+        let current_style = base_state.base.current_style_mut(self.element_data_mut());
+        
+        let current_state: ElementState = {
+            if base_state.base.hovered { 
+                ElementState::Hovered
+            } else if base_state.base.focused { 
+                ElementState::Focused
+            } else {
+                ElementState::Normal
+            }
+        };
+        
+        if let Some(animation) = &current_style.animation {
+            animation_controller.tick(animation, current_state, element_id, delta_time);   
+            let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id);
+            *current_style = new_style;
+        } else {
+            animation_controller.remove(element_id);
+        }
+        
+        for child in self.children_mut() {
+            child.internal.on_animation_frame(element_state, animation_controller, delta_time);
+        }
     }
 
     #[cfg(feature = "accesskit")]

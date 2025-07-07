@@ -35,6 +35,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use craft_runtime::Sender;
 use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
@@ -48,6 +49,7 @@ use winit::window::Window;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
+use crate::animation::animation::AnimationController;
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -103,6 +105,8 @@ pub struct App {
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
+    pub(crate) animation_controller: AnimationController,
+    pub(crate) last_frame_time: std::time::Instant,
 }
 
 impl App {
@@ -283,6 +287,11 @@ impl App {
         if self.window.is_none() {
             return;
         }
+        
+        let now = Instant::now();
+        let delta_time = now - self.last_frame_time;
+        self.last_frame_time = now;
+
 
         let surface_size = self.window_context.window_size();
 
@@ -319,6 +328,12 @@ impl App {
                 self.window_context.mouse_position,
             );
 
+            let reactive_tree = get_tree!(self, false);
+            let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+            root_element.on_animation_frame(&mut reactive_tree.element_state, &mut self.animation_controller, delta_time);
+            self.window.clone().unwrap().request_redraw();
+
             if self.renderer.is_some() {
                 self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
             }
@@ -345,6 +360,8 @@ impl App {
                     self.window_context.mouse_position,
                 );
 
+                
+                
                 if self.renderer.is_some() {
                     self.draw_reactive_tree(true, self.window_context.mouse_position, self.window.clone());
                 }
