@@ -53,7 +53,10 @@ use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Instant;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
 use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::state_store::{StateStore, StateStoreItem};
 #[cfg(target_arch = "wasm32")]
@@ -267,7 +270,7 @@ pub fn setup_craft(
         animation_controller: AnimationController {
             animations: Default::default(),
         },
-        last_frame_time: Instant::now(),
+        last_frame_time: time::Instant::now(),
         redraw_flags: RedrawFlags::new(true),
     });
 

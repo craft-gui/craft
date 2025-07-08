@@ -35,7 +35,14 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+
+use std::time::{Duration};
+
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use craft_runtime::Sender;
 use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
@@ -106,7 +113,7 @@ pub struct App {
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
     pub(crate) animation_controller: AnimationController,
-    pub(crate) last_frame_time: std::time::Instant,
+    pub(crate) last_frame_time: time::Instant,
     pub redraw_flags: RedrawFlags,
 }
 
@@ -306,9 +313,9 @@ impl App {
             return;
         }
         
-        let now = Instant::now();
+        let now = time::Instant::now();
         let delta_time = now - self.last_frame_time;
-        self.last_frame_time = now;
+        self.last_frame_time = now.into();
 
         let surface_size = self.window_context.window_size();
 
