@@ -4,7 +4,7 @@ use {
     crate::accessibility::activation_handler::CraftActivationHandler,
     crate::accessibility::deactivation_handler::CraftDeactivationHandler,
 };
-use crate::components::{ComponentSpecification, Event};
+use crate::components::{ComponentId, ComponentSpecification, Event};
 use craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
@@ -33,7 +33,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -630,6 +630,12 @@ impl App {
         let old_has_active_animation = self.animation_controller.has_active_animation();
         let reactive_tree = get_tree!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+        // Clean up deleted elements by looking into the reactive tree.
+        let element_animation_ids: HashSet<ComponentId> = HashSet::from_iter(self.animation_controller.animations.keys().cloned());
+        element_animation_ids.difference(&reactive_tree.element_ids).for_each(|element_id| {
+            self.animation_controller.remove(*element_id);
+        });
 
         // Damage track across recursive calls to `on_animation_frame`.
         let mut animation_flags = AnimationFlags::default();
