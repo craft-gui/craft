@@ -114,5 +114,5 @@ impl Component for AnimationsExample {
 fn main() {
     use craft::CraftOptions;
     util::setup_logging();
-    craft::craft_main(AnimationsExample::component(), (), CraftOptions::basic("Counter"));
+    craft::craft_main(AnimationsExample::component(), (), CraftOptions::basic("Animations"));
 }
