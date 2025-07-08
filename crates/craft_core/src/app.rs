@@ -627,6 +627,9 @@ impl App {
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
     fn animate_tree(&mut self, is_dev_tree: bool, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
+        let span = span!(Level::INFO, "animate_tree");
+        let _enter = span.enter();
+        
         let old_has_active_animation = self.animation_controller.has_active_animation();
         let reactive_tree = get_tree!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
