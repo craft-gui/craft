@@ -15,7 +15,7 @@ impl Component for AnimationsExample {
     type Props = ();
     type Message = ();
 
-    fn view(context: &mut Context<Self>) -> ComponentSpecification {
+    fn view(_context: &mut Context<Self>) -> ComponentSpecification {
 
         let growing_animation = Animation::new(Duration::from_secs(5), TimingFunction::EaseOut)
             .push(
@@ -75,7 +75,7 @@ impl Component for AnimationsExample {
                 .height("40px")
                 .animation(growing_animation)
                 .component(),
-            
+
             Container::new()
             .push(
                 Container::new()
@@ -86,7 +86,7 @@ impl Component for AnimationsExample {
                     .height("40px")
                     .animation(moving_animation)
             ).component(),
-            
+
             Text::new("Why, Hello!")
                 .animation(text_animation)
                 .component()
