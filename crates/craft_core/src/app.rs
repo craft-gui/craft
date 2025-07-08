@@ -121,7 +121,7 @@ impl RedrawFlags {
             rebuild_layout,
         }
     }
-    
+
     pub fn should_rebuild_layout(&self) -> bool {
         self.rebuild_layout
     }
@@ -335,46 +335,21 @@ impl App {
             }
         }
 
-        let old_has_active_animation = self.animation_controller.has_active_animation();
-
+        let layout_origin = Point::new(0.0, 0.0);
+        
         {
             if self.redraw_flags.should_rebuild_layout() {
                 self.layout_tree(
                     false,
                     root_size,
-                    Point::new(0.0, 0.0),
+                    layout_origin,
                     self.window_context.effective_scale_factor(),
                     self.window_context.mouse_position,
                 );
             }
-
-            let reactive_tree = get_tree!(self, false);
-            let root_element = reactive_tree.element_tree.as_mut().unwrap();
-
-            let mut animation_flags = AnimationFlags::default();
-            root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, &mut self.animation_controller, delta_time);
-
-            if animation_flags.needs_relayout() || old_has_active_animation {
-                root_element.reset_layout_item();
-                
-                self.layout_tree(
-                    false,
-                    root_size,
-                    Point::new(0.0, 0.0),
-                    self.window_context.effective_scale_factor(),
-                    self.window_context.mouse_position,
-                );
-            }
-
-            {
-                // Request a redraw if there is at least one animation playing.
-                // ControlFlow::Poll is set in `about_to_wait`.
-                if self.animation_controller.has_active_animation() || old_has_active_animation {
-                    // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
-                    self.request_redraw(RedrawFlags::new(old_has_active_animation));
-                }
-            }
-
+            
+            self.animate_tree(false, &delta_time, layout_origin, root_size);
+            
             if self.renderer.is_some() {
                 self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
             }
@@ -382,6 +357,9 @@ impl App {
 
         #[cfg(feature = "dev_tools")]
         {
+            let viewport_size = LogicalSize::new(surface_size.width - root_size.width, root_size.height);
+            let dev_tools_layout_origin = Point::new(root_size.width as f64, 0.0);
+            
             if self.is_dev_tools_open {
                 update_reactive_tree(
                     dev_tools_view(self.user_tree.element_tree.clone().unwrap()),
@@ -395,11 +373,13 @@ impl App {
 
                 self.layout_tree(
                     true,
-                    LogicalSize::new(surface_size.width - root_size.width, root_size.height),
+                    viewport_size,
                     Point::new(root_size.width as f64, 0.0),
                     self.window_context.effective_scale_factor(),
                     self.window_context.mouse_position,
                 );
+
+                self.animate_tree(true, &delta_time, dev_tools_layout_origin, viewport_size);
                 
                 if self.renderer.is_some() {
                     self.draw_reactive_tree(true, self.window_context.mouse_position, self.window.clone());
@@ -638,6 +618,39 @@ impl App {
         }
     }
 
+    /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
+    fn animate_tree(&mut self, is_dev_tree: bool, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
+        let old_has_active_animation = self.animation_controller.has_active_animation();
+        let reactive_tree = get_tree!(self, is_dev_tree);
+        let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+        // Damage track across recursive calls to `on_animation_frame`.
+        let mut animation_flags = AnimationFlags::default();
+        root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, &mut self.animation_controller, *delta_time);
+
+        // Perform a relayout if an animation used any layout effecting style property.
+        if animation_flags.needs_relayout() || old_has_active_animation {
+            root_element.reset_layout_item();
+
+            self.layout_tree(
+                is_dev_tree,
+                viewport_size,
+                layout_origin,
+                self.window_context.effective_scale_factor(),
+                self.window_context.mouse_position,
+            );
+        }
+
+        {
+            // Request a redraw if there is at least one animation playing.
+            // ControlFlow::Poll is set in `about_to_wait`.
+            if self.animation_controller.has_active_animation() || old_has_active_animation {
+                // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
+                self.request_redraw(RedrawFlags::new(old_has_active_animation));
+            }
+        }
+    }
+    
     #[allow(clippy::too_many_arguments)]
     fn layout_tree(
         &mut self,

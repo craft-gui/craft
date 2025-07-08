@@ -5,16 +5,30 @@ use kurbo::{CubicBez, ParamCurve, Point};
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::time::Duration;
+use smallvec::SmallVec;
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
-    pub offset_percentage: f32,
-    //pub properties: SmallVec<[StyleProperty; 5]>,
-    pub properties: Vec<StyleProperty>,
+    /// The action / styles interpolated at `offset_percentage`.
+    /// Range [0.0, 100.0]
+    offset_percentage: f32,
+    
+    /// The list of styles interpolated to an element at this keyframe.
+    properties: SmallVec<[StyleProperty; 3]>,
 }
 
 impl KeyFrame {
+    pub fn new(offset_percentage: f32) -> Self {
+        KeyFrame {
+            offset_percentage,
+            properties: SmallVec::new(),
+        }
+    }
     
+    pub fn push(mut self, property: StyleProperty) -> Self {
+        self.properties.push(property);
+        self
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -25,12 +39,14 @@ pub enum AnimationStatus {
     Scheduled,
 }
 
+/// A cubic bézier curve where P0 and P3 are stuck at (0,0) and (1,1).
 #[derive(Clone, Debug)]
-pub struct CubicBezier {
+pub struct FixedCubicBezier {
     cubic_bez: CubicBez,
 }
 
-impl CubicBezier {
+impl FixedCubicBezier {
+    /// Sets P1 and P2 of a fixed cubic bézier curve.
     pub fn new(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
         Self {
             cubic_bez: CubicBez::new(
@@ -44,54 +60,88 @@ impl CubicBezier {
 }
 
 
+/// The motion of an animation modeled with a mathematical function.
 #[derive(Default, Clone, Debug)]
 pub enum TimingFunction {
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#linear
     #[default]
     Linear,
-    EaseIn,
-    EaseOut,
-    BezierCurve(CubicBezier),
-    EaseInOut,
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease
     Ease,
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-in
+    EaseIn,
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-out
+    EaseOut,
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-in-out
+    EaseInOut,
+    /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#cubic-beziernumber_01_number_number_01_number
+    BezierCurve(FixedCubicBezier),
 }
 
 #[derive(Clone, Debug)]
 pub struct Animation {
-    pub key_frames: Vec<KeyFrame>,
+    pub key_frames: SmallVec<[KeyFrame; 2]>,
     pub duration: Duration,
     pub timing_function: TimingFunction,
 }
 
+impl Animation {
+    pub fn new(duration: Duration, timing_function: TimingFunction) -> Self {
+        Self {
+            key_frames: SmallVec::new(),
+            duration,
+            timing_function,
+        }
+    }
+    
+    pub fn push(mut self, key_frame: KeyFrame) -> Self {
+        self.key_frames.push(key_frame);
+        self
+    }
+}
+
 pub struct ActiveAnimation {
+    /// How far into an animation we are.
     current: Duration,
+    /// Tracks the status of an animation, if it is playing, scheduled, or paused.
     status: AnimationStatus,
+    /// Stores the element state of the animation, so that we can track if an animation needs to be removed if an element is in a new state.
     element_state: ElementState
 }
 
+/// For damage tracking across recursive calls to `on_animation_frame`.
 #[derive(Clone, Debug, Default)]
 pub struct AnimationFlags {
     needs_relayout: bool,
 }
 
 impl AnimationFlags {
+    /// OR'd with the provided boolean and the previously stored boolean, to track if an animiatable property effects layout.
+    /// This is used after `on_animation_frame` to optionally recompute the layout.
     pub fn set_needs_relayout(&mut self, needs_relayout: bool) {
         self.needs_relayout = self.needs_relayout | needs_relayout;
     }
     
+    /// Returns whether we need to perform a relayout or not.
     pub fn needs_relayout(&self) -> bool {
         self.needs_relayout
     }
 }
 
 pub struct AnimationController {
+    /// Maps an element id to a record of an animation's playback state. 
     pub(crate) animations: FxHashMap<ComponentId, ActiveAnimation>,
 }
 
 impl AnimationController {
+    
+    /// Removes the playback state (ActiveAnimation).
     pub fn remove(&mut self, component: ComponentId) {
         self.animations.remove(&component);
     }
     
+    
+    /// Determines if any animation is currently playing/running.
     pub fn has_active_animation(&self) -> bool {
         for animation in self.animations.values() {
             if animation.status == AnimationStatus::Playing {
@@ -101,7 +151,8 @@ impl AnimationController {
         
         false
     }
-
+    
+    /// Advances an active animation, and it is also responsible for tracking the status and element_state. 
     pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, component: ComponentId, delta: Duration) {
         let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
             active_animation
@@ -131,6 +182,8 @@ impl AnimationController {
         }
     }
 
+    /// Called after `tick`, and is responsible for using the current animation time and
+    /// computing an interpolated style from a provided `Animation`.
     pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, component: ComponentId, animation_flags: &mut AnimationFlags) -> Style {
         let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
             active_animation
@@ -157,7 +210,6 @@ impl AnimationController {
         }
 
         let (keyframe_start, keyframe_end) = find_keyframe_pair(pos, animation);
-        println!("{:?}", (keyframe_start, keyframe_end));
         
         let mut style = Style::default();
         let mut start_map = HashMap::new();
@@ -181,25 +233,31 @@ impl AnimationController {
 
             let t = match &animation.timing_function {
                 TimingFunction::Linear => {
-                    let linear = CubicBezier::new(0.0, 0.0, 1.0, 1.0);
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#linear
+                    let linear = FixedCubicBezier::new(0.0, 0.0, 1.0, 1.0);
                     linear.cubic_bez.eval(local_t as f64).y
                 }
                 TimingFunction::Ease => {
-                    let ease = CubicBezier::new(0.25, 0.1, 0.25, 1.0);
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease
+                    let ease = FixedCubicBezier::new(0.25, 0.1, 0.25, 1.0);
                     ease.cubic_bez.eval(local_t as f64).y
                 }
                 TimingFunction::EaseIn => {
-                    let ease_in = CubicBezier::new(0.42, 0.0, 1.0, 1.0);
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-in
+                    let ease_in = FixedCubicBezier::new(0.42, 0.0, 1.0, 1.0);
                     ease_in.cubic_bez.eval(local_t as f64).y
                 }
                 TimingFunction::EaseOut => {
-                    let ease_out = CubicBezier::new(0.0, 0.0, 0.58, 1.0);
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-out
+                    let ease_out = FixedCubicBezier::new(0.0, 0.0, 0.58, 1.0);
                     ease_out.cubic_bez.eval(local_t as f64).y
                 }
                 TimingFunction::EaseInOut => {
-                    let ease_in_out = CubicBezier::new(0.42, 0.0, 0.58, 1.0);
+                    // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#ease-in-out
+                    let ease_in_out = FixedCubicBezier::new(0.42, 0.0, 0.58, 1.0);
                     ease_in_out.cubic_bez.eval(local_t as f64).y
                 }
+                // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#cubic-beziernumber_01_number_number_01_number
                 TimingFunction::BezierCurve(cubic_bezier) => {
                     cubic_bezier.cubic_bez.eval(local_t as f64).y
                 }

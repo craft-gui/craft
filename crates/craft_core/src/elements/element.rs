@@ -201,6 +201,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         );
     }
     
+    /// A bit of a hack to reset the layout item of an element recursively.
     fn reset_layout_item(&mut self) {
         *self.layout_item_mut() = LayoutItem::default();
         
@@ -324,8 +325,9 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
     }
     
+    /// Called after layout, and is responsible for updating the animation state of an element.
     fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, animation_controller: &mut AnimationController, delta_time: Duration) {
-        let element_id = self.component_id().clone();
+        let element_id = self.component_id();
         let base_state = self.get_base_state(element_state);
         let mut current_state: ElementState = {
             if base_state.base.hovered {
@@ -337,7 +339,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             }
         };
         
-        let current_style = if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) {
+        // A bit hacky, but we either get the current style with no fallback or fallback to a style and change the current element state to Normal.
+        // This is to allow for retaining an animation state on a normal style even if you hover over it (assuming the hover has no animation).
+        // Basically this is to hack in a basic inherited animation.
+        let current_style = if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && current_style.animation.is_some() {
             current_style
         } else {
             current_state = ElementState::Normal;
@@ -349,6 +354,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id, animation_flags);
             *current_style = Style::merge(current_style, &new_style);
         } else {
+            // If the element style or the fallback doesn't have an animation, then remove any animation state.
             animation_controller.remove(element_id);
         }
         
