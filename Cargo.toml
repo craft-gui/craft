@@ -12,6 +12,7 @@ members = [
     "examples/text",
     "examples/tour",
     "examples/events",
+    "examples/animations",
     "examples/overlay",
     "examples/custom_event_loop",
     "website",

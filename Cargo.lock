@@ -186,6 +186,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "animations"
+version = "0.1.0"
+dependencies = [
+ "craft_gui",
+ "util",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
