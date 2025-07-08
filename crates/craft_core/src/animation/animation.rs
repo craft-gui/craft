@@ -4,8 +4,10 @@ use crate::style::{Style, StyleProperty, Unit};
 use kurbo::{CubicBez, ParamCurve, Point};
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
+use std::iter::zip;
 use std::time::Duration;
 use smallvec::SmallVec;
+use craft_primitives::geometry::TrblRectangle;
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
@@ -83,6 +85,13 @@ pub struct Animation {
     pub key_frames: SmallVec<[KeyFrame; 2]>,
     pub duration: Duration,
     pub timing_function: TimingFunction,
+    pub loop_amount: LoopAmount,
+}
+
+#[derive(Clone, Debug)]
+pub enum LoopAmount {
+    Infinite,
+    Fixed(u32)
 }
 
 impl Animation {
@@ -91,11 +100,17 @@ impl Animation {
             key_frames: SmallVec::new(),
             duration,
             timing_function,
+            loop_amount: LoopAmount::Fixed(1),
         }
     }
     
     pub fn push(mut self, key_frame: KeyFrame) -> Self {
         self.key_frames.push(key_frame);
+        self
+    }
+    
+    pub fn loop_amount(mut self, loop_amount: LoopAmount) -> Self {
+        self.loop_amount = loop_amount;
         self
     }
 }
@@ -106,7 +121,8 @@ pub struct ActiveAnimation {
     /// Tracks the status of an animation, if it is playing, scheduled, or paused.
     status: AnimationStatus,
     /// Stores the element state of the animation, so that we can track if an animation needs to be removed if an element is in a new state.
-    element_state: ElementState
+    element_state: ElementState,
+    loop_amount: LoopAmount,
 }
 
 /// For damage tracking across recursive calls to `on_animation_frame`.
@@ -161,6 +177,7 @@ impl AnimationController {
                 current: Duration::ZERO,
                 status: AnimationStatus::Playing,
                 element_state: state,
+                loop_amount: animation.loop_amount.clone(),
             });
             self.animations.get_mut(&component).unwrap()
         };
@@ -174,11 +191,29 @@ impl AnimationController {
         if active_animation.status == AnimationStatus::Playing && active_animation.element_state == state {
             active_animation.current += delta;
 
-            if active_animation.current >= animation.duration {
-                active_animation.current = Duration::ZERO;
-                active_animation.status = AnimationStatus::Paused;
-                animation_flags.set_needs_relayout(true);
+            let is_completed = active_animation.current >= animation.duration;
+            
+            match &mut active_animation.loop_amount {
+                LoopAmount::Infinite => {
+                    if is_completed {
+                        active_animation.current = Duration::ZERO;
+                    }
+                }
+                LoopAmount::Fixed(amount) => {
+                    if is_completed {
+                        *amount -= 1;
+
+                        if *amount == 0 {
+                            active_animation.current = Duration::ZERO;
+                            active_animation.status = AnimationStatus::Paused;
+                            animation_flags.set_needs_relayout(true);
+                        } else {
+                            active_animation.current = Duration::ZERO;
+                        }
+                    }
+                }
             }
+            
         }
     }
 
@@ -280,30 +315,52 @@ impl AnimationController {
                     let new_color = start.lerp_rect(*end, t as f32);
                     style.set_background(new_color);
                 }
+                (Some(StyleProperty::Color(start)), Some(StyleProperty::Color(end))) => {
+                    let new_color = start.lerp_rect(*end, t as f32);
+                    style.set_color(new_color);
+                    animation_flags.set_needs_relayout(true);
+                }
+                (Some(StyleProperty::FontSize(start)), Some(StyleProperty::FontSize(end))) => {
+                    let new = lerp(*start, *end, t as f32);
+                    style.set_font_size(new);
+                    animation_flags.set_needs_relayout(true);
+                }
                 (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) 
                 => {
-                    if std::mem::discriminant(start) != std::mem::discriminant(end) {
-                        panic!("Width must be the same Unit type.");
-                    }
-                    
                     let resolved_start = resolve_unit(start);
                     let resolved_end = resolve_unit(end);
                     let new = lerp(resolved_start, resolved_end, t as f32);
                     style.set_width(Unit::Px(new));
                     animation_flags.set_needs_relayout(true);
                 }
-                (Some(StyleProperty::Height(start)), Some(StyleProperty::Height(end)))
-                => {
-                    if std::mem::discriminant(start) != std::mem::discriminant(end) {
-                        panic!("Width must be the same Unit type.");
-                    }
-
+                (Some(StyleProperty::Height(start)), Some(StyleProperty::Height(end))) => {
                     let resolved_start = resolve_unit(start);
                     let resolved_end = resolve_unit(end);
                     let new = lerp(resolved_start, resolved_end, t as f32);
                     style.set_height(Unit::Px(new));
                     animation_flags.set_needs_relayout(true);
                 }
+
+                (Some(StyleProperty::Inset(start)), Some(StyleProperty::Inset(end))) => {
+                    let trlb = zip(start.to_array(), end.to_array()).map(|(start, end)| {
+                        let resolved_start = resolve_unit(&start);
+                        let resolved_end = resolve_unit(&end);
+                        let new = lerp(resolved_start, resolved_end, t as f32);
+                        
+                        new
+                    }).collect::<Vec<f32>>();
+
+                    let inset = TrblRectangle::new(
+                        Unit::Px(trlb[0]),
+                        Unit::Px(trlb[1]),
+                        Unit::Px(trlb[2]),
+                        Unit::Px(trlb[3]),
+                    );
+                    
+                    style.set_inset(inset);
+                    animation_flags.set_needs_relayout(true);
+                }
+                
                 _ => {}
             }
 
