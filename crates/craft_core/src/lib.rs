@@ -68,6 +68,7 @@ use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBui
 
 use app::App;
 use crate::animation::animation::AnimationController;
+use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -267,6 +268,7 @@ pub fn setup_craft(
             animations: Default::default(),
         },
         last_frame_time: Instant::now(),
+        redraw_flags: RedrawFlags::new(true),
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

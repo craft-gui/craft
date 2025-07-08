@@ -91,8 +91,18 @@ impl AnimationController {
     pub fn remove(&mut self, component: ComponentId) {
         self.animations.remove(&component);
     }
+    
+    pub fn has_active_animation(&self) -> bool {
+        for animation in self.animations.values() {
+            if animation.status == AnimationStatus::Playing {
+                return true;
+            }
+        }
+        
+        false
+    }
 
-    pub fn tick(&mut self, animation: &Animation, state: ElementState, component: ComponentId, delta: Duration) {
+    pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, component: ComponentId, delta: Duration) {
         let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
             active_animation
         } else {
@@ -109,13 +119,14 @@ impl AnimationController {
             active_animation.status = AnimationStatus::Playing;
             active_animation.element_state = state;
         }
-
+        
         if active_animation.status == AnimationStatus::Playing && active_animation.element_state == state {
             active_animation.current += delta;
 
             if active_animation.current >= animation.duration {
                 active_animation.current = Duration::ZERO;
                 active_animation.status = AnimationStatus::Paused;
+                animation_flags.set_needs_relayout(true);
             }
         }
     }
@@ -197,30 +208,42 @@ impl AnimationController {
             fn lerp(a: f32, b: f32, t: f32) -> f32 {
                 a + (b - a) * t
             }
+
+            fn resolve_unit(unit: &Unit) -> f32 {
+                match unit {
+                    Unit::Px(px) => *px,
+                    Unit::Percentage(percent) => *percent,
+                    Unit::Auto => panic!("Unit must not be auto.")
+                }
+            }
             
             match (start_prop, end_prop) {
                 (Some(StyleProperty::Background(start)), Some(StyleProperty::Background(end))) => {
                     let new_color = start.lerp_rect(*end, t as f32);
                     style.set_background(new_color);
                 }
-                (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) => {
-
+                (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) 
+                => {
                     if std::mem::discriminant(start) != std::mem::discriminant(end) {
                         panic!("Width must be the same Unit type.");
-                    }
-                    
-                    fn resolve_unit(unit: &Unit) -> f32 {
-                        match unit {
-                            Unit::Px(px) => *px,
-                            Unit::Percentage(percent) => *percent,
-                            Unit::Auto => panic!("Unit must not be auto.")
-                        }
                     }
                     
                     let resolved_start = resolve_unit(start);
                     let resolved_end = resolve_unit(end);
                     let new = lerp(resolved_start, resolved_end, t as f32);
                     style.set_width(Unit::Px(new));
+                    animation_flags.set_needs_relayout(true);
+                }
+                (Some(StyleProperty::Height(start)), Some(StyleProperty::Height(end)))
+                => {
+                    if std::mem::discriminant(start) != std::mem::discriminant(end) {
+                        panic!("Width must be the same Unit type.");
+                    }
+
+                    let resolved_start = resolve_unit(start);
+                    let resolved_end = resolve_unit(end);
+                    let new = lerp(resolved_start, resolved_end, t as f32);
+                    style.set_height(Unit::Px(new));
                     animation_flags.set_needs_relayout(true);
                 }
                 _ => {}

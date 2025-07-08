@@ -345,7 +345,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         };
         
         if let Some(animation) = &current_style.animation {
-            animation_controller.tick(animation, current_state, element_id, delta_time);   
+            animation_controller.tick(animation_flags, animation, current_state, element_id, delta_time);   
             let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id, animation_flags);
             *current_style = Style::merge(current_style, &new_style);
         } else {
