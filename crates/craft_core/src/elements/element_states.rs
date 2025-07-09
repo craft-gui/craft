@@ -1,5 +1,4 @@
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ElementState {
     #[default]
     Normal,
