@@ -3,7 +3,7 @@ use crate::elements::element_states::ElementState;
 use crate::style::Style;
 use std::collections::HashMap;
 use rustc_hash::FxHashMap;
-use crate::animation::animation::ActiveAnimation;
+use crate::animations::animation::ActiveAnimation;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseElementState {

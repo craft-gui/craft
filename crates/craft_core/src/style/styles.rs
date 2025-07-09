@@ -6,12 +6,12 @@ pub use taffy::BoxSizing;
 pub use taffy::Overflow;
 pub use taffy::Position;
 
+use crate::animations::animation::Animation;
 use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::ColorBrush;
+use smallvec::SmallVec;
 use std::fmt;
 use std::fmt::Debug;
-use smallvec::SmallVec;
-use crate::animation::animation::Animation;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Unit {
@@ -178,24 +178,19 @@ impl TextStyleProperty {
     pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'static, ColorBrush>> {
         match self {
             TextStyleProperty::FontFamily(font_family) => {
-                let font_stack_cow_list =
-                    Cow::Owned(vec![
-                        parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
-                        parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
-                    ]);
+                let font_stack_cow_list = Cow::Owned(vec![
+                    parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
+                    parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
+                ]);
                 let font_stack = parley::FontStack::List(font_stack_cow_list);
 
                 Some(parley::StyleProperty::FontStack(font_stack))
             }
 
-            TextStyleProperty::FontSize(font_size) => {
-                Some(parley::StyleProperty::FontSize(*font_size))
-            }
+            TextStyleProperty::FontSize(font_size) => Some(parley::StyleProperty::FontSize(*font_size)),
 
             TextStyleProperty::Color(color) => {
-                let brush = ColorBrush {
-                    color: *color,
-                };
+                let brush = ColorBrush { color: *color };
 
                 Some(parley::StyleProperty::Brush(brush))
             }
@@ -214,25 +209,17 @@ impl TextStyleProperty {
             TextStyleProperty::FontWeight(font_weight) => {
                 Some(parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32)))
             }
-            TextStyleProperty::Underline(underline) => {
-                Some(parley::StyleProperty::Underline(*underline))
-            }
-            TextStyleProperty::UnderlineOffset(offset) => {
-                Some(parley::StyleProperty::UnderlineOffset(Some(*offset)))
-            }
+            TextStyleProperty::Underline(underline) => Some(parley::StyleProperty::Underline(*underline)),
+            TextStyleProperty::UnderlineOffset(offset) => Some(parley::StyleProperty::UnderlineOffset(Some(*offset))),
 
-            TextStyleProperty::UnderlineSize(size) => {
-                Some(parley::StyleProperty::UnderlineSize(Some(*size)))
-            }
+            TextStyleProperty::UnderlineSize(size) => Some(parley::StyleProperty::UnderlineSize(Some(*size))),
 
             TextStyleProperty::UnderlineBrush(color) => {
-                let brush = ColorBrush {
-                    color: *color,
-                };
+                let brush = ColorBrush { color: *color };
 
                 Some(parley::StyleProperty::UnderlineBrush(Some(brush)))
             }
-            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundColor(_) => { None }
+            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundColor(_) => None,
         }
     }
 }
@@ -261,7 +248,7 @@ pub enum StyleProperty {
     FlexGrow(f32),
     FlexShrink(f32),
     FlexBasis(Unit),
-    
+
     Color(Color),
     Background(Color),
     /// Defaults to the text color, if it is None.
@@ -287,8 +274,7 @@ pub enum StyleProperty {
     Visible(bool),
 }
 
-#[derive(Clone, Debug, Copy)]
-#[derive(PartialEq)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub struct FontFamily {
     font_family_length: u8,
     font_family_name: [u8; 64],
@@ -300,7 +286,7 @@ impl FontFamily {
             font_family_length: 0,
             font_family_name: [0; 64],
         };
-        
+
         let chars = font_family.chars().collect::<Vec<char>>();
         font_family_res.font_family_length = chars.len() as u8;
         font_family_res.font_family_name[..font_family.len()].copy_from_slice(font_family.as_bytes());
@@ -334,7 +320,7 @@ impl Default for FontFamily {
 pub struct Style {
     properties: SmallVec<[StyleProperty; 5]>,
     pub dirty_flags: StyleFlags,
-    pub animations: Option<SmallVec<[Animation; 1]>>
+    pub animations: Option<SmallVec<[Animation; 1]>>,
 }
 
 impl Default for Style {
@@ -353,15 +339,12 @@ macro_rules! style_property {
     ) => {
         impl Style {
             pub fn $get(&self) -> $inner {
-                self.properties.iter().find_map(|p| {
-                    if let StyleProperty::$variant(val) = p {
-                        Some(*val)
-                    } else {
-                        None
-                    }
-                }).unwrap_or($default)
+                self.properties
+                    .iter()
+                    .find_map(|p| if let StyleProperty::$variant(val) = p { Some(*val) } else { None })
+                    .unwrap_or($default)
             }
-            
+
             pub fn $set(&mut self, val: $inner) {
                 if self.dirty_flags.contains(StyleFlags::$flag) {
                     self.remove_property(|p| matches!(p, StyleProperty::$variant(_)));
@@ -409,43 +392,91 @@ style_property!(font_style, set_font_style, FontStyle, FontStyle, FONT_STYLE, Fo
 style_property!(underline, set_underline, Underline, Option<Underline>, UNDERLINE, None);
 style_property!(overflow, set_overflow, Overflow, [Overflow; 2], OVERFLOW, [Overflow::default(); 2]);
 
-style_property!(border_color, set_border_color, BorderColor, TrblRectangle<Color>, BORDER_COLOR, TrblRectangle::new_all(Color::BLACK));
-style_property!(border_width, set_border_width, BorderWidth, TrblRectangle<Unit>, BORDER_WIDTH, TrblRectangle::new_all(Unit::Px(0.0)));
+style_property!(
+    border_color,
+    set_border_color,
+    BorderColor,
+    TrblRectangle<Color>,
+    BORDER_COLOR,
+    TrblRectangle::new_all(Color::BLACK)
+);
+style_property!(
+    border_width,
+    set_border_width,
+    BorderWidth,
+    TrblRectangle<Unit>,
+    BORDER_WIDTH,
+    TrblRectangle::new_all(Unit::Px(0.0))
+);
 style_property!(border_radius, set_border_radius, BorderRadius, [(f32, f32); 4], BORDER_RADIUS, [(0.0, 0.0); 4]);
 
-style_property!(scrollbar_color, set_scrollbar_color, ScrollbarColor, ScrollbarColor, SCROLLBAR_COLOR, ScrollbarColor {thumb_color: Color::from_rgb8(150, 150, 152), track_color: Color::TRANSPARENT});
-const SCROLLBAR_THUMB_MARGIN: TrblRectangle<f32> = if cfg!(any(target_os = "android", target_os = "ios")) { TrblRectangle::new_all(0.0) } else { TrblRectangle::new(1.0, 2.0, 1.0, 2.0) };
-style_property!(scrollbar_thumb_margin, set_scrollbar_thumb_margin, ScrollbarThumbMargin, TrblRectangle<f32>, SCROLLBAR_THUMB_MARGIN, SCROLLBAR_THUMB_MARGIN);
-style_property!(scrollbar_thumb_radius, set_scrollbar_thumb_radius, ScrollbarRadius, [(f32, f32); 4], SCROLLBAR_RADIUS, [(10.0, 10.0); 4]);
-style_property!(scrollbar_width, set_scrollbar_width, ScrollbarWidth, f32, SCROLLBAR_WIDTH, if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 });
+style_property!(
+    scrollbar_color,
+    set_scrollbar_color,
+    ScrollbarColor,
+    ScrollbarColor,
+    SCROLLBAR_COLOR,
+    ScrollbarColor {
+        thumb_color: Color::from_rgb8(150, 150, 152),
+        track_color: Color::TRANSPARENT
+    }
+);
+const SCROLLBAR_THUMB_MARGIN: TrblRectangle<f32> = if cfg!(any(target_os = "android", target_os = "ios")) {
+    TrblRectangle::new_all(0.0)
+} else {
+    TrblRectangle::new(1.0, 2.0, 1.0, 2.0)
+};
+style_property!(
+    scrollbar_thumb_margin,
+    set_scrollbar_thumb_margin,
+    ScrollbarThumbMargin,
+    TrblRectangle<f32>,
+    SCROLLBAR_THUMB_MARGIN,
+    SCROLLBAR_THUMB_MARGIN
+);
+style_property!(
+    scrollbar_thumb_radius,
+    set_scrollbar_thumb_radius,
+    ScrollbarRadius,
+    [(f32, f32); 4],
+    SCROLLBAR_RADIUS,
+    [(10.0, 10.0); 4]
+);
+style_property!(
+    scrollbar_width,
+    set_scrollbar_width,
+    ScrollbarWidth,
+    f32,
+    SCROLLBAR_WIDTH,
+    if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 }
+);
 
 style_property!(visible, set_visible, Visible, bool, VISIBLE, true);
-style_property!(selection_color, set_selection_color, SelectionColor, Color, SELECTION_COLOR, Color::from_rgb8(0, 120, 215));
+style_property!(
+    selection_color,
+    set_selection_color,
+    SelectionColor,
+    Color,
+    SELECTION_COLOR,
+    Color::from_rgb8(0, 120, 215)
+);
 style_property!(cursor_color, set_cursor_color, CursorColor, Option<Color>, CURSOR_COLOR, None);
 
 impl Style {
-    pub fn animation(&self, animation: String) -> Option<&Animation> {
-        if let Some(animations) = &self.animations {
-            for ani in animations {
-                if ani.name == animation {
-                    return Some(ani);
-                }
-            }   
-        }
-        
-        None
+    pub fn animation(&self, animation: &str) -> Option<&Animation> {
+        self.animations.as_ref().map(|ani| ani.iter().find(|ani| ani.name == animation)).unwrap_or_default()
     }
 
     pub fn set_animation(&mut self, animation: Animation) {
         if let Some(animations) = &mut self.animations {
-            animations.push(animation);   
+            animations.push(animation);
         } else {
             let mut ani_vec = SmallVec::new();
             ani_vec.push(animation);
             self.animations = Some(ani_vec);
         }
     }
-    
+
     fn remove_property(&mut self, f: impl Fn(&StyleProperty) -> bool) {
         if let Some(pos) = self.properties.iter().position(f) {
             self.properties.remove(pos);
@@ -647,5 +678,4 @@ impl Style {
         style_set.insert(parley::StyleProperty::UnderlineOffset(underline_offset));
         style_set.insert(parley::StyleProperty::UnderlineSize(underline_size));
     }
-    
 }

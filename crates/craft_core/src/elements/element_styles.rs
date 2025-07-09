@@ -3,7 +3,7 @@ use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Underline, Unit, Weight, Wrap};
 use taffy::Position;
-use crate::animation::animation::Animation;
+use crate::animations::animation::Animation;
 
 pub trait ElementStyles
 where

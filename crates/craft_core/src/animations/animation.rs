@@ -31,7 +31,7 @@ impl KeyFrame {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 #[derive(PartialEq)]
 pub enum AnimationStatus {
     Paused,
@@ -40,7 +40,7 @@ pub enum AnimationStatus {
 }
 
 /// A cubic bézier curve where P0 and P3 are stuck at (0,0) and (1,1).
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FixedCubicBezier {
     cubic_bez: CubicBez,
 }
@@ -61,7 +61,7 @@ impl FixedCubicBezier {
 
 
 /// The motion of an animation modeled with a mathematical function.
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Copy, Clone, Debug)]
 pub enum TimingFunction {
     /// https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#linear
     #[default]
@@ -87,16 +87,16 @@ pub struct Animation {
     pub loop_amount: LoopAmount,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum LoopAmount {
     Infinite,
     Fixed(u32)
 }
 
 impl Animation {
-    pub fn new(name: String, duration: Duration, timing_function: TimingFunction) -> Self {
+    pub fn new(name: &str, duration: Duration, timing_function: TimingFunction) -> Self {
         Self {
-            name,
+            name: name.to_string(),
             key_frames: SmallVec::new(),
             duration,
             timing_function,
@@ -115,7 +115,7 @@ impl Animation {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct ActiveAnimation {
     /// How far into an animation we are.
     pub(crate) current: Duration,
@@ -125,7 +125,7 @@ pub struct ActiveAnimation {
 }
 
 /// For damage tracking across recursive calls to `on_animation_frame`.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AnimationFlags {
     needs_relayout: bool,
     has_active_animation: bool,
@@ -135,7 +135,7 @@ impl AnimationFlags {
     /// OR'd with the provided boolean and the previously stored boolean, to track if an animatable property effects layout.
     /// This is used after `on_animation_frame` to optionally recompute the layout.
     pub fn set_needs_relayout(&mut self, needs_relayout: bool) {
-        self.needs_relayout = self.needs_relayout | needs_relayout;
+        self.needs_relayout |= needs_relayout;
     }
     
     /// Returns whether we need to perform a relayout or not.
@@ -145,7 +145,7 @@ impl AnimationFlags {
 
     /// OR'd with the provided boolean and the previously stored boolean, to track if any animation is active.
     pub fn set_has_active_animation(&mut self, has_active_animation: bool) {
-        self.has_active_animation = self.has_active_animation | has_active_animation;
+        self.has_active_animation |= has_active_animation;
     }
 
     /// Returns true if any animation is in the Playing state.
@@ -157,7 +157,7 @@ impl AnimationFlags {
 impl ActiveAnimation {
     
     /// Advances an active animation, and it is also responsible for tracking the status and element_state. 
-    pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, delta: Duration) {
+    pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, _state: ElementState, delta: Duration) {
         if self.status == AnimationStatus::Playing {
             self.current += delta;
 
@@ -189,7 +189,7 @@ impl ActiveAnimation {
 
     /// Called after `tick`, and is responsible for using the current animation time and
     /// computing an interpolated style from a provided `Animation`.
-    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, animation_flags: &mut AnimationFlags) -> Style {
+    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, _state: ElementState, animation_flags: &mut AnimationFlags) -> Style {
         if self.status != AnimationStatus::Playing {
             return element_style.clone();
         }
@@ -267,16 +267,16 @@ impl ActiveAnimation {
             }
 
             #[inline(always)]
-            fn resolve_unit(start: &Unit, end: &Unit, t: f64, set_prop: &mut dyn FnMut(Unit)) {
+            fn resolve_unit(start: Unit, end: Unit, t: f64, set_prop: &mut dyn FnMut(Unit)) {
                 let resolved_start = match start {
-                    Unit::Px(px) => *px,
-                    Unit::Percentage(percent) => *percent,
+                    Unit::Px(px) => px,
+                    Unit::Percentage(percent) => percent,
                     Unit::Auto => panic!("Unit must not be auto.")
                 };
                 
                 let resolved_end = match end {
-                    Unit::Px(px) => *px,
-                    Unit::Percentage(percent) => *percent,
+                    Unit::Px(px) => px,
+                    Unit::Percentage(percent) => percent,
                     Unit::Auto => panic!("Unit must not be auto.")
                 };
                 let new = lerp(resolved_start, resolved_end, t as f32);
@@ -308,13 +308,13 @@ impl ActiveAnimation {
                 }
                 (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) 
                 => {
-                    resolve_unit(start, end, t, &mut |new| {
+                    resolve_unit(*start, *end, t, &mut |new| {
                         style.set_width(new);
                     });
                     animation_flags.set_needs_relayout(true);
                 }
                 (Some(StyleProperty::Height(start)), Some(StyleProperty::Height(end))) => {
-                    resolve_unit(start, end, t, &mut |new| {
+                    resolve_unit(*start, *end, t, &mut |new| {
                         style.set_height(new);
                     });
                     animation_flags.set_needs_relayout(true);
@@ -323,7 +323,7 @@ impl ActiveAnimation {
                 (Some(StyleProperty::Inset(start)), Some(StyleProperty::Inset(end))) => {
                     let trlb = zip(start.to_array(), end.to_array()).map(|(start, end)| {
                         let mut inset_unit = Unit::Auto;
-                        resolve_unit(&start, &end, t, &mut |new| {
+                        resolve_unit(start, end, t, &mut |new| {
                             inset_unit = new;
                         });
                         

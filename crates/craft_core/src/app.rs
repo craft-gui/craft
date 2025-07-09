@@ -4,7 +4,7 @@ use {
     crate::accessibility::activation_handler::CraftActivationHandler,
     crate::accessibility::deactivation_handler::CraftDeactivationHandler,
 };
-use crate::components::{ComponentId, ComponentSpecification, Event};
+use crate::components::{ComponentSpecification, Event};
 use craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
@@ -33,7 +33,7 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -56,7 +56,7 @@ use winit::window::Window;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
-use crate::animation::animation::{AnimationFlags};
+use crate::animations::animation::{AnimationFlags};
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -314,7 +314,7 @@ impl App {
         
         let now = time::Instant::now();
         let delta_time = now - self.last_frame_time;
-        self.last_frame_time = now.into();
+        self.last_frame_time = now;
 
         let surface_size = self.window_context.window_size();
 
@@ -637,7 +637,7 @@ impl App {
         // Damage track across recursive calls to `on_animation_frame`.
         let mut animation_flags = AnimationFlags::default();
         root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, *delta_time);
-        reactive_tree.previous_animation_flags = animation_flags.clone();
+        reactive_tree.previous_animation_flags = animation_flags;
         
         // Perform a relayout if an animation used any layout effecting style property.
         if animation_flags.needs_relayout() || old_has_active_animation {

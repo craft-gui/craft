@@ -1,4 +1,4 @@
-use crate::animation::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
+use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::element_data::ElementData;
@@ -367,7 +367,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
                     active_animations.insert(ani.name.clone(), ActiveAnimation {
                         current: Duration::ZERO,
                         status: AnimationStatus::Playing,
-                        loop_amount: ani.loop_amount.clone(),
+                        loop_amount: ani.loop_amount,
                     });
                 }
             }
@@ -377,25 +377,20 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             });
         }
 
-        let mut to_remove = Vec::new();
-        for (anim_name, active_animation) in active_animations.iter_mut() {
+        active_animations.retain(|anim_name, active_animation| {
             if active_animation.status == AnimationStatus::Playing {
                 animation_flags.set_has_active_animation(true);
             }
             
-            if let Some(animation) = &current_style.animation(anim_name.to_string()) {
+            if let Some(animation) = current_style.animation(anim_name) {
                 active_animation.tick(animation_flags, animation, current_state, delta_time);
-                let new_style = active_animation.compute_style(&current_style, animation, current_state, animation_flags);
+                let new_style = active_animation.compute_style(current_style, animation, current_state, animation_flags);
                 *current_style = Style::merge(current_style, &new_style);
+                true
             } else {
-                // If the element style or the fallback doesn't have an animation, then remove any animation state.
-                to_remove.push(anim_name.clone());
+                false
             }
-        }
-        
-        for anim_name in &to_remove {
-            active_animations.remove(anim_name);
-        }
+        });
 
         for child in self.children_mut() {
             child.internal.on_animation_frame(animation_flags, element_state, delta_time);
@@ -676,6 +671,14 @@ macro_rules! generate_component_methods {
             self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
 
             self
+        }
+
+        #[allow(dead_code)]
+        pub fn extend_children_in_place<T>(&mut self, children: Vec<T>)
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
         }
 
         #[allow(dead_code)]
