@@ -21,13 +21,13 @@ impl Component for AnimationsExample {
             .push(
                 KeyFrame::new(0.0)
                     .push(StyleProperty::Background(palette::css::GREEN))
-                    .push(StyleProperty::Width(Unit::Px(20.0)))
+                    .push(StyleProperty::Width(Unit::Percentage(10.0)))
                     .push(StyleProperty::Height(Unit::Px(40.0))),
             )
             .push(
                 KeyFrame::new(100.0)
                     .push(StyleProperty::Background(palette::css::RED))
-                    .push(StyleProperty::Width(Unit::Px(400.0)))
+                    .push(StyleProperty::Width(Unit::Percentage(80.0)))
                     .push(StyleProperty::Height(Unit::Px(100.0)))
             )
             .loop_amount(LoopAmount::Fixed(3))

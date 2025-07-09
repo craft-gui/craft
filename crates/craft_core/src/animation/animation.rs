@@ -275,12 +275,29 @@ impl ActiveAnimation {
                 a + (b - a) * t
             }
 
-            fn resolve_unit(unit: &Unit) -> f32 {
-                match unit {
+            #[inline(always)]
+            fn resolve_unit(start: &Unit, end: &Unit, t: f64, set_prop: &mut dyn FnMut(Unit)) {
+                let resolved_start = match start {
                     Unit::Px(px) => *px,
                     Unit::Percentage(percent) => *percent,
                     Unit::Auto => panic!("Unit must not be auto.")
-                }
+                };
+                
+                let resolved_end = match end {
+                    Unit::Px(px) => *px,
+                    Unit::Percentage(percent) => *percent,
+                    Unit::Auto => panic!("Unit must not be auto.")
+                };
+                let new = lerp(resolved_start, resolved_end, t as f32);
+                
+                // Naively asserts that start and end must be the same Unit type.
+                let new = match start {
+                    Unit::Px(_) => Unit::Px(new),
+                    Unit::Percentage(_) => Unit::Percentage(new),
+                    _ => unreachable!()
+                };
+                
+                set_prop(new);
             }
             
             match (start_prop, end_prop) {
@@ -300,35 +317,29 @@ impl ActiveAnimation {
                 }
                 (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) 
                 => {
-                    let resolved_start = resolve_unit(start);
-                    let resolved_end = resolve_unit(end);
-                    let new = lerp(resolved_start, resolved_end, t as f32);
-                    style.set_width(Unit::Px(new));
+                    resolve_unit(start, end, t, &mut |new| {
+                        style.set_width(new);
+                    });
                     animation_flags.set_needs_relayout(true);
                 }
                 (Some(StyleProperty::Height(start)), Some(StyleProperty::Height(end))) => {
-                    let resolved_start = resolve_unit(start);
-                    let resolved_end = resolve_unit(end);
-                    let new = lerp(resolved_start, resolved_end, t as f32);
-                    style.set_height(Unit::Px(new));
+                    resolve_unit(start, end, t, &mut |new| {
+                        style.set_height(new);
+                    });
                     animation_flags.set_needs_relayout(true);
                 }
 
                 (Some(StyleProperty::Inset(start)), Some(StyleProperty::Inset(end))) => {
                     let trlb = zip(start.to_array(), end.to_array()).map(|(start, end)| {
-                        let resolved_start = resolve_unit(&start);
-                        let resolved_end = resolve_unit(&end);
-                        let new = lerp(resolved_start, resolved_end, t as f32);
+                        let mut inset_unit = Unit::Auto;
+                        resolve_unit(&start, &end, t, &mut |new| {
+                            inset_unit = new;
+                        });
                         
-                        new
-                    }).collect::<Vec<f32>>();
+                        inset_unit
+                    }).collect::<Vec<Unit>>();
 
-                    let inset = TrblRectangle::new(
-                        Unit::Px(trlb[0]),
-                        Unit::Px(trlb[1]),
-                        Unit::Px(trlb[2]),
-                        Unit::Px(trlb[3]),
-                    );
+                    let inset = TrblRectangle::new(trlb[0], trlb[1], trlb[2], trlb[3]);
                     
                     style.set_inset(inset);
                     animation_flags.set_needs_relayout(true);
