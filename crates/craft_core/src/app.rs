@@ -56,7 +56,7 @@ use winit::window::Window;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
-use crate::animation::animation::{AnimationController, AnimationFlags};
+use crate::animation::animation::{AnimationFlags};
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -112,7 +112,6 @@ pub struct App {
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
-    pub(crate) animation_controller: AnimationController,
     pub(crate) last_frame_time: time::Instant,
     pub redraw_flags: RedrawFlags,
 }
@@ -627,23 +626,19 @@ impl App {
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
     fn animate_tree(&mut self, is_dev_tree: bool, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
+
         let span = span!(Level::INFO, "animate_tree");
         let _enter = span.enter();
         
-        let old_has_active_animation = self.animation_controller.has_active_animation();
         let reactive_tree = get_tree!(self, is_dev_tree);
+        let old_has_active_animation = reactive_tree.previous_animation_flags.has_active_animation();
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
-
-        // Clean up deleted elements by looking into the reactive tree.
-        let element_animation_ids: HashSet<ComponentId> = HashSet::from_iter(self.animation_controller.animations.keys().cloned());
-        element_animation_ids.difference(&reactive_tree.element_ids).for_each(|element_id| {
-            self.animation_controller.remove(*element_id);
-        });
 
         // Damage track across recursive calls to `on_animation_frame`.
         let mut animation_flags = AnimationFlags::default();
-        root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, &mut self.animation_controller, *delta_time);
-
+        root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, *delta_time);
+        reactive_tree.previous_animation_flags = animation_flags.clone();
+        
         // Perform a relayout if an animation used any layout effecting style property.
         if animation_flags.needs_relayout() || old_has_active_animation {
             root_element.reset_layout_item();
@@ -657,13 +652,11 @@ impl App {
             );
         }
 
-        {
-            // Request a redraw if there is at least one animation playing.
-            // ControlFlow::Poll is set in `about_to_wait`.
-            if self.animation_controller.has_active_animation() || old_has_active_animation {
-                // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
-                self.request_redraw(RedrawFlags::new(old_has_active_animation));
-            }
+        // Request a redraw if there is at least one animation playing.
+        // ControlFlow::Poll is set in `about_to_wait`.
+        if animation_flags.has_active_animation() || old_has_active_animation {
+            // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
+            self.request_redraw(RedrawFlags::new(old_has_active_animation));
         }
     }
     

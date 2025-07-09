@@ -1,28 +1,29 @@
+use crate::animation::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
-use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use craft_renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
+use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
+use craft_renderer::renderer::RenderList;
 use kurbo::Affine;
 use peniko::Color;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
 use std::time::Duration;
+use rustc_hash::FxHashMap;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
-use crate::animation::animation::{AnimationController, AnimationFlags};
 
 #[derive(Clone)]
 pub struct ElementBoxed {
@@ -326,9 +327,8 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     }
     
     /// Called after layout, and is responsible for updating the animation state of an element.
-    fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, animation_controller: &mut AnimationController, delta_time: Duration) {
-        let element_id = self.component_id();
-        let base_state = self.get_base_state(element_state);
+    fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, delta_time: Duration) {
+        let base_state = self.get_base_state_mut(element_state);
         let mut current_state: ElementState = {
             if base_state.base.hovered {
                 ElementState::Hovered
@@ -342,24 +342,64 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         // A bit hacky, but we either get the current style with no fallback or fallback to a style and change the current element state to Normal.
         // This is to allow for retaining an animation state on a normal style even if you hover over it (assuming the hover has no animation).
         // Basically this is to hack in a basic inherited animation.
-        let current_style = if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && current_style.animation.is_some() {
+        let current_style = 
+            if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && 
+            let Some(current_style_animations) = &current_style.animations && !current_style_animations.is_empty() {
             current_style
         } else {
             current_state = ElementState::Normal;
             base_state.base.current_style_mut(self.element_data_mut())
         };
         
-        if let Some(animation) = &current_style.animation {
-            animation_controller.tick(animation_flags, animation, current_state, element_id, delta_time);   
-            let new_style = animation_controller.compute_style(&current_style, animation, current_state, element_id, animation_flags);
-            *current_style = Style::merge(current_style, &new_style);
+        // This is pretty hacky, but we can avoid allocating a hashmap for every element.
+        let active_animations = if current_style.animations.is_some() {
+            if base_state.base.animations.is_none() {
+                base_state.base.animations = Some(FxHashMap::default());
+            }
+            
+            base_state.base.animations.as_mut().unwrap()
         } else {
-            // If the element style or the fallback doesn't have an animation, then remove any animation state.
-            animation_controller.remove(element_id);
+            for child in self.children_mut() {
+                child.internal.on_animation_frame(animation_flags, element_state, delta_time);
+            }
+            return;
+        };
+        
+        if let Some(current_style_animations) = &mut current_style.animations {
+            for ani in current_style_animations {
+                if !active_animations.contains_key(&ani.name) {
+                    active_animations.insert(ani.name.clone(), ActiveAnimation {
+                        current: Duration::ZERO,
+                        status: AnimationStatus::Playing,
+                        element_state: current_state,
+                        loop_amount: ani.loop_amount.clone(),
+                    });
+                }
+            }   
         }
         
+        let mut to_remove = Vec::new();
+        for (anim_name, active_animation) in active_animations.iter_mut() {
+            if active_animation.status == AnimationStatus::Playing {
+                animation_flags.set_has_active_animation(true);
+            }
+            
+            if let Some(animation) = &current_style.animation(anim_name.to_string()) {
+                active_animation.tick(animation_flags, animation, current_state, delta_time);
+                let new_style = active_animation.compute_style(&current_style, animation, current_state, animation_flags);
+                *current_style = Style::merge(current_style, &new_style);
+            } else {
+                // If the element style or the fallback doesn't have an animation, then remove any animation state.
+                to_remove.push(anim_name.clone());
+            }
+        }
+        
+        for anim_name in &to_remove {
+            active_animations.remove(anim_name);
+        }
+
         for child in self.children_mut() {
-            child.internal.on_animation_frame(animation_flags, element_state, animation_controller, delta_time);
+            child.internal.on_animation_frame(animation_flags, element_state, delta_time);
         }
     }
 

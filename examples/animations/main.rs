@@ -17,7 +17,7 @@ impl Component for AnimationsExample {
 
     fn view(_context: &mut Context<Self>) -> ComponentSpecification {
 
-        let growing_animation = Animation::new(Duration::from_secs(5), TimingFunction::EaseOut)
+        let growing_animation = Animation::new("growing_animation".to_string(), Duration::from_secs(5), TimingFunction::EaseOut)
             .push(
                 KeyFrame::new(0.0)
                     .push(StyleProperty::Background(palette::css::GREEN))
@@ -33,7 +33,7 @@ impl Component for AnimationsExample {
             .loop_amount(LoopAmount::Fixed(3))
             ;
 
-        let moving_animation = Animation::new(Duration::from_secs(5), TimingFunction::Ease)
+        let moving_animation = Animation::new("moving_animation".to_string(), Duration::from_secs(5), TimingFunction::Ease)
             .push(
                 KeyFrame::new(0.0)
                     .push(StyleProperty::Background(palette::css::BLUE))
@@ -52,7 +52,7 @@ impl Component for AnimationsExample {
             .loop_amount(LoopAmount::Infinite)
             ;
 
-        let text_animation = Animation::new(Duration::from_secs(5), TimingFunction::Ease)
+        let text_animation = Animation::new("text_animation".to_string(), Duration::from_secs(5), TimingFunction::Ease)
             .push(
                 KeyFrame::new(0.0)
                     .push(StyleProperty::Background(palette::css::RED))
@@ -73,7 +73,7 @@ impl Component for AnimationsExample {
                 .background(palette::css::GRAY)
                 .width("100px")
                 .height("40px")
-                .animation(growing_animation)
+                .push_animation(growing_animation)
                 .component(),
 
             Container::new()
@@ -84,11 +84,11 @@ impl Component for AnimationsExample {
                     .position(Position::Absolute)
                     .width("40px")
                     .height("40px")
-                    .animation(moving_animation)
+                    .push_animation(moving_animation)
             ).component(),
 
             Text::new("Why, Hello!")
-                .animation(text_animation)
+                .push_animation(text_animation)
                 .component()
         ];
 

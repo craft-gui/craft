@@ -334,7 +334,7 @@ impl Default for FontFamily {
 pub struct Style {
     properties: SmallVec<[StyleProperty; 5]>,
     pub dirty_flags: StyleFlags,
-    pub animation: Option<Box<Animation>>
+    pub animations: Option<SmallVec<[Animation; 1]>>
 }
 
 impl Default for Style {
@@ -342,7 +342,7 @@ impl Default for Style {
         Style {
             properties: SmallVec::new(),
             dirty_flags: StyleFlags::empty(),
-            animation: None,
+            animations: None,
         }
     }
 }
@@ -424,12 +424,26 @@ style_property!(selection_color, set_selection_color, SelectionColor, Color, SEL
 style_property!(cursor_color, set_cursor_color, CursorColor, Option<Color>, CURSOR_COLOR, None);
 
 impl Style {
-    pub fn animation(&self) -> &Option<Box<Animation>> {
-        &self.animation
+    pub fn animation(&self, animation: String) -> Option<&Animation> {
+        if let Some(animations) = &self.animations {
+            for ani in animations {
+                if ani.name == animation {
+                    return Some(ani);
+                }
+            }   
+        }
+        
+        None
     }
 
     pub fn set_animation(&mut self, animation: Animation) {
-        self.animation = Some(Box::new(animation));
+        if let Some(animations) = &mut self.animations {
+            animations.push(animation);   
+        } else {
+            let mut ani_vec = SmallVec::new();
+            ani_vec.push(animation);
+            self.animations = Some(ani_vec);
+        }
     }
     
     fn remove_property(&mut self, f: impl Fn(&StyleProperty) -> bool) {

@@ -5,6 +5,7 @@ use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::state_store::StateStore;
 use crate::reactive::tree::ComponentTreeNode;
 use std::collections::{HashMap, HashSet, VecDeque};
+use crate::animation::animation::AnimationFlags;
 
 #[derive(Default)]
 pub struct ReactiveTree {
@@ -18,6 +19,7 @@ pub struct ReactiveTree {
     pub(crate) user_state: StateStore,
     pub(crate) element_state: ElementStateStore,
     pub(crate) focus: Option<ComponentId>,
+    pub(crate) previous_animation_flags: AnimationFlags,
 }
 
 impl ReactiveTree {

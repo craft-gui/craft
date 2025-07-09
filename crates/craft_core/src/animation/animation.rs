@@ -1,13 +1,11 @@
-use crate::components::ComponentId;
 use crate::elements::ElementState;
 use crate::style::{Style, StyleProperty, Unit};
+use craft_primitives::geometry::TrblRectangle;
 use kurbo::{CubicBez, ParamCurve, Point};
-use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::iter::zip;
 use std::time::Duration;
-use smallvec::SmallVec;
-use craft_primitives::geometry::TrblRectangle;
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
@@ -82,6 +80,7 @@ pub enum TimingFunction {
 
 #[derive(Clone, Debug)]
 pub struct Animation {
+    pub name: String,
     pub key_frames: SmallVec<[KeyFrame; 2]>,
     pub duration: Duration,
     pub timing_function: TimingFunction,
@@ -95,8 +94,9 @@ pub enum LoopAmount {
 }
 
 impl Animation {
-    pub fn new(duration: Duration, timing_function: TimingFunction) -> Self {
+    pub fn new(name: String, duration: Duration, timing_function: TimingFunction) -> Self {
         Self {
+            name,
             key_frames: SmallVec::new(),
             duration,
             timing_function,
@@ -115,24 +115,26 @@ impl Animation {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct ActiveAnimation {
     /// How far into an animation we are.
-    current: Duration,
+    pub(crate) current: Duration,
     /// Tracks the status of an animation, if it is playing, scheduled, or paused.
-    status: AnimationStatus,
+    pub(crate) status: AnimationStatus,
     /// Stores the element state of the animation, so that we can track if an animation needs to be removed if an element is in a new state.
-    element_state: ElementState,
-    loop_amount: LoopAmount,
+    pub(crate) element_state: ElementState,
+    pub(crate) loop_amount: LoopAmount,
 }
 
 /// For damage tracking across recursive calls to `on_animation_frame`.
 #[derive(Clone, Debug, Default)]
 pub struct AnimationFlags {
     needs_relayout: bool,
+    has_active_animation: bool,
 }
 
 impl AnimationFlags {
-    /// OR'd with the provided boolean and the previously stored boolean, to track if an animiatable property effects layout.
+    /// OR'd with the provided boolean and the previously stored boolean, to track if an animatable property effects layout.
     /// This is used after `on_animation_frame` to optionally recompute the layout.
     pub fn set_needs_relayout(&mut self, needs_relayout: bool) {
         self.needs_relayout = self.needs_relayout | needs_relayout;
@@ -142,61 +144,38 @@ impl AnimationFlags {
     pub fn needs_relayout(&self) -> bool {
         self.needs_relayout
     }
-}
 
-pub struct AnimationController {
-    /// Maps an element id to a record of an animation's playback state. 
-    pub(crate) animations: FxHashMap<ComponentId, ActiveAnimation>,
-}
-
-impl AnimationController {
-    
-    /// Removes the playback state (ActiveAnimation).
-    pub fn remove(&mut self, component: ComponentId) {
-        self.animations.remove(&component);
+    /// OR'd with the provided boolean and the previously stored boolean, to track if any animation is active.
+    pub fn set_has_active_animation(&mut self, has_active_animation: bool) {
+        self.has_active_animation = self.has_active_animation | has_active_animation;
     }
-    
-    
-    /// Determines if any animation is currently playing/running.
+
+    /// Returns true if any animation is in the Playing state.
     pub fn has_active_animation(&self) -> bool {
-        for animation in self.animations.values() {
-            if animation.status == AnimationStatus::Playing {
-                return true;
-            }
-        }
-        
-        false
+        self.has_active_animation
     }
+}
+
+impl ActiveAnimation {
     
     /// Advances an active animation, and it is also responsible for tracking the status and element_state. 
-    pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, component: ComponentId, delta: Duration) {
-        let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
-            active_animation
-        } else {
-            self.animations.insert(component, ActiveAnimation {
-                current: Duration::ZERO,
-                status: AnimationStatus::Playing,
-                element_state: state,
-                loop_amount: animation.loop_amount.clone(),
-            });
-            self.animations.get_mut(&component).unwrap()
-        };
+    pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, delta: Duration) {
         
-        if active_animation.element_state != state {
-            active_animation.current = Duration::ZERO;
-            active_animation.status = AnimationStatus::Playing;
-            active_animation.element_state = state;
+        if self.element_state != state {
+            self.current = Duration::ZERO;
+            self.status = AnimationStatus::Playing;
+            self.element_state = state;
         }
         
-        if active_animation.status == AnimationStatus::Playing && active_animation.element_state == state {
-            active_animation.current += delta;
+        if self.status == AnimationStatus::Playing && self.element_state == state {
+            self.current += delta;
 
-            let is_completed = active_animation.current >= animation.duration;
+            let is_completed = self.current >= animation.duration;
             
-            match &mut active_animation.loop_amount {
+            match &mut self.loop_amount {
                 LoopAmount::Infinite => {
                     if is_completed {
-                        active_animation.current = Duration::ZERO;
+                        self.current = Duration::ZERO;
                     }
                 }
                 LoopAmount::Fixed(amount) => {
@@ -204,11 +183,11 @@ impl AnimationController {
                         *amount -= 1;
 
                         if *amount == 0 {
-                            active_animation.current = Duration::ZERO;
-                            active_animation.status = AnimationStatus::Paused;
+                            self.current = Duration::ZERO;
+                            self.status = AnimationStatus::Paused;
                             animation_flags.set_needs_relayout(true);
                         } else {
-                            active_animation.current = Duration::ZERO;
+                            self.current = Duration::ZERO;
                         }
                     }
                 }
@@ -219,18 +198,12 @@ impl AnimationController {
 
     /// Called after `tick`, and is responsible for using the current animation time and
     /// computing an interpolated style from a provided `Animation`.
-    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, component: ComponentId, animation_flags: &mut AnimationFlags) -> Style {
-        let active_animation = if let Some(active_animation) = self.animations.get_mut(&component) {
-            active_animation
-        } else {
-            return element_style.clone();
-        };
-
-        if active_animation.status != AnimationStatus::Playing || active_animation.element_state != state {
+    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, animation_flags: &mut AnimationFlags) -> Style {
+        if self.status != AnimationStatus::Playing || self.element_state != state {
             return element_style.clone();
         }
 
-        let pos = Duration::div_duration_f32(active_animation.current, animation.duration);
+        let pos = Duration::div_duration_f32(self.current, animation.duration);
         fn find_keyframe_pair(pos: f32, animation: &Animation) -> (&KeyFrame, &KeyFrame) {
             let mut sorted = animation.key_frames.iter().collect::<Vec<_>>();
             sorted.sort_by(|a, b| a.offset_percentage.total_cmp(&b.offset_percentage));

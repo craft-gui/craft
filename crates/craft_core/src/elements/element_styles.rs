@@ -264,7 +264,7 @@ where
         self
     }
     
-    fn animation(mut self, animation: Animation) -> Self {
+    fn push_animation(mut self, animation: Animation) -> Self {
         self.styles_mut().set_animation(animation);
         self
     }

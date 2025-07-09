@@ -250,9 +250,13 @@ impl ApplicationHandler for CraftWinitState {
             event_loop.exit();
             return;
         }
-        
+
         // Switch to Poll mode if we are running animations.
-        if craft_state.craft_app.animation_controller.has_active_animation() {
+        let has_active_animation = 
+            craft_state.craft_app.user_tree.previous_animation_flags.has_active_animation()
+            || craft_state.craft_app.dev_tree.previous_animation_flags.has_active_animation()
+            ;
+        if has_active_animation {
             event_loop.set_control_flow(ControlFlow::Poll);
         } else {
             event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
