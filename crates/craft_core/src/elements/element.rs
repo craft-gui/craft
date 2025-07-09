@@ -329,7 +329,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     /// Called after layout, and is responsible for updating the animation state of an element.
     fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, delta_time: Duration) {
         let base_state = self.get_base_state_mut(element_state);
-        let mut current_state: ElementState = {
+        let current_state: ElementState = {
             if base_state.base.hovered {
                 ElementState::Hovered
             } else if base_state.base.focused {
@@ -339,16 +339,12 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             }
         };
         
-        // A bit hacky, but we either get the current style with no fallback or fallback to a style and change the current element state to Normal.
-        // This is to allow for retaining an animation state on a normal style even if you hover over it (assuming the hover has no animation).
-        // Basically this is to hack in a basic inherited animation.
+        // If we don't have an animation in the current style then try to fall back to the normal style.
         let current_style = 
-            if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && 
-            let Some(current_style_animations) = &current_style.animations && !current_style_animations.is_empty() {
+            if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && current_style.animations.is_some() {
             current_style
         } else {
-            current_state = ElementState::Normal;
-            base_state.base.current_style_mut(self.element_data_mut())
+            &mut self.element_data_mut().style
         };
         
         // This is pretty hacky, but we can avoid allocating a hashmap for every element.
@@ -366,18 +362,21 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         };
         
         if let Some(current_style_animations) = &mut current_style.animations {
-            for ani in current_style_animations {
+            for ani in &mut *current_style_animations {
                 if !active_animations.contains_key(&ani.name) {
                     active_animations.insert(ani.name.clone(), ActiveAnimation {
                         current: Duration::ZERO,
                         status: AnimationStatus::Playing,
-                        element_state: current_state,
                         loop_amount: ani.loop_amount.clone(),
                     });
                 }
-            }   
+            }
+
+            active_animations.retain(|key, _| {
+                current_style_animations.iter().any(|ani| &ani.name == key)
+            });
         }
-        
+
         let mut to_remove = Vec::new();
         for (anim_name, active_animation) in active_animations.iter_mut() {
             if active_animation.status == AnimationStatus::Playing {

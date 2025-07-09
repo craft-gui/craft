@@ -470,6 +470,7 @@ impl Style {
         }
 
         let mut merged = old.clone();
+        merged.animations = None;
 
         for prop in &new.properties {
             let flag = match prop {

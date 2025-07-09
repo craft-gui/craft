@@ -121,8 +121,6 @@ pub struct ActiveAnimation {
     pub(crate) current: Duration,
     /// Tracks the status of an animation, if it is playing, scheduled, or paused.
     pub(crate) status: AnimationStatus,
-    /// Stores the element state of the animation, so that we can track if an animation needs to be removed if an element is in a new state.
-    pub(crate) element_state: ElementState,
     pub(crate) loop_amount: LoopAmount,
 }
 
@@ -160,14 +158,7 @@ impl ActiveAnimation {
     
     /// Advances an active animation, and it is also responsible for tracking the status and element_state. 
     pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, state: ElementState, delta: Duration) {
-        
-        if self.element_state != state {
-            self.current = Duration::ZERO;
-            self.status = AnimationStatus::Playing;
-            self.element_state = state;
-        }
-        
-        if self.status == AnimationStatus::Playing && self.element_state == state {
+        if self.status == AnimationStatus::Playing {
             self.current += delta;
 
             let is_completed = self.current >= animation.duration;
@@ -199,7 +190,7 @@ impl ActiveAnimation {
     /// Called after `tick`, and is responsible for using the current animation time and
     /// computing an interpolated style from a provided `Animation`.
     pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, state: ElementState, animation_flags: &mut AnimationFlags) -> Style {
-        if self.status != AnimationStatus::Playing || self.element_state != state {
+        if self.status != AnimationStatus::Playing {
             return element_style.clone();
         }
 
