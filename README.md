@@ -83,7 +83,7 @@ fn main() {
 * ⬜️ iOS
 * ✅ Text Input (Basic)
 * ✅ IME Support (Basic)
-* ⬜️ Animations
+* ✅ Animations (Basic)
 * ✅ Scrollables (Basic)
 * ⬜️ Documentation
 * ⬜️ Tests
