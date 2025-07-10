@@ -43,7 +43,7 @@ use smol_str::SmolStr;
 // A stateful element that shows text.
 #[derive(Clone, Default)]
 pub struct Text {
-    text: Option<String>,
+    text: Option<SmolStr>,
     element_data: ElementData,
     selectable: bool,
 }
@@ -51,7 +51,7 @@ pub struct Text {
 pub struct TextState {
     scale_factor: f32,
     selection: Selection,
-    text: Option<String>,
+    text: Option<SmolStr>,
     text_hash: Option<u64>,
     text_render: Option<TextRender>,
     last_text_style: Style,
@@ -75,7 +75,7 @@ impl StatefulElement<TextState> for Text {}
 impl Text {
     pub fn new(text: &str) -> Text {
         Text {
-            text: Some(text.to_string()),
+            text: Some(text.into()),
             element_data: Default::default(),
             selectable: true,
         }
@@ -321,7 +321,7 @@ impl Element for Text {
 
         let mut current_node = accesskit::Node::new(Role::Label);
         let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
-        current_node.set_value(*Box::new(state.text.clone().unwrap()));
+        current_node.set_value(state.text.as_deref().unwrap());
         current_node.add_action(Action::SetTextSelection);
 
         current_node.set_bounds(accesskit::Rect {
