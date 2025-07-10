@@ -82,12 +82,12 @@ mod tests {
         initial_tree.component_tree.print_tree();
 
         let mut iter = initial_tree.element_tree.internal.pre_order_iter();
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("0".to_string()));
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("1".to_string()));
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("2".to_string()));
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("3".to_string()));
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("4".to_string()));
-        assert_eq!(iter.next().unwrap().get_id().clone(), Some("5".to_string()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("0".into()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("1".into()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("2".into()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("3".into()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("4".into()));
+        assert_eq!(iter.next().unwrap().get_id().clone(), Some("5".into()));
         assert!(iter.next().is_none());
     }
 }
