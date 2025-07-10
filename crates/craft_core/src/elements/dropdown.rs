@@ -19,6 +19,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, Position, TaffyTree, TraversePartialTree};
 use winit::window::Window;
+use smol_str::SmolStr;
 
 /// The index of the dropdown list in the layout tree.
 const DROPDOWN_LIST_INDEX: usize = 1;

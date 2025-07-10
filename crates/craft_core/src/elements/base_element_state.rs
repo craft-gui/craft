@@ -3,6 +3,7 @@ use crate::elements::element_states::ElementState;
 use crate::style::Style;
 use std::collections::HashMap;
 use rustc_hash::FxHashMap;
+use smol_str::SmolStr;
 use crate::animations::animation::ActiveAnimation;
 
 #[derive(Debug, Default, Clone)]
@@ -15,7 +16,7 @@ pub struct BaseElementState {
     /// Useful for scroll thumbs.
     pub(crate) pointer_capture: HashMap<i64, bool>,
     pub(crate) focused: bool,
-    pub(crate) animations: Option<FxHashMap<String, ActiveAnimation>>,
+    pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
 }
 
 impl<'a> BaseElementState {

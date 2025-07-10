@@ -22,6 +22,7 @@ use std::mem;
 use std::sync::Arc;
 use std::time::Duration;
 use rustc_hash::FxHashMap;
+use smol_str::SmolStr;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
 
@@ -72,7 +73,7 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         }
     }
 
-    fn get_id(&self) -> &Option<String> {
+    fn get_id(&self) -> &Option<SmolStr> {
         &self.element_data().id
     }
 
@@ -552,8 +553,8 @@ macro_rules! generate_component_methods_no_children {
         }
 
         #[allow(dead_code)]
-        pub fn key(mut self, key: &str) -> Self {
-            self.element_data.key = Some(key.to_string());
+        pub fn key<T: Into<SmolStr>>(mut self, key: T) -> Self {
+            self.element_data.key = Some(key.into());
             self
         }
 
@@ -564,8 +565,8 @@ macro_rules! generate_component_methods_no_children {
         }
 
         #[allow(dead_code)]
-        pub fn id(mut self, id: &str) -> Self {
-            self.element_data.id = Some(id.to_string());
+        pub fn id<T: Into<SmolStr>>(mut self, id: T) -> Self {
+            self.element_data.id = Some(id.into());
             self
         }
 
@@ -640,6 +641,7 @@ macro_rules! generate_component_methods_private_push {
 
 #[macro_export]
 macro_rules! generate_component_methods {
+
     () => {
         $crate::generate_component_methods_no_children!();
 

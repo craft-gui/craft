@@ -38,6 +38,7 @@ use winit::dpi;
 use web_time as time;
 use winit::window::Window;
 use craft_primitives::ColorBrush;
+use smol_str::SmolStr;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]

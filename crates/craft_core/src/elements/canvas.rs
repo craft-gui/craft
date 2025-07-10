@@ -18,6 +18,7 @@ use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::elements::StatefulElement;
+use smol_str::SmolStr;
 
 #[derive(Clone, Default)]
 pub struct Canvas {

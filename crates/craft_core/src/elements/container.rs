@@ -19,6 +19,7 @@ use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
 use crate::elements::StatefulElement;
+use smol_str::SmolStr;
 
 /// An element for storing related elements.
 #[derive(Clone, Default)]

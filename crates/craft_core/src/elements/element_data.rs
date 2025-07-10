@@ -1,3 +1,4 @@
+use smol_str::SmolStr;
 use crate::components::{ComponentId, ComponentSpecification};
 use crate::components::Props;
 use crate::elements::element::ElementBoxed;
@@ -31,14 +32,14 @@ pub struct ElementData {
     pub children: Vec<ElementBoxed>,
 
     /// A user-defined id for the element.
-    pub id: Option<String>,
+    pub id: Option<SmolStr>,
 
     /// The id of the component that this element belongs to.
     pub component_id: ComponentId,
 
     // Used for converting the element to a component specification.
     pub child_specs: Vec<ComponentSpecification>,
-    pub(crate) key: Option<String>,
+    pub(crate) key: Option<SmolStr>,
     pub(crate) props: Option<Props>,
     pub(crate) event_handlers: EventHandlers,
 }

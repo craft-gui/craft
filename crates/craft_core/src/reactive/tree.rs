@@ -13,15 +13,16 @@ use crate::text::text_context::TextContext;
 use crate::window_context::WindowContext;
 use crate::GlobalState;
 use std::collections::{HashMap, HashSet, VecDeque};
+use smol_str::SmolStr;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
     pub is_element: bool,
-    pub key: Option<String>,
-    pub tag: String,
+    pub key: Option<SmolStr>,
+    pub tag: SmolStr,
     pub update: UpdateFn,
     pub children: Vec<ComponentTreeNode>,
-    pub children_keys: HashMap<String, ComponentId>,
+    pub children_keys: HashMap<SmolStr, ComponentId>,
     pub id: ComponentId,
     pub(crate) parent_id: Option<ComponentId>,
     pub props: Props,
@@ -104,7 +105,7 @@ pub(crate) fn diff_trees(
         let mut component_tree = ComponentTreeNode {
             is_element: true,
             key: None,
-            tag: "root".to_string(),
+            tag: "root".into(),
             update: dummy_update,
             children: vec![],
             children_keys: HashMap::new(),
@@ -157,7 +158,7 @@ pub(crate) fn diff_trees(
                     let mut element = element;
 
                     // Store the new tag, i.e. the element's name.
-                    let new_tag = element.internal.name().to_string();
+                    let new_tag = element.internal.name();
 
                     let mut should_update = false;
                     let id = match old_tag {
@@ -202,7 +203,7 @@ pub(crate) fn diff_trees(
                     let new_component_node = ComponentTreeNode {
                         is_element: true,
                         key: new_spec.key,
-                        tag: new_tag,
+                        tag: new_tag.into(),
                         update: dummy_update,
                         children: vec![],
                         children_keys: HashMap::new(),

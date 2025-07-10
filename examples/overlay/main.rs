@@ -79,7 +79,7 @@ impl Component for OverlayExample {
 
         let target = context.target().map(|target| target.get_id()).cloned();
         if let Some(target) = target {
-            context.state_mut().hovered_element_id = target.clone();
+            context.state_mut().hovered_element_id = target.clone().map(|s| s.into());
             if let Some(_id) = target {
                 context.event_mut().prevent_propagate();
             }
