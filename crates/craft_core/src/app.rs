@@ -33,8 +33,16 @@ use cfg_if::cfg_if;
 use craft_logging::{info, span, Level};
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+
+use std::time::{Duration};
+
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use craft_runtime::Sender;
 use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
@@ -43,11 +51,12 @@ use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
-use winit::event_loop::ActiveEventLoop;
+use winit::event_loop::{ActiveEventLoop};
 use winit::window::Window;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
+use crate::animations::animation::{AnimationFlags};
 use crate::events::update_queue_entry::UpdateQueueEntry;
 
 macro_rules! get_tree {
@@ -103,6 +112,25 @@ pub struct App {
     pub(crate) accesskit_adapter: Option<Adapter>,
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
+    pub(crate) last_frame_time: time::Instant,
+    pub redraw_flags: RedrawFlags,
+}
+
+#[derive(Debug)]
+pub struct RedrawFlags {
+    rebuild_layout: bool,
+}
+
+impl RedrawFlags {
+    pub fn new(rebuild_layout: bool) -> Self {
+        Self {
+            rebuild_layout,
+        }
+    }
+
+    pub fn should_rebuild_layout(&self) -> bool {
+        self.rebuild_layout
+    }
 }
 
 impl App {
@@ -283,11 +311,14 @@ impl App {
         if self.window.is_none() {
             return;
         }
+        
+        let now = time::Instant::now();
+        let delta_time = now - self.last_frame_time;
+        self.last_frame_time = now;
 
         let surface_size = self.window_context.window_size();
 
         self.setup_text_context();
-
         self.update_view();
 
         cfg_if! {
@@ -310,15 +341,21 @@ impl App {
             }
         }
 
+        let layout_origin = Point::new(0.0, 0.0);
+        
         {
-            self.layout_tree(
-                false,
-                root_size,
-                Point::new(0.0, 0.0),
-                self.window_context.effective_scale_factor(),
-                self.window_context.mouse_position,
-            );
-
+            if self.redraw_flags.should_rebuild_layout() {
+                self.layout_tree(
+                    false,
+                    root_size,
+                    layout_origin,
+                    self.window_context.effective_scale_factor(),
+                    self.window_context.mouse_position,
+                );
+            }
+            
+            self.animate_tree(false, &delta_time, layout_origin, root_size);
+            
             if self.renderer.is_some() {
                 self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
             }
@@ -326,6 +363,9 @@ impl App {
 
         #[cfg(feature = "dev_tools")]
         {
+            let viewport_size = LogicalSize::new(surface_size.width - root_size.width, root_size.height);
+            let dev_tools_layout_origin = Point::new(root_size.width as f64, 0.0);
+            
             if self.is_dev_tools_open {
                 update_reactive_tree(
                     dev_tools_view(self.user_tree.element_tree.clone().unwrap()),
@@ -339,12 +379,14 @@ impl App {
 
                 self.layout_tree(
                     true,
-                    LogicalSize::new(surface_size.width - root_size.width, root_size.height),
+                    viewport_size,
                     Point::new(root_size.width as f64, 0.0),
                     self.window_context.effective_scale_factor(),
                     self.window_context.mouse_position,
                 );
 
+                self.animate_tree(true, &delta_time, dev_tools_layout_origin, viewport_size);
+                
                 if self.renderer.is_some() {
                     self.draw_reactive_tree(true, self.window_context.mouse_position, self.window.clone());
                 }
@@ -386,7 +428,7 @@ impl App {
             } else {
                 self.window_context.zoom_in();
             }
-            self.request_redraw();
+            self.request_redraw(RedrawFlags::new(true));
             return;
         }
 
@@ -394,7 +436,7 @@ impl App {
         let message = Message::CraftMessage(event);
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, false);
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     pub fn on_pointer_button(
@@ -424,7 +466,7 @@ impl App {
             self.dispatch_event(&message, EventDispatchType::Bubbling, true);
         }
 
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     pub fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
@@ -439,7 +481,7 @@ impl App {
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, true);
 
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     pub fn on_ime(&mut self, ime: Ime) {
@@ -448,7 +490,7 @@ impl App {
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, false);
 
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     /// Dispatch messages to the reactive tree.
@@ -487,11 +529,11 @@ impl App {
         if keyboard_input.modifiers.ctrl() {
             if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
                 self.window_context.zoom_in();
-                self.request_redraw();
+                self.request_redraw(RedrawFlags::new(true));
                 return;
             } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
                 self.window_context.zoom_out();
-                self.request_redraw();
+                self.request_redraw(RedrawFlags::new(true));
                 return;
             }
         }
@@ -511,7 +553,7 @@ impl App {
             }
         }
 
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     /// Processes async messages sent from the user.
@@ -547,7 +589,7 @@ impl App {
             ));
         }
 
-        self.request_redraw();
+        self.request_redraw(RedrawFlags::new(true));
     }
 
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
@@ -575,12 +617,49 @@ impl App {
         );
     }
 
-    fn request_redraw(&self) {
+    fn request_redraw(&mut self, redraw_flags: RedrawFlags) {
+        self.redraw_flags = redraw_flags;
         if let Some(window) = &self.window {
             window.request_redraw();
         }
     }
 
+    /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
+    fn animate_tree(&mut self, is_dev_tree: bool, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
+
+        let span = span!(Level::INFO, "animate_tree");
+        let _enter = span.enter();
+        
+        let reactive_tree = get_tree!(self, is_dev_tree);
+        let old_has_active_animation = reactive_tree.previous_animation_flags.has_active_animation();
+        let root_element = reactive_tree.element_tree.as_mut().unwrap();
+
+        // Damage track across recursive calls to `on_animation_frame`.
+        let mut animation_flags = AnimationFlags::default();
+        root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, *delta_time);
+        reactive_tree.previous_animation_flags = animation_flags;
+        
+        // Perform a relayout if an animation used any layout effecting style property.
+        if animation_flags.needs_relayout() || old_has_active_animation {
+            root_element.reset_layout_item();
+
+            self.layout_tree(
+                is_dev_tree,
+                viewport_size,
+                layout_origin,
+                self.window_context.effective_scale_factor(),
+                self.window_context.mouse_position,
+            );
+        }
+
+        // Request a redraw if there is at least one animation playing.
+        // ControlFlow::Poll is set in `about_to_wait`.
+        if animation_flags.has_active_animation() || old_has_active_animation {
+            // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
+            self.request_redraw(RedrawFlags::new(old_has_active_animation));
+        }
+    }
+    
     #[allow(clippy::too_many_arguments)]
     fn layout_tree(
         &mut self,

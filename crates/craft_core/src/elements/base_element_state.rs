@@ -2,6 +2,8 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::style::Style;
 use std::collections::HashMap;
+use rustc_hash::FxHashMap;
+use crate::animations::animation::ActiveAnimation;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseElementState {
@@ -13,6 +15,7 @@ pub struct BaseElementState {
     /// Useful for scroll thumbs.
     pub(crate) pointer_capture: HashMap<i64, bool>,
     pub(crate) focused: bool,
+    pub(crate) animations: Option<FxHashMap<String, ActiveAnimation>>,
 }
 
 impl<'a> BaseElementState {
@@ -43,6 +46,21 @@ impl<'a> BaseElementState {
         }
         &mut element_data.style
     }
+    pub fn current_style_mut_no_fallback(&self, element_data: &'a mut ElementData) -> Option<&'a mut Style> {
+        if self.active {
+            if let Some(pressed_style) = &mut element_data.pressed_style {
+                return Some(pressed_style);
+            }
+        }
+        if self.hovered {
+            if let Some(hover_style) = &mut element_data.hover_style {
+                return Some(hover_style);
+            }
+        }
+        
+        None
+    }
+    
 }
 
 // HACK: Remove this and all usages when pointer capture per device works.

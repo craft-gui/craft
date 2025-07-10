@@ -3,6 +3,7 @@ use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::Color;
 use crate::style::{AlignItems, Display, FlexDirection, FontStyle, JustifyContent, Overflow, Style, Underline, Unit, Weight, Wrap};
 use taffy::Position;
+use crate::animations::animation::Animation;
 
 pub trait ElementStyles
 where
@@ -260,6 +261,11 @@ where
 
     fn visible(mut self, visible: bool) -> Self {
         self.styles_mut().set_visible(visible);
+        self
+    }
+    
+    fn push_animation(mut self, animation: Animation) -> Self {
+        self.styles_mut().set_animation(animation);
         self
     }
 }

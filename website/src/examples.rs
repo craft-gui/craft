@@ -10,10 +10,14 @@ mod request;
 #[path = "../../examples/tour/main.rs"]
 mod tour;
 
+#[path = "../../examples/animations/main.rs"]
+mod animations;
+
 use crate::examples::counter::Counter;
 use crate::examples::request::AniList;
 use crate::examples::text::TextState;
 use crate::examples::tour::Tour;
+use crate::examples::animations::AnimationsExample;
 use crate::navbar::NAVBAR_HEIGHT;
 use crate::theme::{wrapper, ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT};
 use crate::WebsiteGlobalState;
@@ -30,6 +34,7 @@ const COUNTER_EXAMPLE_LINK: &str = "/examples/counter";
 const TOUR_EXAMPLE_LINK: &str = "/examples/tour";
 const REQUEST_EXAMPLE_LINK: &str = "/examples/request";
 const TEXT_EXAMPLE_LINK: &str = "/examples/text";
+const ANIMATIONS_EXAMPLE_LINK: &str = "/examples/animations";
 
 #[derive(Default)]
 pub(crate) struct Examples {
@@ -60,7 +65,8 @@ fn examples_sidebar(example_to_show: &String, window: &WindowContext) -> Compone
         create_examples_link("Counter", COUNTER_EXAMPLE_LINK, example_to_show),
         create_examples_link("Tour", TOUR_EXAMPLE_LINK, example_to_show),
         create_examples_link("Request", REQUEST_EXAMPLE_LINK, example_to_show),
-        create_examples_link("Text", TEXT_EXAMPLE_LINK, example_to_show)
+        create_examples_link("Text", TEXT_EXAMPLE_LINK, example_to_show),
+        create_examples_link("Animations", ANIMATIONS_EXAMPLE_LINK, example_to_show)
     ];
     
     if window.window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
@@ -128,6 +134,7 @@ impl Component for Examples {
             TEXT_EXAMPLE_LINK => TextState::component().key(TEXT_EXAMPLE_LINK),
             TOUR_EXAMPLE_LINK => Tour::component().key(TOUR_EXAMPLE_LINK).props(Props::new(example_props)),
             REQUEST_EXAMPLE_LINK => AniList::component().key(REQUEST_EXAMPLE_LINK).props(Props::new(example_props)),
+            ANIMATIONS_EXAMPLE_LINK => AnimationsExample::component().key(ANIMATIONS_EXAMPLE_LINK).props(Props::new(example_props)),
             _ => Counter::component().key(COUNTER_EXAMPLE_LINK),
         };
 

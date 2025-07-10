@@ -1,24 +1,27 @@
+use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::components::component::{ComponentOrElement, ComponentSpecification};
 use crate::components::{ComponentId, Event, FocusAction};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::CraftMessage;
-use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
-use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
 use crate::reactive::element_state_store::{ElementStateStore, ElementStateStoreItem};
-use craft_renderer::renderer::RenderList;
 use crate::style::Style;
 use crate::text::text_context::TextContext;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
+use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
+use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
+use craft_renderer::renderer::RenderList;
 use kurbo::Affine;
 use peniko::Color;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
+use std::time::Duration;
+use rustc_hash::FxHashMap;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
 
@@ -198,6 +201,15 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
             position,
         );
     }
+    
+    /// A bit of a hack to reset the layout item of an element recursively.
+    fn reset_layout_item(&mut self) {
+        *self.layout_item_mut() = LayoutItem::default();
+        
+        for child in self.element_data_mut().children.iter_mut() {
+            child.internal.reset_layout_item();
+        }
+    }
 
     fn draw_children(
         &mut self,
@@ -312,6 +324,77 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
 
     fn get_base_state_mut<'a>(&self, element_state: &'a mut ElementStateStore) -> &'a mut ElementStateStoreItem {
         element_state.storage.get_mut(&self.element_data().component_id).unwrap()
+    }
+    
+    /// Called after layout, and is responsible for updating the animation state of an element.
+    fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, element_state: &mut ElementStateStore, delta_time: Duration) {
+        let base_state = self.get_base_state_mut(element_state);
+        let current_state: ElementState = {
+            if base_state.base.hovered {
+                ElementState::Hovered
+            } else if base_state.base.focused {
+                ElementState::Focused
+            } else {
+                ElementState::Normal
+            }
+        };
+        
+        // If we don't have an animation in the current style then try to fall back to the normal style.
+        let current_style = 
+            if let Some(current_style) = base_state.base.current_style_mut_no_fallback(self.element_data_mut()) && current_style.animations.is_some() {
+            current_style
+        } else {
+            &mut self.element_data_mut().style
+        };
+        
+        // This is pretty hacky, but we can avoid allocating a hashmap for every element.
+        let active_animations = if current_style.animations.is_some() {
+            if base_state.base.animations.is_none() {
+                base_state.base.animations = Some(FxHashMap::default());
+            }
+            
+            base_state.base.animations.as_mut().unwrap()
+        } else {
+            for child in self.children_mut() {
+                child.internal.on_animation_frame(animation_flags, element_state, delta_time);
+            }
+            return;
+        };
+        
+        if let Some(current_style_animations) = &mut current_style.animations {
+            for ani in &mut *current_style_animations {
+                if !active_animations.contains_key(&ani.name) {
+                    active_animations.insert(ani.name.clone(), ActiveAnimation {
+                        current: Duration::ZERO,
+                        status: AnimationStatus::Playing,
+                        loop_amount: ani.loop_amount,
+                    });
+                }
+            }
+
+            active_animations.retain(|key, _| {
+                current_style_animations.iter().any(|ani| &ani.name == key)
+            });
+        }
+
+        active_animations.retain(|anim_name, active_animation| {
+            if active_animation.status == AnimationStatus::Playing {
+                animation_flags.set_has_active_animation(true);
+            }
+            
+            if let Some(animation) = current_style.animation(anim_name) {
+                active_animation.tick(animation_flags, animation, current_state, delta_time);
+                let new_style = active_animation.compute_style(current_style, animation, current_state, animation_flags);
+                *current_style = Style::merge(current_style, &new_style);
+                true
+            } else {
+                false
+            }
+        });
+
+        for child in self.children_mut() {
+            child.internal.on_animation_frame(animation_flags, element_state, delta_time);
+        }
     }
 
     #[cfg(feature = "accesskit")]
@@ -588,6 +671,14 @@ macro_rules! generate_component_methods {
             self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
 
             self
+        }
+
+        #[allow(dead_code)]
+        pub fn extend_children_in_place<T>(&mut self, children: Vec<T>)
+        where
+            T: Into<ComponentSpecification>,
+        {
+            self.element_data.child_specs.extend(children.into_iter().map(|x| x.into()));
         }
 
         #[allow(dead_code)]
