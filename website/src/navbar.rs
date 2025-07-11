@@ -75,7 +75,7 @@ impl Component for Navbar {
             return;
         }
 
-        let id = context.target().and_then(|e| e.get_id().as_ref()).cloned();
+        let id = context.target().and_then(|e| e.get_id().map(|s| s.to_string()));
         if let Some(current_target) = id {
             if current_target.starts_with("route_") {
                 let route = current_target.trim_start_matches("route_");

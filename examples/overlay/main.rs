@@ -76,11 +76,10 @@ impl Component for OverlayExample {
 
     fn update(context: &mut Context<Self>) {
         println!("{:?}", context.window());
-
-        let target = context.target().map(|target| target.get_id()).cloned();
-        if let Some(target) = target {
-            context.state_mut().hovered_element_id = target.clone().map(|s| s.into());
-            if let Some(_id) = target {
+        
+        if let Some(target) = context.target() {
+            context.state_mut().hovered_element_id = target.get_id().map(|s| s.to_string());
+            if let Some(_id) = &context.state_mut().hovered_element_id {
                 context.event_mut().prevent_propagate();
             }
         } else {
