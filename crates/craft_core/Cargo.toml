@@ -30,6 +30,8 @@ default = ["clipboard", "accesskit"]
 [dependencies]
 craft_logging = { path = "../craft_logger", version = "0.1.0" }
 
+smol_str = "0.3.2"
+
 [dependencies.cfg-if]
 workspace = true
 

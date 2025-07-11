@@ -38,6 +38,7 @@ use crate::elements::base_element_state::BaseElementState;
 use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 use crate::utils::cloneable_any::CloneableAny;
+use smol_str::SmolStr;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]

@@ -9,6 +9,7 @@ use crate::elements::{Container, Element};
 use crate::window_context::WindowContext;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
+use smol_str::SmolStr;
 
 /// A Component's view function.
 pub type ViewFn = fn(
@@ -42,7 +43,7 @@ pub struct ComponentData {
     pub view_fn: ViewFn,
     pub update_fn: UpdateFn,
     /// A unique identifier for view_fn.
-    pub tag: String,
+    pub tag: SmolStr,
     /// The type id of the view function. This is currently not used.
     pub type_id: TypeId,
 }
@@ -59,7 +60,7 @@ pub enum ComponentOrElement {
 pub struct ComponentSpecification {
     pub component: ComponentOrElement,
     /// Specify a key when the component position or type may change, but state should be retained.
-    pub key: Option<String>,
+    pub key: Option<SmolStr>,
     /// A read only reference to the props of the component.
     pub props: Option<Props>,
     /// The children of the component.
@@ -79,8 +80,8 @@ impl ComponentSpecification {
         }
     }
 
-    pub fn key(mut self, key: &str) -> Self {
-        self.key = Some(key.to_owned());
+    pub fn key<T: Into<SmolStr>>(mut self, key: T) -> Self {
+        self.key = Some(key.into());
         self
     }
 
@@ -416,7 +417,7 @@ where
             default_props: Self::default_props,
             view_fn: Self::generic_view_internal,
             update_fn: Self::update_internal,
-            tag: std::any::type_name_of_val(&Self::generic_view_internal).to_string(),
+            tag: std::any::type_name_of_val(&Self::generic_view_internal).into(),
             type_id: Self::generic_view_internal.type_id(),
         };
 

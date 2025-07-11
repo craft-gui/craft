@@ -15,6 +15,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use smol_str::SmolStr;
 
 /// An element for storing related elements.
 #[derive(Clone, Default)]

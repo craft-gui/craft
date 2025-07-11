@@ -25,6 +25,7 @@ use ui_events::keyboard::{Code, KeyState};
 use ui_events::keyboard::Code::{ArrowDown, ArrowLeft, ArrowRight, ArrowUp};
 use winit::window::Window;
 use crate::elements::StatefulElement;
+use smol_str::SmolStr;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {

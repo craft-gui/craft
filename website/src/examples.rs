@@ -83,7 +83,7 @@ fn examples_sidebar(example_to_show: &String, window: &WindowContext) -> Compone
                 .max_width("300px");
         
         for (index, link) in links.drain(..).enumerate() {
-            if *link.get_id() == Some(example_to_show.to_string()) {
+            if link.get_id() == Some(example_to_show) {
                 dropdown = dropdown.set_default(index);
             }
             dropdown = dropdown.push(link);

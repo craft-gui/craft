@@ -58,7 +58,7 @@ pub(crate) fn tree_window(
             row = row.push(
                 Container::new()
                     .push(
-                        Text::new(custom_id.as_str())
+                        Text::new(custom_id)
                             .color(Color::WHITE)
                             .margin("2.5px", "10px", "2.5px", "10px")
                     )

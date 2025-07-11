@@ -14,6 +14,7 @@ use std::sync::Arc;
 use kurbo::Affine;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use smol_str::SmolStr;
 
 #[derive(Clone)]
 pub struct Font {

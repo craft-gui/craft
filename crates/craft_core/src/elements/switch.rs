@@ -20,6 +20,7 @@ use taffy::{NodeId, TaffyTree};
 use ui_events::keyboard::{Code, KeyState};
 use winit::window::Window;
 use crate::elements::StatefulElement;
+use smol_str::SmolStr;
 
 /// An element that represents an on or off state.
 #[derive(Clone)]

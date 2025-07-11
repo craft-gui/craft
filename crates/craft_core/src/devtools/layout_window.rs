@@ -353,7 +353,8 @@ impl Component for LayoutWindow {
     }
 
     fn update(context: &mut Context<Self>) {
-        if let Some(id) = context.target().and_then(|e| e.get_id().clone()) {
+        let id = context.target().and_then(|e| e.get_id().map(|id| id.to_string()));
+        if let Some(id) = id {
             if context.message().clicked() {
                 if id == "tab_styles" {
                     context.state_mut().layout_tab = LayoutTab::Styles

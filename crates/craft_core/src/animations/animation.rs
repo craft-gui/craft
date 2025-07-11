@@ -6,6 +6,7 @@ use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::iter::zip;
 use std::time::Duration;
+use smol_str::SmolStr;
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
@@ -80,7 +81,7 @@ pub enum TimingFunction {
 
 #[derive(Clone, Debug)]
 pub struct Animation {
-    pub name: String,
+    pub name: SmolStr,
     pub key_frames: SmallVec<[KeyFrame; 2]>,
     pub duration: Duration,
     pub timing_function: TimingFunction,
@@ -96,7 +97,7 @@ pub enum LoopAmount {
 impl Animation {
     pub fn new(name: &str, duration: Duration, timing_function: TimingFunction) -> Self {
         Self {
-            name: name.to_string(),
+            name: name.into(),
             key_frames: SmallVec::new(),
             duration,
             timing_function,
