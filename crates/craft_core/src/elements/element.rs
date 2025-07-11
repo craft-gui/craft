@@ -73,8 +73,8 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
         }
     }
 
-    fn get_id(&self) -> &Option<SmolStr> {
-        &self.element_data().id
+    fn get_id(&self) -> Option<&str> {
+        self.element_data().id.as_ref().map(|id| id.as_str())
     }
 
     fn component_id(&self) -> ComponentId {
