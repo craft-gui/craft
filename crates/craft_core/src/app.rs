@@ -1,80 +1,96 @@
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use {
-    crate::accessibility::access_handler::CraftAccessHandler,
-    crate::accessibility::activation_handler::CraftActivationHandler,
-    crate::accessibility::deactivation_handler::CraftDeactivationHandler,
-};
 use crate::components::{ComponentSpecification, Event};
-use craft_runtime::CraftRuntimeHandle;
 #[cfg(feature = "dev_tools")]
 use crate::devtools::dev_tools_component::dev_tools_view;
 use crate::elements::{Container, Element};
 use crate::events::event_dispatch::dispatch_event;
 use crate::events::internal::{InternalMessage, InternalUserMessage};
 use crate::events::{CraftMessage, EventDispatchType, Message};
-use craft_primitives::geometry::{Rectangle, Size};
-use crate::layout::layout_context::{measure_content, LayoutContext};
+use crate::layout::layout_context::measure_content;
 use crate::reactive::element_id::reset_unique_element_id;
-use crate::reactive::element_state_store::ElementStateStore;
 use crate::reactive::reactive_tree::ReactiveTree;
 use crate::reactive::tree::diff_trees;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::view_introspection::scan_view_for_resources;
 use crate::{GlobalState, RendererBox, WindowContext};
+use cfg_if::cfg_if;
+use craft_logging::{info, span, Level};
+use craft_primitives::geometry::{Rectangle};
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_runtime::CraftRuntimeHandle;
+use kurbo::{Affine, Point};
+use peniko::Color;
+use std::collections::HashMap;
+use std::sync::Arc;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use {
+    crate::accessibility::access_handler::CraftAccessHandler,
+    crate::accessibility::activation_handler::CraftActivationHandler,
+    crate::accessibility::deactivation_handler::CraftDeactivationHandler,
+};
 #[cfg(feature = "accesskit")]
-use
-{
+use {
     accesskit::{Role, TreeUpdate},
     accesskit_winit::Adapter,
 };
-use cfg_if::cfg_if;
-use craft_logging::{info, span, Level};
-use kurbo::{Affine, Point};
-use peniko::Color;
-use std::collections::{HashMap};
-use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
-use std::time::{Duration};
-
-use taffy::{AvailableSpace, NodeId, TaffyTree};
+use crate::animations::animation::AnimationFlags;
+use crate::elements::text::TextState;
+use crate::elements::text_input::TextInputState;
+use crate::events::update_queue_entry::UpdateQueueEntry;
+use craft_renderer::RenderList;
+use craft_resource_manager::resource_event::ResourceEvent;
+use craft_resource_manager::resource_type::ResourceType;
 use craft_runtime::Sender;
-use ui_events::keyboard::{KeyState, KeyboardEvent, Modifiers, NamedKey};
+use std::time::Duration;
+use taffy::{AvailableSpace, NodeId, TaffyTree};
+use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
-use winit::event_loop::{ActiveEventLoop};
+use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
-use craft_renderer::RenderList;
-use craft_resource_manager::resource_event::ResourceEvent;
-use craft_resource_manager::resource_type::ResourceType;
-use crate::animations::animation::{AnimationFlags};
-use crate::events::update_queue_entry::UpdateQueueEntry;
+
+macro_rules! get_tree_mut {
+    ($self:expr, $is_dev_tree:expr) => {{
+        if !$is_dev_tree {
+            &mut $self.user_tree
+        } else {
+            #[cfg(not(feature = "dev_tools"))]
+            {
+                panic!("Dev tools are not enabled, but a dev tree was requested.");
+            }
+            #[cfg(feature = "dev_tools")]
+            {
+                &mut $self.dev_tree
+            }
+        }
+    }};
+}
 
 macro_rules! get_tree {
-        ($self:expr, $is_dev_tree:expr) => {{
-            if !$is_dev_tree {
-                &mut $self.user_tree
-            } else {
-                #[cfg(not(feature = "dev_tools"))]
-                {
-                    panic!("Dev tools are not enabled, but a dev tree was requested.");
-                }
-                #[cfg(feature = "dev_tools")]
-                {
-                    &mut $self.dev_tree
-                }
+    ($self:expr, $is_dev_tree:expr) => {{
+        if !$is_dev_tree {
+            &$self.user_tree
+        } else {
+            #[cfg(not(feature = "dev_tools"))]
+            {
+                panic!("Dev tools are not enabled, but a dev tree was requested.");
             }
-        }};
-    }
+            #[cfg(feature = "dev_tools")]
+            {
+                &$self.dev_tree
+            }
+        }
+    }};
+}
 
 pub struct App {
     /// The user's view specification. This is lazily evaluated and will be called each time the view is redrawn.
@@ -114,6 +130,8 @@ pub struct App {
     pub(crate) modifiers: Modifiers,
     pub(crate) last_frame_time: time::Instant,
     pub redraw_flags: RedrawFlags,
+
+    pub(crate) render_list: RenderList,
 }
 
 #[derive(Debug)]
@@ -123,9 +141,7 @@ pub struct RedrawFlags {
 
 impl RedrawFlags {
     pub fn new(rebuild_layout: bool) -> Self {
-        Self {
-            rebuild_layout,
-        }
+        Self { rebuild_layout }
     }
 
     pub fn should_rebuild_layout(&self) -> bool {
@@ -144,7 +160,7 @@ impl App {
     }
 
     pub fn on_process_user_events(&mut self, is_dev_tree: bool) {
-        let reactive_tree = get_tree!(self, is_dev_tree);
+        let reactive_tree = get_tree_mut!(self, is_dev_tree);
 
         if reactive_tree.update_queue.is_empty() {
             return;
@@ -242,16 +258,19 @@ impl App {
                 let bold = include_bytes!("../../../fonts/Roboto-Bold.ttf");
                 let semi_bold = include_bytes!("../../../fonts/Roboto-SemiBold.ttf");
                 let medium = include_bytes!("../../../fonts/Roboto-Medium.ttf");
-             
+
                 fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
                     let blob = peniko::Blob::new(Arc::new(font_data));
                     let fonts = text_context.font_context.collection.register_fonts(blob, None);
 
                     // Register all the Roboto families under parley::GenericFamily::SystemUi.
                     // This will become the fallback font for platforms like WASM.
-                    text_context.font_context.collection.append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|f| f.0));
+                    text_context
+                        .font_context
+                        .collection
+                        .append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|f| f.0));
                 }
-                
+
                 register_and_append(regular, &mut text_context);
                 register_and_append(bold, &mut text_context);
                 register_and_append(semi_bold, &mut text_context);
@@ -311,14 +330,13 @@ impl App {
         if self.window.is_none() {
             return;
         }
-        
+
         let now = time::Instant::now();
         let delta_time = now - self.last_frame_time;
         self.last_frame_time = now;
 
         let surface_size = self.window_context.window_size();
 
-        self.setup_text_context();
         self.update_view();
 
         cfg_if! {
@@ -335,6 +353,7 @@ impl App {
 
         #[cfg(feature = "dev_tools")]
         {
+            use crate::geometry::Size;
             if self.is_dev_tools_open {
                 let dev_tools_size = Size::new(350.0, root_size.height);
                 root_size.width -= dev_tools_size.width;
@@ -342,7 +361,7 @@ impl App {
         }
 
         let layout_origin = Point::new(0.0, 0.0);
-        
+
         {
             if self.redraw_flags.should_rebuild_layout() {
                 self.layout_tree(
@@ -353,9 +372,9 @@ impl App {
                     self.window_context.mouse_position,
                 );
             }
-            
+
             self.animate_tree(false, &delta_time, layout_origin, root_size);
-            
+
             if self.renderer.is_some() {
                 self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
             }
@@ -365,7 +384,7 @@ impl App {
         {
             let viewport_size = LogicalSize::new(surface_size.width - root_size.width, root_size.height);
             let dev_tools_layout_origin = Point::new(root_size.width as f64, 0.0);
-            
+
             if self.is_dev_tools_open {
                 update_reactive_tree(
                     dev_tools_view(self.user_tree.element_tree.clone().unwrap()),
@@ -386,7 +405,7 @@ impl App {
                 );
 
                 self.animate_tree(true, &delta_time, dev_tools_layout_origin, viewport_size);
-                
+
                 if self.renderer.is_some() {
                     self.draw_reactive_tree(true, self.window_context.mouse_position, self.window.clone());
                 }
@@ -417,7 +436,8 @@ impl App {
     }
 
     pub fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollUpdate) {
-        if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse {
+        if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse
+        {
             let y: f32 = match pointer_scroll_update.delta {
                 ScrollDelta::PageDelta(_, y) => y,
                 ScrollDelta::LineDelta(_, y) => y,
@@ -545,11 +565,14 @@ impl App {
 
         #[cfg(feature = "dev_tools")]
         {
+            use ui_events::keyboard::KeyState;
             let logical_key = keyboard_input.key;
             let key_state = keyboard_input.state;
 
-            if KeyState::Down == key_state && let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key {
-                    self.is_dev_tools_open = !self.is_dev_tools_open;
+            if KeyState::Down == key_state
+                && let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key
+            {
+                self.is_dev_tools_open = !self.is_dev_tools_open;
             }
         }
 
@@ -558,7 +581,7 @@ impl App {
 
     /// Processes async messages sent from the user.
     pub fn on_user_message(&mut self, message: InternalUserMessage) {
-        let state = if let Some(state) = self.user_tree.user_state.storage.get_mut(&message.source_component_id) { 
+        let state = if let Some(state) = self.user_tree.user_state.storage.get_mut(&message.source_component_id) {
             state.as_mut()
         } else {
             // The receiving component may not be mounted anymore after an async task, so just return.
@@ -578,7 +601,7 @@ impl App {
             None,
             None,
         );
-        
+
         // TODO: Should we handle effects here too?
         if event.future.is_some() {
             self.user_tree.update_queue.push_back(UpdateQueueEntry::new(
@@ -595,7 +618,10 @@ impl App {
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
         match resource_event {
             ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
-                if let Some(_text_context) = self.text_context.as_mut() && resource_type == ResourceType::Font && resource.data().is_some() {
+                if let Some(_text_context) = self.text_context.as_mut()
+                    && resource_type == ResourceType::Font
+                    && resource.data().is_some()
+                {
                     // Todo: Load the font into the text context.
                     self.resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
                     self.reload_fonts = true;
@@ -610,8 +636,7 @@ impl App {
     fn view_introspection(&mut self) {
         scan_view_for_resources(
             self.app_sender.clone(),
-            self.user_tree.element_tree.as_ref().unwrap().as_ref(),
-            self.user_tree.component_tree.as_ref().unwrap(),
+            self.user_tree.as_fiber_tree(),
             self.resource_manager.clone(),
             &mut self.resources_collected,
         );
@@ -625,12 +650,17 @@ impl App {
     }
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
-    fn animate_tree(&mut self, is_dev_tree: bool, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
-
+    fn animate_tree(
+        &mut self,
+        is_dev_tree: bool,
+        delta_time: &Duration,
+        layout_origin: Point,
+        viewport_size: LogicalSize<f32>,
+    ) {
         let span = span!(Level::INFO, "animate_tree");
         let _enter = span.enter();
-        
-        let reactive_tree = get_tree!(self, is_dev_tree);
+
+        let reactive_tree = get_tree_mut!(self, is_dev_tree);
         let old_has_active_animation = reactive_tree.previous_animation_flags.has_active_animation();
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
@@ -638,7 +668,7 @@ impl App {
         let mut animation_flags = AnimationFlags::default();
         root_element.on_animation_frame(&mut animation_flags, &mut reactive_tree.element_state, *delta_time);
         reactive_tree.previous_animation_flags = animation_flags;
-        
+
         // Perform a relayout if an animation used any layout effecting style property.
         if animation_flags.needs_relayout() || old_has_active_animation {
             root_element.reset_layout_item();
@@ -659,7 +689,7 @@ impl App {
             self.request_redraw(RedrawFlags::new(old_has_active_animation));
         }
     }
-    
+
     #[allow(clippy::too_many_arguments)]
     fn layout_tree(
         &mut self,
@@ -669,20 +699,20 @@ impl App {
         scale_factor: f64,
         mouse_position: Option<Point>,
     ) {
-        let reactive_tree = get_tree!(self, is_dev_tree);
-        let root_element = reactive_tree.element_tree.as_mut().unwrap();
-
-        style_root_element(root_element, viewport_size);
+        let reactive_tree = get_tree_mut!(self, is_dev_tree);
+        {
+            let root_element = reactive_tree.element_tree.as_mut().unwrap();
+            style_root_element(root_element, viewport_size);
+        }
         let text_context = self.text_context.as_mut().unwrap();
 
         {
             let span = span!(Level::INFO, "layout");
             let _enter = span.enter();
             layout(
-                &mut reactive_tree.element_state,
+                reactive_tree,
                 viewport_size,
                 text_context,
-                root_element.as_mut(),
                 origin,
                 self.resource_manager.clone(),
                 scale_factor,
@@ -693,19 +723,27 @@ impl App {
 
     #[allow(clippy::too_many_arguments)]
     fn draw_reactive_tree(&mut self, is_dev_tree: bool, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
-        let reactive_tree = get_tree!(self, is_dev_tree);
+        let reactive_tree = get_tree_mut!(self, is_dev_tree);
         let root_element = reactive_tree.element_tree.as_mut().unwrap();
 
         let text_context = self.text_context.as_mut().unwrap();
         {
             let span = span!(Level::INFO, "render");
             let _enter = span.enter();
-            let mut render_list = RenderList::new();
+            self.render_list.clear();
             let scale_factor = self.window_context.effective_scale_factor();
-            root_element.draw(&mut render_list, text_context, &mut reactive_tree.element_state, mouse_position, window, scale_factor);
+            root_element.draw(
+                &mut self.render_list,
+                text_context,
+                &mut reactive_tree.element_state,
+                mouse_position,
+                window,
+                scale_factor,
+            );
 
             let renderer = self.renderer.as_mut().unwrap();
-            renderer.sort_and_cull_render_list(&mut render_list);
+
+            renderer.sort_and_cull_render_list(&mut self.render_list);
 
             let window = Rectangle {
                 x: 0.0,
@@ -713,7 +751,22 @@ impl App {
                 width: renderer.surface_width(),
                 height: renderer.surface_height(),
             };
-            renderer.prepare_render_list(render_list, self.resource_manager.clone(), window);
+            renderer.prepare_render_list(
+                &mut self.render_list,
+                self.resource_manager.clone(),
+                window,
+                Box::new(|component| {
+                    let data = &get_tree!(self, is_dev_tree).element_state.storage.get(&component).unwrap().data;
+
+                    if let Some(data) = data.downcast_ref::<TextState>() {
+                        data.text_render.as_ref()
+                    } else if let Some(data) = data.downcast_ref::<TextInputState>() {
+                        data.text_render.as_ref()
+                    } else {
+                        panic!("Unknown component data type for component: {}", component);
+                    }
+                }),
+            );
         }
     }
 
@@ -734,7 +787,12 @@ impl App {
 
         let state = &mut self.user_tree.element_state;
 
-        self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(&mut tree_update, None, state, self.window_context.effective_scale_factor());
+        self.user_tree.element_tree.as_mut().unwrap().compute_accessibility_tree(
+            &mut tree_update,
+            None,
+            state,
+            self.window_context.effective_scale_factor(),
+        );
         tree_update.nodes[0].1.set_role(Role::Window);
 
         tree_update
@@ -752,7 +810,7 @@ fn update_reactive_tree(
     window_context: &mut WindowContext,
 ) {
     let window_element = Container::new().into();
-    let old_component_tree = reactive_tree.component_tree.as_ref();
+    let old_component_tree = reactive_tree.component_tree.take();
 
     let new_tree = {
         let span = span!(Level::INFO, "reactive tree diffing");
@@ -784,9 +842,9 @@ fn update_reactive_tree(
 fn style_root_element(root: &mut Box<dyn Element>, root_size: LogicalSize<f32>) {
     let is_user_root_height_auto = {
         let root_children = root.children();
-        root_children[0].style().height().is_auto()
+        root_children[0].internal.style().height().is_auto()
     };
-    
+
     let style = root.style_mut();
 
     style.set_width(Unit::Px(root_size.width));
@@ -802,17 +860,23 @@ fn style_root_element(root: &mut Box<dyn Element>, root_size: LogicalSize<f32>) 
 
 #[allow(clippy::too_many_arguments)]
 fn layout(
-    element_state: &mut ElementStateStore,
+    reactive_tree: &mut ReactiveTree,
     window_size: LogicalSize<f32>,
     text_context: &mut TextContext,
-    root_element: &mut dyn Element,
     origin: Point,
     resource_manager: Arc<ResourceManager>,
     scale_factor: f64,
     pointer: Option<Point>,
-) -> (TaffyTree<LayoutContext>, NodeId) {
-    let mut taffy_tree: TaffyTree<LayoutContext> = TaffyTree::new();
-    let root_node = root_element.compute_layout(&mut taffy_tree, element_state, scale_factor).unwrap();
+) -> NodeId {
+    if reactive_tree.taffy_tree.is_none() {
+        reactive_tree.taffy_tree = Some(TaffyTree::new());
+    }
+    let mut taffy_tree = reactive_tree.taffy_tree.as_mut().unwrap();
+    taffy_tree.clear();
+
+    let element_state = &mut reactive_tree.element_state;
+    let root_element = reactive_tree.element_tree.as_mut().unwrap();
+    let root_node = root_element.compute_layout(taffy_tree, element_state, scale_factor).unwrap();
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(window_size.width),
@@ -855,5 +919,5 @@ fn layout(
     // root_element.print_tree();
     // taffy_tree.print_tree(root_node);
 
-    (taffy_tree, root_node)
+    root_node
 }

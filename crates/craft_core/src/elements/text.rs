@@ -33,6 +33,7 @@ use std::time;
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use time::{Duration, Instant};
 use kurbo::Affine;
+use smallvec::SmallVec;
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
@@ -53,7 +54,7 @@ pub struct TextState {
     selection: Selection,
     text: Option<SmolStr>,
     text_hash: Option<u64>,
-    text_render: Option<TextRender>,
+    pub(crate) text_render: Option<TextRender>,
     last_text_style: Style,
     layout: Option<parley::Layout<ColorBrush>>,
     cache: HashMap<TextHashKey, Size<f32>>,
@@ -96,7 +97,7 @@ impl Element for Text {
         &mut self.element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
+    fn children_mut(&mut self) -> &mut SmallVec<[ElementBoxed; 4]> {
         &mut self.element_data.children
     }
 
@@ -122,8 +123,8 @@ impl Element for Text {
         self.draw_borders(renderer, element_state, scale_factor);
         let state: &mut TextState = self.state_mut(element_state);
 
-        if let Some(text_render) = state.text_render.as_ref() {
-            renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), None, false);
+        if state.text_render.as_ref().is_some() {
+            renderer.draw_text(self.component_id(), content_rectangle.scale(scale_factor), None, false);
         }
     }
 

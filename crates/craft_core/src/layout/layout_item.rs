@@ -144,6 +144,7 @@ impl LayoutItem {
 
 pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorderSpec, bg_color: Color, scale_factor: f64) {
     let background_color = bg_color;
+    
     let scale_factor = Affine::scale(scale_factor);
 
     let mut background_path = computed_border_spec.build_background_path();

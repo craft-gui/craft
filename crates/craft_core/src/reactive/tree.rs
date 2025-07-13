@@ -22,7 +22,7 @@ pub(crate) struct ComponentTreeNode {
     pub tag: SmolStr,
     pub update: UpdateFn,
     pub children: Vec<ComponentTreeNode>,
-    pub children_keys: HashMap<SmolStr, ComponentId>,
+    pub children_keys: Option<HashMap<SmolStr, ComponentId>>,
     pub id: ComponentId,
     pub(crate) parent_id: Option<ComponentId>,
     pub props: Props,
@@ -33,34 +33,7 @@ struct TreeVisitorNode {
     component_specification: ComponentSpecification,
     parent_element_ptr: *mut dyn Element,
     parent_component_node: *mut ComponentTreeNode,
-    old_component_node: Option<*const ComponentTreeNode>,
-}
-
-impl ComponentTreeNode {
-    #[allow(dead_code)]
-    pub fn print_tree(&self) {
-        let mut elements: Vec<(&ComponentTreeNode, usize, bool)> = vec![(self, 0, true)];
-        while let Some((element, indent, is_last)) = elements.pop() {
-            let mut prefix = String::new();
-            for _ in 0..indent {
-                prefix.push_str("  ");
-            }
-            if is_last {
-                prefix.push_str("└─");
-            } else {
-                prefix.push_str("├─");
-            }
-            println!(
-                "{} , Tag: {}, Id: {}, Key: {:?}, Parent: {:?}",
-                prefix, element.tag, element.id, element.key, element.parent_id
-            );
-            let children = &element.children;
-            for (i, child) in children.iter().enumerate().rev() {
-                let is_last = i == children.len() - 1;
-                elements.push((child, indent + 1, is_last));
-            }
-        }
-    }
+    old_component_node: Option<*mut ComponentTreeNode>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -91,7 +64,7 @@ pub struct DiffTreesResult {
 pub(crate) fn diff_trees(
     component_specification: ComponentSpecification,
     mut root_element: ElementBoxed,
-    old_component_tree: Option<&ComponentTreeNode>,
+    mut old_component_tree: Option<ComponentTreeNode>,
     user_state: &mut StateStore,
     global_state: &mut GlobalState,
     element_state: &mut ElementStateStore,
@@ -108,7 +81,7 @@ pub(crate) fn diff_trees(
             tag: "root".into(),
             update: dummy_update,
             children: vec![],
-            children_keys: HashMap::new(),
+            children_keys: None,
             id: 0,
             parent_id: None,
             props: Props::new(()),
@@ -123,13 +96,17 @@ pub(crate) fn diff_trees(
             },
         );
 
-        let mut old_component_tree_as_ptr = old_component_tree.map(|old_root| old_root as *const ComponentTreeNode);
+        let mut old_component_tree_as_ptr: Option<*mut ComponentTreeNode> = if let Some(old_component_tree) = old_component_tree.as_mut() {
+            Some(old_component_tree as *mut ComponentTreeNode)
+        } else {
+            None
+        };
 
         // HACK: This is a workaround to get the first child of the old component tree because we start at the first level on the new tree.
         // This is because the root of the component tree is not a component, but a dummy node.
         if old_component_tree_as_ptr.is_some() {
             old_component_tree_as_ptr =
-                Some((*old_component_tree_as_ptr.unwrap()).children.first().unwrap() as *const ComponentTreeNode);
+                Some((*old_component_tree_as_ptr.unwrap()).children.first_mut().unwrap() as *mut ComponentTreeNode);
         }
 
         let component_root: *mut ComponentTreeNode = &mut component_tree as *mut ComponentTreeNode;
@@ -206,7 +183,7 @@ pub(crate) fn diff_trees(
                         tag: new_tag.into(),
                         update: dummy_update,
                         children: vec![],
-                        children_keys: HashMap::new(),
+                        children_keys: None,
                         id,
                         parent_id: Some((*parent_component_ptr).id),
                         props: Props::new(()),
@@ -218,10 +195,10 @@ pub(crate) fn diff_trees(
                         (*tree_node.parent_component_node).children.last_mut().unwrap();
 
                     // Get the old children of the old component node.
-                    let mut olds: Vec<*const ComponentTreeNode> = vec![];
+                    let mut olds: Vec<*mut ComponentTreeNode> = vec![];
                     if tree_node.old_component_node.is_some() {
-                        for child in (*tree_node.old_component_node.unwrap()).children.iter() {
-                            olds.push(child as *const ComponentTreeNode);
+                        for child in (*tree_node.old_component_node.unwrap()).children.iter_mut() {
+                            olds.push(child as *mut ComponentTreeNode);
                         }
                     }
 
@@ -261,9 +238,9 @@ pub(crate) fn diff_trees(
 
                     let mut is_new_component = true;
                     let id: ComponentId =
-                        if new_spec.key.is_some() && children_keys.contains_key(new_spec.key.as_deref().unwrap()) {
+                        if new_spec.key.is_some() && children_keys.is_some() && children_keys.as_ref().unwrap().contains_key(new_spec.key.as_deref().unwrap()) {
                             is_new_component = false;
-                            *(children_keys.get(new_spec.key.as_deref().unwrap()).unwrap())
+                            *(children_keys.as_ref().unwrap().get(new_spec.key.as_deref().unwrap()).unwrap())
                         } else if let Some(old_tag) = old_tag {
                             let same_key = new_spec.key.as_ref()
                                 == tree_node.old_component_node.as_ref().and_then(|node| (**node).key.as_ref());
@@ -324,7 +301,10 @@ pub(crate) fn diff_trees(
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {
-                        parent_component_ptr.as_mut().unwrap().children_keys.insert(key, id);
+                        if parent_component_ptr.as_mut().unwrap().children_keys.is_none() {
+                            parent_component_ptr.as_mut().unwrap().children_keys = Some(HashMap::new());
+                        }
+                        parent_component_ptr.as_mut().unwrap().children_keys.as_mut().unwrap().insert(key, id);
                     }
 
                     let new_component_node = ComponentTreeNode {
@@ -333,7 +313,7 @@ pub(crate) fn diff_trees(
                         tag: component_data.tag,
                         update: component_data.update_fn,
                         children: vec![],
-                        children_keys: HashMap::new(),
+                        children_keys: None,
                         id,
                         parent_id: Some((*parent_component_ptr).id),
                         props,
@@ -347,7 +327,7 @@ pub(crate) fn diff_trees(
                     // Get the old component node or none.
                     // NOTE: ComponentSpecs can only have one child.
                     let mut old_component_tree = tree_node.old_component_node.and_then(|old_node| {
-                        (*old_node).children.first().map(|child| child as *const ComponentTreeNode)
+                        (*old_node).children.first_mut().map(|child| child as *mut ComponentTreeNode)
                     });
 
                     // EDGE CASE: If this is a new component, then we must drop any old tree.

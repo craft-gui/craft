@@ -22,7 +22,7 @@ use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
-use crate::text_renderer_data::TextRenderLine;
+use crate::text_renderer_data::{TextRender, TextRenderLine};
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
@@ -128,11 +128,12 @@ impl Renderer for VelloCpuRenderer {
         self.clear_color = color;
     }
 
-    fn prepare_render_list(
-        &mut self,
-        render_list: RenderList,
+    fn prepare_render_list<'a>(
+        &'a mut self,
+        render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
+        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         vello_draw_rect(&mut self.render_context, Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32), Color::WHITE);
         
@@ -187,6 +188,8 @@ impl Renderer for VelloCpuRenderer {
                         kurbo::Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+
+                    let text_render = get_text_renderer(*text_render).expect("Text render not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;

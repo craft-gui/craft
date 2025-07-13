@@ -198,7 +198,7 @@ impl ActiveAnimation {
         let pos = Duration::div_duration_f32(self.current, animation.duration);
         fn find_keyframe_pair(pos: f32, animation: &Animation) -> (&KeyFrame, &KeyFrame) {
             let mut sorted = animation.key_frames.iter().collect::<Vec<_>>();
-            sorted.sort_by(|a, b| a.offset_percentage.total_cmp(&b.offset_percentage));
+            sorted.sort_unstable_by(|a, b| a.offset_percentage.total_cmp(&b.offset_percentage));
             for window in sorted.windows(2) {
                 let [start, end] = window else { continue };
                 if pos >= (start.offset_percentage / 100.0) && pos <= (end.offset_percentage / 100.0) {

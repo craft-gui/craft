@@ -15,7 +15,7 @@ impl<'a> Iterator for ElementTreePreOrderIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(node) = self.stack.pop() {
             for child in node.children().iter().rev() {
-                self.stack.push(*child);
+                self.stack.push(child.internal.as_ref());
             }
             Some(node)
         } else {
@@ -78,8 +78,6 @@ mod tests {
             &mut window_context,
             &mut update_queue,
         );
-
-        initial_tree.component_tree.print_tree();
 
         let mut iter = initial_tree.element_tree.internal.pre_order_iter();
         assert_eq!(iter.next().unwrap().get_id().clone(), Some("0".into()));

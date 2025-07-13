@@ -1,36 +1,32 @@
-use crate::elements::element::Element;
 use crate::elements::{Font, Image, TinyVg};
-use crate::reactive::fiber_tree;
+use crate::events::internal::InternalMessage;
 use crate::reactive::fiber_tree::FiberNode;
-use crate::reactive::tree::ComponentTreeNode;
 use craft_resource_manager::resource_type::ResourceType;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_runtime::Sender;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
-use craft_runtime::Sender;
-use crate::events::internal::InternalMessage;
 
 /// Introspect the view.
 ///
 // Scans through the component tree and diffs it for resources that need to be updated.
 pub fn scan_view_for_resources(
     app_sender: Sender<InternalMessage>,
-    element: &dyn Element,
-    component: &ComponentTreeNode,
+    fiber_tree: Rc<RefCell<FiberNode>>,
     resource_manager: Arc<ResourceManager>,
     resources_collected: &mut HashMap<ResourceIdentifier, bool>,
 ) {
-    let fiber: Rc<RefCell<FiberNode>> = fiber_tree::new(component, element);
-
     let mut nodes: Vec<Rc<RefCell<FiberNode>>> = Vec::new();
-    let mut to_visit: Vec<Rc<RefCell<FiberNode>>> = vec![fiber.clone()];
+    let mut to_visit: Vec<Rc<RefCell<FiberNode>>> = vec![Rc::clone(&fiber_tree)];
 
     while let Some(node) = to_visit.pop() {
-        nodes.push(node.clone());
+        if node.borrow().element.is_some() {
+            nodes.push(Rc::clone(&node));
+        }
         for child in node.borrow().children.iter().rev() {
-            to_visit.push(child.clone());
+            to_visit.push(Rc::clone(&child));
         }
     }
 

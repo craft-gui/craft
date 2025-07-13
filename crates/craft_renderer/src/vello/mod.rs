@@ -17,7 +17,7 @@ use vello::{Glyph, Scene};
 use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
 use wgpu::util::TextureBlitter;
 use winit::window::Window;
-use crate::text_renderer_data::TextRenderLine;
+use crate::text_renderer_data::{TextRender, TextRenderLine};
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,
@@ -259,11 +259,12 @@ impl Renderer for VelloRenderer {
         self
     }
 
-    fn prepare_render_list(
+    fn prepare_render_list<'a>(
         &mut self,
-        render_list: RenderList,
+        render_list: &mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
+        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
@@ -301,6 +302,7 @@ impl Renderer for VelloRenderer {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
+                    let text_render = get_text_renderer(*text_render).expect("Text renderer not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;

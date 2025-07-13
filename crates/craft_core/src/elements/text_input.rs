@@ -28,6 +28,7 @@ use std::time;
 use time::{Duration, Instant};
 use kurbo::Affine;
 use parley::{Affinity, ContentWidths, Cursor, Selection, StyleProperty};
+use smallvec::SmallVec;
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
@@ -35,7 +36,6 @@ use web_time as time;
 use winit::event::Ime;
 use winit::window::Window;
 use crate::elements::base_element_state::BaseElementState;
-use crate::reactive::element_id::create_unique_element_id;
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 use crate::utils::cloneable_any::CloneableAny;
 use smol_str::SmolStr;
@@ -83,7 +83,7 @@ pub struct TextInputState {
 
     // The most recently requested key for laying out the text input.
     last_requested_key: Option<TextHashKey>,
-    text_render: Option<TextRender>,
+    pub(crate) text_render: Option<TextRender>,
     new_text: Option<String>,
     new_style: TextStyle,
     scale_factor: f64,
@@ -126,7 +126,7 @@ impl Element for TextInput {
         &mut self.element_data
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
+    fn children_mut(&mut self) -> &mut SmallVec<[ElementBoxed; 4]> {
         &mut self.element_data.children
     }
 
@@ -165,8 +165,8 @@ impl Element for TextInput {
             None
         };
 
-        if let Some(text_render) = state.text_render.as_ref() {
-            renderer.draw_text(text_render.clone(), content_rectangle.scale(scale_factor), text_scroll, state.cursor_visible);
+        if state.text_render.as_ref().is_some() {
+            renderer.draw_text(self.component_id(), content_rectangle.scale(scale_factor), text_scroll, state.cursor_visible);
         }
 
         renderer.pop_layer();
@@ -678,6 +678,8 @@ impl Element for TextInput {
         element_state: &mut ElementStateStore,
         scale_factor: f64,
     ) {
+        use crate::reactive::element_id::create_unique_element_id;
+
         let state: &mut TextInputState = self.state_mut(element_state);
 
         if state.editor.try_layout().is_none() {

@@ -57,10 +57,6 @@ impl Element for Dropdown {
         &mut self.element_data
     }
 
-    fn children(&self) -> Vec<&dyn Element> {
-        self.element_data().children.iter().map(|x| x.internal.as_ref()).collect()
-    }
-
     /// Checks if a point is in the dropdown selection and/or list.
     fn in_bounds(&self, point: Point) -> bool {
         // Check the bounds of the dropdown selection.
@@ -71,7 +67,7 @@ impl Element for Dropdown {
         // Check the bounds of the dropdown list items.
         let mut dropdown_list_in_bounds = false;
         for child in self.children() {
-            if child.in_bounds(point) {
+            if child.internal.in_bounds(point) {
                 dropdown_list_in_bounds = true;
                 break;
             }
@@ -290,7 +286,7 @@ impl Element for Dropdown {
                 for child in self.children().iter().enumerate() {
                     // Emit an event when a dropdown list item is selected and close the dropdown list.
                     // The emission of this event implies a DropdownToggled(false) event.
-                    if child.1.in_bounds(pointer_button.state.position) {
+                    if child.1.internal.in_bounds(pointer_button.state.position) {
                         // We need to retain the index of the selected item to render the `pseudo_dropdown_selection` element.
                         state.selected_item = Some(child.0);
                         state.is_open = false;

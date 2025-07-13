@@ -28,7 +28,7 @@ use crate::vello_hybrid::render_context::RenderContext;
 use crate::vello_hybrid::render_context::RenderSurface;
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::{Brush};
-use crate::text_renderer_data::TextRenderLine;
+use crate::text_renderer_data::{TextRender, TextRenderLine};
 use vello_hybrid::Scene;
 
 pub struct ActiveRenderState {
@@ -161,11 +161,12 @@ impl CraftRenderer for VelloHybridRenderer {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list(
+    fn prepare_render_list<'a>(
         &mut self,
-        render_list: RenderList,
+        render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
+        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
@@ -282,6 +283,8 @@ impl CraftRenderer for VelloHybridRenderer {
                         Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+
+                    let text_render = get_text_renderer(*text_render).expect("Text render not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;

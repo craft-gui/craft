@@ -17,12 +17,12 @@ use craft_primitives::geometry::{ElementBox, Point, Rectangle, TrblRectangle};
 use craft_renderer::renderer::RenderList;
 use kurbo::Affine;
 use peniko::Color;
+use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 use std::any::Any;
 use std::mem;
 use std::sync::Arc;
 use std::time::Duration;
-use rustc_hash::FxHashMap;
-use smol_str::SmolStr;
 use taffy::{NodeId, Overflow, TaffyTree};
 use winit::window::Window;
 
@@ -35,11 +35,11 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     fn element_data(&self) -> &ElementData;
     fn element_data_mut(&mut self) -> &mut ElementData;
 
-    fn children(&self) -> Vec<&dyn Element> {
-        self.element_data().children.iter().map(|x| x.internal.as_ref()).collect()
+    fn children(&self) -> &SmallVec<[ElementBoxed; 4]> {
+        &self.element_data().children
     }
 
-    fn children_mut(&mut self) -> &mut Vec<ElementBoxed> {
+    fn children_mut(&mut self) -> &mut SmallVec<[ElementBoxed; 4]> {
         &mut self.element_data_mut().children
     }
 
@@ -271,6 +271,10 @@ pub trait Element: Any + StandardElementClone + Send + Sync {
     }
 
     fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+        if !self.element_data().is_scrollable() {
+            return;
+        }
+
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
         let scrollbar_thumb_radius = self.element_data().current_style().scrollbar_thumb_radius();
         // let scrollbar_thumb_radius = self.element_data().current_style().

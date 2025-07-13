@@ -4,6 +4,7 @@ use craft_primitives::Color;
 use crate::renderer::{RenderList, Renderer};
 use craft_resource_manager::ResourceManager;
 use std::sync::Arc;
+use crate::text_renderer_data::TextRender;
 
 pub struct BlankRenderer;
 
@@ -23,11 +24,12 @@ impl Renderer for BlankRenderer {
         self
     }
     
-    fn prepare_render_list(
+    fn prepare_render_list<'a>(
         &mut self,
-        _render_list: RenderList,
+        _render_list: &mut RenderList,
         _resource_manager: Arc<ResourceManager>,
         _window: Rectangle,
+        _get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
     }
 

@@ -1,3 +1,4 @@
+use smallvec::SmallVec;
 use smol_str::SmolStr;
 use crate::components::{ComponentId, ComponentSpecification};
 use crate::components::Props;
@@ -17,19 +18,19 @@ pub struct ElementData {
     pub layout_item: LayoutItem,
 
     /// The style of the element when it is hovered.
-    pub hover_style: Option<Box<Style>>,
+    pub hover_style: Option<Style>,
 
     /// The style of the element when it is pressed.
-    pub pressed_style: Option<Box<Style>>,
+    pub pressed_style: Option<Style>,
 
     /// The style of the element when it is disabled.
-    pub disabled_style: Option<Box<Style>>,
+    pub disabled_style: Option<Style>,
 
     /// The style of the element when it is focused.
-    pub focused_style: Option<Box<Style>>,
+    pub focused_style: Option<Style>,
 
     /// The children of the element.
-    pub children: Vec<ElementBoxed>,
+    pub children: SmallVec<[ElementBoxed; 4]>,
 
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,
@@ -56,7 +57,7 @@ impl ElementData {
                 if let Some(ref mut hover_style) = self.hover_style {
                     hover_style
                 } else {
-                    self.hover_style = Some(Box::new(self.style.clone()));
+                    self.hover_style = Some(self.style.clone());
                     self.hover_style.as_mut().unwrap()
                 }
             }
@@ -64,7 +65,7 @@ impl ElementData {
                 if let Some(ref mut pressed_style) = self.pressed_style {
                     pressed_style
                 } else {
-                    self.pressed_style = Some(Box::new(self.style.clone()));
+                    self.pressed_style = Some(self.style.clone());
                     self.pressed_style.as_mut().unwrap()
                 }
             }
@@ -72,7 +73,7 @@ impl ElementData {
                 if let Some(ref mut disabled_style) = self.disabled_style {
                     disabled_style
                 } else {
-                    self.disabled_style = Some(Box::new(self.style.clone()));
+                    self.disabled_style = Some(self.style.clone());
                     self.disabled_style.as_mut().unwrap()
                 }
             }
@@ -80,7 +81,7 @@ impl ElementData {
                 if let Some(ref mut focused_style) = self.focused_style {
                     focused_style
                 } else {
-                    self.focused_style = Some(Box::new(self.style.clone()));
+                    self.focused_style = Some(self.style.clone());
                     self.focused_style.as_mut().unwrap()
                 }
             }

@@ -70,6 +70,7 @@ use craft_logging::info;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
+use craft_renderer::RenderList;
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::utils::cloneable_any::CloneableAny;
@@ -248,6 +249,7 @@ pub fn setup_craft(
             element_state: Default::default(),
             focus: None,
             previous_animation_flags: Default::default(),
+            taffy_tree: None,
         },
 
         #[cfg(feature = "dev_tools")]
@@ -265,11 +267,13 @@ pub fn setup_craft(
             pointer_captures: Default::default(),
             focus: None,
             previous_animation_flags: Default::default(),
+            taffy_tree: None,
         },
         runtime: runtime_copy,
         modifiers: Default::default(),
         last_frame_time: time::Instant::now(),
         redraw_flags: RedrawFlags::new(true),
+        render_list: RenderList::new(),
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

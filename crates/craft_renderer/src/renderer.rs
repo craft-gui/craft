@@ -13,7 +13,7 @@ pub enum RenderCommand {
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
-    DrawText(TextRender, Rectangle, Option<TextScroll>, bool),
+    DrawText(u64, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Brush),
@@ -109,6 +109,11 @@ impl RenderList {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.commands.clear();
+        self.overlay.children.clear();
+    }
+
     pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
@@ -122,12 +127,12 @@ impl RenderList {
 
     pub fn draw_text(
         &mut self,
-        text_render: TextRender,
+        component: u64,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
-        self.commands.push(RenderCommand::DrawText(text_render, rectangle, text_scroll, show_cursor));
+        self.commands.push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
     }
     pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
@@ -171,8 +176,6 @@ pub trait Renderer: Any {
     fn as_any_mut(&mut self) -> &mut dyn Any;
     
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
-        let mut overlay_render = SortedCommands { children: vec![] };
-
         fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
             let cull_top = (rectangle.y + rectangle.height) < 0.0;
             let cull_bottom = rectangle.y > window_height;
@@ -194,8 +197,9 @@ pub trait Renderer: Any {
 
         let window_height = self.surface_height();
 
-        let mut current: *mut SortedCommands = &mut overlay_render;
+        let mut current: *mut SortedCommands = &mut render_list.overlay;
         let mut stack: Vec<*mut SortedCommands> = vec![current];
+
         for (index, command) in render_list.commands.iter().enumerate() {
             match &command {
                 RenderCommand::StartOverlay => {
@@ -237,13 +241,13 @@ pub trait Renderer: Any {
                 }
             }
         }
-        render_list.overlay = overlay_render;
     }
-    fn prepare_render_list(
-        &mut self,
-        render_list: RenderList,
+    fn prepare_render_list<'a>(
+        &'a mut self,
+        render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
+        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     );
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);

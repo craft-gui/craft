@@ -90,7 +90,7 @@ pub(crate) fn tree_window(
         let children = element.children();
         for (i, child) in children.iter().enumerate().rev() {
             let is_last = i == children.len() - 1;
-            elements.push((*child, indent + 1, is_last));
+            elements.push((child.internal.as_ref(), indent + 1, is_last));
         }
 
         element_count += 1;
