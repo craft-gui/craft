@@ -23,7 +23,7 @@ impl Default for CraftRuntime {
             if #[cfg(target_arch = "wasm32")] {
                 Self { }
             } else {
-                Self { tokio_runtime: tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to create tokio runtime.") }
+                Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
             }
         }
     }
