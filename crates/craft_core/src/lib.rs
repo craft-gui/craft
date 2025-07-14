@@ -25,6 +25,7 @@ mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
 pub mod animations;
+pub mod location;
 
 pub use options::CraftOptions;
 pub use craft_primitives::palette;
