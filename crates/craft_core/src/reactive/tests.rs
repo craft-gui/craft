@@ -47,7 +47,7 @@ fn diff_trees_same_tag_same_id_are_equal() {
     let updated_tree = diff_trees(
         updated_view,
         root_element.clone(),
-        Some(&initial_tree.component_tree),
+        Some(initial_tree.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
@@ -97,7 +97,7 @@ fn diff_trees_after_one_iteration_adjacent_nodes_different_ids() {
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.component_tree),
+        Some(tree_1.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
@@ -154,7 +154,7 @@ fn remove_unused_element_state_after_removal_is_state_deleted() {
     let tree_2 = diff_trees(
         root_component_2,
         root_element.clone(),
-        Some(reactive_tree.component_tree.as_ref().unwrap()),
+        Some(reactive_tree.component_tree.as_ref().unwrap().clone()),
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
@@ -232,7 +232,7 @@ fn remove_unused_component_state_after_removal_is_state_deleted() {
     let tree_2 = diff_trees(
         root_component_2,
         root_element.clone(),
-        Some(reactive_tree.component_tree.as_ref().unwrap()),
+        Some(reactive_tree.component_tree.as_ref().unwrap().clone()),
         &mut reactive_tree.user_state,
         &mut global_state,
         &mut reactive_tree.element_state,
@@ -289,7 +289,7 @@ fn diff_trees_after_one_iteration_same_key_different_position_same_id() {
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.component_tree),
+        Some(tree_1.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
@@ -337,7 +337,7 @@ fn diff_trees_after_one_iteration_same_position_different_component_keys_differe
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.component_tree),
+        Some(tree_1.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
@@ -389,7 +389,7 @@ fn diff_trees_after_one_iteration_same_position_different_components_different_c
     let tree_2 = diff_trees(
         root_node_2,
         root_element.clone(),
-        Some(&tree_1.component_tree),
+        Some(tree_1.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
@@ -449,7 +449,7 @@ fn diff_trees_elements_swapped_keys_should_swap_ids() {
     let tree_2 = diff_trees(
         root_node_2,
         root_element,
-        Some(&tree_1.component_tree),
+        Some(tree_1.component_tree.clone()),
         &mut user_state,
         &mut global_state,
         &mut element_state,
