@@ -11,6 +11,7 @@ use crate::animations::animation::AnimationFlags;
 use crate::layout::layout_context::LayoutContext;
 use crate::reactive::fiber_tree;
 use crate::reactive::fiber_tree::FiberNode;
+use crate::reactive::tracked_changes::TrackedChanges;
 
 #[derive(Default)]
 pub struct ReactiveTree {
@@ -26,6 +27,7 @@ pub struct ReactiveTree {
     pub(crate) focus: Option<ComponentId>,
     pub(crate) previous_animation_flags: AnimationFlags,
     pub(crate) taffy_tree: Option<taffy::TaffyTree<LayoutContext>>,
+    pub(crate) tracked_changes: TrackedChanges,
 }
 
 impl ReactiveTree {

@@ -44,6 +44,7 @@ mod tests {
     use crate::window_context::WindowContext;
     use crate::GlobalState;
     use std::collections::VecDeque;
+    use crate::reactive::tracked_changes::TrackedChanges;
 
     #[test]
     fn pre_order_iter_ids_correct_order() {
@@ -64,6 +65,7 @@ mod tests {
         let mut global_state = GlobalState::from(Box::new(()) as Box<dyn Any + Send>);
         let mut window_context = WindowContext::new();
         let mut update_queue: VecDeque<UpdateQueueEntry> = VecDeque::new();
+        let mut tracked_changes= TrackedChanges::default();
 
         let initial_tree = diff_trees(
             initial_view,
@@ -77,6 +79,7 @@ mod tests {
             1.0,
             &mut window_context,
             &mut update_queue,
+            &mut tracked_changes,
         );
 
         let mut iter = initial_tree.element_tree.internal.pre_order_iter();

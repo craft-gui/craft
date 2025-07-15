@@ -14,6 +14,7 @@ use crate::window_context::WindowContext;
 use crate::GlobalState;
 use std::collections::{HashMap, HashSet, VecDeque};
 use smol_str::SmolStr;
+use crate::reactive::tracked_changes::TrackedChanges;
 
 #[derive(Clone)]
 pub(crate) struct ComponentTreeNode {
@@ -26,6 +27,8 @@ pub(crate) struct ComponentTreeNode {
     pub id: ComponentId,
     pub(crate) parent_id: Option<ComponentId>,
     pub props: Props,
+    /// The result of a view() function is cached here for components.
+    pub stored_view_result: Option<ComponentSpecification>,
 }
 
 #[derive(Clone)]
@@ -47,6 +50,7 @@ fn dummy_update(
     _window_context: &mut WindowContext,
     _target: Option<&dyn Element>,
     _current_target: Option<&dyn Element>,
+    _tracked_changes: &mut TrackedChanges,
 ) {
 }
 
@@ -73,6 +77,7 @@ pub(crate) fn diff_trees(
     scaling_factor: f64,
     window_context: &mut WindowContext,
     update_queue: &mut VecDeque<UpdateQueueEntry>,
+    tracked_changes: &mut TrackedChanges,
 ) -> DiffTreesResult {
     unsafe {
         let mut component_tree = ComponentTreeNode {
@@ -85,6 +90,7 @@ pub(crate) fn diff_trees(
             id: 0,
             parent_id: None,
             props: Props::new(()),
+            stored_view_result: None,
         };
 
         // Make sure to set a default state for the root.
@@ -187,6 +193,7 @@ pub(crate) fn diff_trees(
                         id,
                         parent_id: Some((*parent_component_ptr).id),
                         props: Props::new(()),
+                        stored_view_result: None,
                     };
 
                     // Add the new component node to the tree and get a pointer to it.
@@ -276,6 +283,7 @@ pub(crate) fn diff_trees(
                             window_context,
                             None,
                             None,
+                            tracked_changes
                         );
                         // TODO: Should we handle effects here?
                         if event.future.is_some() {
@@ -290,14 +298,44 @@ pub(crate) fn diff_trees(
 
                     let state = user_state.storage.get(&id);
                     let state = state.unwrap().as_ref();
-                    let new_component = (component_data.view_fn)(
-                        state,
-                        global_state,
-                        props.clone(),
-                        new_spec.children,
-                        id,
-                        window_context,
-                    );
+
+                   
+                    let wrote_to_state = tracked_changes.writes.remove(&id);
+                    let read_global_state = tracked_changes.global_reads.get(&id).is_some();
+                    
+                    let new_component = if is_new_component || wrote_to_state || (read_global_state && tracked_changes.wrote_to_global_state) {
+                        // The component may not perform a global read across renders, so we should remove this here.
+                        let _ = tracked_changes.global_reads.remove(&id);
+                        (component_data.view_fn)(
+                            state,
+                            global_state,
+                            props.clone(),
+                            new_spec.children,
+                            id,
+                            window_context,
+                            tracked_changes
+                        )
+                    } else {
+                        let old_component_tree = tree_node.old_component_node.and_then(|old_node| {
+                            (*old_node).stored_view_result.take()
+                        });
+                        if let Some(old_component_tree) = old_component_tree
+                        {
+                            old_component_tree
+                        } else {
+                            // The component may not perform a global read across renders, so we should remove this here.
+                            let _ = tracked_changes.global_reads.remove(&id);
+                            (component_data.view_fn)(
+                                state,
+                                global_state,
+                                props.clone(),
+                                new_spec.children,
+                                id,
+                                window_context,
+                                tracked_changes
+                            )
+                        }
+                    };
 
                     // Add the current child id to the children_keys hashmap in the parent.
                     if let Some(key) = new_spec.key.clone() {
@@ -317,6 +355,8 @@ pub(crate) fn diff_trees(
                         id,
                         parent_id: Some((*parent_component_ptr).id),
                         props,
+                        // TODO: Remove expensive clone.
+                        stored_view_result: Some(new_component.clone()),
                     };
 
                     // Add the new component node to the tree and get a pointer to it.
@@ -347,6 +387,9 @@ pub(crate) fn diff_trees(
                 }
             };
         }
+        
+        // We reconstructed all the components who read from global state, so we'll reset this:  
+        tracked_changes.wrote_to_global_state = false;
 
         DiffTreesResult {
             component_tree,

@@ -250,6 +250,7 @@ pub fn setup_craft(
             focus: None,
             previous_animation_flags: Default::default(),
             taffy_tree: None,
+            tracked_changes: Default::default(),
         },
 
         #[cfg(feature = "dev_tools")]
@@ -268,6 +269,7 @@ pub fn setup_craft(
             focus: None,
             previous_animation_flags: Default::default(),
             taffy_tree: None,
+            tracked_changes: Default::default(),
         },
         runtime: runtime_copy,
         modifiers: Default::default(),

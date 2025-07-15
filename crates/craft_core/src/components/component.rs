@@ -10,6 +10,7 @@ use crate::window_context::WindowContext;
 use std::any::{Any, TypeId};
 use std::ops::Deref;
 use smol_str::SmolStr;
+use crate::reactive::tracked_changes::TrackedChanges;
 
 /// A Component's view function.
 pub type ViewFn = fn(
@@ -19,6 +20,7 @@ pub type ViewFn = fn(
     children: Vec<ComponentSpecification>,
     id: ComponentId,
     window_context: &WindowContext,
+    tracked_changes: &mut TrackedChanges
 ) -> ComponentSpecification;
 
 /// A Component's update function.
@@ -32,6 +34,7 @@ pub type UpdateFn = fn(
     window_context: &mut WindowContext,
     target: Option<&dyn Element>,
     current_target: Option<&dyn Element>,
+    tracked_changes: &mut TrackedChanges
 );
 
 pub type ComponentId = u64;
@@ -141,6 +144,7 @@ pub struct Context<'a, C: Component> {
     event: Option<&'a mut Event>,
     target: Option<&'a dyn Element>,
     current_target: Option<&'a dyn Element>,
+    tracked_changes: &'a mut TrackedChanges,
 }
 
 impl<'a, ComponentType: Component> Context<'a, ComponentType> {
@@ -159,6 +163,7 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
         message: Option<&'a Message>,
         target: Option<&'a dyn Element>,
         current_target: Option<&'a dyn Element>,
+        tracked_changes: &'a mut TrackedChanges,
     ) -> Self {
         Context {
             component,
@@ -174,6 +179,7 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
             message,
             target,
             current_target,
+            tracked_changes
         }
     }
 
@@ -183,6 +189,9 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
     }
 
     pub fn state_mut(&mut self) -> &mut ComponentType {
+        // Track when state is written to, so that we can invalidate that view.
+        self.tracked_changes.writes.insert(self.id);
+
         self.component_mut.as_deref_mut().unwrap()
     }
 
@@ -194,11 +203,16 @@ impl<'a, ComponentType: Component> Context<'a, ComponentType> {
         }
     }
 
-    pub fn global_state(& self) -> &ComponentType::GlobalState {
+    pub fn global_state(&mut self) -> &ComponentType::GlobalState {
+        // Track when global state is read from, so that we can invalidate the view whenever global state is updated.
+        self.tracked_changes.global_reads.insert(self.id);
         self.global_state.unwrap().downcast_ref::<ComponentType::GlobalState>().expect("Global state type mismatch")
     }
 
     pub fn global_state_mut(&mut self) -> &mut ComponentType::GlobalState {
+        self.tracked_changes.global_reads.insert(self.id);
+        // We only need to track if anybody wrote to global state.
+        self.tracked_changes.wrote_to_global_state = true;
         self.global_state_mut
             .as_deref_mut()
             .expect("Global ")
@@ -254,6 +268,7 @@ pub fn dispatch_event<ComponentType: Component>(
     window_context: &mut WindowContext,
     target: Option<&dyn Element>,
     current_target: Option<&dyn Element>,
+    tracked_changes: &mut TrackedChanges
 ) {
     match message {
         Message::CraftMessage(craft_message) => match craft_message {
@@ -271,6 +286,7 @@ pub fn dispatch_event<ComponentType: Component>(
                             window_context,
                             target,
                             current_target,
+                            tracked_changes,
                             pointer_button_update,
                         );
                     }
@@ -305,6 +321,7 @@ pub fn dispatch_event<ComponentType: Component>(
                 None,
                 None,
                 None,
+                tracked_changes
             );
             let user_message: Option<&ComponentType::Message> = user_message.as_any().downcast_ref();
             if let Some(user_message) = user_message {
@@ -329,6 +346,7 @@ where
         children: Vec<ComponentSpecification>,
         id: ComponentId,
         window_context: &WindowContext,
+        tracked_changes: &mut TrackedChanges
     ) -> ComponentSpecification {
         let casted_state: &Self = state.downcast_ref::<Self>().unwrap();
 
@@ -346,6 +364,7 @@ where
             None,
             None,
             None,
+            tracked_changes
         );
         Self::view(&mut context)
     }
@@ -366,6 +385,7 @@ where
         window_context: &mut WindowContext,
         target: Option<&dyn Element>,
         current_target: Option<&dyn Element>,
+        tracked_changes: &mut TrackedChanges
     ) {
         dispatch_event::<Self>(
             state,
@@ -377,6 +397,7 @@ where
             window_context,
             target,
             current_target,
+            tracked_changes
         );
 
         let casted_state: &mut Self = state.downcast_mut::<Self>().unwrap();
@@ -395,6 +416,7 @@ where
             Some(message),
             target,
             current_target,
+            tracked_changes
         );
         Self::update(&mut context);
     }

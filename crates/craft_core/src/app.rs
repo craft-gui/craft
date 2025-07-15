@@ -600,6 +600,7 @@ impl App {
             &mut self.window_context,
             None,
             None,
+            &mut self.user_tree.tracked_changes
         );
 
         // TODO: Should we handle effects here too?
@@ -827,6 +828,7 @@ fn update_reactive_tree(
             scaling_factor,
             window_context,
             &mut reactive_tree.update_queue,
+            &mut reactive_tree.tracked_changes,
         )
     };
 

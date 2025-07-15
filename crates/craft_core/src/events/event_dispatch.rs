@@ -185,6 +185,7 @@ pub(crate) fn dispatch_event(
                             window_context,
                             target_param,
                             current_target_param,
+                            &mut reactive_tree.tracked_changes
                         );
 
                         if !event.prevent_defaults
@@ -324,6 +325,7 @@ pub(crate) fn dispatch_event(
                                 window_context,
                                 target_param,
                                 current_target_param,
+                                &mut reactive_tree.tracked_changes
                             );
                         }
                         effects.append(&mut event.effects);
@@ -379,6 +381,7 @@ pub(crate) fn dispatch_event(
                             window_context,
                             None,
                             None,
+                            &mut reactive_tree.tracked_changes
                         );
                         effects.append(&mut event.effects);
                         if event.future.is_some() {

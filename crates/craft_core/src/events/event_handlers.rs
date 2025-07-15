@@ -6,6 +6,7 @@ use crate::components::Event;
 use crate::elements::Element;
 use crate::events::Message;
 use crate::reactive::state_store::StateStoreItem;
+use crate::reactive::tracked_changes::TrackedChanges;
 use crate::{GlobalState, WindowContext};
 
 use ui_events::pointer::PointerButtonUpdate;
@@ -24,6 +25,7 @@ pub struct EventHandlers {
                     &mut WindowContext,
                     Option<&dyn Element>,
                     Option<&dyn Element>,
+                    &mut TrackedChanges,
                     &PointerButtonUpdate,
                 ) + Send
                 + Sync,
@@ -41,6 +43,7 @@ pub struct EventHandlers {
                     &mut WindowContext,
                     Option<&dyn Element>,
                     Option<&dyn Element>,
+                    &mut TrackedChanges,
                     &PointerButtonUpdate,
                 ) + Send
                 + Sync,
@@ -58,6 +61,7 @@ pub struct EventHandlers {
                     &mut WindowContext,
                     Option<&dyn Element>,
                     Option<&dyn Element>,
+                    &mut TrackedChanges,
                     &str,
                 ) + Send
                 + Sync,

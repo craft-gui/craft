@@ -113,6 +113,7 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
     writeln!(file, "use crate::{{GlobalState, WindowContext}};").unwrap();
     writeln!(file, "use crate::elements::Element;").unwrap();
     writeln!(file, "use crate::reactive::state_store::StateStoreItem;").unwrap();
+    writeln!(file, "use crate::reactive::tracked_changes::TrackedChanges;").unwrap();
     writeln!(file).unwrap();
 
 
@@ -141,7 +142,9 @@ fn generate_event_handler_struct(event_handlers: &[EventHandler]) {
         crate::components::component::ComponentId,
         &mut WindowContext,
         Option<&dyn Element>,
-        Option<&dyn Element>,", handler.name).unwrap();
+        Option<&dyn Element>,
+        &mut TrackedChanges,
+        ", handler.name).unwrap();
         for param in handler.params.iter() {
             if param.is_ref {
                 write!(file, "&").unwrap();
@@ -179,6 +182,7 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
     writeln!(file, "use crate::{{GlobalState, WindowContext}};").unwrap();
     writeln!(file, "use crate::elements::Element;").unwrap();
     writeln!(file, "use crate::reactive::state_store::StateStoreItem;").unwrap();
+    writeln!(file, "use crate::reactive::tracked_changes::TrackedChanges;").unwrap();
     writeln!(file).unwrap();
 
     let mut imports: HashSet<String> = HashSet::new();
@@ -235,7 +239,9 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
                   id: ComponentId,
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
-                  current_target: Option<&dyn Element>,", handler.name).unwrap();
+                  current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
+                  ", handler.name).unwrap();
             for param in &handler.params {
                 write!(file, "{}: ", param.name).unwrap();
                 if param.is_ref {
@@ -262,6 +268,7 @@ fn generate_element_impls(event_handlers: &[EventHandler]) {
                     Some(message),
                     target,
                     current_target,
+                    tracked_changes,
                 );").unwrap();
             writeln!(file, "                callback(&mut context, ").unwrap();
             for (param_index, param) in handler.params.iter().enumerate() {

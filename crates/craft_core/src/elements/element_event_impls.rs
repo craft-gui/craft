@@ -10,6 +10,7 @@ use crate::components::Props;
 use crate::elements::Element;
 use crate::events::Message;
 use crate::reactive::state_store::StateStoreItem;
+use crate::reactive::tracked_changes::TrackedChanges;
 use crate::{GlobalState, WindowContext};
 
 use crate::elements::Container;
@@ -32,6 +33,7 @@ impl Container {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -48,6 +50,7 @@ impl Container {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -74,6 +77,7 @@ impl TextInput {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -90,6 +94,7 @@ impl TextInput {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -116,6 +121,7 @@ impl Text {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -132,6 +138,7 @@ impl Text {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -158,6 +165,7 @@ impl Container {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -174,6 +182,7 @@ impl Container {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -200,6 +209,7 @@ impl TextInput {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -216,6 +226,7 @@ impl TextInput {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -242,6 +253,7 @@ impl Text {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &PointerButtonUpdate| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -258,6 +270,7 @@ impl Text {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
@@ -284,6 +297,7 @@ impl TextInput {
                   window_context: &mut WindowContext,
                   target: Option<&dyn Element>,
                   current_target: Option<&dyn Element>,
+                  tracked_changes: &mut TrackedChanges,
                   press: &str| {
                 if let Some(casted_state) = state.downcast_mut::<ComponentType>() {
                     let mut context = Context::new(
@@ -300,6 +314,7 @@ impl TextInput {
                         Some(message),
                         target,
                         current_target,
+                        tracked_changes,
                     );
                     callback(&mut context, press);
                 } else {
