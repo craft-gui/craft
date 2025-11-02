@@ -1,19 +1,21 @@
-use std::any::Any;
+use crate::text_renderer_data::TextData;
 use craft_primitives::geometry::Rectangle;
 use craft_primitives::Color;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::Shape;
 use peniko::{kurbo, BrushRef, Gradient};
+use std::any::Any;
+use std::cell::RefCell;
+use std::rc::Weak;
 use std::sync::Arc;
-use crate::text_renderer_data::TextRender;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum RenderCommand {
     DrawRect(Rectangle, Color),
     DrawRectOutline(Rectangle, Color),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
-    DrawText(u64, Rectangle, Option<TextScroll>, bool),
+    DrawText(Weak<RefCell<dyn TextData>>, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
     FillBezPath(kurbo::BezPath, Brush),
@@ -127,7 +129,7 @@ impl RenderList {
 
     pub fn draw_text(
         &mut self,
-        component: u64,
+        component: Weak<RefCell<dyn TextData>>,
         rectangle: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
@@ -247,7 +249,7 @@ pub trait Renderer: Any {
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
-        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
+        //get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     );
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);

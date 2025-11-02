@@ -75,6 +75,7 @@ impl RenderContext {
         let instance = Instance::new(&wgpu::InstanceDescriptor {
             backends,
             flags,
+            memory_budget_thresholds: Default::default(),
             backend_options,
         });
         Self {
@@ -164,7 +165,7 @@ impl RenderContext {
 
     /// Creates a compatible device handle id.
     async fn new_device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
-        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await?;
+        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await.ok()?;
         #[cfg(feature = "vello_hybrid_renderer_webgl")]
         let limits = Limits {
             max_color_attachments: 4,
@@ -182,8 +183,8 @@ impl RenderContext {
                     required_features: Features::empty(),
                     required_limits: limits,
                     memory_hints: MemoryHints::default(),
+                    trace: Default::default(),
                 },
-                None,
             )
             .await
             .ok()?;

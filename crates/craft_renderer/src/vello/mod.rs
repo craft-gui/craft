@@ -8,7 +8,7 @@ use crate::renderer::{RenderCommand, RenderList, Renderer, SortedCommands, TextS
 use crate::vello::tinyvg::draw_tiny_vg;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::ResourceManager;
-use peniko::BrushRef;
+use peniko::{BrushRef, ImageAlphaType};
 use std::sync::Arc;
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -171,6 +171,7 @@ fn new_instance() -> Instance {
     Instance::new(&wgpu::InstanceDescriptor {
         backends,
         flags,
+        memory_budget_thresholds: Default::default(),
         backend_options,
     })
 }
@@ -190,8 +191,8 @@ async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queu
                 required_features: features & maybe_features,
                 required_limits: limits,
                 memory_hints: MemoryHints::default(),
+                trace: Default::default(),
             },
-            None,
         )
         .await.expect("Failed to create device.");
 
@@ -264,7 +265,6 @@ impl Renderer for VelloRenderer {
         render_list: &mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
-        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
@@ -282,8 +282,15 @@ impl Renderer for VelloRenderer {
                         let image = &resource.image;
                         let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
-                        let vello_image =
-                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                        let vello_image = vello::peniko::ImageData {
+                            data: blob,
+                            format: peniko::ImageFormat::Rgba8,
+                            alpha_type: ImageAlphaType::Alpha,
+                            width: image.width(),
+                            height: image.height(),
+                        };
+
+                        let vello_image = vello::peniko::ImageBrush::new(vello_image);
 
                         let mut transform = Affine::IDENTITY;
                         transform =
@@ -302,7 +309,13 @@ impl Renderer for VelloRenderer {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    let text_render = get_text_renderer(*text_render).expect("Text renderer not found");
+                    let c = text_render.upgrade();
+                    if c.is_none() {
+                        return;
+                    }
+                    let c = c.unwrap();
+                    let c = c.borrow();
+                    let text_render = c.get_text_renderer().expect("Text render not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;

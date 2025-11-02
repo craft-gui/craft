@@ -13,27 +13,27 @@ vello_hybrid_renderer_webgl = ["wgpu/webgl"]
 
 [dependencies.vello]
 git = "https://github.com/linebender/vello.git"
-rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+rev = "459e0a7b1fa328d8b6adeea0c31a2069621a85d0"
 default-features = false
 features = ["wgpu"]
 optional = true
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello.git"
-rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+rev = "459e0a7b1fa328d8b6adeea0c31a2069621a85d0"
 optional = true
 features = ["multithreading"]
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello.git"
-rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+rev = "459e0a7b1fa328d8b6adeea0c31a2069621a85d0"
 default-features = false
 features = ["default"]
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello.git"
-rev = "b1e31b1c4a8a0a3af62827744b2db8150af765f9"
+rev = "459e0a7b1fa328d8b6adeea0c31a2069621a85d0"
 optional = true
 
 [dependencies.softbuffer]
@@ -41,9 +41,9 @@ version = "0.4.6"
 optional = true
 
 [dependencies.wgpu]
-version = "24.0.3"
+version = "26.0.1"
 default-features = false
-features = ["wgsl"]
+features = ["wgsl", "vulkan", "dx12"]
 optional = true
 
 [dependencies.peniko]

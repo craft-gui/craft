@@ -1,0 +1,21 @@
+[package]
+name = "counter_retained"
+version = "0.1.0"
+edition = "2024"
+default-run = "counter_retained"
+
+[[bin]]
+name = "counter_retained"
+path = "main.rs"
+
+[dependencies]
+util = { path = "../util" }
+
+[dependencies.craft_retained]
+path = "../../crates/craft_retained"
+default-features = false
+features = ["dev_tools", "accesskit", "system_fonts"]
+
+[dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+features = ["vello_renderer"]

@@ -4,11 +4,13 @@ resolver = "2"
 members = [
     "crates/craft",
     "crates/craft_core",
+    "crates/craft_retained",
     "crates/craft_dylib",
     "crates/craft_logger",
     "examples/util",
     "examples/request",
     "examples/counter",
+    "examples/counter_retained",
     "examples/text",
     "examples/tour",
     "examples/events",
@@ -36,13 +38,13 @@ tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19"}
 
 [workspace.dependencies.peniko]
-version = "0.4.0"
+version = "0.5.0"
 default-features = false
 features = ["std"]
 
 
 [workspace.dependencies.kurbo]
-version = "0.11.2"
+version = "0.12.0"
 default-features = false
 features = ["std"]
 
@@ -52,12 +54,12 @@ default-features = false
 features = []
 
 [workspace.dependencies.tokio]
-version = "1.45.1"
+version = "1.48.0"
 default-features = false
 features = ["sync", "time"]
 
 [workspace.dependencies.image]
-version = "0.25.6"
+version = "0.25.8"
 default-features = false
 features = []
 
@@ -75,6 +77,6 @@ features = ["std"]
 version = "1.0.1"
 
 [workspace.dependencies.winit]
-version = "0.30.11"
+version = "0.30.12"
 default-features = false
 features = []

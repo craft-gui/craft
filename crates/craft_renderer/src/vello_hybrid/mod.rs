@@ -9,7 +9,7 @@ use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use chrono::{DateTime, Utc};
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
-use peniko::ImageQuality;
+use peniko::{Blob, ImageAlphaType, ImageQuality};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -30,6 +30,7 @@ use crate::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::{Brush};
 use crate::text_renderer_data::{TextRender, TextRenderLine};
 use vello_hybrid::Scene;
+use crate::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -166,7 +167,6 @@ impl CraftRenderer for VelloHybridRenderer {
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
-        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
@@ -263,10 +263,8 @@ impl CraftRenderer for VelloHybridRenderer {
                         scene.set_transform(transform);
 
                         scene.set_paint(PaintType::Image(vello_common::paint::Image {
-                            source: ImageSource::OpaqueId(image_id),
-                            x_extend: peniko::Extend::default(),
-                            y_extend: peniko::Extend::default(),
-                            quality: ImageQuality::High,
+                            image: ImageSource::OpaqueId(image_id),
+                            sampler: Default::default(),
                         }));
 
                         scene.fill_rect(&kurbo::Rect::new(
@@ -284,7 +282,13 @@ impl CraftRenderer for VelloHybridRenderer {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    let text_render = get_text_renderer(*text_render).expect("Text render not found");
+                    let c = text_render.upgrade();
+                    if c.is_none() {
+                        return;
+                    }
+                    let c = c.unwrap();
+                    let c = c.borrow();
+                    let text_render = c.get_text_renderer().expect("Text render not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;

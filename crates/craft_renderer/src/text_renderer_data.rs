@@ -28,7 +28,7 @@ pub struct TextRenderItem {
     pub glyph_transform: Option<Affine>,
     pub font_size: f32,
     pub glyphs: Vec<TextRenderGlyph>,
-    pub font: peniko::Font,
+    pub font: peniko::FontData,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -42,7 +42,12 @@ pub struct TextRenderItemLine {
 
 #[derive(Clone, Copy, Debug)]
 pub struct TextRenderGlyph {
-    pub id: u16,
+    pub id: u32,
     pub x: f32,
     pub y: f32,
+}
+
+pub trait TextData {
+    fn get_text_renderer<'a>(&'a self) -> Option<&'a TextRender>;
+
 }

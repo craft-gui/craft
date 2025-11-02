@@ -10,7 +10,7 @@ use craft_resource_manager::resource::Resource;
 use craft_resource_manager::ResourceManager;
 use peniko::kurbo::Affine;
 use peniko::kurbo::Shape;
-use peniko::{kurbo, Blob, Color, Fill};
+use peniko::{kurbo, Blob, Color, Fill, ImageAlphaType, ImageData, ImageSampler};
 use softbuffer::Buffer;
 use std::num::NonZero;
 use std::num::NonZeroU32;
@@ -19,7 +19,7 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
-use vello_common::paint::PaintType;
+use vello_common::paint::{ImageSource, PaintType};
 use vello_cpu::{Pixmap, RenderContext, RenderMode};
 use winit::window::Window;
 use crate::text_renderer_data::{TextRender, TextRenderLine};
@@ -133,7 +133,7 @@ impl Renderer for VelloCpuRenderer {
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
-        get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
+        //get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
         vello_draw_rect(&mut self.render_context, Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32), Color::WHITE);
         
@@ -160,8 +160,13 @@ impl Renderer for VelloCpuRenderer {
                         let image = &resource.image;
                         let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
-                        let vello_image =
-                            peniko::Image::new(blob, peniko::ImageFormat::Rgba8, image.width(), image.height());
+                        let id = vello_common::peniko::ImageData {
+                            data: blob,
+                            format: peniko::ImageFormat::Rgba8,
+                            alpha_type: ImageAlphaType::Alpha,
+                            width: image.width(),
+                            height: image.height(),
+                        };
 
                         let mut transform = Affine::IDENTITY;
                         transform =
@@ -171,9 +176,16 @@ impl Renderer for VelloCpuRenderer {
                             rectangle.height as f64 / image.height() as f64,
                         );
                         self.render_context.set_transform(transform);
-                        self.render_context.set_paint(PaintType::Image(
-                            vello_common::paint::Image::from_peniko_image(&vello_image),
-                        ));
+
+                        let is = vello_common::paint::ImageSource::from_peniko_image_data(&id);
+
+                        let id = vello_common::paint::Image {
+                            image: is,
+                            sampler: Default::default(),
+                        };
+
+                        //let pixmap = vello_common::pixmap::Pixmap::from_parts(image.pixels(), 100, 100);
+                        self.render_context.set_paint(PaintType::Image(id));
                         self.render_context.fill_rect(&kurbo::Rect::new(
                             0.0,
                             0.0,
@@ -189,7 +201,13 @@ impl Renderer for VelloCpuRenderer {
                     let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    let text_render = get_text_renderer(*text_render).expect("Text render not found");
+                    let c = text_render.upgrade();
+                    if c.is_none() {
+                        return;
+                    }
+                    let c = c.unwrap();
+                    let c = c.borrow();
+                    let text_render = c.get_text_renderer().expect("Text render not found");
 
                     let cull_and_process = |process_line: &mut dyn FnMut(&TextRenderLine)| {
                         let mut skip_remaining_lines = false;
@@ -324,7 +342,7 @@ impl Renderer for VelloCpuRenderer {
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
         self.render_context.flush();
-        self.render_context.render_to_pixmap(&mut self.pixmap, RenderMode::OptimizeQuality);
+        self.render_context.render_to_pixmap(&mut self.pixmap);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
         self.render_context.reset();

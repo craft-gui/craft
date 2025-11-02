@@ -29,8 +29,8 @@ impl Renderer for BlankRenderer {
         _render_list: &mut RenderList,
         _resource_manager: Arc<ResourceManager>,
         _window: Rectangle,
-        _get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
+
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}
