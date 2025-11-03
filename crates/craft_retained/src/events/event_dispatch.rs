@@ -187,7 +187,7 @@ pub fn dispatch_event(
 
                 for current_target in targets.iter() {
                     let mut res = Event::new();
-                    current_target.borrow_mut().on_scroll_event(message, text_context.as_mut().unwrap(), false, &mut res, Some(target.clone()));
+                    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), false, &mut res, Some(target.clone()));
                     if !propagate {
                         break;
                     }

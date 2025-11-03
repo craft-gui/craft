@@ -20,6 +20,7 @@ use crate::elements::scroll_state::ScrollState;
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerEventHandler, PointerUpdateHandler};
 //use crate::events::PointerEventHandler;
 
+/// Stores common data to most elements.
 #[derive(Clone)]
 pub struct ElementData {
     pub current_state: ElementState,
@@ -42,7 +43,7 @@ pub struct ElementData {
     pub focused_style: Option<Style>,
 
     /// The children of the element.
-    pub children: SmallVec<[Rc<RefCell<dyn Element>>; 4]>,
+    pub children: Vec<Rc<RefCell<dyn Element>>>,
 
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,

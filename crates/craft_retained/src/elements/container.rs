@@ -1,4 +1,3 @@
-use crate::elements::element::{resolve_clip_for_scrollable, Element};
 use crate::elements::element_data::ElementData;
 use crate::elements::scroll_state::ScrollState;
 use crate::layout::layout_context::LayoutContext;
@@ -11,6 +10,9 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
+use crate::elements::core::ElementData as ElementDataTrait;
+use crate::elements::Element;
 use crate::events::{CraftMessage, Event};
 
 pub struct Container {
@@ -29,7 +31,7 @@ impl Container {
     }
 }
 
-impl Element for Container {
+impl crate::elements::core::ElementData for Container {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -38,36 +40,17 @@ impl Element for Container {
         &mut self.element_data
     }
 
-    fn children<'a>(&self) -> &[Rc<RefCell<dyn Element>>] {
-        self.element_data.children.as_slice()
+    fn push(&mut self, child: Rc<RefCell<dyn Element>>) {
+        let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
+        child.borrow_mut().element_data_mut().parent = Some(me);
+        self.element_data.children.push(child);
     }
+}
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        pointer: Option<Point>,
-        window: Option<Arc<Window>>,
-        scale_factor: f64,
-    ) {
+impl Element for Container {
+}
 
-        let current_style = self.element_data.current_style();
-
-        if !current_style.visible() {
-            return;
-        }
-
-        // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, scale_factor);
-        self.maybe_start_layer(renderer, scale_factor);
-        for child in self.children() {
-            child.borrow_mut().draw(renderer, text_context, pointer, window.clone(), scale_factor);
-        }
-        self.maybe_end_layer(renderer);
-
-        self.draw_scrollbar(renderer, scale_factor);
-    }
-
+impl ElementInternals for Container {
     fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) -> Option<NodeId> {
         self.element_data.layout_item.child_nodes.clear();
 
@@ -81,11 +64,6 @@ impl Element for Container {
         self.element_data.layout_item.build_tree(taffy_tree, current_style)
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn Element>>) {
-        let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child);
-    }
     fn finalize_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -129,13 +107,39 @@ impl Element for Container {
         }
     }
 
-    fn on_scroll_event(
+    fn draw(
+        &mut self,
+        renderer: &mut RenderList,
+        text_context: &mut TextContext,
+        pointer: Option<Point>,
+        window: Option<Arc<Window>>,
+        scale_factor: f64,
+    ) {
+
+        let current_style = self.element_data.current_style();
+
+        if !current_style.visible() {
+            return;
+        }
+
+        // We draw the borders before we start any layers, so that we don't clip the borders.
+        self.draw_borders(renderer, scale_factor);
+        self.maybe_start_layer(renderer, scale_factor);
+        for child in self.children() {
+            child.borrow_mut().draw(renderer, text_context, pointer, window.clone(), scale_factor);
+        }
+        self.maybe_end_layer(renderer);
+
+        self.draw_scrollbar(renderer, scale_factor);
+    }
+
+    fn on_event(
         &mut self,
         message: &CraftMessage,
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
-        target: Option<Rc<RefCell<dyn Element>>>,
+        target: Option<Rc<RefCell<dyn ElementInternals>>>,
         //_current_target: Option<&dyn Element>,
     ) {
         //self.on_style_event(message, should_style, event);

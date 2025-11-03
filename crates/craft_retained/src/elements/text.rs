@@ -1,4 +1,3 @@
-use crate::elements::element::{Element};
 use crate::elements::element_data::{ElementData, DUMMY_DEVICE_ID};
 use crate::events::{CraftMessage, Event};
 use crate::generate_component_methods_no_children;
@@ -37,6 +36,9 @@ use craft_primitives::ColorBrush;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::PointerButton;
 use craft_renderer::text_renderer_data::TextData;
+use crate::elements::{Container, Element};
+use crate::elements::core::ElementInternals;
+use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::element_id::create_unique_element_id;
 
 // A stateful element that shows text.
@@ -141,7 +143,7 @@ impl Text {
     }
 }
 
-impl Element for Text {
+impl crate::elements::core::ElementData for Text {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -149,6 +151,13 @@ impl Element for Text {
     fn element_data_mut(&mut self) -> &mut ElementData {
         &mut self.element_data
     }
+}
+
+impl crate::elements::Element for Text {
+
+}
+
+impl ElementInternals for Text {
 
     fn draw(
         &mut self,
@@ -286,13 +295,13 @@ impl Element for Text {
         });
     }
 
-    fn on_scroll_event(
+    fn on_event(
         &mut self,
         message: &CraftMessage,
         _text_context: &mut TextContext,
         should_style: bool,
         event: &mut Event,
-        target: Option<Rc<RefCell<dyn Element>>>,
+        target: Option<Rc<RefCell<dyn ElementInternals>>>,
         //_current_target: Option<&dyn Element>,
     ) {
         //self.on_style_event(message, should_style, event);
