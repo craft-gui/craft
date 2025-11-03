@@ -10,6 +10,7 @@ pub mod style;
 #[cfg(test)]
 mod tests;
 pub mod text;
+pub mod document;
 
 mod app;
 pub use craft_primitives::geometry as geometry;

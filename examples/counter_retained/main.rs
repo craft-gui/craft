@@ -65,7 +65,7 @@ fn main() {
     //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
 
     root.borrow_mut().push(body.clone());
-    //body.borrow_mut().push(button.clone());
+    body.borrow_mut().push(button.clone());
 
     body.borrow_mut().element_data_mut().current_style_mut().set_background(Color::from_rgb8(0, 255, 0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_width(Unit::Px(100.0));
@@ -76,7 +76,7 @@ fn main() {
 
     let count = Rc::new(RefCell::new(Counter::default()));
 
-    //body.borrow_mut().push(text.clone());
+    body.borrow_mut().push(text.clone());
 
     let text2 = text.clone();
 
@@ -100,13 +100,18 @@ fn main() {
     scroll.borrow_mut().style_mut().set_width(Unit::Px(200.0));
     scroll.borrow_mut().style_mut().set_height(Unit::Px(200.0));
 
-    let content = Container::new();
+    let content_1 = Container::new();
+    content_1.borrow_mut().style_mut().set_background(Color::from_rgb8(0, 255, 255));
+    content_1.borrow_mut().style_mut().set_width(Unit::Px(50.0));
+    content_1.borrow_mut().style_mut().set_height(Unit::Px(500.0));
 
-    content.borrow_mut().style_mut().set_background(Color::from_rgb8(0, 255, 255));
-    content.borrow_mut().style_mut().set_width(Unit::Px(50.0));
-    content.borrow_mut().style_mut().set_height(Unit::Px(500.0));
+    let content_2 = Container::new();
+    content_2.borrow_mut().style_mut().set_background(Color::from_rgb8(255, 0, 255));
+    content_2.borrow_mut().style_mut().set_width(Unit::Px(50.0));
+    content_2.borrow_mut().style_mut().set_height(Unit::Px(200.0));
 
-    scroll.borrow_mut().push(content);
+    scroll.borrow_mut().push(content_1);
+    scroll.borrow_mut().push(content_2);
 
     body.borrow_mut().push(scroll);
 

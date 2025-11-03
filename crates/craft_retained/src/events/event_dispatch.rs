@@ -10,7 +10,9 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
+use ui_events::pointer::PointerId;
 use winit::event::Ime;
+use crate::app::DOCUMENTS;
 
 #[allow(clippy::too_many_arguments)]
 pub fn dispatch_event(
@@ -98,15 +100,20 @@ pub fn dispatch_event(
                             target = Some(Rc::clone(&node));
                         }
 
-                        /*// Unless another element has pointer capture.
-                        if let Some(element_id) = reactive_tree.pointer_captures.get(&DUMMY_DEVICE_ID)
-                            && *element_id == element.component_id()
+                        let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
+                            let key = &PointerId::new(1).unwrap();
+                            docs.get_current_document().pointer_captures.get(key).map(|id| *id)
+                        });
+
+                        // Unless another element has pointer capture.
+                        if let Some(element_id) = pointer_capture_element_id
+                            && element_id == node.borrow().id()
                             && (is_pointer_event || is_ime_event)
                         {
                             target = Some(Rc::clone(&node));
                             break;
                         }
-*/
+
                         /*if let Some(focus_id) = reactive_tree.focus
                             && is_keyboard_event
                             && element.component_id() == focus_id

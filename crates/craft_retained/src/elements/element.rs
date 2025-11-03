@@ -4,6 +4,8 @@ use craft_primitives::geometry::ElementBox;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use kurbo::Point;
+use ui_events::pointer::PointerId;
+use crate::app::DOCUMENTS;
 use crate::elements::core::ElementData;
 
 /// The element trait for end-users.
@@ -54,6 +56,20 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals {
         } else {
             rect.contains(&point)
         }
+    }
+
+    fn set_pointer_capture(&self, pointer_id: PointerId) {
+        DOCUMENTS.with_borrow_mut(|docs| {
+            let current_doc = docs.get_current_document();
+            current_doc.pointer_captures.insert(pointer_id, self.id());
+        });
+    }
+
+    fn release_pointer_capture(&self, pointer_id: PointerId) {
+        DOCUMENTS.with_borrow_mut(|docs| {
+            let current_doc = docs.get_current_document();
+            let _ = current_doc.pointer_captures.remove(&pointer_id);
+        });
     }
 
 }

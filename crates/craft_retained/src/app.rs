@@ -1,4 +1,5 @@
 use crate::layout::layout_context::measure_content;
+use std::cell::Cell;
 use std::cell::RefCell;
 use crate::events::internal::{InternalMessage};
 use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
@@ -40,15 +41,16 @@ use craft_runtime::Sender;
 use std::time::Duration;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
+use ui_events::pointer::{PointerButtonEvent, PointerId, PointerScrollEvent, PointerUpdate};
 //use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::Window;
+use winit::window::{Window, WindowId};
 use crate::animations::animation::AnimationFlags;
+use crate::document::DocumentManager;
 use crate::elements::Element;
 use crate::layout::layout_context::LayoutContext;
 
@@ -84,6 +86,14 @@ macro_rules! get_tree {
             }
         }
     }};
+}
+
+
+thread_local! {
+    /// The most recently recorded window id. This is set every time a windows event occurs.
+    pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = Cell::new(None);
+    /// For internal use within elements.
+    pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
 }
 
 pub struct App {

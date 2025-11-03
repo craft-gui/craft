@@ -1,4 +1,4 @@
-use crate::elements::element_data::{ElementData, DUMMY_DEVICE_ID};
+use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::generate_component_methods_no_children;
 use craft_primitives::geometry::{Point, Rectangle};
@@ -34,7 +34,7 @@ use web_time as time;
 use winit::window::Window;
 use craft_primitives::ColorBrush;
 use smol_str::{SmolStr, ToSmolStr};
-use ui_events::pointer::PointerButton;
+use ui_events::pointer::{PointerButton, PointerId};
 use craft_renderer::text_renderer_data::TextData;
 use crate::elements::{Container, Element};
 use crate::elements::core::ElementInternals;
@@ -344,7 +344,7 @@ impl ElementInternals for Text {
                             _ => state.move_to_point(cursor_pos),
                         }
                         if click_count == 1 {
-                            self.element_data.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                            self.set_pointer_capture(PointerId::new(1).unwrap());
                         }
                         event.prevent_defaults();
                     }
@@ -353,7 +353,7 @@ impl ElementInternals for Text {
                     if pointer_button.button.map(|button| button == PointerButton::Primary).unwrap_or_default() {
                         state.pointer_down = false;
                         state.cursor_reset();
-                        self.element_data.pointer_capture.insert(DUMMY_DEVICE_ID, false);
+                        self.release_pointer_capture(PointerId::new(1).unwrap());
                         event.prevent_defaults();
                     }
                 }

@@ -27,12 +27,13 @@ use craft_runtime::Receiver;
 use craft_runtime::Sender;
 use craft_runtime::CraftRuntimeHandle;
 
-use crate::app::App;
+use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS};
 use crate::events::EventDispatchType;
 use std::sync::Arc;
-use ui_events::pointer::PointerEvent;
+use ui_events::pointer::{PointerEvent};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
 use winit::dpi::LogicalSize;
+use crate::document::Document;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
@@ -125,9 +126,17 @@ impl ApplicationHandler for CraftWinitState {
         }
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
         let craft_state = &mut self.craft_state;
-        
+
+        CURRENT_WINDOW_ID.set(Some(window_id));
+        // Create a new document if there is none for the current window.
+        DOCUMENTS.with_borrow_mut(|docs| {
+            if docs.get_document_by_window_id(window_id).is_none() {
+                docs.add_document(window_id, Document::new());
+            }
+        });
+
         #[cfg(feature = "accesskit")]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
             accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);

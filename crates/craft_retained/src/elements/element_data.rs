@@ -12,9 +12,10 @@ use std::rc::{Rc, Weak};
 use kurbo::Point;
 use taffy::Overflow;
 use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonEvent, PointerType, PointerUpdate};
+use ui_events::pointer::{PointerButtonEvent, PointerId, PointerType, PointerUpdate};
 use ui_events::ScrollDelta;
 use craft_primitives::geometry::Rectangle;
+use crate::app::DOCUMENTS;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scroll_state::ScrollState;
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerEventHandler, PointerUpdateHandler};
@@ -52,9 +53,6 @@ pub struct ElementData {
 
     pub(crate) hovered: bool,
     pub(crate) active: bool,
-    /// Whether this element should receive pointer events regardless of hit testing.
-    /// Useful for scroll thumbs.
-    pub(crate) pointer_capture: HashMap<i64, bool>,
     pub(crate) focused: bool,
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
@@ -169,8 +167,12 @@ impl ElementData {
                             } else if self.layout_item.computed_scroll_thumb.contains(&pointer_button.state.logical_point()) {
                                 state.scroll_click =
                                     Some(Point::new(pointer_button.state.logical_point().x, pointer_button.state.logical_point().y));
+                                
                                 // FIXME: Turn pointer capture on with the correct device id.
-                                self.pointer_capture.insert(DUMMY_DEVICE_ID, true);
+                                DOCUMENTS.with_borrow_mut(|docs| {
+                                    let current_doc = docs.get_current_document();
+                                    current_doc.pointer_captures.insert(PointerId::new(1).unwrap(), self.internal_id);
+                                });
 
                                 event.prevent_propagate();
                                 event.prevent_defaults();
@@ -192,7 +194,10 @@ impl ElementData {
                         if state.scroll_click.is_some() {
                             state.scroll_click = None;
                             // FIXME: Turn pointer capture off with the correct device id.
-                            self.pointer_capture.insert(DUMMY_DEVICE_ID, false);
+                            DOCUMENTS.with_borrow_mut(|docs| {
+                                let current_doc = docs.get_current_document();
+                                let _ =current_doc.pointer_captures.remove(&PointerId::new(1).unwrap());
+                            });
                             event.prevent_propagate();
                             event.prevent_defaults();
                         }
@@ -243,7 +248,6 @@ impl Default for ElementData {
             internal_id: create_unique_element_id(),
             hovered: false,
             active: false,
-            pointer_capture: Default::default(),
             focused: false,
             animations: None,
             parent: None,
