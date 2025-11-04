@@ -1,5 +1,10 @@
+//! Stores one or more elements.
+
+use crate::elements::core::ElementData as ElementDataTrait;
+use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
-use crate::elements::scroll_state::ScrollState;
+use crate::elements::Element;
+use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::{Rectangle, Size};
@@ -10,11 +15,10 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
-use crate::elements::core::ElementData as ElementDataTrait;
-use crate::elements::Element;
-use crate::events::{CraftMessage, Event};
 
+/// Stores one or more elements.
+///
+/// If overflow is set to scroll, it will become scrollable.
 pub struct Container {
     element_data: ElementData,
     me: Option<Weak<RefCell<Container>>>,
@@ -47,8 +51,7 @@ impl crate::elements::core::ElementData for Container {
     }
 }
 
-impl Element for Container {
-}
+impl Element for Container {}
 
 impl ElementInternals for Container {
     fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) -> Option<NodeId> {
@@ -75,18 +78,15 @@ impl ElementInternals for Container {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
     ) {
-        let result = taffy_tree.layout(root_node).unwrap();
-        self.resolve_box(position, transform, result, z_index);
+        let layout = taffy_tree.layout(root_node).unwrap();
+        self.resolve_box(position, transform, layout, z_index);
         self.finalize_borders();
 
-        self.element_data.layout_item.scrollbar_size =
-            Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.layout_item.computed_scrollbar_size =
-            Size::new(result.scroll_width(), result.scroll_height());
-        self.element_data.finalize_scroll();
-        let scroll_y = self.element_data.scroll_state.as_ref().unwrap().scroll_y;
+        self.element_data.finalize_scroll(layout);
         self.resolve_clip(clip_bounds);
-        let child_transform = Affine::translate((0.0, -scroll_y as f64));
+
+        let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
+        let child_transform = Affine::translate((0.0, -scroll_y));
 
         for child in self.element_data.children.iter_mut() {
             let taffy_child_node_id = child.borrow().element_data().layout_item.taffy_node_id;
@@ -115,7 +115,6 @@ impl ElementInternals for Container {
         window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
-
         let current_style = self.element_data.current_style();
 
         if !current_style.visible() {
@@ -151,5 +150,4 @@ impl ElementInternals for Container {
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
         resolve_clip_for_scrollable(self, clip_bounds);
     }
-
 }
