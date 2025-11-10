@@ -59,16 +59,37 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals {
     }
 
     fn set_pointer_capture(&self, pointer_id: PointerId) {
+        // https://w3c.github.io/pointerevents/#setting-pointer-capture
+
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
-            current_doc.pointer_captures.insert(pointer_id, self.id());
+
+            // 1. If the pointerId provided as the method's argument does not match any of the active pointers, then throw a "NotFoundError" DOMException.
+            // TODO (POINTER CAPTURE)
+            // 2. Let the pointer be the active pointer specified by the given pointerId.
+            // TODO (POINTER CAPTURE)
+            // 3. If the element is not connected [DOM], throw an "InvalidStateError" DOMException.
+            // TODO (POINTER CAPTURE)
+            // 4. If this method is invoked while the element's node document [DOM] has a locked element ([PointerLock] pointerLockElement), throw an "InvalidStateError" DOMException.
+            // TODO (POINTER CAPTURE)
+            // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
+            // TODO (POINTER CAPTURE)
+            // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
+            current_doc.pending_pointer_captures.insert(pointer_id, self.id());
         });
     }
 
     fn release_pointer_capture(&self, pointer_id: PointerId) {
+        // https://w3c.github.io/pointerevents/#releasing-pointer-capture
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
-            let _ = current_doc.pointer_captures.remove(&pointer_id);
+
+            // 1. If the pointerId provided as the method's argument does not match any of the active pointers and these steps are not being invoked as a result of the implicit release of pointer capture, then throw a "NotFoundError" DOMException.
+            // TODO (POINTER CAPTURE)
+            // 2. If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.
+            // TODO (POINTER CAPTURE)
+            // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
+            let _ = current_doc.pending_pointer_captures.remove(&pointer_id);
         });
     }
 

@@ -171,7 +171,7 @@ impl ElementData {
                                 // FIXME: Turn pointer capture on with the correct device id.
                                 DOCUMENTS.with_borrow_mut(|docs| {
                                     let current_doc = docs.get_current_document();
-                                    current_doc.pointer_captures.insert(PointerId::new(1).unwrap(), self.internal_id);
+                                    current_doc.pending_pointer_captures.insert(PointerId::new(1).unwrap(), self.internal_id);
                                 });
 
                                 event.prevent_propagate();
@@ -196,7 +196,7 @@ impl ElementData {
                             // FIXME: Turn pointer capture off with the correct device id.
                             DOCUMENTS.with_borrow_mut(|docs| {
                                 let current_doc = docs.get_current_document();
-                                let _ =current_doc.pointer_captures.remove(&PointerId::new(1).unwrap());
+                                let _ =current_doc.pending_pointer_captures.remove(&PointerId::new(1).unwrap());
                             });
                             event.prevent_propagate();
                             event.prevent_defaults();

@@ -102,7 +102,7 @@ pub fn dispatch_event(
 
                         let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
                             let key = &PointerId::new(1).unwrap();
-                            docs.get_current_document().pointer_captures.get(key).map(|id| *id)
+                            docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
                         });
 
                         // Unless another element has pointer capture.
