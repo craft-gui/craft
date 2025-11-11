@@ -42,6 +42,8 @@ pub enum EventDispatchType {
 
 #[derive(Clone)]
 pub enum CraftMessage {
+    GotPointerCapture(),
+    LostPointerCapture(),
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
     KeyboardInputEvent(KeyboardEvent),
