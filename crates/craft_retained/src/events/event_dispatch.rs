@@ -54,6 +54,7 @@ pub fn dispatch_event(
             }
         }
 
+        let is_pointer_up_event = matches!(message, CraftMessage::PointerButtonUp(_));
         let is_pointer_event = matches!(
             message,
             CraftMessage::PointerMovedEvent(_)
@@ -91,27 +92,33 @@ pub fn dispatch_event(
                 let mut target: Option<Rc<RefCell<dyn Element>>> = None;
                 let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
 
-                for node in nodes {
+                // 9.4 Implicit pointer capture
+                // https://w3c.github.io/pointerevents/#implicit-pointer-capture
+                //
+                let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
+                    let key = &PointerId::new(1).unwrap();
+                    docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
+                });
+
+                // Skip hit-testing if pointer capture is active.
+                if let Some(pointer_capture_element_id) = pointer_capture_element_id && (is_pointer_event || is_ime_event) {
+                    for node in &nodes {
+                        if node.borrow().id() == pointer_capture_element_id {
+                            target = Some(Rc::clone(&node));
+                            break;
+                        }
+                    }
+                }
+
+                // Only find the target if we didn't have a valid pointer capture element in the tree.
+                if target.is_none() {
+                    for node in nodes {
                         let should_pass_hit_test =
                             mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
 
                         // The first element to pass the hit test should be the target.
                         if should_pass_hit_test && target.is_none() {
                             target = Some(Rc::clone(&node));
-                        }
-
-                        let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
-                            let key = &PointerId::new(1).unwrap();
-                            docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
-                        });
-
-                        // Unless another element has pointer capture.
-                        if let Some(element_id) = pointer_capture_element_id
-                            && element_id == node.borrow().id()
-                            && (is_pointer_event || is_ime_event)
-                        {
-                            target = Some(Rc::clone(&node));
-                            break;
                         }
 
                         /*if let Some(focus_id) = reactive_tree.focus
@@ -121,10 +128,13 @@ pub fn dispatch_event(
                             target = Some(Rc::clone(&node));
                             break;
                         }*/
+                    }
                 }
+
                 if target.is_none() {
                     return;
                 }
+
                 let target = target.unwrap();
 
                 let mut current_target = Some(Rc::clone(&target));
@@ -199,6 +209,58 @@ pub fn dispatch_event(
                         break;
                     }
                 }
+
+                let mut processing_pending_pointer_capture =  || {
+                    // 4.1.3.2 Process pending pointer capture
+                    DOCUMENTS.with_borrow_mut(|docs| {
+                        let key = &PointerId::new(1).unwrap();
+
+                        let current_doc = docs.get_current_document();
+                        let pointer_capture_val = current_doc.pointer_captures.get(key);
+                        let pending_pointer_capture_val = current_doc.pending_pointer_captures.get(key);
+
+                        // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
+                        // then fire a pointer event named lostpointercapture at the pointer capture target override node.
+                        if let Some(pointer_capture_val) = pointer_capture_val && Some(pointer_capture_val) != pending_pointer_capture_val {
+                            // TODO: Fire lostpointercapture
+                            //dispatch_event(message, dispatch_type.clone(), _resource_manager, mouse_position, Rc::clone(&root), text_context, window_context, is_style);
+                        }
+
+                        // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
+                        // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
+                        if let Some(pending_pointer_capture_val) = pending_pointer_capture_val && Some(pending_pointer_capture_val) != pointer_capture_val {
+                            // TODO: Fire gotpointercapture
+                            //dispatch_event(message, dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
+                        }
+
+                        // 3. Set the pointer capture target override to the pending pointer capture target override, if set.
+                        // Otherwise, clear the pointer capture target override.
+                        if let Some(pending_pointer_capture_val) = pending_pointer_capture_val {
+                            current_doc.pointer_captures.insert(*key, *pending_pointer_capture_val);
+                        } else {
+                            let _ = current_doc.pointer_captures.remove(key);
+                        }
+
+
+                    });
+                };
+
+
+                // 9.5 Implicit release of pointer capture
+                // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
+                if is_pointer_up_event /* || is_pointer_canceled */ {
+                    // Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the pending pointer capture target override
+                    // for the pointerId of the pointerup or pointercancel event that was just dispatched
+                    DOCUMENTS.with_borrow_mut(|docs| {
+                        let key = &PointerId::new(1).unwrap();
+                        let _ = docs.get_current_document().pending_pointer_captures.remove(key);
+                    });
+
+                    processing_pending_pointer_capture();
+                } else if is_pointer_event {
+                    processing_pending_pointer_capture();
+                }
+
 
                /* for element_state in reactive_tree.element_state.storage.values_mut() {
                     if let Message::CraftMessage(message) = &message {

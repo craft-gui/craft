@@ -59,6 +59,7 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals {
     }
 
     fn set_pointer_capture(&self, pointer_id: PointerId) {
+        // 9.2 Setting pointer capture
         // https://w3c.github.io/pointerevents/#setting-pointer-capture
 
         DOCUMENTS.with_borrow_mut(|docs| {
@@ -80,6 +81,7 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals {
     }
 
     fn release_pointer_capture(&self, pointer_id: PointerId) {
+        // 9.3 Releasing pointer capture
         // https://w3c.github.io/pointerevents/#releasing-pointer-capture
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
