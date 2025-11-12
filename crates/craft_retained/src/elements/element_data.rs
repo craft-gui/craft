@@ -1,5 +1,4 @@
 use crate::animations::animation::ActiveAnimation;
-use crate::app::DOCUMENTS;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
@@ -132,8 +131,12 @@ impl ElementData {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn on_event(&mut self, message: &CraftMessage, event: &mut Event) {
+    pub(crate) fn on_event(&mut self, me: Weak<RefCell<dyn Element>>, message: &CraftMessage, event: &mut Event) {
+        // HACK: We need to be able to access Element trait methods here.
+        let me = unsafe { (*me.as_ptr()).as_ptr() };
+
         if self.is_scrollable() {
+
             if let Some(state) = &mut self.scroll_state {
                 match message {
                     CraftMessage::PointerScroll(mouse_wheel) => {
@@ -185,10 +188,9 @@ impl ElementData {
                                 ));
 
                                 // FIXME: Turn pointer capture on with the correct device id.
-                                DOCUMENTS.with_borrow_mut(|docs| {
-                                    let current_doc = docs.get_current_document();
-                                    current_doc.pending_pointer_captures.insert(PointerId::new(1).unwrap(), self.internal_id);
-                                });
+                                unsafe {
+                                    (*me).set_pointer_capture(PointerId::new(1).unwrap());
+                                };
 
                                 event.prevent_propagate();
                                 event.prevent_defaults();
@@ -214,10 +216,9 @@ impl ElementData {
                         if state.scroll_click.is_some() {
                             state.scroll_click = None;
                             // FIXME: Turn pointer capture off with the correct device id.
-                            DOCUMENTS.with_borrow_mut(|docs| {
-                                let current_doc = docs.get_current_document();
-                                let _ = current_doc.pending_pointer_captures.remove(&PointerId::new(1).unwrap());
-                            });
+                            unsafe {
+                                (*me).release_pointer_capture(PointerId::new(1).unwrap());
+                            };
                             event.prevent_propagate();
                             event.prevent_defaults();
                         }

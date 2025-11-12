@@ -144,7 +144,7 @@ impl ElementInternals for Container {
         //self.on_style_event(message, should_style, event);
         //self.maybe_unset_focus(message, event, target);
 
-        self.element_data.on_event(message, event);
+        self.element_data.on_event(self.me.clone().unwrap(), message, event);
     }
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
