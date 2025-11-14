@@ -11,7 +11,7 @@ use crate::text::text_context::TextContext;
 use crate::WindowContext;
 
 /// Returns the currently pointer captured element or None.
-pub fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>, message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
+pub(super) fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>, message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
     // 9.4 Implicit pointer capture
     // https://w3c.github.io/pointerevents/#implicit-pointer-capture
     //
