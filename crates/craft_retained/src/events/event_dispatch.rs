@@ -13,36 +13,9 @@ use std::sync::Arc;
 use ui_events::pointer::PointerId;
 use winit::event::Ime;
 use crate::app::DOCUMENTS;
-use crate::events::pointer_capture_dispatch::processing_pending_pointer_capture;
+use crate::events::pointer_capture_dispatch::{find_pointer_capture_target, processing_pending_pointer_capture};
 
-pub fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>, message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
-    // 9.4 Implicit pointer capture
-    // https://w3c.github.io/pointerevents/#implicit-pointer-capture
-    //
-    let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
-        let key = &PointerId::new(1).unwrap();
-
-        if matches!(message, CraftMessage::GotPointerCapture()) {
-            // Check pending (step 2):
-            // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
-            return docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
-        } else {
-            docs.get_current_document().pointer_captures.get(key).map(|id| *id)
-        }
-    });
-
-    // Skip hit-testing if pointer capture is active AND it is a pointer event.
-    if let Some(pointer_capture_element_id) = pointer_capture_element_id && message.is_pointer_event() /*|| is_ime_event)*/ {
-        for node in nodes {
-            if node.borrow().id() == pointer_capture_element_id {
-                return Some(Rc::clone(&node));
-            }
-        }
-    }
-
-    None
-}
-
+/// Collect all the elements into an array.
 pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
     let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
     let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(&root)];
@@ -59,6 +32,7 @@ pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Elem
     nodes
 }
 
+/// Find the target that should be visited.
 pub fn find_target(root: &Rc<RefCell<dyn Element>>, mouse_position: Option<Point>, message: &CraftMessage) -> Rc<RefCell<dyn Element>> {
     let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
 
@@ -104,7 +78,7 @@ pub fn find_target(root: &Rc<RefCell<dyn Element>>, mouse_position: Option<Point
 pub fn dispatch_event(
     message: &CraftMessage,
     dispatch_type: EventDispatchType,
-    _resource_manager: &mut Arc<ResourceManager>,
+    resource_manager: &mut Arc<ResourceManager>,
     mouse_position: Option<Point>,
     root: Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
@@ -231,9 +205,9 @@ pub fn dispatch_event(
                         let _ = docs.get_current_document().pending_pointer_captures.remove(key);
                     });
 
-                    processing_pending_pointer_capture(dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
+                    processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
                 } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-                    processing_pending_pointer_capture(dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
+                    processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
                 }
 
             }

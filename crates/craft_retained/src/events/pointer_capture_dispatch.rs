@@ -10,6 +10,36 @@ use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
 use crate::text::text_context::TextContext;
 use crate::WindowContext;
 
+/// Returns the currently pointer captured element or None.
+pub fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>, message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
+    // 9.4 Implicit pointer capture
+    // https://w3c.github.io/pointerevents/#implicit-pointer-capture
+    //
+    let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
+        let key = &PointerId::new(1).unwrap();
+
+        if matches!(message, CraftMessage::GotPointerCapture()) {
+            // Check pending (step 2):
+            // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
+            return docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
+        } else {
+            docs.get_current_document().pointer_captures.get(key).map(|id| *id)
+        }
+    });
+
+    // Skip hit-testing if pointer capture is active AND it is a pointer event.
+    if let Some(pointer_capture_element_id) = pointer_capture_element_id && message.is_pointer_event() /*|| is_ime_event)*/ {
+        for node in nodes {
+            if node.borrow().id() == pointer_capture_element_id {
+                return Some(Rc::clone(&node));
+            }
+        }
+    }
+
+    None
+}
+
+/// Checks if we need to dispatch Got or Lost events and updates the current pointer capture.
 pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchType,
                                       _resource_manager: &mut Arc<ResourceManager>,
                                       mouse_position: Option<Point>,
