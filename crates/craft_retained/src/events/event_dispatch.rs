@@ -26,22 +26,11 @@ pub fn dispatch_event(
     window_context: &mut WindowContext,
     is_style: bool,
 ) {
-    let mut focus = FocusAction::None;
+    let mut _focus = FocusAction::None;
     let span = span!(Level::INFO, "dispatch event");
     let _enter = span.enter();
 
-    let mut effects: Vec<(EventDispatchType, CraftMessage)> = Vec::new();
-
     {
-/*        let current_element_tree = if let Some(current_element_tree) = reactive_tree.element_tree.as_ref() {
-            current_element_tree
-        } else {
-            return;
-        };
-
-        let fiber: Rc<RefCell<FiberNode>> =
-            fiber_tree::new(reactive_tree.component_tree.as_ref().unwrap(), current_element_tree.as_ref());*/
-
         let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
         let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(&root)];
 
@@ -62,7 +51,7 @@ pub fn dispatch_event(
                 | CraftMessage::PointerButtonUp(_)
                 | CraftMessage::PointerButtonDown(_)
         );
-        let is_keyboard_event = matches!(message, CraftMessage::KeyboardInputEvent(_));
+        let _is_keyboard_event = matches!(message, CraftMessage::KeyboardInputEvent(_));
         let is_ime_event = matches!(
             message,
             CraftMessage::ImeEvent(Ime::Enabled)
@@ -233,24 +222,7 @@ pub fn dispatch_event(
                     processing_pending_pointer_capture(dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
                 }
 
-
-               /* for element_state in reactive_tree.element_state.storage.values_mut() {
-                    if let Message::CraftMessage(message) = &message {
-                        match message {
-                            CraftMessage::PointerMovedEvent(..) => {
-                                element_state.base.hovered = false;
-                            }
-                            CraftMessage::PointerButtonUp(pointer_button) => {
-                                if pointer_button.is_primary() {
-                                    element_state.base.active = false;
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }*/
             }
         }
     }
-    //reactive_tree.update_focus(focus);
 }
