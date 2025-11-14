@@ -3,7 +3,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::Element;
-use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerEventHandler, PointerUpdateHandler};
+use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use craft_primitives::geometry::{Rectangle, Size};
@@ -55,6 +55,8 @@ pub struct ElementData {
     pub(crate) focused: bool,
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+    pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
+    pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_pointer_button_down: Vec<PointerEventHandler>,
     pub on_pointer_button_up: Vec<PointerEventHandler>,
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
@@ -278,6 +280,8 @@ impl Default for ElementData {
             focused: false,
             animations: None,
             parent: None,
+            on_got_pointer_capture: vec![],
+            on_lost_pointer_capture: vec![],
             on_pointer_button_down: vec![],
             on_pointer_button_up: vec![],
             on_pointer_moved: vec![],

@@ -1,4 +1,4 @@
-use crate::events::{KeyboardInputHandler, PointerEventHandler, PointerUpdateHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
 use crate::style::Style;
 use craft_primitives::geometry::ElementBox;
 use std::cell::RefCell;
@@ -10,6 +10,14 @@ use crate::elements::core::ElementData;
 
 /// The element trait for end-users.
 pub trait Element : ElementData + crate::elements::core::ElementInternals {
+    fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
+        self.element_data_mut().on_got_pointer_capture.push(on_got_pointer_capture);
+    }
+
+    fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) {
+        self.element_data_mut().on_lost_pointer_capture.push(on_lost_pointer_capture);
+    }
+
     fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
         self.element_data_mut().on_pointer_button_down.push(on_pointer_button_down);
     }

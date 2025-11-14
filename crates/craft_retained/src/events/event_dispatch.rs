@@ -193,12 +193,20 @@ pub fn dispatch_event(
                             CraftMessage::SliderValueChanged(_) => {}
                             CraftMessage::ElementMessage(_) => {}
                             CraftMessage::GotPointerCapture() => {
-                                println!("\nCurrent Target Id: {}", current_target.borrow().id());
-                                println!("GotPointerCapture");
+                                for handler in &element_data.on_got_pointer_capture {
+                                    (*handler)(&mut res);
+                                    if !propagate {
+                                        break;
+                                    }
+                                }
                             }
                             CraftMessage::LostPointerCapture() => {
-                                println!("\nCurrent Target Id: {}", current_target.borrow().id());
-                                println!("LostPointerCapture");
+                                for handler in &element_data.on_lost_pointer_capture {
+                                    (*handler)(&mut res);
+                                    if !propagate {
+                                        break;
+                                    }
+                                }
                             }
                         }
                 }

@@ -30,6 +30,7 @@ pub type ElementFilter = dyn Fn(&dyn Element) -> bool + Send + Sync + 'static;
 pub use event_dispatch::dispatch_event;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
+pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
 
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 
