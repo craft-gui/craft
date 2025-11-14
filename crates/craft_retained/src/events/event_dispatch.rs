@@ -13,6 +13,7 @@ use std::sync::Arc;
 use ui_events::pointer::PointerId;
 use winit::event::Ime;
 use crate::app::DOCUMENTS;
+use crate::events::pointer_capture_dispatch::processing_pending_pointer_capture;
 
 #[allow(clippy::too_many_arguments)]
 pub fn dispatch_event(
@@ -97,7 +98,7 @@ pub fn dispatch_event(
                 //
                 let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
                     let key = &PointerId::new(1).unwrap();
-                    docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
+                    docs.get_current_document().pointer_captures.get(key).map(|id| *id)
                 });
 
                 // Skip hit-testing if pointer capture is active.
@@ -215,45 +216,7 @@ pub fn dispatch_event(
                         break;
                     }
                 }
-
-                let mut processing_pending_pointer_capture =  || {
-                    // 4.1.3.2 Process pending pointer capture
-
-                    let key = &PointerId::new(1).unwrap();
-                    let (pointer_capture_val, pending_pointer_capture_val) = DOCUMENTS.with_borrow_mut(|docs| {
-                        let current_doc = docs.get_current_document();
-                        let pointer_capture_val = current_doc.pointer_captures.get(key);
-                        let pending_pointer_capture_val = current_doc.pending_pointer_captures.get(key);
-
-                        return (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned());
-                    });
-
-                    // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
-                    // then fire a pointer event named lostpointercapture at the pointer capture target override node.
-                    if let Some(pointer_capture_val) = pointer_capture_val && Some(pointer_capture_val) != pending_pointer_capture_val {
-                        dispatch_event(&CraftMessage::LostPointerCapture(), dispatch_type.clone(), _resource_manager, mouse_position, Rc::clone(&root), text_context, window_context, is_style);
-                    }
-
-                    // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
-                    // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
-                    if let Some(pending_pointer_capture_val) = pending_pointer_capture_val && Some(pending_pointer_capture_val) != pointer_capture_val {
-                        dispatch_event(&CraftMessage::GotPointerCapture(), dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
-                    }
-
-
-                    // 3. Set the pointer capture target override to the pending pointer capture target override, if set.
-                    // Otherwise, clear the pointer capture target override.
-                    DOCUMENTS.with_borrow_mut(|docs| {
-                        let current_doc = docs.get_current_document();
-
-                        if let Some(pending_pointer_capture_val) = pending_pointer_capture_val {
-                            current_doc.pointer_captures.insert(*key, pending_pointer_capture_val);
-                        } else {
-                            let _ = current_doc.pointer_captures.remove(key);
-                        }
-                    });
-                };
-
+                
 
                 // 9.5 Implicit release of pointer capture
                 // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
@@ -265,9 +228,9 @@ pub fn dispatch_event(
                         let _ = docs.get_current_document().pending_pointer_captures.remove(key);
                     });
 
-                    processing_pending_pointer_capture();
+                    processing_pending_pointer_capture(dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
                 } else if is_pointer_event {
-                    processing_pending_pointer_capture();
+                    processing_pending_pointer_capture(dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
                 }
 
 

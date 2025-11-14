@@ -2,6 +2,7 @@ mod mouse_wheel;
 
 pub mod internal;
 mod event_dispatch;
+mod pointer_capture_dispatch;
 //#[cfg(test)]
 //mod tests;
 
