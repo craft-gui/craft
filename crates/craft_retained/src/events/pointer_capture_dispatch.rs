@@ -20,11 +20,11 @@ pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchTyp
     // 4.1.3.2 Process pending pointer capture
     let key = &PointerId::new(1).unwrap();
     let (pointer_capture_val, pending_pointer_capture_val) = DOCUMENTS.with_borrow_mut(|docs| {
-    let current_doc = docs.get_current_document();
-    let pointer_capture_val = current_doc.pointer_captures.get(key);
-    let pending_pointer_capture_val = current_doc.pending_pointer_captures.get(key);
+        let current_doc = docs.get_current_document();
+        let pointer_capture_val = current_doc.pointer_captures.get(key);
+        let pending_pointer_capture_val = current_doc.pending_pointer_captures.get(key);
 
-    return (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned());
+        return (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned());
     });
 
     // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,

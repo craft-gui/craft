@@ -65,6 +65,26 @@ pub enum CraftMessage {
 }
 
 impl CraftMessage {
+    pub(super) fn is_pointer_event(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::PointerMovedEvent(_)
+            | CraftMessage::PointerButtonUp(_)
+            | CraftMessage::PointerButtonDown(_)
+            | CraftMessage::GotPointerCapture()
+            | CraftMessage::LostPointerCapture()
+            | CraftMessage::PointerScroll(_)
+        )
+    }
+
+    pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::GotPointerCapture()
+            | CraftMessage::LostPointerCapture()
+        )
+    }
+    
     pub fn clicked(&self) -> bool {
         /*if let PointerButtonUp(pointer_button) = self && pointer_button.is_primary() {
             return true;
