@@ -222,11 +222,6 @@ impl Store {
     }
 }
 
-/*fn buttons(state: Rc<RefCell<Store>>) {
-    let create_1k_button = Container::new();
-    create_1k_button.borrow_mut().on_pointer_button_up(Rc::new(|event, pointer_button_event| {}));
-}*/
-
 #[allow(unused)]
 #[cfg(not(target_os = "android"))]
 fn main() {
