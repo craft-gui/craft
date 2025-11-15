@@ -77,7 +77,7 @@ pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchTyp
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val {
             current_doc.pointer_captures.insert(*key, pending_pointer_capture_val);
         } else {
-            let _ = current_doc.pointer_captures.remove(key);
+            current_doc.pointer_captures.remove(key);
         }
     });
 }
