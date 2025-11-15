@@ -21,9 +21,9 @@ pub(super) fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>,
         if matches!(message, CraftMessage::GotPointerCapture()) {
             // Check pending (step 2):
             // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
-            return docs.get_current_document().pending_pointer_captures.get(key).map(|id| *id)
+            docs.get_current_document().pending_pointer_captures.get(key).copied()
         } else {
-            docs.get_current_document().pointer_captures.get(key).map(|id| *id)
+            docs.get_current_document().pointer_captures.get(key).copied()
         }
     });
 
@@ -31,7 +31,7 @@ pub(super) fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>,
     if let Some(pointer_capture_element_id) = pointer_capture_element_id && message.is_pointer_event() /*|| is_ime_event)*/ {
         for node in nodes {
             if node.borrow().id() == pointer_capture_element_id {
-                return Some(Rc::clone(&node));
+                return Some(Rc::clone(node));
             }
         }
     }
@@ -54,7 +54,7 @@ pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchTyp
         let pointer_capture_val = current_doc.pointer_captures.get(key);
         let pending_pointer_capture_val = current_doc.pending_pointer_captures.get(key);
 
-        return (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned());
+        (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned())
     });
 
     // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,

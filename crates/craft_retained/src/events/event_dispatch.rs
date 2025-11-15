@@ -18,7 +18,7 @@ use crate::events::pointer_capture_dispatch::{find_pointer_capture_target, proce
 /// Collect all the elements into an array.
 pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
     let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
-    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(&root)];
+    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
     while let Some(node_rc) = to_visit.pop() {
         let node_ref = node_rc.borrow();
 
@@ -71,7 +71,7 @@ pub fn find_target(root: &Rc<RefCell<dyn Element>>, mouse_position: Option<Point
         }
     }
 
-    target.unwrap_or(Rc::clone(&root))
+    target.unwrap_or(Rc::clone(root))
 }
 
 #[allow(clippy::too_many_arguments)]

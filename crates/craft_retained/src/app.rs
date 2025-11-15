@@ -91,7 +91,7 @@ macro_rules! get_tree {
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
-    pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = Cell::new(None);
+    pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// For internal use within elements, we need to record document global information at times (focus, pointer captures, etc.)
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
 }
