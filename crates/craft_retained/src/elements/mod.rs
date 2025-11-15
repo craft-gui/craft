@@ -7,6 +7,7 @@ mod element_states;
 mod scroll_state;
 
 mod element_id;
+mod scrollable;
 
 pub use container::Container;
 pub use text::Text;
