@@ -1,10 +1,9 @@
-use std::any::Any;
+use crate::renderer::{RenderList, Renderer};
 use craft_primitives::geometry::Rectangle;
 use craft_primitives::Color;
-use crate::renderer::{RenderList, Renderer};
 use craft_resource_manager::ResourceManager;
+use std::any::Any;
 use std::sync::Arc;
-use crate::text_renderer_data::TextRender;
 
 pub struct BlankRenderer;
 

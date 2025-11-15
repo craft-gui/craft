@@ -1,29 +1,32 @@
 mod tinyvg;
 
-use std::any::Any;
-use craft_primitives::geometry::Rectangle;
-use craft_primitives::Color;
 use crate::image_adapter::ImageAdapter;
 use crate::renderer::{RenderCommand, RenderList, Renderer, SortedCommands, TextScroll};
+use crate::text_renderer_data::TextRenderLine;
 use crate::vello::tinyvg::draw_tiny_vg;
+use craft_primitives::geometry::Rectangle;
+use craft_primitives::Color;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::ResourceManager;
 use peniko::{BrushRef, ImageAlphaType};
+use std::any::Any;
 use std::sync::Arc;
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::{kurbo, peniko, AaConfig, Error, RendererOptions};
 use vello::{Glyph, Scene};
-use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
 use wgpu::util::TextureBlitter;
+use wgpu::{
+    Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
+    Texture, TextureFormat, TextureView,
+};
 use winit::window::Window;
-use crate::text_renderer_data::{TextRender, TextRenderLine};
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,
     pub surface_config: SurfaceConfiguration,
     pub surface_texture: wgpu::Texture,
-    pub surface_view:    wgpu::TextureView,
+    pub surface_view: wgpu::TextureView,
 }
 
 impl RenderSurface {
@@ -49,7 +52,12 @@ impl RenderSurface {
 
     /// Returns the current swapchain `SurfaceTexture`.
     /// Unlike the cached textures that we store, this always fetches a fresh, up-to-date frame.
-    pub fn get_swapchain_surface_texture(&mut self, device: &Device, surface_width: u32, surface_height: u32) -> SurfaceTexture {
+    pub fn get_swapchain_surface_texture(
+        &mut self,
+        device: &Device,
+        surface_width: u32,
+        surface_height: u32,
+    ) -> SurfaceTexture {
         match self.surface.get_current_texture() {
             Ok(texture) => texture,
             Err(err) => {
@@ -61,42 +69,47 @@ impl RenderSurface {
                         panic!("Failed to acquire surface texture: {err:?}");
                     }
                 }
-                self.surface
-                    .get_current_texture()
-                    .expect("Failed to get surface texture after resize")
+                self.surface.get_current_texture().expect("Failed to get surface texture after resize")
             }
         }
     }
-    
+
     pub fn width(&self) -> u32 {
         self.surface_config.width
     }
-    
+
     pub fn height(&self) -> u32 {
         self.surface_config.height
     }
-    
+
     pub fn resize(&mut self, device: &Device, surface_width: u32, surface_height: u32) {
         self.surface_config.width = surface_width;
         self.surface_config.height = surface_height;
         let (surface_texture, surface_view) = Self::create_surface_textures(device, surface_width, surface_height);
-        
+
         self.surface_texture = surface_texture;
         self.surface_view = surface_view;
-        
+
         self.surface.configure(device, &self.surface_config);
     }
-    
-    pub fn new(device: &Device, adapter: &Adapter, surface: Surface<'static>, surface_width: u32, surface_height: u32) -> RenderSurface {
+
+    pub fn new(
+        device: &Device,
+        adapter: &Adapter,
+        surface: Surface<'static>,
+        surface_width: u32,
+        surface_height: u32,
+    ) -> RenderSurface {
         let capabilities = surface.get_capabilities(adapter);
         let format = capabilities
             .formats
             .into_iter()
             .find(|it| matches!(it, TextureFormat::Rgba8Unorm | TextureFormat::Bgra8Unorm))
-            .ok_or(Error::UnsupportedSurfaceFormat).expect("Unsupported surface format.");
+            .ok_or(Error::UnsupportedSurfaceFormat)
+            .expect("Unsupported surface format.");
 
         let (surface_texture, surface_view) = Self::create_surface_textures(device, surface_width, surface_height);
-        
+
         let surface_config = SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
@@ -107,9 +120,9 @@ impl RenderSurface {
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: vec![],
         };
-        
+
         surface.configure(device, &surface_config);
-        
+
         RenderSurface {
             surface,
             surface_config,
@@ -177,43 +190,36 @@ fn new_instance() -> Instance {
 }
 
 async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queue, Adapter) {
-    let adapter =
-        wgpu::util::initialize_adapter_from_env_or_default(instance, Some(surface))
-            .await.expect("Failed to create an adapter.");
+    let adapter = wgpu::util::initialize_adapter_from_env_or_default(instance, Some(surface))
+        .await
+        .expect("Failed to create an adapter.");
     let features = adapter.features();
     let limits = Limits::default();
     let maybe_features = wgpu::Features::CLEAR_TEXTURE | wgpu::Features::PIPELINE_CACHE;
 
     let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: None,
-                required_features: features & maybe_features,
-                required_limits: limits,
-                memory_hints: MemoryHints::default(),
-                trace: Default::default(),
-            },
-        )
-        .await.expect("Failed to create device.");
+        .request_device(&wgpu::DeviceDescriptor {
+            label: None,
+            required_features: features & maybe_features,
+            required_limits: limits,
+            memory_hints: MemoryHints::default(),
+            trace: Default::default(),
+        })
+        .await
+        .expect("Failed to create device.");
 
-    (
-        device,
-        queue,
-        adapter,
-    )
+    (device, queue, adapter)
 }
 
 impl VelloRenderer {
-    
     pub async fn new(window: Arc<Window>, render_into_texture: bool) -> VelloRenderer {
-
         let window_size = window.inner_size();
-        
+
         let instance = new_instance();
         let surface = instance.create_surface(window).expect("Failed to create a surface.");
         let (device, queue, adapter) = new_device(&instance, &surface).await;
         let render_surface = RenderSurface::new(&device, &adapter, surface, window_size.width, window_size.height);
-        
+
         VelloRenderer {
             texture_blitter: TextureBlitter::new(&device, render_surface.surface_config.format),
             render_surface,
@@ -266,7 +272,7 @@ impl Renderer for VelloRenderer {
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
-        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
             match command {
@@ -278,7 +284,9 @@ impl Renderer for VelloRenderer {
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
-                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
+                    if let Some(resource) = resource
+                        && let Resource::Image(resource) = resource.as_ref()
+                    {
                         let image = &resource.image;
                         let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
@@ -346,7 +354,7 @@ impl Renderer for VelloRenderer {
                             process_line(line);
                         }
                     };
-                    
+
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for (background, color) in &line.backgrounds {
                             let background_rect = Rectangle {
@@ -357,7 +365,7 @@ impl Renderer for VelloRenderer {
                             };
                             vello_draw_rect(scene, background_rect, *color);
                         }
-                        
+
                         for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,
@@ -371,7 +379,6 @@ impl Renderer for VelloRenderer {
 
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
-                            
                             if let Some(underline) = &item.underline {
                                 scene.stroke(
                                     &Stroke::new(underline.width.into()),
@@ -381,7 +388,7 @@ impl Renderer for VelloRenderer {
                                     &underline.line,
                                 );
                             }
-                            
+
                             scene
                                 .draw_glyphs(&item.font)
                                 .font_size(item.font_size)
@@ -393,26 +400,23 @@ impl Renderer for VelloRenderer {
                                 .draw(
                                     Fill::NonZero,
                                     item.glyphs.iter().map(|glyph| Glyph {
-                                        id: glyph.id as u32,
+                                        id: glyph.id,
                                         x: glyph.x,
                                         y: glyph.y,
                                     }),
                                 );
                         }
                     });
-                    
-                    if *show_cursor {
-                        if let Some((cursor, cursor_color)) = &text_render.cursor {
-                            let cursor_rect = Rectangle {
-                                x: cursor.x + rect.x,
-                                y: -scroll + cursor.y + rect.y,
-                                width: cursor.width,
-                                height: cursor.height,
-                            };
-                            vello_draw_rect(scene, cursor_rect, *cursor_color);
-                        }
+
+                    if *show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                        let cursor_rect = Rectangle {
+                            x: cursor.x + rect.x,
+                            y: -scroll + cursor.y + rect.y,
+                            width: cursor.width,
+                            height: cursor.height,
+                        };
+                        vello_draw_rect(scene, cursor_rect, *cursor_color);
                     }
-                    
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
                     draw_tiny_vg(
@@ -444,9 +448,9 @@ impl Renderer for VelloRenderer {
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
-        let width  = self.render_surface.width();
+        let width = self.render_surface.width();
         let height = self.render_surface.height();
-        
+
         self.renderer
             .render_to_texture(
                 &self.device,
@@ -465,19 +469,22 @@ impl Renderer for VelloRenderer {
                 },
             )
             .expect("failed to render to texture");
-        
-        if !self.render_into_texture {
-            let swapchain_surface_texture = self.render_surface.get_swapchain_surface_texture(&self.device, width, height);
-            let swapchain_surface_texture_view = swapchain_surface_texture
-                .texture
-                .create_view(&wgpu::TextureViewDescriptor::default());
-            let mut encoder =
-                self.device
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Surface Blit"),
-                    });
 
-            self.texture_blitter.copy(&self.device, &mut encoder, &self.render_surface.surface_view, &swapchain_surface_texture_view);
+        if !self.render_into_texture {
+            let swapchain_surface_texture =
+                self.render_surface.get_swapchain_surface_texture(&self.device, width, height);
+            let swapchain_surface_texture_view =
+                swapchain_surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Surface Blit"),
+            });
+
+            self.texture_blitter.copy(
+                &self.device,
+                &mut encoder,
+                &self.render_surface.surface_view,
+                &swapchain_surface_texture_view,
+            );
             self.queue.submit(Some(encoder.finish()));
 
             swapchain_surface_texture.present();
@@ -485,6 +492,4 @@ impl Renderer for VelloRenderer {
 
         self.scene.reset();
     }
-
-
 }

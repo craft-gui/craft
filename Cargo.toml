@@ -2,23 +2,10 @@
 resolver = "2"
 
 members = [
-    "crates/craft",
-    "crates/craft_core",
     "crates/craft_retained",
-    "crates/craft_dylib",
     "crates/craft_logger",
     "examples/util",
-    "examples/request",
-    "examples/counter",
     "examples/counter_retained",
-    "examples/text",
-    "examples/tour",
-    "examples/events",
-    "examples/animations",
-    "examples/overlay",
-    "examples/custom_event_loop",
-    "website",
-    "crates/craft",
     "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
 ]
 

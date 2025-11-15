@@ -1,12 +1,10 @@
+use crate::app::DOCUMENTS;
+use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
 use crate::style::Style;
 use craft_primitives::geometry::ElementBox;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use kurbo::Point;
 use ui_events::pointer::PointerId;
-use crate::app::DOCUMENTS;
-use crate::elements::core::ElementData;
 
 /// The element trait for end-users.
 pub trait Element : ElementData + crate::elements::core::ElementInternals {

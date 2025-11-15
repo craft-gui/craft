@@ -1,45 +1,39 @@
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
-use crate::generate_component_methods_no_children;
-use craft_primitives::geometry::{Point, Rectangle};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
-use craft_renderer::renderer::RenderList;
 use crate::style::Style;
-use crate::text::text_context::{TextContext};
+use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
+use craft_primitives::geometry::{Point, Rectangle};
+use craft_renderer::renderer::RenderList;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
-use rustc_hash::FxHasher;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 #[cfg(feature = "accesskit")]
-use {
-    parley::LayoutAccessibility,
-};
+use parley::LayoutAccessibility;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
+use kurbo::Affine;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
 use time::{Duration, Instant};
-use kurbo::Affine;
-use smallvec::SmallVec;
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-use winit::window::Window;
+use crate::elements::core::ElementData as ElementDataTrait;
+use crate::elements::core::ElementInternals;
+use crate::elements::element_id::create_unique_element_id;
+use crate::elements::Element;
 use craft_primitives::ColorBrush;
+use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use craft_renderer::text_renderer_data::TextData;
-use crate::elements::{Container, Element};
-use crate::elements::core::ElementInternals;
-use crate::elements::core::ElementData as ElementDataTrait;
-use crate::elements::element_id::create_unique_element_id;
+use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -103,7 +97,6 @@ impl Text {
             me: None,
         }));
         let me2 = me.clone();
-        let me3 = me.clone();
         me.borrow_mut().me = Some(Rc::downgrade(&me2));
 
         me.borrow_mut().set_text(text);
@@ -299,10 +292,8 @@ impl ElementInternals for Text {
         &mut self,
         message: &CraftMessage,
         _text_context: &mut TextContext,
-        should_style: bool,
         event: &mut Event,
-        target: Option<Rc<RefCell<dyn ElementInternals>>>,
-        //_current_target: Option<&dyn Element>,
+        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         //self.on_style_event(message, should_style, event);
         //self.maybe_unset_focus(message, event, target);
@@ -628,7 +619,7 @@ impl TextState {
 }
 
 impl TextData for Text {
-    fn get_text_renderer<'a>(&'a self) -> Option<&'a TextRender> {
+    fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }
 }

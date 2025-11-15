@@ -1,5 +1,4 @@
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
-use crate::elements::element_states::ElementState;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
@@ -58,11 +57,11 @@ pub trait ElementInternals: ElementData {
     /// - `scale_factor`: scale factor.
     fn draw(
         &mut self,
-        renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        pointer: Option<Point>,
-        window: Option<Arc<Window>>,
-        scale_factor: f64,
+        _renderer: &mut RenderList,
+        _text_context: &mut TextContext,
+        _pointer: Option<Point>,
+        _window: Option<Arc<Window>>,
+        _scale_factor: f64,
     ) {
     }
 
@@ -109,12 +108,10 @@ pub trait ElementInternals: ElementData {
     /// Handles default events.
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        _message: &CraftMessage,
         _text_context: &mut TextContext,
-        should_style: bool,
-        event: &mut Event,
-        target: Option<Rc<RefCell<dyn ElementInternals>>>,
-        //_current_target: Option<&dyn Element>,
+        _event: &mut Event,
+        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
     }
 
@@ -152,16 +149,7 @@ pub trait ElementInternals: ElementData {
 
     /// Called after layout, and is responsible for updating the animation state of an element.
     fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, delta_time: Duration) {
-        let mut base_state = self.element_data_mut();
-        let current_state: ElementState = {
-            if base_state.hovered {
-                ElementState::Hovered
-            } else if base_state.focused {
-                ElementState::Focused
-            } else {
-                ElementState::Normal
-            }
-        };
+        let base_state = self.element_data_mut();
 
         // If we don't have an animation in the current style then try to fall back to the normal style.
         let current_style =

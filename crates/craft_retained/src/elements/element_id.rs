@@ -11,13 +11,3 @@ pub fn create_unique_element_id() -> u64 {
         id
     })
 }
-
-pub fn reset_unique_element_id() {
-    THREAD_LOCAL_ELEMENT_ID.with(|counter| {
-        counter.set(0);
-    })
-}
-
-pub fn get_current_element_id_counter() -> u64 {
-    THREAD_LOCAL_ELEMENT_ID.get()
-}

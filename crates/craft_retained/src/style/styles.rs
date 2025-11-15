@@ -115,20 +115,15 @@ impl Weight {
     pub const BLACK: Weight = Weight(900);
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Default, Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Wrap {
+    #[default]
     /// Items will not wrap and stay on a single line
     NoWrap,
     /// Items will wrap according to this item's [`taffy::FlexDirection`]
     Wrap,
     /// Items will wrap in the opposite direction to this item's [`taffy::FlexDirection`]
     WrapReverse,
-}
-
-impl Default for Wrap {
-    fn default() -> Self {
-        Self::NoWrap
-    }
 }
 
 impl Default for Weight {
@@ -172,56 +167,6 @@ pub enum TextStyleProperty {
     UnderlineBrush(Color),
     Link(String),
     BackgroundColor(Color),
-}
-
-impl TextStyleProperty {
-    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'static, ColorBrush>> {
-        match self {
-            TextStyleProperty::FontFamily(font_family) => {
-                let font_stack_cow_list = Cow::Owned(vec![
-                    parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
-                    parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
-                ]);
-                let font_stack = parley::FontStack::List(font_stack_cow_list);
-
-                Some(parley::StyleProperty::FontStack(font_stack))
-            }
-
-            TextStyleProperty::FontSize(font_size) => Some(parley::StyleProperty::FontSize(*font_size)),
-
-            TextStyleProperty::Color(color) => {
-                let brush = ColorBrush { color: *color };
-
-                Some(parley::StyleProperty::Brush(brush))
-            }
-
-            TextStyleProperty::FontStyle(font_style) => {
-                let font_style = match font_style {
-                    FontStyle::Normal => parley::FontStyle::Normal,
-                    FontStyle::Italic => parley::FontStyle::Italic,
-                    // FIXME: Allow an angle when setting the obliqueness.
-                    FontStyle::Oblique => parley::FontStyle::Oblique(None),
-                };
-
-                Some(parley::StyleProperty::FontStyle(font_style))
-            }
-
-            TextStyleProperty::FontWeight(font_weight) => {
-                Some(parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32)))
-            }
-            TextStyleProperty::Underline(underline) => Some(parley::StyleProperty::Underline(*underline)),
-            TextStyleProperty::UnderlineOffset(offset) => Some(parley::StyleProperty::UnderlineOffset(Some(*offset))),
-
-            TextStyleProperty::UnderlineSize(size) => Some(parley::StyleProperty::UnderlineSize(Some(*size))),
-
-            TextStyleProperty::UnderlineBrush(color) => {
-                let brush = ColorBrush { color: *color };
-
-                Some(parley::StyleProperty::UnderlineBrush(Some(brush)))
-            }
-            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundColor(_) => None,
-        }
-    }
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -547,7 +492,7 @@ impl Style {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_text_style(&self) -> parley::TextStyle<ColorBrush> {
+    pub fn to_text_style(&'_ self) -> parley::TextStyle<'_, ColorBrush> {
         let font_size = self.font_size();
         let line_height = self.line_height();
         let font_weight = parley::FontWeight::new(self.font_weight().0 as f32);

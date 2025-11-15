@@ -8,11 +8,7 @@ mod pointer_capture_dispatch;
 
 pub use mouse_wheel::MouseWheel;
 pub use winit::event::ElementState;
-
-use crate::old_elements::Element;
-//use crate::events::CraftMessage::PointerButtonUp;
 use std::any::Any;
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 pub use ui_events;
@@ -24,8 +20,6 @@ pub use winit::event::MouseButton;
 use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
-
-pub type ElementFilter = dyn Fn(&dyn Element) -> bool + Send + Sync + 'static;
 
 pub use event_dispatch::dispatch_event;
 
@@ -170,7 +164,7 @@ impl Event {
         self.ime = action;
     }
 
-    pub fn focus_action(&mut self, action: FocusAction) {
+    pub fn focus_action(&mut self, _action: FocusAction) {
         //self.focus = action;
     }
 }

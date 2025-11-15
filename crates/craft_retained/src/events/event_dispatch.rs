@@ -113,8 +113,7 @@ pub fn dispatch_event(
                 }
 
                 let target = targets[0].clone();
-                let mut propagate = true;
-                let mut prevent_defaults = false;
+                let propagate = true;
 
 
                 // Call the callback handlers.
@@ -188,7 +187,7 @@ pub fn dispatch_event(
                 // Call the default on_event element functions.
                 for current_target in targets.iter() {
                     let mut res = Event::new();
-                    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), false, &mut res, Some(target.clone()));
+                    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), &mut res, Some(target.clone()));
                     if !propagate {
                         break;
                     }

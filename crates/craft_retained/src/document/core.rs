@@ -9,6 +9,12 @@ pub struct Document {
     pub(crate) pending_pointer_captures: HashMap<PointerId, u64>,
 }
 
+impl Default for Document {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Document {
     pub fn new() -> Self {
         Self {

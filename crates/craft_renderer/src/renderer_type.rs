@@ -69,7 +69,11 @@ impl RendererType {
             RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window)),
             #[cfg(feature = "vello_hybrid_renderer")]
             RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window).await),
-            RendererType::Blank => Box::new(BlankRenderer),
+            RendererType::Blank => {
+                // So the linter does not complain about window being unused.
+                let _ = window;
+                Box::new(BlankRenderer)
+            },
         };
 
         renderer
