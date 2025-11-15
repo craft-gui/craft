@@ -39,7 +39,7 @@ pub(super) fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>,
     None
 }
 
-/// Checks if we need to dispatch Got or Lost events and updates the current pointer capture.
+/// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
 pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchType,
                                       _resource_manager: &mut Arc<ResourceManager>,
                                       mouse_position: Option<Point>,

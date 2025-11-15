@@ -105,7 +105,7 @@ pub fn dispatch_event(
                 let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message);
                 let mut current_target = Some(Rc::clone(&target));
 
-                // Collect the elements that we need to visit as we bubble.
+                // Gather the elements to visit during the bubble phase.
                 let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
                 while let Some(node) = current_target {
                     targets.push_back(Rc::clone(&node));
