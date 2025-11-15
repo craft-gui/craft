@@ -13,6 +13,23 @@ env:
   RUST_STABLE_VER: "1.91" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
 
 jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+
+      - name: Install Clippy
+        run: rustup component add clippy
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
   build-linux:
     runs-on: ubuntu-latest
     steps:

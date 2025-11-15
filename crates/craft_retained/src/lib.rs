@@ -16,8 +16,6 @@ pub use craft_primitives::geometry as geometry;
 pub mod layout;
 pub use craft_runtime::CraftRuntime;
 mod window_context;
-#[cfg(feature = "markdown")]
-pub mod markdown;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
