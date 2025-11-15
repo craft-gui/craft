@@ -3,6 +3,7 @@ use winit::window::WindowId;
 use crate::app::{CURRENT_WINDOW_ID};
 use crate::document::Document;
 
+/// A wrapper to get a document with a window id or the current document.
 pub struct DocumentManager {
     documents: HashMap<WindowId, Document>,
 }

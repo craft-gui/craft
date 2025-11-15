@@ -2,6 +2,7 @@ mod mouse_wheel;
 
 pub mod internal;
 mod event_dispatch;
+mod pointer_capture_dispatch;
 //#[cfg(test)]
 //mod tests;
 
@@ -29,6 +30,7 @@ pub type ElementFilter = dyn Fn(&dyn Element) -> bool + Send + Sync + 'static;
 pub use event_dispatch::dispatch_event;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
+pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
 
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 
@@ -42,6 +44,8 @@ pub enum EventDispatchType {
 
 #[derive(Clone)]
 pub enum CraftMessage {
+    GotPointerCapture(),
+    LostPointerCapture(),
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
     KeyboardInputEvent(KeyboardEvent),
@@ -62,6 +66,26 @@ pub enum CraftMessage {
 }
 
 impl CraftMessage {
+    pub(super) fn is_pointer_event(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::PointerMovedEvent(_)
+            | CraftMessage::PointerButtonUp(_)
+            | CraftMessage::PointerButtonDown(_)
+            | CraftMessage::GotPointerCapture()
+            | CraftMessage::LostPointerCapture()
+            | CraftMessage::PointerScroll(_)
+        )
+    }
+
+    pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::GotPointerCapture()
+            | CraftMessage::LostPointerCapture()
+        )
+    }
+    
     pub fn clicked(&self) -> bool {
         /*if let PointerButtonUp(pointer_button) = self && pointer_button.is_primary() {
             return true;

@@ -3,11 +3,11 @@
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
-use crate::elements::Element;
+use crate::elements::{scrollable, Element};
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::text::text_context::TextContext;
-use craft_primitives::geometry::{Rectangle, Size};
+use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::cell::RefCell;
@@ -144,7 +144,7 @@ impl ElementInternals for Container {
         //self.on_style_event(message, should_style, event);
         //self.maybe_unset_focus(message, event, target);
 
-        self.element_data.on_event(message, event);
+        scrollable::on_scroll_events(self, message, event);
     }
 
     fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
