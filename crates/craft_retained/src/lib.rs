@@ -1,7 +1,6 @@
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
 pub mod craft_winit_state;
-pub mod old_elements;
 pub mod elements;
 pub mod events;
 pub mod animations;
@@ -17,8 +16,6 @@ pub use craft_primitives::geometry as geometry;
 pub mod layout;
 pub use craft_runtime::CraftRuntime;
 mod window_context;
-#[cfg(feature = "markdown")]
-pub mod markdown;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
@@ -30,7 +27,6 @@ pub use craft_primitives::Color;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 
-use crate::events::CraftMessage;
 pub use craft_renderer::RendererType;
 use events::internal::InternalMessage;
 use craft_renderer::renderer::Renderer;
@@ -44,9 +40,7 @@ pub use winit::window::{Cursor, CursorIcon};
 
 pub use window_context::WindowContext;
 
-use std::any::Any;
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -104,8 +98,6 @@ pub fn internal_craft_main_with_options(
     let mut winit_craft_state = CraftWinitState::new(craft_state);
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
-
-pub(crate) type GlobalState = Box<dyn Any + Send + 'static>;
 
 /// Starts the Craft application with the provided component specification, global state, and configuration options.
 ///
@@ -224,11 +216,8 @@ pub fn setup_craft(
         renderer: None,
         window_context: WindowContext::new(),
         resource_manager,
-        resources_collected: Default::default(),
         reload_fonts: false,
 
-        #[cfg(feature = "dev_tools")]
-        is_dev_tools_open: false,
         runtime: runtime_copy,
         modifiers: Default::default(),
         last_frame_time: time::Instant::now(),

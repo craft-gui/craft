@@ -1,12 +1,11 @@
+use craft_retained::animations::{Animation, KeyFrame, LoopAmount, TimingFunction};
+use craft_retained::elements::core::ElementData;
 use craft_retained::elements::Element;
-use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::style::{Overflow, StyleProperty, Unit};
-use craft_retained::{elements::{Container, Text}, palette, rgb, style::{AlignItems, Display, FlexDirection, JustifyContent}, Color};
+use craft_retained::{elements::{Container, Text}, palette, Color};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
-use craft_retained::animations::{Animation, KeyFrame, LoopAmount, TimingFunction};
-use craft_retained::elements::core::{ElementData};
 
 #[derive(Default)]
 pub struct Counter {
@@ -14,10 +13,6 @@ pub struct Counter {
 }
 
 impl Counter {
-
-    fn decrement(&mut self) {
-        self.count -= 1;
-    }
 
     fn increment(&mut self) {
         self.count += 1;

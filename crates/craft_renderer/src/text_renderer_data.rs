@@ -48,6 +48,6 @@ pub struct TextRenderGlyph {
 }
 
 pub trait TextData {
-    fn get_text_renderer<'a>(&'a self) -> Option<&'a TextRender>;
+    fn get_text_renderer(&self) -> Option<&TextRender>;
 
 }

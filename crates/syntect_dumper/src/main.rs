@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let contents = get(*theme_url)?.text()?;
 
         // Use the filename from the URL directly
-        let filename = theme_url.split('/').last().ok_or("Invalid URL, no filename found")?;
+        let filename = theme_url.split('/').next_back().ok_or("Invalid URL, no filename found")?;
 
         let theme_path = theme_dir.join(filename);
         fs::write(&theme_path, contents)?;

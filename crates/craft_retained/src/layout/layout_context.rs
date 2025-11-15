@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use taffy::{AvailableSpace, Size};
 use crate::elements::Text;
-use crate::old_elements::Element;
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
@@ -152,10 +151,8 @@ pub fn measure_content(
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
             let element = &taffy_text_context.element;
-            if let Some(element) = element.upgrade() {
-                if let Ok(mut element) = element.try_borrow_mut() {
-                    return element.state.measure(known_dimensions, available_space, text_context)
-                }
+            if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
+                return element.state.measure(known_dimensions, available_space, text_context)
             }
             Size::ZERO
         }
@@ -165,7 +162,7 @@ pub fn measure_content(
         Some(LayoutContext::TinyVg(tinyvg_context)) => {
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
-        Some(LayoutContext::Other( measure_fn)) => {
+        Some(LayoutContext::Other(_measure_fn)) => {
             Size::ZERO
         }
     }

@@ -10,9 +10,26 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_STABLE_VER: "1.88" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
+  RUST_STABLE_VER: "1.91" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
 
 jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+
+      - name: Install Clippy
+        run: rustup component add clippy
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -25,11 +42,7 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --package counter
-      - name: Build Request Example
-        run: cargo build --package request
-      - name: Build Text Example
-        run: cargo build --package text
+        run: cargo build --package counter_retained
 
   build-macos:
     runs-on: macos-latest
@@ -43,7 +56,7 @@ jobs:
       - name: Build Craft
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --package counter
+        run: cargo build --package counter_retained
 
   build-windows:
     runs-on: windows-latest
@@ -55,7 +68,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Counter Example
-        run: cargo build --bin counter
+        run: cargo build --bin counter_retained
 
   build-android:
     runs-on: ubuntu-latest
@@ -89,7 +102,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --package counter --lib
+        run: cargo apk build --package counter_retained --lib
 
   build-ios:
     runs-on: macos-latest
@@ -102,7 +115,7 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --bin counter
+        run: cargo build --target aarch64-apple-ios --bin counter_retained
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -114,6 +127,6 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Unit Tests
-        run: cargo test --package craft_core --no-run
+        run: cargo test --package craft_retained --no-run
       - name: Run Unit Tests
-        run: cargo test --package craft_core --no-fail-fast --verbose
+        run: cargo test --package craft_retained --no-fail-fast --verbose

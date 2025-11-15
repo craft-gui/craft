@@ -43,9 +43,6 @@ pub struct ElementData {
 
     pub(crate) internal_id: u64,
 
-    pub(crate) hovered: bool,
-    pub(crate) active: bool,
-    pub(crate) focused: bool,
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
     pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
@@ -143,9 +140,6 @@ impl Default for ElementData {
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
-            hovered: false,
-            active: false,
-            focused: false,
             animations: None,
             parent: None,
             on_got_pointer_capture: vec![],
@@ -176,6 +170,3 @@ impl ElementData {
         None
     }
 }
-
-// HACK: Remove this and all usages when pointer capture per device works.
-pub(crate) const DUMMY_DEVICE_ID: i64 = -1;

@@ -28,7 +28,6 @@ use craft_runtime::Sender;
 use craft_runtime::CraftRuntimeHandle;
 
 use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS};
-use crate::events::EventDispatchType;
 use std::sync::Arc;
 use ui_events::pointer::{PointerEvent};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
@@ -162,10 +161,10 @@ impl ApplicationHandler for CraftWinitState {
                 Some(WindowEventTranslation::Pointer(pointer_event)) => {
                     match pointer_event {
                         PointerEvent::Down(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(pointer_button_update, false, EventDispatchType::Bubbling);
+                            craft_state.craft_app.on_pointer_button(pointer_button_update, false);
                         }
                         PointerEvent::Up(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(pointer_button_update, true, EventDispatchType::Bubbling);
+                            craft_state.craft_app.on_pointer_button(pointer_button_update, true);
                         }
                         PointerEvent::Move(pointer_update) => {
                             craft_state.craft_app.on_pointer_moved(pointer_update);

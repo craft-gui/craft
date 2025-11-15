@@ -5,15 +5,13 @@ use crate::events::internal::{InternalMessage};
 use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
-use crate::{GlobalState, RendererBox, WindowContext};
-use cfg_if::cfg_if;
+use crate::{RendererBox, WindowContext};
 use craft_logging::{info, span, Level};
 use craft_primitives::geometry::{Rectangle};
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceManager};
 use craft_runtime::CraftRuntimeHandle;
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::collections::HashMap;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -41,8 +39,7 @@ use craft_runtime::Sender;
 use std::time::Duration;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::{PointerButtonEvent, PointerId, PointerScrollEvent, PointerUpdate};
-//use ui_events::pointer::{PointerButtonUpdate, PointerScrollUpdate, PointerUpdate};
+use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use winit::dpi::{LogicalSize, PhysicalSize};
@@ -53,41 +50,6 @@ use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::Element;
 use crate::layout::layout_context::LayoutContext;
-
-macro_rules! get_tree_mut {
-    ($self:expr, $is_dev_tree:expr) => {{
-        if !$is_dev_tree {
-            &mut $self.user_tree
-        } else {
-            #[cfg(not(feature = "dev_tools"))]
-            {
-                panic!("Dev tools are not enabled, but a dev tree was requested.");
-            }
-            #[cfg(feature = "dev_tools")]
-            {
-                &mut $self.dev_tree
-            }
-        }
-    }};
-}
-
-macro_rules! get_tree {
-    ($self:expr, $is_dev_tree:expr) => {{
-        if !$is_dev_tree {
-            &$self.user_tree
-        } else {
-            #[cfg(not(feature = "dev_tools"))]
-            {
-                panic!("Dev tools are not enabled, but a dev tree was requested.");
-            }
-            #[cfg(feature = "dev_tools")]
-            {
-                &$self.dev_tree
-            }
-        }
-    }};
-}
-
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -110,16 +72,9 @@ pub struct App {
     ///
     /// The resource manager is responsible for loading, caching, and providing access to resources.
     pub(crate) resource_manager: Arc<ResourceManager>,
-    /// Resources that have already been collected.
-    /// We use this in view_introspection, so that we don't request the download
-    /// of a resource too many times.
-    pub(crate) resources_collected: HashMap<ResourceIdentifier, bool>,
     // The user's reactive tree.
     /// Provides a way for the user to get and set common window properties during view and update.
     pub window_context: WindowContext,
-
-    #[cfg(feature = "dev_tools")]
-    pub(crate) is_dev_tools_open: bool,
 
     pub(crate) app_sender: Sender<InternalMessage>,
     #[cfg(feature = "accesskit")]
@@ -162,7 +117,7 @@ impl App {
         self.on_resize(self.window.as_ref().unwrap().inner_size());
     }
 
-    pub fn on_process_user_events(&mut self, is_dev_tree: bool) {
+    pub fn on_process_user_events(&mut self) {
     }
 
     #[allow(unused_variables)]
@@ -293,25 +248,10 @@ impl App {
 
         self.update_view();
 
-        cfg_if! {
-            if #[cfg(feature = "dev_tools")] {
-                let mut root_size = self.window_context.window_size();
-            } else {
-                let root_size = surface_size;
-            }
-        }
+        let root_size = surface_size;
 
         if self.renderer.is_some() {
             self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
-        }
-
-        #[cfg(feature = "dev_tools")]
-        {
-            use crate::geometry::Size;
-            if self.is_dev_tools_open {
-                let dev_tools_size = Size::new(350.0, root_size.height);
-                root_size.width -= dev_tools_size.width;
-            }
         }
 
         let layout_origin = Point::new(0.0, 0.0);
@@ -329,7 +269,7 @@ impl App {
             self.animate_tree(&delta_time, layout_origin, root_size);
 
             if self.renderer.is_some() {
-                self.draw_reactive_tree(false, self.window_context.mouse_position, self.window.clone());
+                self.draw_reactive_tree(self.window_context.mouse_position, self.window.clone());
             }
         }
 
@@ -347,11 +287,7 @@ impl App {
             self.window_context.reset();
         }
 
-        self.on_process_user_events(false);
-        #[cfg(feature = "dev_tools")]
-        {
-            self.on_process_user_events(true);
-        }
+        self.on_process_user_events();
 
         self.view_introspection();
     }
@@ -384,7 +320,6 @@ impl App {
         &mut self,
         pointer_event: PointerButtonEvent,
         is_up: bool,
-        dispatch_type: EventDispatchType,
     ) {
         let mut pointer_event = pointer_event;
         let zoom = self.window_context.zoom_factor;
@@ -467,19 +402,6 @@ impl App {
 
         self.dispatch_event(&message, EventDispatchType::Bubbling, false);
 
-        #[cfg(feature = "dev_tools")]
-        {
-            use ui_events::keyboard::KeyState;
-            let logical_key = keyboard_input.key;
-            let key_state = keyboard_input.state;
-
-            if KeyState::Down == key_state
-                && let ui_events::keyboard::Key::Named(NamedKey::F12) = logical_key
-            {
-                self.is_dev_tools_open = !self.is_dev_tools_open;
-            }
-        }
-
         self.request_redraw(RedrawFlags::new(true));
     }
 
@@ -522,7 +444,7 @@ impl App {
         let _enter = span.enter();
 
         let old_has_active_animation = self.previous_animation_flags.has_active_animation();
-        let mut root_element = self.root.clone();
+        let root_element = self.root.clone();
 
         // Damage track across recursive calls to `on_animation_frame`.
         let mut animation_flags = AnimationFlags::default();
@@ -579,7 +501,7 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_reactive_tree(&mut self, is_dev_tree: bool, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
+    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
         let text_context = self.text_context.as_mut().unwrap();
         {
             let span = span!(Level::INFO, "render");

@@ -1,7 +1,6 @@
 use craft_primitives::geometry::Rectangle;
-use crate::tinyvg_helpers::TinyVgHelpers;
 use crate::vello_cpu::brush_to_paint;
-use crate::Brush;
+use crate::{tinyvg_helpers, Brush};
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{Affine, BezPath, Line, Shape, Stroke};
@@ -36,7 +35,7 @@ pub(crate) fn draw_path(
     affine: &Affine,
     override_color: &Option<Color>,
 ) {
-    let (bezier_path, brush) = TinyVgHelpers::assemble_path(path, fill_style, color_table, override_color);
+    let (bezier_path, brush) = tinyvg_helpers::assemble_path(path, fill_style, color_table, override_color);
 
     if let Some(line_width) = line_width {
         stroke_path(scene, &bezier_path, affine, line_width.0, &brush);
@@ -100,7 +99,7 @@ pub(crate) fn draw_tiny_vg(
                     draw_path(scene, &path, &data.style, None, &tiny_vg.color_table, &affine, override_color);
                 }
                 DrawCommand::FillRectangles(data) => {
-                    let brush = TinyVgHelpers::get_brush(&data.style, &tiny_vg.color_table, override_color);
+                    let brush = tinyvg_helpers::get_brush(&data.style, &tiny_vg.color_table, override_color);
                     for rectangle in &data.rectangles {
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
@@ -111,34 +110,34 @@ pub(crate) fn draw_tiny_vg(
                     draw_path(scene, &data.path, &data.style, None, &tiny_vg.color_table, &affine, override_color);
                 }
                 DrawCommand::DrawLines(data) => {
-                    let brush = TinyVgHelpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
+                    let brush = tinyvg_helpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
 
                     for line in &data.lines {
                         let line = Line::new(
-                            TinyVgHelpers::to_kurbo_point(line.start),
-                            TinyVgHelpers::to_kurbo_point(line.end),
+                            tinyvg_helpers::to_kurbo_point(line.start),
+                            tinyvg_helpers::to_kurbo_point(line.end),
                         );
                         stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
                     }
                 }
                 DrawCommand::DrawLineLoop(data) => {
-                    let brush = TinyVgHelpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
+                    let brush = tinyvg_helpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
 
                     let mut start = data.points[0];
                     for point in &data.points {
                         let line =
-                            Line::new(TinyVgHelpers::to_kurbo_point(start), TinyVgHelpers::to_kurbo_point(*point));
+                            Line::new(tinyvg_helpers::to_kurbo_point(start), tinyvg_helpers::to_kurbo_point(*point));
                         stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
                         start = *point;
                     }
                 }
                 DrawCommand::DrawLineStrip(data) => {
-                    let brush = TinyVgHelpers::get_brush(&data.style, &tiny_vg.color_table, override_color);
+                    let brush = tinyvg_helpers::get_brush(&data.style, &tiny_vg.color_table, override_color);
 
                     let mut start = data.points[0];
                     for point in &data.points {
                         let line =
-                            Line::new(TinyVgHelpers::to_kurbo_point(start), TinyVgHelpers::to_kurbo_point(*point));
+                            Line::new(tinyvg_helpers::to_kurbo_point(start), tinyvg_helpers::to_kurbo_point(*point));
                         stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
                         start = *point;
                     }
@@ -179,8 +178,8 @@ pub(crate) fn draw_tiny_vg(
                     );
                 }
                 DrawCommand::OutlineFillRectangles(data) => {
-                    let fill_brush = TinyVgHelpers::get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
-                    let line_brush = TinyVgHelpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
+                    let fill_brush = tinyvg_helpers::get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
+                    let line_brush = tinyvg_helpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
                     for rectangle in &data.rectangles {
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);

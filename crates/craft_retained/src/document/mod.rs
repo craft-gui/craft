@@ -1,5 +1,5 @@
-pub mod document;
+pub mod core;
 pub mod document_manager;
 
 pub use document_manager::DocumentManager;
-pub use document::Document;
+pub use core::Document;

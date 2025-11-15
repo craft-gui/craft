@@ -1,17 +1,18 @@
 pub(crate) mod tinyvg;
 
-use std::any::Any;
-use craft_primitives::geometry::Rectangle;
 use crate::image_adapter::ImageAdapter;
 use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
+use crate::text_renderer_data::TextRenderLine;
 use crate::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::{Brush, RenderCommand};
+use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::ResourceManager;
 use peniko::kurbo::Affine;
 use peniko::kurbo::Shape;
-use peniko::{kurbo, Blob, Color, Fill, ImageAlphaType, ImageData, ImageSampler};
+use peniko::{kurbo, Blob, Color, Fill, ImageAlphaType};
 use softbuffer::Buffer;
+use std::any::Any;
 use std::num::NonZero;
 use std::num::NonZeroU32;
 use std::ops::Deref;
@@ -19,10 +20,9 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
-use vello_common::paint::{ImageSource, PaintType};
-use vello_cpu::{Pixmap, RenderContext, RenderMode};
+use vello_common::paint::PaintType;
+use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
-use crate::text_renderer_data::{TextRender, TextRenderLine};
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
@@ -100,10 +100,6 @@ impl VelloCpuRenderer {
 }
 
 impl Renderer for VelloCpuRenderer {
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-    
     fn surface_width(&self) -> f32 {
         self.window_width as f32
     }
@@ -128,6 +124,10 @@ impl Renderer for VelloCpuRenderer {
         self.clear_color = color;
     }
 
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
     fn prepare_render_list<'a>(
         &'a mut self,
         render_list: &'a mut RenderList,
@@ -135,14 +135,18 @@ impl Renderer for VelloCpuRenderer {
         window: Rectangle,
         //get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
     ) {
-        vello_draw_rect(&mut self.render_context, Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32), Color::WHITE);
-        
+        vello_draw_rect(
+            &mut self.render_context,
+            Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
+            Color::WHITE,
+        );
+
         let paint = PaintType::Solid(self.clear_color);
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
 
-        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     self.render_context.set_paint(PaintType::Solid(*fill_color));
@@ -156,7 +160,9 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
 
-                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
+                    if let Some(resource) = resource
+                        && let Resource::Image(resource) = resource.as_ref()
+                    {
                         let image = &resource.image;
                         let data = Arc::new(ImageAdapter::new(resource.clone()));
                         let blob = Blob::new(data);
@@ -192,7 +198,7 @@ impl Renderer for VelloCpuRenderer {
                             image.width() as f64,
                             image.height() as f64,
                         ));
-                        self.render_context.reset_transform(); 
+                        self.render_context.reset_transform();
                     }
                 }
                 RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
@@ -239,7 +245,6 @@ impl Renderer for VelloCpuRenderer {
                         }
                     };
 
-
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for (background, color) in &line.backgrounds {
                             let background_rect = Rectangle {
@@ -248,13 +253,9 @@ impl Renderer for VelloCpuRenderer {
                                 width: background.width,
                                 height: background.height,
                             };
-                            vello_draw_rect(
-                                &mut self.render_context,
-                                background_rect,
-                                *color,
-                            );
+                            vello_draw_rect(&mut self.render_context, background_rect, *color);
                         }
-                        
+
                         for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,
@@ -262,11 +263,7 @@ impl Renderer for VelloCpuRenderer {
                                 width: selection.width,
                                 height: selection.height,
                             };
-                            vello_draw_rect(
-                                &mut self.render_context,
-                                selection_rect,
-                                *selection_color,
-                            );
+                            vello_draw_rect(&mut self.render_context, selection_rect, *selection_color);
                         }
                     });
 
@@ -278,7 +275,7 @@ impl Renderer for VelloCpuRenderer {
                                 self.render_context.set_paint(PaintType::from(underline.brush.color));
                                 self.render_context.stroke_path(&underline.line.to_path(0.1));
                             }
-                            
+
                             self.render_context.set_paint(PaintType::from(
                                 text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
                             ));
@@ -290,23 +287,21 @@ impl Renderer for VelloCpuRenderer {
                                 .font_size(item.font_size)
                                 .glyph_transform(text_transform);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
-                                id: glyph.id as u32,
+                                id: glyph.id,
                                 x: glyph.x,
                                 y: glyph.y,
                             }));
                         }
                     });
-                    
-                    if *show_cursor {
-                        if let Some((cursor, cursor_color)) = &text_render.cursor {
-                            let cursor_rect = Rectangle {
-                                x: cursor.x + rect.x,
-                                y: -scroll + cursor.y + rect.y,
-                                width: cursor.width,
-                                height: cursor.height,
-                            };
-                            vello_draw_rect(&mut self.render_context, cursor_rect, *cursor_color);
-                        }
+
+                    if *show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                        let cursor_rect = Rectangle {
+                            x: cursor.x + rect.x,
+                            y: -scroll + cursor.y + rect.y,
+                            width: cursor.width,
+                            height: cursor.height,
+                        };
+                        vello_draw_rect(&mut self.render_context, cursor_rect, *cursor_color);
                     }
                 }
                 RenderCommand::PushLayer(rect) => {
@@ -350,7 +345,7 @@ impl Renderer for VelloCpuRenderer {
 }
 
 impl VelloCpuRenderer {
-    fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<Arc<Window>, Arc<Window>> {
+    fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<'_, Arc<Window>, Arc<Window>> {
         let mut buffer = self.surface.buffer_mut().unwrap();
 
         let pixmap = &self.pixmap.data_as_u8_slice();

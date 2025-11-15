@@ -136,10 +136,8 @@ impl ElementInternals for Container {
         &mut self,
         message: &CraftMessage,
         _text_context: &mut TextContext,
-        should_style: bool,
         event: &mut Event,
-        target: Option<Rc<RefCell<dyn ElementInternals>>>,
-        //_current_target: Option<&dyn Element>,
+        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         //self.on_style_event(message, should_style, event);
         //self.maybe_unset_focus(message, event, target);

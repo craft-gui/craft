@@ -1,15 +1,14 @@
 mod render_context;
 mod tinyvg;
 
+use crate::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
+use chrono::{DateTime, Utc};
 use craft_primitives::geometry::Rectangle;
 use craft_primitives::Color;
-use crate::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
-use chrono::{DateTime, Utc};
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
-use peniko::{Blob, ImageAlphaType, ImageQuality};
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -24,13 +23,12 @@ use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::TextureFormat;
 use winit::window::Window;
 
+use crate::text_renderer_data::TextRenderLine;
 use crate::vello_hybrid::render_context::RenderContext;
 use crate::vello_hybrid::render_context::RenderSurface;
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
-use crate::{Brush};
-use crate::text_renderer_data::{TextRender, TextRenderLine};
+use crate::Brush;
 use vello_hybrid::Scene;
-use crate::image_adapter::ImageAdapter;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -129,10 +127,6 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 }
 
 impl CraftRenderer for VelloHybridRenderer {
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn surface_width(&self) -> f32 {
         match &self.state {
             RenderState::Active(active_render_state) => active_render_state.window_width,
@@ -162,9 +156,13 @@ impl CraftRenderer for VelloHybridRenderer {
         self.surface_clear_color = color;
     }
 
-    fn prepare_render_list<'a>(
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn prepare_render_list(
         &mut self,
-        render_list: &'a mut RenderList,
+        render_list: &mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
@@ -182,9 +180,7 @@ impl CraftRenderer for VelloHybridRenderer {
 
         vello_draw_rect(&mut self.scene, Rectangle::new(0.0, 0.0, width as f32, height as f32), Color::WHITE);
 
-        let renderer = self.renderers[surface.dev_id]
-            .as_mut()
-            .unwrap();
+        let renderer = self.renderers[surface.dev_id].as_mut().unwrap();
         let device_handle = &self.context.devices[surface.dev_id];
         let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Blit Textures onto a Texture Atlas Encoder"),
@@ -194,7 +190,7 @@ impl CraftRenderer for VelloHybridRenderer {
 
         let mut seen_images: HashSet<ImageId> = HashSet::new();
         let mut expired_images: HashSet<ImageId> = HashSet::new();
-        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
             match command {
@@ -209,13 +205,17 @@ impl CraftRenderer for VelloHybridRenderer {
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.resources.get(resource_identifier);
 
-                    if let Some(resource) = resource && let Resource::Image(resource) = resource.as_ref() {
+                    if let Some(resource) = resource
+                        && let Resource::Image(resource) = resource.as_ref()
+                    {
                         let expiration_time = resource.common_data.expiration_time();
 
                         let image = &resource.image;
 
                         // There is an image, and it hasn't expired.
-                        let image_id = if let Some(stored_image) = self.images.get(resource_identifier) && stored_image.1 == expiration_time {
+                        let image_id = if let Some(stored_image) = self.images.get(resource_identifier)
+                            && stored_image.1 == expiration_time
+                        {
                             stored_image.0
                         } else {
                             // There is an image, but it expired.
@@ -240,13 +240,14 @@ impl CraftRenderer for VelloHybridRenderer {
                                     }
                                 })
                                 .collect();
-                            let pixmap = Pixmap::from_parts(
-                                premul_data,
-                                image.width() as u16,
-                                image.height() as u16,
-                            );
+                            let pixmap = Pixmap::from_parts(premul_data, image.width() as u16, image.height() as u16);
 
-                            let image_id = renderer.upload_image(&device_handle.device, &device_handle.queue, &mut encoder, &pixmap);
+                            let image_id = renderer.upload_image(
+                                &device_handle.device,
+                                &device_handle.queue,
+                                &mut encoder,
+                                &pixmap,
+                            );
                             self.images.insert(resource_identifier.clone(), (image_id, expiration_time));
 
                             image_id
@@ -267,12 +268,7 @@ impl CraftRenderer for VelloHybridRenderer {
                             sampler: Default::default(),
                         }));
 
-                        scene.fill_rect(&kurbo::Rect::new(
-                            0.0,
-                            0.0,
-                            image.width() as f64,
-                            image.height() as f64,
-                        ));
+                        scene.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.width() as f64, image.height() as f64));
                         scene.reset_transform();
                     }
                 }
@@ -320,7 +316,6 @@ impl CraftRenderer for VelloHybridRenderer {
                         }
                     };
 
-
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for (background, color) in &line.backgrounds {
                             let background_rect = Rectangle {
@@ -331,7 +326,7 @@ impl CraftRenderer for VelloHybridRenderer {
                             };
                             vello_draw_rect(scene, background_rect, *color);
                         }
-                        
+
                         for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
                                 x: selection.x + rect.x,
@@ -360,23 +355,21 @@ impl CraftRenderer for VelloHybridRenderer {
                             let glyph_run_builder =
                                 scene.glyph_run(&item.font).font_size(item.font_size).glyph_transform(text_transform);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
-                                id: glyph.id as u32,
+                                id: glyph.id,
                                 x: glyph.x,
                                 y: glyph.y,
                             }));
                         }
                     });
 
-                    if *show_cursor {
-                        if let Some((cursor, cursor_color)) = &text_render.cursor {
-                            let cursor_rect = Rectangle {
-                                x: cursor.x + rect.x,
-                                y: -scroll + cursor.y + rect.y,
-                                width: cursor.width,
-                                height: cursor.height,
-                            };
-                            vello_draw_rect(scene, cursor_rect, *cursor_color);
-                        }
+                    if *show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                        let cursor_rect = Rectangle {
+                            x: cursor.x + rect.x,
+                            y: -scroll + cursor.y + rect.y,
+                            width: cursor.width,
+                            height: cursor.height,
+                        };
+                        vello_draw_rect(scene, cursor_rect, *cursor_color);
                     }
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {

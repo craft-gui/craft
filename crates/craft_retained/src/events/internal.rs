@@ -1,6 +1,5 @@
 use craft_resource_manager::resource_event::ResourceEvent;
 
-use crate::events::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use {craft_renderer::renderer::Renderer, std::sync::Arc, winit::window::Window};
 

@@ -9,7 +9,6 @@ homepage = "https://craftgui.com/"
 repository = "https://github.com/craft-gui/craft"
 
 [features]
-dev_tools = []
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
 
