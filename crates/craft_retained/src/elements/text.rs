@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
@@ -147,7 +148,13 @@ impl crate::elements::core::ElementData for Text {
 }
 
 impl crate::elements::Element for Text {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl ElementInternals for Text {

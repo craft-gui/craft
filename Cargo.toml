@@ -6,6 +6,7 @@ members = [
     "crates/craft_logger",
     "examples/util",
     "examples/counter_retained",
+    "examples/jsframeworkbench",
     "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
 ]
 

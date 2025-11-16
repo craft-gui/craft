@@ -1,5 +1,6 @@
 //! Stores one or more elements.
 
+use std::any::Any;
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
@@ -51,7 +52,15 @@ impl crate::elements::core::ElementData for Container {
     }
 }
 
-impl Element for Container {}
+impl Element for Container {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl ElementInternals for Container {
     fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) -> Option<NodeId> {

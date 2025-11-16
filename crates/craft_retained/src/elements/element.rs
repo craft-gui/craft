@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::app::DOCUMENTS;
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
@@ -7,7 +8,7 @@ use kurbo::Point;
 use ui_events::pointer::PointerId;
 
 /// The element trait for end-users.
-pub trait Element : ElementData + crate::elements::core::ElementInternals {
+pub trait Element : ElementData + crate::elements::core::ElementInternals + Any {
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
         self.element_data_mut().on_got_pointer_capture.push(on_got_pointer_capture);
     }
@@ -110,6 +111,10 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals {
             current_doc.pending_pointer_captures.get(&pointer_id).cloned() == Some(self.id())
         })
     }
+
+    fn as_any(&self) -> &dyn Any;
+
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 
 }
 
