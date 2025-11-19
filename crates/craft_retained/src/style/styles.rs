@@ -183,8 +183,6 @@ pub enum StyleProperty {
     MaxHeight(Unit),
     MinWidth(Unit),
     MinHeight(Unit),
-    X(f32),
-    Y(f32),
     Display(Display),
     Wrap(Wrap),
     AlignItems(Option<AlignItems>),
@@ -314,9 +312,6 @@ style_property!(max_width, set_max_width, MaxWidth, Unit, MAX_WIDTH, Unit::Auto)
 style_property!(max_height, set_max_height, MaxHeight, Unit, MAX_HEIGHT, Unit::Auto);
 style_property!(min_width, set_min_width, MinWidth, Unit, MIN_WIDTH, Unit::Auto);
 style_property!(min_height, set_min_height, MinHeight, Unit, MIN_HEIGHT, Unit::Auto);
-
-style_property!(x, set_x, X, f32, X, 0.0);
-style_property!(y, set_y, Y, f32, Y, 0.0);
 
 style_property!(display, set_display, Display, Display, DISPLAY, Display::Flex);
 style_property!(wrap, set_wrap, Wrap, Wrap, WRAP, Wrap::default());
@@ -448,8 +443,6 @@ impl Style {
                 StyleProperty::MaxHeight(_) => StyleFlags::MAX_HEIGHT,
                 StyleProperty::MinWidth(_) => StyleFlags::MIN_WIDTH,
                 StyleProperty::MinHeight(_) => StyleFlags::MIN_HEIGHT,
-                StyleProperty::X(_) => StyleFlags::X,
-                StyleProperty::Y(_) => StyleFlags::Y,
                 StyleProperty::Display(_) => StyleFlags::DISPLAY,
                 StyleProperty::Wrap(_) => StyleFlags::WRAP,
                 StyleProperty::AlignItems(_) => StyleFlags::ALIGN_ITEMS,

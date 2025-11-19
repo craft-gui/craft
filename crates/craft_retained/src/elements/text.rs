@@ -100,21 +100,21 @@ impl Text {
         let me2 = me.clone();
         me.borrow_mut().me = Some(Rc::downgrade(&me2));
 
-        me.borrow_mut().set_text(text);
+        me.borrow_mut().text(text);
 
         me
     }
 
-    pub fn disable_selection(mut self) -> Self {
-        self.selectable = false;
+    pub fn get_selectable(&self) -> bool {
+        self.selectable
+    }
+
+    pub fn selectable(&mut self, selectable: bool) -> &mut Self {
+        self.selectable = selectable;
         self
     }
 
-    pub fn set_selectable(&mut self, selectable: bool) {
-        self.selectable = selectable;
-    }
-
-    pub fn text(&self) -> &str {
+    pub fn get_text(&self) -> &str {
         &self.state.text
     }
 
@@ -122,8 +122,9 @@ impl Text {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(&mut self, text: &str) {
+    pub fn text(&mut self, text: &str) -> &mut Self {
         self.set_text_smol_str(text.to_smolstr());
+        self
     }
 
     /// Set the text.
