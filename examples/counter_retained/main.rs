@@ -34,7 +34,8 @@ fn main() {
 
     let button = Container::new();
     let inc = Text::new("Increment");
-    inc.borrow_mut().set_selectable(false);
+    inc.borrow_mut().selectable(false);
+
     button.borrow_mut().push(inc);
 
     let growing_animation = Animation::new("growing_animation", Duration::from_secs(5), TimingFunction::Ease)
@@ -54,20 +55,23 @@ fn main() {
 
     //button.borrow_mut().style_mut().animations.push(growing_animation);
 
-    button.borrow_mut().style_mut().set_background(Color::from_rgb8(255, 0, 0));
+    button.borrow_mut().background_color(Color::from_rgb8(255, 0, 0));
     //button.borrow_mut().style_mut().set_width(Unit::Px(100.0));
     //button.borrow_mut().style_mut().set_height(Unit::Px(100.0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
 
-    root.borrow_mut().push(body.clone());
-    body.borrow_mut().push(button.clone());
+    root.borrow_mut()
+        .push(body.clone())
+        .push(button.clone());
 
-    body.borrow_mut().element_data_mut().current_style_mut().set_background(Color::from_rgb8(0, 255, 0));
+    body.borrow_mut().background_color(Color::from_rgb8(0, 255, 0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_width(Unit::Px(100.0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_height(Unit::Px(100.0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
 
     let text = Text::new("Count: 0");
+
+    text.borrow_mut().color(Color::WHITE);
 
     let count = Rc::new(RefCell::new(Counter::default()));
 
@@ -85,28 +89,32 @@ fn main() {
         if let Some(craft_retained::events::ui_events::pointer::PointerButton::Primary) = e.button {
             let mut count = count.borrow_mut();
             count.increment();
-            text2.borrow_mut().set_text(&format!("Count: {}", count.count()));
+            text2.borrow_mut().text(&format!("Count: {}", count.count()));
         }
     }));
 
     let scroll = Container::new();
-    scroll.borrow_mut().style_mut().set_overflow([Overflow::Visible, Overflow::Scroll]);
-    scroll.borrow_mut().style_mut().set_background(Color::from_rgb8(0, 255, 0));
-    scroll.borrow_mut().style_mut().set_width(Unit::Px(200.0));
-    scroll.borrow_mut().style_mut().set_height(Unit::Px(200.0));
+    scroll.borrow_mut()
+        .overflow(Overflow::Visible, Overflow::Scroll)
+        .background_color(Color::from_rgb8(0, 255, 0))
+        .width(Unit::Px(200.0))
+        .height(Unit::Px(200.0));
 
     let content_1 = Container::new();
-    content_1.borrow_mut().style_mut().set_background(Color::from_rgb8(0, 255, 255));
-    content_1.borrow_mut().style_mut().set_width(Unit::Px(50.0));
-    content_1.borrow_mut().style_mut().set_height(Unit::Px(500.0));
+    content_1.borrow_mut()
+        .background_color(Color::from_rgb8(0, 255, 255))
+        .width(Unit::Px(50.0))
+        .height(Unit::Px(500.0));
 
     let content_2 = Container::new();
-    content_2.borrow_mut().style_mut().set_background(Color::from_rgb8(255, 0, 255));
-    content_2.borrow_mut().style_mut().set_width(Unit::Px(50.0));
-    content_2.borrow_mut().style_mut().set_height(Unit::Px(200.0));
+        content_2.borrow_mut()
+        .background_color(Color::from_rgb8(255, 0, 255))
+        .width(Unit::Px(50.0))
+        .height(Unit::Px(200.0));
 
-    scroll.borrow_mut().push(content_1);
-    scroll.borrow_mut().push(content_2);
+    scroll.borrow_mut()
+        .push(content_1)
+        .push(content_2);
 
     body.borrow_mut().push(scroll);
 

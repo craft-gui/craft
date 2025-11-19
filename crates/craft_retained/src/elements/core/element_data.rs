@@ -31,7 +31,11 @@ pub trait ElementData {
     }
 
     /// Appends a child to the element.
-    fn push(&mut self, _child: Rc<RefCell<dyn Element>>) {
+    fn push(&mut self, _child: Rc<RefCell<dyn Element>>) -> &mut Self where Self: Sized {
+        panic!("Pushing children is not supported.")
+    }
+
+    fn push_dyn(&mut self, _child: Rc<RefCell<dyn Element>>) {
         panic!("Pushing children is not supported.")
     }
 }

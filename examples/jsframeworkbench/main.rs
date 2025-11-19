@@ -3,7 +3,6 @@ use craft_retained::elements::Element;
 use craft_retained::elements::{Container, Text};
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::events::Event;
-use craft_retained::geometry::TrblRectangle;
 use craft_retained::style::Overflow;
 use craft_retained::style::{Display, FlexDirection, Unit};
 use craft_retained::Color;
@@ -100,16 +99,17 @@ impl State {
         self.element.borrow_mut().children_mut().clear();
     }
     pub fn swap(&mut self) {
-        self.store.data.swap(1, 998);
-        self.element.borrow_mut().children_mut().swap(1, 998);
+        if self.store.data.len() >= 999 {
+            self.store.data.swap(1, 998);
+            self.element.borrow_mut().children_mut().swap(1, 998);
+        }
     }
-
 
     pub fn append_rows(&mut self) {
         for data in self.store.data.iter().skip(self.rows.len()) {
             let row = Self::create_row(data);
             self.rows.push(row.clone());
-            self.element.borrow_mut().push(row);
+            self.element.borrow_mut().push_dyn(row);
         }
     }
 
@@ -119,10 +119,7 @@ impl State {
 
     pub fn create_row(data: &Data) -> Rc<RefCell<Container>> {
         let row = Container::new();
-        row.borrow_mut().style_mut().set_display(Display::Flex);
-
-        row.borrow_mut().push(Text::new(data.id.to_string().as_str()));
-        row.borrow_mut().push(Text::new(data.label.as_str()));
+        row.borrow_mut().display(Display::Flex).push(Text::new(&data.id.to_string())).push(Text::new(&data.label));
 
         row
     }
@@ -136,9 +133,9 @@ impl State {
         self.store.update();
         for (index, data) in self.store.data.iter().enumerate().step_by(10) {
             let container = self.rows[index].borrow_mut();
-            let mut text = container.children()[0].borrow_mut();
+            let mut text = container.children()[1].borrow_mut();
             if let Some(text) = text.as_any_mut().downcast_mut::<Text>() {
-                text.set_text(&data.label);
+                text.text(&data.label);
             }
         }
     }
@@ -245,36 +242,29 @@ fn build_body() -> Rc<RefCell<Container>> {
     let state = Rc::new(RefCell::new(State::new(data_list.clone())));
     let buttons = build_buttons(state.clone());
 
-    body.borrow_mut().style_mut().set_overflow([Overflow::Scroll; 2]);
-    body.borrow_mut().style_mut().set_width(Unit::Percentage(100.0));
-    body.borrow_mut().style_mut().set_height(Unit::Percentage(100.0));
-    body.borrow_mut().style_mut().set_flex_direction(FlexDirection::Column);
+    body.borrow_mut()
+        .overflow(Overflow::Visible, Overflow::Scroll)
+        .width(Unit::Percentage(100.0))
+        .height(Unit::Percentage(100.0))
+        .flex_direction(FlexDirection::Column);
 
     let text = Text::new(r#"Craft-"keyed""#);
-    text.borrow_mut().style_mut().set_font_size(64.0);
+    text.borrow_mut().font_size(64.0);
 
-    body.borrow_mut().push(text);
-    body.borrow_mut().push(buttons);
-    body.borrow_mut().push(data_list);
+    body.borrow_mut().push(text).push(buttons).push(data_list);
 
     body
 }
 
 fn build_data_list() -> Rc<RefCell<Container>> {
     let data_list = Container::new();
-    data_list
-        .borrow_mut()
-        .style_mut()
-        .set_flex_direction(FlexDirection::Column);
+    data_list.borrow_mut().flex_direction(FlexDirection::Column);
     data_list
 }
 
 fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let buttons = Container::new();
-    buttons
-        .borrow_mut()
-        .style_mut()
-        .set_flex_direction(FlexDirection::Column);
+    buttons.borrow_mut().flex_direction(FlexDirection::Column);
 
     let state1 = state.clone();
     let btn_create_1k = build_button("Create 1,000 rows", move |_, _| {
@@ -287,31 +277,25 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     });
 
     let state3 = state.clone();
-    let btn_append_1k = build_button("Append 1,000 rows", move |_, _| {
-        state3.borrow_mut().add()
-    });
+    let btn_append_1k = build_button("Append 1,000 rows", move |_, _| state3.borrow_mut().add());
 
     let state4 = state.clone();
-    let btn_update_10th_row = build_button("Update every 10th row", move |_, _| {
-        state4.borrow_mut().update()
-    });
+    let btn_update_10th_row = build_button("Update every 10th row", move |_, _| state4.borrow_mut().update());
 
     let state5 = state.clone();
-    let btn_clear = build_button("Clear", move |_, _| {
-        state5.borrow_mut().remove_all_rows()
-    });
+    let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().remove_all_rows());
 
     let state6 = state.clone();
-    let btn_swap = build_button("Swap Rows", move |_, _| {
-        state6.borrow_mut().swap()
-    });
+    let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap());
 
-    buttons.borrow_mut().push(btn_create_1k);
-    buttons.borrow_mut().push(btn_create_10k);
-    buttons.borrow_mut().push(btn_append_1k);
-    buttons.borrow_mut().push(btn_update_10th_row);
-    buttons.borrow_mut().push(btn_clear);
-    buttons.borrow_mut().push(btn_swap);
+    buttons
+        .borrow_mut()
+        .push(btn_create_1k)
+        .push(btn_create_10k)
+        .push(btn_append_1k)
+        .push(btn_update_10th_row)
+        .push(btn_clear)
+        .push(btn_swap);
 
     buttons
 }
@@ -323,14 +307,17 @@ where
     let button = Container::new();
 
     {
-        button.borrow_mut().style_mut().set_background(Color::from_rgb8(211, 211, 211));
-        button.borrow_mut().style_mut().set_border_color(TrblRectangle::new_all(Color::from_rgb8(111, 111, 111)));
-        button.borrow_mut().style_mut().set_flex_direction(FlexDirection::Row);
-        button.borrow_mut().style_mut().set_flex_grow(0.0);
+        let border_color = Color::from_rgb8(111, 111, 111);
+        button
+            .borrow_mut()
+            .background_color(Color::from_rgb8(211, 211, 211))
+            .border_color(border_color, border_color, border_color, border_color)
+            .flex_direction(FlexDirection::Row)
+            .flex_grow(0.0);
     }
 
     let text = Text::new(label);
-    text.borrow_mut().set_selectable(false);
+    text.borrow_mut().selectable(false);
     button.borrow_mut().push(text);
 
     button.borrow_mut().on_pointer_button_up(Rc::new(callback));

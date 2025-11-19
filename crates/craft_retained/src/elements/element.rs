@@ -1,14 +1,20 @@
-use std::any::Any;
 use crate::app::DOCUMENTS;
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
-use crate::style::Style;
-use craft_primitives::geometry::ElementBox;
+use crate::style::{
+    AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
+    Weight, Wrap,
+};
+use craft_primitives::geometry::{ElementBox, TrblRectangle};
 use kurbo::Point;
+use peniko::Color;
+use std::any::Any;
+use taffy::{BoxSizing, Overflow, Position};
 use ui_events::pointer::PointerId;
+/*use crate::elements::element_styles::ElementStyles;*/
 
 /// The element trait for end-users.
-pub trait Element : ElementData + crate::elements::core::ElementInternals + Any {
+pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
         self.element_data_mut().on_got_pointer_capture.push(on_got_pointer_capture);
     }
@@ -116,5 +122,305 @@ pub trait Element : ElementData + crate::elements::core::ElementInternals + Any 
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
-}
+    fn display(&mut self, display: Display) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_display(display);
+        self
+    }
 
+    fn box_sizing(&mut self, box_sizing: BoxSizing) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_box_sizing(box_sizing);
+        self
+    }
+
+    fn position(&mut self, position: Position) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_position(position);
+        self
+    }
+
+    fn margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_margin(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_padding(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn gap(&mut self, row_gap: Unit, column_gap: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_gap([row_gap, column_gap]);
+        self
+    }
+
+    fn inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn min_width(&mut self, min_width: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_min_width(min_width);
+        self
+    }
+
+    fn min_height(&mut self, min_height: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_min_height(min_height);
+        self
+    }
+
+    fn width(&mut self, width: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_width(width);
+        self
+    }
+
+    fn height(&mut self, height: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_height(height);
+        self
+    }
+
+    fn max_width(&mut self, max_width: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_max_width(max_width);
+        self
+    }
+
+    fn max_height(&mut self, max_height: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_max_height(max_height);
+        self
+    }
+
+    fn wrap(&mut self, wrap: Wrap) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_wrap(wrap);
+        self
+    }
+
+    fn align_items(&mut self, align_items: Option<AlignItems>) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_align_items(align_items);
+        self
+    }
+
+    fn justify_content(&mut self, justify_content: Option<JustifyContent>) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_justify_content(justify_content);
+        self
+    }
+
+    fn flex_direction(&mut self, flex_direction: FlexDirection) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_flex_direction(flex_direction);
+        self
+    }
+
+    fn flex_grow(&mut self, flex_grow: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_flex_grow(flex_grow);
+        self
+    }
+
+    fn flex_shrink(&mut self, flex_shrink: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_flex_shrink(flex_shrink);
+        self
+    }
+
+    fn flex_basis(&mut self, flex_basis: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_flex_basis(flex_basis);
+        self
+    }
+
+    fn font_family(&mut self, font_family: FontFamily) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_font_family(font_family);
+        self
+    }
+
+    fn color(&mut self, color: Color) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_color(color);
+        self
+    }
+
+    fn background_color(&mut self, color: Color) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_background(color);
+        self
+    }
+
+    fn font_size(&mut self, font_size: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_font_size(font_size);
+        self
+    }
+
+    fn line_height(&mut self, line_height: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_line_height(line_height);
+        self
+    }
+
+    fn font_weight(&mut self, font_weight: Weight) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_font_weight(font_weight);
+        self
+    }
+
+    fn font_style(&mut self, font_style: FontStyle) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_font_style(font_style);
+        self
+    }
+
+    fn underline(&mut self, underline: Option<Underline>) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_underline(underline);
+        self
+    }
+
+    fn overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_overflow([overflow_x, overflow_y]);
+        self
+    }
+
+    fn border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_border_color(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_border_width(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_border_radius([top, right, bottom, left]);
+        self
+    }
+
+    fn scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_scrollbar_color(scrollbar_color);
+        self
+    }
+
+    fn scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
+        self
+    }
+
+    fn scrollbar_thumb_radius(
+        &mut self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
+        self
+    }
+
+    fn scrollbar_width(&mut self, scrollbar_width: f32) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_scrollbar_width(scrollbar_width);
+        self
+    }
+
+    fn selection_color(&mut self, selection_color: Color) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.style_mut().set_selection_color(selection_color);
+        self
+    }
+}

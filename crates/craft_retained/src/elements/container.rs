@@ -45,10 +45,15 @@ impl crate::elements::core::ElementData for Container {
         &mut self.element_data
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn Element>>) {
+    fn push(&mut self, child: Rc<RefCell<dyn Element>>) -> &mut Self where Self: Sized {
         let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child);
+        self
+    }
+
+    fn push_dyn(&mut self, child: Rc<RefCell<dyn Element>>) {
+        self.push(child);
     }
 }
 
