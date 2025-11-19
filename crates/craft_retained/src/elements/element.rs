@@ -5,13 +5,12 @@ use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
     Weight, Wrap,
 };
+use craft_primitives::geometry::Point;
 use craft_primitives::geometry::{ElementBox, TrblRectangle};
-use kurbo::Point;
-use peniko::Color;
+use craft_primitives::Color;
 use std::any::Any;
 use taffy::{BoxSizing, Overflow, Position};
 use ui_events::pointer::PointerId;
-/*use crate::elements::element_styles::ElementStyles;*/
 
 /// The element trait for end-users.
 pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
