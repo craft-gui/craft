@@ -60,9 +60,8 @@ fn main() {
     //button.borrow_mut().style_mut().set_height(Unit::Px(100.0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
 
-    root.borrow_mut()
-        .push(body.clone())
-        .push(button.clone());
+    root.borrow_mut().push(body.clone());
+    body.borrow_mut().push(button.clone());
 
     body.borrow_mut().background_color(Color::from_rgb8(0, 255, 0));
     //body.borrow_mut().element_data_mut().current_style_mut().set_width(Unit::Px(100.0));
