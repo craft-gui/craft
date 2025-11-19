@@ -1,123 +1,97 @@
-use craft_retained::animations::{Animation, KeyFrame, LoopAmount, TimingFunction};
 use craft_retained::elements::core::ElementData;
 use craft_retained::elements::Element;
-use craft_retained::style::{Overflow, StyleProperty, Unit};
-use craft_retained::{elements::{Container, Text}, palette, Color};
+use craft_retained::events::ui_events::pointer::PointerButton;
+use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
+use craft_retained::{
+    elements::{Container, Text},
+    rgb, Color,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Counter {
     count: i64,
 }
 
 impl Counter {
-
-    fn increment(&mut self) {
-        self.count += 1;
+    fn change(&mut self, delta: i64) {
+        self.count += delta;
     }
 
     fn count(&self) -> i64 {
         self.count
     }
+}
 
+fn create_button(
+    label: &str,
+    base_color: Color,
+    delta: i64,
+    state: Rc<RefCell<Counter>>,
+    count_text: Rc<RefCell<Text>>,
+) -> Rc<RefCell<Container>> {
+    let border_color = rgb(0, 0, 0);
+    let label = Text::new(label);
+    label.borrow_mut().font_size(24.0).color(Color::WHITE).selectable(false);
+    let container = Container::new();
+    container
+        .borrow_mut()
+        .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
+        .border_color(border_color, border_color, border_color, border_color)
+        .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
+        .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
+        .display(Display::Flex)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .background_color(base_color)
+        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
+            if pointer_button_event.button == Some(PointerButton::Primary) {
+                state.borrow_mut().change(delta);
+                count_text.borrow_mut().text(&format!("Count: {}", state.borrow().count()));
+                event.prevent_propagate();
+            }
+        }))
+        .push(label);
+    container
 }
 
 #[allow(unused)]
 #[cfg(not(target_os = "android"))]
 fn main() {
-    println!("Hello World");
-    let root = Container::new();
-    let body = Container::new();
-    let root2 = root.clone();
-
-    let button = Container::new();
-    let inc = Text::new("Increment");
-    inc.borrow_mut().selectable(false);
-
-    button.borrow_mut().push(inc);
-
-    let growing_animation = Animation::new("growing_animation", Duration::from_secs(5), TimingFunction::Ease)
-        .push(
-            KeyFrame::new(0.0)
-                .push(StyleProperty::Background(palette::css::GREEN))
-                .push(StyleProperty::Width(Unit::Percentage(10.0)))
-                .push(StyleProperty::Height(Unit::Px(40.0))),
-        )
-        .push(
-            KeyFrame::new(100.0)
-                .push(StyleProperty::Background(palette::css::RED))
-                .push(StyleProperty::Width(Unit::Percentage(80.0)))
-                .push(StyleProperty::Height(Unit::Px(100.0))),
-        )
-        .loop_amount(LoopAmount::Infinite);
-
-    //button.borrow_mut().style_mut().animations.push(growing_animation);
-
-    button.borrow_mut().background_color(Color::from_rgb8(255, 0, 0));
-    //button.borrow_mut().style_mut().set_width(Unit::Px(100.0));
-    //button.borrow_mut().style_mut().set_height(Unit::Px(100.0));
-    //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
-
-    root.borrow_mut().push(body.clone());
-    body.borrow_mut().push(button.clone());
-
-    body.borrow_mut().background_color(Color::from_rgb8(0, 255, 0));
-    //body.borrow_mut().element_data_mut().current_style_mut().set_width(Unit::Px(100.0));
-    //body.borrow_mut().element_data_mut().current_style_mut().set_height(Unit::Px(100.0));
-    //body.borrow_mut().element_data_mut().current_style_mut().set_border_radius([(20.0, 20.0); 4]);
-
-    let text = Text::new("Count: 0");
-
-    text.borrow_mut().color(Color::WHITE);
-
     let count = Rc::new(RefCell::new(Counter::default()));
 
-    body.borrow_mut().push(text.clone());
+    let container = Container::new();
 
-    let text2 = text.clone();
+    let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
 
-    button.borrow_mut().on_pointer_button_down(Rc::new(move |_, _| {
-        /*let mut text = text.borrow_mut();
-        let new_text = if text.text() == "foo" { "bar" } else { "foo" };
-        text.set_text(new_text);*/
-    }));
+    let button = Container::new();
+    button
+        .borrow_mut()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Row)
+        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .push(create_button("-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
+        .push(create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
 
-    button.borrow_mut().on_pointer_button_up(Rc::new(move |_, e| {
-        if let Some(craft_retained::events::ui_events::pointer::PointerButton::Primary) = e.button {
-            let mut count = count.borrow_mut();
-            count.increment();
-            text2.borrow_mut().text(&format!("Count: {}", count.count()));
-        }
-    }));
+    container
+        .borrow_mut()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .width(Unit::Percentage(100.0))
+        .height(Unit::Percentage(100.0))
+        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .push(count_text)
+        .font_size(72.0)
+        .color(rgb(50, 50, 50))
+        .push(button);
 
-    let scroll = Container::new();
-    scroll.borrow_mut()
-        .overflow(Overflow::Visible, Overflow::Scroll)
-        .background_color(Color::from_rgb8(0, 255, 0))
-        .width(Unit::Px(200.0))
-        .height(Unit::Px(200.0));
-
-    let content_1 = Container::new();
-    content_1.borrow_mut()
-        .background_color(Color::from_rgb8(0, 255, 255))
-        .width(Unit::Px(50.0))
-        .height(Unit::Px(500.0));
-
-    let content_2 = Container::new();
-        content_2.borrow_mut()
-        .background_color(Color::from_rgb8(255, 0, 255))
-        .width(Unit::Px(50.0))
-        .height(Unit::Px(200.0));
-
-    scroll.borrow_mut()
-        .push(content_1)
-        .push(content_2);
-
-    body.borrow_mut().push(scroll);
+    let root = Container::new();
+    root.borrow_mut().push(container);
 
     use craft_retained::CraftOptions;
     util::setup_logging();
-    craft_retained::craft_main(root2, CraftOptions::basic("Counter"));
+    craft_retained::craft_main(root, CraftOptions::basic("Counter"));
 }

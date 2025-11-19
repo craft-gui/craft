@@ -14,28 +14,52 @@ use ui_events::pointer::PointerId;
 
 /// The element trait for end-users.
 pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
-    fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
+    fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_got_pointer_capture.push(on_got_pointer_capture);
+        self
     }
 
-    fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) {
+    fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_lost_pointer_capture.push(on_lost_pointer_capture);
+        self
     }
 
-    fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
+    fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_pointer_button_down.push(on_pointer_button_down);
+        self
     }
 
-    fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) {
+    fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_pointer_button_up.push(on_pointer_button_up);
+        self
     }
 
-    fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
+    fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_pointer_moved.push(on_pointer_moved);
+        self
     }
 
-    fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) {
+    fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
         self.element_data_mut().on_keyboard_input.push(on_keyboard_input);
+        self
     }
 
     /// Returns the element's [`ElementBox`].
