@@ -1,4 +1,3 @@
-use craft_retained::elements::core::ElementData;
 use craft_retained::elements::Element;
 use craft_retained::elements::{Container, Text};
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
@@ -62,7 +61,7 @@ impl Data {
 
 pub struct State {
     store: Store,
-    rows: Vec<Rc<RefCell<Container>>>,
+    rows: Vec<Rc<RefCell<dyn Element>>>,
     selected_row: Option<usize>,
     element: Rc<RefCell<dyn Element>>,
 }
@@ -113,18 +112,26 @@ impl State {
     }
 
     pub fn append_rows(&mut self) {
-        for data in self.store.data.iter().skip(self.rows.len()) {
-            let row = Self::create_row(data);
-            self.rows.push(row.clone());
-            self.element.borrow_mut().push_dyn(row);
-        }
+        // Collect all new rows that need to be appended
+        let new_rows: Vec<Rc<RefCell<dyn Element>>> = self.store.data
+            .iter()
+            .skip(self.rows.len())
+            .map(|data| {
+                let row = Self::create_row(data);
+                row
+            })
+            .collect();
+
+        self.rows.extend(new_rows.iter().cloned());
+
+        self.element.borrow_mut().as_any_mut().downcast_mut::<Container>().unwrap().extend(new_rows);
     }
 
     pub fn select(&mut self, row: Option<usize>) {
         self.selected_row = row;
     }
 
-    pub fn create_row(data: &Data) -> Rc<RefCell<Container>> {
+    pub fn create_row(data: &Data) -> Rc<RefCell<dyn Element>> {
         let row = Container::new();
         row.borrow_mut().display(Display::Flex).push(Text::new(&data.id.to_string())).push(Text::new(&data.label));
 
@@ -187,6 +194,7 @@ impl Store {
     }
 
     pub fn build_data(&mut self, count: usize) {
+        self.data.reserve(count);
         for _ in 0..count {
             self.data.push(Data::new(
                 self.next_id,

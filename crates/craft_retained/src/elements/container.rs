@@ -77,6 +77,37 @@ impl Element for Container {
         self.push(child);
     }
 
+    /// Appends multiple typed children in one call
+    fn extend(
+        &mut self,
+        children: impl IntoIterator<Item = Rc<RefCell<dyn Element>>>
+    ) -> &mut Self
+    where
+        Self: Sized,
+    {
+        let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
+        let children: Vec<_> = children.into_iter().collect();
+
+        for child in &children {
+            child.borrow_mut().element_data_mut().parent = Some(me.clone());
+        }
+
+        self.element_data.children.extend(children.iter().cloned());
+
+        // Add the children's taffy node.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            for child in &children {
+                if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
+                    taffy_tree.add_child(parent_id, child_id).unwrap();
+                }
+            }
+            taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
+        });
+
+        self
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
