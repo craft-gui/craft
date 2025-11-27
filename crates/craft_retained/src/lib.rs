@@ -38,6 +38,8 @@ use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
 use winit::event_loop::EventLoop;
 pub use winit::window::{Cursor, CursorIcon};
 
+pub use utils::craft_error::CraftError;
+
 pub use window_context::WindowContext;
 
 use std::cell::RefCell;
@@ -54,7 +56,6 @@ use crate::wasm_queue::WASM_QUEUE;
 use craft_winit_state::CraftState;
 
 use cfg_if::cfg_if;
-use taffy::TaffyTree;
 use craft_logging::info;
 
 #[cfg(target_os = "android")]
@@ -65,7 +66,6 @@ use craft_renderer::RenderList;
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::elements::Element;
-use crate::layout::layout_context::LayoutContext;
 use crate::utils::cloneable_any::CloneableAny;
 
 #[cfg(target_arch = "wasm32")]
@@ -206,7 +206,6 @@ pub fn setup_craft(
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
     let craft_app = Box::new(App {
-        taffy_tree: TaffyTree::<LayoutContext>::new(),
         root,
         app_sender: app_sender.clone(),
         #[cfg(feature = "accesskit")]

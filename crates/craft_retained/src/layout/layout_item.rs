@@ -30,18 +30,21 @@ pub struct LayoutItem {
     pub clip_bounds: Option<Rectangle>,
 
     //  ---
-    pub child_nodes: Vec<NodeId>,
+    pub children_awaiting_add: Vec<NodeId>,
+    
+    cache_border_spec: Option<BorderSpec>,
 }
 
 impl LayoutItem {
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
-            self.child_nodes.push(*taffy_node_id);
+            self.children_awaiting_add.push(*taffy_node_id);
         }
     }
 
     pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
-        self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.child_nodes).unwrap());
+        self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.children_awaiting_add).unwrap());
+        self.children_awaiting_add.clear();
         self.taffy_node_id
     }
 
@@ -121,7 +124,11 @@ impl LayoutItem {
             border_radius,
             border_color,
         );
+        if let Some(cache_border_spec) = self.cache_border_spec && cache_border_spec == border_spec{
+            return;
+        }
         self.computed_border = border_spec.compute_border_spec();
+        self.cache_border_spec = Some(border_spec);
     }
 
     pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
