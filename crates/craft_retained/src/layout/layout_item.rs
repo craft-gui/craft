@@ -31,6 +31,8 @@ pub struct LayoutItem {
 
     //  ---
     pub children_awaiting_add: Vec<NodeId>,
+    
+    cache_border_spec: Option<BorderSpec>,
 }
 
 impl LayoutItem {
@@ -122,7 +124,11 @@ impl LayoutItem {
             border_radius,
             border_color,
         );
+        if let Some(cache_border_spec) = self.cache_border_spec && cache_border_spec == border_spec{
+            return;
+        }
         self.computed_border = border_spec.compute_border_spec();
+        self.cache_border_spec = Some(border_spec);
     }
 
     pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {

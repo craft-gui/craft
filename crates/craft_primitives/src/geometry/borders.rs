@@ -8,6 +8,7 @@ use crate::geometry::side::Side;
 use crate::geometry::{Rectangle, TrblRectangle};
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
+#[derive(Copy, Clone, PartialEq)]
 pub struct BorderSpec {
     x1: f64,
     y1: f64,

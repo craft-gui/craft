@@ -1,17 +1,17 @@
-use crate::layout::layout_context::measure_content;
-use std::cell::Cell;
-use std::cell::RefCell;
-use crate::events::internal::{InternalMessage};
+use crate::events::internal::InternalMessage;
 use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
+use crate::layout::layout_context::measure_content;
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::{RendererBox, WindowContext};
 use craft_logging::{info, span, Level};
-use craft_primitives::geometry::{Rectangle};
-use craft_resource_manager::{ResourceManager};
+use craft_primitives::geometry::Rectangle;
+use craft_resource_manager::ResourceManager;
 use craft_runtime::CraftRuntimeHandle;
 use kurbo::{Affine, Point};
 use peniko::Color;
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -32,6 +32,10 @@ use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
+use crate::animations::animation::AnimationFlags;
+use crate::document::DocumentManager;
+use crate::elements::Element;
+use crate::layout::layout_context::LayoutContext;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
@@ -46,10 +50,6 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
-use crate::animations::animation::AnimationFlags;
-use crate::document::DocumentManager;
-use crate::elements::Element;
-use crate::layout::layout_context::LayoutContext;
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -86,10 +86,9 @@ pub struct App {
 
     pub(crate) render_list: RenderList,
 
-
     pub(crate) previous_animation_flags: AnimationFlags,
 
-    pub(crate) focus: Option<Weak<RefCell<dyn Element>>>
+    pub(crate) focus: Option<Weak<RefCell<dyn Element>>>,
 }
 
 #[derive(Debug)]
@@ -117,8 +116,7 @@ impl App {
         self.on_resize(self.window.as_ref().unwrap().inner_size());
     }
 
-    pub fn on_process_user_events(&mut self) {
-    }
+    pub fn on_process_user_events(&mut self) {}
 
     #[allow(unused_variables)]
     pub fn on_resume(&mut self, window: Arc<Window>, renderer: RendererBox, event_loop: &ActiveEventLoop) {
@@ -213,9 +211,7 @@ impl App {
     }
 
     /// Updates the view by applying the latest changes to the reactive tree.
-    pub(crate) fn update_view(&mut self) {
-    }
-
+    pub(crate) fn update_view(&mut self) {}
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(feature = "accesskit")]
@@ -316,11 +312,7 @@ impl App {
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_pointer_button(
-        &mut self,
-        pointer_event: PointerButtonEvent,
-        is_up: bool,
-    ) {
+    pub fn on_pointer_button(&mut self, pointer_event: PointerButtonEvent, is_up: bool) {
         let mut pointer_event = pointer_event;
         let zoom = self.window_context.zoom_factor;
         pointer_event.state.position.x /= zoom;
@@ -423,8 +415,7 @@ impl App {
         }
     }
 
-    fn view_introspection(&mut self) {
-    }
+    fn view_introspection(&mut self) {}
 
     fn request_redraw(&mut self, redraw_flags: RedrawFlags) {
         self.redraw_flags = redraw_flags;
@@ -434,12 +425,7 @@ impl App {
     }
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
-    fn animate_tree(
-        &mut self,
-        delta_time: &Duration,
-        layout_origin: Point,
-        viewport_size: LogicalSize<f32>,
-    ) {
+    fn animate_tree(&mut self, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
         let span = span!(Level::INFO, "animate_tree");
         let _enter = span.enter();
 
@@ -479,7 +465,6 @@ impl App {
         scale_factor: f64,
         mouse_position: Option<Point>,
     ) {
-
         let root_element = self.root.clone();
         style_root_element(root_element.borrow_mut().deref_mut(), viewport_size);
         let text_context = self.text_context.as_mut().unwrap();
@@ -513,13 +498,7 @@ impl App {
 
             let renderer = self.renderer.as_mut().unwrap();
 
-            self.root.borrow_mut().draw(
-                &mut self.render_list,
-                text_context,
-                mouse_position,
-                window,
-                scale_factor,
-            );
+            self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, window, scale_factor);
 
             renderer.sort_and_cull_render_list(&mut self.render_list);
 
@@ -529,11 +508,7 @@ impl App {
                 width: renderer.surface_width(),
                 height: renderer.surface_height(),
             };
-            renderer.prepare_render_list(
-                &mut self.render_list,
-                self.resource_manager.clone(),
-                window,
-            );
+            renderer.prepare_render_list(&mut self.render_list, self.resource_manager.clone(), window);
         }
     }
 
@@ -593,44 +568,55 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
-    let root_node = root_element.borrow_mut().compute_layout(taffy_tree, scale_factor).unwrap();
+    let root_node = {
+        let span = span!(Level::INFO, "compute layout(internal)");
+        let _enter = span.enter();
+        root_element.borrow_mut().compute_layout(taffy_tree, scale_factor).unwrap()
+    };
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(window_size.width),
         height: AvailableSpace::Definite(window_size.height),
     };
 
-    taffy_tree
-        .compute_layout_with_measure(
-            root_node,
-            available_space,
-            |known_dimensions, available_space, _node_id, node_context, style| {
-                measure_content(
-                    known_dimensions,
-                    available_space,
-                    node_context,
-                    text_context,
-                    resource_manager.clone(),
-                    style,
-                )
-            },
-        )
-        .unwrap();
+    {
+        let span = span!(Level::INFO, "layout(taffy)");
+        let _enter = span.enter();
+        taffy_tree
+            .compute_layout_with_measure(
+                root_node,
+                available_space,
+                |known_dimensions, available_space, _node_id, node_context, style| {
+                    measure_content(
+                        known_dimensions,
+                        available_space,
+                        node_context,
+                        text_context,
+                        resource_manager.clone(),
+                        style,
+                    )
+                },
+            )
+            .unwrap();
+    }
 
     let transform = Affine::IDENTITY;
 
     let mut layout_order: u32 = 0;
-    root_element.borrow_mut().finalize_layout(
-        taffy_tree,
-        root_node,
-        origin,
-        &mut layout_order,
-        transform,
-        pointer,
-        text_context,
-        None,
-    );
+    {
+        let span = span!(Level::INFO, "layout(finalize)");
+        let _enter = span.enter();
+        root_element.borrow_mut().finalize_layout(
+            taffy_tree,
+            root_node,
+            origin,
+            &mut layout_order,
+            transform,
+            pointer,
+            text_context,
+            None,
+        );
+    }
 
     root_node
-
 }
