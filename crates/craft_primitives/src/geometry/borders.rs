@@ -1,126 +1,321 @@
-use crate::geometry::corner::Corner;
-use crate::color::Color;
+use kurbo::{Arc, BezPath, PathEl, Point, Rect, Shape, Vec2};
 
-use peniko::kurbo::{BezPath, PathEl, Point, Shape, Vec2};
+use std::f64::consts::{FRAC_PI_2, PI};
+use std::ops::Add;
+pub const TOP_LEFT: usize = 0;
+pub const TOP_RIGHT: usize = 1;
+pub const BOTTOM_RIGHT: usize = 2;
+pub const BOTTOM_LEFT: usize = 3;
 
-use crate::geometry::cornerside::CornerSide;
-use crate::geometry::side::Side;
-use crate::geometry::{Rectangle, TrblRectangle};
-use std::f64::consts::{FRAC_PI_2, PI, TAU};
+pub const TOP: usize = 0;
+pub const RIGHT: usize = 1;
+pub const BOTTOM: usize = 2;
+pub const LEFT: usize = 3;
 
-#[derive(Copy, Clone, PartialEq)]
-pub struct BorderSpec {
+pub const CORNERS: [usize; 4] = [TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT];
+pub const NEXT_CORNER: [usize; 4] = [TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT, TOP_LEFT];
+pub const CORNER_HORIZONTAL_SIDE: [usize; 4] = [LEFT, RIGHT, RIGHT, LEFT];
+pub const CORNER_VERTICAL_SIDE: [usize; 4] = [TOP, TOP, BOTTOM, BOTTOM];
+const CORNER_RADIUS_SIGN: [Vec2; 4] = [
+    Vec2::new(1.0, 1.0),
+    Vec2::new(-1.0, 1.0),
+    Vec2::new(-1.0, -1.0),
+    Vec2::new(1.0, -1.0),
+];
+
+const CORNER_START_ANGLES: [f64; 4] = [PI, 3.0 * FRAC_PI_2, 0.0, FRAC_PI_2];
+
+const FIRST_ARC: usize = 1;
+const SECOND_ARC: usize = 0;
+const THIRD_ARC: usize = 3;
+const FOURTH_ARC: usize = 2;
+
+const NEXT_ARC: [usize; 4] = [THIRD_ARC, SECOND_ARC, FIRST_ARC, FOURTH_ARC];
+
+#[derive(Clone, Copy, Default, PartialEq)]
+pub struct CssRoundedRect {
+    /// The minimum x coordinate (left edge).
+    x0: f64,
+    /// The minimum y coordinate (top edge in y-down spaces).
+    y0: f64,
+    /// The maximum x coordinate (right edge).
     x1: f64,
+    /// The maximum y coordinate (bottom edge in y-down spaces).
     y1: f64,
-    x2: f64,
-    y2: f64,
-    top_left_radius_x: f64,
-    top_left_radius_y: f64,
-    top_right_radius_x: f64,
-    top_right_radius_y: f64,
-    bottom_right_radius_x: f64,
-    bottom_right_radius_y: f64,
-    bottom_left_radius_x: f64,
-    bottom_left_radius_y: f64,
 
-    top_width: f64,
-    right_width: f64,
-    bottom_width: f64,
-    left_width: f64,
+    outer_radii: [Vec2; 4],
+    inner_radii: [Vec2; 4],
 
-    top_color: Color,
-    right_color: Color,
-    bottom_color: Color,
-    left_color: Color,
+    /// The corner points of the outer rectangle.
+    corners: [Point; 4],
+
+    // (Inner, Outer)
+    intersect_angles: [Vec2; 4],
+
+    // corners[outer, outer, inner, inner]
+    corners_arcs: [[Option<Arc>; 4]; 4],
+
+    background_arcs: [Option<Arc>; 4],
+
+    widths: [f64; 4],
 }
 
-impl BorderSpec {
-    pub fn new(rect: Rectangle, widths: [f32; 4], radii: [(f32, f32); 4], colors: TrblRectangle<Color>) -> Self {
-        Self {
-            x1: rect.x as f64,
-            y1: rect.y as f64,
-            x2: (rect.x + rect.width) as f64,
-            y2: (rect.y + rect.height) as f64,
-            top_left_radius_x: radii[0].0 as f64,
-            top_left_radius_y: radii[0].1 as f64,
-            top_right_radius_x: radii[1].0 as f64,
-            top_right_radius_y: radii[1].1 as f64,
-            bottom_right_radius_x: radii[2].0 as f64,
-            bottom_right_radius_y: radii[2].1 as f64,
-            bottom_left_radius_x: radii[3].0 as f64,
-            bottom_left_radius_y: radii[3].1 as f64,
-            top_width: widths[0] as f64,
-            right_width: widths[1] as f64,
-            bottom_width: widths[2] as f64,
-            left_width: widths[3] as f64,
-            top_color: colors.top,
-            right_color: colors.right,
-            bottom_color: colors.bottom,
-            left_color: colors.left,
+impl CssRoundedRect {
+    pub fn new(rect: Rect, widths: [f64; 4], radii: [Vec2; 4]) -> Self {
+        let mut css_rounded_rect = Self {
+            x0: rect.x0,
+            y0: rect.y0,
+            x1: rect.x0 + rect.width(),
+            y1: rect.y0 + rect.height(),
+            outer_radii: radii,
+            inner_radii: [Vec2::default(); 4],
+            intersect_angles: [Vec2::default(); 4],
+            corners_arcs: [[None; 4]; 4],
+            background_arcs: [None; 4],
+            widths,
+            corners: [
+                Point::new(rect.x0, rect.y0),
+                Point::new(rect.x1, rect.y0),
+                Point::new(rect.x1, rect.y1),
+                Point::new(rect.x0, rect.y1),
+            ],
+        };
+        css_rounded_rect.scale_radius();
+
+        for corner in CORNERS {
+            let outer_radius = css_rounded_rect.outer_radii[corner];
+            let width_x = css_rounded_rect.widths[CORNER_HORIZONTAL_SIDE[corner]];
+            let width_y = css_rounded_rect.widths[CORNER_VERTICAL_SIDE[corner]];
+            let is_sharp = is_inner_radius_sharp(width_x, outer_radius.x, width_y, outer_radius.y);
+            if !is_sharp {
+                css_rounded_rect.inner_radii[corner] =
+                    Vec2::new(outer_radius.x - width_x, outer_radius.y - width_y);
+            }
+
+            let inner_radius = css_rounded_rect.inner_radii[corner];
+
+            let (mut outer_x, mut outer_y) = (outer_radius.x, outer_radius.y);
+            let (mut inner_x, mut inner_y) = (inner_radius.x, inner_radius.y);
+
+            let (mut side_for_radius_x, mut side_for_radius_y) = (width_y, width_x);
+
+            // For the corners that are NOT TOP_LEFT or BOTTOM_RIGHT we need to swap axes.
+            if !(corner == TOP_LEFT || corner == BOTTOM_RIGHT) {
+                std::mem::swap(&mut outer_x, &mut outer_y);
+                std::mem::swap(&mut inner_x, &mut inner_y);
+
+                std::mem::swap(&mut side_for_radius_x, &mut side_for_radius_y);
+            }
+
+            let outer_sweep_angle =
+                intersect_angle(outer_x, outer_y, side_for_radius_x, side_for_radius_y);
+            let inner_sweep_angle =
+                intersect_angle(inner_x, inner_y, side_for_radius_x, side_for_radius_y);
+
+            css_rounded_rect.intersect_angles[corner] =
+                Vec2::new(inner_sweep_angle, outer_sweep_angle);
+        }
+
+        css_rounded_rect.compute_arcs();
+        css_rounded_rect
+    }
+
+    fn compute_arcs(&mut self) {
+        for corner in CORNERS {
+            let outer_radius = self.outer_radii[corner];
+            let inner_radius = self.inner_radii[corner];
+
+            let radius_sign = CORNER_RADIUS_SIGN[corner];
+
+            let outer_radius = Vec2::new(
+                radius_sign.x * outer_radius.x,
+                radius_sign.y * outer_radius.y,
+            );
+            let inner_radius = Vec2::new(
+                radius_sign.x * inner_radius.x,
+                radius_sign.y * inner_radius.y,
+            );
+
+            if is_outer_radius_sharp(outer_radius) {
+                continue;
+            }
+
+            let center = self.corners[corner].add(outer_radius);
+            let intersect_angle = self.intersect_angles[corner];
+
+            let outside_1st_arc = Arc::new(
+                center,
+                self.outer_radii[corner],
+                CORNER_START_ANGLES[corner],
+                intersect_angle.y,
+                0.0,
+            );
+
+            let outside_2nd_arc = Arc::new(
+                center,
+                self.outer_radii[corner],
+                CORNER_START_ANGLES[corner] + intersect_angle.y,
+                FRAC_PI_2 - intersect_angle.y,
+                0.0,
+            );
+
+            // the background arc will always have radius pi/2
+            let background_arc = Arc::new(
+                center,
+                self.outer_radii[corner],
+                CORNER_START_ANGLES[corner],
+                FRAC_PI_2,
+                0.0,
+            );
+
+            self.corners_arcs[corner][0] = Some(outside_1st_arc);
+            self.corners_arcs[corner][1] = Some(outside_2nd_arc);
+            self.background_arcs[corner] = Some(background_arc);
+
+            if is_outer_radius_sharp(inner_radius) {
+                continue;
+            }
+
+            let inner_1st_arc = Arc::new(
+                center,
+                self.inner_radii[corner],
+                CORNER_START_ANGLES[corner] + FRAC_PI_2,
+                -FRAC_PI_2 + intersect_angle.x,
+                0.0,
+            );
+
+            let inner_2nd_arc = Arc::new(
+                center,
+                self.inner_radii[corner],
+                CORNER_START_ANGLES[corner] + intersect_angle.x,
+                -intersect_angle.x,
+                0.0,
+            );
+
+            self.corners_arcs[corner][2] = Some(inner_1st_arc);
+            self.corners_arcs[corner][3] = Some(inner_2nd_arc);
         }
     }
 
-    pub fn compute_border_spec(&self) -> ComputedBorderSpec {
-        ComputedBorderSpec::new(self)
+    pub fn get_side(&self, side: usize) -> Option<BezPath> {
+        let width = self.widths[side];
+
+        // The border has no thickness.
+        if width == 0.0 {
+            return None;
+        }
+
+        let corner = side;
+        let next_corner = NEXT_CORNER[corner];
+
+        let rect_corner = self.corners[corner];
+        let next_rect_corner = self.corners[next_corner];
+
+        let mut path = BezPath::new();
+
+        let mut current_arc = FIRST_ARC;
+
+        if let Some(arc) = &self.corners_arcs[corner][current_arc] {
+            path.extend(&arc.to_path(0.01));
+        } else {
+            path.move_to(rect_corner);
+        }
+
+        current_arc = NEXT_ARC[current_arc];
+
+        if let Some(arc) = &self.corners_arcs[next_corner][current_arc] {
+            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+        } else {
+            path.line_to(next_rect_corner);
+        }
+
+        current_arc = NEXT_ARC[current_arc];
+
+        if let Some(arc) = &self.corners_arcs[next_corner][current_arc] {
+            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+        } else {
+            let offset = CORNER_RADIUS_SIGN[next_corner];
+            let horizontal_side = CORNER_HORIZONTAL_SIDE[next_corner];
+            let vertical_side = CORNER_VERTICAL_SIDE[next_corner];
+            let horizontal_width = self.widths[horizontal_side];
+            let vertical_width = self.widths[vertical_side];
+            let inside_corner = next_rect_corner.add(Vec2::new(
+                horizontal_width * offset.x,
+                vertical_width * offset.y,
+            ));
+            path.line_to(inside_corner);
+        }
+
+        current_arc = NEXT_ARC[current_arc];
+
+        if let Some(arc) = &self.corners_arcs[corner][current_arc] {
+            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+        } else {
+            let offset = CORNER_RADIUS_SIGN[corner];
+            let horizontal_side = CORNER_HORIZONTAL_SIDE[corner];
+            let vertical_side = CORNER_VERTICAL_SIDE[corner];
+            let horizontal_width = self.widths[horizontal_side];
+            let vertical_width = self.widths[vertical_side];
+            let inside_corner = rect_corner.add(Vec2::new(
+                horizontal_width * offset.x,
+                vertical_width * offset.y,
+            ));
+            path.line_to(inside_corner);
+        }
+        path.close_path();
+
+        Some(path)
     }
-}
 
-#[derive(Clone, Debug, Default)]
-pub struct ComputedBorderSpec {
-    sides: [SideData; 4],
-    computed_corner: [ComputedCorner; 4],
-}
+    /// Calculate the scaling factor to apply to the radii to ensure they fit within the rectangle.
+    fn scale_radius(&mut self) {
+        let box_width = self.width();
+        let box_height = self.height();
 
-#[derive(Copy, Clone, Debug)]
-pub struct SideData {
-    pub width: f64,
-    pub color: Color,
-}
+        let f_top_x = box_width / (self.outer_radii[TOP_LEFT].x + self.outer_radii[TOP_RIGHT].x);
+        let f_bottom_x =
+            box_width / (self.outer_radii[BOTTOM_LEFT].x + self.outer_radii[BOTTOM_RIGHT].x);
 
-impl Default for SideData {
-    fn default() -> Self {
-        Self {
-            width: 0.0,
-            color: Color::BLACK,
+        let f_left_y =
+            box_height / (self.outer_radii[BOTTOM_LEFT].y + self.outer_radii[TOP_LEFT].y);
+        let f_right_y =
+            box_height / (self.outer_radii[BOTTOM_RIGHT].y + self.outer_radii[TOP_RIGHT].y);
+
+        let radius_scale = f_top_x
+            .min(f_left_y)
+            .min(f_bottom_x)
+            .min(f_right_y)
+            .min(1.0);
+
+        for radius in &mut self.outer_radii {
+            *radius *= radius_scale;
         }
     }
-}
 
-impl SideData {
-    fn new(width: f64, color: Color) -> Self {
-        Self { width, color }
+    /// The width of the rectangle.
+    ///
+    /// Note: negative width is treated as 0.
+    #[inline]
+    pub fn width(&self) -> f64 {
+        (self.x1 - self.x0).max(0.0)
     }
-}
 
-#[derive(Clone, Debug, Default)]
-struct ComputedCorner {
-    inner_transition_point: Point,
-    outer_transition_point: Point,
-    is_inner_sharp: bool,
-    is_outer_sharp: bool,
-
-    inner_sides: [ComputedCornerSide; 2],
-    outer_sides: [ComputedCornerSide; 2],
-
-    border_point: Point,
-    corner_point: Point,
-}
-
-#[derive(Debug, Default, Clone)]
-struct ComputedCornerSide {
-    arc: BezPath,
-}
-
-impl ComputedCornerSide {
-    fn new() -> Self {
-        Self {
-            arc: BezPath::new(),
-        }
+    /// The height of the rectangle.
+    ///
+    /// Note: negative height is treated as 0.
+    #[inline]
+    pub fn height(&self) -> f64 {
+        (self.y1 - self.y0).max(0.0)
     }
 }
 
 /// Calculate the angle of intersection between the quarter-ellipse and a line from the border point to the corner point.
-fn intersect_angle(top_left_radius_x: f64, top_left_radius_y: f64, top_width: f64, right_width: f64) -> f64 {
+fn intersect_angle(
+    top_left_radius_x: f64,
+    top_left_radius_y: f64,
+    top_width: f64,
+    right_width: f64,
+) -> f64 {
     // 1. Set up the equations and solve for the intersection point using the quadratic formula.
     // 2. To get the angle, we use the parametric equation of the ellipse, solving for the angle.
 
@@ -128,6 +323,11 @@ fn intersect_angle(top_left_radius_x: f64, top_left_radius_y: f64, top_width: f6
 
     let r_x = top_left_radius_x;
     let r_y = top_left_radius_y;
+
+    if r_x == 0.0 || r_y == 0.0 {
+        // There is no ellipse, so the corner is rectangular.
+        return FRAC_PI_2;
+    }
 
     // If one of the vertical borders has a width of 0, the intersection line will be vertical.
     // Return 0 degrees, which will be a rectangular corner.
@@ -145,7 +345,8 @@ fn intersect_angle(top_left_radius_x: f64, top_left_radius_y: f64, top_width: f6
     let discriminant = q_b * q_b - 4.0 * q_a;
 
     if discriminant < 0.0 || q_a == 0.0 {
-        panic!("No intersection");
+        return PI / 2.0;
+        //panic!("No intersection");
     }
 
     // q_a is > 0, so x_2 Should always be smaller than x_1 giving us the closest intersection point.
@@ -170,394 +371,178 @@ fn extend_path_with_arc(path: &mut BezPath, arc_path: &BezPath) {
     }
 }
 
-#[derive(Default, Clone)]
-struct CornerData {
-    outer_radius_x: f64,
-    outer_radius_y: f64,
-    inner_radius_x: f64,
-    inner_radius_y: f64,
-    inner_is_sharp: bool,
-    outer_is_sharp: bool,
-
-    border_point: Point,
-    border_radius_point: Point,
-    corner_point: Point,
+pub struct CssRectPathIter {
+    rect: CssRoundedRect,
+    current_corner: usize,
+    current_corner_iter: Option<Box<dyn Iterator<Item = PathEl>>>,
+    tolerance: f64,
 }
 
-impl CornerData {
-    fn new(border_spec: &BorderSpec, radius_scale: f64, corner: Corner) -> Self {
-        let radius_x = match corner {
-            Corner::TopLeft => border_spec.top_left_radius_x,
-            Corner::TopRight => border_spec.top_right_radius_x,
-            Corner::BottomRight => border_spec.bottom_right_radius_x,
-            Corner::BottomLeft => border_spec.bottom_left_radius_x,
-        } * radius_scale;
+impl CssRectPathIter {
+    fn next_arc_element(&mut self) -> Option<PathEl> {
+        if let Some(iter) = &mut self.current_corner_iter {
+            if let Some(el) = iter.next() {
+                // Turn MoveTo into LineTo except for the first corner
+                if self.current_corner != 1 && matches!(el, PathEl::MoveTo(_)) {
+                    if let PathEl::MoveTo(p) = el {
+                        return Some(PathEl::LineTo(p));
+                    }
+                }
+                return Some(el);
+            } else {
+                self.current_corner_iter = None;
+            }
+        }
+        None
+    }
+}
 
-        let radius_y = match corner {
-            Corner::TopLeft => border_spec.top_left_radius_y,
-            Corner::TopRight => border_spec.top_right_radius_y,
-            Corner::BottomRight => border_spec.bottom_right_radius_y,
-            Corner::BottomLeft => border_spec.bottom_left_radius_y,
-        } * radius_scale;
+impl Iterator for CssRectPathIter {
+    type Item = PathEl;
 
-        let width_x = match corner {
-            Corner::TopLeft => border_spec.left_width,
-            Corner::TopRight => border_spec.right_width,
-            Corner::BottomRight => border_spec.right_width,
-            Corner::BottomLeft => border_spec.left_width,
-        };
-
-        let width_y = match corner {
-            Corner::TopLeft => border_spec.top_width,
-            Corner::TopRight => border_spec.top_width,
-            Corner::BottomRight => border_spec.bottom_width,
-            Corner::BottomLeft => border_spec.bottom_width,
-        };
-
-        let mut inner_radius_x = (radius_x - width_x).max(0.0);
-        let mut inner_radius_y = (radius_y - width_y).max(0.0);
-
-        let inner_is_sharp = is_inner_radius_sharp(width_x, radius_x, width_y, radius_y);
-        let outer_is_sharp = is_outer_radius_sharp(radius_x, radius_y);
-
-        if inner_is_sharp {
-            inner_radius_x = 0.0;
-            inner_radius_y = 0.0;
+    fn next(&mut self) -> Option<PathEl> {
+        if self.current_corner_iter.is_some() {
+            let path_element = self.next_arc_element();
+            if path_element.is_some() {
+                return path_element;
+            }
         }
 
-        let corner_point = match corner {
-            Corner::TopLeft => Point::new(border_spec.x1, border_spec.y1),
-            Corner::TopRight => Point::new(border_spec.x2, border_spec.y1),
-            Corner::BottomRight => Point::new(border_spec.x2, border_spec.y2),
-            Corner::BottomLeft => Point::new(border_spec.x1, border_spec.y2),
-        };
+        self.current_corner += 1;
+        self.current_corner_iter = None;
 
-        let border_point = match corner {
-            Corner::TopLeft => {
-                Point::new(border_spec.x1 + border_spec.left_width, border_spec.y1 + border_spec.top_width)
-            }
-            Corner::TopRight => {
-                Point::new(border_spec.x2 - border_spec.right_width, border_spec.y1 + border_spec.top_width)
-            }
-            Corner::BottomRight => {
-                Point::new(border_spec.x2 - border_spec.right_width, border_spec.y2 - border_spec.bottom_width)
-            }
-            Corner::BottomLeft => {
-                Point::new(border_spec.x1 + border_spec.left_width, border_spec.y2 - border_spec.bottom_width)
-            }
-        };
+        if self.current_corner > 5 {
+            return None;
+        }
 
-        let border_radius_point = match corner {
-            Corner::TopLeft => Point::new(border_spec.x1 + radius_x, border_spec.y1 + radius_y),
-            Corner::TopRight => Point::new(border_spec.x2 - radius_x, border_spec.y1 + radius_y),
-            Corner::BottomRight => Point::new(border_spec.x2 - radius_x, border_spec.y2 - radius_y),
-            Corner::BottomLeft => Point::new(border_spec.x1 + radius_x, border_spec.y2 - radius_y),
+        let current_corner = if self.current_corner <= 4 {
+            self.rect.background_arcs[self.current_corner - 1].as_ref()
+        } else {
+            None
         };
-
-        Self {
-            outer_radius_x: radius_x,
-            outer_radius_y: radius_y,
-            inner_radius_x,
-            inner_radius_y,
-            inner_is_sharp,
-            outer_is_sharp,
-            border_point,
-            border_radius_point,
-            corner_point,
+        if let Some(current_background_arc) = current_corner {
+            let iter = current_background_arc.path_elements(self.tolerance);
+            self.current_corner_iter = Some(Box::new(iter));
+            self.next_arc_element()
+        } else {
+            match self.current_corner {
+                1 => Some(PathEl::MoveTo(self.rect.corners[TOP_LEFT])),
+                2 => Some(PathEl::LineTo(self.rect.corners[TOP_RIGHT])),
+                3 => Some(PathEl::LineTo(self.rect.corners[BOTTOM_RIGHT])),
+                4 => Some(PathEl::LineTo(self.rect.corners[BOTTOM_LEFT])),
+                5 => Some(PathEl::ClosePath),
+                _ => None,
+            }
         }
     }
 }
 
-impl ComputedBorderSpec {
-    fn new(border_spec: &BorderSpec) -> Self {
-        let box_width = (border_spec.x2 - border_spec.x1).max(0.0);
-        let box_height = (border_spec.y2 - border_spec.y1).max(0.0);
+impl Shape for CssRoundedRect {
+    type PathElementsIter<'iter> = CssRectPathIter;
 
-        let f_top_x = box_width / (border_spec.top_left_radius_x + border_spec.top_right_radius_x);
-        let f_bottom_x = box_width / (border_spec.bottom_left_radius_x + border_spec.bottom_right_radius_x);
-
-        let f_left_y = box_height / (border_spec.bottom_left_radius_y + border_spec.top_left_radius_y);
-        let f_right_y = box_height / (border_spec.top_right_radius_y + border_spec.bottom_right_radius_y);
-
-        let f = f64::min(f64::min(f_top_x, f_left_y), f64::min(f_bottom_x, f_right_y));
-
-        let f = if f < 1.0 { f } else { 1.0 };
-
-        //////////////////////////
-
-        let sides = [
-            SideData::new(border_spec.top_width, border_spec.top_color),
-            SideData::new(border_spec.right_width, border_spec.right_color),
-            SideData::new(border_spec.bottom_width, border_spec.bottom_color),
-            SideData::new(border_spec.left_width, border_spec.left_color),
-        ];
-
-        let corners = [
-            CornerData::new(border_spec, f, Corner::TopLeft),
-            CornerData::new(border_spec, f, Corner::TopRight),
-            CornerData::new(border_spec, f, Corner::BottomRight),
-            CornerData::new(border_spec, f, Corner::BottomLeft),
-        ];
-
-        let computed_corner = [
-            Self::create_corner(Corner::TopLeft, &corners, &sides),
-            Self::create_corner(Corner::TopRight, &corners, &sides),
-            Self::create_corner(Corner::BottomRight, &corners, &sides),
-            Self::create_corner(Corner::BottomLeft, &corners, &sides),
-        ];
-
-        ComputedBorderSpec {
-            sides,
-            computed_corner,
+    fn path_elements(&self, tolerance: f64) -> Self::PathElementsIter<'_> {
+        Self::PathElementsIter {
+            rect: *self,
+            current_corner: TOP_LEFT,
+            current_corner_iter: None,
+            tolerance,
         }
     }
 
-    fn create_corner(corner: Corner, corners: &[CornerData; 4], sides: &[SideData; 4]) -> ComputedCorner {
-        // The (start_angle, end_angle) for the inner curves.
-        // The reverse of these angle pairs is used for the outer curves.
-        const INNER_ANGLES: [(f64, f64); 4] =
-            [(PI, FRAC_PI_2), (FRAC_PI_2, 0.0), (TAU, 3.0 * FRAC_PI_2), (3.0 * FRAC_PI_2, PI)];
-
-        let corner_data = &corners[corner as usize];
-        let primary_side = &sides[corner.get_primary_side() as usize];
-        let secondary_side = &sides[corner.get_secondary_side() as usize];
-
-        let inner_sweep_angle = intersect_angle(
-            corner_data.inner_radius_x,
-            corner_data.inner_radius_y,
-            primary_side.width,
-            secondary_side.width,
-        );
-
-        let outer_sweep_angle: f64 = intersect_angle(
-            corner_data.outer_radius_x,
-            corner_data.outer_radius_y,
-            primary_side.width,
-            secondary_side.width,
-        );
-
-        let inner_intersect_angle = corner.get_relative_angle(inner_sweep_angle);
-
-        let inner_angle = INNER_ANGLES[corner as usize];
-
-        let inner_start_angle = inner_angle.0;
-        let inner_end_angle = inner_angle.1;
-
-        let outer_angle = (inner_angle.1, inner_angle.0);
-        let outer_start_angle = outer_angle.0;
-        let outer_end_angle = outer_angle.1;
-
-        let inner_first_start_angle = inner_start_angle;
-        let inner_first_end_angle = inner_intersect_angle;
-        let inner_first_sweep_angle = inner_first_end_angle - inner_first_start_angle;
-
-        let inner_second_start_angle = inner_intersect_angle;
-        let inner_second_end_angle = inner_end_angle;
-        let inner_second_sweep_angle = inner_second_end_angle - inner_second_start_angle;
-
-        let outer_intersect_angle = corner.get_relative_angle(outer_sweep_angle);
-
-        let outer_first_start_angle = outer_start_angle;
-        let outer_first_end_angle = outer_intersect_angle;
-        let outer_first_sweep_angle = outer_first_end_angle - outer_first_start_angle;
-
-        let outer_second_start_angle = outer_intersect_angle;
-        let outer_second_end_angle = outer_end_angle;
-        let outer_second_sweep_angle = outer_second_end_angle - outer_second_start_angle;
-
-        let mut inner_sides = [ComputedCornerSide::new(), ComputedCornerSide::new()];
-        let mut outer_sides = [ComputedCornerSide::new(), ComputedCornerSide::new()];
-
-        let inner_transition_point = corner_data.border_radius_point
-            + Vec2::new(
-                corner_data.inner_radius_x * f64::cos(inner_intersect_angle),
-                -corner_data.inner_radius_y * f64::sin(inner_intersect_angle),
-            );
-
-        let outer_transition_point = corner_data.border_radius_point
-            + Vec2::new(
-                corner_data.outer_radius_x * f64::cos(outer_intersect_angle),
-                -corner_data.outer_radius_y * f64::sin(outer_intersect_angle),
-            );
-
-        let inner_arc_first = peniko::kurbo::Arc::new(
-            corner_data.border_radius_point,
-            Vec2::new(corner_data.inner_radius_x, corner_data.inner_radius_y),
-            to_clockwise_angle(inner_first_start_angle),
-            -inner_first_sweep_angle,
-            0.0,
-        )
-        .to_path(0.1);
-
-        let inner_arc_second = peniko::kurbo::Arc::new(
-            corner_data.border_radius_point,
-            Vec2::new(corner_data.inner_radius_x, corner_data.inner_radius_y),
-            to_clockwise_angle(inner_second_start_angle),
-            -inner_second_sweep_angle,
-            0.0,
-        )
-        .to_path(0.1);
-
-        let outer_arc_first = peniko::kurbo::Arc::new(
-            corner_data.border_radius_point,
-            Vec2::new(corner_data.outer_radius_x, corner_data.outer_radius_y),
-            to_clockwise_angle(outer_first_start_angle),
-            -outer_first_sweep_angle,
-            0.0,
-        )
-        .to_path(0.1);
-
-        let outer_arc_second = peniko::kurbo::Arc::new(
-            corner_data.border_radius_point,
-            Vec2::new(corner_data.outer_radius_x, corner_data.outer_radius_y),
-            to_clockwise_angle(outer_second_start_angle),
-            -outer_second_sweep_angle,
-            0.0,
-        )
-        .to_path(0.1);
-
-        inner_sides[corner.get_inner_start_side() as usize].arc = inner_arc_first;
-        inner_sides[corner.get_inner_start_side().next() as usize].arc = inner_arc_second;
-
-        outer_sides[corner.get_outer_start_side() as usize].arc = outer_arc_first;
-        outer_sides[corner.get_outer_start_side().next() as usize].arc = outer_arc_second;
-
-        ComputedCorner {
-            inner_transition_point,
-            outer_transition_point,
-            is_inner_sharp: corner_data.inner_is_sharp,
-            is_outer_sharp: corner_data.outer_is_sharp,
-            inner_sides,
-            outer_sides,
-            border_point: corner_data.border_point,
-            corner_point: corner_data.corner_point,
+    /// The area of the CSS border rectangle.
+    fn area(&self) -> f64 {
+        let mut removed_border_area = 0.0;
+        for corner in CORNERS {
+            let outer_radius = self.outer_radii[corner];
+            let quarter_ellipse_area = PI * outer_radius.x * outer_radius.y / 4.0;
+            let removed = (outer_radius.x * outer_radius.y) - quarter_ellipse_area;
+            removed_border_area += removed;
         }
+        self.width() * self.height() - removed_border_area
     }
 
-    fn get_computed_corner(&self, corner: Corner) -> &ComputedCorner {
-        &self.computed_corner[corner as usize]
+    /// Approximate the CSS border rectangle perimeter.
+    ///
+    /// This uses a numerical approximation. The absolute error between the calculated perimeter
+    /// and the true perimeter is bounded by `accuracy` (modulo floating point rounding errors).
+    ///
+    /// For circular ellipses (equal horizontal and vertical radii), the calculated perimeter is
+    /// exact.
+    fn perimeter(&self, accuracy: f64) -> f64 {
+        let mut border_perimeter_delta = 0.0;
+        for corner in CORNERS {
+            let outer_radius = self.outer_radii[corner];
+            border_perimeter_delta +=
+                kurbo::Ellipse::new(Point::default(), outer_radius, 0.0).perimeter(accuracy) / 4.0;
+            border_perimeter_delta -= outer_radius.x + outer_radius.y;
+        }
+        self.width() * 2.0 + self.height() * 2.0 + border_perimeter_delta
     }
 
-    pub fn get_side(&self, side: Side) -> &SideData {
-        &self.sides[side as usize]
+    fn winding(&self, p: Point) -> i32 {
+        if p.x < self.x0 || p.x > self.x1 || p.y < self.y0 || p.y > self.y1 {
+            return 0;
+        }
+
+        for corner in CORNERS {
+            if let Some(arc) = &self.corners_arcs[corner][0] {
+                let border_radius = self.outer_radii[corner];
+                let sign = CORNER_RADIUS_SIGN[corner];
+                let corner_point = self.corners[corner];
+                let border_point = corner_point.add(Vec2::new(
+                    border_radius.x * sign.x,
+                    border_radius.y * sign.y,
+                ));
+                let quarter_ellipse_bounds = Rect::from_points(corner_point, border_point);
+                if quarter_ellipse_bounds.contains(p) && arc.contains(p) {
+                    return 0;
+                }
+            }
+        }
+
+        1
     }
 
-    pub fn build_side_path(&self, side: Side) -> BezPath {
-        let start_corner = side.as_corner();
-        let end_corner = side.next_clockwise().as_corner();
-
-        let start_corner = self.get_computed_corner(start_corner);
-        let end_corner = self.get_computed_corner(end_corner);
-
-        const CORNER_SIDES: [(CornerSide, CornerSide); 4] = [
-            (CornerSide::Top, CornerSide::Top),
-            (CornerSide::Bottom, CornerSide::Top),
-            (CornerSide::Bottom, CornerSide::Bottom),
-            (CornerSide::Top, CornerSide::Bottom),
-        ];
-
-        // Figure out which corner-side arcs to use
-        let (start_side, end_side) = CORNER_SIDES[side as usize];
-
-        let mut path = BezPath::new();
-
-        //
-        // 1) Start corner, inner arc or move
-        //
-        if !start_corner.is_inner_sharp {
-            // Arc
-            path.extend(start_corner.inner_sides[start_side as usize].arc.clone());
-        } else {
-            // Sharp → just move there
-            path.move_to(start_corner.border_point);
-        }
-
-        //
-        // 2) End corner, inner arc or line
-        //
-        if !end_corner.is_inner_sharp {
-            extend_path_with_arc(&mut path, &end_corner.inner_sides[end_side as usize].arc);
-        } else {
-            path.line_to(end_corner.border_point);
-        }
-
-        //
-        // 3) End corner, outer arc or line to corner
-        //
-        if !end_corner.is_outer_sharp {
-            path.line_to(end_corner.outer_transition_point);
-            extend_path_with_arc(&mut path, &end_corner.outer_sides[end_side as usize].arc);
-        } else {
-            path.line_to(end_corner.corner_point);
-        }
-
-        //
-        // 4) Start corner, outer arc or line to corner
-        //
-        if !start_corner.is_outer_sharp {
-            extend_path_with_arc(&mut path, &start_corner.outer_sides[start_side as usize].arc);
-            path.line_to(start_corner.inner_transition_point);
-        } else {
-            path.line_to(start_corner.corner_point);
-        }
-
-        //
-        // 5) Close it up
-        //
-        path.close_path();
-
-        path
+    fn bounding_box(&self) -> Rect {
+        // TODO: improve accuracy by considering the radii
+        Rect::new(self.x0, self.y0, self.x1, self.y1)
     }
-
-    pub fn build_background_path(&self) -> BezPath {
-        let mut background_path = BezPath::new();
-
-        let top_left = self.get_computed_corner(Corner::TopLeft);
-        let top_right = self.get_computed_corner(Corner::TopRight);
-        let bottom_right = self.get_computed_corner(Corner::BottomRight);
-        let bottom_left = self.get_computed_corner(Corner::BottomLeft);
-
-        if !top_left.is_outer_sharp {
-            background_path.extend(top_left.outer_sides[CornerSide::Top as usize].arc.clone());
-            extend_path_with_arc(&mut background_path, &top_left.outer_sides[CornerSide::Bottom as usize].arc);
-        } else {
-            background_path.move_to(top_left.corner_point);
-        }
-
-        if !bottom_left.is_outer_sharp {
-            extend_path_with_arc(&mut background_path, &bottom_left.outer_sides[CornerSide::Top as usize].arc);
-            extend_path_with_arc(&mut background_path, &bottom_left.outer_sides[CornerSide::Bottom as usize].arc);
-        } else {
-            background_path.line_to(bottom_left.corner_point);
-        }
-
-        if !bottom_right.is_outer_sharp {
-            extend_path_with_arc(&mut background_path, &bottom_right.outer_sides[CornerSide::Bottom as usize].arc);
-            extend_path_with_arc(&mut background_path, &bottom_right.outer_sides[CornerSide::Top as usize].arc);
-        } else {
-            background_path.line_to(bottom_right.corner_point);
-        }
-
-        if !top_right.is_outer_sharp {
-            extend_path_with_arc(&mut background_path, &top_right.outer_sides[CornerSide::Bottom as usize].arc);
-            extend_path_with_arc(&mut background_path, &top_right.outer_sides[CornerSide::Top as usize].arc);
-        } else {
-            background_path.line_to(top_right.corner_point);
-        }
-        background_path.close_path();
-
-        background_path
-    }
-}
-
-const fn to_clockwise_angle(angle: f64) -> f64 {
-    TAU - angle
-}
-
-fn is_outer_radius_sharp(radius_x: f64, radius_y: f64) -> bool {
-    radius_x == 0.0 || radius_y == 0.0
 }
 
 fn is_inner_radius_sharp(width_x: f64, radius_x: f64, width_y: f64, radius_y: f64) -> bool {
     width_x >= radius_x || width_y >= radius_y
+}
+
+fn is_outer_radius_sharp(radii: Vec2) -> bool {
+    radii.x == 0.0 || radii.y == 0.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::FRAC_PI_2;
+
+    const EPS: f64 = 1e-9;
+
+    #[test]
+    fn returns_zero_when_right_width_zero() {
+        // If the right border width is 0.0, it should always return 0.0 (rectangular corner)
+        let result = intersect_angle(10.0, 10.0, 5.0, 0.0);
+        assert!((result - 0.0).abs() < EPS);
+    }
+
+    #[test]
+    fn returns_pi_over_4_for_equal_axes_case() {
+        // For a circle (rx == ry) and symmetric border widths, the intersection angle is 45° (π/4)
+        let result = intersect_angle(10.0, 10.0, 10.0, 10.0);
+        assert!(result <= FRAC_PI_2);
+    }
+
+    #[test]
+    fn returns_f() {
+        // If the right border width is 0.0, it should always return 0.0 (rectangular corner)
+        let result = intersect_angle(10.0, 0.0, 5.0, 5.0);
+        println!("Result: {}", result);
+        assert!((result - 0.0).abs() < EPS);
+    }
 }

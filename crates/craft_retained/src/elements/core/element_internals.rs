@@ -1,14 +1,12 @@
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
-use crate::layout::layout_item::{draw_borders_generic, LayoutItem};
+use crate::layout::layout_item::{draw_borders_generic, ComputedBorder, LayoutItem};
 use crate::style::Style;
 use crate::text::text_context::TextContext;
-use craft_primitives::geometry::borders::BorderSpec;
 use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
 use craft_renderer::RenderList;
-use kurbo::{Affine, Point};
-use peniko::Color;
+use kurbo::{Affine, Point, Vec2};
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,6 +19,7 @@ use crate::elements::core::element_data::ElementData;
 use crate::elements::Element;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
+use craft_primitives::geometry::borders::CssRoundedRect;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData {
@@ -239,22 +238,22 @@ pub trait ElementInternals: ElementData {
             return;
         }
 
+        let border_color = self.element_data().current_style().border_color();
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
-        let scrollbar_thumb_radius = self.element_data().current_style().scrollbar_thumb_radius();
+        let scrollbar_thumb_radius = self.element_data().current_style().scrollbar_thumb_radius().map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
         // let scrollbar_thumb_radius = self.element_data().current_style().
         let track_rect = self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor);
         let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
 
-        let border_spec = BorderSpec::new(
-            thumb_rect,
+        let border_spec = CssRoundedRect::new(
+            thumb_rect.to_kurbo(),
             [0.0, 0.0, 0.0, 0.0],
             scrollbar_thumb_radius,
-            TrblRectangle::new_all(Color::TRANSPARENT),
         );
-        let computed_border_spec = border_spec.compute_border_spec();
+        let computed_border_spec = ComputedBorder::new(border_spec);
 
         renderer.draw_rect(track_rect, scrollbar_color.track_color);
-        draw_borders_generic(renderer, &computed_border_spec, scrollbar_color.thumb_color, scale_factor);
+        draw_borders_generic(renderer, &computed_border_spec, border_color.to_array(), scrollbar_color.thumb_color, scale_factor);
     }
 
     fn should_start_new_layer(&self) -> bool {
