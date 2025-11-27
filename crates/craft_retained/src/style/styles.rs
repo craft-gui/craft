@@ -264,6 +264,8 @@ pub struct Style {
     properties: SmallVec<[StyleProperty; 5]>,
     pub dirty_flags: StyleFlags,
     pub animations: Vec<Animation>,
+    /// Set to true anytime a setter is called.
+    pub is_dirty: bool,
 }
 
 impl Default for Style {
@@ -272,6 +274,7 @@ impl Default for Style {
             properties: SmallVec::new(),
             dirty_flags: StyleFlags::empty(),
             animations: Vec::new(),
+            is_dirty: true,
         }
     }
 }
@@ -289,6 +292,7 @@ macro_rules! style_property {
             }
 
             pub fn $set(&mut self, val: $inner) {
+                self.is_dirty = true;
                 if self.dirty_flags.contains(StyleFlags::$flag) {
                     self.remove_property(|p| matches!(p, StyleProperty::$variant(_)));
                 }
@@ -548,6 +552,7 @@ impl Style {
             letter_spacing: Default::default(),
             word_break: Default::default(),
             overflow_wrap: Default::default(),
+            text_wrap_mode: Default::default(),
         }
     }
 

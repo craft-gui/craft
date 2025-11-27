@@ -198,7 +198,7 @@ pub trait ElementInternals: ElementData {
             }
         });
 
-        for child in self.children_mut() {
+        for child in self.children() {
             child.borrow_mut().on_animation_frame(animation_flags, delta_time);
         }
     }

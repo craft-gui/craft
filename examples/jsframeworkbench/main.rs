@@ -96,12 +96,19 @@ impl State {
     }
 
     pub fn remove_all_rows(&mut self) {
-        self.element.borrow_mut().children_mut().clear();
+        self.store.data.clear();
+        let to_remove = self.element.borrow().children().to_vec();
+        for child in to_remove {
+            self.element.borrow_mut().remove_child(child).expect("Failed to remove child!");
+        }
     }
+
     pub fn swap(&mut self) {
         if self.store.data.len() >= 999 {
             self.store.data.swap(1, 998);
-            self.element.borrow_mut().children_mut().swap(1, 998);
+            let child_1 = self.element.borrow().children()[1].clone();
+            let child_2 = self.element.borrow().children()[998].clone();
+            self.element.borrow_mut().swap_child(child_1, child_2).expect("Failed to swap children");
         }
     }
 

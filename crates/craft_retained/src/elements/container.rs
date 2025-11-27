@@ -16,6 +16,7 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
+use crate::app::TAFFY_TREE;
 
 /// Stores one or more elements.
 ///
@@ -31,6 +32,12 @@ impl Container {
             element_data: ElementData::new(true),
             me: None,
         }));
+
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style()).expect("TODO: panic message");
+            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        });
+
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me
     }
@@ -44,20 +51,30 @@ impl crate::elements::core::ElementData for Container {
     fn element_data_mut(&mut self) -> &mut ElementData {
         &mut self.element_data
     }
+}
 
+impl Element for Container {
     fn push(&mut self, child: Rc<RefCell<dyn Element>>) -> &mut Self where Self: Sized {
         let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
         child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child);
+        self.element_data.children.push(child.clone());
+
+        // Add the children's taffy node.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            if let Some(child_id) = child_id {
+                taffy_tree.add_child(parent_id, child_id).unwrap();
+            }
+        });
+
         self
     }
 
     fn push_dyn(&mut self, child: Rc<RefCell<dyn Element>>) {
         self.push(child);
     }
-}
 
-impl Element for Container {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -69,16 +86,18 @@ impl Element for Container {
 
 impl ElementInternals for Container {
     fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) -> Option<NodeId> {
-        self.element_data.layout_item.child_nodes.clear();
-
         for child in &mut self.element_data.children {
-            let child_node = child.borrow_mut().compute_layout(taffy_tree, scale_factor);
-            self.element_data.layout_item.push_child(&child_node);
+            child.borrow_mut().compute_layout(taffy_tree, scale_factor);
         }
 
-        let current_style = self.element_data.style.to_taffy_style();
+        if self.element_data.style.is_dirty {
+            let node_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            let style: taffy::Style = self.element_data.style.to_taffy_style();
+            taffy_tree.set_style(node_id, style).expect("Failed to set style on node.");
+            self.element_data.style.is_dirty = false;
+        }
 
-        self.element_data.layout_item.build_tree(taffy_tree, current_style)
+        self.element_data.layout_item.taffy_node_id
     }
 
     fn finalize_layout(

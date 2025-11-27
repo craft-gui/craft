@@ -1,4 +1,4 @@
-use crate::app::DOCUMENTS;
+use crate::app::{DOCUMENTS, TAFFY_TREE};
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
 use crate::style::{
@@ -9,11 +9,108 @@ use craft_primitives::geometry::Point;
 use craft_primitives::geometry::{ElementBox, TrblRectangle};
 use craft_primitives::Color;
 use std::any::Any;
-use taffy::{BoxSizing, Overflow, Position};
+use std::cell::RefCell;
+use std::rc::Rc;
+use taffy::{BoxSizing, NodeId, Overflow, Position, TaffyResult, TaffyTree};
 use ui_events::pointer::PointerId;
+use crate::CraftError;
+use crate::layout::layout_context::LayoutContext;
 
 /// The element trait for end-users.
 pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
+
+    fn swap_child(&mut self, child_1: Rc<RefCell<dyn Element>>, child_2: Rc<RefCell<dyn Element>>) -> Result<(), CraftError> {
+        let children = &mut self.element_data_mut().children;
+        let position_1 = children.iter()
+            .position(|x| Rc::ptr_eq(x, &child_1)).ok_or(CraftError::ElementNotFound)?;
+
+        let position_2 = children.iter()
+            .position(|x| Rc::ptr_eq(x, &child_2)).ok_or(CraftError::ElementNotFound)?;
+
+        // Swap the children.
+        self.element_data_mut().children.swap(position_1, position_2);
+
+        // Swap the children's taffy nodes.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data().layout_item.taffy_node_id;
+            let child_1_id = child_1.borrow().element_data().layout_item.taffy_node_id;
+            let child_2_id = child_2.borrow().element_data().layout_item.taffy_node_id;
+
+            if let Some(parent_id) = parent_id && let Some(child_1_id) = child_1_id && let Some(child_2_id) = child_2_id {
+                // There isn't a swap API in the taffy tree. Instead swap the children and call set_children.
+                let mut tchildren = taffy_tree.children(parent_id).expect("Failed to get taffy children").to_vec();
+
+                let i1 = tchildren.iter().position(|x| *x == child_1_id)
+                    .ok_or(CraftError::ElementNotFound).expect("Failed to find taffy child");
+                let i2 = tchildren.iter().position(|x| *x == child_2_id)
+                    .ok_or(CraftError::ElementNotFound).expect("Failed to find taffy child");
+
+                tchildren.swap(i1, i2);
+
+                taffy_tree.set_children(parent_id, &tchildren).expect("Failed set taffy children");
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Removes a direct child of this element and returns the removed node.
+    ///
+    /// # Errors
+    /// Returns [`CraftError::ElementNotFound`] if `child` is not an immediate child
+    /// of this element.
+    ///
+    /// # Panics
+    /// Panics if the corresponding Taffy layout nodes fail to be removed.
+    fn remove_child(&mut self, child: Rc<RefCell<dyn Element>>) -> Result<Rc<RefCell<dyn Element>>, CraftError> {
+        // Find the node.
+        let children = &mut self.element_data_mut().children;
+        let position = children.iter()
+            .position(|x| Rc::ptr_eq(x, &child)).ok_or(CraftError::ElementNotFound)?;
+
+        let child = children[position].clone();
+
+        // Remove the node from the element.
+
+        children.remove(position);
+
+        // Remove the parent reference.
+
+        child.borrow_mut().element_data_mut().parent = None;
+
+        // Remove the entire layout subtree.
+
+        fn remove_subtree(taffy: &mut TaffyTree<LayoutContext>, node: NodeId) -> TaffyResult<()> {
+            // Can we avoid this allocation?
+            let children = taffy.children(node)?;
+
+            for child in children {
+                remove_subtree(taffy, child)?;
+            }
+
+            taffy.remove(node).map(|_| ())
+        }
+
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+
+            if let Some(child_id) = child_id {
+                remove_subtree(taffy_tree, child_id).expect("Failed to remove taffy element.");
+            }
+        });
+
+        Ok(child)
+    }
+
+    /// Appends a child to the element.
+    fn push(&mut self, _child: Rc<RefCell<dyn Element>>) -> &mut Self where Self: Sized {
+        panic!("Pushing children is not supported.")
+    }
+
+    fn push_dyn(&mut self, _child: Rc<RefCell<dyn Element>>) {
+        panic!("Pushing children is not supported.")
+    }
+
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) -> &mut Self
     where
         Self: Sized,

@@ -24,18 +24,4 @@ pub trait ElementData {
     fn children(&self) -> &[Rc<RefCell<dyn Element>>] {
         self.element_data().children.as_slice()
     }
-
-    /// Returns a mutable reference to the children.
-    fn children_mut(&mut self) -> &mut Vec<Rc<RefCell<dyn Element>>> {
-        &mut self.element_data_mut().children
-    }
-
-    /// Appends a child to the element.
-    fn push(&mut self, _child: Rc<RefCell<dyn Element>>) -> &mut Self where Self: Sized {
-        panic!("Pushing children is not supported.")
-    }
-
-    fn push_dyn(&mut self, _child: Rc<RefCell<dyn Element>>) {
-        panic!("Pushing children is not supported.")
-    }
 }

@@ -30,18 +30,19 @@ pub struct LayoutItem {
     pub clip_bounds: Option<Rectangle>,
 
     //  ---
-    pub child_nodes: Vec<NodeId>,
+    pub children_awaiting_add: Vec<NodeId>,
 }
 
 impl LayoutItem {
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
-            self.child_nodes.push(*taffy_node_id);
+            self.children_awaiting_add.push(*taffy_node_id);
         }
     }
 
     pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
-        self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.child_nodes).unwrap());
+        self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.children_awaiting_add).unwrap());
+        self.children_awaiting_add.clear();
         self.taffy_node_id
     }
 

@@ -35,6 +35,7 @@ use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
 use winit::window::Window;
+use crate::app::TAFFY_TREE;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -101,6 +102,14 @@ impl Text {
         me.borrow_mut().me = Some(Rc::downgrade(&me2));
 
         me.borrow_mut().text(text);
+
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let context = LayoutContext::Text(TaffyTextContext{
+                element: me.borrow().me.clone().unwrap()
+            });
+            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
+            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        });
 
         me
     }
@@ -237,26 +246,19 @@ impl ElementInternals for Text {
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _scale_factor: f64,
     ) -> Option<NodeId> {
-        if self.state.is_layout_dirty {
-            self.state.layout = None;
-            self.state.cache.clear();
-            self.state.current_layout_key = None;
-            self.state.last_requested_measure_key = None;
-            self.state.current_render_key = None;
-            self.state.text_render = None;
-            self.state.content_widths = None;
-        }
         //self.merge_default_style();
 
-        let style: taffy::Style = self.element_data.style.to_taffy_style();
+        if self.state.is_layout_dirty {
+            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
+        }
 
-        self.element_data.layout_item.build_tree_with_context(
-            taffy_tree,
-            style,
-            LayoutContext::Text(TaffyTextContext{
-                element: self.me.clone().unwrap()
-            }),
-        )
+        let node_id = self.element_data.layout_item.taffy_node_id.unwrap();
+        if self.element_data.style.is_dirty {
+            let style: taffy::Style = self.element_data.style.to_taffy_style();
+            taffy_tree.set_style(node_id, style).expect("TODO: panic message");
+            self.element_data.style.is_dirty = false;
+        }
+        Some(node_id)
     }
 
     fn finalize_layout(
@@ -525,6 +527,17 @@ impl TextState {
         available_space: Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> Size<f32> {
+        if self.is_layout_dirty {
+            self.layout = None;
+            self.cache.clear();
+            self.current_layout_key = None;
+            self.last_requested_measure_key = None;
+            self.current_render_key = None;
+            self.text_render = None;
+            self.content_widths = None;
+            self.is_layout_dirty = false;
+        }
+
         if self.layout.is_none() {
             let mut builder = text_context.tree_builder(self.scale_factor, &Style::default().to_text_style());
             let text = &self.text;

@@ -56,10 +56,10 @@ thread_local! {
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
+    pub static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
 }
 
 pub struct App {
-    pub taffy_tree: TaffyTree<LayoutContext>,
     pub(crate) root: Rc<RefCell<dyn crate::elements::Element>>,
     /// A winit window. This is only valid between resume and pause.
     pub window: Option<Arc<Window>>,
@@ -487,16 +487,18 @@ impl App {
         {
             let span = span!(Level::INFO, "layout");
             let _enter = span.enter();
-            layout(
-                &mut self.taffy_tree,
-                root_element,
-                viewport_size,
-                text_context,
-                origin,
-                self.resource_manager.clone(),
-                scale_factor,
-                mouse_position,
-            )
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                layout(
+                    taffy_tree,
+                    root_element,
+                    viewport_size,
+                    text_context,
+                    origin,
+                    self.resource_manager.clone(),
+                    scale_factor,
+                    mouse_position,
+                )
+            });
         };
     }
 
@@ -591,8 +593,6 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
-    taffy_tree.clear();
-
     let root_node = root_element.borrow_mut().compute_layout(taffy_tree, scale_factor).unwrap();
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
