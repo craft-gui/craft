@@ -96,16 +96,16 @@ impl State {
     }
 
     pub fn remove_all_rows(&mut self) {
-        self.store.data.clear();
         let to_remove = self.element.borrow().children().to_vec();
         for child in to_remove {
             self.element.borrow_mut().remove_child(child).expect("Failed to remove child!");
         }
     }
 
-    pub fn swap(&mut self) {
+    pub fn swap_rows(&mut self) {
         if self.store.data.len() >= 999 {
-            self.store.data.swap(1, 998);
+            self.store.swap_rows();
+            self.rows.swap(1, 998);
             let child_1 = self.element.borrow().children()[1].clone();
             let child_2 = self.element.borrow().children()[998].clone();
             self.element.borrow_mut().swap_child(child_1, child_2).expect("Failed to swap children");
@@ -153,6 +153,14 @@ pub struct Store {
     next_id: usize,
     rng: ThreadRng,
     selected: Option<usize>,
+}
+
+impl Store {
+    pub fn swap_rows(&mut self) {
+        if self.data.len() >= 999 {
+            self.data.swap(1, 998);
+        }
+    }
 }
 
 impl Default for Store {
@@ -293,7 +301,7 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().remove_all_rows());
 
     let state6 = state.clone();
-    let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap());
+    let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap_rows());
 
     buttons
         .borrow_mut()

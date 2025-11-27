@@ -65,6 +65,8 @@ impl Element for Container {
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id).unwrap();
+
+                taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
             }
         });
 

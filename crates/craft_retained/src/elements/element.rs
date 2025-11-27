@@ -48,6 +48,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
                 tchildren.swap(i1, i2);
 
                 taffy_tree.set_children(parent_id, &tchildren).expect("Failed set taffy children");
+                taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty.");
             }
         });
 
@@ -97,6 +98,10 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             if let Some(child_id) = child_id {
                 remove_subtree(taffy_tree, child_id).expect("Failed to remove taffy element.");
             }
+
+
+            let parent_id = self.element_data().layout_item.taffy_node_id;
+            taffy_tree.mark_dirty(parent_id.unwrap()).expect("Failed to mark taffy node dirty.");
         });
 
         Ok(child)
