@@ -1,9 +1,9 @@
-use kurbo::{Affine, BezPath, Shape, Vec2};
-use craft_primitives::geometry::borders::{CssRoundedRect, BOTTOM, LEFT, RIGHT, TOP};
-use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
-use craft_renderer::{Brush, RenderList};
 use crate::style::Style;
+use craft_primitives::geometry::borders::{CssRoundedRect, BOTTOM, LEFT, RIGHT, TOP};
+use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
+use craft_renderer::{Brush, RenderList};
+use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree};
 
@@ -132,7 +132,6 @@ impl LayoutItem {
         &mut self,
         has_border: bool,
         border_radius: [(f32, f32); 4],
-        border_color: TrblRectangle<Color>,
     ) {
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
         if !has_border {
@@ -178,7 +177,7 @@ pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_sp
 
     let mut background_path = computed_border_spec.background.clone();
     background_path.apply_affine(scale_factor);
-    renderer.fill_bez_path(background_path, Brush::Color(background_color));;
+    renderer.fill_bez_path(background_path, Brush::Color(background_color));
 
     for (side_index, side) in computed_border_spec.sides.iter().enumerate() {
         if let Some(mut side) = side.clone() {

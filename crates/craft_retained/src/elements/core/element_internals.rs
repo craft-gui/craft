@@ -4,7 +4,7 @@ use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, ComputedBorder, LayoutItem};
 use crate::style::Style;
 use crate::text::text_context::TextContext;
-use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
+use craft_primitives::geometry::{ElementBox, Rectangle};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point, Vec2};
 use rustc_hash::FxHashMap;
@@ -138,12 +138,12 @@ pub trait ElementInternals: ElementData {
     }
 
     fn finalize_borders(&mut self) {
-        let (has_border, border_radius, border_color) = {
+        let (has_border, border_radius) = {
             let current_style = self.element_data().current_style();
-            (current_style.has_border(), current_style.border_radius(), current_style.border_color())
+            (current_style.has_border(), current_style.border_radius())
         };
 
-        self.element_data_mut().layout_item.finalize_borders(has_border, border_radius, border_color);
+        self.element_data_mut().layout_item.finalize_borders(has_border, border_radius);
     }
 
     /// Called after layout, and is responsible for updating the animation state of an element.
