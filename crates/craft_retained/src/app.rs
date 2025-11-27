@@ -231,6 +231,14 @@ impl App {
         }
     }
 
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(not(feature = "accesskit"))]
+    pub fn on_request_redraw(&mut self) {
+        self.on_request_redraw_internal();
+    }
+
+    //#[cfg(not(feature = "accesskit"))]
+
     fn on_request_redraw_internal(&mut self) {
         if self.window.is_none() {
             return;
