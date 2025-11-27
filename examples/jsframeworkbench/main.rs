@@ -136,6 +136,13 @@ impl State {
         self.append_rows();
     }
 
+    pub fn clear(&mut self) {
+        self.store.clear();
+        self.rows.clear();
+        self.remove_all_rows();
+        self.select(None);
+    }
+
     pub fn update(&mut self) {
         self.store.update();
         for (index, data) in self.store.data.iter().enumerate().step_by(10) {
@@ -298,7 +305,7 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let btn_update_10th_row = build_button("Update every 10th row", move |_, _| state4.borrow_mut().update());
 
     let state5 = state.clone();
-    let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().remove_all_rows());
+    let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().clear());
 
     let state6 = state.clone();
     let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap_rows());
