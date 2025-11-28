@@ -7,6 +7,7 @@ use craft_resource_manager::ResourceManager;
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
 use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
+use crate::events::event_dispatch::dispatch_bubbling_event;
 use crate::text::text_context::TextContext;
 use crate::WindowContext;
 
@@ -60,13 +61,13 @@ pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchTyp
     // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
     // then fire a pointer event named lostpointercapture at the pointer capture target override node.
     if let Some(pointer_capture_val) = pointer_capture_val && Some(pointer_capture_val) != pending_pointer_capture_val {
-        dispatch_event(&CraftMessage::LostPointerCapture(), dispatch_type.clone(), _resource_manager, mouse_position, Rc::clone(&root), text_context, window_context, is_style);
+        //dispatch_bubbling_event(&CraftMessage::LostPointerCapture(), dispatch_type.clone(), _resource_manager, mouse_position, Rc::clone(&root), text_context, window_context, is_style);
     }
 
     // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
     // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
     if let Some(pending_pointer_capture_val) = pending_pointer_capture_val && Some(pending_pointer_capture_val) != pointer_capture_val {
-        dispatch_event(&CraftMessage::GotPointerCapture(), dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
+        //dispatch_bubbling_event(&CraftMessage::GotPointerCapture(), dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
     }
 
     // 3. Set the pointer capture target override to the pending pointer capture target override, if set.

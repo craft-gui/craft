@@ -43,6 +43,7 @@ pub use utils::craft_error::CraftError;
 pub use window_context::WindowContext;
 
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
@@ -206,6 +207,7 @@ pub fn setup_craft(
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
     let craft_app = Box::new(App {
+        previous_targets: VecDeque::new(),
         root,
         app_sender: app_sender.clone(),
         #[cfg(feature = "accesskit")]

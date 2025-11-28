@@ -12,6 +12,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::Cell;
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -60,6 +61,8 @@ thread_local! {
 }
 
 pub struct App {
+    pub(crate) previous_targets: VecDeque<Rc<RefCell<dyn Element>>>, // Move this...
+
     pub(crate) root: Rc<RefCell<dyn crate::elements::Element>>,
     /// A winit window. This is only valid between resume and pause.
     pub window: Option<Arc<Window>>,
@@ -368,6 +371,7 @@ impl App {
             &mut self.text_context,
             &mut self.window_context,
             is_style,
+            &mut self.previous_targets,
         );
         self.window.clone().unwrap().request_redraw();
     }

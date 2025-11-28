@@ -25,6 +25,8 @@ pub use event_dispatch::dispatch_event;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 
@@ -35,11 +37,12 @@ pub enum EventDispatchType {
     Bubbling,
 }
 
-
 #[derive(Clone)]
 pub enum CraftMessage {
     GotPointerCapture(),
     LostPointerCapture(),
+    PointerEnter(),
+    PointerLeave(),
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
     KeyboardInputEvent(KeyboardEvent),
