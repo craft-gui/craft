@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
 use kurbo::Point;
@@ -7,7 +8,7 @@ use craft_resource_manager::ResourceManager;
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
 use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
-use crate::events::event_dispatch::dispatch_bubbling_event;
+use crate::events::event_dispatch::{collect_nodes, dispatch_bubbling_event};
 use crate::text::text_context::TextContext;
 use crate::WindowContext;
 
@@ -43,11 +44,8 @@ pub(super) fn find_pointer_capture_target(nodes: &Vec<Rc<RefCell<dyn Element>>>,
 /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
 pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchType,
                                       _resource_manager: &mut Arc<ResourceManager>,
-                                      mouse_position: Option<Point>,
                                       root: Rc<RefCell<dyn Element>>,
-                                      text_context: &mut Option<TextContext>,
-                                      window_context: &mut WindowContext,
-                                      is_style: bool) {
+                                      text_context: &mut Option<TextContext>) {
     // 4.1.3.2 Process pending pointer capture
     let key = &PointerId::new(1).unwrap();
     let (pointer_capture_val, pending_pointer_capture_val) = DOCUMENTS.with_borrow_mut(|docs| {
@@ -61,13 +59,39 @@ pub(super) fn processing_pending_pointer_capture(dispatch_type: EventDispatchTyp
     // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
     // then fire a pointer event named lostpointercapture at the pointer capture target override node.
     if let Some(pointer_capture_val) = pointer_capture_val && Some(pointer_capture_val) != pending_pointer_capture_val {
-        //dispatch_bubbling_event(&CraftMessage::LostPointerCapture(), dispatch_type.clone(), _resource_manager, mouse_position, Rc::clone(&root), text_context, window_context, is_style);
+        let msg = CraftMessage::LostPointerCapture();
+        let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
+        let mut target = find_pointer_capture_target(&nodes, &msg);
+
+        if let Some(target) = target {
+            let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+            let mut current_target = Some(Rc::clone(&target));
+            while let Some(node) = current_target {
+                targets.push_back(Rc::clone(&node));
+                current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+            }
+
+            dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+        }
     }
 
     // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
     // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
     if let Some(pending_pointer_capture_val) = pending_pointer_capture_val && Some(pending_pointer_capture_val) != pointer_capture_val {
-        //dispatch_bubbling_event(&CraftMessage::GotPointerCapture(), dispatch_type, _resource_manager, mouse_position, root, text_context, window_context, is_style);
+        let msg = CraftMessage::GotPointerCapture();
+        let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
+        let mut target = find_pointer_capture_target(&nodes, &msg);
+
+        if let Some(target) = target {
+            let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+            let mut current_target = Some(Rc::clone(&target));
+            while let Some(node) = current_target {
+                targets.push_back(Rc::clone(&node));
+                current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+            }
+
+            dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+        }
     }
 
     // 3. Set the pointer capture target override to the pending pointer capture target override, if set.

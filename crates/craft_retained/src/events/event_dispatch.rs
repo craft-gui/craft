@@ -273,9 +273,9 @@ pub fn dispatch_event(
             let _ = docs.get_current_document().pending_pointer_captures.remove(key);
         });
 
-        processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
+        processing_pending_pointer_capture(dispatch_type, resource_manager, root, text_context);
     } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-        processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
+        processing_pending_pointer_capture(dispatch_type, resource_manager, root, text_context);
     }
 
     *previous_targets = targets;
