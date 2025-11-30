@@ -158,7 +158,7 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.stroke_rect(&rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(resource_identifier);
+                    let resource = resource_manager.get(resource_identifier);
 
                     if let Some(resource) = resource
                         && let Resource::Image(resource) = resource.as_ref()

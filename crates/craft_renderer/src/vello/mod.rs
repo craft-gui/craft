@@ -283,7 +283,7 @@ impl Renderer for VelloRenderer {
                     self.scene.stroke(&Stroke::new(1.0), Affine::IDENTITY, outline_color, None, &rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    let resource = resource_manager.resources.get(resource_identifier);
+                    let resource = resource_manager.get(resource_identifier);
                     if let Some(resource) = resource
                         && let Resource::Image(resource) = resource.as_ref()
                     {
@@ -307,7 +307,6 @@ impl Renderer for VelloRenderer {
                             rectangle.width as f64 / image.width() as f64,
                             rectangle.height as f64 / image.height() as f64,
                         );
-
                         scene.draw_image(&vello_image, transform);
                     }
                 }
