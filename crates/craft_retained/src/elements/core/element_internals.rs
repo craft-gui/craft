@@ -267,6 +267,13 @@ pub trait ElementInternals: ElementData {
         self.element_data().layout_item.computed_box
     }
 
+    /// Gets
+    fn get_default_style() -> Style where
+        Self: Sized,
+    {
+        Style::default()
+    }
+
 }
 
 pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn Element, clip_bounds: Option<Rectangle>) {

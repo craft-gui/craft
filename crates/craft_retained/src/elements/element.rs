@@ -1,4 +1,4 @@
-use crate::app::{DOCUMENTS, TAFFY_TREE};
+use crate::app::{DOCUMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
 use crate::layout::layout_context::LayoutContext;
@@ -12,7 +12,7 @@ use craft_primitives::geometry::{ElementBox, TrblRectangle};
 use craft_primitives::Color;
 use std::any::Any;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use taffy::{BoxSizing, NodeId, Overflow, Position, TaffyResult, TaffyTree};
 use ui_events::pointer::PointerId;
 
@@ -565,6 +565,46 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_selection_color(selection_color);
+        self
+    }
+
+    /// Sets focus on the specified element, if it can be focused.
+    ///
+    /// The focused element is the element that will receive keyboard and similar events by default.
+    fn focus(&mut self) where
+        Self: Sized,
+    {
+        // Todo: check if the element is focusable. Should we return a result?
+        FOCUS.with_borrow_mut(|focus| {
+            *focus = self.element_data().me.clone();
+        });
+    }
+
+    /// Returns true if the element has focus.
+    fn is_focused(&self) -> bool {
+        let focus_element = FOCUS.with(|focus| {
+           focus.borrow().clone()
+        });
+
+        if focus_element.is_none() {
+            return false;
+        }
+
+        let focus_element = focus_element.unwrap();
+
+        Weak::ptr_eq(&focus_element, self.element_data().me.as_ref().unwrap())
+    }
+
+    /// Removes focus if the element has focus.
+    fn unfocus(&mut self) -> &mut Self where
+        Self: Sized,
+    {
+        if self.is_focused() {
+            FOCUS.with(|focus| {
+                *focus.borrow_mut() = None;
+            });
+        }
+
         self
     }
 }

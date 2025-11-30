@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::any::Any;
+use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
@@ -11,12 +11,12 @@ use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::app::TAFFY_TREE;
 
 /// Stores one or more elements.
 ///
@@ -39,6 +39,10 @@ impl Container {
         });
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+
+        let me_element: Rc<RefCell<dyn Element>> = me.clone();
+        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
         me
     }
 }
