@@ -140,3 +140,23 @@ impl<K: Clone + Hash + PartialEq, V> Drop for LockFreeMap<K, V> {
         }
     }
 }
+
+impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
+    pub fn contains(&self, key: &K) -> bool {
+        // Todo speedup with cache
+        self.with_root(|inner| {
+            let idx = inner.bucket(key);
+            let mut cur = inner.buckets[idx].load(Ordering::Acquire);
+            while !cur.is_null() {
+                unsafe {
+                    let node = &*cur;
+                    if node.key == *key {
+                        return true;
+                    }
+                    cur = node.next;
+                }
+            }
+            false
+        })
+    }
+}

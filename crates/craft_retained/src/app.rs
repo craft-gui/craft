@@ -6,12 +6,13 @@ use crate::text::text_context::TextContext;
 use crate::{RendererBox, WindowContext};
 use craft_logging::{info, span, Level};
 use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::ResourceManager;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use craft_runtime::CraftRuntimeHandle;
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::cell::Cell;
+use std::cell::{Cell};
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -56,7 +57,9 @@ thread_local! {
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
-    pub static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
+    pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
+    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
+    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
 }
 
 pub struct App {
@@ -244,6 +247,8 @@ impl App {
             return;
         }
 
+        self.update_resources();
+
         let now = time::Instant::now();
         let delta_time = now - self.last_frame_time;
         self.last_frame_time = now;
@@ -408,15 +413,18 @@ impl App {
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
         match resource_event {
             ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
+                IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
+                   in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_identifier);
+                });
                 if let Some(_text_context) = self.text_context.as_mut()
                     && resource_type == ResourceType::Font
                     && resource.data().is_some()
                 {
                     // Todo: Load the font into the text context.
-                    self.resource_manager.resources.insert(resource_identifier.clone(), Arc::new(resource));
+                    self.resource_manager.insert(resource_identifier.clone(), Arc::new(resource));
                     self.reload_fonts = true;
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
-                    self.resource_manager.resources.insert(resource_identifier, Arc::new(resource));
+                    self.resource_manager.insert(resource_identifier, Arc::new(resource));
                 }
             }
             ResourceEvent::UnLoaded(_) => {}
@@ -543,6 +551,20 @@ impl App {
         tree_update.nodes[0].1.set_role(Role::Window);
 
         tree_update
+    }
+
+    fn update_resources(&mut self) {
+        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
+            IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
+                for (resource, resource_type) in pending_resources.drain(..) {
+                    if self.resource_manager.contains(&resource) || in_progress.contains(&(resource.clone(), resource_type)) {
+                        continue;
+                    }
+                    self.resource_manager.async_download_resource_and_send_message_on_finish(self.app_sender.clone(), resource.clone(), resource_type);
+                    in_progress.push_back((resource, resource_type));
+                }
+            });
+        });
     }
 }
 

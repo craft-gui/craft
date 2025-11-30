@@ -8,7 +8,9 @@ mod scroll_state;
 
 mod element_id;
 mod scrollable;
+mod image;
 
 pub use container::Container;
 pub use text::Text;
+pub use image::Image;
 pub use element::Element;

@@ -154,13 +154,14 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        for child in self.element_data.children.iter_mut() {
-            let taffy_child_node_id = child.borrow().element_data().layout_item.taffy_node_id;
+        for child in &self.element_data.children {
+            let mut child = child.borrow_mut();
+            let taffy_child_node_id = child.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
 
-            child.borrow_mut().finalize_layout(
+            child.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
                 self.element_data.layout_item.computed_box.position,
