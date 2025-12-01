@@ -1,11 +1,11 @@
+use crate::elements::Element;
+use crate::events::pointer_capture::find_pointer_capture_target;
+use crate::events::{CraftMessage, Event};
+use crate::text::text_context::TextContext;
+use kurbo::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use kurbo::Point;
-use crate::elements::Element;
-use crate::events::{CraftMessage, Event};
-use crate::events::pointer_capture::find_pointer_capture_target;
-use crate::text::text_context::TextContext;
 
 pub fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -16,7 +16,7 @@ pub fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCe
         targets.push_back(Rc::clone(&node));
         current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
     }
-    
+
     targets
 }
 
@@ -81,49 +81,52 @@ pub fn find_target(
     target.unwrap_or(Rc::clone(root))
 }
 
-pub(super) fn call_user_event_handlers(current_target: &Rc<RefCell<dyn Element>>, message: &CraftMessage) {
-    let mut res = Event::new(current_target.clone());
+pub(super) fn call_user_event_handlers(
+    event: &mut Event,
+    current_target: &Rc<RefCell<dyn Element>>,
+    message: &CraftMessage,
+) {
     match message {
         CraftMessage::PointerEnter() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_enter {
-                (*handler)(&mut res);
+                (*handler)(event);
             }
         }
         CraftMessage::PointerLeave() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_leave {
-                (*handler)(&mut res);
+                (*handler)(event);
             }
         }
         CraftMessage::PointerButtonUp(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_button_up {
-                (*handler)(&mut res, e);
+                (*handler)(event, e);
             }
         }
         CraftMessage::PointerButtonDown(e) => {
             let len = current_target.borrow().element_data().on_pointer_button_down.len();
             for i in 0..len {
                 let handler = current_target.borrow().element_data().on_pointer_button_down[i].clone();
-                (*handler)(&mut res, e);
+                (*handler)(event, e);
             }
         }
         CraftMessage::KeyboardInputEvent(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_keyboard_input {
-                (*handler)(&mut res, e);
+                (*handler)(event, e);
             }
         }
         CraftMessage::PointerMovedEvent(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_moved {
-                (*handler)(&mut res, e);
+                (*handler)(event, e);
             }
         }
         CraftMessage::PointerScroll(_) => {}
@@ -139,25 +142,25 @@ pub(super) fn call_user_event_handlers(current_target: &Rc<RefCell<dyn Element>>
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_got_pointer_capture {
-                (*handler)(&mut res);
+                (*handler)(event);
             }
         }
         CraftMessage::LostPointerCapture() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_lost_pointer_capture {
-                (*handler)(&mut res);
+                (*handler)(event);
             }
         }
     }
 }
 
 pub(super) fn call_default_element_event_handler(
+    event: &mut Event,
     current_target: &Rc<RefCell<dyn Element>>,
     target: &Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
     message: &CraftMessage,
 ) {
-    let mut res = Event::new(current_target.clone());
-    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), &mut res, Some(target.clone()));
+    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), event, Some(target.clone()));
 }

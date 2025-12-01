@@ -1,16 +1,16 @@
 use crate::elements::Element;
-use crate::events::{CraftMessage, Event, EventDispatchType, FocusAction};
+use crate::events::{CraftMessage, Event, FocusAction};
 
-use crate::app::DOCUMENTS;
-use crate::events::pointer_capture::{maybe_handle_implicit_pointer_capture_release, process_pending_pointer_capture};
+use crate::events::helpers::{
+    call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list,
+};
+use crate::events::pointer_capture::{maybe_handle_implicit_pointer_capture_release};
 use crate::text::text_context::TextContext;
 use craft_logging::{span, Level};
 use craft_primitives::geometry::Point;
 use std::cell::RefCell;
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 use std::rc::Rc;
-use ui_events::pointer::PointerId;
-use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
 
 pub struct EventDispatcher {
     previous_targets: VecDeque<Rc<RefCell<dyn Element>>>,
@@ -27,14 +27,17 @@ impl EventDispatcher {
         &self,
         message: &CraftMessage,
         text_context: &mut Option<TextContext>,
-        current_target: &Rc<RefCell<dyn Element>>,
         target: &Rc<RefCell<dyn Element>>,
     ) {
-        // Call the callback handlers.
-        call_user_event_handlers(current_target, message);
+        let mut base_event = Event::new(target.clone());
 
-        // Call the default on_event element functions.
-        call_default_element_event_handler(current_target, target, text_context, message);
+        // Call the callback handlers.
+        call_user_event_handlers(&mut base_event, target, message);
+
+        if !base_event.prevent_defaults {
+            // Call the default on_event element functions.
+            call_default_element_event_handler(&mut base_event, target, target, text_context, message);
+        }
     }
 
     pub fn dispatch_capturing_event(
@@ -43,7 +46,6 @@ impl EventDispatcher {
         _text_context: &mut Option<TextContext>,
         _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
     ) {
-
     }
 
     pub fn dispatch_bubbling_event(
@@ -53,21 +55,23 @@ impl EventDispatcher {
         targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
     ) {
         let target = targets[0].clone();
-        let mut propagate = true;
+        let mut base_event = Event::new(target.clone());
 
         // Call the callback handlers.
         for current_target in targets.iter() {
-            call_user_event_handlers(current_target, message);
-            if !propagate {
+            call_user_event_handlers(&mut base_event, current_target, message);
+            if !base_event.propagate {
                 break;
             }
         }
 
-        // Call the default on_event element functions.
-        for current_target in targets.iter() {
-            call_default_element_event_handler(current_target, &target, text_context, message);
-            if !propagate {
-                break;
+        if !base_event.prevent_defaults {
+            // Call the default on_event element functions.
+            for current_target in targets.iter() {
+                call_default_element_event_handler(&mut base_event, current_target, &target, text_context, message);
+                if !base_event.propagate {
+                    break;
+                }
             }
         }
     }
@@ -92,7 +96,7 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                self.dispatch_once(&CraftMessage::PointerLeave(), text_context, &prev_target.clone(), &prev_target.clone());
+                self.dispatch_once(&CraftMessage::PointerLeave(), text_context, &prev_target.clone());
             }
         }
     }
@@ -117,7 +121,7 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                self.dispatch_once(&CraftMessage::PointerEnter(), text_context, &target.clone(), &target.clone());
+                self.dispatch_once(&CraftMessage::PointerEnter(), text_context, &target.clone());
             }
         }
     }
@@ -156,5 +160,4 @@ impl EventDispatcher {
 
         self.previous_targets = targets;
     }
-
 }
