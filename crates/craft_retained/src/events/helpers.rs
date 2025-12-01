@@ -1,10 +1,24 @@
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::rc::Rc;
 use kurbo::Point;
 use crate::elements::Element;
 use crate::events::{CraftMessage, Event};
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::text::text_context::TextContext;
+
+pub fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
+    let mut current_target = Some(Rc::clone(&target));
+
+    // Gather and "freeze" the elements we will visit.
+    let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+    while let Some(node) = current_target {
+        targets.push_back(Rc::clone(&node));
+        current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+    }
+    
+    targets
+}
 
 /// Collect all the elements into an array.
 pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {

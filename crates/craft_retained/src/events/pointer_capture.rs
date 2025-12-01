@@ -1,13 +1,13 @@
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
 use crate::events::event_dispatch::EventDispatcher;
+use crate::events::helpers::collect_nodes;
 use crate::events::{CraftMessage, EventDispatchType};
 use crate::text::text_context::TextContext;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use ui_events::pointer::PointerId;
-use crate::events::helpers::collect_nodes;
 
 /// Returns the currently pointer captured element or None.
 pub(super) fn find_pointer_capture_target(
@@ -45,9 +45,8 @@ pub(super) fn find_pointer_capture_target(
 }
 
 /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-pub(super) fn processing_pending_pointer_capture(
+pub(super) fn process_pending_pointer_capture(
     event_dispatcher: &mut EventDispatcher,
-    dispatch_type: EventDispatchType,
     root: Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
 ) {
@@ -78,7 +77,8 @@ pub(super) fn processing_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            event_dispatcher.dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+            event_dispatcher.dispatch_capturing_event(&msg, text_context, &mut targets);
+            event_dispatcher.dispatch_bubbling_event(&msg, text_context, &mut targets);
         }
     }
 
@@ -99,7 +99,8 @@ pub(super) fn processing_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            event_dispatcher.dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+            event_dispatcher.dispatch_capturing_event(&msg, text_context, &mut targets);
+            event_dispatcher.dispatch_bubbling_event(&msg, text_context, &mut targets);
         }
     }
 
@@ -114,4 +115,29 @@ pub(super) fn processing_pending_pointer_capture(
             current_doc.pointer_captures.remove(key);
         }
     });
+}
+
+pub(super) fn maybe_handle_implicit_pointer_capture_release(
+    event_dispatcher: &mut EventDispatcher,
+    message: &CraftMessage,
+    root: Rc<RefCell<dyn Element>>,
+    text_context: &mut Option<TextContext>,
+) {
+    // 9.5 Implicit release of pointer capture
+    // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
+    let is_pointer_up_event = matches!(message, CraftMessage::PointerButtonUp(_));
+    if is_pointer_up_event
+    /* || is_pointer_canceled */
+    {
+        // Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the pending pointer capture target override
+        // for the pointerId of the pointerup or pointercancel event that was just dispatched
+        DOCUMENTS.with_borrow_mut(|docs| {
+            let key = &PointerId::new(1).unwrap();
+            let _ = docs.get_current_document().pending_pointer_captures.remove(key);
+        });
+
+        process_pending_pointer_capture(event_dispatcher, root, text_context);
+    } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
+        process_pending_pointer_capture(event_dispatcher, root, text_context);
+    }
 }
