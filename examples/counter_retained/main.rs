@@ -91,6 +91,6 @@ fn main() {
     root.borrow_mut().push(container);
 
     use craft_retained::CraftOptions;
-    //util::setup_logging();
+    util::setup_logging();
     craft_retained::craft_main(root, CraftOptions::basic("Counter"));
 }
