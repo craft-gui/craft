@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::any::Any;
+use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
@@ -11,12 +11,12 @@ use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
 use winit::window::Window;
-use crate::app::TAFFY_TREE;
 
 /// Stores one or more elements.
 ///
@@ -39,6 +39,10 @@ impl Container {
         });
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+
+        let me_element: Rc<RefCell<dyn Element>> = me.clone();
+        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
         me
     }
 }
@@ -154,13 +158,14 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        for child in self.element_data.children.iter_mut() {
-            let taffy_child_node_id = child.borrow().element_data().layout_item.taffy_node_id;
+        for child in &self.element_data.children {
+            let mut child = child.borrow_mut();
+            let taffy_child_node_id = child.element_data().layout_item.taffy_node_id;
             if taffy_child_node_id.is_none() {
                 continue;
             }
 
-            child.borrow_mut().finalize_layout(
+            child.finalize_layout(
                 taffy_tree,
                 taffy_child_node_id.unwrap(),
                 self.element_data.layout_item.computed_box.position,

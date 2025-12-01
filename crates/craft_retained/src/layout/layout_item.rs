@@ -1,12 +1,34 @@
-use kurbo::Affine;
-use craft_primitives::geometry::borders::{BorderSpec, ComputedBorderSpec};
-use craft_primitives::geometry::Side;
-use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use crate::layout::layout_context::LayoutContext;
-use craft_renderer::{Brush, RenderList};
 use crate::style::Style;
+use craft_primitives::geometry::borders::{CssRoundedRect, BOTTOM, LEFT, RIGHT, TOP};
+use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size};
+use craft_renderer::{Brush, RenderList};
+use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::{NodeId, Position, TaffyTree};
+
+#[derive(Clone)]
+pub(crate) struct ComputedBorder {
+    sides: [Option<BezPath>; 4],
+    background: BezPath,
+}
+
+impl ComputedBorder {
+
+    pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
+        let top = css_rect.get_side(TOP);
+        let right = css_rect.get_side(RIGHT);
+        let bottom = css_rect.get_side(BOTTOM);
+        let left = css_rect.get_side(LEFT);
+        let background = css_rect.to_path(0.1f64);
+
+        Self {
+            sides: [top, right, bottom, left],
+            background,
+        }
+    }
+
+}
 
 #[derive(Clone, Default)]
 pub struct LayoutItem {
@@ -23,7 +45,7 @@ pub struct LayoutItem {
     pub scrollbar_size: Size<f32>,
     pub computed_scroll_track: Rectangle,
     pub computed_scroll_thumb: Rectangle,
-    pub computed_border: ComputedBorderSpec,
+    pub computed_border_sides: Option<[BezPath; 4]>,
     pub(crate) max_scroll_y: f32,
 
     pub layout_order: u32,
@@ -32,7 +54,8 @@ pub struct LayoutItem {
     //  ---
     pub children_awaiting_add: Vec<NodeId>,
     
-    cache_border_spec: Option<BorderSpec>,
+    cache_border_spec: Option<CssRoundedRect>,
+    computed_border: Option<ComputedBorder>,
 }
 
 impl LayoutItem {
@@ -109,7 +132,6 @@ impl LayoutItem {
         &mut self,
         has_border: bool,
         border_radius: [(f32, f32); 4],
-        border_color: TrblRectangle<Color>,
     ) {
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
         if !has_border {
@@ -118,16 +140,15 @@ impl LayoutItem {
 
         let element_rect = self.computed_box_transformed;
         let borders = element_rect.border;
-        let border_spec = BorderSpec::new(
-            element_rect.border_rectangle(),
-            [borders.top, borders.right, borders.bottom, borders.left],
-            border_radius,
-            border_color,
+        let border_spec = CssRoundedRect::new(
+            element_rect.border_rectangle().to_kurbo(),
+            [borders.top as f64, borders.right as f64, borders.bottom as f64, borders.left as f64],
+            border_radius.map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64)),
         );
         if let Some(cache_border_spec) = self.cache_border_spec && cache_border_spec == border_spec{
             return;
         }
-        self.computed_border = border_spec.compute_border_spec();
+        self.computed_border = Some(ComputedBorder::new(border_spec));
         self.cache_border_spec = Some(border_spec);
     }
 
@@ -145,39 +166,25 @@ impl LayoutItem {
         }
         
         let computed_border_spec = &self.computed_border;
-        draw_borders_generic(renderer, computed_border_spec, background_color, scale_factor);
+        draw_borders_generic(renderer, computed_border_spec.as_ref().unwrap(), current_style.border_color().to_array(), background_color, scale_factor);
     }
 }
 
-pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorderSpec, bg_color: Color, scale_factor: f64) {
+pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorder, side_colors: [Color; 4], bg_color: Color, scale_factor: f64) {
     let background_color = bg_color;
     
     let scale_factor = Affine::scale(scale_factor);
 
-    let mut background_path = computed_border_spec.build_background_path();
+    let mut background_path = computed_border_spec.background.clone();
     background_path.apply_affine(scale_factor);
-
     renderer.fill_bez_path(background_path, Brush::Color(background_color));
 
-    let top = computed_border_spec.get_side(Side::Top);
-    let right = computed_border_spec.get_side(Side::Right);
-    let bottom = computed_border_spec.get_side(Side::Bottom);
-    let left = computed_border_spec.get_side(Side::Left);
-
-    let mut border_top_path = computed_border_spec.build_side_path(Side::Top);
-    let mut border_right_path = computed_border_spec.build_side_path(Side::Right);
-    let mut border_bottom_path = computed_border_spec.build_side_path(Side::Bottom);
-    let mut border_left_path = computed_border_spec.build_side_path(Side::Left);
-
-    border_top_path.apply_affine(scale_factor);
-    border_right_path.apply_affine(scale_factor);
-    border_bottom_path.apply_affine(scale_factor);
-    border_left_path.apply_affine(scale_factor);
-
-    renderer.fill_bez_path(border_top_path, Brush::Color(top.color));
-    renderer.fill_bez_path(border_right_path, Brush::Color(right.color));
-    renderer.fill_bez_path(border_bottom_path, Brush::Color(bottom.color));
-    renderer.fill_bez_path(border_left_path, Brush::Color(left.color));
+    for (side_index, side) in computed_border_spec.sides.iter().enumerate() {
+        if let Some(mut side) = side.clone() {
+            side.apply_affine(scale_factor);
+            renderer.fill_bez_path(side, Brush::Color(side_colors[side_index]));
+        }
+    }
 }
 
 fn from_taffy_point(p: taffy::Point<f32>) -> Point {

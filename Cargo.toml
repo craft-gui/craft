@@ -7,6 +7,7 @@ members = [
     "examples/util",
     "examples/counter_retained",
     "examples/pointer_events",
+    "examples/text",
     "examples/jsframeworkbench",
     "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
 ]
@@ -15,7 +16,15 @@ members = [
 edition = "2024"
 
 [profile.release]
+# For fast build/run and profiling
 debug = true
+
+# For fast run & small binary:
+#opt-level = 3
+#lto = true
+#codegen-units = 1
+#strip = true
+#debug = false
 
 [workspace.dependencies]
 reqwest = { version = "0.12.19", default-features = false }

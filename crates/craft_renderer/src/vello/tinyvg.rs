@@ -35,7 +35,7 @@ pub(crate) fn draw_tiny_vg(
     resource_identifier: ResourceIdentifier,
     override_color: &Option<Color>,
 ) {
-    let resource = resource_manager.resources.get(&resource_identifier);
+    let resource = resource_manager.get(&resource_identifier);
     if let Some(resource) = resource
         && let Resource::TinyVg(resource) = resource.as_ref()
     {
