@@ -101,6 +101,9 @@ impl Text {
         let me2 = me.clone();
         me.borrow_mut().me = Some(Rc::downgrade(&me2));
 
+        let me_element: Rc<RefCell<dyn Element>> = me.clone();
+        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
         me.borrow_mut().text(text);
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

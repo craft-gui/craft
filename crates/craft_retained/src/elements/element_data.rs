@@ -45,6 +45,7 @@ pub struct ElementData {
 
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+    pub(crate) me: Option<Weak<RefCell<dyn Element>>>,
     pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_pointer_button_down: Vec<PointerEventHandler>,
@@ -142,6 +143,7 @@ impl Default for ElementData {
             internal_id: create_unique_element_id(),
             animations: None,
             parent: None,
+            me: None,
             on_got_pointer_capture: vec![],
             on_lost_pointer_capture: vec![],
             on_pointer_button_down: vec![],

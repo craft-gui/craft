@@ -5,11 +5,15 @@ use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use std::sync::Arc;
 
 use taffy::{AvailableSpace, Size};
-use crate::elements::Text;
+use crate::elements::{Text, TextInput};
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
     pub element: Weak<RefCell<Text>>
+}
+
+pub struct TaffyTextInputContext {
+    pub element: Weak<RefCell<TextInput>>
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -84,6 +88,7 @@ pub type LayoutFn = fn(
 
 pub enum LayoutContext {
     Text(TaffyTextContext),
+    TextInput(TaffyTextInputContext),
     Image(ImageContext),
     TinyVg(TinyVgContext),
     Other(LayoutFn),
@@ -157,6 +162,13 @@ pub fn measure_content(
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
             let element = &taffy_text_context.element;
+            if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
+                return element.state.measure(known_dimensions, available_space, text_context)
+            }
+            Size::ZERO
+        }
+        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
+            let element = &taffy_text_input_context.element;
             if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
                 return element.state.measure(known_dimensions, available_space, text_context)
             }
