@@ -66,6 +66,7 @@ use craft_renderer::RenderList;
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::elements::Element;
+use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
 
 #[cfg(target_arch = "wasm32")]
@@ -206,6 +207,7 @@ pub fn setup_craft(
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
     let craft_app = Box::new(App {
+        event_dispatcher: EventDispatcher::new(),
         root,
         app_sender: app_sender.clone(),
         #[cfg(feature = "accesskit")]

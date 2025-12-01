@@ -1,0 +1,21 @@
+[package]
+name = "pointer_events"
+version = "0.1.0"
+edition = "2024"
+default-run = "pointer_events"
+
+[[bin]]
+name = "pointer_events"
+path = "main.rs"
+
+[dependencies]
+util = { path = "../util" }
+
+[dependencies.craft_retained]
+path = "../../crates/craft_retained"
+default-features = false
+features = ["accesskit", "system_fonts"]
+
+[dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+features = ["vello_renderer"]

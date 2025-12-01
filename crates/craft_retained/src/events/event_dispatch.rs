@@ -1,215 +1,195 @@
 use crate::elements::Element;
-use crate::events::{CraftMessage, Event, EventDispatchType, FocusAction};
+use crate::events::{CraftMessage, Event, FocusAction};
 
+use crate::events::helpers::{
+    call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list,
+};
+use crate::events::pointer_capture::{maybe_handle_implicit_pointer_capture_release};
 use crate::text::text_context::TextContext;
-use crate::window_context::WindowContext;
 use craft_logging::{span, Level};
 use craft_primitives::geometry::Point;
-use craft_resource_manager::ResourceManager;
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
-use std::sync::Arc;
-use ui_events::pointer::PointerId;
-use winit::event::Ime;
-use crate::app::DOCUMENTS;
-use crate::events::pointer_capture_dispatch::{find_pointer_capture_target, processing_pending_pointer_capture};
+use std::rc::{Rc, Weak};
 
-/// Collect all the elements into an array.
-pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
-    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
-    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
-    while let Some(node_rc) = to_visit.pop() {
-        let node_ref = node_rc.borrow();
+/// Responsible for dispatching events.
+pub(crate) struct EventDispatcher {
+    /// A "frozen" target list used to diff against the current target list.
+    /// This is useful for pointer enter, leave, etc.
+    previous_targets: VecDeque<Weak<RefCell<dyn Element>>>,
+}
 
-        nodes.push(Rc::clone(&node_rc));
-
-        for child in node_ref.children().iter().rev() {
-            to_visit.push(Rc::clone(child));
+impl EventDispatcher {
+    /// Creates an event dispatcher and zeros out the previous target list.
+    pub fn new() -> Self {
+        Self {
+            previous_targets: Default::default(),
         }
     }
 
-    nodes
-}
+    /// Dispatches 1 event to 1 element.
+    /// NOTE: This calls the user callbacks + the default event handler (if prevent_default() is not called).
+    pub(super) fn dispatch_once(
+        &self,
+        message: &CraftMessage,
+        text_context: &mut Option<TextContext>,
+        target: &Rc<RefCell<dyn Element>>,
+    ) {
+        let mut base_event = Event::new(target.clone());
 
-/// Find the target that should be visited.
-pub fn find_target(root: &Rc<RefCell<dyn Element>>, mouse_position: Option<Point>, message: &CraftMessage) -> Rc<RefCell<dyn Element>> {
-    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
+        // Call the callback handlers.
+        call_user_event_handlers(&mut base_event, target, message);
 
-    let mut target = find_pointer_capture_target(&nodes, message);
-    if let Some(target) = target {
-        return target;
-    }
-
-    // Otherwise sort and do hit-testing:
-
-    // Sort by layout order in descending order.
-    nodes.sort_unstable_by(|a_rc, b_rc| {
-        let a = a_rc.borrow();
-        let b = b_rc.borrow();
-        let a_elem = a;
-        let b_elem = b;
-
-        (
-            1, //b.overlay_order,
-            b_elem.element_data().layout_item.layout_order,
-        )
-            .cmp(&(
-                1, //a.overlay_order,
-                a_elem.element_data().layout_item.layout_order,
-            ))
-    });
-
-
-    for node in nodes {
-        let should_pass_hit_test =
-            mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
-
-        // The first element to pass the hit test should be the target.
-        if should_pass_hit_test && target.is_none() {
-            target = Some(Rc::clone(&node));
+        if !base_event.prevent_defaults {
+            // Call the default on_event element functions.
+            call_default_element_event_handler(&mut base_event, target, target, text_context, message);
         }
     }
 
-    target.unwrap_or(Rc::clone(root))
-}
+    pub(super) fn dispatch_capturing_event(
+        &self,
+        _message: &CraftMessage,
+        _text_context: &mut Option<TextContext>,
+        _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
+    ) {
+    }
 
-#[allow(clippy::too_many_arguments)]
-pub fn dispatch_event(
-    message: &CraftMessage,
-    dispatch_type: EventDispatchType,
-    resource_manager: &mut Arc<ResourceManager>,
-    mouse_position: Option<Point>,
-    root: Rc<RefCell<dyn Element>>,
-    text_context: &mut Option<TextContext>,
-    window_context: &mut WindowContext,
-    is_style: bool,
-) {
-    let mut _focus = FocusAction::None;
-    let span = span!(Level::INFO, "dispatch event");
-    let _enter = span.enter();
+    /// Dispatches 1 event to many elements.
+    /// The first dispatch happens at the top-most visual element.
+    pub(super) fn dispatch_bubbling_event(
+        &self,
+        message: &CraftMessage,
+        text_context: &mut Option<TextContext>,
+        targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
+    ) {
+        let target = targets[0].clone();
+        let mut base_event = Event::new(target.clone());
 
-    let is_pointer_up_event = matches!(message, CraftMessage::PointerButtonUp(_));
-    let _is_keyboard_event = matches!(message, CraftMessage::KeyboardInputEvent(_));
-    let _is_ime_event = matches!(
-            message,
-            CraftMessage::ImeEvent(Ime::Enabled)
-                | CraftMessage::ImeEvent(Ime::Disabled)
-        );
-
-    {
-
-        match dispatch_type {
-            EventDispatchType::Bubbling => {
-
-                let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message);
-                let mut current_target = Some(Rc::clone(&target));
-
-                // Gather the elements to visit during the bubble phase.
-                let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
-                while let Some(node) = current_target {
-                    targets.push_back(Rc::clone(&node));
-                    current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
-                }
-
-                let target = targets[0].clone();
-                let propagate = true;
-
-
-                // Call the callback handlers.
-                for current_target in targets.iter() {
-
-                    let mut res = Event::new();
-
-                        let element_data = current_target.borrow();
-                        let element_data = element_data.element_data();
-                        match message {
-                            CraftMessage::PointerButtonUp(e) => {
-                                for handler in &element_data.on_pointer_button_up {
-                                    (*handler)(&mut res, e);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                            CraftMessage::PointerButtonDown(e) => {
-                                for handler in &element_data.on_pointer_button_down {
-                                    (*handler)(&mut res, e);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                            CraftMessage::KeyboardInputEvent(e) => {
-                                for handler in &element_data.on_keyboard_input {
-                                    (*handler)(&mut res, e);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                            CraftMessage::PointerMovedEvent(e) => {
-                                for handler in &element_data.on_pointer_moved {
-                                    (*handler)(&mut res, e);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                            CraftMessage::PointerScroll(_) => {}
-                            CraftMessage::ImeEvent(_) => {}
-                            CraftMessage::TextInputChanged(_) => {}
-                            CraftMessage::LinkClicked(_) => {}
-                            CraftMessage::DropdownToggled(_) => {}
-                            CraftMessage::DropdownItemSelected(_) => {}
-                            CraftMessage::SwitchToggled(_) => {}
-                            CraftMessage::SliderValueChanged(_) => {}
-                            CraftMessage::ElementMessage(_) => {}
-                            CraftMessage::GotPointerCapture() => {
-                                for handler in &element_data.on_got_pointer_capture {
-                                    (*handler)(&mut res);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                            CraftMessage::LostPointerCapture() => {
-                                for handler in &element_data.on_lost_pointer_capture {
-                                    (*handler)(&mut res);
-                                    if !propagate {
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                }
-
-                // Call the default on_event element functions.
-                for current_target in targets.iter() {
-                    let mut res = Event::new();
-                    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), &mut res, Some(target.clone()));
-                    if !propagate {
-                        break;
-                    }
-                }
-                
-
-                // 9.5 Implicit release of pointer capture
-                // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
-                if is_pointer_up_event /* || is_pointer_canceled */ {
-                    // Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the pending pointer capture target override
-                    // for the pointerId of the pointerup or pointercancel event that was just dispatched
-                    DOCUMENTS.with_borrow_mut(|docs| {
-                        let key = &PointerId::new(1).unwrap();
-                        let _ = docs.get_current_document().pending_pointer_captures.remove(key);
-                    });
-
-                    processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
-                } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-                    processing_pending_pointer_capture(dispatch_type, resource_manager, mouse_position, root, text_context, window_context, is_style);
-                }
-
+        // Call the callback handlers.
+        for current_target in targets.iter() {
+            call_user_event_handlers(&mut base_event, current_target, message);
+            if !base_event.propagate {
+                break;
             }
         }
+
+        if !base_event.prevent_defaults {
+            // Call the default on_event element functions.
+            for current_target in targets.iter() {
+                call_default_element_event_handler(&mut base_event, current_target, &target, text_context, message);
+                if !base_event.propagate {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Diffs the current and previous target lists and dispatches
+    /// `pointer_leave` to any element that was present in the previous list
+    /// but is not present in the current one.
+    ///
+    /// Note: This event does not bubble.
+    pub(super) fn maybe_dispatch_pointer_leave(
+        &self,
+        text_context: &mut Option<TextContext>,
+        targets: &VecDeque<Rc<RefCell<dyn Element>>>,
+    ) {
+        for prev_target in self.previous_targets.iter() {
+            let mut found = false;
+
+            let prev_target = prev_target.upgrade();
+            if prev_target.is_none() {
+                continue;
+            }
+            let prev_target = prev_target.unwrap();
+
+            let prev_target_id = prev_target.borrow().id();
+
+            for target in targets.iter() {
+                let target_id = target.borrow().id();
+
+                if prev_target_id == target_id {
+                    found = true;
+                    break;
+                }
+            }
+
+            // We had a prev target, but we don't in the new list. (PointerLeave)
+            if !found {
+                self.dispatch_once(&CraftMessage::PointerLeave(), text_context, &prev_target.clone());
+            }
+        }
+    }
+
+    /// Diffs the current and previous target lists and dispatches
+    /// `pointer_enter` to any element that exists in the current list
+    /// but not in the previous one.
+    ///
+    /// Note: This event does not bubble.
+    pub(super) fn maybe_dispatch_pointer_enter(
+        &self,
+        text_context: &mut Option<TextContext>,
+        targets: &VecDeque<Rc<RefCell<dyn Element>>>,
+    ) {
+        for target in targets.iter().rev() {
+            let mut found = false;
+            let target_id = target.borrow().id();
+
+            for prev_target in self.previous_targets.iter().rev() {
+                let prev_target = prev_target.upgrade();
+                if prev_target.is_none() {
+                    continue;
+                }
+                let prev_target = prev_target.unwrap();
+                let prev_target_id = prev_target.borrow().id();
+
+                if prev_target_id == target_id {
+                    found = true;
+                    break;
+                }
+            }
+
+            // We weren't in the prev target list, but we are in the new list. (PointerEnter)
+            if !found {
+                self.dispatch_once(&CraftMessage::PointerEnter(), text_context, &target.clone());
+            }
+        }
+    }
+
+    /// Dispatches events.
+    /// May emit multiple events from a single message (pointer enter, leave, etc.).
+    #[allow(clippy::too_many_arguments)]
+    pub fn dispatch_event(
+        &mut self,
+        message: &CraftMessage,
+        mouse_position: Option<Point>,
+        root: Rc<RefCell<dyn Element>>,
+        text_context: &mut Option<TextContext>,
+    ) {
+        let mut _focus = FocusAction::None;
+        let span = span!(Level::INFO, "dispatch event");
+        let _enter = span.enter();
+
+        // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
+        let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message);
+        let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(target);
+
+        self.maybe_dispatch_pointer_leave(text_context, &targets);
+        self.maybe_dispatch_pointer_enter(text_context, &targets);
+
+        // Handle capturing
+        self.dispatch_capturing_event(message, text_context, &mut targets);
+
+        // Handle bubbling
+        self.dispatch_bubbling_event(message, text_context, &mut targets);
+
+        // NOTE: May dispatch gotpointercapture and lostpointercapture. Handles capturing and bubbling.
+        // The event dispatch flow looks like this:
+        // - pointer_event(capture), pointer_event(bubble) (Executed above)
+        // - lostpointercapture(capture), lostpointercapture(bubble)
+        // - gotpointercapture(capture), gotpointercapture(bubble)
+        maybe_handle_implicit_pointer_capture_release(self, message, root, text_context);
+
+        self.previous_targets = targets.iter().map(Rc::downgrade).collect();
     }
 }

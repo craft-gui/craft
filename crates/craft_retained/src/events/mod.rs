@@ -2,13 +2,15 @@ mod mouse_wheel;
 
 pub mod internal;
 mod event_dispatch;
-mod pointer_capture_dispatch;
+mod pointer_capture;
+mod helpers;
 //#[cfg(test)]
 //mod tests;
 
 pub use mouse_wheel::MouseWheel;
 pub use winit::event::ElementState;
 use std::any::Any;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 pub use ui_events;
@@ -21,10 +23,13 @@ use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
-pub use event_dispatch::dispatch_event;
+pub(crate) use event_dispatch::EventDispatcher;
+use crate::elements::Element;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 
@@ -35,11 +40,12 @@ pub enum EventDispatchType {
     Bubbling,
 }
 
-
 #[derive(Clone)]
 pub enum CraftMessage {
     GotPointerCapture(),
     LostPointerCapture(),
+    PointerEnter(),
+    PointerLeave(),
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
     KeyboardInputEvent(KeyboardEvent),
@@ -107,6 +113,7 @@ pub enum PointerCapture {
 
 /// The result of an update.
 pub struct Event {
+    pub target: Rc<RefCell<dyn Element>>,
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -169,9 +176,10 @@ impl Event {
     }
 }
 
-impl Default for Event {
-    fn default() -> Self {
+impl Event {
+    fn new(target: Rc<RefCell<dyn Element>>) -> Self {
         Event {
+            target,
             propagate: true,
             future: None,
             prevent_defaults: false,
@@ -185,10 +193,6 @@ impl Default for Event {
 }
 
 impl Event {
-    pub fn new() -> Event {
-        Event::default()
-    }
-
     pub fn pinned_future(&mut self, future: PinnedFutureAny) {
         self.future = Some(future);
     }

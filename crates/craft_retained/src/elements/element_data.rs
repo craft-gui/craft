@@ -3,7 +3,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::Element;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use craft_primitives::geometry::{Rectangle, Size};
@@ -45,6 +45,8 @@ pub struct ElementData {
 
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+    pub on_pointer_enter: Vec<PointerEnterHandler>,
+    pub on_pointer_leave: Vec<PointerLeaveHandler>,
     pub(crate) me: Option<Weak<RefCell<dyn Element>>>,
     pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
@@ -89,7 +91,7 @@ impl ElementData {
 
             // Content Size = overflowed content size + padding
             // Scroll Height = Content Size
-            let scroll_height = content_height + box_transformed.padding.bottom + box_transformed.padding.top;
+            let scroll_height = (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
             let scroll_track_width = self.layout_item.scrollbar_size.width;
 
             // The scroll track height is the height of the padding box.
@@ -105,7 +107,7 @@ impl ElementData {
                 scroll_track_height,
             );
 
-            let visible_y = client_height / scroll_height;
+            let visible_y = (client_height / scroll_height).clamp(0.0, 1.0);
             let scroll_thumb_height = scroll_track_height * visible_y;
             let remaining_height = scroll_track_height - scroll_thumb_height;
             let scroll_thumb_offset =
@@ -113,7 +115,7 @@ impl ElementData {
 
             let thumb_margin = self.style.scrollbar_thumb_margin();
             let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
-            let scroll_thumb_height = scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom);
+            let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
             self.layout_item.computed_scroll_thumb = self.layout_item.computed_scroll_track;
             self.layout_item.computed_scroll_thumb.x += thumb_margin.left;
@@ -143,6 +145,8 @@ impl Default for ElementData {
             internal_id: create_unique_element_id(),
             animations: None,
             parent: None,
+            on_pointer_enter: vec![],
+            on_pointer_leave: vec![],
             me: None,
             on_got_pointer_capture: vec![],
             on_lost_pointer_capture: vec![],

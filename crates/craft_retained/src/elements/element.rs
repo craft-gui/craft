@@ -1,6 +1,6 @@
 use crate::app::{DOCUMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::core::ElementData;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEventHandler, PointerUpdateHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
@@ -133,6 +133,22 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         panic!("")
+    }
+
+    fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
+        self
+    }
+
+    fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.element_data_mut().on_pointer_leave.push(on_pointer_leave);
+        self
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) -> &mut Self

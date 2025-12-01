@@ -3013,6 +3013,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pointer_events"
+version = "0.1.0"
+dependencies = [
+ "craft_renderer",
+ "craft_retained",
+ "util",
+]
+
+[[package]]
 name = "polling"
 version = "3.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
