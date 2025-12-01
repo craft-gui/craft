@@ -2,7 +2,7 @@ use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::style::{Display, Style, TextStyleProperty, Unit};
-use craft_primitives::geometry::{Point, Rectangle, Size, TrblRectangle};
+use craft_primitives::geometry::{Point, Rectangle, TrblRectangle};
 use craft_primitives::Color;
 use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
@@ -130,7 +130,7 @@ impl TextInput {
 
         let me = Rc::new(RefCell::new(Self {
             text: Some(text.to_string()),
-            element_data: ElementData::default(),
+            element_data: ElementData::new(true),
             use_text_value_on_update: true,
             ranged_styles: Some(RangedStyles::new(vec![])),
             disabled: false,
@@ -270,11 +270,7 @@ impl ElementInternals for TextInput {
         } else {
             text_renderer.cursor = None;
         }
-
-        self.element_data.layout_item.scrollbar_size =
-            Size::new(result.scrollbar_size.width, result.scrollbar_size.height);
-        self.element_data.layout_item.computed_scrollbar_size =
-            Size::new(result.scroll_width(), result.scroll_height());
+        
         self.element_data.finalize_scroll(result);
     }
 
@@ -302,7 +298,7 @@ impl ElementInternals for TextInput {
 
         let text_scroll = if is_scrollable {
             Some(TextScroll::new(
-                self.element_data.scroll().unwrap().scroll_y(),
+                self.element_data.scroll().map_or(0.0, |s| s.scroll_y()),
                 self.element_data.layout_item.computed_scroll_track.height,
             ))
         } else {
@@ -855,8 +851,9 @@ impl TextInputState {
             })
             .map(|width| {
                 let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
-                println!("MIN: {:?}", content_widths);
-                width.clamp(content_widths.min, content_widths.max)
+                // Taffy may give a min width > max_width.
+                // Min-width is preserved in this scenario to ensure text is readable.
+                width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
             });
 
         let _height_constraint: Option<f32> = known_dimensions
