@@ -12,18 +12,24 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
-pub struct EventDispatcher {
+/// Responsible for dispatching events.
+pub(crate) struct EventDispatcher {
+    /// A "frozen" target list used to diff against the current target list.
+    /// This is useful for pointer enter, leave, etc.
     previous_targets: VecDeque<Weak<RefCell<dyn Element>>>,
 }
 
 impl EventDispatcher {
+    /// Creates an event dispatcher and zeros out the previous target list.
     pub fn new() -> Self {
         Self {
             previous_targets: Default::default(),
         }
     }
 
-    pub fn dispatch_once(
+    /// Dispatches 1 event to 1 element.
+    /// NOTE: This calls the user callbacks + the default event handler (if prevent_default() is not called).
+    pub(super) fn dispatch_once(
         &self,
         message: &CraftMessage,
         text_context: &mut Option<TextContext>,
@@ -40,7 +46,7 @@ impl EventDispatcher {
         }
     }
 
-    pub fn dispatch_capturing_event(
+    pub(super) fn dispatch_capturing_event(
         &self,
         _message: &CraftMessage,
         _text_context: &mut Option<TextContext>,
@@ -48,7 +54,9 @@ impl EventDispatcher {
     ) {
     }
 
-    pub fn dispatch_bubbling_event(
+    /// Dispatches 1 event to many elements.
+    /// The first dispatch happens at the top-most visual element.
+    pub(super) fn dispatch_bubbling_event(
         &self,
         message: &CraftMessage,
         text_context: &mut Option<TextContext>,
@@ -76,6 +84,11 @@ impl EventDispatcher {
         }
     }
 
+    /// Diffs the current and previous target lists and dispatches
+    /// `pointer_leave` to any element that was present in the previous list
+    /// but is not present in the current one.
+    ///
+    /// Note: This event does not bubble.
     pub(super) fn maybe_dispatch_pointer_leave(
         &self,
         text_context: &mut Option<TextContext>,
@@ -108,6 +121,11 @@ impl EventDispatcher {
         }
     }
 
+    /// Diffs the current and previous target lists and dispatches
+    /// `pointer_enter` to any element that exists in the current list
+    /// but not in the previous one.
+    ///
+    /// Note: This event does not bubble.
     pub(super) fn maybe_dispatch_pointer_enter(
         &self,
         text_context: &mut Option<TextContext>,
@@ -138,6 +156,8 @@ impl EventDispatcher {
         }
     }
 
+    /// Dispatches events.
+    /// May emit multiple events from a single message (pointer enter, leave, etc.).
     #[allow(clippy::too_many_arguments)]
     pub fn dispatch_event(
         &mut self,

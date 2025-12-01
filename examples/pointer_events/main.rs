@@ -70,11 +70,12 @@ fn event_log() -> (Rc<RefCell<Container>>, Rc<dyn Fn(String)>) {
 
 fn pointer_capture_example() -> Rc<RefCell<Container>> {
     let container = Container::new();
+    let container_padding = 20.0;
     container.borrow_mut().display(Display::Flex).flex_direction(FlexDirection::Column).padding(
-        Unit::Px(20.0),
-        Unit::Px(20.0),
-        Unit::Px(20.0),
-        Unit::Px(20.0),
+        Unit::Px(container_padding),
+        Unit::Px(container_padding),
+        Unit::Px(container_padding),
+        Unit::Px(container_padding),
     );
 
     let draggable_text = Text::new("Draggable");
@@ -102,7 +103,7 @@ fn pointer_capture_example() -> Rc<RefCell<Container>> {
                 Unit::Px(0.0),
                 Unit::Px(0.0),
                 Unit::Px(0.0),
-                Unit::Px(mouse_y - half_size / 2.0),
+                Unit::Px(mouse_y - half_size - container_padding),
             );
         }
         e.prevent_defaults();

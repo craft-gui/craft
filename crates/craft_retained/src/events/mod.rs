@@ -23,7 +23,7 @@ use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
-pub use event_dispatch::EventDispatcher;
+pub(crate) use event_dispatch::EventDispatcher;
 use crate::elements::Element;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;

@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-pub fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
+pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
 
     // Gather and "freeze" the elements we will visit.
@@ -21,7 +21,7 @@ pub fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCe
 }
 
 /// Collect all the elements into an array.
-pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
+pub(super) fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
     let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
     let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
     while let Some(node_rc) = to_visit.pop() {
@@ -38,7 +38,7 @@ pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Elem
 }
 
 /// Find the target that should be visited.
-pub fn find_target(
+pub(super) fn find_target(
     root: &Rc<RefCell<dyn Element>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
