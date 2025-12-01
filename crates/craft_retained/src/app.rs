@@ -1,5 +1,6 @@
+use crate::events::EventDispatcher;
 use crate::events::internal::InternalMessage;
-use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
+use crate::events::{CraftMessage, EventDispatchType};
 use crate::layout::layout_context::measure_content;
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
@@ -61,8 +62,7 @@ thread_local! {
 }
 
 pub struct App {
-    pub(crate) previous_targets: VecDeque<Rc<RefCell<dyn Element>>>, // Move this...
-
+    pub(crate) event_dispatcher: EventDispatcher,
     pub(crate) root: Rc<RefCell<dyn crate::elements::Element>>,
     /// A winit window. This is only valid between resume and pause.
     pub window: Option<Arc<Window>>,
@@ -311,7 +311,7 @@ impl App {
         let event = CraftMessage::PointerScroll(pointer_scroll_update);
         let message = event;
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, false);
+        self.dispatch_event(&message, false);
         self.request_redraw(RedrawFlags::new(true));
     }
 
@@ -331,7 +331,7 @@ impl App {
         let message = event;
         self.window_context.mouse_position = Some(Point::new(cursor_position.x, cursor_position.y));
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, true);
+        self.dispatch_event(&message, true);
 
         self.request_redraw(RedrawFlags::new(true));
     }
@@ -346,7 +346,7 @@ impl App {
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, true);
+        self.dispatch_event(&message, true);
 
         self.request_redraw(RedrawFlags::new(true));
     }
@@ -355,23 +355,18 @@ impl App {
         let event = CraftMessage::ImeEvent(ime);
         let message = event;
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, false);
+        self.dispatch_event(&message, false);
 
         self.request_redraw(RedrawFlags::new(true));
     }
 
     /// Dispatch messages to the reactive tree.
-    fn dispatch_event(&mut self, message: &CraftMessage, dispatch_type: EventDispatchType, is_style: bool) {
-        dispatch_event(
+    fn dispatch_event(&mut self, message: &CraftMessage, _is_style: bool) {
+        self.event_dispatcher.dispatch_event(
             message,
-            dispatch_type.clone(),
-            &mut self.resource_manager,
             self.window_context.mouse_position,
             self.root.clone(),
             &mut self.text_context,
-            &mut self.window_context,
-            is_style,
-            &mut self.previous_targets,
         );
         self.window.clone().unwrap().request_redraw();
     }
@@ -396,7 +391,7 @@ impl App {
         let keyboard_event = CraftMessage::KeyboardInputEvent(keyboard_input.clone());
         let message = keyboard_event;
 
-        self.dispatch_event(&message, EventDispatchType::Bubbling, false);
+        self.dispatch_event(&message, false);
 
         self.request_redraw(RedrawFlags::new(true));
     }

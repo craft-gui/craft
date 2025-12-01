@@ -1,16 +1,13 @@
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
-use crate::events::event_dispatch::{collect_nodes, dispatch_bubbling_event};
-use crate::events::{dispatch_event, CraftMessage, EventDispatchType};
+use crate::events::event_dispatch::EventDispatcher;
+use crate::events::{CraftMessage, EventDispatchType};
 use crate::text::text_context::TextContext;
-use crate::WindowContext;
-use craft_resource_manager::ResourceManager;
-use kurbo::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use std::sync::Arc;
 use ui_events::pointer::PointerId;
+use crate::events::helpers::collect_nodes;
 
 /// Returns the currently pointer captured element or None.
 pub(super) fn find_pointer_capture_target(
@@ -49,8 +46,8 @@ pub(super) fn find_pointer_capture_target(
 
 /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
 pub(super) fn processing_pending_pointer_capture(
+    event_dispatcher: &mut EventDispatcher,
     dispatch_type: EventDispatchType,
-    _resource_manager: &mut Arc<ResourceManager>,
     root: Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
 ) {
@@ -81,7 +78,7 @@ pub(super) fn processing_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+            event_dispatcher.dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
         }
     }
 
@@ -102,7 +99,7 @@ pub(super) fn processing_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
+            event_dispatcher.dispatch_bubbling_event(&msg, dispatch_type.clone(), text_context, &mut targets);
         }
     }
 

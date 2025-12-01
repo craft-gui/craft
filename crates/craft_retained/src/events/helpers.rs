@@ -1,0 +1,149 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+use kurbo::Point;
+use crate::elements::Element;
+use crate::events::{CraftMessage, Event};
+use crate::events::pointer_capture::find_pointer_capture_target;
+use crate::text::text_context::TextContext;
+
+/// Collect all the elements into an array.
+pub fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
+    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
+    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
+    while let Some(node_rc) = to_visit.pop() {
+        let node_ref = node_rc.borrow();
+
+        nodes.push(Rc::clone(&node_rc));
+
+        for child in node_ref.children().iter().rev() {
+            to_visit.push(Rc::clone(child));
+        }
+    }
+
+    nodes
+}
+
+/// Find the target that should be visited.
+pub fn find_target(
+    root: &Rc<RefCell<dyn Element>>,
+    mouse_position: Option<Point>,
+    message: &CraftMessage,
+) -> Rc<RefCell<dyn Element>> {
+    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
+
+    let mut target = find_pointer_capture_target(&nodes, message);
+    if let Some(target) = target {
+        return target;
+    }
+
+    // Otherwise sort and do hit-testing:
+
+    // Sort by layout order in descending order.
+    nodes.sort_unstable_by(|a_rc, b_rc| {
+        let a = a_rc.borrow();
+        let b = b_rc.borrow();
+        let a_elem = a;
+        let b_elem = b;
+
+        (
+            1, //b.overlay_order,
+            b_elem.element_data().layout_item.layout_order,
+        )
+            .cmp(&(
+                1, //a.overlay_order,
+                a_elem.element_data().layout_item.layout_order,
+            ))
+    });
+
+    for node in nodes {
+        let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
+
+        // The first element to pass the hit test should be the target.
+        if should_pass_hit_test && target.is_none() {
+            target = Some(Rc::clone(&node));
+        }
+    }
+
+    target.unwrap_or(Rc::clone(root))
+}
+
+pub(super) fn call_user_event_handlers(current_target: &Rc<RefCell<dyn Element>>, message: &CraftMessage) {
+    let mut res = Event::new(current_target.clone());
+    match message {
+        CraftMessage::PointerEnter() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_pointer_enter {
+                (*handler)(&mut res);
+            }
+        }
+        CraftMessage::PointerLeave() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_pointer_leave {
+                (*handler)(&mut res);
+            }
+        }
+        CraftMessage::PointerButtonUp(e) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_pointer_button_up {
+                (*handler)(&mut res, e);
+            }
+        }
+        CraftMessage::PointerButtonDown(e) => {
+            let len = current_target.borrow().element_data().on_pointer_button_down.len();
+            for i in 0..len {
+                let handler = current_target.borrow().element_data().on_pointer_button_down[i].clone();
+                (*handler)(&mut res, e);
+            }
+        }
+        CraftMessage::KeyboardInputEvent(e) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_keyboard_input {
+                (*handler)(&mut res, e);
+            }
+        }
+        CraftMessage::PointerMovedEvent(e) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_pointer_moved {
+                (*handler)(&mut res, e);
+            }
+        }
+        CraftMessage::PointerScroll(_) => {}
+        CraftMessage::ImeEvent(_) => {}
+        CraftMessage::TextInputChanged(_) => {}
+        CraftMessage::LinkClicked(_) => {}
+        CraftMessage::DropdownToggled(_) => {}
+        CraftMessage::DropdownItemSelected(_) => {}
+        CraftMessage::SwitchToggled(_) => {}
+        CraftMessage::SliderValueChanged(_) => {}
+        CraftMessage::ElementMessage(_) => {}
+        CraftMessage::GotPointerCapture() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_got_pointer_capture {
+                (*handler)(&mut res);
+            }
+        }
+        CraftMessage::LostPointerCapture() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_lost_pointer_capture {
+                (*handler)(&mut res);
+            }
+        }
+    }
+}
+
+pub(super) fn call_default_element_event_handler(
+    current_target: &Rc<RefCell<dyn Element>>,
+    target: &Rc<RefCell<dyn Element>>,
+    text_context: &mut Option<TextContext>,
+    message: &CraftMessage,
+) {
+    let mut res = Event::new(current_target.clone());
+    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), &mut res, Some(target.clone()));
+}

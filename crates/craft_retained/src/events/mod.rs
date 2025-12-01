@@ -2,7 +2,8 @@ mod mouse_wheel;
 
 pub mod internal;
 mod event_dispatch;
-mod pointer_capture_dispatch;
+mod pointer_capture;
+mod helpers;
 //#[cfg(test)]
 //mod tests;
 
@@ -22,7 +23,7 @@ use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
-pub use event_dispatch::dispatch_event;
+pub use event_dispatch::EventDispatcher;
 use crate::elements::Element;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
