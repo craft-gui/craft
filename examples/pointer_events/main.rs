@@ -46,13 +46,6 @@ fn event_log() -> (Rc<RefCell<Container>>, Rc<dyn Fn(String)>) {
     });
 
     let event_log_copy = event_log.clone();
-    let mut clear_text = Rc::new(move || {
-        for child in event_log_copy.borrow_mut().children() {
-            event_log_copy.borrow_mut().remove_child(child.clone()).expect("TODO: panic message");
-        }
-    });
-
-    let event_log_copy = event_log.clone();
     let clear_log = Text::new("Clear");
     clear_log
         .borrow_mut()
@@ -61,7 +54,7 @@ fn event_log() -> (Rc<RefCell<Container>>, Rc<dyn Fn(String)>) {
         .border_radius((6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
-        .on_pointer_button_down(Rc::new(move |e, _pb_event| {
+        .on_pointer_button_down(Rc::new(move |_e, _pb_event| {
             let to_remove = event_log_copy.borrow().children().to_vec();
             for child in to_remove {
                 event_log_copy.borrow_mut().remove_child(child).expect("Failed to remove child!");
@@ -115,12 +108,12 @@ fn pointer_capture_example() -> Rc<RefCell<Container>> {
         e.prevent_defaults();
     }));
 
-    draggable_text.borrow_mut().on_got_pointer_capture(Rc::new(move |e| {
+    draggable_text.borrow_mut().on_got_pointer_capture(Rc::new(move |_e| {
         push_text_clone("Got Pointer Capture".to_string());
     }));
 
     let push_text_clone = push_text.clone();
-    draggable_text.borrow_mut().on_lost_pointer_capture(Rc::new(move |e| {
+    draggable_text.borrow_mut().on_lost_pointer_capture(Rc::new(move |_e| {
         push_text_clone("Lost Pointer Capture".to_string());
     }));
 

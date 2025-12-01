@@ -10,10 +10,10 @@ use craft_logging::{span, Level};
 use craft_primitives::geometry::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 pub struct EventDispatcher {
-    previous_targets: VecDeque<Rc<RefCell<dyn Element>>>,
+    previous_targets: VecDeque<Weak<RefCell<dyn Element>>>,
 }
 
 impl EventDispatcher {
@@ -83,6 +83,13 @@ impl EventDispatcher {
     ) {
         for prev_target in self.previous_targets.iter() {
             let mut found = false;
+
+            let prev_target = prev_target.upgrade();
+            if prev_target.is_none() {
+                continue;
+            }
+            let prev_target = prev_target.unwrap();
+
             let prev_target_id = prev_target.borrow().id();
 
             for target in targets.iter() {
@@ -111,6 +118,11 @@ impl EventDispatcher {
             let target_id = target.borrow().id();
 
             for prev_target in self.previous_targets.iter().rev() {
+                let prev_target = prev_target.upgrade();
+                if prev_target.is_none() {
+                    continue;
+                }
+                let prev_target = prev_target.unwrap();
                 let prev_target_id = prev_target.borrow().id();
 
                 if prev_target_id == target_id {
@@ -158,6 +170,6 @@ impl EventDispatcher {
         // - gotpointercapture(capture), gotpointercapture(bubble)
         maybe_handle_implicit_pointer_capture_release(self, message, root, text_context);
 
-        self.previous_targets = targets;
+        self.previous_targets = targets.iter().map(Rc::downgrade).collect();
     }
 }

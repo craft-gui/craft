@@ -1,6 +1,6 @@
 use crate::events::EventDispatcher;
 use crate::events::internal::InternalMessage;
-use crate::events::{CraftMessage, EventDispatchType};
+use crate::events::{CraftMessage};
 use crate::layout::layout_context::measure_content;
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
@@ -13,7 +13,6 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;

@@ -2,7 +2,7 @@ use crate::app::DOCUMENTS;
 use crate::elements::Element;
 use crate::events::event_dispatch::EventDispatcher;
 use crate::events::helpers::collect_nodes;
-use crate::events::{CraftMessage, EventDispatchType};
+use crate::events::CraftMessage;
 use crate::text::text_context::TextContext;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -67,7 +67,7 @@ pub(super) fn process_pending_pointer_capture(
     {
         let msg = CraftMessage::LostPointerCapture();
         let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
-        let mut target = find_pointer_capture_target(&nodes, &msg);
+        let target = find_pointer_capture_target(&nodes, &msg);
 
         if let Some(target) = target {
             let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
@@ -89,7 +89,7 @@ pub(super) fn process_pending_pointer_capture(
     {
         let msg = CraftMessage::GotPointerCapture();
         let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
-        let mut target = find_pointer_capture_target(&nodes, &msg);
+        let target = find_pointer_capture_target(&nodes, &msg);
 
         if let Some(target) = target {
             let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
