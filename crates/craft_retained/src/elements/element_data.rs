@@ -91,7 +91,7 @@ impl ElementData {
 
             // Content Size = overflowed content size + padding
             // Scroll Height = Content Size
-            let scroll_height = content_height + box_transformed.padding.bottom + box_transformed.padding.top;
+            let scroll_height = (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
             let scroll_track_width = self.layout_item.scrollbar_size.width;
 
             // The scroll track height is the height of the padding box.
@@ -107,7 +107,7 @@ impl ElementData {
                 scroll_track_height,
             );
 
-            let visible_y = client_height / scroll_height;
+            let visible_y = (client_height / scroll_height).clamp(0.0, 1.0);
             let scroll_thumb_height = scroll_track_height * visible_y;
             let remaining_height = scroll_track_height - scroll_thumb_height;
             let scroll_thumb_offset =
@@ -115,7 +115,7 @@ impl ElementData {
 
             let thumb_margin = self.style.scrollbar_thumb_margin();
             let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
-            let scroll_thumb_height = scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom);
+            let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
             self.layout_item.computed_scroll_thumb = self.layout_item.computed_scroll_track;
             self.layout_item.computed_scroll_thumb.x += thumb_margin.left;
