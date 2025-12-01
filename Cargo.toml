@@ -6,6 +6,7 @@ members = [
     "crates/craft_logger",
     "examples/util",
     "examples/counter_retained",
+    "examples/pointer_events",
     "examples/jsframeworkbench",
     "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
 ]
@@ -14,11 +15,7 @@ members = [
 edition = "2024"
 
 [profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
-debug = false
+debug = true
 
 [workspace.dependencies]
 reqwest = { version = "0.12.19", default-features = false }
