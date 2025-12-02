@@ -18,4 +18,4 @@ features = ["accesskit", "system_fonts"]
 
 [dependencies.craft_renderer]
 path = "../../crates/craft_renderer"
-features = ["vello_renderer"]
+features = ["vello_hybrid_renderer"]

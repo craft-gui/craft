@@ -230,9 +230,6 @@ impl ApplicationHandler for CraftWinitState {
                 WASM_QUEUE.with_borrow_mut(|wasm_queue: &mut WasmQueue| {
                     wasm_queue.drain(|message| {
                         match message {
-                            InternalMessage::GotUserMessage(user_message) => {
-                                craft_state.craft_app.on_user_message(user_message);
-                            }
                             InternalMessage::ResourceEvent(resource_event) => {
                                 craft_state.craft_app.on_resource_event(resource_event);
                             }
