@@ -55,9 +55,7 @@ fn create_button(
     container
 }
 
-#[allow(unused)]
-#[cfg(not(target_os = "android"))]
-fn main() {
+pub fn counter() -> Rc<RefCell<dyn Element>> {
     let count = Rc::new(RefCell::new(Counter::default()));
 
     let container = Container::new();
@@ -90,7 +88,15 @@ fn main() {
     let root = Container::new();
     root.borrow_mut().push(container);
 
+    root
+}
+
+#[allow(unused)]
+#[cfg(not(target_os = "android"))]
+fn main() {
+    let counter = counter();
+
     use craft_retained::CraftOptions;
     util::setup_logging();
-    craft_retained::craft_main(root, CraftOptions::basic("Counter"));
+    craft_retained::craft_main(counter, CraftOptions::basic("Counter"));
 }

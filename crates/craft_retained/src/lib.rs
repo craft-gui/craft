@@ -35,7 +35,6 @@ pub use craft_resource_manager::ResourceIdentifier;
 
 use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
 
-use winit::event_loop::EventLoop;
 pub use winit::window::{Cursor, CursorIcon};
 
 pub use utils::craft_error::CraftError;
@@ -84,8 +83,7 @@ type RendererBox = Box<dyn Renderer>;
 
 #[cfg(target_os = "android")]
 pub fn internal_craft_main_with_options(
-    application: ComponentSpecification,
-    global_state: GlobalState,
+    root: Rc<RefCell<dyn Element>>,
     options: Option<CraftOptions>,
     app: AndroidApp,
 ) {
@@ -95,7 +93,7 @@ pub fn internal_craft_main_with_options(
         EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
-    let craft_state = setup_craft(application, global_state, options);
+    let craft_state = setup_craft(root, options);
     let mut winit_craft_state = CraftWinitState::new(craft_state);
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
@@ -107,15 +105,9 @@ pub fn internal_craft_main_with_options(
 /// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
 /// behavior via [`CraftOptions`] without interacting directly with lower-level details.
 ///
-/// # Type Parameters
-///
-/// * `GlobalState`: The type use for global state. It must implement [`Send`] and have a `'static` lifetime
-///   to ensure it can be safely transferred between threads.
-///
 /// # Parameters
 ///
-/// * `application` - A [`ComponentSpecification`] that describes the structure and behavior of the application's components.
-/// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
+/// * `root` - The root element.
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
 pub fn craft_main(
@@ -132,25 +124,18 @@ pub fn craft_main(
 /// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
 /// behavior via [`CraftOptions`] without interacting directly with lower-level details.
 ///
-/// # Type Parameters
-///
-/// * `GlobalState`: The type used for global state. It must implement [`Send`] and have a `'static` lifetime
-///   to ensure it can be safely transferred between threads.
-///
 /// # Parameters
 ///
-/// * `application` - A [`ComponentSpecification`] that describes the structure and behavior of the application's components.
-/// * `global_state` - A boxed instance of type `GlobalState` which holds the application's global state.
+/// * `root` - The root element.
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 /// * `android_app` - The Android application instance.
 #[cfg(target_os = "android")]
-pub fn craft_main<GlobalState: Send + 'static>(
-    application: ComponentSpecification,
-    global_state: GlobalState,
+pub fn craft_main(
+    root: Rc<RefCell<dyn Element>>,
     options: CraftOptions,
     android_app: AndroidApp,
 ) {
-    internal_craft_main_with_options(application, Box::new(global_state), Some(options), android_app);
+    internal_craft_main_with_options(root, Some(options), android_app);
 }
 
 #[cfg(not(target_os = "android"))]
@@ -158,8 +143,9 @@ fn internal_craft_main_with_options(
     root: Rc<RefCell<dyn Element>>,
     options: Option<CraftOptions>,
 ) {
-    info!("Craft started");
+    use winit::event_loop::EventLoop;
 
+    info!("Craft started");
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 

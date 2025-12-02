@@ -8,6 +8,11 @@ default-run = "counter_retained"
 name = "counter_retained"
 path = "main.rs"
 
+[lib]
+name = "counter_android"
+path = "counter_android.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 util = { path = "../util" }
 
@@ -16,6 +21,10 @@ path = "../../crates/craft_retained"
 default-features = false
 features = ["accesskit", "system_fonts"]
 
-[dependencies.craft_renderer]
+[target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
 path = "../../crates/craft_renderer"
 features = ["vello_hybrid_renderer"]
+
+[target.'cfg(target_os = "android")'.dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+features = ["vello_renderer"]
