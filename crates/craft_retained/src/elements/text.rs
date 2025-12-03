@@ -171,7 +171,6 @@ impl crate::elements::Element for Text {
 }
 
 impl ElementInternals for Text {
-
     fn draw(
         &mut self,
         renderer: &mut RenderList,
@@ -248,8 +247,12 @@ impl ElementInternals for Text {
     fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        _scale_factor: f64,
+        scale_factor: f64,
     ) {
+        if scale_factor as f32 != self.state.scale_factor {
+            self.state.is_layout_dirty = true;
+            self.state.scale_factor = scale_factor as f32;
+        }
         if self.state.is_layout_dirty {
             taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         }
@@ -370,152 +373,8 @@ impl ElementInternals for Text {
             }
         }
     }
-
-    /*fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
-    }*/
-
-/*    fn initialize_state(&mut self, scaling_factor: f64) -> ElementStateStoreItem {
-        let hash = hash_string(self.text.as_ref().unwrap());
-        let text_state = TextState {
-            scale_factor: scaling_factor as f32,
-            selection: Selection::default(),
-            text: std::mem::take(&mut self.text),
-            text_hash: Some(hash),
-            text_render: None,
-            last_text_style: self.style().clone(),
-            layout: None,
-            cache: Default::default(),
-            current_layout_key: None,
-            last_requested_measure_key: None,
-            current_render_key: None,
-            content_widths: None,
-            last_click_time: None,
-            click_count: 0,
-            pointer_down: false,
-            cursor_pos: Point::new(0.0, 0.0),
-            start_time: None,
-            blink_period: Default::default(),
-        };
-
-        ElementStateStoreItem {
-            base: Default::default(),
-            data: Box::new(text_state),
-        }
-    }*/
-
-  /*  #[cfg(feature = "accesskit")]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        scale_factor: f64,
-    ) {
-        let state: &mut TextState = &mut self.state;
-        if state.layout.is_none() {
-            return;
-        }
-
-        let layout = state.layout.as_mut();
-        let mut access = LayoutAccessibility::default();
-        let text = state.text.as_ref().unwrap();
-
-        let current_node_id = accesskit::NodeId(self.element_data().component_id);
-
-        let mut current_node = accesskit::Node::new(Role::Label);
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
-        current_node.set_value(state.text.as_deref().unwrap());
-        current_node.add_action(Action::SetTextSelection);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        if let Some(layout) = layout {
-            access.build_nodes(
-                text,
-                layout,
-                tree,
-                &mut current_node,
-                || accesskit::NodeId(create_unique_element_id()),
-                padding_box.x as f64,
-                padding_box.y as f64,
-            );
-        }
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
-    }*/
-
- /*   fn update_state(&mut self, reload_fonts: bool, scaling_factor: f64) {
-        let text_hash = hash_string(self.text.as_ref().unwrap());
-        let (state, base_state) = self.state_and_base_mut(element_state);
-
-        let scale_factor_changed = if let Some(layout) = &state.layout {
-            if layout.scale() != scaling_factor as f32 {
-                state.scale_factor = scaling_factor as f32;
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-
-        let last_style = &state.last_text_style;
-
-        let current_style = base_state.current_style(self.element_data()).clone();
-        if last_style.color() != current_style.color() {
-            if let Some(text_render) = state.text_render.as_mut() {
-                text_render.override_brush = Some(ColorBrush::new(current_style.color()));
-            }
-        }
-
-        let style_changed = {
-            let last_style = &state.last_text_style;
-
-            current_style.font_size() != last_style.font_size()
-                || current_style.font_weight() != last_style.font_weight()
-                || current_style.font_style() != last_style.font_style()
-                || current_style.font_family() != last_style.font_family()
-                || current_style.underline() != last_style.underline()
-        };
-
-        let text = std::mem::take(&mut self.text);
-
-        if state.text_hash != Some(text_hash) || reload_fonts || style_changed || scale_factor_changed {
-            state.text_hash = Some(text_hash);
-            state.text = text;
-            state.layout = None;
-            state.cache.clear();
-            state.current_layout_key = None;
-            state.last_requested_measure_key = None;
-            state.current_render_key = None;
-            state.text_render = None;
-            state.content_widths = None;
-        }
-
-        state.last_text_style = current_style;
-    }*/
 }
 
-/*impl Text {
-    generate_component_methods_no_children!();
-}*/
-
-/*impl ElementStyles for Text {
-    fn styles_mut(&mut self) -> &mut Style {
-        self.element_data.current_style_mut()
-    }
-}
-*/
 impl TextState {
     pub fn measure(
         &mut self,
@@ -524,14 +383,7 @@ impl TextState {
         text_context: &mut TextContext,
     ) -> Size<f32> {
         if self.is_layout_dirty {
-            self.layout = None;
-            self.cache.clear();
-            self.current_layout_key = None;
-            self.last_requested_measure_key = None;
-            self.current_render_key = None;
-            self.text_render = None;
-            self.content_widths = None;
-            self.is_layout_dirty = false;
+            self.clear_cache();
         }
 
         if self.layout.is_none() {
@@ -632,6 +484,17 @@ impl TextState {
         let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
         let point = Point::new(point.x * scale_factor, point.y * scale_factor);
         self.selection = Selection::from_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
+    }
+
+    pub fn clear_cache(&mut self) {
+        self.layout = None;
+        self.cache.clear();
+        self.current_layout_key = None;
+        self.last_requested_measure_key = None;
+        self.current_render_key = None;
+        self.text_render = None;
+        self.content_widths = None;
+        self.is_layout_dirty = false;
     }
 }
 
