@@ -443,9 +443,10 @@ impl ElementInternals for TextInput {
         fn cut(_drv: &mut PlainEditorDriver) {}
 
         let mut generate_text_changed_event = |editor: &mut PlainEditor| {
+            // TODO: generate event.
+            let _new_text = editor.text().to_string();
             event.prevent_defaults();
             event.prevent_propagate();
-            event.result_message(CraftMessage::TextInputChanged(editor.text().to_string()));
         };
 
         if let CraftMessage::ElementMessage(msg) = message
@@ -664,8 +665,8 @@ impl ElementInternals for TextInput {
                         let cursor_y = cursor_pos.y as f32;
 
                         if click_count == 1 {
-                            if let Some(link) = self.state.get_cursor_link(cursor_pos, self) {
-                                event.result_message(CraftMessage::LinkClicked(link));
+                            if let Some(_link) = self.state.get_cursor_link(cursor_pos, self) {
+                                // TODO generate event
                                 return;
                             }
                         }

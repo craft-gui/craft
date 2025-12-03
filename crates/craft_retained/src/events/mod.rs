@@ -19,7 +19,6 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
-use craft_primitives::geometry::Rectangle;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -85,14 +84,6 @@ impl CraftMessage {
             | CraftMessage::LostPointerCapture()
         )
     }
-    
-    pub fn clicked(&self) -> bool {
-        /*if let PointerButtonUp(pointer_button) = self && pointer_button.is_primary() {
-            return true;
-        }*/
-
-        false
-    }
 
     pub fn new_element_message<T>(data: T) -> CraftMessage
     where
@@ -103,13 +94,6 @@ impl CraftMessage {
 }
 pub type UserMessage = dyn CloneableAny;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum PointerCapture {
-    #[default]
-    None,
-    Set,
-    Unset,
-}
 
 /// The result of an update.
 pub struct Event {
@@ -121,11 +105,6 @@ pub struct Event {
     /// Prevent default event handlers from running when an craft_event is not explicitly handled.
     /// False by default.
     pub prevent_defaults: bool,
-    pub(crate) result_message: Option<CraftMessage>,
-    /// Redirect future pointer events to this component. None by default.
-    pub(crate) pointer_capture: PointerCapture,
-    pub(crate) effects: Vec<(EventDispatchType, CraftMessage)>,
-    pub(crate) ime: ImeAction,
 }
 
 
@@ -134,14 +113,6 @@ pub enum FocusAction {
     #[default]
     None,
     Set(u64),
-    Unset,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum ImeAction {
-    #[default]
-    None,
-    Set(Rectangle),
     Unset,
 }
 
@@ -166,14 +137,6 @@ impl Event {
     pub fn async_no_result() -> Box<dyn Any + 'static> {
         Box::new(())
     }
-
-    pub fn ime_action(&mut self, action: ImeAction) {
-        self.ime = action;
-    }
-
-    pub fn focus_action(&mut self, _action: FocusAction) {
-        //self.focus = action;
-    }
 }
 
 impl Event {
@@ -183,11 +146,6 @@ impl Event {
             propagate: true,
             future: None,
             prevent_defaults: false,
-            result_message: None,
-            pointer_capture: Default::default(),
-            effects: Vec::new(),
-            ime: ImeAction::None,
-            //focus: FocusAction::None,
         }
     }
 }
@@ -215,15 +173,4 @@ impl Event {
         self.propagate = false;
     }
 
-    pub fn result_message(&mut self, message: CraftMessage) {
-        self.result_message = Some(message);
-    }
-
-    pub fn pointer_capture(&mut self, pointer_capture: PointerCapture) {
-        self.pointer_capture = pointer_capture;
-    }
-
-    pub fn add_effect(&mut self, event_dispatch_type: EventDispatchType, message: CraftMessage) {
-        self.effects.push((event_dispatch_type, message));
-    }
 }
