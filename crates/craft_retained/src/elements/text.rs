@@ -148,6 +148,15 @@ impl Text {
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
     }
+
+    pub(crate) fn measure(
+        &mut self,
+        known_dimensions: Size<Option<f32>>,
+        available_space: Size<AvailableSpace>,
+        text_context: &mut TextContext,
+    ) -> Size<f32> {
+        self.state.measure(&self.element_data.style, known_dimensions, available_space, text_context)
+    }
 }
 
 impl crate::elements::core::ElementData for Text {
@@ -378,6 +387,7 @@ impl ElementInternals for Text {
 impl TextState {
     pub fn measure(
         &mut self,
+        style: &Style,
         known_dimensions: Size<Option<f32>>,
         available_space: Size<AvailableSpace>,
         text_context: &mut TextContext,
@@ -387,7 +397,7 @@ impl TextState {
         }
 
         if self.layout.is_none() {
-            let mut builder = text_context.tree_builder(self.scale_factor, &Style::default().to_text_style());
+            let mut builder = text_context.tree_builder(self.scale_factor, &style.to_text_style());
             let text = &self.text;
             builder.push_text(text);
             let (layout, _) = builder.build();

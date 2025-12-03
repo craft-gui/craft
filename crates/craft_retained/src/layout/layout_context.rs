@@ -163,7 +163,7 @@ pub fn measure_content(
         Some(LayoutContext::Text(taffy_text_context)) => {
             let element = &taffy_text_context.element;
             if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
-                return element.state.measure(known_dimensions, available_space, text_context)
+                return element.measure(known_dimensions, available_space, text_context)
             }
             Size::ZERO
         }
