@@ -2,7 +2,7 @@ use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationSta
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, ComputedBorder, LayoutItem};
-use crate::style::Style;
+use crate::style::{Display, Style};
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::{ElementBox, Rectangle};
 use craft_renderer::RenderList;
@@ -23,16 +23,99 @@ use craft_primitives::geometry::borders::CssRoundedRect;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData {
+    /// Compute the element's layout.
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64);
 
-    /// Construct the [`TaffyTree`].
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) -> Option<NodeId>;
+    /// A helper to compute the layout for all children.
+    fn compute_layout_children(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) {
+        for child in &self.element_data().children {
+            child.borrow_mut().compute_layout(taffy_tree, scale_factor);
+        }
+    }
 
-    /// Updates the element to reflect the layour results from the [`TaffyTree`].
+    /// A helper to apply the layout for all children.
+    fn apply_layout_children(
+        &mut self,
+        taffy_tree: &mut TaffyTree<LayoutContext>,
+        z_index: &mut u32,
+        transform: Affine,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
+    ) {
+        for child in &self.element_data().children {
+            let mut child = child.borrow_mut();
+            let taffy_child_node_id = child.element_data().layout_item.taffy_node_id;
+            if taffy_child_node_id.is_none() {
+                continue;
+            }
+
+            child.apply_layout(
+                taffy_tree,
+                taffy_child_node_id.unwrap(),
+                self.element_data().layout_item.computed_box.position,
+                z_index,
+                transform * transform,
+                pointer,
+                text_context,
+                self.element_data().layout_item.clip_bounds,
+            );
+        }
+    }
+
+    /// A helper to check if the element is visible.
+    fn is_visible(&self) -> bool {
+        let style = &self.element_data().style;
+        style.visible() && style.display() != Display::None
+    }
+
+    /// A helper to draw all children.
+    fn draw_children(
+        &mut self,
+        renderer: &mut RenderList,
+        text_context: &mut TextContext,
+        pointer: Option<Point>,
+        window: Option<Arc<Window>>,
+        scale_factor: f64,
+    ) {
+        for child in self.children() {
+            child.borrow_mut().draw(renderer, text_context, pointer, window.clone(), scale_factor);
+        }
+    }
+
+    /// A helper to re-apply the style to the layout node when dirty.
+    fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>) {
+        let element_data = self.element_data_mut();
+        if element_data.style.is_dirty {
+            let node_id = element_data.layout_item.taffy_node_id.unwrap();
+            let style: taffy::Style = element_data.style.to_taffy_style();
+            taffy_tree.set_style(node_id, style).expect("Failed to set style on node.");
+            element_data.style.is_dirty = false;
+        }
+    }
+
+    /// Applies the layout results from the [`TaffyTree`].
+    /// This method retrieves the computed layout for `root_node` and updates the
+    /// element’s internal state accordingly. It resolves the element's position,
+    /// transform, clipping, borders, and stacking order, producing the final
+    /// layout state used for rendering.
     ///
-    /// The majority of the layout computation is done in the `compute_layout` method.
-    /// Store the computed values in the `element_data` struct.
+    /// # Parameters
+    /// - `taffy_tree`: The layout tree containing the computed results.
+    /// - `root_node`: The node whose layout information should be applied.
+    /// - `position`: The absolute position of the element within its parent context.
+    /// - `z_index`: A mutable counter used to assign stacking order as elements
+    ///   are processed.
+    /// - `transform`: The accumulated transform to apply to this element.
+    /// - `pointer`: The current pointer position, if available, for hit-testing.
+    /// - `text_context`: Context used for text layout and measurement.
+    /// - `clip_bounds`: Optional clipping rectangle inherited from ancestors.
+    ///
+    /// # Effects
+    /// This function mutates internal element state to reflect the final resolved
+    /// layout and may trigger updates such as clipping regions, border geometry,
+    /// and z-index assignment.
     #[allow(clippy::too_many_arguments)]
-    fn finalize_layout(
+    fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
@@ -133,17 +216,17 @@ pub trait ElementInternals: ElementData {
     }
 
     /// Computes this element's clip box.
-    fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
 
-    fn finalize_borders(&mut self) {
+    fn apply_borders(&mut self) {
         let (has_border, border_radius) = {
             let current_style = self.element_data().current_style();
             (current_style.has_border(), current_style.border_radius())
         };
 
-        self.element_data_mut().layout_item.finalize_borders(has_border, border_radius);
+        self.element_data_mut().layout_item.apply_borders(has_border, border_radius);
     }
 
     /// Called after layout, and is responsible for updating the animation state of an element.
@@ -151,12 +234,11 @@ pub trait ElementInternals: ElementData {
         let base_state = self.element_data_mut();
 
         // If we don't have an animation in the current style then try to fall back to the normal style.
-        let current_style =
-            if let Some(current_style) = base_state.current_style_mut_no_fallback() {
-                current_style
-            } else {
-                &mut base_state.style
-            };
+        let current_style = if let Some(current_style) = base_state.current_style_mut_no_fallback() {
+            current_style
+        } else {
+            &mut base_state.style
+        };
 
         // This is pretty hacky, but we can avoid allocating a hashmap for every element.
         let active_animations = {
@@ -170,17 +252,18 @@ pub trait ElementInternals: ElementData {
         let current_style_animations = &mut current_style.animations;
         for ani in &mut *current_style_animations {
             if !active_animations.contains_key(&ani.name) {
-                active_animations.insert(ani.name.clone(), ActiveAnimation {
-                    current: Duration::ZERO,
-                    status: AnimationStatus::Playing,
-                    loop_amount: ani.loop_amount,
-                });
+                active_animations.insert(
+                    ani.name.clone(),
+                    ActiveAnimation {
+                        current: Duration::ZERO,
+                        status: AnimationStatus::Playing,
+                        loop_amount: ani.loop_amount,
+                    },
+                );
             }
         }
 
-        active_animations.retain(|key, _| {
-            current_style_animations.iter().any(|ani| &ani.name == key)
-        });
+        active_animations.retain(|key, _| current_style_animations.iter().any(|ani| &ani.name == key));
 
         active_animations.retain(|anim_name, active_animation| {
             if active_animation.status == AnimationStatus::Playing {
@@ -240,20 +323,26 @@ pub trait ElementInternals: ElementData {
 
         let border_color = self.element_data().current_style().border_color();
         let scrollbar_color = self.element_data().current_style().scrollbar_color();
-        let scrollbar_thumb_radius = self.element_data().current_style().scrollbar_thumb_radius().map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
+        let scrollbar_thumb_radius = self
+            .element_data()
+            .current_style()
+            .scrollbar_thumb_radius()
+            .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
         // let scrollbar_thumb_radius = self.element_data().current_style().
         let track_rect = self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor);
         let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
 
-        let border_spec = CssRoundedRect::new(
-            thumb_rect.to_kurbo(),
-            [0.0, 0.0, 0.0, 0.0],
-            scrollbar_thumb_radius,
-        );
+        let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
         let computed_border_spec = ComputedBorder::new(border_spec);
 
         renderer.draw_rect(track_rect, scrollbar_color.track_color);
-        draw_borders_generic(renderer, &computed_border_spec, border_color.to_array(), scrollbar_color.thumb_color, scale_factor);
+        draw_borders_generic(
+            renderer,
+            &computed_border_spec,
+            border_color.to_array(),
+            scrollbar_color.thumb_color,
+            scale_factor,
+        );
     }
 
     fn should_start_new_layer(&self) -> bool {
@@ -268,12 +357,12 @@ pub trait ElementInternals: ElementData {
     }
 
     /// Gets
-    fn get_default_style() -> Style where
+    fn get_default_style() -> Style
+    where
         Self: Sized,
     {
         Style::default()
     }
-
 }
 
 pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn Element, clip_bounds: Option<Rectangle>) {

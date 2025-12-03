@@ -128,7 +128,7 @@ impl LayoutItem {
         self.computed_box_transformed = self.computed_box.transform(scroll_transform);
     }
 
-    pub fn finalize_borders(
+    pub fn apply_borders(
         &mut self,
         has_border: bool,
         border_radius: [(f32, f32); 4],

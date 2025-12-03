@@ -600,7 +600,13 @@ fn layout(
     let root_node = {
         let span = span!(Level::INFO, "compute layout(internal)");
         let _enter = span.enter();
-        root_element.borrow_mut().compute_layout(taffy_tree, scale_factor).unwrap()
+        root_element.borrow_mut().compute_layout(taffy_tree, scale_factor);
+        // There should usually be a layout node. If not, exiting early could also make sense.
+        root_element.borrow()
+            .element_data()
+            .layout_item
+            .taffy_node_id
+            .expect("A root element must have a layout node.")
     };
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
@@ -633,9 +639,9 @@ fn layout(
 
     let mut layout_order: u32 = 0;
     {
-        let span = span!(Level::INFO, "layout(finalize)");
+        let span = span!(Level::INFO, "layout(apply)");
         let _enter = span.enter();
-        root_element.borrow_mut().finalize_layout(
+        root_element.borrow_mut().apply_layout(
             taffy_tree,
             root_node,
             origin,

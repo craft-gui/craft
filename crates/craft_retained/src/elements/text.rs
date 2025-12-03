@@ -180,9 +180,10 @@ impl ElementInternals for Text {
         _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
-        if !self.element_data.style.visible() {
+        if !self.is_visible() {
             return;
         }
+
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
@@ -248,23 +249,15 @@ impl ElementInternals for Text {
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         _scale_factor: f64,
-    ) -> Option<NodeId> {
-        //self.merge_default_style();
-
+    ) {
         if self.state.is_layout_dirty {
             taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         }
 
-        let node_id = self.element_data.layout_item.taffy_node_id.unwrap();
-        if self.element_data.style.is_dirty {
-            let style: taffy::Style = self.element_data.style.to_taffy_style();
-            taffy_tree.set_style(node_id, style).expect("TODO: panic message");
-            self.element_data.style.is_dirty = false;
-        }
-        Some(node_id)
+        self.apply_style_to_layout_node_if_dirty(taffy_tree);
     }
 
-    fn finalize_layout(
+    fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
@@ -277,9 +270,9 @@ impl ElementInternals for Text {
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
-        self.resolve_clip(clip_bounds);
+        self.apply_clip(clip_bounds);
 
-        self.finalize_borders();
+        self.apply_borders();
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {

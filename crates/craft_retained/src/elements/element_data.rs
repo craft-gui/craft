@@ -70,7 +70,7 @@ impl ElementData {
     }
 
     /// Computes the scrollbar's tack and thumb layout.
-    pub(crate) fn finalize_scroll(&mut self, layout: &Layout) {
+    pub(crate) fn apply_scroll(&mut self, layout: &Layout) {
         self.layout_item.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
         self.layout_item.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
 

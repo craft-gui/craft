@@ -91,23 +91,15 @@ impl Element for Image {
 }
 
 impl ElementInternals for Image {
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _scale_factor: f64) -> Option<NodeId> {
-        //self.merge_default_style();
-
+    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _scale_factor: f64) {
         if self.is_image_dirty {
             taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         }
 
-        let node_id = self.element_data.layout_item.taffy_node_id.unwrap();
-        if self.element_data.style.is_dirty {
-            let style: taffy::Style = self.element_data.style.to_taffy_style();
-            taffy_tree.set_style(node_id, style).expect("TODO: panic message");
-            self.element_data.style.is_dirty = false;
-        }
-        Some(node_id)
+        self.apply_style_to_layout_node_if_dirty(taffy_tree);
     }
 
-    fn finalize_layout(
+    fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         root_node: NodeId,
@@ -120,8 +112,8 @@ impl ElementInternals for Image {
     ) {
         let layout = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, layout, z_index);
-        self.finalize_borders();
-        self.resolve_clip(clip_bounds);
+        self.apply_borders();
+        self.apply_clip(clip_bounds);
     }
 
     fn draw(
@@ -132,9 +124,7 @@ impl ElementInternals for Image {
         _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
-        let current_style = self.element_data.current_style();
-
-        if !current_style.visible() {
+        if !self.is_visible() {
             return;
         }
 
