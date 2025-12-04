@@ -8,12 +8,12 @@ use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Range;
+use std::ops::{DerefMut, Range};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
-use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
@@ -32,7 +32,6 @@ use std::time;
 use time::{Duration, Instant};
 use ui_events::keyboard::{Key, Modifiers, NamedKey};
 use ui_events::pointer::PointerButton;
-use understory_box_tree::LocalNode;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::dpi;
@@ -158,13 +157,8 @@ impl TextInput {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
-        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(None, LocalNode::default())
-        });
-        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
-
-        SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(spatial_node, Rc::downgrade(&me_element));
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
         });
 
         me
@@ -205,9 +199,8 @@ impl ElementInternals for TextInput {
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("TextINput must have a spatial node");
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
+            spatial_tree.update_bounds(self);
         });
 
         self.apply_borders();

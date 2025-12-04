@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -12,10 +12,10 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
-use understory_box_tree::LocalNode;
 use winit::window::Window;
 
 /// Stores one or more elements.
@@ -38,20 +38,13 @@ impl Container {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
-        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(None, LocalNode::default())
-        });
-        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
-
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
-
-        SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
-           spatial_tree.insert(spatial_node, Rc::downgrade(&me_element));
-        });
-
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
-
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
+        });
 
         me
     }
@@ -87,13 +80,9 @@ impl Element for Container {
             }
         });
 
-        let child_spatial_id = child.borrow().element_data().layout_item.spatial_node_id;
-        if let Some(child_spatial_id) = child_spatial_id {
-            let parent_spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
-            SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-                spatial_tree.reparent(child_spatial_id, Some(parent_spatial_id));
-            });
-        }
+       SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+           spatial_tree.push_child(self, child.borrow().deref());
+       });
 
         self
     }
@@ -129,11 +118,7 @@ impl Element for Container {
 
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
             for child in children {
-                let child_spatial_id = child.borrow().element_data().layout_item.spatial_node_id;
-                if let Some(child_spatial_id) = child_spatial_id {
-                    let parent_spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
-                    spatial_tree.reparent(child_spatial_id, Some(parent_spatial_id));
-                }
+                spatial_tree.push_child(self, child.borrow().deref());
             }
         });
 
@@ -177,9 +162,8 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
+            spatial_tree.update_bounds(self);
         });
 
         self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context)

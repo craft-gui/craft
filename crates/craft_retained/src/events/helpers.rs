@@ -1,4 +1,4 @@
-use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP};
+use crate::app::SPATIAL_TREE;
 use crate::elements::Element;
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
@@ -7,7 +7,6 @@ use kurbo::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use understory_box_tree::QueryFilter;
 
 pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -39,12 +38,9 @@ pub(super) fn find_target(
         if mouse_position.is_none() {
             return None;
         };
-        let hit = spatial_tree.hit_test_point(mouse_position.unwrap(), QueryFilter::default());
-        if let Some(hit) = hit {
-            SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
-                let target = spatial_tree.get(&hit.node).expect("Node should be in map").clone();
-                target.upgrade()
-            })
+        let target = spatial_tree.hit_test_point(mouse_position.unwrap());
+        if let Some(target) = target {
+            target.upgrade()
         } else {
             None
         }

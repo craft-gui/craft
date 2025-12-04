@@ -1,6 +1,6 @@
 //! Displays an image.
 
-use crate::app::{PENDING_RESOURCES, SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
+use crate::app::{PENDING_RESOURCES, SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
@@ -13,10 +13,10 @@ use craft_resource_manager::ResourceIdentifier;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
-use understory_box_tree::LocalNode;
 use winit::window::Window;
 
 /// Displays an image.
@@ -47,18 +47,11 @@ impl Image {
             pending_resources.push_back((resource_identifier, ResourceType::Image));
         });
 
-        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(None, LocalNode::default())
-        });
-        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
-
-        let me_element: Rc<RefCell<dyn Element>> = me.clone();
-
-        SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(spatial_node, Rc::downgrade(&me_element));
-        });
-
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
+        });
         me
     }
 
@@ -125,9 +118,8 @@ impl ElementInternals for Image {
         let layout = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, layout, z_index);
 
-        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Image must have a spatial node");
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
+            spatial_tree.update_bounds(self);
         });
 
         self.apply_borders();

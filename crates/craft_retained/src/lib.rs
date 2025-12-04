@@ -19,6 +19,7 @@ mod window_context;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
+pub mod spatial;
 
 pub use options::CraftOptions;
 pub use craft_primitives::palette;

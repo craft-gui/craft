@@ -1,4 +1,3 @@
-use std::any::Any;
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
@@ -8,13 +7,15 @@ use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_renderer::renderer::RenderList;
-use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 #[cfg(feature = "accesskit")]
 use parley::LayoutAccessibility;
+use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
+use std::any::Any;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ops::DerefMut;
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
@@ -26,6 +27,7 @@ use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
@@ -34,9 +36,7 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use understory_box_tree::LocalNode;
 use winit::window::Window;
-use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -115,13 +115,8 @@ impl Text {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
-        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(None, LocalNode::default())
-        });
-        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
-
-        SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(spatial_node, Rc::downgrade(&me_element));
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
         });
 
         me
@@ -294,9 +289,8 @@ impl ElementInternals for Text {
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Text must have a spatial node");
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
+            spatial_tree.update_bounds(self);
         });
 
         self.apply_borders();

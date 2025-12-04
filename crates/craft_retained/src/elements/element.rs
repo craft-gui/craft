@@ -1,4 +1,4 @@
-use crate::app::{DOCUMENTS, FOCUS, SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
+use crate::app::{DOCUMENTS, FOCUS, SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
 use crate::layout::layout_context::LayoutContext;
@@ -12,6 +12,7 @@ use craft_primitives::geometry::{ElementBox, TrblRectangle};
 use craft_primitives::Color;
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use taffy::{BoxSizing, NodeId, Overflow, Position, TaffyResult, TaffyTree};
 use ui_events::pointer::PointerId;
@@ -112,14 +113,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             taffy_tree.mark_dirty(parent_id.unwrap()).expect("Failed to mark taffy node dirty.");
         });
 
-        if let Some(spatial_node) = child.borrow().element_data().layout_item.spatial_node_id {
-            SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-                spatial_tree.remove(spatial_node);
-            });
-            SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree_map| {
-               spatial_tree_map.remove(&spatial_node);
-            });
-        }
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.remove(child.borrow().deref());
+        });
 
         Ok(child)
     }

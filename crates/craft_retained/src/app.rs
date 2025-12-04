@@ -13,7 +13,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::{Cell};
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -34,8 +34,6 @@ use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
-use understory_box_tree::Tree as SpatialTree;
-
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::Element;
@@ -54,6 +52,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
+use crate::spatial::SpatialTree;
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -61,8 +60,7 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
-    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree<understory_index::RTreeF64<()>>> = RefCell::new(SpatialTree::<understory_index::RTreeF64<()>>::default());
-    pub(crate) static SPATIAL_TREE_MAP: RefCell<HashMap<understory_box_tree::NodeId, Weak<RefCell<dyn Element>>>> = RefCell::new(HashMap::new());
+    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree> = RefCell::new(SpatialTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
