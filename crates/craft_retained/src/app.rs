@@ -61,7 +61,7 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
-    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree<understory_index::RTreeF64<understory_box_tree::NodeId>>> = RefCell::new(SpatialTree::<understory_index::RTreeF64<understory_box_tree::NodeId>>::default());
+    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree<understory_index::RTreeF64<()>>> = RefCell::new(SpatialTree::<understory_index::RTreeF64<()>>::default());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
