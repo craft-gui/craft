@@ -39,11 +39,7 @@ pub(super) fn find_target(
             return None;
         };
         let target = spatial_tree.hit_test_point(mouse_position.unwrap());
-        if let Some(target) = target {
-            target.upgrade()
-        } else {
-            None
-        }
+        target.and_then(|target| target.upgrade())
     });
 
     target.unwrap_or(Rc::clone(root))
