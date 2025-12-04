@@ -122,6 +122,16 @@ impl Element for Container {
             taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
         });
 
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            for child in children {
+                let child_spatial_id = child.borrow().element_data().layout_item.spatial_node_id;
+                if let Some(child_spatial_id) = child_spatial_id {
+                    let parent_spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
+                    spatial_tree.reparent(child_spatial_id, Some(parent_spatial_id));
+                }
+            }
+        });
+
         self
     }
 
