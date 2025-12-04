@@ -182,7 +182,7 @@ impl ElementInternals for Container {
             spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
         });
 
-        self.apply_layout_children(taffy_tree, z_index, child_transform * transform, pointer, text_context)
+        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context)
     }
 
     fn draw(
