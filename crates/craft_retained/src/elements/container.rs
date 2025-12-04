@@ -148,7 +148,7 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, child_transform, pointer, text_context)
+        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context)
     }
 
     fn draw(
