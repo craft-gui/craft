@@ -1,4 +1,3 @@
-use std::any::Any;
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
@@ -8,13 +7,15 @@ use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_renderer::renderer::RenderList;
-use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 #[cfg(feature = "accesskit")]
 use parley::LayoutAccessibility;
+use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
+use std::any::Any;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ops::DerefMut;
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
@@ -26,6 +27,7 @@ use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
@@ -35,7 +37,6 @@ use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
 use winit::window::Window;
-use crate::app::TAFFY_TREE;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -112,6 +113,10 @@ impl Text {
             });
             let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        });
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
         });
 
         me
@@ -283,6 +288,10 @@ impl ElementInternals for Text {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.update_bounds(self);
+        });
 
         self.apply_borders();
 

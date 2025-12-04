@@ -13,7 +13,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::{Cell};
 use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::{VecDeque};
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -52,6 +52,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
+use crate::spatial::SpatialTree;
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -59,6 +60,7 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
+    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree> = RefCell::new(SpatialTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
@@ -652,6 +654,10 @@ fn layout(
             None,
         );
     }
+
+    SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+        spatial_tree.commit();
+    });
 
     root_node
 }

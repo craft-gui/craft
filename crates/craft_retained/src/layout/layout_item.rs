@@ -36,6 +36,8 @@ pub struct LayoutItem {
     /// This may be None if this is a non-visual element like Font.
     pub taffy_node_id: Option<NodeId>,
 
+    pub spatial_node_id: Option<understory_box_tree::NodeId>,
+
     pub content_size: Size<f32>,
     // The computed values after transforms are applied.
     pub computed_box_transformed: ElementBox,

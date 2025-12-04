@@ -8,12 +8,12 @@ use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Range;
+use std::ops::{DerefMut, Range};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{AvailableSpace, NodeId, TaffyTree};
 
-use crate::app::TAFFY_TREE;
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
@@ -157,6 +157,10 @@ impl TextInput {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
+        });
+
         me
     }
 }
@@ -194,6 +198,10 @@ impl ElementInternals for TextInput {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.update_bounds(self);
+        });
 
         self.apply_borders();
 

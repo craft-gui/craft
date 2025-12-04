@@ -840,6 +840,8 @@ dependencies = [
  "tinyvg-rs",
  "ui-events",
  "ui-events-winit",
+ "understory_box_tree",
+ "understory_index",
  "wasm-bindgen",
  "web-sys",
  "web-time",
@@ -4367,6 +4369,21 @@ dependencies = [
  "web-time",
  "winit",
 ]
+
+[[package]]
+name = "understory_box_tree"
+version = "0.0.1"
+source = "git+https://github.com/endoli/understory/#fd3fbb2e5031162c3fbf2faee4af2b8601e79213"
+dependencies = [
+ "bitflags 2.10.0",
+ "kurbo",
+ "understory_index",
+]
+
+[[package]]
+name = "understory_index"
+version = "0.0.1"
+source = "git+https://github.com/endoli/understory/#fd3fbb2e5031162c3fbf2faee4af2b8601e79213"
 
 [[package]]
 name = "unicase"

@@ -308,7 +308,7 @@ fn build_body() -> Rc<RefCell<Container>> {
         .padding(Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0));
 
     let text = Text::new(r#"Craft-"keyed""#);
-    text.borrow_mut().font_size(64.0).color(Color::WHITE);
+    text.borrow_mut().font_size(32.0).color(Color::BLACK);
 
     let text_container = Container::new();
     text_container.borrow_mut()
@@ -410,7 +410,7 @@ where
     }
 
     let text = Text::new(label);
-    text.borrow_mut().selectable(false);
+    text.borrow_mut().selectable(false).color(Color::WHITE);
     button.borrow_mut().push(text);
 
     button.borrow_mut().on_pointer_button_up(Rc::new(callback));
