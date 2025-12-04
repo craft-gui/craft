@@ -34,6 +34,8 @@ use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
+use understory_box_tree::Tree as SpatialTree;
+
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::Element;
@@ -59,6 +61,7 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
+    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree<understory_index::RTreeF64<understory_box_tree::NodeId>>> = RefCell::new(SpatialTree::<understory_index::RTreeF64<understory_box_tree::NodeId>>::default());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
@@ -651,6 +654,13 @@ fn layout(
             text_context,
             None,
         );
+    }
+
+    {
+        let span = span!(Level::INFO, "layout(spatial index)");
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.commit();
+        });
     }
 
     root_node

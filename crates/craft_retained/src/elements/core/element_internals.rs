@@ -54,7 +54,7 @@ pub trait ElementInternals: ElementData {
                 taffy_child_node_id.unwrap(),
                 self.element_data().layout_item.computed_box.position,
                 z_index,
-                transform * transform,
+                transform,
                 pointer,
                 text_context,
                 self.element_data().layout_item.clip_bounds,

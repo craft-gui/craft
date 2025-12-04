@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -15,6 +15,7 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
+use understory_box_tree::LocalNode;
 use winit::window::Window;
 
 /// Stores one or more elements.
@@ -36,6 +37,11 @@ impl Container {
             let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style()).expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
+
+        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(None, LocalNode::default())
+        });
+        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
 
@@ -75,6 +81,14 @@ impl Element for Container {
                 taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
             }
         });
+
+        let child_spatial_id = child.borrow().element_data().layout_item.spatial_node_id;
+        if let Some(child_spatial_id) = child_spatial_id {
+            let parent_spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
+            SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+                spatial_tree.reparent(child_spatial_id, Some(parent_spatial_id));
+            });
+        }
 
         self
     }
@@ -148,7 +162,12 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, child_transform, pointer, text_context)
+        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Containers must have a spatial node");
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box.padding_rectangle().to_kurbo());
+        });
+
+        self.apply_layout_children(taffy_tree, z_index, child_transform * transform, pointer, text_context)
     }
 
     fn draw(

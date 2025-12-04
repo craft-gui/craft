@@ -34,8 +34,9 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
+use understory_box_tree::LocalNode;
 use winit::window::Window;
-use crate::app::TAFFY_TREE;
+use crate::app::{SPATIAL_TREE, TAFFY_TREE};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -113,6 +114,11 @@ impl Text {
             let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
+
+        let spatial_node = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(None, LocalNode::default())
+        });
+        me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
 
         me
     }
@@ -283,6 +289,11 @@ impl ElementInternals for Text {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
+
+        let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Text must have a spatial node");
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box.padding_rectangle().to_kurbo());
+        });
 
         self.apply_borders();
 
