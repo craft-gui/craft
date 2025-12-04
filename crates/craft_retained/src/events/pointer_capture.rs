@@ -1,7 +1,7 @@
+use std::rc::Weak;
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
 use crate::events::event_dispatch::EventDispatcher;
-use crate::events::helpers::collect_nodes;
 use crate::events::CraftMessage;
 use crate::text::text_context::TextContext;
 use std::cell::RefCell;
@@ -11,43 +11,28 @@ use ui_events::pointer::PointerId;
 
 /// Returns the currently pointer captured element or None.
 pub(super) fn find_pointer_capture_target(
-    nodes: &Vec<Rc<RefCell<dyn Element>>>,
     message: &CraftMessage,
 ) -> Option<Rc<RefCell<dyn Element>>> {
     // 9.4 Implicit pointer capture
     // https://w3c.github.io/pointerevents/#implicit-pointer-capture
     //
-    let pointer_capture_element_id = DOCUMENTS.with_borrow_mut(|docs| {
+    let pointer_capture_element_id: Option<Weak<RefCell<dyn Element>>> = DOCUMENTS.with_borrow_mut(|docs| {
         let key = &PointerId::new(1).unwrap();
-
         if matches!(message, CraftMessage::GotPointerCapture()) {
             // Check pending (step 2):
             // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
-            docs.get_current_document().pending_pointer_captures.get(key).copied()
+            docs.get_current_document().pending_pointer_captures.get(key).cloned()
         } else {
-            docs.get_current_document().pointer_captures.get(key).copied()
+            docs.get_current_document().pointer_captures.get(key).cloned()
         }
     });
 
-    // Skip hit-testing if pointer capture is active AND it is a pointer event.
-    if let Some(pointer_capture_element_id) = pointer_capture_element_id
-        && message.is_pointer_event()
-    /*|| is_ime_event)*/
-    {
-        for node in nodes {
-            if node.borrow().id() == pointer_capture_element_id {
-                return Some(Rc::clone(node));
-            }
-        }
-    }
-
-    None
+    pointer_capture_element_id.map(|element| element.upgrade().expect("Pointer captured element should exist."))
 }
 
 /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
 pub(super) fn process_pending_pointer_capture(
     event_dispatcher: &mut EventDispatcher,
-    root: Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
 ) {
     // 4.1.3.2 Process pending pointer capture
@@ -62,12 +47,11 @@ pub(super) fn process_pending_pointer_capture(
 
     // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
     // then fire a pointer event named lostpointercapture at the pointer capture target override node.
-    if let Some(pointer_capture_val) = pointer_capture_val
-        && Some(pointer_capture_val) != pending_pointer_capture_val
+    if let Some(pointer_capture_val) = pointer_capture_val.clone()
+        && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
     {
         let msg = CraftMessage::LostPointerCapture();
-        let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
-        let target = find_pointer_capture_target(&nodes, &msg);
+        let target = find_pointer_capture_target(&msg);
 
         if let Some(target) = target {
             let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
@@ -84,12 +68,11 @@ pub(super) fn process_pending_pointer_capture(
 
     // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
     // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
-    if let Some(pending_pointer_capture_val) = pending_pointer_capture_val
-        && Some(pending_pointer_capture_val) != pointer_capture_val
+    if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
+        && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
     {
         let msg = CraftMessage::GotPointerCapture();
-        let nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(&root);
-        let target = find_pointer_capture_target(&nodes, &msg);
+        let target = find_pointer_capture_target(&msg);
 
         if let Some(target) = target {
             let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
@@ -120,7 +103,6 @@ pub(super) fn process_pending_pointer_capture(
 pub(super) fn maybe_handle_implicit_pointer_capture_release(
     event_dispatcher: &mut EventDispatcher,
     message: &CraftMessage,
-    root: Rc<RefCell<dyn Element>>,
     text_context: &mut Option<TextContext>,
 ) {
     // 9.5 Implicit release of pointer capture
@@ -136,8 +118,8 @@ pub(super) fn maybe_handle_implicit_pointer_capture_release(
             let _ = docs.get_current_document().pending_pointer_captures.remove(key);
         });
 
-        process_pending_pointer_capture(event_dispatcher, root, text_context);
+        process_pending_pointer_capture(event_dispatcher, text_context);
     } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-        process_pending_pointer_capture(event_dispatcher, root, text_context);
+        process_pending_pointer_capture(event_dispatcher, text_context);
     }
 }

@@ -1,3 +1,4 @@
+use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP};
 use crate::elements::Element;
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
@@ -7,8 +8,6 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use understory_box_tree::QueryFilter;
-use craft_logging::{span, Level};
-use crate::app::SPATIAL_TREE;
 
 pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -23,83 +22,35 @@ pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<R
     targets
 }
 
-/// Collect all the elements into an array.
-pub(super) fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
-    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
-    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
-    while let Some(node_rc) = to_visit.pop() {
-        let node_ref = node_rc.borrow();
-
-        nodes.push(Rc::clone(&node_rc));
-
-        for child in node_ref.children().iter().rev() {
-            to_visit.push(Rc::clone(child));
-        }
-    }
-
-    nodes
-}
-
 /// Find the target that should be visited.
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn Element>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
 ) -> Rc<RefCell<dyn Element>> {
-    SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-        let span = span!(Level::INFO, "hittest(box_tree)");
-        let _enter = span.enter();
-        if mouse_position.is_none() {return};
-        let res = spatial_tree.hit_test_point(mouse_position.unwrap(), QueryFilter::default());
-        println!("RESULT: {:?}", res);
-    });
-    let (nodes, target) = {
-        let span = span!(Level::INFO, "hittest(linear)");
-        let _enter = span.enter();
-        let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
-
-        let mut target = find_pointer_capture_target(&nodes, message);;
-        (nodes, target)
-    };
-    {
-
-        let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
-
-        let mut target = find_pointer_capture_target(&nodes, message);
-        if let Some(target) = target {
-            return target;
-        }
-
-        // Otherwise sort and do hit-testing:
-
-        // Sort by layout order in descending order.
-        nodes.sort_unstable_by(|a_rc, b_rc| {
-            let a = a_rc.borrow();
-            let b = b_rc.borrow();
-            let a_elem = a;
-            let b_elem = b;
-
-            (
-                1, //b.overlay_order,
-                b_elem.element_data().layout_item.layout_order,
-            )
-                .cmp(&(
-                    1, //a.overlay_order,
-                    a_elem.element_data().layout_item.layout_order,
-                ))
-        });
-
-        for node in nodes {
-            let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
-
-            // The first element to pass the hit test should be the target.
-            if should_pass_hit_test && target.is_none() {
-                target = Some(Rc::clone(&node));
-            }
-        }
-
-        target.unwrap_or(Rc::clone(root))
+    let target = find_pointer_capture_target(message);
+    if let Some(target) = target {
+        return target;
     }
+
+    // Otherwise do hit-testing:
+
+    let target: Option<Rc<RefCell<dyn Element>>> = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+        if mouse_position.is_none() {
+            return None;
+        };
+        let hit = spatial_tree.hit_test_point(mouse_position.unwrap(), QueryFilter::default());
+        if let Some(hit) = hit {
+            SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
+                let target = spatial_tree.get(&hit.node).expect("Node should be in map").clone();
+                target.upgrade()
+            })
+        } else {
+            None
+        }
+    });
+
+    target.unwrap_or(Rc::clone(root))
 }
 
 pub(super) fn call_user_event_handlers(

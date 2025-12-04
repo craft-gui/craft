@@ -13,7 +13,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::{Cell};
 use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -62,6 +62,7 @@ thread_local! {
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
     pub(crate) static SPATIAL_TREE: RefCell<SpatialTree<understory_index::RTreeF64<()>>> = RefCell::new(SpatialTree::<understory_index::RTreeF64<()>>::default());
+    pub(crate) static SPATIAL_TREE_MAP: RefCell<HashMap<understory_box_tree::NodeId, Weak<RefCell<dyn Element>>>> = RefCell::new(HashMap::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
@@ -656,12 +657,9 @@ fn layout(
         );
     }
 
-    {
-        let span = span!(Level::INFO, "layout(spatial index)");
-        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.commit();
-        });
-    }
+    SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+        spatial_tree.commit();
+    });
 
     root_node
 }

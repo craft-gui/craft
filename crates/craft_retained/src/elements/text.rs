@@ -36,7 +36,7 @@ use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
 use understory_box_tree::LocalNode;
 use winit::window::Window;
-use crate::app::{SPATIAL_TREE, TAFFY_TREE};
+use crate::app::{SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -119,6 +119,10 @@ impl Text {
             spatial_tree.insert(None, LocalNode::default())
         });
         me.borrow_mut().element_data.layout_item.spatial_node_id = Some(spatial_node);
+
+        SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(spatial_node, Rc::downgrade(&me_element));
+        });
 
         me
     }
@@ -292,7 +296,7 @@ impl ElementInternals for Text {
 
         let spatial_id = self.element_data.layout_item.spatial_node_id.expect("Text must have a spatial node");
         SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box.padding_rectangle().to_kurbo());
+            spatial_tree.set_local_bounds(spatial_id, self.element_data.layout_item.computed_box_transformed.padding_rectangle().to_kurbo());
         });
 
         self.apply_borders();

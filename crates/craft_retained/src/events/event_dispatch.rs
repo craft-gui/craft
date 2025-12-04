@@ -188,7 +188,7 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        maybe_handle_implicit_pointer_capture_release(self, message, root, text_context);
+        maybe_handle_implicit_pointer_capture_release(self, message, text_context);
 
         self.previous_targets = targets.iter().map(Rc::downgrade).collect();
     }

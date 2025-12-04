@@ -1,4 +1,4 @@
-use crate::app::{DOCUMENTS, FOCUS, TAFFY_TREE};
+use crate::app::{DOCUMENTS, FOCUS, SPATIAL_TREE, SPATIAL_TREE_MAP, TAFFY_TREE};
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
 use crate::layout::layout_context::LayoutContext;
@@ -111,6 +111,15 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             let parent_id = self.element_data().layout_item.taffy_node_id;
             taffy_tree.mark_dirty(parent_id.unwrap()).expect("Failed to mark taffy node dirty.");
         });
+
+        if let Some(spatial_node) = child.borrow().element_data().layout_item.spatial_node_id {
+            SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+                spatial_tree.remove(spatial_node);
+            });
+            SPATIAL_TREE_MAP.with_borrow_mut(|spatial_tree_map| {
+               spatial_tree_map.remove(&spatial_node);
+            });
+        }
 
         Ok(child)
     }
@@ -248,7 +257,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
             // TODO (POINTER CAPTURE)
             // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-            current_doc.pending_pointer_captures.insert(pointer_id, self.id());
+            current_doc.pending_pointer_captures.insert(pointer_id, self.element_data().me.clone().unwrap());
         });
     }
 
@@ -274,7 +283,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
-            current_doc.pending_pointer_captures.get(&pointer_id).cloned() == Some(self.id())
+            current_doc.pending_pointer_captures.get(&pointer_id).cloned().map(|w| w.as_ptr()) == self.element_data().me.clone().map(|w|w.as_ptr())
         })
     }
 
