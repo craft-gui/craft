@@ -92,6 +92,7 @@ impl SortedCommands {
 }
 
 pub struct RenderList {
+    pub targets: Vec<(u64, Rectangle)>,
     pub commands: Vec<RenderCommand>,
     /// Stores a sorted list of render command handles. This gets set in `Renderer::sort_render_list`.
     pub overlay: SortedCommands,
@@ -106,12 +107,14 @@ impl Default for RenderList {
 impl RenderList {
     pub fn new() -> Self {
         Self {
+            targets: Vec::new(),
             commands: Vec::new(),
             overlay: SortedCommands { children: vec![] },
         }
     }
 
     pub fn clear(&mut self) {
+        self.targets.clear();
         self.commands.clear();
         self.overlay.children.clear();
     }
@@ -119,6 +122,11 @@ impl RenderList {
     pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
         self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
+
+    pub fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
+        self.targets.push((id, bounding_box));
+    }
+
     pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
         self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
     }
@@ -198,6 +206,10 @@ pub trait Renderer: Any {
         }
 
         let window_height = self.surface_height();
+
+        render_list.targets.retain(|(_, bounding_box)| {
+            !should_cull(bounding_box, window_height)
+        });
 
         let mut current: *mut SortedCommands = &mut render_list.overlay;
         let mut stack: Vec<*mut SortedCommands> = vec![current];

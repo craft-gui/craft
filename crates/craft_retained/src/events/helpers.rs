@@ -6,6 +6,8 @@ use kurbo::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
+use craft_renderer::RenderList;
+use crate::app::ELEMENTS;
 
 pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -20,55 +22,30 @@ pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<R
     targets
 }
 
-/// Collect all the elements into an array.
-pub(super) fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
-    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
-    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
-    while let Some(node_rc) = to_visit.pop() {
-        let node_ref = node_rc.borrow();
-
-        nodes.push(Rc::clone(&node_rc));
-
-        for child in node_ref.children().iter().rev() {
-            to_visit.push(Rc::clone(child));
-        }
-    }
-
-    nodes
-}
-
 /// Find the target that should be visited.
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn Element>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
+    render_list: &mut RenderList,
+    target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
 ) -> Rc<RefCell<dyn Element>> {
     let mut target = find_pointer_capture_target(message);
     if let Some(target) = target {
         return target;
     }
 
-    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
-
-    nodes.sort_unstable_by(|a_rc, b_rc| {
-        let a = a_rc.borrow();
-        let b = b_rc.borrow();
-        let a_elem = a;
-        let b_elem = b;
-
-        (
-            1, //b.overlay_order,
-            b_elem.element_data().layout_item.layout_order,
-        )
-            .cmp(&(
-                1, //a.overlay_order,
-                a_elem.element_data().layout_item.layout_order,
-            ))
+    ELEMENTS.with_borrow_mut(|elements| {
+        target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
+            elements.get(id).unwrap().upgrade()
+        }));
     });
 
     // Otherwise do hit-testing:
 
-    for node in nodes {
+    //println!("targets: {}", target_scratch.len());
+
+    for node in target_scratch.drain(..) {
         let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
 
         // The first element to pass the hit test should be the target.

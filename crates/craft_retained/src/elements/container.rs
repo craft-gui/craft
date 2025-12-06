@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
+use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -38,6 +38,11 @@ impl Container {
         });
 
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().element_data.internal_id, Rc::downgrade(&me_element));
+        });
+
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
 
@@ -161,6 +166,7 @@ impl ElementInternals for Container {
         if !self.is_visible() {
             return;
         }
+        self.add_hit_testable(renderer, true, scale_factor);
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);

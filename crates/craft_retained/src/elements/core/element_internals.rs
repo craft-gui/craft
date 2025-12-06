@@ -294,6 +294,23 @@ pub trait ElementInternals: ElementData {
         }
     }
 
+    fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
+        /*let ed = self.element_data().borrow();
+        let has_events =
+            !ed.on_pointer_button_up.is_empty() ||
+            !ed.on_pointer_moved.is_empty() ||
+            !ed.on_keyboard_input.is_empty() ||
+            !ed.on_pointer_button_down.is_empty() ||
+            !ed.on_got_pointer_capture.is_empty() ||
+            !ed.on_pointer_enter.is_empty() ||
+            !ed.on_pointer_leave.is_empty() ||
+            !ed.on_lost_pointer_capture;*/
+        if hit_testable {
+            let id = self.element_data().internal_id;
+            renderer.push_hit_testable(id, self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor));
+        }
+    }
+
     fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
         let current_style = self.element_data().current_style();
 

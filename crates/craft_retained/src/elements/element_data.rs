@@ -109,6 +109,7 @@ impl ElementData {
 
             let visible_y = (client_height / scroll_height).clamp(0.0, 1.0);
             let scroll_thumb_height = scroll_track_height * visible_y;
+            let scroll_thumb_height = scroll_thumb_height.max(15.0);
             let remaining_height = scroll_track_height - scroll_thumb_height;
             let scroll_thumb_offset =
                 if max_scroll_y != 0.0 { state.scroll_y() / max_scroll_y * remaining_height } else { 0.0 };

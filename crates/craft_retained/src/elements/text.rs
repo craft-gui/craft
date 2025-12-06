@@ -26,7 +26,7 @@ use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-use crate::app::TAFFY_TREE;
+use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
@@ -114,6 +114,10 @@ impl Text {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().element_data.internal_id, Rc::downgrade(&me_element));
+        });
+
         me
     }
 
@@ -191,6 +195,7 @@ impl ElementInternals for Text {
         if !self.is_visible() {
             return;
         }
+        self.add_hit_testable(renderer, true, scale_factor);
 
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();

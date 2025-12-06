@@ -52,7 +52,7 @@ pub struct LayoutItem {
 
     //  ---
     pub children_awaiting_add: Vec<NodeId>,
-    
+
     cache_border_spec: Option<CssRoundedRect>,
     computed_border: Option<ComputedBorder>,
 }
@@ -159,11 +159,14 @@ impl LayoutItem {
         let background_color = current_style.background();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
+        // TODO: we can also draw rects for non-round borders.
         if !current_style.has_border() {
-            renderer.draw_rect(self.computed_box_transformed.padding_rectangle().scale(scale_factor), background_color);
+            if background_color.components[3] != 0.0 {
+                renderer.draw_rect(self.computed_box_transformed.padding_rectangle().scale(scale_factor), background_color);
+            }
             return;
         }
-        
+
         let computed_border_spec = &self.computed_border;
         draw_borders_generic(renderer, computed_border_spec.as_ref().unwrap(), current_style.border_color().to_array(), background_color, scale_factor);
     }
@@ -171,15 +174,18 @@ impl LayoutItem {
 
 pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorder, side_colors: [Color; 4], bg_color: Color, scale_factor: f64) {
     let background_color = bg_color;
-    
+
     let scale_factor = Affine::scale(scale_factor);
 
-    let mut background_path = computed_border_spec.background.clone();
-    background_path.apply_affine(scale_factor);
-    renderer.fill_bez_path(background_path, Brush::Color(background_color));
+    if background_color.components[3] != 0.0 {
+        let mut background_path = computed_border_spec.background.clone();
+        background_path.apply_affine(scale_factor);
+        renderer.fill_bez_path(background_path, Brush::Color(background_color));
+    }
 
     for (side_index, side) in computed_border_spec.sides.iter().enumerate() {
-        if let Some(mut side) = side.clone() {
+        if let Some(side) = side {
+            let mut side = side.clone();
             side.apply_affine(scale_factor);
             renderer.fill_bez_path(side, Brush::Color(side_colors[side_index]));
         }

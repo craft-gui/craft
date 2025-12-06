@@ -13,7 +13,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::{Cell};
 use std::cell::RefCell;
-use std::collections::{VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -58,6 +58,7 @@ thread_local! {
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
+    pub(crate) static ELEMENTS: RefCell<HashMap<u64, Weak<RefCell<dyn Element>>>> = RefCell::new(HashMap::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
@@ -91,6 +92,7 @@ pub struct App {
     pub redraw_flags: RedrawFlags,
 
     pub(crate) render_list: RenderList,
+    pub(super) target_scratch: Vec<Rc<RefCell<dyn Element>>>,
 
     pub(crate) previous_animation_flags: AnimationFlags,
 
@@ -380,6 +382,8 @@ impl App {
             self.window_context.mouse_position,
             self.root.clone(),
             &mut self.text_context,
+            &mut self.render_list,
+            &mut self.target_scratch
         );
         self.window.clone().unwrap().request_redraw();
     }

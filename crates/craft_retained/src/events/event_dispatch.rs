@@ -11,6 +11,7 @@ use craft_primitives::geometry::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
+use craft_renderer::RenderList;
 
 /// Responsible for dispatching events.
 pub(crate) struct EventDispatcher {
@@ -165,13 +166,19 @@ impl EventDispatcher {
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn Element>>,
         text_context: &mut Option<TextContext>,
+        render_list: &mut RenderList,
+        target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
     ) {
         let mut _focus = FocusAction::None;
         let span = span!(Level::INFO, "dispatch event");
         let _enter = span.enter();
 
+        /*for (node, _) in &render_list.targets {
+            println!("target: {}", node);
+        }*/
+
         // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message);
+        let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message, render_list, target_scratch);
         let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(target);
 
         self.maybe_dispatch_pointer_leave(text_context, &targets);
