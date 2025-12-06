@@ -1,4 +1,3 @@
-use crate::app::SPATIAL_TREE;
 use crate::elements::Element;
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
@@ -21,26 +20,62 @@ pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<R
     targets
 }
 
+/// Collect all the elements into an array.
+pub(super) fn collect_nodes(root: &Rc<RefCell<dyn Element>>) -> Vec<Rc<RefCell<dyn Element>>> {
+    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = Vec::new();
+    let mut to_visit: Vec<Rc<RefCell<dyn Element>>> = vec![Rc::clone(root)];
+    while let Some(node_rc) = to_visit.pop() {
+        let node_ref = node_rc.borrow();
+
+        nodes.push(Rc::clone(&node_rc));
+
+        for child in node_ref.children().iter().rev() {
+            to_visit.push(Rc::clone(child));
+        }
+    }
+
+    nodes
+}
+
 /// Find the target that should be visited.
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn Element>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
 ) -> Rc<RefCell<dyn Element>> {
-    let target = find_pointer_capture_target(message);
+    let mut target = find_pointer_capture_target(message);
     if let Some(target) = target {
         return target;
     }
 
+    let mut nodes: Vec<Rc<RefCell<dyn Element>>> = collect_nodes(root);
+
+    nodes.sort_unstable_by(|a_rc, b_rc| {
+        let a = a_rc.borrow();
+        let b = b_rc.borrow();
+        let a_elem = a;
+        let b_elem = b;
+
+        (
+            1, //b.overlay_order,
+            b_elem.element_data().layout_item.layout_order,
+        )
+            .cmp(&(
+                1, //a.overlay_order,
+                a_elem.element_data().layout_item.layout_order,
+            ))
+    });
+
     // Otherwise do hit-testing:
 
-    let target: Option<Rc<RefCell<dyn Element>>> = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-        if mouse_position.is_none() {
-            return None;
-        };
-        let target = spatial_tree.hit_test_point(mouse_position.unwrap());
-        target.and_then(|target| target.upgrade())
-    });
+    for node in nodes {
+        let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
+
+        // The first element to pass the hit test should be the target.
+        if should_pass_hit_test && target.is_none() {
+            target = Some(Rc::clone(&node));
+        }
+    }
 
     target.unwrap_or(Rc::clone(root))
 }

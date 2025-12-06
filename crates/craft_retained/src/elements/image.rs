@@ -1,6 +1,6 @@
 //! Displays an image.
 
-use crate::app::{PENDING_RESOURCES, SPATIAL_TREE, TAFFY_TREE};
+use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
@@ -13,7 +13,6 @@ use craft_resource_manager::ResourceIdentifier;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -49,9 +48,6 @@ impl Image {
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
 
-        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.insert(me.borrow_mut().deref_mut());
-        });
         me
     }
 
@@ -117,10 +113,6 @@ impl ElementInternals for Image {
     ) {
         let layout = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, layout, z_index);
-
-        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-            spatial_tree.update_bounds(self);
-        });
 
         self.apply_borders();
         self.apply_clip(clip_bounds);
