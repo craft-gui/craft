@@ -281,15 +281,16 @@ impl ElementInternals for Text {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        _pointer: Option<Point>,
+        pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {

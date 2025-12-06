@@ -41,6 +41,7 @@ pub trait ElementInternals: ElementData {
         transform: Affine,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        scale_factor: f64,
     ) {
         for child in &self.element_data().children {
             let mut child = child.borrow_mut();
@@ -58,6 +59,7 @@ pub trait ElementInternals: ElementData {
                 pointer,
                 text_context,
                 self.element_data().layout_item.clip_bounds,
+                scale_factor,
             );
         }
     }
@@ -125,6 +127,7 @@ pub trait ElementInternals: ElementData {
         pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     );
 
     /// Draws the element and its visual contents.
@@ -220,13 +223,13 @@ pub trait ElementInternals: ElementData {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
 
-    fn apply_borders(&mut self) {
+    fn apply_borders(&mut self, scale_factor: f64) {
         let (has_border, border_radius) = {
             let current_style = self.element_data().current_style();
             (current_style.has_border(), current_style.border_radius())
         };
 
-        self.element_data_mut().layout_item.apply_borders(has_border, border_radius);
+        self.element_data_mut().layout_item.apply_borders(has_border, border_radius, scale_factor);
     }
 
     /// Called after layout, and is responsible for updating the animation state of an element.
@@ -350,7 +353,8 @@ pub trait ElementInternals: ElementData {
         let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
 
         let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
-        let computed_border_spec = ComputedBorder::new(border_spec);
+        let mut computed_border_spec = ComputedBorder::new(border_spec);
+        computed_border_spec.scale(scale_factor);
 
         renderer.draw_rect(track_rect, scrollbar_color.track_color);
         draw_borders_generic(
@@ -358,7 +362,6 @@ pub trait ElementInternals: ElementData {
             &computed_border_spec,
             border_color.to_array(),
             scrollbar_color.thumb_color,
-            scale_factor,
         );
     }
 

@@ -14,6 +14,20 @@ pub(crate) struct ComputedBorder {
 }
 
 impl ComputedBorder {
+    pub(crate) fn scale(&mut self, scale_factor: f64) {
+        let scale_factor = Affine::scale(scale_factor);
+
+        self.background.apply_affine(scale_factor);
+
+        for side in self.sides.iter_mut() {
+            if let Some(side) = side {
+                side.apply_affine(scale_factor);
+            }
+        }
+    }
+}
+
+impl ComputedBorder {
 
     pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
         let top = css_rect.get_side(TOP);
@@ -53,7 +67,7 @@ pub struct LayoutItem {
     //  ---
     pub children_awaiting_add: Vec<NodeId>,
 
-    cache_border_spec: Option<CssRoundedRect>,
+    cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     computed_border: Option<ComputedBorder>,
 }
 
@@ -131,9 +145,10 @@ impl LayoutItem {
         &mut self,
         has_border: bool,
         border_radius: [(f32, f32); 4],
+        scale_factor: f64,
     ) {
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
-        if !has_border {
+        if !has_border || border_radius == [(0.0, 0.0); 4] {
             return;
         }
 
@@ -144,11 +159,13 @@ impl LayoutItem {
             [borders.top as f64, borders.right as f64, borders.bottom as f64, borders.left as f64],
             border_radius.map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64)),
         );
-        if let Some(cache_border_spec) = self.cache_border_spec && cache_border_spec == border_spec{
+        if let Some((cache_border_spec, cache_scale_factor)) = self.cache_border_spec && cache_border_spec == border_spec && scale_factor == cache_scale_factor {
             return;
         }
-        self.computed_border = Some(ComputedBorder::new(border_spec));
-        self.cache_border_spec = Some(border_spec);
+        let mut computed = ComputedBorder::new(border_spec);
+        computed.scale(scale_factor);
+        self.computed_border = Some(computed);
+        self.cache_border_spec = Some((border_spec, scale_factor));
     }
 
     pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -159,34 +176,29 @@ impl LayoutItem {
         let background_color = current_style.background();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
-        // TODO: we can also draw rects for non-round borders.
-        if !current_style.has_border() {
+        if let Some(computed_border) = &self.computed_border {
+            draw_borders_generic(renderer, computed_border, current_style.border_color().to_array(), background_color);
+        } else {
+            // Draw the background.
             if background_color.components[3] != 0.0 {
                 renderer.draw_rect(self.computed_box_transformed.padding_rectangle().scale(scale_factor), background_color);
             }
-            return;
+            // TODO: Draw the borders.
         }
-
-        let computed_border_spec = &self.computed_border;
-        draw_borders_generic(renderer, computed_border_spec.as_ref().unwrap(), current_style.border_color().to_array(), background_color, scale_factor);
     }
 }
 
-pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border_spec: &ComputedBorder, side_colors: [Color; 4], bg_color: Color, scale_factor: f64) {
+pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border: &ComputedBorder, side_colors: [Color; 4], bg_color: Color) {
     let background_color = bg_color;
 
-    let scale_factor = Affine::scale(scale_factor);
-
     if background_color.components[3] != 0.0 {
-        let mut background_path = computed_border_spec.background.clone();
-        background_path.apply_affine(scale_factor);
+        let mut background_path = computed_border.background.clone();
         renderer.fill_bez_path(background_path, Brush::Color(background_color));
     }
 
-    for (side_index, side) in computed_border_spec.sides.iter().enumerate() {
+    for (side_index, side) in computed_border.sides.iter().enumerate() {
         if let Some(side) = side {
-            let mut side = side.clone();
-            side.apply_affine(scale_factor);
+            let side = side.clone();
             renderer.fill_bez_path(side, Brush::Color(side_colors[side_index]));
         }
     }

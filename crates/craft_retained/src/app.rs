@@ -654,6 +654,7 @@ fn layout(
             pointer,
             text_context,
             None,
+            scale_factor,
         );
     }
 

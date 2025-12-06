@@ -187,15 +187,16 @@ impl ElementInternals for TextInput {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        _pointer: Option<Point>,
+        pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
         let result = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         let focused = self.is_focused();
 

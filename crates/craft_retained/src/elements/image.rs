@@ -107,14 +107,15 @@ impl ElementInternals for Image {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        _pointer: Option<Point>,
-        _text_context: &mut TextContext,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
         let layout = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, layout, z_index);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
         self.apply_clip(clip_bounds);
     }
 

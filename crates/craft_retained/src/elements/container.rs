@@ -141,10 +141,11 @@ impl ElementInternals for Container {
         pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
         let layout = taffy_tree.layout(root_node).unwrap();
         self.resolve_box(position, transform, layout, z_index);
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         self.element_data.apply_scroll(layout);
         self.apply_clip(clip_bounds);
@@ -152,7 +153,7 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context)
+        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor)
     }
 
     fn draw(
