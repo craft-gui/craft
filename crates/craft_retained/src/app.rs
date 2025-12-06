@@ -655,9 +655,13 @@ fn layout(
         );
     }
 
-    SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
-        spatial_tree.commit();
-    });
+    {
+        let span = span!(Level::INFO, "layout(spatial)");
+        let _enter = span.enter();
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.commit();
+        });
+    }
 
     root_node
 }

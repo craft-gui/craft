@@ -132,6 +132,7 @@ impl Default for PlainEditor {
             buffer: "".to_string(),
             default_style: StyleSet::new(1.0),
             ranged_styles: Default::default(),
+            #[cfg(feature = "accesskit")]
             layout_access: Default::default(),
             selection: Default::default(),
             compose: None,
