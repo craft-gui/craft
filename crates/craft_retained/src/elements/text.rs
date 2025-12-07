@@ -37,6 +37,7 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
+use craft_logging::{span, Level};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -283,7 +284,8 @@ impl ElementInternals for Text {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-
+        let span = span!(Level::INFO, "apply layout(text)");
+        let _enter = span.enter();
         let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
@@ -300,6 +302,7 @@ impl ElementInternals for Text {
 
         state.try_update_text_render(text_context);
 
+        // This needs to be cached.
         let layout = state.layout.as_ref().unwrap();
         let text_renderer = state.text_render.as_mut().unwrap();
         for line in text_renderer.lines.iter_mut() {
