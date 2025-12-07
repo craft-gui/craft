@@ -517,9 +517,13 @@ impl App {
 
             let renderer = self.renderer.as_mut().unwrap();
 
-            self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
+            {
+                let span = span!(Level::INFO, "render(element)");
+                let _enter = span.enter();
+                self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
+            }
 
-            renderer.sort_and_cull_render_list(&mut self.render_list);
+        renderer.sort_and_cull_render_list(&mut self.render_list);
 
             let window = Rectangle {
                 x: 0.0,

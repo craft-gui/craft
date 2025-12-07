@@ -37,7 +37,6 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -203,9 +202,7 @@ impl ElementInternals for Text {
 
         self.draw_borders(renderer, scale_factor);
 
-        if self.state.text_render.as_ref().is_some() {
-            renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
-        }
+        renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
     }
 
     #[cfg(feature = "accesskit")]
