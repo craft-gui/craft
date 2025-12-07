@@ -160,7 +160,6 @@ impl ElementInternals for Container {
         renderer: &mut RenderList,
         text_context: &mut TextContext,
         pointer: Option<Point>,
-        window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
@@ -172,7 +171,7 @@ impl ElementInternals for Container {
         self.draw_borders(renderer, scale_factor);
 
         self.maybe_start_layer(renderer, scale_factor);
-        self.draw_children(renderer, text_context, pointer, window, scale_factor);
+        self.draw_children(renderer, text_context, pointer, scale_factor);
         self.maybe_end_layer(renderer);
 
         self.draw_scrollbar(renderer, scale_factor);

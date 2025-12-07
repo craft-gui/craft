@@ -191,7 +191,6 @@ impl ElementInternals for Text {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {

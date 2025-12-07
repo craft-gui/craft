@@ -69,11 +69,10 @@ pub trait ElementInternals: ElementData {
         renderer: &mut RenderList,
         text_context: &mut TextContext,
         pointer: Option<Point>,
-        window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         for child in self.children() {
-            child.borrow_mut().draw(renderer, text_context, pointer, window.clone(), scale_factor);
+            child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
         }
     }
 
@@ -137,7 +136,6 @@ pub trait ElementInternals: ElementData {
         _renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         _scale_factor: f64,
     ) {
     }

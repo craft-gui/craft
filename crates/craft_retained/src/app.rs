@@ -517,7 +517,7 @@ impl App {
 
             let renderer = self.renderer.as_mut().unwrap();
 
-            self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, window, scale_factor);
+            self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
 
             renderer.sort_and_cull_render_list(&mut self.render_list);
 

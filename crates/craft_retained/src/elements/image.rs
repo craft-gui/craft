@@ -14,9 +14,7 @@ use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 use taffy::TaffyTree;
-use winit::window::Window;
 
 /// Displays an image.
 pub struct Image {
@@ -123,7 +121,6 @@ impl ElementInternals for Image {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
