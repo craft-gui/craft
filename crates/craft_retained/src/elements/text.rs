@@ -283,6 +283,7 @@ impl ElementInternals for Text {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
+
         let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
@@ -291,9 +292,6 @@ impl ElementInternals for Text {
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {
-            println!("Current: {:?}", state.current_layout_key);
-            println!("requested: {:?}", state.last_requested_measure_key);
-            println!("");
             state.layout(
                 state.last_requested_measure_key.unwrap().known_dimensions(),
                 state.last_requested_measure_key.unwrap().available_space(),
@@ -399,7 +397,6 @@ impl TextState {
         text_context: &mut TextContext,
     ) -> Size<f32> {
         if self.is_layout_dirty {
-            println!("DIRTY");
             self.clear_cache();
         }
 
@@ -461,7 +458,6 @@ impl TextState {
 
         if self.cache.len() >= MAX_CACHE_SIZE {
             // TODO: Use LRU?
-            println!("CLEAR");
             let oldest_key = *self.cache.keys().next().unwrap();
             self.cache.remove(&oldest_key);
         }
