@@ -13,7 +13,7 @@ use std::fmt;
 use std::fmt::Debug;
 use crate::animations::Animation;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Unit {
     Px(f32),
     Percentage(f32),

@@ -134,7 +134,6 @@ impl ElementInternals for Container {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -143,7 +142,7 @@ impl ElementInternals for Container {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(root_node).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, layout, z_index);
         self.apply_borders(scale_factor);
 

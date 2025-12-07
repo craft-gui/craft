@@ -12,17 +12,19 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
+const MAX_CACHE_SIZE: usize = 16;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use kurbo::Affine;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
+use taffy::{AvailableSpace, Size, TaffyTree};
 use time::{Duration, Instant};
+use rustc_hash::FxHashMap;
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
@@ -53,7 +55,7 @@ pub struct TextState {
     selection: Selection,
     pub(crate) text_render: Option<TextRender>,
     layout: Option<parley::Layout<ColorBrush>>,
-    cache: HashMap<TextHashKey, Size<f32>>,
+    cache: FxHashMap<TextHashKey, Size<f32>>,
     current_layout_key: Option<TextHashKey>,
     last_requested_measure_key: Option<TextHashKey>,
     current_render_key: Option<TextHashKey>,
@@ -277,16 +279,15 @@ impl ElementInternals for Text {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        pointer: Option<Point>,
+        _pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let result = taffy_tree.layout(root_node).unwrap();
+        let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
@@ -294,6 +295,9 @@ impl ElementInternals for Text {
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {
+            println!("Current: {:?}", state.current_layout_key);
+            println!("requested: {:?}", state.last_requested_measure_key);
+            println!("");
             state.layout(
                 state.last_requested_measure_key.unwrap().known_dimensions(),
                 state.last_requested_measure_key.unwrap().available_space(),
@@ -399,6 +403,7 @@ impl TextState {
         text_context: &mut TextContext,
     ) -> Size<f32> {
         if self.is_layout_dirty {
+            println!("DIRTY");
             self.clear_cache();
         }
 
@@ -457,6 +462,13 @@ impl TextState {
             width: logical_width,
             height: logical_height,
         };
+
+        if self.cache.len() >= MAX_CACHE_SIZE {
+            // TODO: Use LRU?
+            println!("CLEAR");
+            let oldest_key = *self.cache.keys().next().unwrap();
+            self.cache.remove(&oldest_key);
+        }
 
         self.cache.insert(key, size);
         self.current_layout_key = Some(key);

@@ -15,7 +15,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use taffy::{NodeId, TaffyTree};
+use taffy::TaffyTree;
 use winit::window::Window;
 
 /// Displays an image.
@@ -103,16 +103,15 @@ impl ElementInternals for Image {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        pointer: Option<Point>,
-        text_context: &mut TextContext,
+        _pointer: Option<Point>,
+        _text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(root_node).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, layout, z_index);
 
         self.apply_borders(scale_factor);

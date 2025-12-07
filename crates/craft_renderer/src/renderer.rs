@@ -12,7 +12,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub enum RenderCommand {
     DrawRect(Rectangle, Color),
-    DrawRectOutline(Rectangle, Color),
+    DrawRectOutline(Rectangle, Color, f64),
     DrawImage(Rectangle, ResourceIdentifier),
     DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
     DrawText(Weak<RefCell<dyn TextData>>, Rectangle, Option<TextScroll>, bool),
@@ -127,8 +127,8 @@ impl RenderList {
         self.targets.push((id, bounding_box));
     }
 
-    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color) {
-        self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color));
+    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, thickness: f64) {
+        self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
     }
 
     pub fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush) {
@@ -196,7 +196,7 @@ pub trait Renderer: Any {
         fn bounding_rect(render_command: &RenderCommand) -> Rectangle {
             match render_command {
                 RenderCommand::DrawRect(rect, _)
-                | RenderCommand::DrawRectOutline(rect, _)
+                | RenderCommand::DrawRectOutline(rect, _, _)
                 | RenderCommand::DrawImage(rect, _)
                 | RenderCommand::DrawTinyVg(rect, _, _)
                 | RenderCommand::DrawText(_, rect, _, _) => *rect,

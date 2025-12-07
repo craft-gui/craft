@@ -647,7 +647,6 @@ fn layout(
         let _enter = span.enter();
         root_element.borrow_mut().apply_layout(
             taffy_tree,
-            root_node,
             origin,
             &mut layout_order,
             transform,
