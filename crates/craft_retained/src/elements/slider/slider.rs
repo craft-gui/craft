@@ -212,6 +212,28 @@ impl Element for Slider {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+
+    fn in_bounds(&self, point: Point) -> bool {
+        let element_data = &self.element_data;
+        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
+
+        let thumb_pos = self.thumb_position(self.get_value());
+        let thumb_size = self.get_thumb_size();
+        let thumb_rect = Rectangle::new(thumb_pos.x as f32, thumb_pos.y as f32, thumb_size as f32, thumb_size as f32);
+
+        if thumb_rect.contains(&point) {
+            return true;
+        }
+
+        if let Some(clip) = element_data.layout_item.clip_bounds {
+            match rect.intersection(&clip) {
+                Some(bounds) => bounds.contains(&point),
+                None => false,
+            }
+        } else {
+            rect.contains(&point)
+        }
+    }
 }
 
 impl ElementInternals for Slider {
