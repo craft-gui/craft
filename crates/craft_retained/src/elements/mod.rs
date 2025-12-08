@@ -10,9 +10,11 @@ mod element_id;
 mod scrollable;
 mod image;
 mod text_input;
+mod slider;
 
 pub use container::Container;
 pub use text::Text;
+pub use slider::Slider;
 pub use text_input::TextInput;
 pub use image::Image;
 pub use element::Element;
