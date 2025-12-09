@@ -14,31 +14,29 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 const MAX_CACHE_SIZE: usize = 16;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use kurbo::Affine;
+use rustc_hash::FxHashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use taffy::{AvailableSpace, Size, TaffyTree};
 use time::{Duration, Instant};
-use rustc_hash::FxHashMap;
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use crate::app::{ELEMENTS, TAFFY_TREE};
-use crate::elements::core::ElementData as ElementDataTrait;
 use crate::elements::core::ElementInternals;
+#[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::Element;
 use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use craft_logging::{span, Level};
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -214,7 +212,7 @@ impl ElementInternals for Text {
         parent_index: Option<usize>,
         scale_factor: f64,
     ) {
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box = self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.layout.is_none() {

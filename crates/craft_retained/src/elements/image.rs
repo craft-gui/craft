@@ -1,5 +1,6 @@
 //! Displays an image.
 
+use crate::app::ELEMENTS;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
@@ -13,6 +14,7 @@ use craft_resource_manager::ResourceIdentifier;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use taffy::TaffyTree;
 
@@ -45,6 +47,10 @@ impl Image {
         });
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }

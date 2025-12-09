@@ -1,3 +1,4 @@
+use crate::app::ELEMENTS;
 use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
@@ -10,15 +11,14 @@ use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
+use peniko::Color;
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use peniko::Color;
-use taffy::{NodeId, TaffyTree};
+use taffy::TaffyTree;
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
-use winit::window::Window;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -93,6 +93,10 @@ impl Slider {
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }
@@ -276,7 +280,7 @@ impl ElementInternals for Slider {
 
         self.draw_borders(renderer, scale_factor);
         self.draw_track(renderer, scale_factor);
-        self.draw_thumb(renderer, scale_factor);
+        self.draw_thumb(renderer);
     }
 
     fn on_event(

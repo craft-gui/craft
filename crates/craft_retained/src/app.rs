@@ -14,7 +14,7 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::cell::{Cell};
 use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{VecDeque};
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -87,6 +87,7 @@ pub struct App {
     pub(crate) app_sender: Sender<InternalMessage>,
     #[cfg(feature = "accesskit")]
     pub(crate) accesskit_adapter: Option<Adapter>,
+    #[allow(dead_code)]
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
     pub(crate) last_frame_time: time::Instant,
@@ -97,6 +98,7 @@ pub struct App {
 
     pub(crate) previous_animation_flags: AnimationFlags,
 
+    #[allow(dead_code)]
     pub(crate) focus: Option<Weak<RefCell<dyn Element>>>,
 }
 
@@ -284,7 +286,7 @@ impl App {
             self.animate_tree(&delta_time, layout_origin, root_size);
 
             if self.renderer.is_some() {
-                self.draw_reactive_tree(self.window_context.mouse_position, self.window.clone());
+                self.draw_reactive_tree(self.window_context.mouse_position);
             }
         }
 
@@ -508,7 +510,7 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
+    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
         let text_context = self.text_context.as_mut().unwrap();
         {
             let span = span!(Level::INFO, "render");

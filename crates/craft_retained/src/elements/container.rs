@@ -14,9 +14,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use taffy::{NodeId, TaffyTree};
-use winit::window::Window;
+use taffy::TaffyTree;
 
 /// Stores one or more elements.
 ///

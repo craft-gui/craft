@@ -10,10 +10,8 @@ use kurbo::{Affine, Point, Vec2};
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
 use std::time::Duration;
 use taffy::{Overflow, TaffyTree};
-use winit::window::Window;
 
 use crate::elements::core::element_data::ElementData;
 use crate::elements::Element;

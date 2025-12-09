@@ -1,3 +1,4 @@
+use crate::app::ELEMENTS;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -8,13 +9,13 @@ use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Range;
+use std::ops::{Deref, Range};
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 use taffy::{AvailableSpace, TaffyTree};
 
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
+#[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
 use crate::events::{CraftMessage, Event};
@@ -36,7 +37,6 @@ use ui_events::pointer::PointerButton;
 use web_time as time;
 use winit::dpi;
 use winit::event::Ime;
-use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -155,6 +155,10 @@ impl TextInput {
                 .new_leaf_with_context(me.borrow().element_data.current_style().to_taffy_style(), context)
                 .expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        });
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
         });
 
         me
