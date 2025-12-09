@@ -1,3 +1,4 @@
+use crate::elements::ElementIdMap;
 use crate::events::EventDispatcher;
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage};
@@ -58,7 +59,7 @@ thread_local! {
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
-    pub(crate) static ELEMENTS: RefCell<HashMap<u64, Weak<RefCell<dyn Element>>>> = RefCell::new(HashMap::new());
+    pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());

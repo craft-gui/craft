@@ -12,6 +12,7 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use taffy::{NodeId, TaffyTree};
@@ -39,12 +40,12 @@ impl Container {
 
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
 
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().element_data.internal_id, Rc::downgrade(&me_element));
-        });
-
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }

@@ -37,7 +37,7 @@ pub(super) fn find_target(
 
     ELEMENTS.with_borrow_mut(|elements| {
         target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
-            elements.get(id).unwrap().upgrade()
+            elements.get(*id).unwrap().upgrade()
         }));
     });
 

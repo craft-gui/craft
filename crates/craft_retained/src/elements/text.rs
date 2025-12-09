@@ -12,6 +12,7 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -117,7 +118,7 @@ impl Text {
         });
 
         ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().element_data.internal_id, Rc::downgrade(&me_element));
+            elements.insert(me.borrow().deref());
         });
 
         me
