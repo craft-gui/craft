@@ -19,6 +19,7 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
+pub use event_dispatch::dispatch_event;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -140,7 +141,7 @@ impl Event {
 }
 
 impl Event {
-    fn new(target: Rc<RefCell<dyn Element>>) -> Self {
+    pub fn new(target: Rc<RefCell<dyn Element>>) -> Self {
         Event {
             target,
             propagate: true,

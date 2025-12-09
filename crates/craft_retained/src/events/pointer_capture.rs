@@ -1,7 +1,7 @@
 use std::rc::Weak;
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
-use crate::events::event_dispatch::EventDispatcher;
+use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event, EventDispatcher};
 use crate::events::CraftMessage;
 use crate::text::text_context::TextContext;
 use std::cell::RefCell;
@@ -31,10 +31,7 @@ pub(super) fn find_pointer_capture_target(
 }
 
 /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-pub(super) fn process_pending_pointer_capture(
-    event_dispatcher: &mut EventDispatcher,
-    text_context: &mut Option<TextContext>,
-) {
+pub(super) fn process_pending_pointer_capture() {
     // 4.1.3.2 Process pending pointer capture
     let key = &PointerId::new(1).unwrap();
     let (pointer_capture_val, pending_pointer_capture_val) = DOCUMENTS.with_borrow_mut(|docs| {
@@ -61,8 +58,8 @@ pub(super) fn process_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            event_dispatcher.dispatch_capturing_event(&msg, text_context, &mut targets);
-            event_dispatcher.dispatch_bubbling_event(&msg, text_context, &mut targets);
+            dispatch_capturing_event(&msg, &mut targets);
+            dispatch_bubbling_event(&msg, &mut targets);
         }
     }
 
@@ -82,8 +79,8 @@ pub(super) fn process_pending_pointer_capture(
                 current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
             }
 
-            event_dispatcher.dispatch_capturing_event(&msg, text_context, &mut targets);
-            event_dispatcher.dispatch_bubbling_event(&msg, text_context, &mut targets);
+            dispatch_capturing_event(&msg, &mut targets);
+            dispatch_bubbling_event(&msg, &mut targets);
         }
     }
 
@@ -101,9 +98,7 @@ pub(super) fn process_pending_pointer_capture(
 }
 
 pub(super) fn maybe_handle_implicit_pointer_capture_release(
-    event_dispatcher: &mut EventDispatcher,
     message: &CraftMessage,
-    text_context: &mut Option<TextContext>,
 ) {
     // 9.5 Implicit release of pointer capture
     // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
@@ -118,8 +113,8 @@ pub(super) fn maybe_handle_implicit_pointer_capture_release(
             let _ = docs.get_current_document().pending_pointer_captures.remove(key);
         });
 
-        process_pending_pointer_capture(event_dispatcher, text_context);
+        process_pending_pointer_capture();
     } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-        process_pending_pointer_capture(event_dispatcher, text_context);
+        process_pending_pointer_capture();
     }
 }
