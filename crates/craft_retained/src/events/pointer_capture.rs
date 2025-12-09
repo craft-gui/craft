@@ -1,12 +1,11 @@
-use std::rc::Weak;
 use crate::app::DOCUMENTS;
 use crate::elements::Element;
-use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event, EventDispatcher};
+use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
 use crate::events::CraftMessage;
-use crate::text::text_context::TextContext;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
+use std::rc::Weak;
 use ui_events::pointer::PointerId;
 
 /// Returns the currently pointer captured element or None.

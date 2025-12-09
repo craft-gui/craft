@@ -1,3 +1,4 @@
+use crate::elements::ElementIdMap;
 use crate::events::EventDispatcher;
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage};
@@ -58,6 +59,7 @@ thread_local! {
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
+    pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
@@ -85,15 +87,18 @@ pub struct App {
     pub(crate) app_sender: Sender<InternalMessage>,
     #[cfg(feature = "accesskit")]
     pub(crate) accesskit_adapter: Option<Adapter>,
+    #[allow(dead_code)]
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
     pub(crate) last_frame_time: time::Instant,
     pub redraw_flags: RedrawFlags,
 
     pub(crate) render_list: RenderList,
+    pub(super) target_scratch: Vec<Rc<RefCell<dyn Element>>>,
 
     pub(crate) previous_animation_flags: AnimationFlags,
 
+    #[allow(dead_code)]
     pub(crate) focus: Option<Weak<RefCell<dyn Element>>>,
 }
 
@@ -281,7 +286,7 @@ impl App {
             self.animate_tree(&delta_time, layout_origin, root_size);
 
             if self.renderer.is_some() {
-                self.draw_reactive_tree(self.window_context.mouse_position, self.window.clone());
+                self.draw_reactive_tree(self.window_context.mouse_position);
             }
         }
 
@@ -380,6 +385,8 @@ impl App {
             self.window_context.mouse_position,
             self.root.clone(),
             &mut self.text_context,
+            &mut self.render_list,
+            &mut self.target_scratch
         );
         self.window.clone().unwrap().request_redraw();
     }
@@ -503,7 +510,7 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>, window: Option<Arc<Window>>) {
+    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
         let text_context = self.text_context.as_mut().unwrap();
         {
             let span = span!(Level::INFO, "render");
@@ -513,9 +520,13 @@ impl App {
 
             let renderer = self.renderer.as_mut().unwrap();
 
-            self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, window, scale_factor);
+            {
+                let span = span!(Level::INFO, "render(element)");
+                let _enter = span.enter();
+                self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
+            }
 
-            renderer.sort_and_cull_render_list(&mut self.render_list);
+        renderer.sort_and_cull_render_list(&mut self.render_list);
 
             let window = Rectangle {
                 x: 0.0,
@@ -643,13 +654,13 @@ fn layout(
         let _enter = span.enter();
         root_element.borrow_mut().apply_layout(
             taffy_tree,
-            root_node,
             origin,
             &mut layout_order,
             transform,
             pointer,
             text_context,
             None,
+            scale_factor,
         );
     }
 

@@ -197,8 +197,8 @@ impl CraftRenderer for VelloHybridRenderer {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
-                    self.scene.set_stroke(Stroke::new(1.0));
+                RenderCommand::DrawRectOutline(rectangle, outline_color, thickness) => {
+                    self.scene.set_stroke(Stroke::new(*thickness));
                     self.scene.set_paint(PaintType::from(*outline_color));
                     self.scene.stroke_rect(&rectangle.to_kurbo());
                 }

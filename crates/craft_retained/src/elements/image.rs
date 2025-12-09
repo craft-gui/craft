@@ -1,5 +1,6 @@
 //! Displays an image.
 
+use crate::app::ELEMENTS;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
@@ -13,10 +14,9 @@ use craft_resource_manager::ResourceIdentifier;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use taffy::{NodeId, TaffyTree};
-use winit::window::Window;
+use taffy::TaffyTree;
 
 /// Displays an image.
 pub struct Image {
@@ -47,6 +47,10 @@ impl Image {
         });
 
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }
@@ -103,18 +107,18 @@ impl ElementInternals for Image {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(root_node).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, layout, z_index);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
         self.apply_clip(clip_bounds);
     }
 
@@ -123,7 +127,6 @@ impl ElementInternals for Image {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {

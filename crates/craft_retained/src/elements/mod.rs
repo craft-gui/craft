@@ -10,6 +10,7 @@ mod element_id;
 mod scrollable;
 mod image;
 mod text_input;
+mod element_id_map;
 mod slider;
 
 pub use container::Container;
@@ -18,3 +19,4 @@ pub use slider::*;
 pub use text_input::TextInput;
 pub use image::Image;
 pub use element::Element;
+pub use element_id_map::ElementIdMap;

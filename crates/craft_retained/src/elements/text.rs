@@ -12,30 +12,31 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
+
+const MAX_CACHE_SIZE: usize = 16;
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use kurbo::Affine;
+use rustc_hash::FxHashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use taffy::{AvailableSpace, NodeId, Size, TaffyTree};
+use taffy::{AvailableSpace, Size, TaffyTree};
 use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-use crate::app::TAFFY_TREE;
-use crate::elements::core::ElementData as ElementDataTrait;
+use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
+#[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::Element;
 use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -53,7 +54,7 @@ pub struct TextState {
     selection: Selection,
     pub(crate) text_render: Option<TextRender>,
     layout: Option<parley::Layout<ColorBrush>>,
-    cache: HashMap<TextHashKey, Size<f32>>,
+    cache: FxHashMap<TextHashKey, Size<f32>>,
     current_layout_key: Option<TextHashKey>,
     last_requested_measure_key: Option<TextHashKey>,
     current_render_key: Option<TextHashKey>,
@@ -112,6 +113,10 @@ impl Text {
             });
             let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        });
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
         });
 
         me
@@ -185,21 +190,19 @@ impl ElementInternals for Text {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
             return;
         }
+        self.add_hit_testable(renderer, true, scale_factor);
 
         let computed_box_transformed = self.computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, scale_factor);
 
-        if self.state.text_render.as_ref().is_some() {
-            renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
-        }
+        renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
     }
 
     #[cfg(feature = "accesskit")]
@@ -209,7 +212,7 @@ impl ElementInternals for Text {
         parent_index: Option<usize>,
         scale_factor: f64,
     ) {
-        let padding_box = self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box = self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.layout.is_none() {
@@ -272,19 +275,19 @@ impl ElementInternals for Text {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         _pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
-        let result = taffy_tree.layout(root_node).unwrap();
+        let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {
@@ -296,6 +299,7 @@ impl ElementInternals for Text {
 
         state.try_update_text_render(text_context);
 
+        // This needs to be cached.
         let layout = state.layout.as_ref().unwrap();
         let text_renderer = state.text_render.as_mut().unwrap();
         for line in text_renderer.lines.iter_mut() {
@@ -451,6 +455,12 @@ impl TextState {
             width: logical_width,
             height: logical_height,
         };
+
+        if self.cache.len() >= MAX_CACHE_SIZE {
+            // TODO: Use LRU?
+            let oldest_key = *self.cache.keys().next().unwrap();
+            self.cache.remove(&oldest_key);
+        }
 
         self.cache.insert(key, size);
         self.current_layout_key = Some(key);

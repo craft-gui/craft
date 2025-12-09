@@ -115,7 +115,7 @@ impl RenderSurface {
             format,
             width: surface_width,
             height: surface_height,
-            present_mode: wgpu::PresentMode::AutoVsync,
+            present_mode: wgpu::PresentMode::Immediate,
             desired_maximum_frame_latency: 2,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: vec![],
@@ -279,8 +279,8 @@ impl Renderer for VelloRenderer {
                 RenderCommand::DrawRect(rectangle, fill_color) => {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
-                    self.scene.stroke(&Stroke::new(1.0), Affine::IDENTITY, outline_color, None, &rectangle.to_kurbo());
+                RenderCommand::DrawRectOutline(rectangle, outline_color, thickness) => {
+                    self.scene.stroke(&Stroke::new(*thickness), Affine::IDENTITY, outline_color, None, &rectangle.to_kurbo());
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.get(resource_identifier);

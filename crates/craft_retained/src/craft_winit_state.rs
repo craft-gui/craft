@@ -262,6 +262,7 @@ impl ApplicationHandler for CraftWinitState {
         } else {
             event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
         }
+        event_loop.set_control_flow(ControlFlow::Poll);
         
     }
 }

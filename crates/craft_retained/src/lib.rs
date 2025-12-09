@@ -211,6 +211,7 @@ pub fn setup_craft(
         last_frame_time: time::Instant::now(),
         redraw_flags: RedrawFlags::new(true),
         render_list: RenderList::new(),
+        target_scratch: Vec::new(),
 
         previous_animation_flags: Default::default(),
         focus: None,

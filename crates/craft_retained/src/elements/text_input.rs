@@ -1,3 +1,4 @@
+use crate::app::ELEMENTS;
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -8,13 +9,13 @@ use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::Range;
+use std::ops::{Deref, Range};
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use taffy::{AvailableSpace, NodeId, TaffyTree};
+use taffy::{AvailableSpace, TaffyTree};
 
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
+#[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
 use crate::events::{CraftMessage, Event};
@@ -36,7 +37,6 @@ use ui_events::pointer::PointerButton;
 use web_time as time;
 use winit::dpi;
 use winit::event::Ime;
-use winit::window::Window;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -157,6 +157,10 @@ impl TextInput {
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
+
         me
     }
 }
@@ -183,19 +187,19 @@ impl ElementInternals for TextInput {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         _pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
-        let result = taffy_tree.layout(root_node).unwrap();
+        let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         let focused = self.is_focused();
 
@@ -273,12 +277,13 @@ impl ElementInternals for TextInput {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
             return;
         }
+
+        self.add_hit_testable(renderer, true, scale_factor);
         
         let computed_box_transformed = self.computed_box();
         let content_rectangle = computed_box_transformed.content_rectangle();

@@ -1,10 +1,10 @@
-use kurbo::Vec2;
+use crate::elements::slider::slider::SliderDirection;
+use crate::elements::{Element, Slider};
+use crate::layout::layout_item::{draw_borders_generic, CssComputedBorder};
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
-use crate::elements::{Element, Slider};
-use crate::elements::slider::slider::SliderDirection;
-use crate::layout::layout_item::{draw_borders_generic, ComputedBorder};
+use kurbo::Vec2;
 
 fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
     let br = border_radius;
@@ -50,18 +50,19 @@ impl Slider {
             };
 
             let css_rounded_rect =  CssRoundedRect::new(element_rect.border_rectangle().to_kurbo(), [0.0, 0.0, 0.0, 0.0], thumb_radii);
-            let computed_border_spec = ComputedBorder::new(css_rounded_rect);
+            let mut computed_border_spec = CssComputedBorder::new(css_rounded_rect);
+            computed_border_spec.scale(scale_factor);
+
             let color_rect = [track_color, track_color, track_color, track_color];
             draw_borders_generic(renderer,
                                  &computed_border_spec,
                                  color_rect,
-                                 track_color,
-                                 scale_factor
+                                 track_color
             );
         }
     }
 
-    pub(super) fn draw_thumb(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+    pub(super) fn draw_thumb(&mut self, renderer: &mut RenderList) {
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
         let thumb_background_color = self.get_thumb_color();
@@ -77,13 +78,12 @@ impl Slider {
         };
 
         let css_rounded_rect =  CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], thumb_radii);
-        let computed_border_spec = ComputedBorder::new(css_rounded_rect);
+        let computed_border_spec = CssComputedBorder::new(css_rounded_rect);
         let color_rect = [thumb_background_color, thumb_background_color, thumb_background_color, thumb_background_color];
         draw_borders_generic(renderer,
                              &computed_border_spec,
                              color_rect,
-                             thumb_background_color,
-                             scale_factor
+                             thumb_background_color
         );
     }
 }

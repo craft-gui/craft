@@ -3,7 +3,7 @@ use peniko::kurbo;
 use dpi;
 
 /// A structure representing a rectangle in 2D space.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct Rectangle {
     /// The x-coordinate of the top-left corner of the rectangle.
     pub x: f32,

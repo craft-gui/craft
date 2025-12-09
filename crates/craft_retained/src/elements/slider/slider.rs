@@ -1,3 +1,4 @@
+use crate::app::ELEMENTS;
 use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
@@ -10,15 +11,14 @@ use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
+use peniko::Color;
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use peniko::Color;
-use taffy::{NodeId, TaffyTree};
+use taffy::TaffyTree;
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
-use winit::window::Window;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -93,6 +93,10 @@ impl Slider {
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }
@@ -248,18 +252,18 @@ impl ElementInternals for Slider {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         _pointer: Option<Point>,
         _text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(root_node).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, layout, z_index);
 
-        self.apply_borders();
+        self.apply_borders(scale_factor);
         self.apply_clip(clip_bounds);
     }
 
@@ -268,16 +272,17 @@ impl ElementInternals for Slider {
         renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
             return;
         }
 
+        self.add_hit_testable(renderer, true, scale_factor);
+
         self.draw_borders(renderer, scale_factor);
         self.draw_track(renderer, scale_factor);
-        self.draw_thumb(renderer, scale_factor);
+        self.draw_thumb(renderer);
     }
 
     fn on_event(

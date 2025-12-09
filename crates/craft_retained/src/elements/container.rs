@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
+use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -12,10 +12,9 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use taffy::{NodeId, TaffyTree};
-use winit::window::Window;
+use taffy::TaffyTree;
 
 /// Stores one or more elements.
 ///
@@ -38,8 +37,13 @@ impl Container {
         });
 
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
+
         me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(me.borrow().deref());
+        });
 
         me
     }
@@ -129,17 +133,17 @@ impl ElementInternals for Container {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(root_node).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, layout, z_index);
-        self.apply_borders();
+        self.apply_borders(scale_factor);
 
         self.element_data.apply_scroll(layout);
         self.apply_clip(clip_bounds);
@@ -147,7 +151,7 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context)
+        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor)
     }
 
     fn draw(
@@ -155,18 +159,18 @@ impl ElementInternals for Container {
         renderer: &mut RenderList,
         text_context: &mut TextContext,
         pointer: Option<Point>,
-        window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         if !self.is_visible() {
             return;
         }
+        self.add_hit_testable(renderer, true, scale_factor);
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
 
         self.maybe_start_layer(renderer, scale_factor);
-        self.draw_children(renderer, text_context, pointer, window, scale_factor);
+        self.draw_children(renderer, text_context, pointer, scale_factor);
         self.maybe_end_layer(renderer);
 
         self.draw_scrollbar(renderer, scale_factor);

@@ -1,7 +1,7 @@
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
-use crate::layout::layout_item::{draw_borders_generic, ComputedBorder, LayoutItem};
+use crate::layout::layout_item::{draw_borders_generic, CssComputedBorder, LayoutItem};
 use crate::style::{Display, Style};
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::{ElementBox, Rectangle};
@@ -10,10 +10,8 @@ use kurbo::{Affine, Point, Vec2};
 use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
 use std::time::Duration;
-use taffy::{NodeId, Overflow, TaffyTree};
-use winit::window::Window;
+use taffy::{Overflow, TaffyTree};
 
 use crate::elements::core::element_data::ElementData;
 use crate::elements::Element;
@@ -41,23 +39,18 @@ pub trait ElementInternals: ElementData {
         transform: Affine,
         pointer: Option<Point>,
         text_context: &mut TextContext,
+        scale_factor: f64,
     ) {
         for child in &self.element_data().children {
-            let mut child = child.borrow_mut();
-            let taffy_child_node_id = child.element_data().layout_item.taffy_node_id;
-            if taffy_child_node_id.is_none() {
-                continue;
-            }
-
-            child.apply_layout(
+            child.borrow_mut().apply_layout(
                 taffy_tree,
-                taffy_child_node_id.unwrap(),
                 self.element_data().layout_item.computed_box.position,
                 z_index,
                 transform,
                 pointer,
                 text_context,
                 self.element_data().layout_item.clip_bounds,
+                scale_factor,
             );
         }
     }
@@ -74,11 +67,10 @@ pub trait ElementInternals: ElementData {
         renderer: &mut RenderList,
         text_context: &mut TextContext,
         pointer: Option<Point>,
-        window: Option<Arc<Window>>,
         scale_factor: f64,
     ) {
         for child in self.children() {
-            child.borrow_mut().draw(renderer, text_context, pointer, window.clone(), scale_factor);
+            child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
         }
     }
 
@@ -118,13 +110,13 @@ pub trait ElementInternals: ElementData {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
-        root_node: NodeId,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
         pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
     );
 
     /// Draws the element and its visual contents.
@@ -142,7 +134,6 @@ pub trait ElementInternals: ElementData {
         _renderer: &mut RenderList,
         _text_context: &mut TextContext,
         _pointer: Option<Point>,
-        _window: Option<Arc<Window>>,
         _scale_factor: f64,
     ) {
     }
@@ -220,13 +211,13 @@ pub trait ElementInternals: ElementData {
         self.element_data_mut().layout_item.resolve_clip(clip_bounds);
     }
 
-    fn apply_borders(&mut self) {
-        let (has_border, border_radius) = {
-            let current_style = self.element_data().current_style();
-            (current_style.has_border(), current_style.border_radius())
-        };
+    fn apply_borders(&mut self, scale_factor: f64) {
+        let current_style = self.element_data().current_style();
+        let has_border = current_style.has_border();
+        let border_radius = current_style.border_radius();
+        let border_color = &current_style.border_color();
 
-        self.element_data_mut().layout_item.apply_borders(has_border, border_radius);
+        self.element_data_mut().layout_item.apply_borders(has_border, border_radius, scale_factor, border_color);
     }
 
     /// Called after layout, and is responsible for updating the animation state of an element.
@@ -294,6 +285,23 @@ pub trait ElementInternals: ElementData {
         }
     }
 
+    fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
+        /*let ed = self.element_data().borrow();
+        let has_events =
+            !ed.on_pointer_button_up.is_empty() ||
+            !ed.on_pointer_moved.is_empty() ||
+            !ed.on_keyboard_input.is_empty() ||
+            !ed.on_pointer_button_down.is_empty() ||
+            !ed.on_got_pointer_capture.is_empty() ||
+            !ed.on_pointer_enter.is_empty() ||
+            !ed.on_pointer_leave.is_empty() ||
+            !ed.on_lost_pointer_capture;*/
+        if hit_testable {
+            let id = self.element_data().internal_id;
+            renderer.push_hit_testable(id, self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor));
+        }
+    }
+
     fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
         let current_style = self.element_data().current_style();
 
@@ -333,7 +341,8 @@ pub trait ElementInternals: ElementData {
         let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
 
         let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
-        let computed_border_spec = ComputedBorder::new(border_spec);
+        let mut computed_border_spec = CssComputedBorder::new(border_spec);
+        computed_border_spec.scale(scale_factor);
 
         renderer.draw_rect(track_rect, scrollbar_color.track_color);
         draw_borders_generic(
@@ -341,7 +350,6 @@ pub trait ElementInternals: ElementData {
             &computed_border_spec,
             border_color.to_array(),
             scrollbar_color.thumb_color,
-            scale_factor,
         );
     }
 
