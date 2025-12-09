@@ -2,7 +2,7 @@ use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
-use crate::events::{CraftMessage, Event};
+use crate::events::{dispatch_event, CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::palette;
 use crate::style::Unit;
@@ -329,6 +329,9 @@ impl ElementInternals for Slider {
                 let value = self.compute_slider_value(&Point::new(pointer_button_update.state.position.x, pointer_button_update.state.position.y));
                 self.value = value;
                 //event.result_message(CraftMessage::SliderValueChanged(value));
+
+                let new_event = Event::new(event.target.clone());
+                dispatch_event(new_event, CraftMessage::SliderValueChanged(self.value));
             }
             CraftMessage::PointerMovedEvent(pointer_update) => {
                 if !self.dragging {
@@ -342,6 +345,6 @@ impl ElementInternals for Slider {
             _ => {}
         }
 
-        println!("Slider Value: {}", self.value);
+        //println!("Slider Value: {}", self.value);
     }
 }

@@ -14,7 +14,7 @@ mod slider;
 
 pub use container::Container;
 pub use text::Text;
-pub use slider::Slider;
+pub use slider::*;
 pub use text_input::TextInput;
 pub use image::Image;
 pub use element::Element;
