@@ -282,6 +282,8 @@ impl ElementInternals for TextInput {
         if !self.is_visible() {
             return;
         }
+
+        self.add_hit_testable(renderer, true, scale_factor);
         
         let computed_box_transformed = self.computed_box();
         let content_rectangle = computed_box_transformed.content_rectangle();

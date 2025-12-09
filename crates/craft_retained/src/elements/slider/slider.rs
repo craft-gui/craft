@@ -278,6 +278,8 @@ impl ElementInternals for Slider {
             return;
         }
 
+        self.add_hit_testable(renderer, true, scale_factor);
+
         self.draw_borders(renderer, scale_factor);
         self.draw_track(renderer, scale_factor);
         self.draw_thumb(renderer);
