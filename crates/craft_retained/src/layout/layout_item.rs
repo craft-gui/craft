@@ -243,7 +243,7 @@ struct BorderSpec {
 }
 
 #[derive(Clone, Default)]
-enum ComputedBorder {
+pub(crate) enum ComputedBorder {
     CssComputedBorder(CssComputedBorder),
     Simple,
     #[default]

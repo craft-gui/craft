@@ -13,6 +13,32 @@ use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 use craft_renderer::RenderList;
 
+pub(super) fn dispatch_capturing_event(
+    _message: &CraftMessage,
+    _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
+) {
+}
+
+/// Dispatches 1 event to many elements.
+/// The first dispatch happens at the top-most visual element.
+pub(super) fn dispatch_bubbling_event(
+    message: &CraftMessage,
+    targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
+) -> Event {
+    let target = targets[0].clone();
+    let mut base_event = Event::new(target.clone());
+
+    // Call the callback handlers.
+    for current_target in targets.iter() {
+        call_user_event_handlers(&mut base_event, current_target, message);
+        if !base_event.propagate {
+            break;
+        }
+    }
+
+    base_event
+}
+
 /// Responsible for dispatching events.
 pub(crate) struct EventDispatcher {
     /// A "frozen" target list used to diff against the current target list.
@@ -44,44 +70,6 @@ impl EventDispatcher {
         if !base_event.prevent_defaults {
             // Call the default on_event element functions.
             call_default_element_event_handler(&mut base_event, target, target, text_context, message);
-        }
-    }
-
-    pub(super) fn dispatch_capturing_event(
-        &self,
-        _message: &CraftMessage,
-        _text_context: &mut Option<TextContext>,
-        _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
-    ) {
-    }
-
-    /// Dispatches 1 event to many elements.
-    /// The first dispatch happens at the top-most visual element.
-    pub(super) fn dispatch_bubbling_event(
-        &self,
-        message: &CraftMessage,
-        text_context: &mut Option<TextContext>,
-        targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
-    ) {
-        let target = targets[0].clone();
-        let mut base_event = Event::new(target.clone());
-
-        // Call the callback handlers.
-        for current_target in targets.iter() {
-            call_user_event_handlers(&mut base_event, current_target, message);
-            if !base_event.propagate {
-                break;
-            }
-        }
-
-        if !base_event.prevent_defaults {
-            // Call the default on_event element functions.
-            for current_target in targets.iter() {
-                call_default_element_event_handler(&mut base_event, current_target, &target, text_context, message);
-                if !base_event.propagate {
-                    break;
-                }
-            }
         }
     }
 
@@ -185,18 +173,40 @@ impl EventDispatcher {
         self.maybe_dispatch_pointer_enter(text_context, &targets);
 
         // Handle capturing
-        self.dispatch_capturing_event(message, text_context, &mut targets);
+        dispatch_capturing_event(message, &mut targets);
 
         // Handle bubbling
-        self.dispatch_bubbling_event(message, text_context, &mut targets);
+        let mut base_event = dispatch_bubbling_event(message, &mut targets);
+        let target = targets[0].clone();
+
+        // NOTE: Only certain events will trigger default behavior.
+        // We don't currently check for this, but we should.
+        if !base_event.prevent_defaults {
+            // Call the default on_event element functions.
+            for current_target in targets.iter() {
+                call_default_element_event_handler(&mut base_event, current_target, &target, text_context, message);
+                if !base_event.propagate {
+                    break;
+                }
+            }
+        }
 
         // NOTE: May dispatch gotpointercapture and lostpointercapture. Handles capturing and bubbling.
         // The event dispatch flow looks like this:
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        maybe_handle_implicit_pointer_capture_release(self, message, text_context);
+        maybe_handle_implicit_pointer_capture_release(message);
 
         self.previous_targets = targets.iter().map(Rc::downgrade).collect();
     }
+}
+
+pub fn dispatch_event(event: Event, craft_message: CraftMessage) {
+    let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(event.target);
+    // Handle capturing
+    dispatch_capturing_event(&craft_message, &mut targets);
+
+    // Handle bubbling
+    dispatch_bubbling_event(&craft_message, &mut targets);
 }
