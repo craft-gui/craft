@@ -159,3 +159,9 @@ version = "0.1.1"
 path = "../craft_resource_manager"
 default-features = false
 version = "0.1.1"
+
+[dependencies.understory_box_tree]
+path = "../../../understory/understory_box_tree"
+
+[dependencies.understory_index]
+path = "../../../understory/understory_index"

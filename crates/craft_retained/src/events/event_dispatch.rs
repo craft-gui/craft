@@ -154,8 +154,8 @@ impl EventDispatcher {
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn Element>>,
         text_context: &mut Option<TextContext>,
-        render_list: &mut RenderList,
-        target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
+        _render_list: &mut RenderList,
+        _target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
     ) {
         let mut _focus = FocusAction::None;
         let span = span!(Level::INFO, "dispatch event");
@@ -166,7 +166,7 @@ impl EventDispatcher {
         }*/
 
         // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message, render_list, target_scratch);
+        let target: Rc<RefCell<dyn Element>> = find_target(&root, mouse_position, message);
         let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(target);
 
         self.maybe_dispatch_pointer_leave(text_context, &targets);

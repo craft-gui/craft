@@ -64,6 +64,8 @@ pub struct LayoutItem {
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
     computed_border: ComputedBorder,
+
+    pub spatial_node_id: Option<understory_box_tree::NodeId>,
 }
 
 impl LayoutItem {

@@ -6,8 +6,7 @@ use kurbo::Point;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use craft_renderer::RenderList;
-use crate::app::ELEMENTS;
+use crate::app::{SPATIAL_TREE};
 
 pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -23,36 +22,26 @@ pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<R
 }
 
 /// Find the target that should be visited.
+/// Find the target that should be visited.
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn Element>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
-    render_list: &mut RenderList,
-    target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
 ) -> Rc<RefCell<dyn Element>> {
-    let mut target = find_pointer_capture_target(message);
+    let target = find_pointer_capture_target(message);
     if let Some(target) = target {
         return target;
     }
 
-    ELEMENTS.with_borrow_mut(|elements| {
-        target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
-            elements.get(*id).unwrap().upgrade()
-        }));
-    });
-
     // Otherwise do hit-testing:
 
-    //println!("targets: {}", target_scratch.len());
-
-    for node in target_scratch.drain(..) {
-        let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
-
-        // The first element to pass the hit test should be the target.
-        if should_pass_hit_test && target.is_none() {
-            target = Some(Rc::clone(&node));
-        }
-    }
+    let target: Option<Rc<RefCell<dyn Element>>> = SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+        if mouse_position.is_none() {
+            return None;
+        };
+        let target = spatial_tree.hit_test_point(mouse_position.unwrap());
+        target.and_then(|target| target.upgrade())
+    });
 
     target.unwrap_or(Rc::clone(root))
 }

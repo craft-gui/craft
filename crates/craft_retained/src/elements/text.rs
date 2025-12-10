@@ -12,7 +12,7 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 const MAX_CACHE_SIZE: usize = 16;
@@ -28,7 +28,7 @@ use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
-use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::app::{ELEMENTS, SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
@@ -117,6 +117,10 @@ impl Text {
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
+        });
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
         });
 
         me
@@ -307,6 +311,10 @@ impl ElementInternals for Text {
         }
         state.selection.geometry_with(layout, |rect, line| {
             text_renderer.lines[line].selections.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), self.element_data.style.selection_color()));
+        });
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.update_bounds(self);
         });
     }
 

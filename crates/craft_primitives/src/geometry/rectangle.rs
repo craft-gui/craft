@@ -1,5 +1,4 @@
 use crate::geometry::Point;
-use peniko::kurbo;
 use dpi;
 
 /// A structure representing a rectangle in 2D space.

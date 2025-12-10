@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::app::{ELEMENTS, SPATIAL_TREE, TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -12,7 +12,7 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 use taffy::TaffyTree;
 
@@ -43,6 +43,10 @@ impl Container {
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
+        });
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
         });
 
         me
@@ -79,6 +83,10 @@ impl Element for Container {
             }
         });
 
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.push_child(self, child.borrow().deref());
+        });
+
         self
     }
 
@@ -109,6 +117,12 @@ impl Element for Container {
                 }
             }
             taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
+        });
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            for child in children {
+                spatial_tree.push_child(self, child.borrow().deref());
+            }
         });
 
         self
@@ -150,6 +164,10 @@ impl ElementInternals for Container {
 
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.update_bounds(self);
+        });
 
         self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor)
     }

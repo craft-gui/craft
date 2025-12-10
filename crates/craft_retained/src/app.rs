@@ -53,6 +53,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
+use crate::spatial::SpatialTree;
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -64,6 +65,7 @@ thread_local! {
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
+    pub(crate) static SPATIAL_TREE: RefCell<SpatialTree> = RefCell::new(SpatialTree::new());
 }
 
 pub struct App {
@@ -662,6 +664,14 @@ fn layout(
             None,
             scale_factor,
         );
+    }
+
+    {
+        let span = span!(Level::INFO, "layout(spatial)");
+        let _enter = span.enter();
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.commit();
+        });
     }
 
     root_node

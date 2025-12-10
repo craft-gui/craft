@@ -1,4 +1,4 @@
-use crate::app::ELEMENTS;
+use crate::app::{ELEMENTS, SPATIAL_TREE};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -9,7 +9,7 @@ use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::{Deref, Range};
+use std::ops::{Deref, DerefMut, Range};
 use std::rc::{Rc, Weak};
 use taffy::{AvailableSpace, TaffyTree};
 
@@ -161,6 +161,10 @@ impl TextInput {
             elements.insert(me.borrow().deref());
         });
 
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.insert(me.borrow_mut().deref_mut());
+        });
+
         me
     }
 }
@@ -198,6 +202,10 @@ impl ElementInternals for TextInput {
         let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
         self.apply_clip(clip_bounds);
+
+        SPATIAL_TREE.with_borrow_mut(|spatial_tree| {
+            spatial_tree.update_bounds(self);
+        });
 
         self.apply_borders(scale_factor);
 
