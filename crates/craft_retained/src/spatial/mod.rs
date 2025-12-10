@@ -1,18 +1,18 @@
+use crate::elements::Element;
+use kurbo::{Point, Rect};
 /// Stores elements in a spatially indexed tree.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Weak;
-use kurbo::{Point, Rect, RoundedRect};
+use rustc_hash::FxHashMap;
 use understory_box_tree::{LocalNode, QueryFilter, Tree};
 use understory_index::backends::FlatVec;
-use crate::elements::Element;
 
 #[derive(Default)]
 pub struct SpatialTree {
     tree: Tree<FlatVec<f64>>,
-    map: HashMap<understory_box_tree::NodeId, Weak<RefCell<dyn Element>>>,
-    cache: HashMap<understory_box_tree::NodeId, Rect>,
+    map: FxHashMap<understory_box_tree::NodeId, Weak<RefCell<dyn Element>>>,
+    cache: FxHashMap<understory_box_tree::NodeId, Rect>,
     updates: usize,
 }
 
