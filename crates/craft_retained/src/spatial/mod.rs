@@ -54,7 +54,6 @@ impl SpatialTree {
         if let Some(cache_bounds) = self.cache.get(&spatial_id) {
             if *cache_bounds != bounds {
                 self.tree.set_local_bounds(spatial_id, bounds);
-                self.tree.set_local_clip(spatial_id, Some(RoundedRect::new(0.0, 0.0, 400.0, 400.0, 0.0)));
                 self.cache.insert(spatial_id, bounds);
                 self.updates += 1;
             }
