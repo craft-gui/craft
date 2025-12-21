@@ -191,9 +191,7 @@ impl LayoutItem {
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         match &self.computed_border {
-            ComputedBorder::CssComputedBorder(computed_border) => {
-                draw_borders_generic(renderer, computed_border, current_style.border_color().to_array(), background_color);
-            }
+            ComputedBorder::None => {}
             ComputedBorder::Simple => {
                 let padding_rect =self.computed_box_transformed.padding_rectangle().scale(scale_factor);
                 let border_rect = self.computed_box_transformed.border_rectangle();
@@ -207,7 +205,9 @@ impl LayoutItem {
                     renderer.draw_rect_outline(border_rect, border_color, thickness as f64);
                 }
             }
-            ComputedBorder::None => {}
+            ComputedBorder::CssComputedBorder(computed_border) => {
+                draw_borders_generic(renderer, computed_border, current_style.border_color().to_array(), background_color);
+            }
         }
     }
 }

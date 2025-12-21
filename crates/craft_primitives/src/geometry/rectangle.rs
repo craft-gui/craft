@@ -25,6 +25,7 @@ impl Rectangle {
     /// # Returns
     ///
     /// `true` if the rectangle contains the point, `false` otherwise.
+    #[inline(always)]
     pub fn contains(&self, point: &Point) -> bool {
         point.x as f32 >= self.left()
             && point.x as f32 <= self.right()
@@ -65,30 +66,31 @@ impl Rectangle {
     }
 
     /// Returns the position of the top-left corner of the rectangle.
+    #[inline(always)]
     pub fn position(&self) -> Point {
         Point::new(self.x as f64, self.y as f64)
     }
 
     /// Returns the y-coordinate of the top edge of the rectangle.
-    #[inline]
+    #[inline(always)]
     pub fn top(&self) -> f32 {
         self.y
     }
 
     /// Returns the x-coordinate of the right edge of the rectangle.
-    #[inline]
+    #[inline(always)]
     pub fn right(&self) -> f32 {
         self.x + self.width
     }
 
     /// Returns the y-coordinate of the bottom edge of the rectangle.
-    #[inline]
+    #[inline(always)]
     pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
 
     /// Returns the x-coordinate of the left edge of the rectangle.
-    #[inline]
+    #[inline(always)]
     pub fn left(&self) -> f32 {
         self.x
     }
@@ -106,6 +108,7 @@ impl Rectangle {
         }
     }
 
+
     pub fn intersection(&self, other: &Rectangle) -> Option<Rectangle> {
         let x0 = self.x.max(other.x);
         let y0 = self.y.max(other.y);
@@ -117,6 +120,14 @@ impl Rectangle {
         } else {
             None
         }
+    }
+
+    #[inline(always)]
+    pub fn intersects(&self, other: &Rectangle) -> bool {
+        self.x < other.right()
+            && self.right() > other.x
+            && self.y < other.bottom()
+            && self.bottom() > other.y
     }
 }
 

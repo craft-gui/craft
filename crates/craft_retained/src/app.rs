@@ -178,6 +178,7 @@ impl App {
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
         }
+        self.render_list.set_cull(Some(Rectangle::new(0.0, 0.0, new_size.width as f32, new_size.height as f32)));
         style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
@@ -285,7 +286,7 @@ impl App {
                 );
             }
 
-            self.animate_tree(&delta_time, layout_origin, root_size);
+            //self.animate_tree(&delta_time, layout_origin, root_size);
 
             if self.renderer.is_some() {
                 self.draw_reactive_tree(self.window_context.mouse_position);
@@ -512,6 +513,7 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[inline(never)]
     fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
         let text_context = self.text_context.as_mut().unwrap();
         {

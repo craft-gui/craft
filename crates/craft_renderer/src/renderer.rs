@@ -96,6 +96,7 @@ pub struct RenderList {
     pub commands: Vec<RenderCommand>,
     /// Stores a sorted list of render command handles. This gets set in `Renderer::sort_render_list`.
     pub overlay: SortedCommands,
+    cull: Option<Rectangle>,
 }
 
 impl Default for RenderList {
@@ -110,6 +111,7 @@ impl RenderList {
             targets: Vec::new(),
             commands: Vec::new(),
             overlay: SortedCommands { children: vec![] },
+            cull: None,
         }
     }
 
@@ -119,19 +121,41 @@ impl RenderList {
         self.overlay.children.clear();
     }
 
+    #[inline(always)]
     pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
+        if let Some(cull) = &self.cull {
+            if !cull.intersects(&rectangle) {
+                return;
+            }
+        }
         self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
+
     pub fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
+        if let Some(cull) = &self.cull {
+            if !cull.intersects(&bounding_box) {
+                return;
+            }
+        }
         self.targets.push((id, bounding_box));
     }
 
     pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, thickness: f64) {
+        if let Some(cull) = &self.cull {
+            if !cull.intersects(&rectangle) {
+                return;
+            }
+        }
         self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
     }
 
     pub fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush) {
+        if let Some(cull) = &self.cull {
+            if !cull.intersects(&Rectangle::from_kurbo(path.bounding_box())) {
+                return;
+            }
+        }
         self.commands.push(RenderCommand::FillBezPath(path, brush));
     }
 
@@ -142,8 +166,14 @@ impl RenderList {
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
+        if let Some(cull) = &self.cull {
+            if !cull.intersects(&rectangle) {
+                return;
+            }
+        }
         self.commands.push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
     }
+
     pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
@@ -172,6 +202,10 @@ impl RenderList {
     pub fn end_overlay(&mut self) {
         self.commands.push(RenderCommand::EndOverlay);
     }
+
+    pub fn set_cull(&mut self, cull: Option<Rectangle>) {
+        self.cull = cull;
+    }
 }
 
 pub trait Renderer: Any {
@@ -185,6 +219,7 @@ pub trait Renderer: Any {
     
     fn as_any_mut(&mut self) -> &mut dyn Any;
     
+    #[inline(never)]
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
         fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
             let cull_top = (rectangle.y + rectangle.height) < 0.0;
@@ -206,10 +241,6 @@ pub trait Renderer: Any {
         }
 
         let window_height = self.surface_height();
-
-        render_list.targets.retain(|(_, bounding_box)| {
-            !should_cull(bounding_box, window_height)
-        });
 
         let mut current: *mut SortedCommands = &mut render_list.overlay;
         let mut stack: Vec<*mut SortedCommands> = vec![current];
