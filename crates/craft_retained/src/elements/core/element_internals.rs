@@ -18,18 +18,10 @@ use crate::elements::Element;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
+use crate::app::TAFFY_TREE;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
-pub trait ElementInternals: ElementData {
-    /// Compute the element's layout.
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64);
-
-    /// A helper to compute the layout for all children.
-    fn compute_layout_children(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) {
-        for child in &self.element_data().children {
-            child.borrow_mut().compute_layout(taffy_tree, scale_factor);
-        }
-    }
+pub trait  ElementInternals: ElementData {
 
     /// A helper to apply the layout for all children.
     fn apply_layout_children(
@@ -370,6 +362,33 @@ pub trait ElementInternals: ElementData {
         Self: Sized,
     {
         Style::default()
+    }
+
+    /// Mark layout node dirty.
+    fn mark_dirty(&mut self) {
+        let id = self.element_data().layout_item.taffy_node_id;
+        if let Some(id) = id {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+               taffy_tree.mark_dirty(id).expect("Failed to mark taffy node as dirty");
+            });
+        }
+    }
+
+    /// Updates taffy's style to reflect craft's style struct.
+    fn update_taffy_style(&mut self) {
+        let id = self.element_data().layout_item.taffy_node_id;
+        if let Some(id) = id {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.set_style(id, self.element_data().style.to_taffy_style()).expect("Failed to set style.");
+            });
+        }
+    }
+
+    /// Set's this element's scale factor. This should not be used to scale individual elements.
+    fn scale_factor(&mut self, scale_factor: f64) {
+        for child in &self.element_data().children {
+            child.borrow_mut().scale_factor(scale_factor);
+        }
     }
 }
 

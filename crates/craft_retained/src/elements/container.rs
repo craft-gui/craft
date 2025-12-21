@@ -124,11 +124,6 @@ impl Element for Container {
 }
 
 impl ElementInternals for Container {
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, scale_factor: f64) {
-        self.compute_layout_children(taffy_tree, scale_factor);
-
-        self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }
 
     fn apply_layout(
         &mut self,

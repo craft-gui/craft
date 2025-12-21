@@ -28,7 +28,6 @@ pub enum SliderDirection {
 }
 
 pub struct Slider {
-    is_layout_dirty: bool,
     element_data: ElementData,
     me: Option<Weak<RefCell<Slider>>>,
 
@@ -52,7 +51,6 @@ pub struct Slider {
 impl Slider {
     pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
         let me = Rc::new(RefCell::new(Self {
-            is_layout_dirty: false,
             element_data: ElementData::new(true),
             me: None,
             step: 1.0,
@@ -241,13 +239,6 @@ impl Element for Slider {
 }
 
 impl ElementInternals for Slider {
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _scale_factor: f64) {
-        if self.is_layout_dirty {
-            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        }
-
-        self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }
 
     fn apply_layout(
         &mut self,

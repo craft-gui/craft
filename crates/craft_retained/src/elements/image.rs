@@ -96,13 +96,6 @@ impl Element for Image {
 }
 
 impl ElementInternals for Image {
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _scale_factor: f64) {
-        if self.is_image_dirty {
-            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        }
-
-        self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }
 
     fn apply_layout(
         &mut self,

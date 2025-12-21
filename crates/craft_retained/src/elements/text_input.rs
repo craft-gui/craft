@@ -11,7 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::{Deref, Range};
 use std::rc::{Rc, Weak};
-use taffy::{AvailableSpace, TaffyTree};
+use taffy::{AvailableSpace, NodeId, TaffyTree};
 
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
@@ -69,6 +69,7 @@ pub enum TextInputMessage {
 
 #[derive(Clone, Default)]
 pub struct TextInputState {
+    taffy_node: Option<NodeId>,
     pub is_active: bool,
     #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
@@ -107,6 +108,7 @@ impl TextInput {
         default_style.add_styles_to_style_set(style_set);
 
         let text_input_state = TextInputState {
+            taffy_node: None,
             ime_state: ImeState::default(),
             is_active: false,
             editor,
@@ -155,6 +157,7 @@ impl TextInput {
                 .new_leaf_with_context(me.borrow().element_data.current_style().to_taffy_style(), context)
                 .expect("TODO: panic message");
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+            me.borrow_mut().state.taffy_node(Some(node_id));
         });
 
         ELEMENTS.with_borrow_mut(|elements| {
@@ -176,13 +179,6 @@ impl crate::elements::core::ElementData for TextInput {
 }
 
 impl ElementInternals for TextInput {
-    fn compute_layout(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, _scale_factor: f64) {
-        if self.state.is_layout_dirty {
-            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        }
-
-        self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }
 
     fn apply_layout(
         &mut self,
@@ -747,6 +743,12 @@ impl ElementInternals for TextInput {
 
         style
     }
+
+    fn scale_factor(&mut self, scale_factor: f64) {
+        self.state.editor.set_scale(scale_factor as f32);
+        self.state.scale_factor = scale_factor;
+        self.state.clear_cache();
+    }
 }
 
 impl TextInput {
@@ -809,6 +811,12 @@ impl TextInputState {
         self.current_render_key = None;
         self.text_render = None;
         self.content_widths = None;
+
+        if let Some(id) = self.taffy_node {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.mark_dirty(id).expect("Failed to mark node dirty");
+            })
+        }
     }
 
     pub fn layout(
@@ -886,6 +894,10 @@ impl TextInputState {
         self.cache.insert(key, size);
         self.current_layout_key = Some(key);
         size
+    }
+
+    fn taffy_node(&mut self, taffy_node: Option<NodeId>) {
+        self.taffy_node = taffy_node;
     }
 
     pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInput) -> Option<String> {

@@ -125,6 +125,7 @@ impl App {
     pub fn on_scale_factor_changed(&mut self, scale_factor: f64) {
         self.window_context.scale_factor = scale_factor;
         self.on_resize(self.window.as_ref().unwrap().inner_size());
+        self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
     }
 
     pub fn on_process_user_events(&mut self) {}
@@ -177,6 +178,7 @@ impl App {
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
         }
+        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
@@ -322,6 +324,7 @@ impl App {
             } else {
                 self.window_context.zoom_in();
             }
+            self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
             self.request_redraw(RedrawFlags::new(true));
             return;
         }
@@ -488,7 +491,6 @@ impl App {
         mouse_position: Option<Point>,
     ) {
         let root_element = self.root.clone();
-        style_root_element(root_element.borrow_mut().deref_mut(), viewport_size);
         let text_context = self.text_context.as_mut().unwrap();
 
         {
@@ -595,6 +597,7 @@ fn style_root_element(root: &mut dyn Element, root_size: LogicalSize<f32>) {
     } else {
         style.set_height(Unit::Px(root_size.height));
     }
+    root.update_taffy_style();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -608,17 +611,11 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
-    let root_node = {
-        let span = span!(Level::INFO, "compute layout(internal)");
-        let _enter = span.enter();
-        root_element.borrow_mut().compute_layout(taffy_tree, scale_factor);
-        // There should usually be a layout node. If not, exiting early could also make sense.
-        root_element.borrow()
-            .element_data()
-            .layout_item
-            .taffy_node_id
-            .expect("A root element must have a layout node.")
-    };
+    let root_node = root_element.borrow()
+        .element_data()
+        .layout_item
+        .taffy_node_id
+        .expect("A root element must have a layout node.");
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(window_size.width),
