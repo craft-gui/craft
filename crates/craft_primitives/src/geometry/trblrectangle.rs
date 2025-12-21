@@ -11,6 +11,7 @@ impl<T> TrblRectangle<T>
 where
     T: Copy + PartialEq,
 {
+    #[inline(always)]
     pub const fn new(top: T, right: T, bottom: T, left: T) -> Self {
         Self {
             top,

@@ -513,7 +513,6 @@ impl App {
     }
 
     #[allow(clippy::too_many_arguments)]
-    #[inline(never)]
     fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
         let text_context = self.text_context.as_mut().unwrap();
         {

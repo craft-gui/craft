@@ -250,6 +250,7 @@ pub(crate) enum ComputedBorder {
     None,
 }
 
+#[inline(always)]
 fn from_taffy_point(p: taffy::Point<f32>) -> Point {
     Point {
         x: p.x as f64,

@@ -18,6 +18,7 @@ impl<T> Size<T> {
     /// # Returns
     ///
     /// A `Size` instance with the specified width and height.
+    #[inline(always)]
     pub fn new(width: T, height: T) -> Self {
         Self { width, height }
     }

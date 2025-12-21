@@ -218,8 +218,7 @@ pub trait Renderer: Any {
     fn surface_set_clear_color(&mut self, color: Color);
     
     fn as_any_mut(&mut self) -> &mut dyn Any;
-    
-    #[inline(never)]
+
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
         fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
             let cull_top = (rectangle.y + rectangle.height) < 0.0;
