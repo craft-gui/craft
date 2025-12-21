@@ -152,6 +152,7 @@ impl Text {
         self.state.text = text;
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
+        self.mark_dirty();
     }
 
     pub(crate) fn measure(
@@ -256,7 +257,7 @@ impl ElementInternals for Text {
         tree.nodes.push((current_node_id, current_node));
     }
 
-    fn compute_layout(
+    /*fn compute_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
         scale_factor: f64,
@@ -270,7 +271,7 @@ impl ElementInternals for Text {
         }
 
         self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }
+    }*/
 
     fn apply_layout(
         &mut self,
@@ -385,6 +386,13 @@ impl ElementInternals for Text {
                 _ => {}
             }
         }
+    }
+
+    fn scale_factor(&mut self, scale_factor: f64) {
+        self.state.is_layout_dirty = true;
+        self.state.is_render_dirty = true;
+        self.mark_dirty();
+        self.state.scale_factor = scale_factor as f32;
     }
 }
 

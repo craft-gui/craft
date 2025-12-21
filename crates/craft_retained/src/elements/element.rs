@@ -287,6 +287,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_display(display);
+        self.update_taffy_style();
         self
     }
 
@@ -295,6 +296,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_box_sizing(box_sizing);
+        self.update_taffy_style();
         self
     }
 
@@ -303,6 +305,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_position(position);
+        self.update_taffy_style();
         self
     }
 
@@ -311,6 +314,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_margin(TrblRectangle::new(top, right, bottom, left));
+        self.update_taffy_style();
         self
     }
 
@@ -319,6 +323,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_padding(TrblRectangle::new(top, right, bottom, left));
+        self.update_taffy_style();
         self
     }
 
@@ -327,6 +332,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_gap([row_gap, column_gap]);
+        self.update_taffy_style();
         self
     }
 
@@ -335,6 +341,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
+        self.update_taffy_style();
         self
     }
 
@@ -343,6 +350,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_min_width(min_width);
+        self.update_taffy_style();
         self
     }
 
@@ -351,6 +359,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_min_height(min_height);
+        self.update_taffy_style();
         self
     }
 
@@ -359,6 +368,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_width(width);
+        self.update_taffy_style();
         self
     }
 
@@ -367,6 +377,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_height(height);
+        self.update_taffy_style();
         self
     }
 
@@ -375,6 +386,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_max_width(max_width);
+        self.update_taffy_style();
         self
     }
 
@@ -383,6 +395,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_max_height(max_height);
+        self.update_taffy_style();
         self
     }
 
@@ -391,6 +404,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_wrap(wrap);
+        self.update_taffy_style();
         self
     }
 
@@ -399,6 +413,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_align_items(align_items);
+        self.update_taffy_style();
         self
     }
 
@@ -407,6 +422,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_justify_content(justify_content);
+        self.update_taffy_style();
         self
     }
 
@@ -415,6 +431,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_flex_direction(flex_direction);
+        self.update_taffy_style();
         self
     }
 
@@ -423,6 +440,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_flex_grow(flex_grow);
+        self.update_taffy_style();
         self
     }
 
@@ -431,6 +449,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_flex_shrink(flex_shrink);
+        self.update_taffy_style();
         self
     }
 
@@ -439,6 +458,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_flex_basis(flex_basis);
+        self.update_taffy_style();
         self
     }
 
@@ -447,6 +467,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_font_family(font_family);
+        self.update_taffy_style();
         self
     }
 
@@ -455,6 +476,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_color(color);
+        self.update_taffy_style();
         self
     }
 
@@ -471,6 +493,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_font_size(font_size);
+        self.update_taffy_style();
         self
     }
 
@@ -479,6 +502,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_line_height(line_height);
+        self.update_taffy_style();
         self
     }
 
@@ -487,6 +511,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_font_weight(font_weight);
+        self.update_taffy_style();
         self
     }
 
@@ -495,6 +520,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_font_style(font_style);
+        self.update_taffy_style();
         self
     }
 
@@ -503,6 +529,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_underline(underline);
+        self.update_taffy_style();
         self
     }
 
@@ -511,6 +538,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
+        self.update_taffy_style();
         self
     }
 
@@ -527,6 +555,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.style_mut().set_border_width(TrblRectangle::new(top, right, bottom, left));
+        self.update_taffy_style();
         self
     }
 
