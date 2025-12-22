@@ -64,9 +64,16 @@ pub struct LayoutItem {
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
     computed_border: ComputedBorder,
+    /// True if the layout is new.
+    pub has_new_layout: bool,
+    transform: Affine,
 }
 
 impl LayoutItem {
+    pub(crate) fn get_transform(&self) -> Affine {
+        self.transform
+    }
+
     pub fn push_child(&mut self, child: &Option<NodeId>) {
         if let Some(taffy_node_id) = child.as_ref() {
             self.children_awaiting_add.push(*taffy_node_id);
@@ -134,6 +141,7 @@ impl LayoutItem {
             size,
         };
         self.computed_box_transformed = self.computed_box.transform(scroll_transform);
+        self.transform = scroll_transform;
     }
 
     pub fn apply_borders(

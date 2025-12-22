@@ -6,6 +6,7 @@ use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 use craft_primitives::geometry::{Point, Rectangle};
+use craft_primitives::Color;
 use craft_renderer::renderer::RenderList;
 #[cfg(feature = "accesskit")]
 use parley::LayoutAccessibility;
@@ -37,6 +38,7 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
+use crate::rgba;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -203,6 +205,10 @@ impl ElementInternals for Text {
 
         self.draw_borders(renderer, scale_factor);
 
+        if self.element_data.layout_item.has_new_layout {
+            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
+        }
+
         renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
     }
 
@@ -283,12 +289,23 @@ impl ElementInternals for Text {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
+        dirty: bool,
     ) {
-        let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        self.resolve_box(position, transform, result, z_index);
-        self.apply_clip(clip_bounds);
+        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let result = taffy_tree.layout(node).unwrap();
 
-        self.apply_borders(scale_factor);
+        let dirty = dirty || result.has_new_layout || transform != self.element_data.layout_item.get_transform();
+        self.element_data.layout_item.has_new_layout = dirty;
+        if dirty {
+            self.resolve_box(position, transform, result, z_index);
+            self.apply_clip(clip_bounds);
+
+            self.apply_borders(scale_factor);
+        }
+
+        if result.has_new_layout {
+            taffy_tree.mark_old(node);
+        }
 
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {
@@ -299,16 +316,6 @@ impl ElementInternals for Text {
         }
 
         state.try_update_text_render(text_context);
-
-        // This needs to be cached.
-        let layout = state.layout.as_ref().unwrap();
-        let text_renderer = state.text_render.as_mut().unwrap();
-        for line in text_renderer.lines.iter_mut() {
-            line.selections.clear();
-        }
-        state.selection.geometry_with(layout, |rect, line| {
-            text_renderer.lines[line].selections.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), self.element_data.style.selection_color()));
-        });
     }
 
     fn on_event(
@@ -333,10 +340,10 @@ impl ElementInternals for Text {
             let text_position = self.computed_box_transformed().content_rectangle();
 
             let state: &mut TextState = &mut self.state;
-
             match message {
                 CraftMessage::PointerButtonDown(pointer_button) => {
                     if pointer_button.button.map(|button| button == PointerButton::Primary).unwrap_or_default() {
+                        state.update_text_selection(self.element_data.style.selection_color());
                         state.pointer_down = true;
                         state.cursor_reset();
                         let now = Instant::now();
@@ -365,6 +372,7 @@ impl ElementInternals for Text {
                 }
                 CraftMessage::PointerButtonUp(pointer_button) => {
                     if pointer_button.button.map(|button| button == PointerButton::Primary).unwrap_or_default() {
+                        state.update_text_selection(self.element_data.style.selection_color());
                         state.pointer_down = false;
                         state.cursor_reset();
                         self.release_pointer_capture(PointerId::new(1).unwrap());
@@ -377,6 +385,7 @@ impl ElementInternals for Text {
                     state.cursor_pos = pointer_moved.current.logical_point() - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
+                        state.update_text_selection(self.element_data.style.selection_color());
                         state.cursor_reset();
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos);
@@ -523,6 +532,17 @@ impl TextState {
         self.text_render = None;
         self.content_widths = None;
         self.is_layout_dirty = false;
+    }
+
+    fn update_text_selection(&mut self, selection_color: Color) {
+        let layout = self.layout.as_ref().unwrap();
+        let text_renderer = self.text_render.as_mut().unwrap();
+        for line in text_renderer.lines.iter_mut() {
+            line.selections.clear();
+        }
+        self.selection.geometry_with(layout, |rect, line| {
+            text_renderer.lines[line].selections.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), selection_color));
+        });
     }
 }
 

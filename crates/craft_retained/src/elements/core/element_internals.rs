@@ -32,6 +32,7 @@ pub trait  ElementInternals: ElementData {
         pointer: Option<Point>,
         text_context: &mut TextContext,
         scale_factor: f64,
+        dirty: bool,
     ) {
         for child in &self.element_data().children {
             child.borrow_mut().apply_layout(
@@ -43,6 +44,7 @@ pub trait  ElementInternals: ElementData {
                 text_context,
                 self.element_data().layout_item.clip_bounds,
                 scale_factor,
+                dirty,
             );
         }
     }
@@ -109,6 +111,7 @@ pub trait  ElementInternals: ElementData {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
+        dirty: bool,
     );
 
     /// Draws the element and its visual contents.

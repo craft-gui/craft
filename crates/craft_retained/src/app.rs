@@ -30,8 +30,6 @@ use {
     accesskit_winit::Adapter,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
@@ -90,7 +88,6 @@ pub struct App {
     #[allow(dead_code)]
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
-    pub(crate) last_frame_time: time::Instant,
     pub redraw_flags: RedrawFlags,
 
     pub(crate) render_list: RenderList,
@@ -259,10 +256,6 @@ impl App {
         }
 
         self.update_resources();
-
-        let now = time::Instant::now();
-        let delta_time = now - self.last_frame_time;
-        self.last_frame_time = now;
 
         let surface_size = self.window_context.window_size();
 
@@ -451,6 +444,7 @@ impl App {
     }
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
+    #[allow(dead_code)]
     fn animate_tree(&mut self, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
         let span = span!(Level::INFO, "animate_tree");
         let _enter = span.enter();
@@ -591,7 +585,7 @@ fn style_root_element(root: &mut dyn Element, root_size: LogicalSize<f32>) {
 
     style.set_width(Unit::Px(root_size.width));
     style.set_wrap(Wrap::Wrap);
-    style.set_display(Display::Block);
+    style.set_display(Display::Flex);
 
     if is_user_root_height_auto {
         style.set_height(Unit::Auto);
@@ -659,6 +653,7 @@ fn layout(
             text_context,
             None,
             scale_factor,
+            false,
         );
     }
 

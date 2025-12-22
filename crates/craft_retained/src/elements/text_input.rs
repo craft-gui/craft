@@ -190,6 +190,7 @@ impl ElementInternals for TextInput {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
+        dirty: bool,
     ) {
         let result = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
         self.resolve_box(position, transform, result, z_index);
