@@ -14,7 +14,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::TaffyTree;
+use taffy::{PrintTree, TaffyTree};
 
 /// Stores one or more elements.
 ///
@@ -136,17 +136,36 @@ impl ElementInternals for Container {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        self.resolve_box(position, transform, layout, z_index);
-        self.apply_borders(scale_factor);
+        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let layout = taffy_tree.layout(node).unwrap();
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        self.element_data.apply_scroll(layout);
-        self.apply_clip(clip_bounds);
+        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
+
+        if dirty {
+            self.resolve_box(position, transform, layout, z_index);
+            self.apply_borders(scale_factor);
+            // For scroll changes from taffy;
+            self.element_data.apply_scroll(layout);
+            self.apply_clip(clip_bounds);
+            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+        }
+
+        // For manual scroll updates.
+        if !dirty && self.element_data.scroll_state.map(|scroll_state| scroll_state.is_new()).unwrap_or_default() {
+            self.element_data.apply_scroll(layout);
+            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+        }
+
+        if has_new_layout {
+            taffy_tree.mark_seen(node);
+        }
 
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor)
+        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor, false)
     }
 
     fn draw(
@@ -163,6 +182,10 @@ impl ElementInternals for Container {
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
+
+        /*if self.element_data.layout_item.has_new_layout {
+            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
+        }*/
 
         self.maybe_start_layer(renderer, scale_factor);
         self.draw_children(renderer, text_context, pointer, scale_factor);

@@ -19,6 +19,7 @@ use parley::layout::LayoutAccessibility;
 use accesskit::{Node, NodeId, TreeUpdate};
 use crate::text::RangedStyles;
 use craft_primitives::ColorBrush;
+use crate::request_layout;
 
 /// Opaque representation of a generation.
 ///
@@ -456,6 +457,7 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         self.editor
             .set_selection(Selection::from_point(&self.editor.layout, x, y));
+        request_layout();
     }
 
     /// Move the cursor to a byte index.
@@ -661,6 +663,7 @@ impl PlainEditorDriver<'_>
                 .selection
                 .next_visual_word(&self.editor.layout, true),
         );
+        request_layout();
     }
 
     /// Select the word at the point.
@@ -668,6 +671,7 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         self.editor
             .set_selection(Selection::word_from_point(&self.editor.layout, x, y));
+        request_layout();
     }
 
     /// Select the physical line at the point.
@@ -675,6 +679,7 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         let line = Selection::line_from_point(&self.editor.layout, x, y);
         self.editor.set_selection(line);
+        request_layout();
     }
 
     /// Move the selection focus point to the cluster boundary closest to point.

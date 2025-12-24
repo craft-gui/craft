@@ -16,7 +16,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::TaffyTree;
+use taffy::{PrintTree, TaffyTree};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 
@@ -251,11 +251,19 @@ impl ElementInternals for Slider {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        self.resolve_box(position, transform, layout, z_index);
+        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let layout = taffy_tree.layout(node).unwrap();
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        self.apply_borders(scale_factor);
-        self.apply_clip(clip_bounds);
+        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
+
+        if dirty {
+            self.resolve_box(position, transform, layout, z_index);
+
+            self.apply_borders(scale_factor);
+            self.apply_clip(clip_bounds);
+        }
     }
 
     fn draw(
@@ -327,7 +335,7 @@ impl ElementInternals for Slider {
                 //event.result_message(CraftMessage::SliderValueChanged(value));
 
                 let new_event = Event::new(event.target.clone());
-                dispatch_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                //dispatch_event(new_event, CraftMessage::SliderValueChanged(self.value));
             }
             CraftMessage::PointerMovedEvent(pointer_update) => {
                 if !self.dragging {

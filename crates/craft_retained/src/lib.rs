@@ -11,6 +11,8 @@ mod tests;
 pub mod text;
 pub mod document;
 
+pub use crate::app::request_layout;
+
 mod app;
 pub use craft_primitives::geometry as geometry;
 pub mod layout;
@@ -47,8 +49,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::sync::Arc;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 #[cfg(target_arch = "wasm32")]
@@ -208,7 +208,6 @@ pub fn setup_craft(
 
         runtime: runtime_copy,
         modifiers: Default::default(),
-        last_frame_time: time::Instant::now(),
         redraw_flags: RedrawFlags::new(true),
         render_list: RenderList::new(),
         target_scratch: Vec::new(),

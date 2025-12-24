@@ -132,6 +132,7 @@ impl RenderList {
     }
 
 
+    #[inline(always)]
     pub fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
         if let Some(cull) = &self.cull {
             if !cull.intersects(&bounding_box) {
@@ -141,6 +142,7 @@ impl RenderList {
         self.targets.push((id, bounding_box));
     }
 
+    #[inline(always)]
     pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, thickness: f64) {
         if let Some(cull) = &self.cull {
             if !cull.intersects(&rectangle) {
@@ -150,6 +152,7 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
     }
 
+    #[inline(always)]
     pub fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush) {
         if let Some(cull) = &self.cull {
             if !cull.intersects(&Rectangle::from_kurbo(path.bounding_box())) {
@@ -159,6 +162,7 @@ impl RenderList {
         self.commands.push(RenderCommand::FillBezPath(path, brush));
     }
 
+    #[inline(always)]
     pub fn draw_text(
         &mut self,
         component: Weak<RefCell<dyn TextData>>,
@@ -174,10 +178,12 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
     }
 
+    #[inline(always)]
     pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
         self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
+    #[inline(always)]
     pub fn draw_tiny_vg(
         &mut self,
         rectangle: Rectangle,
@@ -187,10 +193,12 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color));
     }
 
+    #[inline(always)]
     pub fn push_layer(&mut self, rect: Rectangle) {
         self.commands.push(RenderCommand::PushLayer(rect));
     }
 
+    #[inline(always)]
     pub fn pop_layer(&mut self) {
         self.commands.push(RenderCommand::PopLayer);
     }
