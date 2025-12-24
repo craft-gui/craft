@@ -19,7 +19,6 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 pub use winit::event::Ime;
 pub use winit::event::Modifiers;
 pub use winit::event::MouseButton;
-pub use event_dispatch::dispatch_event;
 use crate::PinnedFutureAny;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -28,6 +27,7 @@ use crate::elements::Element;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 

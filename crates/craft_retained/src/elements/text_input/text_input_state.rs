@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
-use crate::app::{LAYOUT_DIRTY, TAFFY_TREE};
+use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::elements::TextInput;

@@ -5,7 +5,7 @@ use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rec
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
-use taffy::{Layout, NodeId, Position, TaffyTree};
+use taffy::{NodeId, Position, TaffyTree};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {

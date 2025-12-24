@@ -1,6 +1,6 @@
 use crate::app::{DOCUMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::core::ElementData;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
@@ -140,6 +140,14 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         Self: Sized,
     {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
+        self
+    }    
+    
+    fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.element_data_mut().on_slider_value_changed.push(on_slider_value_changed);
         self
     }
 

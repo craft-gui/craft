@@ -3,7 +3,6 @@ use crate::events::{CraftMessage, Event};
 use kurbo::Point;
 use ui_events::pointer::{PointerId, PointerType};
 use ui_events::ScrollDelta;
-use crate::app::LAYOUT_DIRTY;
 use crate::request_layout;
 
 #[allow(clippy::too_many_arguments)]

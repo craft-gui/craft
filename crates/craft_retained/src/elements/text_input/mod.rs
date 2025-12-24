@@ -21,7 +21,6 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::events::{CraftMessage, Event};
-use crate::text::parley_editor::PlainEditor;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 use crate::text::RangedStyles;

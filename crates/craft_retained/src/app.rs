@@ -1,12 +1,12 @@
 use crate::elements::ElementIdMap;
-use crate::events::EventDispatcher;
+use crate::events::{Event, EventDispatcher};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage};
 use crate::layout::layout_context::measure_content;
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::{RendererBox, WindowContext};
-use craft_logging::{info, span, Level};
+use craft_logging::info;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use craft_runtime::CraftRuntimeHandle;
@@ -63,11 +63,32 @@ thread_local! {
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
     pub(crate) static LAYOUT_DIRTY: RefCell<bool> = RefCell::new(true);
+    /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
+    static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
+}
+
+/// Enqueues an event at the back of the dispatch queue.
+///
+/// This does **not** invoke any element `on_event` handlers.
+/// Only user-registered event callbacks will be dispatched.
+pub fn queue_event(event: Event, message: CraftMessage) {
+    EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
+        return event_queue.push_back((event, message));
+    });
+}
+
+/// Pops from the front of the event dispatch queue and returns the result.
+pub(crate) fn dequeue_event() -> Option<(Event, CraftMessage)> {
+    let event = EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
+        return event_queue.pop_front();
+    });
+
+    event
 }
 
 pub struct App {
     pub(crate) event_dispatcher: EventDispatcher,
-    pub(crate) root: Rc<RefCell<dyn crate::elements::Element>>,
+    pub(crate) root: Rc<RefCell<dyn Element>>,
     /// A winit window. This is only valid between resume and pause.
     pub window: Option<Arc<Window>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.

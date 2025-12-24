@@ -112,7 +112,13 @@ pub(super) fn call_user_event_handlers(
         CraftMessage::DropdownToggled(_) => {}
         CraftMessage::DropdownItemSelected(_) => {}
         CraftMessage::SwitchToggled(_) => {}
-        CraftMessage::SliderValueChanged(_) => {}
+        CraftMessage::SliderValueChanged(slider_value) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_slider_value_changed {
+                (*handler)(event, *slider_value);
+            }
+        }
         CraftMessage::ElementMessage(_) => {}
         CraftMessage::GotPointerCapture() => {
             let element_data = current_target.borrow().element_data().clone();

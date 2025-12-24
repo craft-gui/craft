@@ -3,7 +3,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
 use crate::elements::Element;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
 use craft_primitives::geometry::{Rectangle, Size};
@@ -45,6 +45,7 @@ pub struct ElementData {
 
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
     pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+    pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
     pub on_pointer_leave: Vec<PointerLeaveHandler>,
     pub(crate) me: Option<Weak<RefCell<dyn Element>>>,
@@ -146,6 +147,7 @@ impl Default for ElementData {
             internal_id: create_unique_element_id(),
             animations: None,
             parent: None,
+            on_slider_value_changed: vec![],
             on_pointer_enter: vec![],
             on_pointer_leave: vec![],
             me: None,

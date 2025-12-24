@@ -1,17 +1,17 @@
 use crate::elements::Element;
 use crate::events::{CraftMessage, Event, FocusAction};
 
+use crate::app::dequeue_event;
 use crate::events::helpers::{
     call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list,
 };
-use crate::events::pointer_capture::{maybe_handle_implicit_pointer_capture_release};
+use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
 use crate::text::text_context::TextContext;
-use craft_logging::{span, Level};
 use craft_primitives::geometry::Point;
+use craft_renderer::RenderList;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
-use craft_renderer::RenderList;
 
 pub(super) fn dispatch_capturing_event(
     _message: &CraftMessage,
@@ -198,15 +198,16 @@ impl EventDispatcher {
         // - gotpointercapture(capture), gotpointercapture(bubble)
         maybe_handle_implicit_pointer_capture_release(message);
 
+        // Drain the event dispatch queue and invoke user callbacks.
+        while let Some((event, message)) = dequeue_event() {
+            let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(event.target);
+            // Handle capturing
+            dispatch_capturing_event(&message, &mut targets);
+
+            // Handle bubbling
+            let _ = dispatch_bubbling_event(&message, &mut targets);
+        }
+
         self.previous_targets = targets.iter().map(Rc::downgrade).collect();
     }
-}
-
-pub fn dispatch_event(event: Event, craft_message: CraftMessage) {
-    let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = freeze_target_list(event.target);
-    // Handle capturing
-    dispatch_capturing_event(&craft_message, &mut targets);
-
-    // Handle bubbling
-    dispatch_bubbling_event(&craft_message, &mut targets);
 }

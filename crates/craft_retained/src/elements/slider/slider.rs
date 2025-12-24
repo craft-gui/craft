@@ -1,9 +1,9 @@
-use crate::app::ELEMENTS;
+use crate::app::{queue_event, ELEMENTS};
 use crate::app::TAFFY_TREE;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
-use crate::events::{dispatch_event, CraftMessage, Event};
+use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::LayoutContext;
 use crate::palette;
 use crate::style::Unit;
@@ -291,7 +291,8 @@ impl ElementInternals for Slider {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        let focused = false;
+        // @HARDCODED
+        let focused = true;
 
         match message {
             CraftMessage::KeyboardInputEvent(key) => {
@@ -313,7 +314,9 @@ impl ElementInternals for Slider {
 
                 if let Some(new_value) = new_value {
                     self.value = new_value;
-                    //event.result_message(CraftMessage::SliderValueChanged(self.value));
+
+                    let new_event = Event::new(event.target.clone());
+                    queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
                 }
             }
             CraftMessage::PointerButtonUp(pointer_button_update) => {
@@ -323,7 +326,9 @@ impl ElementInternals for Slider {
 
                 let value = self.compute_slider_value(&Point::new(pointer_button_update.state.position.x, pointer_button_update.state.position.y));
                 self.value = value;
-                //event.result_message(CraftMessage::SliderValueChanged(value));
+
+                let new_event = Event::new(event.target.clone());
+                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
             }
             CraftMessage::PointerButtonDown(pointer_button_update) => {
                 self.dragging = true;
@@ -332,10 +337,9 @@ impl ElementInternals for Slider {
 
                 let value = self.compute_slider_value(&Point::new(pointer_button_update.state.position.x, pointer_button_update.state.position.y));
                 self.value = value;
-                //event.result_message(CraftMessage::SliderValueChanged(value));
 
                 let new_event = Event::new(event.target.clone());
-                //dispatch_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
             }
             CraftMessage::PointerMovedEvent(pointer_update) => {
                 if !self.dragging {
@@ -344,7 +348,9 @@ impl ElementInternals for Slider {
 
                 let value = self.compute_slider_value(&Point::new(pointer_update.current.position.x, pointer_update.current.position.y));
                 self.value = value;
-                //event.result_message(CraftMessage::SliderValueChanged(value));
+
+                let new_event = Event::new(event.target.clone());
+                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
             }
             _ => {}
         }

@@ -18,7 +18,7 @@ use crate::elements::Element;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
-use crate::app::{LAYOUT_DIRTY, TAFFY_TREE};
+use crate::app::TAFFY_TREE;
 use crate::request_layout;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
