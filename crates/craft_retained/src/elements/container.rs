@@ -14,8 +14,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::TaffyTree;
-use crate::rgba;
+use taffy::{PrintTree, TaffyTree};
 
 /// Stores one or more elements.
 ///
@@ -136,13 +135,14 @@ impl ElementInternals for Container {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
-        dirty: bool,
     ) {
         let node = self.element_data.layout_item.taffy_node_id.unwrap();
         let layout = taffy_tree.layout(node).unwrap();
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        let dirty = layout.has_new_layout || transform != self.element_data.layout_item.get_transform() ;
-        self.element_data.layout_item.has_new_layout = dirty;
+        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
+
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
             self.apply_borders(scale_factor);
@@ -158,8 +158,8 @@ impl ElementInternals for Container {
             self.element_data.scroll_state.as_mut().unwrap().mark_old();
         }
 
-        if layout.has_new_layout {
-            taffy_tree.mark_old(node);
+        if has_new_layout {
+            taffy_tree.mark_seen(node);
         }
 
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
@@ -183,9 +183,9 @@ impl ElementInternals for Container {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
 
-        if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
-        }
+        /*if self.element_data.layout_item.has_new_layout {
+            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
+        }*/
 
         self.maybe_start_layer(renderer, scale_factor);
         self.draw_children(renderer, text_context, pointer, scale_factor);

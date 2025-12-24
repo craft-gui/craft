@@ -14,10 +14,12 @@ use craft_logging::info;
 
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
-use winit::event_loop::{ActiveEventLoop};
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowAttributes;
 use winit::window::{Window, WindowId};
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
@@ -31,6 +33,8 @@ use ui_events::pointer::{PointerEvent};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
 use winit::dpi::LogicalSize;
 use crate::document::Document;
+
+const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
 /// Stores state related to Winit.
 ///
@@ -249,19 +253,15 @@ impl ApplicationHandler for CraftWinitState {
             return;
         }
 
-        //self.craft_state.craft_app.window.clone().unwrap().request_redraw();
-
         // Switch to Poll mode if we are running animations.
 
-/*        let has_active_animation = self.craft_state.craft_app.previous_animation_flags.has_active_animation();
+        let has_active_animation = self.craft_state.craft_app.previous_animation_flags.has_active_animation();
 
         if has_active_animation {
             event_loop.set_control_flow(ControlFlow::Poll);
         } else {
             event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
         }
-        event_loop.set_control_flow(ControlFlow::Poll);
-        */
     }
 }
 

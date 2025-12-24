@@ -5,7 +5,7 @@ use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rec
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
-use taffy::{NodeId, Position, TaffyTree};
+use taffy::{Layout, NodeId, Position, TaffyTree};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
@@ -67,6 +67,7 @@ pub struct LayoutItem {
     /// True if the layout is new.
     pub has_new_layout: bool,
     transform: Affine,
+    pub position: Point,
 }
 
 impl LayoutItem {
@@ -142,6 +143,7 @@ impl LayoutItem {
         };
         self.computed_box_transformed = self.computed_box.transform(scroll_transform);
         self.transform = scroll_transform;
+        self.position = relative_position;
     }
 
     pub fn apply_borders(

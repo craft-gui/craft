@@ -88,7 +88,8 @@ workspace = true
 
 [dependencies.taffy]
 #version = "0.9.2"
-path = "../../../taffy"
+git = "https://github.com/AustinMReppert/taffy"
+rev = "c99a8e60bf43ea695abda49a4be2b07baf683934"
 default-features = false
 features = ["std", "taffy_tree", "flexbox", "content_size", "block_layout"]
 

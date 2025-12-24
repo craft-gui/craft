@@ -158,8 +158,8 @@ impl EventDispatcher {
         target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
     ) {
         let mut _focus = FocusAction::None;
-        let span = span!(Level::INFO, "dispatch event");
-        let _enter = span.enter();
+        /*let span = span!(Level::INFO, "dispatch event");
+        let _enter = span.enter();*/
 
         /*for (node, _) in &render_list.targets {
             println!("target: {}", node);

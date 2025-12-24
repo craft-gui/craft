@@ -62,6 +62,7 @@ thread_local! {
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
+    pub(crate) static LAYOUT_DIRTY: RefCell<bool> = RefCell::new(true);
 }
 
 pub struct App {
@@ -123,6 +124,7 @@ impl App {
         self.window_context.scale_factor = scale_factor;
         self.on_resize(self.window.as_ref().unwrap().inner_size());
         self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
+        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
     }
 
     pub fn on_process_user_events(&mut self) {}
@@ -287,8 +289,8 @@ impl App {
         }
 
         {
-            let span = span!(Level::INFO, "renderer_submit");
-            let _enter = span.enter();
+            /*let span = span!(Level::INFO, "renderer_submit");
+            let _enter = span.enter();*/
 
             if self.renderer.is_some() {
                 self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
@@ -319,6 +321,8 @@ impl App {
                 self.window_context.zoom_in();
             }
             self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
+            request_layout();
+            style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
             self.request_redraw(RedrawFlags::new(true));
             return;
         }
@@ -446,8 +450,8 @@ impl App {
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
     #[allow(dead_code)]
     fn animate_tree(&mut self, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
-        let span = span!(Level::INFO, "animate_tree");
-        let _enter = span.enter();
+        /*let span = span!(Level::INFO, "animate_tree");
+        let _enter = span.enter();*/
 
         let old_has_active_animation = self.previous_animation_flags.has_active_animation();
         let root_element = self.root.clone();
@@ -489,8 +493,8 @@ impl App {
         let text_context = self.text_context.as_mut().unwrap();
 
         {
-            let span = span!(Level::INFO, "layout");
-            let _enter = span.enter();
+            /*let span = span!(Level::INFO, "layout");
+            let _enter = span.enter();*/
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
                 layout(
                     taffy_tree,
@@ -510,16 +514,16 @@ impl App {
     fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
         let text_context = self.text_context.as_mut().unwrap();
         {
-            let span = span!(Level::INFO, "render");
-            let _enter = span.enter();
+            /*let span = span!(Level::INFO, "render");
+            let _enter = span.enter();*/
             self.render_list.clear();
             let scale_factor = self.window_context.effective_scale_factor();
 
             let renderer = self.renderer.as_mut().unwrap();
 
             {
-                let span = span!(Level::INFO, "render(element)");
-                let _enter = span.enter();
+                /*let span = span!(Level::INFO, "render(element)");
+                let _enter = span.enter();*/
                 self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
             }
 
@@ -585,7 +589,7 @@ fn style_root_element(root: &mut dyn Element, root_size: LogicalSize<f32>) {
 
     style.set_width(Unit::Px(root_size.width));
     style.set_wrap(Wrap::Wrap);
-    style.set_display(Display::Flex);
+    style.set_display(Display::Block);
 
     if is_user_root_height_auto {
         style.set_height(Unit::Auto);
@@ -606,11 +610,19 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
+    let dirty = LAYOUT_DIRTY.with_borrow(|status| {
+        *status
+    });
+
     let root_node = root_element.borrow()
         .element_data()
         .layout_item
         .taffy_node_id
         .expect("A root element must have a layout node.");
+
+    if !dirty {
+        return root_node;
+    }
 
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(window_size.width),
@@ -618,8 +630,10 @@ fn layout(
     };
 
     {
-        let span = span!(Level::INFO, "layout(taffy)");
-        let _enter = span.enter();
+        /*let span = span!(Level::INFO, "layout(taffy)");
+        let _enter = span.enter();*/
+        //println!("before layout");
+        //taffy_tree.print_tree(root_node);
         taffy_tree
             .compute_layout_with_measure(
                 root_node,
@@ -637,13 +651,15 @@ fn layout(
             )
             .unwrap();
     }
+        //println!("after layout");
+    //taffy_tree.print_tree(root_node);
 
     let transform = Affine::IDENTITY;
 
     let mut layout_order: u32 = 0;
     {
-        let span = span!(Level::INFO, "layout(apply)");
-        let _enter = span.enter();
+        /*let span = span!(Level::INFO, "layout(apply)");
+        let _enter = span.enter();*/
         root_element.borrow_mut().apply_layout(
             taffy_tree,
             origin,
@@ -653,9 +669,18 @@ fn layout(
             text_context,
             None,
             scale_factor,
-            false,
         );
     }
 
+    LAYOUT_DIRTY.with_borrow_mut(|status| {
+        *status = false;
+    });
+
     root_node
+}
+
+pub fn request_layout() {
+    LAYOUT_DIRTY.with_borrow_mut(|status| {
+        *status = true;
+    });
 }

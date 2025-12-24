@@ -24,7 +24,7 @@ use kurbo::Affine;
 use rustc_hash::FxHashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use taffy::{AvailableSpace, Size, TaffyTree};
+use taffy::{AvailableSpace, PrintTree, Size, TaffyTree};
 use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
@@ -38,7 +38,6 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
-use crate::rgba;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -65,7 +64,11 @@ pub struct TextState {
     pub(crate) last_click_time: Option<Instant>,
     pub(crate) click_count: u32,
     pub(crate) pointer_down: bool,
-    pub(crate) cursor_pos: Point,
+    /// The last known cursor position.
+    ///
+    /// The cursor is assumed to start at (0.0, 0.0). The cursor_pos may return points
+    /// outside the text input.
+    cursor_pos: Point,
     pub(crate) start_time: Option<Instant>,
     pub(crate) blink_period: Duration,
 
@@ -205,9 +208,9 @@ impl ElementInternals for Text {
 
         self.draw_borders(renderer, scale_factor);
 
-        if self.element_data.layout_item.has_new_layout {
+        /*if self.element_data.layout_item.has_new_layout {
             renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
-        }
+        }*/
 
         renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
     }
@@ -263,22 +266,6 @@ impl ElementInternals for Text {
         tree.nodes.push((current_node_id, current_node));
     }
 
-    /*fn compute_layout(
-        &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        scale_factor: f64,
-    ) {
-        if scale_factor as f32 != self.state.scale_factor {
-            self.state.is_layout_dirty = true;
-            self.state.scale_factor = scale_factor as f32;
-        }
-        if self.state.is_layout_dirty {
-            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
-        }
-
-        self.apply_style_to_layout_node_if_dirty(taffy_tree);
-    }*/
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree<LayoutContext>,
@@ -289,13 +276,13 @@ impl ElementInternals for Text {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
-        dirty: bool,
     ) {
         let node = self.element_data.layout_item.taffy_node_id.unwrap();
         let result = taffy_tree.layout(node).unwrap();
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        let dirty = dirty || result.has_new_layout || transform != self.element_data.layout_item.get_transform();
-        self.element_data.layout_item.has_new_layout = dirty;
+        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
         if dirty {
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
@@ -303,8 +290,8 @@ impl ElementInternals for Text {
             self.apply_borders(scale_factor);
         }
 
-        if result.has_new_layout {
-            taffy_tree.mark_old(node);
+        if has_new_layout {
+            taffy_tree.mark_seen(node);
         }
 
         let state: &mut TextState = &mut self.state;
@@ -325,9 +312,6 @@ impl ElementInternals for Text {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        //self.on_style_event(message, should_style, event);
-        //self.maybe_unset_focus(message, event, target);
-
         if !self.selectable {
             return;
         }

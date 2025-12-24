@@ -18,7 +18,8 @@ use crate::elements::Element;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
-use crate::app::TAFFY_TREE;
+use crate::app::{LAYOUT_DIRTY, TAFFY_TREE};
+use crate::request_layout;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait  ElementInternals: ElementData {
@@ -44,7 +45,6 @@ pub trait  ElementInternals: ElementData {
                 text_context,
                 self.element_data().layout_item.clip_bounds,
                 scale_factor,
-                dirty,
             );
         }
     }
@@ -111,7 +111,6 @@ pub trait  ElementInternals: ElementData {
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
-        dirty: bool,
     );
 
     /// Draws the element and its visual contents.
@@ -369,6 +368,7 @@ pub trait  ElementInternals: ElementData {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
+        request_layout();
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
@@ -379,6 +379,8 @@ pub trait  ElementInternals: ElementData {
 
     /// Updates taffy's style to reflect craft's style struct.
     fn update_taffy_style(&mut self) {
+        request_layout();
+
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {

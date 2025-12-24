@@ -11,6 +11,8 @@ mod tests;
 pub mod text;
 pub mod document;
 
+pub use crate::app::request_layout;
+
 mod app;
 pub use craft_primitives::geometry as geometry;
 pub mod layout;
