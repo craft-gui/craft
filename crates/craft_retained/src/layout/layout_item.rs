@@ -72,16 +72,6 @@ impl LayoutItem {
         self.transform
     }
 
-    pub fn build_tree_with_context(
-        &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
-        style: taffy::Style,
-        layout_context: LayoutContext,
-    ) -> Option<NodeId> {
-        self.taffy_node_id = Some(taffy_tree.new_leaf_with_context(style, layout_context).unwrap());
-        self.taffy_node_id
-    }
-
     pub fn resolve_box(
         &mut self,
         relative_position: Point,
