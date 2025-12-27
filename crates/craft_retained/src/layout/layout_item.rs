@@ -58,9 +58,6 @@ pub struct LayoutItem {
     pub layout_order: u32,
     pub clip_bounds: Option<Rectangle>,
 
-    //  ---
-    pub children_awaiting_add: Vec<NodeId>,
-
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
     computed_border: ComputedBorder,
@@ -73,18 +70,6 @@ pub struct LayoutItem {
 impl LayoutItem {
     pub(crate) fn get_transform(&self) -> Affine {
         self.transform
-    }
-
-    pub fn push_child(&mut self, child: &Option<NodeId>) {
-        if let Some(taffy_node_id) = child.as_ref() {
-            self.children_awaiting_add.push(*taffy_node_id);
-        }
-    }
-
-    pub fn build_tree(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>, style: taffy::Style) -> Option<NodeId> {
-        self.taffy_node_id = Some(taffy_tree.new_with_children(style, &self.children_awaiting_add).unwrap());
-        self.children_awaiting_add.clear();
-        self.taffy_node_id
     }
 
     pub fn build_tree_with_context(
