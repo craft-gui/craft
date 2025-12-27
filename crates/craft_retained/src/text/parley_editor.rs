@@ -903,6 +903,7 @@ impl PlainEditor
     ///
     /// The return value is a `SplitString` because it
     /// excludes the IME preedit region.
+    #[allow(dead_code)]
     pub fn text(&self) -> SplitString<'_> {
         if let Some(preedit_range) = &self.compose {
             SplitString([

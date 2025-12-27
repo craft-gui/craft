@@ -81,7 +81,6 @@ impl State {
         self.remove_all_rows();
         self.store.clear();
         self.rows.clear();
-        self.rows.shrink_to_fit();
         self.store.run();
         self.append_rows();
         self.select(None);
@@ -91,7 +90,6 @@ impl State {
         self.remove_all_rows();
         self.store.clear();
         self.rows.clear();
-        self.rows.shrink_to_fit();
         self.store.run_lots();
         self.append_rows();
         self.select(None);
@@ -250,7 +248,6 @@ impl Store {
 
     pub fn clear(&mut self) {
         self.data.clear();
-        self.data.shrink_to_fit();
         self.selected = None;
     }
 

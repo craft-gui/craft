@@ -1,6 +1,11 @@
-use crate::app::{DOCUMENTS, FOCUS, TAFFY_TREE};
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+use crate::document::Document;
 use crate::elements::core::ElementData;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
+use crate::elements::ElementIdMap;
+use crate::events::{
+    KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler,
+    PointerUpdateHandler, SliderValueChangedHandler,
+};
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
@@ -112,6 +117,32 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             taffy_tree.mark_dirty(parent_id.unwrap()).expect("Failed to mark taffy node dirty.");
         });
 
+        // TODO: Move to document
+        fn remove_element_from_document(
+            node: Rc<RefCell<dyn Element>>,
+            document: &mut Document,
+            elements: &mut ElementIdMap,
+        ) {
+            elements.remove_id(node.borrow().element_data().internal_id);
+            document
+                .pointer_captures
+                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me.as_ref().unwrap()));
+            document
+                .pending_pointer_captures
+                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me.as_ref().unwrap()));
+            for child in node.borrow().children() {
+                remove_element_from_document(child.clone(), document, elements);
+            }
+        }
+
+        DOCUMENTS.with_borrow_mut(|documents| {
+            ELEMENTS.with_borrow_mut(|elements| {
+                remove_element_from_document(child.clone(), documents.get_current_document(), elements);
+            });
+        });
+
+        child.borrow_mut().unfocus_dyn();
+
         Ok(child)
     }
 
@@ -141,8 +172,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
         self
-    }    
-    
+    }
+
     fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self
     where
         Self: Sized,
@@ -282,7 +313,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
-            current_doc.pending_pointer_captures.get(&pointer_id).cloned().map(|w| w.as_ptr()) == self.element_data().me.clone().map(|w|w.as_ptr())
+            current_doc.pending_pointer_captures.get(&pointer_id).cloned().map(|w| w.as_ptr())
+                == self.element_data().me.clone().map(|w| w.as_ptr())
         })
     }
 
@@ -624,7 +656,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     /// Sets focus on the specified element, if it can be focused.
     ///
     /// The focused element is the element that will receive keyboard and similar events by default.
-    fn focus(&mut self) where
+    fn focus(&mut self)
+    where
         Self: Sized,
     {
         // Todo: check if the element is focusable. Should we return a result?
@@ -635,9 +668,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
     /// Returns true if the element has focus.
     fn is_focused(&self) -> bool {
-        let focus_element = FOCUS.with(|focus| {
-           focus.borrow().clone()
-        });
+        let focus_element = FOCUS.with(|focus| focus.borrow().clone());
 
         if focus_element.is_none() {
             return false;
@@ -649,15 +680,21 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     /// Removes focus if the element has focus.
-    fn unfocus(&mut self) -> &mut Self where
+    fn unfocus(&mut self) -> &mut Self
+    where
         Self: Sized,
     {
+        self.unfocus_dyn();
+
+        self
+    }
+
+    /// Removes focus if the element has focus.
+    fn unfocus_dyn(&mut self) {
         if self.is_focused() {
             FOCUS.with(|focus| {
                 *focus.borrow_mut() = None;
             });
         }
-
-        self
     }
 }

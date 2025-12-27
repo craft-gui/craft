@@ -33,7 +33,7 @@ pub trait  ElementInternals: ElementData {
         pointer: Option<Point>,
         text_context: &mut TextContext,
         scale_factor: f64,
-        dirty: bool,
+        _dirty: bool,
     ) {
         for child in &self.element_data().children {
             child.borrow_mut().apply_layout(

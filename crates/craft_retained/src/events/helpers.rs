@@ -37,7 +37,9 @@ pub(super) fn find_target(
 
     ELEMENTS.with_borrow_mut(|elements| {
         target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
-            elements.get(*id).unwrap().upgrade()
+            // When an element is removed from the dom, we do not remove it from targets.
+            // So we must handle it here.
+            elements.get(*id).and_then(|target| target.upgrade())
         }));
     });
 

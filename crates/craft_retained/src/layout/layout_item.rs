@@ -1,11 +1,10 @@
-use crate::layout::layout_context::LayoutContext;
 use crate::style::Style;
 use craft_primitives::geometry::borders::{CssRoundedRect, BOTTOM, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
-use taffy::{NodeId, Position, TaffyTree};
+use taffy::{NodeId, Position};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
