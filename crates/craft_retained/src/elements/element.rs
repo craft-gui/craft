@@ -11,7 +11,7 @@ use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
     Weight, Wrap,
 };
-use crate::CraftError;
+use crate::{request_layout, CraftError};
 use craft_primitives::geometry::Point;
 use craft_primitives::geometry::{ElementBox, TrblRectangle};
 use craft_primitives::Color;
@@ -64,6 +64,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
                 taffy_tree.set_children(parent_id, &tchildren).expect("Failed set taffy children");
                 taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty.");
+                request_layout();
             }
         });
 
