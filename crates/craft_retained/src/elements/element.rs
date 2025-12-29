@@ -587,53 +587,77 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_font_family(font_family);
+        self
+    }
+
+    fn set_font_family(&mut self, font_family: FontFamily) {
         self.style_mut().set_font_family(font_family);
         self.update_taffy_style();
-        self
     }
 
     fn color(&mut self, color: Color) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_color(color);
+        self
+    }
+
+    fn set_color(&mut self, color: Color) {
         self.style_mut().set_color(color);
         self.update_taffy_style();
-        self
     }
 
     fn background_color(&mut self, color: Color) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_background(color);
+        self.set_background_color(color);
         self
+    }
+
+    fn set_background_color(&mut self, color: Color) {
+        self.style_mut().set_background(color);
     }
 
     fn font_size(&mut self, font_size: f32) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_font_size(font_size);
+        self
+    }
+
+    fn set_font_size(&mut self, font_size: f32) {
         self.style_mut().set_font_size(font_size);
         self.update_taffy_style();
-        self
     }
 
     fn line_height(&mut self, line_height: f32) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_line_height(line_height);
+        self
+    }
+
+    fn set_line_height(&mut self, line_height: f32) {
         self.style_mut().set_line_height(line_height);
         self.update_taffy_style();
-        self
     }
 
     fn font_weight(&mut self, font_weight: Weight) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_font_weight(font_weight);
+        self
+    }
+
+    fn set_font_weight(&mut self, font_weight: Weight) {
         self.style_mut().set_font_weight(font_weight);
         self.update_taffy_style();
-        self
     }
 
     fn font_style(&mut self, font_style: FontStyle) -> &mut Self
