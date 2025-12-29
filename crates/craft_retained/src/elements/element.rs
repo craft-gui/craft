@@ -664,68 +664,100 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_font_style(font_style);
+        self
+    }
+
+    fn set_font_style(&mut self, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
         self.update_taffy_style();
-        self
     }
 
     fn underline(&mut self, underline: Option<Underline>) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_underline(underline);
+        self
+    }
+
+    fn set_underline(&mut self, underline: Option<Underline>) {
         self.style_mut().set_underline(underline);
         self.update_taffy_style();
-        self
     }
 
     fn overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_overflow(overflow_x, overflow_y);
+        self
+    }
+
+    fn set_overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
         self.update_taffy_style();
-        self
     }
 
     fn border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_border_color(TrblRectangle::new(top, right, bottom, left));
+        self.set_border_color(top, right, bottom, left);
         self
+    }
+
+    fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
+        self.style_mut().set_border_color(TrblRectangle::new(top, right, bottom, left));
     }
 
     fn border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_border_width(top, right, bottom, left);
+        self
+    }
+
+    fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_border_width(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-        self
     }
 
     fn border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_border_radius([top, right, bottom, left]);
+        self.set_border_radius(top, right, bottom, left);
         self
+    }
+
+    fn set_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
+        self.style_mut().set_border_radius([top, right, bottom, left]);
     }
 
     fn scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_scrollbar_color(scrollbar_color);
+        self.set_scrollbar_color(scrollbar_color);
         self
+    }
+
+    fn set_scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) {
+        self.style_mut().set_scrollbar_color(scrollbar_color);
     }
 
     fn scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
+        self.set_scrollbar_thumb_margin(top, right, bottom, left);
         self
+    }
+
+    fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
+        self.style_mut().set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
     }
 
     fn scrollbar_thumb_radius(
@@ -738,24 +770,36 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
-        self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
+        self.set_scrollbar_thumb_radius(top, right, bottom, left);
         self
+    }
+
+    fn set_scrollbar_thumb_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
+        self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
     }
 
     fn scrollbar_width(&mut self, scrollbar_width: f32) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_scrollbar_width(scrollbar_width);
+        self.set_scrollbar_width(scrollbar_width);
         self
+    }
+
+    fn set_scrollbar_width(&mut self, scrollbar_width: f32) {
+        self.style_mut().set_scrollbar_width(scrollbar_width);
     }
 
     fn selection_color(&mut self, selection_color: Color) -> &mut Self
     where
         Self: Sized,
     {
-        self.style_mut().set_selection_color(selection_color);
+        self.set_selection_color(selection_color);
         self
+    }
+
+    fn set_selection_color(&mut self, selection_color: Color) {
+        self.style_mut().set_selection_color(selection_color);
     }
 
     /// Sets focus on the specified element, if it can be focused.
