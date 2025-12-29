@@ -522,45 +522,65 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_justify_content(justify_content);
+        self
+    }
+
+    fn set_justify_content(&mut self, justify_content: Option<JustifyContent>) {
         self.style_mut().set_justify_content(justify_content);
         self.update_taffy_style();
-        self
     }
 
     fn flex_direction(&mut self, flex_direction: FlexDirection) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_flex_direction(flex_direction);
+        self
+    }
+
+    fn set_flex_direction(&mut self, flex_direction: FlexDirection) {
         self.style_mut().set_flex_direction(flex_direction);
         self.update_taffy_style();
-        self
     }
 
     fn flex_grow(&mut self, flex_grow: f32) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_flex_grow(flex_grow);
+        self
+    }
+
+    fn set_flex_grow(&mut self, flex_grow: f32) {
         self.style_mut().set_flex_grow(flex_grow);
         self.update_taffy_style();
-        self
     }
 
     fn flex_shrink(&mut self, flex_shrink: f32) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_flex_shrink(flex_shrink);
+        self
+    }
+
+    fn set_flex_shrink(&mut self, flex_shrink: f32) {
         self.style_mut().set_flex_shrink(flex_shrink);
         self.update_taffy_style();
-        self
     }
 
     fn flex_basis(&mut self, flex_basis: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_flex_basis(flex_basis);
+        self
+    }
+
+    fn set_flex_basis(&mut self, flex_basis: Unit) {
         self.style_mut().set_flex_basis(flex_basis);
         self.update_taffy_style();
-        self
     }
 
     fn font_family(&mut self, font_family: FontFamily) -> &mut Self
