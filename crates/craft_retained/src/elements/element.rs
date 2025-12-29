@@ -496,18 +496,26 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_wrap(wrap);
+        self
+    }
+
+    fn set_wrap(&mut self, wrap: Wrap) {
         self.style_mut().set_wrap(wrap);
         self.update_taffy_style();
-        self
     }
 
     fn align_items(&mut self, align_items: Option<AlignItems>) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_align_items(align_items);
+        self
+    }
+
+    fn set_align_items(&mut self, align_items: Option<AlignItems>) {
         self.style_mut().set_align_items(align_items);
         self.update_taffy_style();
-        self
     }
 
     fn justify_content(&mut self, justify_content: Option<JustifyContent>) -> &mut Self
