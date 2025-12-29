@@ -366,90 +366,130 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_margin(top, right, bottom, left);
+        self
+    }
+
+    fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_margin(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-        self
     }
 
     fn padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_padding(top, right, bottom, left);
+        self
+    }
+
+    fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_padding(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-        self
     }
 
     fn gap(&mut self, row_gap: Unit, column_gap: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_gap(row_gap, column_gap);
+        self
+    }
+
+    fn set_gap(&mut self, row_gap: Unit, column_gap: Unit) {
         self.style_mut().set_gap([row_gap, column_gap]);
         self.update_taffy_style();
-        self
     }
 
     fn inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_inset(top, right, bottom, left);
+        self
+    }
+
+    fn set_inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-        self
     }
 
     fn min_width(&mut self, min_width: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_min_width(min_width);
+        self
+    }
+
+    fn set_min_width(&mut self, min_width: Unit) {
         self.style_mut().set_min_width(min_width);
         self.update_taffy_style();
-        self
     }
 
     fn min_height(&mut self, min_height: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_min_height(min_height);
+        self
+    }
+
+    fn set_min_height(&mut self, min_height: Unit) {
         self.style_mut().set_min_height(min_height);
         self.update_taffy_style();
-        self
     }
 
     fn width(&mut self, width: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_width(width);
+        self
+    }
+
+    fn set_width(&mut self, width: Unit) {
         self.style_mut().set_width(width);
         self.update_taffy_style();
-        self
     }
 
     fn height(&mut self, height: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_height(height);
+        self
+    }
+
+    fn set_height(&mut self, height: Unit) {
         self.style_mut().set_height(height);
         self.update_taffy_style();
-        self
     }
 
     fn max_width(&mut self, max_width: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_max_width(max_width);
+        self
+    }
+
+    fn set_max_width(&mut self, max_width: Unit) {
         self.style_mut().set_max_width(max_width);
         self.update_taffy_style();
-        self
     }
 
     fn max_height(&mut self, max_height: Unit) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_max_height(max_height);
+        self
+    }
+
+    fn set_max_height(&mut self, max_height: Unit) {
         self.style_mut().set_max_height(max_height);
         self.update_taffy_style();
-        self
     }
 
     fn wrap(&mut self, wrap: Wrap) -> &mut Self
