@@ -327,18 +327,26 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_display(display);
+        self
+    }
+
+    fn set_display(&mut self, display: Display) {
         self.style_mut().set_display(display);
         self.update_taffy_style();
-        self
     }
 
     fn box_sizing(&mut self, box_sizing: BoxSizing) -> &mut Self
     where
         Self: Sized,
     {
+        self.set_box_sizing(box_sizing);
+        self
+    }
+
+    fn set_box_sizing(&mut self, box_sizing: BoxSizing) {
         self.style_mut().set_box_sizing(box_sizing);
         self.update_taffy_style();
-        self
     }
 
     fn position(&mut self, position: Position) -> &mut Self
