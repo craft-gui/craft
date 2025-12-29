@@ -353,9 +353,13 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
+        self.set_position(position);
+        self
+    }
+
+    fn set_position(&mut self, position: Position) {
         self.style_mut().set_position(position);
         self.update_taffy_style();
-        self
     }
 
     fn margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
