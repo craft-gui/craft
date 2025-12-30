@@ -7,14 +7,17 @@ use taffy::{Layout, NodeId, PrintTree, Size, Style};
 pub struct TaffyTree {
     inner: taffy::TaffyTree<LayoutContext>,
     /// True if at least one node is dirty.
-    dirty: bool,
+    is_layout_dirty: bool,
+    /// True if the layout should be re-applied.
+    is_apply_layout_dirty: bool,
 }
 
 impl TaffyTree {
     pub(crate) fn new() -> Self {
         Self {
             inner: taffy::TaffyTree::<LayoutContext>::new(),
-            dirty: true,
+            is_layout_dirty: true,
+            is_apply_layout_dirty: true,
         }
     }
 
@@ -24,10 +27,12 @@ impl TaffyTree {
 
     pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
         self.inner.add_child(parent, child).unwrap();
+        self.request_layout();
     }
 
     pub fn mark_dirty(&mut self, node: NodeId) {
         self.inner.mark_dirty(node).unwrap();
+        self.request_layout();
     }
 
     pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
@@ -36,6 +41,7 @@ impl TaffyTree {
 
     pub fn set_children(&mut self, parent: NodeId, children: &[NodeId]) {
         self.inner.set_children(parent, children).unwrap();
+        self.request_layout();
     }
 
     pub fn compute_layout(
@@ -61,10 +67,10 @@ impl TaffyTree {
                 },
             )
             .unwrap();
+        self.is_layout_dirty = false;
     }
 
-    // Remove the entire layout subtree.
-
+    /// Remove the entire layout subtree.
     pub fn remove_subtree(&mut self, node: NodeId) {
         // Can we avoid this allocation?
         let children = self.inner.children(node).unwrap();
@@ -74,11 +80,13 @@ impl TaffyTree {
         }
 
         self.inner.remove(node).map(|_| ()).unwrap();
+        self.request_layout();
     }
 
     #[inline]
     pub fn set_style(&mut self, node: NodeId, style: Style) {
         self.inner.set_style(node, style).unwrap();
+        self.request_layout();
     }
 
     /// Creates and adds a new unattached leaf node to the tree, and returns the [`NodeId`] of the new node
@@ -92,6 +100,7 @@ impl TaffyTree {
     #[inline]
     pub fn set_node_context(&mut self, node: NodeId, measure: Option<LayoutContext>) {
         self.inner.set_node_context(node, measure).unwrap();
+        self.request_layout();
     }
 
     /// Return this node layout relative to its parent
@@ -109,5 +118,31 @@ impl TaffyTree {
     #[inline]
     pub fn mark_seen(&mut self, node: NodeId) {
         self.inner.mark_seen(node);
+    }
+
+    #[inline(always)]
+    pub fn request_layout(&mut self) {
+        self.is_layout_dirty = true;
+        self.is_apply_layout_dirty = true;
+    }
+
+    #[inline(always)]
+    pub fn request_apply_layout(&mut self) {
+        self.is_layout_dirty = true;
+        self.is_apply_layout_dirty = true;
+    }
+
+    #[inline(always)]
+    pub fn is_layout_dirty(&self) -> bool {
+        self.is_layout_dirty
+    }
+
+    #[inline(always)]
+    pub fn is_apply_layout_dirty(&self) -> bool {
+        self.is_apply_layout_dirty
+    }
+
+    pub fn apply_layout(&mut self) {
+        self.is_apply_layout_dirty = false;
     }
 }

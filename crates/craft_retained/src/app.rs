@@ -61,7 +61,6 @@ thread_local! {
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
-    pub(crate) static LAYOUT_DIRTY: RefCell<bool> = RefCell::new(true);
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
 }
@@ -636,8 +635,6 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
-    let dirty = LAYOUT_DIRTY.with_borrow(|status| *status);
-
     let root_node = root_element
         .borrow()
         .element_data()
@@ -645,52 +642,49 @@ fn layout(
         .taffy_node_id
         .expect("A root element must have a layout node.");
 
-    if !dirty {
-        return root_node;
-    }
-
     let available_space: taffy::Size<AvailableSpace> = taffy::Size {
         width: AvailableSpace::Definite(window_size.width),
         height: AvailableSpace::Definite(window_size.height),
     };
 
-    {
+    if taffy_tree.is_layout_dirty() {
         /*let span = span!(Level::INFO, "layout(taffy)");
         let _enter = span.enter();*/
-        //println!("before layout");
-        //taffy_tree.print_tree(root_node);
-        taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone())
+        taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
     }
-    //println!("after layout");
-    //taffy_tree.print_tree(root_node);
 
-    let transform = Affine::IDENTITY;
-
-    let mut layout_order: u32 = 0;
-    {
+    if taffy_tree.is_apply_layout_dirty() {
         /*let span = span!(Level::INFO, "layout(apply)");
-        let _enter = span.enter();*/
+                let _enter = span.enter();*/
+
+        // TODO: move into taffy_tree
+        let mut layout_order: u32 = 0;
         root_element.borrow_mut().apply_layout(
             taffy_tree,
             origin,
             &mut layout_order,
-            transform,
+            Affine::IDENTITY,
             pointer,
             text_context,
             None,
             scale_factor,
         );
+        taffy_tree.apply_layout();
     }
-
-    LAYOUT_DIRTY.with_borrow_mut(|status| {
-        *status = false;
-    });
 
     root_node
 }
 
+#[inline]
 pub fn request_layout() {
-    LAYOUT_DIRTY.with_borrow_mut(|status| {
-        *status = true;
+    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        taffy_tree.request_layout();
+    });
+}
+
+#[inline]
+pub fn request_apply_layout() {
+    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        taffy_tree.request_apply_layout();
     });
 }
