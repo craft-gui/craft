@@ -216,7 +216,7 @@ impl CssRoundedRect {
         let mut current_arc = FIRST_ARC;
 
         if let Some(arc) = &self.corners_arcs[corner][current_arc] {
-            path.extend(&arc.to_path(0.01));
+            path.extend(&arc.to_path(0.1));
         } else {
             path.move_to(rect_corner);
         }
@@ -224,7 +224,7 @@ impl CssRoundedRect {
         current_arc = NEXT_ARC[current_arc];
 
         if let Some(arc) = &self.corners_arcs[next_corner][current_arc] {
-            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+            extend_path_with_arc(&mut path, &arc.to_path(0.1));
         } else {
             path.line_to(next_rect_corner);
         }
@@ -232,7 +232,7 @@ impl CssRoundedRect {
         current_arc = NEXT_ARC[current_arc];
 
         if let Some(arc) = &self.corners_arcs[next_corner][current_arc] {
-            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+            extend_path_with_arc(&mut path, &arc.to_path(0.1));
         } else {
             let offset = CORNER_RADIUS_SIGN[next_corner];
             let horizontal_side = CORNER_HORIZONTAL_SIDE[next_corner];
@@ -249,7 +249,7 @@ impl CssRoundedRect {
         current_arc = NEXT_ARC[current_arc];
 
         if let Some(arc) = &self.corners_arcs[corner][current_arc] {
-            extend_path_with_arc(&mut path, &arc.to_path(0.01));
+            extend_path_with_arc(&mut path, &arc.to_path(0.1));
         } else {
             let offset = CORNER_RADIUS_SIGN[corner];
             let horizontal_side = CORNER_HORIZONTAL_SIDE[corner];
