@@ -1,6 +1,5 @@
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::events::{CraftMessage, Event};
-use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::{draw_borders_generic, CssComputedBorder, LayoutItem};
 use crate::style::{Display, Style};
 use crate::text::text_context::TextContext;
@@ -11,7 +10,7 @@ use rustc_hash::FxHashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
-use taffy::{Overflow, TaffyTree};
+use taffy::{Overflow};
 
 use crate::elements::core::element_data::ElementData;
 use crate::elements::Element;
@@ -19,6 +18,7 @@ use crate::elements::Element;
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
 use crate::app::TAFFY_TREE;
+use crate::layout::TaffyTree;
 use crate::request_layout;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
@@ -27,7 +27,7 @@ pub trait  ElementInternals: ElementData {
     /// A helper to apply the layout for all children.
     fn apply_layout_children(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         z_index: &mut u32,
         transform: Affine,
         pointer: Option<Point>,
@@ -69,12 +69,12 @@ pub trait  ElementInternals: ElementData {
     }
 
     /// A helper to re-apply the style to the layout node when dirty.
-    fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree<LayoutContext>) {
+    fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree) {
         let element_data = self.element_data_mut();
         if element_data.style.is_dirty {
             let node_id = element_data.layout_item.taffy_node_id.unwrap();
             let style: taffy::Style = element_data.style.to_taffy_style();
-            taffy_tree.set_style(node_id, style).expect("Failed to set style on node.");
+            taffy_tree.set_style(node_id, style);
             element_data.style.is_dirty = false;
         }
     }
@@ -103,7 +103,7 @@ pub trait  ElementInternals: ElementData {
     #[allow(clippy::too_many_arguments)]
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -372,7 +372,7 @@ pub trait  ElementInternals: ElementData {
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-               taffy_tree.mark_dirty(id).expect("Failed to mark taffy node as dirty");
+               taffy_tree.mark_dirty(id);
             });
         }
     }
@@ -384,7 +384,7 @@ pub trait  ElementInternals: ElementData {
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.set_style(id, self.element_data().style.to_taffy_style()).expect("Failed to set style.");
+                taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
             });
         }
     }

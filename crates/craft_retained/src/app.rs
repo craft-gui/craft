@@ -1,8 +1,7 @@
 use crate::elements::ElementIdMap;
-use crate::events::{Event, EventDispatcher};
 use crate::events::internal::InternalMessage;
-use crate::events::{CraftMessage};
-use crate::layout::layout_context::measure_content;
+use crate::events::CraftMessage;
+use crate::events::{Event, EventDispatcher};
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use crate::{RendererBox, WindowContext};
@@ -12,9 +11,9 @@ use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use craft_runtime::CraftRuntimeHandle;
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::cell::{Cell};
+use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -36,13 +35,13 @@ use web_time as time;
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::Element;
-use crate::layout::layout_context::LayoutContext;
+use crate::layout::TaffyTree;
 use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
 use craft_runtime::Sender;
 use std::time::Duration;
-use taffy::{AvailableSpace, NodeId, TaffyTree};
+use taffy::{AvailableSpace, NodeId};
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use ui_events::ScrollDelta;
@@ -58,7 +57,7 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static TAFFY_TREE: RefCell<TaffyTree<LayoutContext>> = RefCell::new(TaffyTree::new());
+    pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
@@ -408,7 +407,7 @@ impl App {
             self.root.clone(),
             &mut self.text_context,
             &mut self.render_list,
-            &mut self.target_scratch
+            &mut self.target_scratch,
         );
         self.window.clone().unwrap().request_redraw();
     }
@@ -442,7 +441,7 @@ impl App {
         match resource_event {
             ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
                 IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
-                   in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_identifier);
+                    in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_identifier);
                 });
                 if let Some(_text_context) = self.text_context.as_mut()
                     && resource_type == ResourceType::Font
@@ -548,7 +547,7 @@ impl App {
                 self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
             }
 
-        renderer.sort_and_cull_render_list(&mut self.render_list);
+            renderer.sort_and_cull_render_list(&mut self.render_list);
 
             let window = Rectangle {
                 x: 0.0,
@@ -589,10 +588,16 @@ impl App {
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
                 for (resource, resource_type) in pending_resources.drain(..) {
-                    if self.resource_manager.contains(&resource) || in_progress.contains(&(resource.clone(), resource_type)) {
+                    if self.resource_manager.contains(&resource)
+                        || in_progress.contains(&(resource.clone(), resource_type))
+                    {
                         continue;
                     }
-                    self.resource_manager.async_download_resource_and_send_message_on_finish(self.app_sender.clone(), resource.clone(), resource_type);
+                    self.resource_manager.async_download_resource_and_send_message_on_finish(
+                        self.app_sender.clone(),
+                        resource.clone(),
+                        resource_type,
+                    );
                     in_progress.push_back((resource, resource_type));
                 }
             });
@@ -622,7 +627,7 @@ fn style_root_element(root: &mut dyn Element, root_size: LogicalSize<f32>) {
 
 #[allow(clippy::too_many_arguments)]
 fn layout(
-    taffy_tree: &mut TaffyTree<LayoutContext>,
+    taffy_tree: &mut TaffyTree,
     root_element: Rc<RefCell<dyn Element>>,
     window_size: LogicalSize<f32>,
     text_context: &mut TextContext,
@@ -631,11 +636,10 @@ fn layout(
     scale_factor: f64,
     pointer: Option<Point>,
 ) -> NodeId {
-    let dirty = LAYOUT_DIRTY.with_borrow(|status| {
-        *status
-    });
+    let dirty = LAYOUT_DIRTY.with_borrow(|status| *status);
 
-    let root_node = root_element.borrow()
+    let root_node = root_element
+        .borrow()
         .element_data()
         .layout_item
         .taffy_node_id
@@ -655,24 +659,9 @@ fn layout(
         let _enter = span.enter();*/
         //println!("before layout");
         //taffy_tree.print_tree(root_node);
-        taffy_tree
-            .compute_layout_with_measure(
-                root_node,
-                available_space,
-                |known_dimensions, available_space, _node_id, node_context, style| {
-                    measure_content(
-                        known_dimensions,
-                        available_space,
-                        node_context,
-                        text_context,
-                        resource_manager.clone(),
-                        style,
-                    )
-                },
-            )
-            .unwrap();
+        taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone())
     }
-        //println!("after layout");
+    //println!("after layout");
     //taffy_tree.print_tree(root_node);
 
     let transform = Affine::IDENTITY;

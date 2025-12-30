@@ -4,7 +4,6 @@ use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
 use crate::events::{CraftMessage, Event};
-use crate::layout::layout_context::LayoutContext;
 use crate::palette;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
@@ -16,9 +15,9 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::{PrintTree, TaffyTree};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
+use crate::layout::TaffyTree;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -84,7 +83,7 @@ impl Slider {
 
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style()).expect("TODO: panic message");
+            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
@@ -242,7 +241,7 @@ impl ElementInternals for Slider {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -252,7 +251,7 @@ impl ElementInternals for Slider {
         scale_factor: f64,
     ) {
         let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node).unwrap();
+        let layout = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
         let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;

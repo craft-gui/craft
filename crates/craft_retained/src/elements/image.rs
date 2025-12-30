@@ -16,7 +16,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::TaffyTree;
+use crate::layout::TaffyTree;
 
 /// Displays an image.
 pub struct Image {
@@ -38,7 +38,7 @@ impl Image {
         let resource_identifier_2= resource_identifier.clone();
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let context = LayoutContext::Image(ImageContext::new(resource_identifier_2));
-            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
+            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context);
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
@@ -62,7 +62,7 @@ impl Image {
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let context = LayoutContext::Image(ImageContext::new(resource_identifier));
             let node = self.element_data.layout_item.taffy_node_id.expect("Failed to get Image node");
-            taffy_tree.set_node_context(node, Some(context)).expect("Failed to set Image node context");
+            taffy_tree.set_node_context(node, Some(context));
         });
 
         self
@@ -99,7 +99,7 @@ impl ElementInternals for Image {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -108,7 +108,7 @@ impl ElementInternals for Image {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap()).unwrap();
+        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap());
         self.resolve_box(position, transform, layout, z_index);
 
         self.apply_borders(scale_factor);

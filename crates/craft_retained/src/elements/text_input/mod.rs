@@ -12,7 +12,6 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::{Deref};
 use std::rc::{Rc, Weak};
-use taffy::{PrintTree, TaffyTree};
 
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
@@ -30,6 +29,7 @@ use kurbo::Affine;
 use parley::{BoundingBox};
 use ui_events::pointer::PointerButton;
 use winit::event::Ime;
+use crate::layout::TaffyTree;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -84,8 +84,7 @@ impl TextInput {
                 element: me.borrow().me.clone().unwrap(),
             });
             let node_id = taffy_tree
-                .new_leaf_with_context(me.borrow().element_data.current_style().to_taffy_style(), context)
-                .expect("TODO: panic message");
+                .new_leaf_with_context(me.borrow().element_data.current_style().to_taffy_style(), context);
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
             me.borrow_mut().state.taffy_node(Some(node_id));
         });
@@ -111,7 +110,7 @@ impl crate::elements::core::ElementData for TextInput {
 impl ElementInternals for TextInput {
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -129,7 +128,7 @@ impl ElementInternals for TextInput {
         self.element_data.layout_item.has_new_layout = has_new_layout;
 
         if dirty {
-            let result = taffy_tree.layout(node).unwrap();
+            let result = taffy_tree.layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
             self.apply_borders(scale_factor);
@@ -145,7 +144,7 @@ impl ElementInternals for TextInput {
 
         // For manual scroll updates.
         if !dirty && self.element_data.scroll_state.map(|scroll_state| scroll_state.is_new()).unwrap_or_default() {
-            let result = taffy_tree.layout(node).unwrap();
+            let result = taffy_tree.layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.scroll_state.as_mut().unwrap().mark_old();
         }

@@ -24,7 +24,7 @@ use kurbo::Affine;
 use rustc_hash::FxHashMap;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-use taffy::{AvailableSpace, PrintTree, Size, TaffyTree};
+use taffy::{AvailableSpace, Size};
 use time::{Duration, Instant};
 use winit::dpi;
 #[cfg(target_arch = "wasm32")]
@@ -38,6 +38,7 @@ use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
 use smol_str::{SmolStr, ToSmolStr};
 use ui_events::pointer::{PointerButton, PointerId};
+use crate::layout::TaffyTree;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -116,7 +117,7 @@ impl Text {
             let context = LayoutContext::Text(TaffyTextContext{
                 element: me.borrow().me.clone().unwrap()
             });
-            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context).expect("TODO: panic message");
+            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context);
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
@@ -268,7 +269,7 @@ impl ElementInternals for Text {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -278,7 +279,7 @@ impl ElementInternals for Text {
         scale_factor: f64,
     ) {
         let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let result = taffy_tree.layout(node).unwrap();
+        let result = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
         let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position;

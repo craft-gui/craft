@@ -5,7 +5,6 @@ use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
 use crate::events::{CraftMessage, Event};
-use crate::layout::layout_context::LayoutContext;
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
@@ -14,31 +13,28 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use taffy::{PrintTree, TaffyTree};
+use crate::layout::TaffyTree;
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 pub struct Container {
     element_data: ElementData,
-    me: Option<Weak<RefCell<Container>>>,
 }
 
 impl Container {
     pub fn new() -> Rc<RefCell<Self>> {
         let me = Rc::new(RefCell::new(Self {
             element_data: ElementData::new(true),
-            me: None,
         }));
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style()).expect("TODO: panic message");
+            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
         let me_element: Rc<RefCell<dyn Element>> = me.clone();
 
-        me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
 
         ELEMENTS.with_borrow_mut(|elements| {
@@ -64,7 +60,7 @@ impl Element for Container {
     where
         Self: Sized,
     {
-        let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
+        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone().unwrap();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
 
@@ -73,9 +69,9 @@ impl Element for Container {
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id).unwrap();
+                taffy_tree.add_child(parent_id, child_id);
 
-                taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
+                taffy_tree.mark_dirty(parent_id);
             }
         });
 
@@ -91,7 +87,7 @@ impl Element for Container {
     where
         Self: Sized,
     {
-        let me: Weak<RefCell<dyn Element>> = self.me.clone().unwrap() as Weak<RefCell<dyn Element>>;
+        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone().unwrap();
         let children: Vec<_> = children.into_iter().collect();
 
         for child in &children {
@@ -105,10 +101,10 @@ impl Element for Container {
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             for child in &children {
                 if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
-                    taffy_tree.add_child(parent_id, child_id).unwrap();
+                    taffy_tree.add_child(parent_id, child_id);
                 }
             }
-            taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty");
+            taffy_tree.mark_dirty(parent_id);
         });
 
         self
@@ -127,7 +123,7 @@ impl ElementInternals for Container {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree<LayoutContext>,
+        taffy_tree: &mut TaffyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -137,7 +133,7 @@ impl ElementInternals for Container {
         scale_factor: f64,
     ) {
         let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node).unwrap();
+        let layout = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
         let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;

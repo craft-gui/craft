@@ -166,7 +166,7 @@ impl TextInputState {
 
         if let Some(id) = self.taffy_node {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.mark_dirty(id).expect("Failed to mark node dirty");
+                taffy_tree.mark_dirty(id);
             })
         }
     }

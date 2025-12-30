@@ -6,7 +6,7 @@ use crate::events::{
     KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler,
     PointerUpdateHandler, SliderValueChangedHandler,
 };
-use crate::layout::layout_context::LayoutContext;
+
 use crate::style::{
     AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
     Weight, Wrap,
@@ -18,7 +18,7 @@ use craft_primitives::Color;
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use taffy::{BoxSizing, NodeId, Overflow, Position, TaffyResult, TaffyTree};
+use taffy::{BoxSizing, Overflow, Position};
 use ui_events::pointer::PointerId;
 
 /// The element trait for end-users.
@@ -47,7 +47,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
                 && let Some(child_2_id) = child_2_id
             {
                 // There isn't a swap API in the taffy tree. Instead swap the children and call set_children.
-                let mut tchildren = taffy_tree.children(parent_id).expect("Failed to get taffy children").to_vec();
+                let mut tchildren = taffy_tree.children(parent_id).to_vec();
 
                 let i1 = tchildren
                     .iter()
@@ -62,8 +62,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
                 tchildren.swap(i1, i2);
 
-                taffy_tree.set_children(parent_id, &tchildren).expect("Failed set taffy children");
-                taffy_tree.mark_dirty(parent_id).expect("Failed to mark taffy node dirty.");
+                taffy_tree.set_children(parent_id, &tchildren);
+                taffy_tree.mark_dirty(parent_id);
                 request_layout();
             }
         });
@@ -94,28 +94,15 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
         child.borrow_mut().element_data_mut().parent = None;
 
-        // Remove the entire layout subtree.
-
-        fn remove_subtree(taffy: &mut TaffyTree<LayoutContext>, node: NodeId) -> TaffyResult<()> {
-            // Can we avoid this allocation?
-            let children = taffy.children(node)?;
-
-            for child in children {
-                remove_subtree(taffy, child)?;
-            }
-
-            taffy.remove(node).map(|_| ())
-        }
-
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
 
             if let Some(child_id) = child_id {
-                remove_subtree(taffy_tree, child_id).expect("Failed to remove taffy element.");
+                taffy_tree.remove_subtree(child_id);
             }
 
             let parent_id = self.element_data().layout_item.taffy_node_id;
-            taffy_tree.mark_dirty(parent_id.unwrap()).expect("Failed to mark taffy node dirty.");
+            taffy_tree.mark_dirty(parent_id.unwrap());
         });
 
         // TODO: Move to document
