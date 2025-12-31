@@ -23,7 +23,6 @@ pub struct Image {
     is_image_dirty: bool,
     resource_identifier: ResourceIdentifier,
     element_data: ElementData,
-    me: Option<Weak<RefCell<Image>>>,
 }
 
 impl Image {
@@ -32,7 +31,6 @@ impl Image {
             is_image_dirty: false,
             resource_identifier: resource_identifier.clone(),
             element_data: ElementData::new(true),
-            me: None,
         }));
 
         let resource_identifier_2= resource_identifier.clone();
@@ -46,7 +44,7 @@ impl Image {
             pending_resources.push_back((resource_identifier, ResourceType::Image));
         });
 
-        me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+        me.borrow_mut().element_data.set_element(me.clone());
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
