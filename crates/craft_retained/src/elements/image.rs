@@ -15,7 +15,7 @@ use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
-use std::rc::{Rc, Weak};
+use std::rc::{Rc};
 use crate::layout::TaffyTree;
 
 /// Displays an image.
