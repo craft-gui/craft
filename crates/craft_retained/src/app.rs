@@ -50,6 +50,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
+use crate::window_manager::WindowManager;
 
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
@@ -63,6 +64,8 @@ thread_local! {
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
+
+    pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
 }
 
 /// Enqueues an event at the back of the dispatch queue.

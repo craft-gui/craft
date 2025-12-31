@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
+use crate::app::{TAFFY_TREE, WINDOW_MANAGER};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -14,27 +14,36 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
+use winit::window::Window as WinitWindow;
+
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
-pub struct Container {
+pub struct Window {
     element_data: ElementData,
+    winit_window: Option<Rc<RefCell<WinitWindow>>>,
 }
 
-impl Container {
+impl Window {
     pub fn new() -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Container>>| {
-            RefCell::new(Container {
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
                 element_data: ElementData::new(me.clone(), true),
+                winit_window: None,
             })
         });
 
         me.borrow_mut().element_data.crate_layout_node(None);
+
+        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            window_manager.add_window(me.clone());
+        });
+
         me
     }
 }
 
-impl crate::elements::core::ElementData for Container {
+impl crate::elements::core::ElementData for Window {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -44,7 +53,7 @@ impl crate::elements::core::ElementData for Container {
     }
 }
 
-impl Element for Container {
+impl Element for Window {
     fn push(&mut self, child: Rc<RefCell<dyn Element>>) -> &mut Self
     where
         Self: Sized,
@@ -105,7 +114,7 @@ impl Element for Container {
     }
 }
 
-impl ElementInternals for Container {
+impl ElementInternals for Window {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

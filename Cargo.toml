@@ -6,6 +6,7 @@ members = [
     "crates/craft_logger",
     "examples/util",
     "examples/counter_retained",
+    "examples/multiwindow",
     "examples/pointer_events",
     "examples/text",
     "examples/jsframeworkbench",

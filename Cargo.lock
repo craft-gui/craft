@@ -2200,6 +2200,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "multiwindow"
+version = "0.1.0"
+dependencies = [
+ "craft_renderer",
+ "craft_retained",
+ "util",
+]
+
+[[package]]
 name = "naga"
 version = "26.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

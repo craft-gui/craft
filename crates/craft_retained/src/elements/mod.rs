@@ -12,6 +12,7 @@ mod image;
 mod text_input;
 mod element_id_map;
 mod slider;
+mod window;
 
 pub use container::Container;
 pub use text::Text;
@@ -20,3 +21,4 @@ pub use text_input::TextInput;
 pub use image::Image;
 pub use element::Element;
 pub use element_id_map::ElementIdMap;
+pub use window::Window;

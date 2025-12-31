@@ -27,7 +27,7 @@ use craft_runtime::Receiver;
 use craft_runtime::Sender;
 use craft_runtime::CraftRuntimeHandle;
 
-use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS};
+use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER};
 use std::sync::Arc;
 use ui_events::pointer::{PointerEvent};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
@@ -80,6 +80,10 @@ impl ApplicationHandler for CraftWinitState {
             window_attributes =
                 window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
         }
+        
+        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            window_manager.create_windows(event_loop);
+        });
 
         #[cfg(target_arch = "wasm32")]
         let window_attributes = {
