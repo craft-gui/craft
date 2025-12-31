@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::app::{TAFFY_TREE};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -11,7 +11,6 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use crate::layout::TaffyTree;
 
@@ -28,18 +27,8 @@ impl Container {
             element_data: ElementData::new(true),
         }));
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
-            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
-        });
-
-        let me_element: Rc<RefCell<dyn Element>> = me.clone();
-
-        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
-
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().deref());
-        });
+        me.borrow_mut().element_data.crate_layout_node(None);
+        me.borrow_mut().element_data.set_element(me.clone());
 
         me
     }

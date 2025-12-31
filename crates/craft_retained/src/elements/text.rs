@@ -13,32 +13,30 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 const MAX_CACHE_SIZE: usize = 16;
 
-#[cfg(feature = "accesskit")]
-use accesskit::{Action, Role};
-use kurbo::Affine;
-use rustc_hash::FxHashMap;
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
-use taffy::{AvailableSpace, Size};
-use time::{Duration, Instant};
-use winit::dpi;
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::Element;
+use crate::layout::TaffyTree;
+#[cfg(feature = "accesskit")]
+use accesskit::{Action, Role};
 use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
+use kurbo::Affine;
+use rustc_hash::FxHashMap;
 use smol_str::{SmolStr, ToSmolStr};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+use taffy::{AvailableSpace, Size};
+use time::{Duration, Instant};
 use ui_events::pointer::{PointerButton, PointerId};
-use crate::layout::TaffyTree;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+use winit::dpi;
 
 // A stateful element that shows text.
 #[derive(Clone, Default)]
@@ -49,7 +47,7 @@ pub struct Text {
     me: Option<Weak<RefCell<Self>>>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct TextState {
     text: SmolStr,
     scale_factor: f32,
@@ -79,51 +77,21 @@ pub struct TextState {
 
 impl Text {
     pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        let text_state = TextState {
-            text: SmolStr::new(""),
-            scale_factor: 1.0,
-            selection: Selection::default(),
-            text_render: None,
-            layout: None,
-            cache: Default::default(),
-            current_layout_key: None,
-            last_requested_measure_key: None,
-            current_render_key: None,
-            content_widths: None,
-            last_click_time: None,
-            click_count: 0,
-            pointer_down: false,
-            cursor_pos: Point::new(0.0, 0.0),
-            start_time: None,
-            blink_period: Default::default(),
-            is_layout_dirty: false,
-            is_render_dirty: false,
-        };
         let me = Rc::new(RefCell::new(Text {
             element_data: Default::default(),
             selectable: true,
-            state: text_state,
+            state: TextState::default(),
             me: None,
         }));
-        let me2 = me.clone();
-        me.borrow_mut().me = Some(Rc::downgrade(&me2));
 
-        let me_element: Rc<RefCell<dyn Element>> = me.clone();
-        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
+        me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
+        let text_context = Some(LayoutContext::Text(TaffyTextContext {
+            element: me.borrow().me.clone().unwrap(),
+        }));
+        me.borrow_mut().element_data.crate_layout_node(text_context);
+        me.borrow_mut().element_data.set_element(me.clone());
 
         me.borrow_mut().text(text);
-
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let context = LayoutContext::Text(TaffyTextContext{
-                element: me.borrow().me.clone().unwrap()
-            });
-            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context);
-            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
-        });
-
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().deref());
-        });
 
         me
     }
@@ -223,7 +191,8 @@ impl ElementInternals for Text {
         parent_index: Option<usize>,
         scale_factor: f64,
     ) {
-        let padding_box = self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box =
+            self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.layout.is_none() {
@@ -282,7 +251,9 @@ impl ElementInternals for Text {
         let result = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position;
+        let dirty = has_new_layout
+            || transform != self.element_data.layout_item.get_transform()
+            || position != self.element_data.layout_item.position;
         self.element_data.layout_item.has_new_layout = has_new_layout;
         if dirty {
             self.resolve_box(position, transform, result, z_index);
@@ -303,7 +274,7 @@ impl ElementInternals for Text {
             );
         }
 
-        state.try_update_text_render(text_context);
+        state.try_update_text_render(text_context, self.element_data.style.selection_color());
     }
 
     fn on_event(
@@ -316,7 +287,6 @@ impl ElementInternals for Text {
         if !self.selectable {
             return;
         }
-
 
         let _content_rect = self.computed_box().content_rectangle();
 
@@ -367,7 +337,8 @@ impl ElementInternals for Text {
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
-                    state.cursor_pos = pointer_moved.current.logical_point() - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
+                    state.cursor_pos = pointer_moved.current.logical_point()
+                        - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
                         state.update_text_selection(self.element_data.style.selection_color());
@@ -431,7 +402,7 @@ impl TextState {
             AvailableSpace::Definite(width) => {
                 let scaled_width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
                 Some(scaled_width.clamp(content_widths.min, content_widths.max))
-            },
+            }
         });
 
         let height_constraint = known_dimensions.height.or(match available_space.height {
@@ -440,7 +411,7 @@ impl TextState {
             AvailableSpace::Definite(height) => {
                 let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor as f64).0;
                 Some(scaled_height)
-            },
+            }
         });
 
         let layout = self.layout.as_mut().unwrap();
@@ -469,7 +440,7 @@ impl TextState {
         size
     }
 
-    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext) {
+    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext, selection_color: Color) {
         if self.current_render_key == self.current_layout_key {
             return;
         }
@@ -477,6 +448,8 @@ impl TextState {
         let layout = self.layout.as_ref().unwrap();
         self.text_render = Some(text_render_data::from_editor(layout));
         self.current_render_key = self.current_layout_key;
+
+        self.update_text_selection(selection_color);
     }
 
     pub fn cursor_reset(&mut self) {
@@ -520,19 +493,48 @@ impl TextState {
     }
 
     fn update_text_selection(&mut self, selection_color: Color) {
-        let layout = self.layout.as_ref().unwrap();
-        let text_renderer = self.text_render.as_mut().unwrap();
-        for line in text_renderer.lines.iter_mut() {
-            line.selections.clear();
+        if let Some(layout) = self.layout.as_ref() {
+            let text_renderer = self.text_render.as_mut().unwrap();
+            for line in text_renderer.lines.iter_mut() {
+                line.selections.clear();
+            }
+            self.selection.geometry_with(layout, |rect, line| {
+                text_renderer.lines[line].selections.push((
+                    Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32),
+                    selection_color,
+                ));
+            });
         }
-        self.selection.geometry_with(layout, |rect, line| {
-            text_renderer.lines[line].selections.push((Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32), selection_color));
-        });
     }
 }
 
 impl TextData for Text {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
+    }
+}
+
+impl Default for TextState {
+    fn default() -> Self {
+        Self {
+            text: SmolStr::new(""),
+            scale_factor: 1.0,
+            selection: Selection::default(),
+            text_render: None,
+            layout: None,
+            cache: Default::default(),
+            current_layout_key: None,
+            last_requested_measure_key: None,
+            current_render_key: None,
+            content_widths: None,
+            last_click_time: None,
+            click_count: 0,
+            pointer_down: false,
+            cursor_pos: Point::new(0.0, 0.0),
+            start_time: None,
+            blink_period: Default::default(),
+            is_layout_dirty: false,
+            is_render_dirty: false,
+        }
     }
 }

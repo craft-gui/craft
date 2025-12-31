@@ -12,6 +12,8 @@ use smol_str::SmolStr;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use taffy::{Layout, Overflow};
+use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::layout::layout_context::LayoutContext;
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -60,14 +62,37 @@ pub struct ElementData {
 }
 
 impl ElementData {
+
     pub fn new(scrollable: bool) -> Self {
         let mut default = Self::default();
 
+        // Create scroll state if needed.
         if scrollable {
             default.scroll_state = Some(ScrollState::default());
         }
 
         default
+    }
+
+    /// Creates a new taffy node for this element with optional layout context.
+    pub fn crate_layout_node(&mut self, layout_context: Option<LayoutContext>) {
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let style = self.style.to_taffy_style();
+            let node_id = if let Some(layout_context) = layout_context {
+                taffy_tree.new_leaf_with_context(style, layout_context)
+            } else {
+                taffy_tree.new_leaf(style)
+            };
+            self.layout_item.taffy_node_id = Some(node_id);
+        });
+    }
+
+    /// Sets element Weak
+    pub fn set_element(&mut self, element: Rc<RefCell<dyn Element>>) {
+        self.me = Some(Rc::downgrade(&element));
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert_id(self.internal_id, self.me.clone().unwrap());
+        });
     }
 
     /// Computes the scrollbar's tack and thumb layout.

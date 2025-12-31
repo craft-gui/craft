@@ -21,6 +21,10 @@ impl ElementIdMap {
         self.map.insert(element_data.internal_id, element_data.me.clone().unwrap())
     }
 
+    pub fn insert_id(&mut self, id: u64, element: Weak<RefCell<dyn Element>>) -> Option<Weak<RefCell<dyn Element>>> {
+        self.map.insert(id, element)
+    }
+
     pub fn remove(&mut self, element: &dyn Element) -> Option<Weak<RefCell<dyn Element>>> {
         self.map.remove(&element.element_data().internal_id)
     }
