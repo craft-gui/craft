@@ -1,10 +1,11 @@
 //! Stores one or more elements.
 
-use crate::app::{TAFFY_TREE};
+use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
 use crate::events::{CraftMessage, Event};
+use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
@@ -12,7 +13,6 @@ use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use crate::layout::TaffyTree;
 
 /// Stores one or more elements.
 ///
@@ -59,8 +59,6 @@ impl Element for Container {
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
-
-                taffy_tree.mark_dirty(parent_id);
             }
         });
 
@@ -93,7 +91,6 @@ impl Element for Container {
                     taffy_tree.add_child(parent_id, child_id);
                 }
             }
-            taffy_tree.mark_dirty(parent_id);
         });
 
         self
@@ -109,7 +106,6 @@ impl Element for Container {
 }
 
 impl ElementInternals for Container {
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -125,7 +121,9 @@ impl ElementInternals for Container {
         let layout = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;
+        let dirty = has_new_layout
+            || transform != self.element_data.layout_item.get_transform()
+            || position != self.element_data.layout_item.position;
         self.element_data.layout_item.has_new_layout = has_new_layout;
 
         if dirty {
@@ -150,7 +148,15 @@ impl ElementInternals for Container {
         let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
         let child_transform = Affine::translate((0.0, -scroll_y));
 
-        self.apply_layout_children(taffy_tree, z_index, transform * child_transform, pointer, text_context, scale_factor, false)
+        self.apply_layout_children(
+            taffy_tree,
+            z_index,
+            transform * child_transform,
+            pointer,
+            text_context,
+            scale_factor,
+            false,
+        )
     }
 
     fn draw(
