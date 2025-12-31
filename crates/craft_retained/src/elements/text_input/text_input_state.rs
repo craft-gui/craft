@@ -248,10 +248,6 @@ impl TextInputState {
         size
     }
 
-    pub fn taffy_node(&mut self, taffy_node: Option<NodeId>) {
-        self.taffy_node = taffy_node;
-    }
-
     #[allow(dead_code)]
     pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInput) -> Option<String> {
         if let Some(ranged_styles) = &element.ranged_styles {

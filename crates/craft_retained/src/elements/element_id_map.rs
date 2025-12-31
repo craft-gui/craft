@@ -18,7 +18,7 @@ impl ElementIdMap {
 
     pub fn insert(&mut self, element: &dyn Element) -> Option<Weak<RefCell<dyn Element>>> {
         let element_data = element.element_data();
-        self.map.insert(element_data.internal_id, element_data.me.clone().unwrap())
+        self.map.insert(element_data.internal_id, element_data.me.clone())
     }
 
     pub fn insert_id(&mut self, id: u64, element: Weak<RefCell<dyn Element>>) -> Option<Weak<RefCell<dyn Element>>> {

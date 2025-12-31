@@ -10,29 +10,28 @@ use craft_primitives::Color;
 use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::{Deref};
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
-use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::events::{CraftMessage, Event};
+use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 use crate::text::RangedStyles;
 use crate::utils::cloneable_any::CloneableAny;
 use craft_renderer::text_renderer_data::TextData;
 use kurbo::Affine;
-use parley::{BoundingBox};
+use parley::BoundingBox;
 use ui_events::pointer::PointerButton;
 use winit::event::Ime;
-use crate::layout::TaffyTree;
 
 // A stateful element that shows text.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct TextInput {
     element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.
@@ -42,7 +41,7 @@ pub struct TextInput {
     pub ranged_styles: Option<RangedStyles>,
     pub disabled: bool,
     pub(crate) state: TextInputState,
-    me: Option<Weak<RefCell<Self>>>,
+    me: Weak<RefCell<Self>>,
 }
 
 #[allow(dead_code)]
@@ -60,34 +59,25 @@ impl TextInput {
 
         let text_input_state = TextInputState::default();
 
-        let me = Rc::new(RefCell::new(Self {
-            text: Some(text.to_string()),
-            element_data: ElementData::new(true),
-            use_text_value_on_update: true,
-            ranged_styles: Some(RangedStyles::new(vec![])),
-            disabled: false,
-            state: text_input_state,
-            me: None,
-        }));
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                text: Some(text.to_string()),
+                element_data: ElementData::new(me.clone(), true),
+                use_text_value_on_update: true,
+                ranged_styles: Some(RangedStyles::new(vec![])),
+                disabled: false,
+                state: text_input_state,
+                me: me.clone(),
+            })
+        });
         me.borrow_mut().element_data.style = default_style;
-
-        let me2 = me.clone();
-        me.borrow_mut().me = Some(Rc::downgrade(&me2));
-
-        let me_element: Rc<RefCell<dyn Element>> = me.clone();
-        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
 
         me.borrow_mut().text(text);
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let context = LayoutContext::TextInput(TaffyTextInputContext {
-                element: me.borrow().me.clone().unwrap(),
-            });
-            let node_id = taffy_tree
-                .new_leaf_with_context(me.borrow().element_data.current_style().to_taffy_style(), context);
-            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
-            me.borrow_mut().state.taffy_node(Some(node_id));
-        });
+        let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
+            element: me.borrow().me.clone(),
+        }));
+        me.borrow_mut().element_data.crate_layout_node(context);
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
@@ -198,7 +188,7 @@ impl ElementInternals for TextInput {
 
         if self.state.text_render.as_ref().is_some() {
             renderer.draw_text(
-                self.me.clone().unwrap(),
+                self.me.clone(),
                 content_rectangle.scale(scale_factor),
                 text_scroll,
                 self.is_focused(),

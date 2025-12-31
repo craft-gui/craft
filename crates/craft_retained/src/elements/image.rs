@@ -6,6 +6,7 @@ use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::elements::Element;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
+use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
@@ -15,8 +16,7 @@ use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
-use std::rc::{Rc};
-use crate::layout::TaffyTree;
+use std::rc::{Rc, Weak};
 
 /// Displays an image.
 pub struct Image {
@@ -27,24 +27,20 @@ pub struct Image {
 
 impl Image {
     pub fn new(resource_identifier: ResourceIdentifier) -> Rc<RefCell<Self>> {
-        let me = Rc::new(RefCell::new(Self {
-            is_image_dirty: false,
-            resource_identifier: resource_identifier.clone(),
-            element_data: ElementData::new(true),
-        }));
-
-        let resource_identifier_2= resource_identifier.clone();
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let context = LayoutContext::Image(ImageContext::new(resource_identifier_2));
-            let node_id = taffy_tree.new_leaf_with_context(me.borrow().style().to_taffy_style(), context);
-            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                is_image_dirty: false,
+                resource_identifier: resource_identifier.clone(),
+                element_data: ElementData::new(me.clone(), false),
+            })
         });
+
+        let layout_context = Some(LayoutContext::Image(ImageContext::new(resource_identifier.clone())));
+        me.borrow_mut().element_data.crate_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             pending_resources.push_back((resource_identifier, ResourceType::Image));
         });
-
-        me.borrow_mut().element_data.set_element(me.clone());
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
@@ -69,7 +65,6 @@ impl Image {
     pub fn get_image(&self) -> &ResourceIdentifier {
         &self.resource_identifier
     }
-
 }
 
 impl crate::elements::core::ElementData for Image {
@@ -83,7 +78,6 @@ impl crate::elements::core::ElementData for Image {
 }
 
 impl Element for Image {
-
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -94,7 +88,6 @@ impl Element for Image {
 }
 
 impl ElementInternals for Image {
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

@@ -114,10 +114,10 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             elements.remove_id(node.borrow().element_data().internal_id);
             document
                 .pointer_captures
-                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me.as_ref().unwrap()));
+                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me));
             document
                 .pending_pointer_captures
-                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me.as_ref().unwrap()));
+                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me));
             for child in node.borrow().children() {
                 remove_element_from_document(child.clone(), document, elements);
             }
@@ -275,7 +275,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
             // TODO (POINTER CAPTURE)
             // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-            current_doc.pending_pointer_captures.insert(pointer_id, self.element_data().me.clone().unwrap());
+            current_doc.pending_pointer_captures.insert(pointer_id, self.element_data().me.clone());
         });
     }
 
@@ -302,7 +302,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
             current_doc.pending_pointer_captures.get(&pointer_id).cloned().map(|w| w.as_ptr())
-                == self.element_data().me.clone().map(|w| w.as_ptr())
+                == Some(self.element_data().me.clone().as_ptr())
         })
     }
 
@@ -798,7 +798,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     {
         // Todo: check if the element is focusable. Should we return a result?
         FOCUS.with_borrow_mut(|focus| {
-            *focus = self.element_data().me.clone();
+            *focus = Some(self.element_data().me.clone());
         });
     }
 
@@ -812,7 +812,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
         let focus_element = focus_element.unwrap();
 
-        Weak::ptr_eq(&focus_element, self.element_data().me.as_ref().unwrap())
+        Weak::ptr_eq(&focus_element, &self.element_data().me)
     }
 
     /// Removes focus if the element has focus.

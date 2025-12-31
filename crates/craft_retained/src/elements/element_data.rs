@@ -50,7 +50,7 @@ pub struct ElementData {
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
     pub on_pointer_leave: Vec<PointerLeaveHandler>,
-    pub(crate) me: Option<Weak<RefCell<dyn Element>>>,
+    pub(crate) me: Weak<RefCell<dyn Element>>,
     pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_pointer_button_down: Vec<PointerEventHandler>,
@@ -63,13 +63,41 @@ pub struct ElementData {
 
 impl ElementData {
 
-    pub fn new(scrollable: bool) -> Self {
-        let mut default = Self::default();
+    pub fn new(me: Weak<RefCell<dyn Element>>, scrollable: bool) -> Self {
+        let mut default = Self {
+            current_state: Default::default(),
+            style: Default::default(),
+            layout_item: Default::default(),
+            hover_style: None,
+            pressed_style: None,
+            disabled_style: None,
+            focused_style: None,
+            children: Default::default(),
+            id: None,
+            internal_id: create_unique_element_id(),
+            animations: None,
+            parent: None,
+            on_slider_value_changed: vec![],
+            on_pointer_enter: vec![],
+            on_pointer_leave: vec![],
+            me,
+            on_got_pointer_capture: vec![],
+            on_lost_pointer_capture: vec![],
+            on_pointer_button_down: vec![],
+            on_pointer_button_up: vec![],
+            on_pointer_moved: vec![],
+            on_keyboard_input: vec![],
+            scroll_state: None,
+        };
 
         // Create scroll state if needed.
         if scrollable {
             default.scroll_state = Some(ScrollState::default());
         }
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert_id(default.internal_id, default.me.clone());
+        });
 
         default
     }
@@ -84,14 +112,6 @@ impl ElementData {
                 taffy_tree.new_leaf(style)
             };
             self.layout_item.taffy_node_id = Some(node_id);
-        });
-    }
-
-    /// Sets element Weak
-    pub fn set_element(&mut self, element: Rc<RefCell<dyn Element>>) {
-        self.me = Some(Rc::downgrade(&element));
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert_id(self.internal_id, self.me.clone().unwrap());
         });
     }
 
@@ -154,36 +174,6 @@ impl ElementData {
 
     pub(crate) fn scroll(&self) -> Option<&ScrollState> {
         self.scroll_state.as_ref()
-    }
-}
-
-impl Default for ElementData {
-    fn default() -> Self {
-        Self {
-            current_state: Default::default(),
-            style: Default::default(),
-            layout_item: Default::default(),
-            hover_style: None,
-            pressed_style: None,
-            disabled_style: None,
-            focused_style: None,
-            children: Default::default(),
-            id: None,
-            internal_id: create_unique_element_id(),
-            animations: None,
-            parent: None,
-            on_slider_value_changed: vec![],
-            on_pointer_enter: vec![],
-            on_pointer_leave: vec![],
-            me: None,
-            on_got_pointer_capture: vec![],
-            on_lost_pointer_capture: vec![],
-            on_pointer_button_down: vec![],
-            on_pointer_button_up: vec![],
-            on_pointer_moved: vec![],
-            on_keyboard_input: vec![],
-            scroll_state: None,
-        }
     }
 }
 

@@ -39,12 +39,12 @@ use web_time as time;
 use winit::dpi;
 
 // A stateful element that shows text.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Text {
     element_data: ElementData,
     selectable: bool,
     pub(crate) state: TextState,
-    me: Option<Weak<RefCell<Self>>>,
+    me: Weak<RefCell<Self>>,
 }
 
 #[derive(Clone)]
@@ -77,19 +77,17 @@ pub struct TextState {
 
 impl Text {
     pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        let me = Rc::new(RefCell::new(Text {
-            element_data: Default::default(),
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Text {
+            element_data: ElementData::new(me.clone(), false),
             selectable: true,
             state: TextState::default(),
-            me: None,
+            me: me.clone(),
         }));
 
-        me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
-            element: me.borrow().me.clone().unwrap(),
+            element: me.borrow().me.clone(),
         }));
         me.borrow_mut().element_data.crate_layout_node(text_context);
-        me.borrow_mut().element_data.set_element(me.clone());
 
         me.borrow_mut().text(text);
 
@@ -181,7 +179,7 @@ impl ElementInternals for Text {
             renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
         }*/
 
-        renderer.draw_text(self.me.clone().unwrap(), content_rectangle.scale(scale_factor), None, false);
+        renderer.draw_text(self.me.clone(), content_rectangle.scale(scale_factor), None, false);
     }
 
     #[cfg(feature = "accesskit")]

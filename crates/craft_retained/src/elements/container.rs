@@ -23,12 +23,13 @@ pub struct Container {
 
 impl Container {
     pub fn new() -> Rc<RefCell<Self>> {
-        let me = Rc::new(RefCell::new(Self {
-            element_data: ElementData::new(true),
-        }));
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                element_data: ElementData::new(me.clone(), true),
+            })
+        });
 
         me.borrow_mut().element_data.crate_layout_node(None);
-        me.borrow_mut().element_data.set_element(me.clone());
 
         me
     }
@@ -49,7 +50,7 @@ impl Element for Container {
     where
         Self: Sized,
     {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone().unwrap();
+        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
 
@@ -74,7 +75,7 @@ impl Element for Container {
     where
         Self: Sized,
     {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone().unwrap();
+        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
         let children: Vec<_> = children.into_iter().collect();
 
         for child in &children {

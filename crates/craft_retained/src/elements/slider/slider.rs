@@ -28,7 +28,6 @@ pub enum SliderDirection {
 
 pub struct Slider {
     element_data: ElementData,
-    me: Option<Weak<RefCell<Slider>>>,
 
     step: f64,
     min: f64,
@@ -49,9 +48,8 @@ pub struct Slider {
 
 impl Slider {
     pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
-        let me = Rc::new(RefCell::new(Self {
-            element_data: ElementData::new(true),
-            me: None,
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Self {
+            element_data: ElementData::new(me.clone(), false),
             step: 1.0,
             min: 0.0,
             max: 100.0,
@@ -86,10 +84,6 @@ impl Slider {
             let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
-
-        let me_element: Rc<RefCell<dyn Element>> = me.clone();
-        me.borrow_mut().me = Some(Rc::downgrade(&me.clone()));
-        me.borrow_mut().element_data.me = Some(Rc::downgrade(&me_element));
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
@@ -205,15 +199,6 @@ impl crate::elements::core::ElementData for Slider {
 }
 
 impl Element for Slider {
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
         let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
@@ -234,6 +219,14 @@ impl Element for Slider {
         } else {
             rect.contains(&point)
         }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
