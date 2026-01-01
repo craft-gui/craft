@@ -1,39 +1,62 @@
 //! Stores one or more elements.
 
-use crate::app::{TAFFY_TREE, WINDOW_MANAGER};
+use crate::app::{WINDOW_MANAGER};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Rectangle, Size};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
+use peniko::Color;
+use taffy::{AvailableSpace, NodeId};
 use winit::window::Window as WinitWindow;
+use crate::RendererBox;
+use craft_resource_manager::ResourceManager;
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 pub struct Window {
     element_data: ElementData,
-    winit_window: Option<Rc<RefCell<WinitWindow>>>,
+    pub(crate) winit_window: Option<Arc<WinitWindow>>,
+    /// The physical window size from winit.
+    pub(crate) window_size: Size<f32>,
+    /// The window's scale factor from winit.
+    scale_factor: f64,
+    /// Zoom scale factor.
+    zoom_scale_factor: f64,
+    mouse_positon: Option<Point>,
+    pub(crate) renderer: Option<RendererBox>,
+    pub(crate) taffy_tree: Rc<RefCell<TaffyTree>>,
+    pub(crate) render_list: Rc<RefCell<RenderList>>,
 }
 
 impl Window {
     pub fn new() -> Rc<RefCell<Self>> {
+        let taffy_tree = Rc::new(RefCell::new(TaffyTree::new()));
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
-                element_data: ElementData::new(me.clone(), true),
+                element_data: ElementData::new_window(taffy_tree.clone(), me.clone(), true),
                 winit_window: None,
+                window_size: Default::default(),
+                scale_factor: 1.0,
+                zoom_scale_factor: 1.0,
+                mouse_positon: None,
+                renderer: None,
+                taffy_tree,
+                render_list: Rc::new(RefCell::new(RenderList::new())),
             })
         });
 
-        me.borrow_mut().element_data.crate_layout_node(None);
+        me.borrow_mut().element_data.create_layout_node(None);
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.add_window(me.clone());
@@ -41,6 +64,146 @@ impl Window {
 
         me
     }
+
+    pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
+        self.winit_window.clone()
+    }
+
+    pub fn set_winit_window(&mut self, window: Arc<WinitWindow>) {
+        self.winit_window = Some(window);
+    }
+
+    /// Get the effective scale factor factoring window scale factor and zoom.
+    pub fn effective_scale_factor(&self) -> f64 {
+        self.scale_factor * self.zoom_scale_factor
+    }
+
+    /// Get the logical size of the window.
+    pub fn window_size(&self) -> Size<f64> {
+        Size::new(
+            self.window_size.width as f64 * self.effective_scale_factor(),
+            self.window_size.height as f64 * self.effective_scale_factor(),
+        )
+    }
+
+    pub(crate) fn zoom_in(&mut self) {
+        self.zoom_scale_factor += 0.01;
+    }
+
+    pub(crate) fn zoom_out(&mut self) {
+        self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
+    }
+
+    pub(crate) fn zoom_scale_factor(&self) -> f64 {
+        self.zoom_scale_factor
+    }
+
+    pub(crate) fn mouse_position(&self) -> Option<Point> {
+        self.mouse_positon
+    }
+
+    pub(crate) fn on_resize(&mut self, new_size: Size<f32>) {
+        if let Some(renderer) = self.renderer.as_mut() {
+            renderer.resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
+        }
+        self.window_size = new_size;
+        //self.render_list.set_cull(Some(Rectangle::new(0.0, 0.0, new_size.width as f32, new_size.height as f32)));
+        let size = self.window_size();
+        // On macOS the window needs to be redrawn manually after resizing
+        #[cfg(target_os = "macos")]
+        {
+            self.window.as_ref().unwrap().request_redraw();
+        }
+    }
+
+    pub(crate) fn set_mouse_position(&mut self, point: Option<Point>) {
+        self.mouse_positon = point;
+    }
+
+    pub(crate) fn on_redraw(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
+        if self.renderer.is_none() {
+            return;
+        }
+
+        self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
+
+        self.layout_window(text_context, resource_manager.clone());
+
+        self.draw_window(text_context, resource_manager);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn layout_window(
+        &mut self,
+        text_context: &mut TextContext,
+        resource_manager: Arc<ResourceManager>,
+    ) -> NodeId {
+        let root_node = self.
+            element_data
+            .layout_item
+            .taffy_node_id
+            .expect("A root element must have a layout node.");
+
+        let window_size = self.window_size();
+        let available_space: taffy::Size<AvailableSpace> = taffy::Size {
+            width: AvailableSpace::Definite(window_size.width as f32),
+            height: AvailableSpace::Definite(window_size.height as f32),
+        };
+
+        //if self.taffy_tree.borrow().is_layout_dirty() {
+            /*let span = span!(Level::INFO, "layout(taffy)");
+            let _enter = span.enter();*/
+            self.taffy_tree.borrow_mut().compute_layout(root_node, available_space, text_context, resource_manager.clone());
+        //}
+
+        //if self.taffy_tree.borrow().is_apply_layout_dirty() {
+            /*let span = span!(Level::INFO, "layout(apply)");
+                    let _enter = span.enter();*/
+
+            // TODO: move into taffy_tree
+            let mut layout_order: u32 = 0;
+            let sf = self.effective_scale_factor();
+            let x = self.taffy_tree.clone();
+            self.apply_layout(
+                x.borrow_mut().deref_mut(),
+                Point::new(0.0, 0.0),
+                &mut layout_order,
+                Affine::IDENTITY,
+                None,
+                text_context,
+                None,
+                sf
+            );
+            self.taffy_tree.borrow_mut().apply_layout();
+        //}
+
+        root_node
+    }
+
+    fn draw_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
+        let render_list = self.render_list.clone();
+        render_list.borrow_mut().deref_mut().clear();
+        self.draw(
+            render_list.borrow_mut().deref_mut(),
+            text_context,
+            None,
+            self.scale_factor,
+        );
+
+        self.winit_window.clone().unwrap().pre_present_notify();
+        self.renderer.as_mut().unwrap().sort_and_cull_render_list(render_list.borrow_mut().deref_mut());
+
+        let window = Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: self.renderer.as_mut().unwrap().surface_width(),
+            height: self.renderer.as_mut().unwrap().surface_height(),
+        };
+        self.renderer.as_mut().unwrap().prepare_render_list(self.render_list.borrow_mut().deref_mut(), resource_manager.clone(), window);
+
+        self.renderer.as_mut().unwrap().submit(resource_manager.clone());
+    }
+
 }
 
 impl crate::elements::core::ElementData for Window {
@@ -63,13 +226,14 @@ impl Element for Window {
         self.element_data.children.push(child.clone());
 
         // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
             }
-        });
+        }
 
         self
     }
@@ -93,14 +257,15 @@ impl Element for Window {
         self.element_data.children.extend(children.iter().cloned());
 
         // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             for child in &children {
                 if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
                     taffy_tree.add_child(parent_id, child_id);
                 }
             }
-        });
+        }
 
         self
     }

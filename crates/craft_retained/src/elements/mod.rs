@@ -3,7 +3,6 @@ mod element;
 pub mod core;
 mod text;
 mod element_data;
-mod element_states;
 mod scroll_state;
 
 mod element_id;

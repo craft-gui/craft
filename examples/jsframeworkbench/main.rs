@@ -1,4 +1,4 @@
-use craft_retained::elements::Element;
+use craft_retained::elements::{Element, Window};
 use craft_retained::elements::{Container, Text};
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::events::Event;
@@ -9,7 +9,7 @@ use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::{Rc};
 use craft_retained::palette::css::WHITE;
 
 const ADJECTIVES: &[&str] = &[
@@ -281,25 +281,25 @@ impl Store {
 fn main() {
     //util::setup_logging();
 
+    let root = Window::new();
+
     let data_list = build_data_list();
     let state = Rc::new(RefCell::new(State::new(data_list.clone())));
 
-    let root = build_root(state.clone());
-    use craft_retained::CraftOptions;
-    craft_retained::craft_main(root, CraftOptions::basic("jsframeworkbench"));
-}
-
-fn build_root(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
-    let root = Container::new();
     let body = build_body(state);
-    root.borrow_mut().push(body);
-    root
+    root.borrow_mut()
+        .width(Unit::Percentage(100.0))
+        .height(Unit::Percentage(100.0))
+        .push(body);
+
+    use craft_retained::CraftOptions;
+    craft_retained::craft_main(CraftOptions::basic("jsframeworkbench"));
 }
 
 fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let body = Container::new();
 
-    let buttons = build_buttons(Rc::downgrade(&state));
+    let buttons = build_buttons(state.clone());
 
     body.borrow_mut()
         .overflow(Overflow::Visible, Overflow::Scroll)
@@ -346,7 +346,7 @@ fn build_data_list() -> Rc<RefCell<Container>> {
     data_list
 }
 
-fn build_buttons(state: Weak<RefCell<State>>) -> Rc<RefCell<Container>> {
+fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let buttons = Container::new();
     buttons.borrow_mut()
         .flex_direction(FlexDirection::Column)
@@ -358,25 +358,25 @@ fn build_buttons(state: Weak<RefCell<State>>) -> Rc<RefCell<Container>> {
 
     let state1 = state.clone();
     let btn_create_1k = build_button("Create 1,000 rows", move |_, _| {
-        state1.upgrade().unwrap().borrow_mut().run();
+        state1.borrow_mut().run();
     });
 
     let state2 = state.clone();
     let btn_create_10k = build_button("Create 10,000 rows", move |_, _| {
-        state2.upgrade().unwrap().borrow_mut().run_lots();
+        state2.borrow_mut().run_lots();
     });
 
     let state3 = state.clone();
-    let btn_append_1k = build_button("Append 1,000 rows", move |_, _| state3.upgrade().unwrap().borrow_mut().add());
+    let btn_append_1k = build_button("Append 1,000 rows", move |_, _| state3.borrow_mut().add());
 
     let state4 = state.clone();
-    let btn_update_10th_row = build_button("Update every 10th row", move |_, _| state4.upgrade().unwrap().borrow_mut().update());
+    let btn_update_10th_row = build_button("Update every 10th row", move |_, _| state4.borrow_mut().update());
 
     let state5 = state.clone();
-    let btn_clear = build_button("Clear", move |_, _| state5.upgrade().unwrap().borrow_mut().clear());
+    let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().clear());
 
     let state6 = state.clone();
-    let btn_swap = build_button("Swap Rows", move |_, _| state6.upgrade().unwrap().borrow_mut().swap_rows());
+    let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap_rows());
 
     buttons
         .borrow_mut()

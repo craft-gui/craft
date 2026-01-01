@@ -14,12 +14,8 @@ util = { path = "../util" }
 [dependencies.craft_retained]
 path = "../../crates/craft_retained"
 default-features = false
-features = ["accesskit", "system_fonts"]
+features = ["system_fonts"]
 
-[target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
-path = "../../crates/craft_renderer"
-features = ["vello_hybrid_renderer"]
-
-[target.'cfg(target_os = "android")'.dependencies.craft_renderer]
+[dependencies.craft_renderer]
 path = "../../crates/craft_renderer"
 features = ["vello_renderer"]

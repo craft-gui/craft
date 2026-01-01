@@ -1,10 +1,10 @@
 //! Displays an image.
 
 use crate::app::ELEMENTS;
-use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
+use crate::app::{PENDING_RESOURCES};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
-use crate::elements::Element;
+use crate::elements::{Element, Window};
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -17,6 +17,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
+use crate::window_manager::WindowManager;
 
 /// Displays an image.
 pub struct Image {
@@ -26,17 +27,17 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(resource_identifier: ResourceIdentifier) -> Rc<RefCell<Self>> {
+    pub fn new_mw(window: &Rc<RefCell<Window>>,  resource_identifier: ResourceIdentifier) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
                 is_image_dirty: false,
                 resource_identifier: resource_identifier.clone(),
-                element_data: ElementData::new(me.clone(), false),
+                element_data: ElementData::new(Rc::downgrade(window), me.clone(), false),
             })
         });
 
         let layout_context = Some(LayoutContext::Image(ImageContext::new(resource_identifier.clone())));
-        me.borrow_mut().element_data.crate_layout_node(layout_context);
+        me.borrow_mut().element_data.create_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             pending_resources.push_back((resource_identifier, ResourceType::Image));
@@ -49,15 +50,20 @@ impl Image {
         me
     }
 
+    pub fn new(resource_identifier: ResourceIdentifier) -> Rc<RefCell<Self>> {
+        Self::new_mw(&WindowManager::get_main_window(), resource_identifier)
+    }
+
     pub fn image(&mut self, resource_identifier: ResourceIdentifier) -> &mut Self {
         self.is_image_dirty = true;
         self.resource_identifier = resource_identifier.clone();
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let context = LayoutContext::Image(ImageContext::new(resource_identifier));
             let node = self.element_data.layout_item.taffy_node_id.expect("Failed to get Image node");
             taffy_tree.set_node_context(node, Some(context));
-        });
+        }
 
         self
     }

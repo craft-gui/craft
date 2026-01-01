@@ -3,7 +3,6 @@ use crate::events::{CraftMessage, Event};
 use kurbo::Point;
 use ui_events::pointer::{PointerId, PointerType};
 use ui_events::ScrollDelta;
-use crate::app::request_apply_layout;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage, event: &mut Event) {
@@ -27,7 +26,11 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
 
                 let current_scroll_y = state.scroll_y();
                 state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                request_apply_layout();
+
+                {
+                    let mut taffy_tree = element_data.taffy_tree.borrow_mut();
+                    taffy_tree.request_apply_layout();
+                }
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -78,7 +81,10 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
                         let scroll_y = percent * element_data.layout_item.max_scroll_y;
 
                         state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout_item.max_scroll_y));
-                        request_apply_layout();
+                        {
+                            let mut taffy_tree = element_data.taffy_tree.borrow_mut();
+                            taffy_tree.request_apply_layout();
+                        }
 
                         event.prevent_propagate();
                         event.prevent_defaults();
@@ -115,7 +121,12 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
 
                     let current_scroll_y = state.scroll_y();
                     state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    request_apply_layout();
+
+                    {
+                        let mut taffy_tree = element_data.taffy_tree.borrow_mut();
+                        taffy_tree.request_apply_layout();
+                    }
+
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();

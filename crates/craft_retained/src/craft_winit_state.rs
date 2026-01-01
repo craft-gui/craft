@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
 use {
     wasm_bindgen::JsCast,
@@ -8,15 +10,13 @@ use {
 use {crate::wasm_queue::WasmQueue, crate::wasm_queue::WASM_QUEUE};
 
 use crate::events::internal::InternalMessage;
-use craft_renderer::renderer::Renderer;
 use crate::{CraftOptions};
 use craft_logging::info;
 
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
-use winit::window::WindowAttributes;
-use winit::window::{Window, WindowId};
+use winit::window::{WindowId};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
@@ -28,10 +28,9 @@ use craft_runtime::Sender;
 use craft_runtime::CraftRuntimeHandle;
 
 use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER};
-use std::sync::Arc;
 use ui_events::pointer::{PointerEvent};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
-use winit::dpi::LogicalSize;
+use craft_primitives::geometry::Size;
 use crate::document::Document;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
@@ -73,19 +72,22 @@ impl ApplicationHandler for CraftWinitState {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let craft_state = &mut self.craft_state;
         
-        let mut window_attributes =
+/*        let mut window_attributes =
             WindowAttributes::default().with_title(craft_state.craft_options.window_title.as_str()).with_visible(false);
 
         if let Some(window_size) = &craft_state.craft_options.window_size {
             window_attributes =
                 window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
-        }
+        }*/
         
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.create_windows(event_loop);
+            window_manager.on_resume(craft_state, event_loop);
         });
 
-        #[cfg(target_arch = "wasm32")]
+
+        craft_state.craft_app.on_resume(event_loop);
+
+        /*#[cfg(target_arch = "wasm32")]
         let window_attributes = {
             let canvas = web_sys::window()
                 .unwrap()
@@ -97,39 +99,21 @@ impl ApplicationHandler for CraftWinitState {
                 .unwrap();
 
             window_attributes.with_canvas(Some(canvas))
-        };
-
-        let window: Arc<Window> =
-            Arc::from(event_loop.create_window(window_attributes).expect("Failed to create window."));
-        info!("Created window");
-
+        };*/
         //craft_state.event_reducer.set_scale_factor(&window);
-
-        let renderer_type = craft_state.craft_options.renderer;
-        let window_copy = window.clone();
-
-        cfg_if::cfg_if! {
-            if #[cfg(not(target_arch = "wasm32"))] {
-                    let renderer = craft_state.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
-                    renderer
-                });
-                craft_state.craft_app.on_resume(window, renderer, event_loop);
-            } else {
-                let app_sender = craft_state.app_sender.clone();
-                let window_copy_2 = window_copy.clone();
-                craft_state.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
-                    app_sender
-                        .send(InternalMessage::RendererCreated(window_copy_2, renderer))
-                        .await
-                        .expect("Failed to send RendererCreated message");
-                });
-            }
-        }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+        let window: Option<Rc<RefCell<crate::elements::Window>>> = WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+           window_manager.get_window_by_id(window_id)
+        });
+
+        let window = if let Some(window) = window {
+            window
+        } else {
+            return
+        };
+
         let craft_state = &mut self.craft_state;
 
         CURRENT_WINDOW_ID.set(Some(window_id));
@@ -140,10 +124,10 @@ impl ApplicationHandler for CraftWinitState {
             }
         });
 
-        #[cfg(feature = "accesskit")]
+        /*#[cfg(feature = "accesskit")]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
             accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);
-        }
+        }*/
 
         if !matches!(
             event,
@@ -158,26 +142,26 @@ impl ApplicationHandler for CraftWinitState {
                     if keyboard_event.state.is_down() && matches!(keyboard_event.key, Key::Named(NamedKey::Escape)) {
                         event_loop.exit();
                     } else {
-                        craft_state.craft_app.on_keyboard_input(keyboard_event);
+                        craft_state.craft_app.on_keyboard_input(window, keyboard_event);
                     }
                     return;
                 }
                 Some(WindowEventTranslation::Pointer(pointer_event)) => {
                     match pointer_event {
                         PointerEvent::Down(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(pointer_button_update, false);
+                            craft_state.craft_app.on_pointer_button(window, pointer_button_update, false);
                         }
                         PointerEvent::Up(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(pointer_button_update, true);
+                            craft_state.craft_app.on_pointer_button(window, pointer_button_update, true);
                         }
                         PointerEvent::Move(pointer_update) => {
-                            craft_state.craft_app.on_pointer_moved(pointer_update);
+                            craft_state.craft_app.on_pointer_moved(window, pointer_update);
                         }
                         PointerEvent::Cancel(_) => {}
                         PointerEvent::Enter(_) => {}
                         PointerEvent::Leave(_) => {}
                         PointerEvent::Scroll(pointer_scroll_update) => {
-                            craft_state.craft_app.on_pointer_scroll(pointer_scroll_update);
+                            craft_state.craft_app.on_pointer_scroll(window, pointer_scroll_update);
                         },
                         PointerEvent::Gesture(_) => todo!()
                     }
@@ -189,20 +173,29 @@ impl ApplicationHandler for CraftWinitState {
 
         match event {
             WindowEvent::CloseRequested => {
-                craft_state.close_requested = true;
-                craft_state.craft_app.on_close_requested();
+                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                   window_manager.close_window(&window);
+                    if window_manager.is_empty() {
+                        craft_state.close_requested = true;
+                        craft_state.craft_app.on_close_requested();
+                    }
+                });
             }
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 craft_state.craft_app.on_scale_factor_changed(scale_factor);
             }
             WindowEvent::Resized(new_size) => {
-                craft_state.craft_app.on_resize(new_size);
+                let new_size = Size::<f32> {
+                    width: new_size.width as f32,
+                    height: new_size.height as f32,
+                };
+                craft_state.craft_app.on_resize(window, new_size);
             }
             WindowEvent::Ime(ime) => {
-                craft_state.craft_app.on_ime(ime);
+                craft_state.craft_app.on_ime(window, ime);
             }
             WindowEvent::RedrawRequested => {
-                craft_state.craft_app.on_request_redraw();
+                craft_state.craft_app.on_request_redraw(window);
             }
             _ => (),
         }

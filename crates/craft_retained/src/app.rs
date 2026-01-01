@@ -1,16 +1,13 @@
-use crate::elements::ElementIdMap;
+use crate::elements::{ElementIdMap, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::CraftMessage;
 use crate::events::{Event, EventDispatcher};
 use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
-use crate::{RendererBox, WindowContext};
 use craft_logging::info;
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Size, Point};
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use craft_runtime::CraftRuntimeHandle;
-use kurbo::{Affine, Point};
-use peniko::Color;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -35,21 +32,18 @@ use web_time as time;
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::Element;
-use crate::layout::TaffyTree;
-use craft_renderer::RenderList;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
 use craft_runtime::Sender;
 use std::time::Duration;
-use taffy::{AvailableSpace, NodeId};
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
-use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
-use winit::window::{Window, WindowId};
+use winit::window::{WindowId};
+use crate::elements::core::ElementInternals;
 use crate::window_manager::WindowManager;
 
 thread_local! {
@@ -58,7 +52,6 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
@@ -89,21 +82,13 @@ pub(crate) fn dequeue_event() -> Option<(Event, CraftMessage)> {
 
 pub struct App {
     pub(crate) event_dispatcher: EventDispatcher,
-    pub(crate) root: Rc<RefCell<dyn Element>>,
-    /// A winit window. This is only valid between resume and pause.
-    pub window: Option<Arc<Window>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     pub(crate) text_context: Option<TextContext>,
-    /// The renderer is used to draw the view. It is only valid between resume and pause.
-    pub renderer: Option<RendererBox>,
     pub(crate) reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
     /// The resource manager is responsible for loading, caching, and providing access to resources.
     pub(crate) resource_manager: Arc<ResourceManager>,
-    // The user's reactive tree.
-    /// Provides a way for the user to get and set common window properties during view and update.
-    pub window_context: WindowContext,
 
     pub(crate) app_sender: Sender<InternalMessage>,
     #[cfg(feature = "accesskit")]
@@ -113,7 +98,6 @@ pub struct App {
     pub(crate) modifiers: Modifiers,
     pub redraw_flags: RedrawFlags,
 
-    pub(crate) render_list: RenderList,
     pub(super) target_scratch: Vec<Rc<RefCell<dyn Element>>>,
 
     pub(crate) previous_animation_flags: AnimationFlags,
@@ -143,22 +127,17 @@ impl App {
     }
 
     pub fn on_scale_factor_changed(&mut self, scale_factor: f64) {
-        self.window_context.scale_factor = scale_factor;
+        /*self.window_context.scale_factor = scale_factor;
         self.on_resize(self.window.as_ref().unwrap().inner_size());
         self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
-        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
+        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());*/
     }
 
-    pub fn on_process_user_events(&mut self) {}
-
     #[allow(unused_variables)]
-    pub fn on_resume(&mut self, window: Arc<Window>, renderer: RendererBox, event_loop: &ActiveEventLoop) {
-        window.set_ime_allowed(true);
+    pub fn on_resume(&mut self, event_loop: &ActiveEventLoop) {
+        //window.set_ime_allowed(true);
 
         self.setup_text_context();
-        self.renderer = Some(renderer);
-
-        self.window = Some(window.clone());
 
         #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         let action_handler = CraftAccessHandler {
@@ -168,44 +147,32 @@ impl App {
         #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         let deactivation_handler = CraftDeactivationHandler::new();
 
-        let scale_factor = window.scale_factor();
+        /*let scale_factor = window.scale_factor();
 
         self.window = Some(window.clone());
         self.window_context.scale_factor = scale_factor;
         self.on_resize(window.inner_size());
-        let tree_update = self.on_request_redraw();
+        let tree_update = self.on_request_redraw();*/
 
-        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-        let craft_activation_handler = CraftActivationHandler::new(tree_update);
+        /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+        let craft_activation_handler = CraftActivationHandler::new(tree_update);*/
 
-        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-        {
-            self.accesskit_adapter = Some(Adapter::with_direct_handlers(
-                event_loop,
-                &window,
-                craft_activation_handler,
-                #[cfg(feature = "accesskit")]
-                action_handler,
-                deactivation_handler,
-            ));
-        }
-
-        window.set_visible(true);
+        //#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+        //{
+        //    self.accesskit_adapter = Some(Adapter::with_direct_handlers(
+        //        event_loop,
+        //        &window,
+        //        craft_activation_handler,
+        //        #[cfg(feature = "accesskit")]
+        //        action_handler,
+        //        deactivation_handler,
+        //    ));
+        //}
     }
 
     /// Handles the window resize event.
-    pub fn on_resize(&mut self, new_size: PhysicalSize<u32>) {
-        self.window_context.window_size = new_size;
-        if let Some(renderer) = self.renderer.as_mut() {
-            renderer.resize_surface(new_size.width.max(1) as f32, new_size.height.max(1) as f32);
-        }
-        self.render_list.set_cull(Some(Rectangle::new(0.0, 0.0, new_size.width as f32, new_size.height as f32)));
-        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
-        // On macOS the window needs to be redrawn manually after resizing
-        #[cfg(target_os = "macos")]
-        {
-            self.window.as_ref().unwrap().request_redraw();
-        }
+    pub fn on_resize(&mut self, window: Rc<RefCell<Window>>, new_size: Size<f32>) {
+        window.borrow_mut().on_resize(new_size);
     }
 
     /// Initialize any data needed to layout/render text.
@@ -245,91 +212,38 @@ impl App {
         }
     }
 
-    /// Updates the view by applying the latest changes to the reactive tree.
-    pub(crate) fn update_view(&mut self) {}
-
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(feature = "accesskit")]
-    pub fn on_request_redraw(&mut self) -> Option<TreeUpdate> {
-        self.on_request_redraw_internal();
-        self.window.as_ref()?;
-        let window = self.window.as_mut().unwrap().clone();
+    pub fn on_request_redraw(&mut self, window: Rc<RefCell<Window>>) -> Option<TreeUpdate> {
+        self.on_request_redraw_internal(window.clone());
+        let winit_window = window.borrow().winit_window().as_mut().unwrap().clone();
 
         let tree_update = self.compute_accessibility_tree();
         if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
             accesskit_adapter.update_if_active(|| tree_update);
-            window.pre_present_notify();
+            winit_window.pre_present_notify();
             None
         } else {
-            window.pre_present_notify();
+            winit_window.pre_present_notify();
             Some(tree_update)
         }
     }
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(not(feature = "accesskit"))]
-    pub fn on_request_redraw(&mut self) {
-        self.on_request_redraw_internal();
+    pub fn on_request_redraw(&mut self, window: Rc<RefCell<Window>>) {
+        self.on_request_redraw_internal(window);
     }
 
     //#[cfg(not(feature = "accesskit"))]
 
-    fn on_request_redraw_internal(&mut self) {
-        if self.window.is_none() {
-            return;
-        }
-
+    fn on_request_redraw_internal(&mut self, window: Rc<RefCell<Window>>) {
         self.update_resources();
 
-        let surface_size = self.window_context.window_size();
-
-        self.update_view();
-
-        let root_size = surface_size;
-
-        if self.renderer.is_some() {
-            self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
-        }
-
-        let layout_origin = Point::new(0.0, 0.0);
-
-        {
-            if self.redraw_flags.should_rebuild_layout() {
-                self.layout_tree(
-                    root_size,
-                    layout_origin,
-                    self.window_context.effective_scale_factor(),
-                    self.window_context.mouse_position,
-                );
-            }
-
-            //self.animate_tree(&delta_time, layout_origin, root_size);
-
-            if self.renderer.is_some() {
-                self.draw_reactive_tree(self.window_context.mouse_position);
-            }
-        }
-
-        {
-            /*let span = span!(Level::INFO, "renderer_submit");
-            let _enter = span.enter();*/
-
-            if self.renderer.is_some() {
-                self.renderer.as_mut().unwrap().submit(self.resource_manager.clone());
-            }
-        }
-
-        if let Some(window) = &self.window {
-            self.window_context.apply_requests(window);
-            self.window_context.reset();
-        }
-
-        self.on_process_user_events();
-
-        self.view_introspection();
+        window.borrow_mut().on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
     }
 
-    pub fn on_pointer_scroll(&mut self, pointer_scroll_update: PointerScrollEvent) {
+    pub fn on_pointer_scroll(&mut self, window: Rc<RefCell<Window>>, pointer_scroll_update: PointerScrollEvent) {
         if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse
         {
             let y: f32 = match pointer_scroll_update.delta {
@@ -338,13 +252,14 @@ impl App {
                 PixelDelta(physical) => physical.y as f32,
             };
             if y < 0.0 {
-                self.window_context.zoom_out();
+                window.borrow_mut().zoom_out();
             } else {
-                self.window_context.zoom_in();
+                window.borrow_mut().zoom_in();
             }
-            self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
-            request_layout();
-            style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());
+            let scale_factor = window.borrow().effective_scale_factor();
+            window.borrow_mut().scale_factor(scale_factor);
+            window.borrow_mut().mark_dirty();
+            //style_root_element(window.borrow_mut().deref_mut(), window.borrow().window_size());
             self.request_redraw(RedrawFlags::new(true));
             return;
         }
@@ -352,13 +267,13 @@ impl App {
         let event = CraftMessage::PointerScroll(pointer_scroll_update);
         let message = event;
 
-        self.dispatch_event(&message, false);
+        self.dispatch_event(window, &message, false);
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_pointer_button(&mut self, pointer_event: PointerButtonEvent, is_up: bool) {
+    pub fn on_pointer_button(&mut self, window: Rc<RefCell<Window>>, pointer_event: PointerButtonEvent, is_up: bool) {
         let mut pointer_event = pointer_event;
-        let zoom = self.window_context.zoom_factor;
+        let zoom = window.borrow().zoom_scale_factor();
         pointer_event.state.position.x /= zoom;
         pointer_event.state.position.y /= zoom;
 
@@ -370,62 +285,63 @@ impl App {
             CraftMessage::PointerButtonDown(pointer_event)
         };
         let message = event;
-        self.window_context.mouse_position = Some(Point::new(cursor_position.x, cursor_position.y));
+        window.borrow_mut().set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
-        self.dispatch_event(&message, true);
+        self.dispatch_event(window.clone(), &message, true);
 
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_pointer_moved(&mut self, mouse_moved: PointerUpdate) {
+    pub fn on_pointer_moved(&mut self, window: Rc<RefCell<Window>>, mouse_moved: PointerUpdate) {
         let mut mouse_moved = mouse_moved;
-        let zoom = self.window_context.zoom_factor;
+        let zoom = window.borrow().zoom_scale_factor();
         mouse_moved.current.position.x /= zoom;
         mouse_moved.current.position.y /= zoom;
 
-        self.window_context.mouse_position = Some(mouse_moved.current.logical_point());
+        window.borrow_mut().set_mouse_position(Some(mouse_moved.current.logical_point()));
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);
 
-        self.dispatch_event(&message, true);
+        self.dispatch_event(window.clone(), &message, true);
 
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_ime(&mut self, ime: Ime) {
+    pub fn on_ime(&mut self, window: Rc<RefCell<Window>>, ime: Ime) {
         let event = CraftMessage::ImeEvent(ime);
         let message = event;
 
-        self.dispatch_event(&message, false);
+        self.dispatch_event(window.clone(), &message, false);
 
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    /// Dispatch messages to the reactive tree.
-    fn dispatch_event(&mut self, message: &CraftMessage, _is_style: bool) {
+    fn dispatch_event(&mut self, window: Rc<RefCell<Window>>, message: &CraftMessage, _is_style: bool) {
+        let mouse_pos = Some(window.borrow().mouse_position());
+        let render_list = window.borrow().render_list.clone();
         self.event_dispatcher.dispatch_event(
             message,
-            self.window_context.mouse_position,
-            self.root.clone(),
+            mouse_pos.unwrap_or_default(),
+            window.clone(),
             &mut self.text_context,
-            &mut self.render_list,
+            render_list.borrow_mut().deref_mut(),
             &mut self.target_scratch,
         );
-        self.window.clone().unwrap().request_redraw();
+        window.borrow().winit_window().unwrap().request_redraw();
     }
 
-    pub fn on_keyboard_input(&mut self, keyboard_input: KeyboardEvent) {
+    pub fn on_keyboard_input(&mut self, window: Rc<RefCell<Window>>, keyboard_input: KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
         if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
             self.modifiers.set(Modifiers::CONTROL, false);
         }
         if keyboard_input.modifiers.ctrl() {
             if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
-                self.window_context.zoom_in();
+                window.borrow_mut().zoom_in();
                 self.request_redraw(RedrawFlags::new(true));
                 return;
             } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
-                self.window_context.zoom_out();
+                window.borrow_mut().zoom_out();
                 self.request_redraw(RedrawFlags::new(true));
                 return;
             }
@@ -434,7 +350,7 @@ impl App {
         let keyboard_event = CraftMessage::KeyboardInputEvent(keyboard_input.clone());
         let message = keyboard_event;
 
-        self.dispatch_event(&message, false);
+        self.dispatch_event(window.clone(), &message, false);
 
         self.request_redraw(RedrawFlags::new(true));
     }
@@ -460,17 +376,15 @@ impl App {
         }
     }
 
-    fn view_introspection(&mut self) {}
-
     fn request_redraw(&mut self, redraw_flags: RedrawFlags) {
         self.redraw_flags = redraw_flags;
-        if let Some(window) = &self.window {
+        /*if let Some(window) = &self.window {
             window.request_redraw();
-        }
+        }*/
     }
 
     /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
-    #[allow(dead_code)]
+    /*#[allow(dead_code)]
     fn animate_tree(&mut self, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
         /*let span = span!(Level::INFO, "animate_tree");
         let _enter = span.enter();*/
@@ -501,65 +415,7 @@ impl App {
             // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
             self.request_redraw(RedrawFlags::new(old_has_active_animation));
         }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn layout_tree(
-        &mut self,
-        viewport_size: LogicalSize<f32>,
-        origin: Point,
-        scale_factor: f64,
-        mouse_position: Option<Point>,
-    ) {
-        let root_element = self.root.clone();
-        let text_context = self.text_context.as_mut().unwrap();
-
-        {
-            /*let span = span!(Level::INFO, "layout");
-            let _enter = span.enter();*/
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                layout(
-                    taffy_tree,
-                    root_element,
-                    viewport_size,
-                    text_context,
-                    origin,
-                    self.resource_manager.clone(),
-                    scale_factor,
-                    mouse_position,
-                )
-            });
-        };
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn draw_reactive_tree(&mut self, mouse_position: Option<Point>) {
-        let text_context = self.text_context.as_mut().unwrap();
-        {
-            /*let span = span!(Level::INFO, "render");
-            let _enter = span.enter();*/
-            self.render_list.clear();
-            let scale_factor = self.window_context.effective_scale_factor();
-
-            let renderer = self.renderer.as_mut().unwrap();
-
-            {
-                /*let span = span!(Level::INFO, "render(element)");
-                let _enter = span.enter();*/
-                self.root.borrow_mut().draw(&mut self.render_list, text_context, mouse_position, scale_factor);
-            }
-
-            renderer.sort_and_cull_render_list(&mut self.render_list);
-
-            let window = Rectangle {
-                x: 0.0,
-                y: 0.0,
-                width: renderer.surface_width(),
-                height: renderer.surface_height(),
-            };
-            renderer.prepare_render_list(&mut self.render_list, self.resource_manager.clone(), window);
-        }
-    }
+    }*/
 
     #[cfg(feature = "accesskit")]
     fn compute_accessibility_tree(&mut self) -> TreeUpdate {
@@ -576,11 +432,11 @@ impl App {
             focus: accesskit::NodeId(focus_id),
         };
 
-        self.root.borrow_mut().compute_accessibility_tree(
+        /*self.root.borrow_mut().compute_accessibility_tree(
             &mut tree_update,
             None,
             self.window_context.effective_scale_factor(),
-        );
+        );*/
         tree_update.nodes[0].1.set_role(Role::Window);
 
         tree_update
@@ -605,89 +461,4 @@ impl App {
             });
         });
     }
-}
-
-fn style_root_element(root: &mut dyn Element, root_size: LogicalSize<f32>) {
-    let is_user_root_height_auto = {
-        let root_children = root.children();
-        root_children[0].borrow().style().height().is_auto()
-    };
-
-    let style = root.style_mut();
-
-    style.set_width(Unit::Px(root_size.width));
-    style.set_wrap(Wrap::Wrap);
-    style.set_display(Display::Block);
-
-    if is_user_root_height_auto {
-        style.set_height(Unit::Auto);
-    } else {
-        style.set_height(Unit::Px(root_size.height));
-    }
-    root.update_taffy_style();
-}
-
-#[allow(clippy::too_many_arguments)]
-fn layout(
-    taffy_tree: &mut TaffyTree,
-    root_element: Rc<RefCell<dyn Element>>,
-    window_size: LogicalSize<f32>,
-    text_context: &mut TextContext,
-    origin: Point,
-    resource_manager: Arc<ResourceManager>,
-    scale_factor: f64,
-    pointer: Option<Point>,
-) -> NodeId {
-    let root_node = root_element
-        .borrow()
-        .element_data()
-        .layout_item
-        .taffy_node_id
-        .expect("A root element must have a layout node.");
-
-    let available_space: taffy::Size<AvailableSpace> = taffy::Size {
-        width: AvailableSpace::Definite(window_size.width),
-        height: AvailableSpace::Definite(window_size.height),
-    };
-
-    if taffy_tree.is_layout_dirty() {
-        /*let span = span!(Level::INFO, "layout(taffy)");
-        let _enter = span.enter();*/
-        taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
-    }
-
-    if taffy_tree.is_apply_layout_dirty() {
-        /*let span = span!(Level::INFO, "layout(apply)");
-                let _enter = span.enter();*/
-
-        // TODO: move into taffy_tree
-        let mut layout_order: u32 = 0;
-        root_element.borrow_mut().apply_layout(
-            taffy_tree,
-            origin,
-            &mut layout_order,
-            Affine::IDENTITY,
-            pointer,
-            text_context,
-            None,
-            scale_factor,
-        );
-        taffy_tree.apply_layout();
-    }
-
-    root_node
-}
-
-#[inline]
-pub fn request_layout() {
-    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        taffy_tree.request_layout();
-    });
-}
-
-#[inline]
-pub fn request_apply_layout() {
-    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        taffy_tree.request_apply_layout();
-    });
 }

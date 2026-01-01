@@ -19,7 +19,6 @@ use parley::layout::LayoutAccessibility;
 use accesskit::{Node, NodeId, TreeUpdate};
 use crate::text::RangedStyles;
 use craft_primitives::ColorBrush;
-use crate::request_layout;
 
 /// Opaque representation of a generation.
 ///
@@ -110,7 +109,7 @@ pub struct PlainEditor
     /// Whether the cursor should be shown. The IME can request to hide the cursor.
     show_cursor: bool,
     width: Option<f32>,
-    scale: f32,
+    scale: f64,
     quantize: bool,
     // Simple tracking of when the layout needs to be updated
     // before it can be used for `Selection` calculations or
@@ -457,7 +456,8 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         self.editor
             .set_selection(Selection::from_point(&self.editor.layout, x, y));
-        request_layout();
+        // TODO: Fix
+        //request_layout();
     }
 
     /// Move the cursor to a byte index.
@@ -663,7 +663,8 @@ impl PlainEditorDriver<'_>
                 .selection
                 .next_visual_word(&self.editor.layout, true),
         );
-        request_layout();
+        // TODO: FIx
+        //request_layout();
     }
 
     /// Select the word at the point.
@@ -671,7 +672,8 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         self.editor
             .set_selection(Selection::word_from_point(&self.editor.layout, x, y));
-        request_layout();
+        // TODO: Fix
+        //request_layout();
     }
 
     /// Select the physical line at the point.
@@ -679,7 +681,8 @@ impl PlainEditorDriver<'_>
         self.refresh_layout();
         let line = Selection::line_from_point(&self.editor.layout, x, y);
         self.editor.set_selection(line);
-        request_layout();
+        // TODO: FIx
+        //request_layout();
     }
 
     /// Move the selection focus point to the cluster boundary closest to point.
@@ -957,7 +960,7 @@ impl PlainEditor
     }
 
     /// Set the scale for the layout.
-    pub fn set_scale(&mut self, scale: f32) {
+    pub fn set_scale(&mut self, scale: f64) {
         self.scale = scale;
         self.layout_dirty = true;
     }
@@ -1148,7 +1151,7 @@ impl PlainEditor
     /// Update the layout.
     fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
         let mut builder =
-            layout_cx.ranged_builder(font_cx, &self.buffer, self.scale, self.quantize);
+            layout_cx.ranged_builder(font_cx, &self.buffer, self.scale as f32, self.quantize);
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
         }

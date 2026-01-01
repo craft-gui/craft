@@ -1,4 +1,4 @@
-use craft_retained::elements::{Element, TextInput};
+use craft_retained::elements::{Element, TextInput, Window};
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
 use craft_retained::{
     elements::Container,
@@ -28,10 +28,10 @@ fn main() {
         .color(rgb(50, 50, 50))
         .push(text);
 
-    let root = Container::new();
+    let root = Window::new();
     root.borrow_mut().push(container);
 
     use craft_retained::CraftOptions;
     util::setup_logging();
-    craft_retained::craft_main(root, CraftOptions::basic("text"));
+    craft_retained::craft_main(CraftOptions::basic("text"));
 }

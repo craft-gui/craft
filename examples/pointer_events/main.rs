@@ -1,5 +1,5 @@
 use craft_retained::elements::core::ElementData;
-use craft_retained::elements::Element;
+use craft_retained::elements::{Element, Window};
 use craft_retained::events::ui_events::pointer::PointerId;
 use craft_retained::events::Event;
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
@@ -178,21 +178,26 @@ fn pointer_enter_leave_example() -> Rc<RefCell<Container>> {
 #[allow(unused)]
 #[cfg(not(target_os = "android"))]
 fn main() {
+    let window = Window::new();
+
     let pointer_capture_container = Container::new();
     let pointer_capture_event_log = Text::new("");
     let pointer_capture_draggable_container = Text::new("Draggable");
 
-    let root = Container::new();
-    root.borrow_mut()
+
+    window.borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow(Overflow::Visible, Overflow::Scroll)
         .max_height(Unit::Percentage(100.0))
         .gap(Unit::Px(50.0), Unit::Px(50.0));
-    root.borrow_mut().push(pointer_capture_example());
-    root.borrow_mut().push(pointer_enter_leave_example());
+
+    let pointer_capture_example = pointer_capture_example();
+    window.borrow_mut().push(pointer_capture_example);
+    let pointer_enter_leave_example = pointer_enter_leave_example();
+    window.borrow_mut().push(pointer_enter_leave_example);
 
     use craft_retained::CraftOptions;
     //util::setup_logging();
-    craft_retained::craft_main(root, CraftOptions::basic("Pointer Events"));
+    craft_retained::craft_main(CraftOptions::basic("Pointer Events"));
 }

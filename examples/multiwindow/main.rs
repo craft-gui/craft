@@ -24,6 +24,7 @@ impl Counter {
 }
 
 fn create_button(
+    window: &Rc<RefCell<Window>>,
     label: &str,
     base_color: Color,
     delta: i64,
@@ -31,9 +32,9 @@ fn create_button(
     count_text: Rc<RefCell<Text>>,
 ) -> Rc<RefCell<Container>> {
     let border_color = rgb(0, 0, 0);
-    let label = Text::new(label);
+    let label = Text::new_mw(window, label);
     label.borrow_mut().font_size(24.0).color(Color::WHITE).selectable(false);
-    let container = Container::new();
+    let container = Container::new_mw(window);
     container
         .borrow_mut()
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
@@ -58,20 +59,20 @@ fn create_button(
 pub fn counter() -> Rc<RefCell<dyn Element>> {
     let count = Rc::new(RefCell::new(Counter::default()));
 
-    let container = Container::new();
+    let window = Window::new();
 
-    let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
+    let count_text = Text::new_mw(&window, &format!("Count: {}", count.borrow().count()));
 
-    let button = Container::new();
+    let button = Container::new_mw(&window);
     button
         .borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .gap(Unit::Px(20.0), Unit::Px(20.0))
-        .push(create_button("-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
-        .push(create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
+        .push(create_button(&window, "-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
+        .push(create_button(&window, "+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
 
-    container
+    window
         .borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
@@ -85,20 +86,21 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
         .color(rgb(50, 50, 50))
         .push(button);
 
-    let root = Container::new();
-    root.borrow_mut().push(container);
+    println!("window: {:?}", window.borrow().style());
+
+    let root = Container::new_mw(&window);
+    root.borrow_mut().push(window);
 
     root
 }
 
-#[allow(unused)]
-#[cfg(not(target_os = "android"))]
 fn main() {
-    let counter = counter();
+    let _counter1 = counter();
+    let _counter2 = counter();
 
-    let window_2 = Window::new();
+    //let window_2 = Window::new();
 
     use craft_retained::CraftOptions;
     util::setup_logging();
-    craft_retained::craft_main(counter, CraftOptions::basic("Counter"));
+    craft_retained::craft_main(CraftOptions::basic("Counter"));
 }

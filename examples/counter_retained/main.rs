@@ -1,4 +1,4 @@
-use craft_retained::elements::Element;
+use craft_retained::elements::{Element, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
 use craft_retained::{
@@ -58,7 +58,7 @@ fn create_button(
 pub fn counter() -> Rc<RefCell<dyn Element>> {
     let count = Rc::new(RefCell::new(Counter::default()));
 
-    let container = Container::new();
+    let container = Window::new();
 
     let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
 
@@ -98,5 +98,5 @@ fn main() {
 
     use craft_retained::CraftOptions;
     util::setup_logging();
-    craft_retained::craft_main(counter, CraftOptions::basic("Counter"));
+    craft_retained::craft_main(CraftOptions::basic("Counter"));
 }

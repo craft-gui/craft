@@ -1,4 +1,4 @@
-use kurbo::Point;
+/*use kurbo::Point;
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalSize};
 use winit::window::{Cursor, Window};
 
@@ -55,7 +55,7 @@ impl WindowContext {
             )));
         };
     }
-    
+
     pub(crate) fn zoom_in(&mut self) {
         self.zoom_factor += 0.01;
     }
@@ -91,7 +91,7 @@ impl WindowContext {
     pub fn window_height(&self) -> f32 {
         self.window_size.to_logical(self.effective_scale_factor()).height
     }
-    
+
     pub fn window_size(&self) -> LogicalSize<f32> {
         self.window_size.to_logical(self.effective_scale_factor())
     }
@@ -123,7 +123,7 @@ impl WindowContext {
     pub fn set_cursor(&mut self, cursor: Cursor) {
         self.requested_cursor = Some(cursor);
     }
-    
+
     pub fn effective_scale_factor(&self) -> f64 {
         self.scale_factor * self.zoom_factor
     }
@@ -136,3 +136,4 @@ impl WindowContext {
         self.requested_cursor = None;
     }
 }
+*/

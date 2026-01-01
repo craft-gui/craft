@@ -1,9 +1,8 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
-use crate::elements::{scrollable, Element};
+use crate::elements::{scrollable, Element, Window};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -13,6 +12,7 @@ use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use crate::window_manager::WindowManager;
 
 /// Stores one or more elements.
 ///
@@ -22,15 +22,19 @@ pub struct Container {
 }
 
 impl Container {
-    pub fn new() -> Rc<RefCell<Self>> {
+    pub fn new_mw(window: &Rc<RefCell<Window>>) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Container>>| {
             RefCell::new(Container {
-                element_data: ElementData::new(me.clone(), true),
+                element_data: ElementData::new(Rc::downgrade(window), me.clone(), true),
             })
         });
 
-        me.borrow_mut().element_data.crate_layout_node(None);
+        me.borrow_mut().element_data.create_layout_node(None);
         me
+    }
+
+    pub fn new() -> Rc<RefCell<Self>> {
+        Self::new_mw(&WindowManager::get_main_window())
     }
 }
 
@@ -54,13 +58,14 @@ impl Element for Container {
         self.element_data.children.push(child.clone());
 
         // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
             }
-        });
+        }
 
         self
     }
@@ -84,14 +89,15 @@ impl Element for Container {
         self.element_data.children.extend(children.iter().cloned());
 
         // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             for child in &children {
                 if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
                     taffy_tree.add_child(parent_id, child_id);
                 }
             }
-        });
+        };
 
         self
     }

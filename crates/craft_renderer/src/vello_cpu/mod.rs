@@ -152,8 +152,8 @@ impl Renderer for VelloCpuRenderer {
                     self.render_context.set_paint(PaintType::Solid(*fill_color));
                     self.render_context.fill_rect(&rectangle.to_kurbo());
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color) => {
-                    self.render_context.set_stroke(Stroke::new(1.0));
+                RenderCommand::DrawRectOutline(rectangle, outline_color, thickness) => {
+                    self.render_context.set_stroke(Stroke::new(*thickness));
                     self.render_context.set_paint(PaintType::Solid(*outline_color));
                     self.render_context.stroke_rect(&rectangle.to_kurbo());
                 }

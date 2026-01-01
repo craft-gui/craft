@@ -11,8 +11,6 @@ mod tests;
 pub mod text;
 pub mod document;
 
-pub use crate::app::request_layout;
-
 mod app;
 pub use craft_primitives::geometry as geometry;
 pub mod layout;
@@ -43,12 +41,8 @@ pub use winit::window::{Cursor, CursorIcon};
 
 pub use utils::craft_error::CraftError;
 
-pub use window_context::WindowContext;
-
-use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
@@ -113,10 +107,9 @@ pub fn internal_craft_main_with_options(
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
 pub fn craft_main(
-    root: Rc<RefCell<dyn Element>>,
     options: CraftOptions,
 ) {
-    internal_craft_main_with_options(root, Some(options));
+    internal_craft_main_with_options(Some(options));
 }
 
 /// Starts the Craft application with the provided component specification, global state, and configuration options.
@@ -142,7 +135,6 @@ pub fn craft_main(
 
 #[cfg(not(target_os = "android"))]
 fn internal_craft_main_with_options(
-    root: Rc<RefCell<dyn Element>>,
     options: Option<CraftOptions>,
 ) {
     use winit::event_loop::EventLoop;
@@ -151,13 +143,12 @@ fn internal_craft_main_with_options(
     let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
-    let craft_state = setup_craft(root, options);
+    let craft_state = setup_craft(options);
     let mut winit_craft_state = CraftWinitState::new(craft_state);
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
 pub fn setup_craft(
-    root: Rc<RefCell<dyn Element>>,
     craft_options: Option<CraftOptions>,
 ) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
@@ -196,21 +187,16 @@ pub fn setup_craft(
 
     let craft_app = Box::new(App {
         event_dispatcher: EventDispatcher::new(),
-        root,
         app_sender: app_sender.clone(),
         #[cfg(feature = "accesskit")]
         accesskit_adapter: None,
-        window: None,
         text_context: None,
-        renderer: None,
-        window_context: WindowContext::new(),
         resource_manager,
         reload_fonts: false,
 
         runtime: runtime_copy,
         modifiers: Default::default(),
         redraw_flags: RedrawFlags::new(true),
-        render_list: RenderList::new(),
         target_scratch: Vec::new(),
 
         previous_animation_flags: Default::default(),

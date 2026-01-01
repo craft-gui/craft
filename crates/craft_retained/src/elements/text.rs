@@ -20,7 +20,7 @@ const MAX_CACHE_SIZE: usize = 16;
 use crate::elements::core::ElementInternals;
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::Element;
+use crate::elements::{Element, Window};
 use crate::layout::TaffyTree;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
@@ -37,6 +37,7 @@ use ui_events::pointer::{PointerButton, PointerId};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::dpi;
+use crate::window_manager::WindowManager;
 
 // A stateful element that shows text.
 #[derive(Clone)]
@@ -50,7 +51,7 @@ pub struct Text {
 #[derive(Clone)]
 pub struct TextState {
     text: SmolStr,
-    scale_factor: f32,
+    scale_factor: f64,
     selection: Selection,
     pub(crate) text_render: Option<TextRender>,
     layout: Option<parley::Layout<ColorBrush>>,
@@ -76,9 +77,9 @@ pub struct TextState {
 }
 
 impl Text {
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
+    pub fn new_mw(window: &Rc<RefCell<Window>>, text: &str) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Text {
-            element_data: ElementData::new(me.clone(), false),
+            element_data: ElementData::new(Rc::downgrade(window), me.clone(), false),
             selectable: true,
             state: TextState::default(),
             me: me.clone(),
@@ -87,11 +88,15 @@ impl Text {
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
             element: me.borrow().me.clone(),
         }));
-        me.borrow_mut().element_data.crate_layout_node(text_context);
+        me.borrow_mut().element_data.create_layout_node(text_context);
 
         me.borrow_mut().text(text);
 
         me
+    }
+
+    pub fn new(text: &str) -> Rc<RefCell<Self>> {
+        Self::new_mw(&WindowManager::get_main_window(), text)
     }
 
     pub fn get_selectable(&self) -> bool {
@@ -355,7 +360,7 @@ impl ElementInternals for Text {
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
         self.mark_dirty();
-        self.state.scale_factor = scale_factor as f32;
+        self.state.scale_factor = scale_factor;
     }
 }
 
@@ -372,7 +377,7 @@ impl TextState {
         }
 
         if self.layout.is_none() {
-            let mut builder = text_context.tree_builder(self.scale_factor, &style.to_text_style());
+            let mut builder = text_context.tree_builder(self.scale_factor as f32, &style.to_text_style());
             let text = &self.text;
             builder.push_text(text);
             let (layout, _) = builder.build();

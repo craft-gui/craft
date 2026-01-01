@@ -1,8 +1,7 @@
 use crate::animations::animation::ActiveAnimation;
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::element_states::ElementState;
 use crate::elements::scroll_state::ScrollState;
-use crate::elements::Element;
+use crate::elements::{Element, Window};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
 use crate::layout::layout_item::LayoutItem;
 use crate::style::Style;
@@ -12,30 +11,30 @@ use smol_str::SmolStr;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use taffy::{Layout, Overflow};
-use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::app::{ELEMENTS};
 use crate::layout::layout_context::LayoutContext;
+use crate::layout::TaffyTree;
 
 /// Stores common data to most elements.
 #[derive(Clone)]
 pub struct ElementData {
-    pub current_state: ElementState,
+    /// A cyclic weak pointer to the element.
+    pub(crate) me: Weak<RefCell<dyn Element>>,
+
+    /// The window which owns this element.
+    pub(crate) window: Option<Weak<RefCell<Window>>>,
+
+    /// The Element's parent.
+    pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+
+    /// The taffy tree where the element's layout will be stored.
+    pub(crate) taffy_tree: Rc<RefCell<TaffyTree>>,
 
     /// The style of the element.
     pub style: Style,
 
+    /// Stores the layout data for an element.
     pub layout_item: LayoutItem,
-
-    /// The style of the element when it is hovered.
-    pub hover_style: Option<Style>,
-
-    /// The style of the element when it is pressed.
-    pub pressed_style: Option<Style>,
-
-    /// The style of the element when it is disabled.
-    pub disabled_style: Option<Style>,
-
-    /// The style of the element when it is focused.
-    pub focused_style: Option<Style>,
 
     /// The children of the element.
     pub children: Vec<Rc<RefCell<dyn Element>>>,
@@ -43,51 +42,88 @@ pub struct ElementData {
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,
 
+    /// A unique id for this element. Within a craft app the id will be unique even across windows.
     pub(crate) internal_id: u64,
 
     pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
-    pub(crate) parent: Option<Weak<RefCell<dyn Element>>>,
+
+    /// Scrollbar state for elements that may have a scrollbar.
+    pub(super) scroll_state: Option<ScrollState>,
+
+    // Events:
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
     pub on_pointer_leave: Vec<PointerLeaveHandler>,
-    pub(crate) me: Weak<RefCell<dyn Element>>,
     pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
     pub on_pointer_button_down: Vec<PointerEventHandler>,
     pub on_pointer_button_up: Vec<PointerEventHandler>,
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
-    /// Scrollbar state for elements that may have a scrollbar.
-    pub(super) scroll_state: Option<ScrollState>,
 }
 
 impl ElementData {
 
-    pub fn new(me: Weak<RefCell<dyn Element>>, scrollable: bool) -> Self {
+    pub fn new(window: Weak<RefCell<Window>>, me: Weak<RefCell<dyn Element>>, scrollable: bool) -> Self {
         let mut default = Self {
-            current_state: Default::default(),
+            me,
+            window: Some(window.clone()),
+            parent: None,
             style: Default::default(),
+            taffy_tree: window.upgrade().unwrap().borrow().taffy_tree.clone(),
             layout_item: Default::default(),
-            hover_style: None,
-            pressed_style: None,
-            disabled_style: None,
-            focused_style: None,
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
             animations: None,
-            parent: None,
-            on_slider_value_changed: vec![],
-            on_pointer_enter: vec![],
-            on_pointer_leave: vec![],
-            me,
-            on_got_pointer_capture: vec![],
-            on_lost_pointer_capture: vec![],
-            on_pointer_button_down: vec![],
-            on_pointer_button_up: vec![],
-            on_pointer_moved: vec![],
-            on_keyboard_input: vec![],
             scroll_state: None,
+
+            on_slider_value_changed: Vec::new(),
+            on_pointer_enter: Vec::new(),
+            on_pointer_leave: Vec::new(),
+            on_got_pointer_capture: Vec::new(),
+            on_lost_pointer_capture: Vec::new(),
+            on_pointer_button_down: Vec::new(),
+            on_pointer_button_up: Vec::new(),
+            on_pointer_moved: Vec::new(),
+            on_keyboard_input: Vec::new(),
+        };
+
+        // Create scroll state if needed.
+        if scrollable {
+            default.scroll_state = Some(ScrollState::default());
+        }
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert_id(default.internal_id, default.me.clone());
+        });
+
+        default
+    }
+
+    pub fn new_window(taffy_tree: Rc<RefCell<TaffyTree>>, me: Weak<RefCell<dyn Element>>, scrollable: bool) -> Self {
+        let mut default = Self {
+            me,
+            window: None,
+            parent: None,
+            style: Default::default(),
+            taffy_tree,
+            layout_item: Default::default(),
+            children: Default::default(),
+            id: None,
+            internal_id: create_unique_element_id(),
+            animations: None,
+            scroll_state: None,
+
+            on_slider_value_changed: Vec::new(),
+            on_pointer_enter: Vec::new(),
+            on_pointer_leave: Vec::new(),
+            on_got_pointer_capture: Vec::new(),
+            on_lost_pointer_capture: Vec::new(),
+            on_pointer_button_down: Vec::new(),
+            on_pointer_button_up: Vec::new(),
+            on_pointer_moved: Vec::new(),
+            on_keyboard_input: Vec::new(),
         };
 
         // Create scroll state if needed.
@@ -103,16 +139,15 @@ impl ElementData {
     }
 
     /// Creates a new taffy node for this element with optional layout context.
-    pub fn crate_layout_node(&mut self, layout_context: Option<LayoutContext>) {
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let style = self.style.to_taffy_style();
-            let node_id = if let Some(layout_context) = layout_context {
-                taffy_tree.new_leaf_with_context(style, layout_context)
-            } else {
-                taffy_tree.new_leaf(style)
-            };
-            self.layout_item.taffy_node_id = Some(node_id);
-        });
+    pub fn create_layout_node(&mut self, layout_context: Option<LayoutContext>) {
+        let mut taffy_tree = self.taffy_tree.borrow_mut();
+        let style = self.style.to_taffy_style();
+        let node_id = if let Some(layout_context) = layout_context {
+            taffy_tree.new_leaf_with_context(style, layout_context)
+        } else {
+            taffy_tree.new_leaf(style)
+        };
+        self.layout_item.taffy_node_id = Some(node_id);
     }
 
     /// Computes the scrollbar's tack and thumb layout.

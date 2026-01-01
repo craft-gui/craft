@@ -1,8 +1,7 @@
-use crate::app::{queue_event, ELEMENTS};
-use crate::app::TAFFY_TREE;
+use crate::app::{queue_event};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
-use crate::elements::Element;
+use crate::elements::{Element, Window};
 use crate::events::{CraftMessage, Event};
 use crate::palette;
 use crate::style::Unit;
@@ -13,11 +12,11 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 use crate::layout::TaffyTree;
+use crate::window_manager::WindowManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -47,9 +46,9 @@ pub struct Slider {
 }
 
 impl Slider {
-    pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
+    pub fn new_mw(window: &Rc<RefCell<Window>>, thumb_size: f32) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Self {
-            element_data: ElementData::new(me.clone(), false),
+            element_data: ElementData::new(Rc::downgrade(window), me.clone(), false),
             step: 1.0,
             min: 0.0,
             max: 100.0,
@@ -80,16 +79,22 @@ impl Slider {
         }
 
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        // TODO: FIX
+       /* {
+            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
         });
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
-        });
+        });*/
 
         me
+    }
+
+    pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
+        Self::new_mw(&WindowManager::get_main_window(), thumb_size)
     }
 
     pub fn value(&mut self, value: f64) -> &mut Self {
