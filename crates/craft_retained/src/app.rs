@@ -2,7 +2,6 @@ use crate::elements::{ElementIdMap, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::CraftMessage;
 use crate::events::{Event, EventDispatcher};
-use crate::style::{Display, Unit, Wrap};
 use crate::text::text_context::TextContext;
 use craft_logging::info;
 use craft_primitives::geometry::{Size, Point};
@@ -35,7 +34,6 @@ use crate::elements::Element;
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
 use craft_runtime::Sender;
-use std::time::Duration;
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use ui_events::ScrollDelta;
@@ -44,6 +42,7 @@ use winit::event::Ime;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{WindowId};
 use crate::elements::core::ElementInternals;
+use crate::layout::TaffyTree;
 use crate::window_manager::WindowManager;
 
 thread_local! {
@@ -59,6 +58,7 @@ thread_local! {
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
 
     pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
+    pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
 }
 
 /// Enqueues an event at the back of the dispatch queue.
@@ -126,7 +126,7 @@ impl App {
         info!("Craft application is closing.");
     }
 
-    pub fn on_scale_factor_changed(&mut self, scale_factor: f64) {
+    pub fn on_scale_factor_changed(&mut self, _scale_factor: f64) {
         /*self.window_context.scale_factor = scale_factor;
         self.on_resize(self.window.as_ref().unwrap().inner_size());
         self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
@@ -461,4 +461,18 @@ impl App {
             });
         });
     }
+}
+
+#[inline]
+pub fn request_layout() {
+    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        taffy_tree.request_layout();
+    });
+}
+
+#[inline]
+pub fn request_apply_layout() {
+    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        taffy_tree.request_apply_layout();
+    });
 }

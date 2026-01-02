@@ -16,7 +16,7 @@ use std::rc::{Rc, Weak};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{scrollable, Window};
+use crate::elements::{scrollable};
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -29,7 +29,6 @@ use kurbo::Affine;
 use parley::BoundingBox;
 use ui_events::pointer::PointerButton;
 use winit::event::Ime;
-use crate::window_manager::WindowManager;
 
 // A stateful element that shows text.
 #[derive(Clone)]
@@ -55,7 +54,7 @@ pub enum TextInputMessage {
 }
 
 impl TextInput {
-    pub fn new_mw(window: &Rc<RefCell<Window>>, text: &str) -> Rc<RefCell<Self>> {
+    pub fn new(text: &str) -> Rc<RefCell<Self>> {
         let default_style = Self::get_default_style();
 
         let text_input_state = TextInputState::default();
@@ -63,7 +62,7 @@ impl TextInput {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
                 text: Some(text.to_string()),
-                element_data: ElementData::new(Rc::downgrade(window), me.clone(), true),
+                element_data: ElementData::new(me.clone(), true),
                 use_text_value_on_update: true,
                 ranged_styles: Some(RangedStyles::new(vec![])),
                 disabled: false,
@@ -85,10 +84,6 @@ impl TextInput {
         });
 
         me
-    }
-
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        Self::new_mw(&WindowManager::get_main_window(), text)
     }
 }
 

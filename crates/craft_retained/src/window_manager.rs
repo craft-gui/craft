@@ -4,23 +4,14 @@ use std::sync::Arc;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{WindowAttributes, WindowId};
 use craft_renderer::renderer::Renderer;
-use crate::app::WINDOW_MANAGER;
 use crate::craft_winit_state::CraftState;
-use crate::elements::{Element, Window};
-use crate::elements::core::ElementData;
+use crate::elements::{Window};
 
 pub(crate) struct WindowManager {
     windows: Vec<Rc<RefCell<Window>>>,
 }
 
 impl WindowManager {
-
-    pub fn get_main_window() -> Rc<RefCell<Window>> {
-        WINDOW_MANAGER.with_borrow(|window_manager| {
-           window_manager.windows[0].clone()
-        })
-    }
-
     pub(crate) fn new() -> Self {
         Self {
             windows: Vec::new(),

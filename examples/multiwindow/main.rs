@@ -24,7 +24,6 @@ impl Counter {
 }
 
 fn create_button(
-    window: &Rc<RefCell<Window>>,
     label: &str,
     base_color: Color,
     delta: i64,
@@ -32,9 +31,9 @@ fn create_button(
     count_text: Rc<RefCell<Text>>,
 ) -> Rc<RefCell<Container>> {
     let border_color = rgb(0, 0, 0);
-    let label = Text::new_mw(window, label);
+    let label = Text::new(label);
     label.borrow_mut().font_size(24.0).color(Color::WHITE).selectable(false);
-    let container = Container::new_mw(window);
+    let container = Container::new();
     container
         .borrow_mut()
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
@@ -61,16 +60,16 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
 
     let window = Window::new();
 
-    let count_text = Text::new_mw(&window, &format!("Count: {}", count.borrow().count()));
+    let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
 
-    let button = Container::new_mw(&window);
+    let button = Container::new();
     button
         .borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .gap(Unit::Px(20.0), Unit::Px(20.0))
-        .push(create_button(&window, "-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
-        .push(create_button(&window, "+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
+        .push(create_button("-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
+        .push(create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
 
     window
         .borrow_mut()
@@ -86,9 +85,7 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
         .color(rgb(50, 50, 50))
         .push(button);
 
-    println!("window: {:?}", window.borrow().style());
-
-    let root = Container::new_mw(&window);
+    let root = Container::new();
     root.borrow_mut().push(window);
 
     root

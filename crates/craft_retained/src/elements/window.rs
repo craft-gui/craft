@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use crate::app::{WINDOW_MANAGER};
+use crate::app::{TAFFY_TREE, WINDOW_MANAGER};
 use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable, Element};
@@ -35,23 +35,20 @@ pub struct Window {
     zoom_scale_factor: f64,
     mouse_positon: Option<Point>,
     pub(crate) renderer: Option<RendererBox>,
-    pub(crate) taffy_tree: Rc<RefCell<TaffyTree>>,
     pub(crate) render_list: Rc<RefCell<RenderList>>,
 }
 
 impl Window {
     pub fn new() -> Rc<RefCell<Self>> {
-        let taffy_tree = Rc::new(RefCell::new(TaffyTree::new()));
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
-                element_data: ElementData::new_window(taffy_tree.clone(), me.clone(), true),
+                element_data: ElementData::new(me.clone(), true),
                 winit_window: None,
                 window_size: Default::default(),
                 scale_factor: 1.0,
                 zoom_scale_factor: 1.0,
                 mouse_positon: None,
                 renderer: None,
-                taffy_tree,
                 render_list: Rc::new(RefCell::new(RenderList::new())),
             })
         });
@@ -107,8 +104,8 @@ impl Window {
             renderer.resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
         }
         self.window_size = new_size;
-        //self.render_list.set_cull(Some(Rectangle::new(0.0, 0.0, new_size.width as f32, new_size.height as f32)));
         let size = self.window_size();
+        self.render_list.borrow_mut().set_cull(Some(Rectangle::new(0.0, 0.0, size.width as f32, size.height as f32)));
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
@@ -150,22 +147,22 @@ impl Window {
             height: AvailableSpace::Definite(window_size.height as f32),
         };
 
-        //if self.taffy_tree.borrow().is_layout_dirty() {
-            /*let span = span!(Level::INFO, "layout(taffy)");
-            let _enter = span.enter();*/
-            self.taffy_tree.borrow_mut().compute_layout(root_node, available_space, text_context, resource_manager.clone());
-        //}
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            //if taffy_tree.is_layout_dirty() {
+                /*let span = span!(Level::INFO, "layout(taffy)");
+                let _enter = span.enter();*/
+                taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
+            //}
 
-        //if self.taffy_tree.borrow().is_apply_layout_dirty() {
+            //if self.taffy_tree.borrow().is_apply_layout_dirty() {
             /*let span = span!(Level::INFO, "layout(apply)");
                     let _enter = span.enter();*/
 
             // TODO: move into taffy_tree
             let mut layout_order: u32 = 0;
             let sf = self.effective_scale_factor();
-            let x = self.taffy_tree.clone();
             self.apply_layout(
-                x.borrow_mut().deref_mut(),
+                taffy_tree,
                 Point::new(0.0, 0.0),
                 &mut layout_order,
                 Affine::IDENTITY,
@@ -174,8 +171,10 @@ impl Window {
                 None,
                 sf
             );
-            self.taffy_tree.borrow_mut().apply_layout();
-        //}
+            taffy_tree.apply_layout();
+            //}
+
+        });
 
         root_node
     }
@@ -226,14 +225,13 @@ impl Element for Window {
         self.element_data.children.push(child.clone());
 
         // Add the children's taffy node.
-        {
-            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
             }
-        }
+        });
 
         self
     }
@@ -257,15 +255,14 @@ impl Element for Window {
         self.element_data.children.extend(children.iter().cloned());
 
         // Add the children's taffy node.
-        {
-            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
             for child in &children {
                 if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
                     taffy_tree.add_child(parent_id, child_id);
                 }
             }
-        }
+        });
 
         self
     }

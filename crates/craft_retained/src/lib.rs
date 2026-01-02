@@ -57,10 +57,8 @@ use craft_logging::info;
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use app::App;
-use craft_renderer::RenderList;
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
-use crate::elements::Element;
 use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
 

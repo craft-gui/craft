@@ -1,7 +1,7 @@
 use crate::app::{queue_event};
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, Window};
+use crate::elements::{Element};
 use crate::events::{CraftMessage, Event};
 use crate::palette;
 use crate::style::Unit;
@@ -16,7 +16,6 @@ use std::rc::{Rc, Weak};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 use crate::layout::TaffyTree;
-use crate::window_manager::WindowManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -46,9 +45,9 @@ pub struct Slider {
 }
 
 impl Slider {
-    pub fn new_mw(window: &Rc<RefCell<Window>>, thumb_size: f32) -> Rc<RefCell<Self>> {
+    pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Self {
-            element_data: ElementData::new(Rc::downgrade(window), me.clone(), false),
+            element_data: ElementData::new(me.clone(), false),
             step: 1.0,
             min: 0.0,
             max: 100.0,
@@ -91,10 +90,6 @@ impl Slider {
         });*/
 
         me
-    }
-
-    pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
-        Self::new_mw(&WindowManager::get_main_window(), thumb_size)
     }
 
     pub fn value(&mut self, value: f64) -> &mut Self {

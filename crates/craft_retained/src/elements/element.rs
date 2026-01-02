@@ -1,4 +1,4 @@
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS};
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
 use crate::elements::core::ElementData;
 use crate::elements::ElementIdMap;
@@ -37,8 +37,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.element_data_mut().children.swap(position_1, position_2);
 
         // Swap the children's taffy nodes.
-        {
-            let mut taffy_tree = self.element_data().taffy_tree.borrow_mut();
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let parent_id = self.element_data().layout_item.taffy_node_id;
             let child_1_id = child_1.borrow().element_data().layout_item.taffy_node_id;
             let child_2_id = child_2.borrow().element_data().layout_item.taffy_node_id;
@@ -67,7 +66,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
                 taffy_tree.mark_dirty(parent_id);
                 taffy_tree.request_layout();
             }
-        }
+        });
 
         Ok(())
     }
@@ -95,8 +94,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
         child.borrow_mut().element_data_mut().parent = None;
 
-        {
-            let mut taffy_tree = self.element_data().taffy_tree.borrow_mut();
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
 
             if let Some(child_id) = child_id {
@@ -105,7 +103,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
             let parent_id = self.element_data().layout_item.taffy_node_id;
             taffy_tree.mark_dirty(parent_id.unwrap());
-        }
+        });
 
         // TODO: Move to document
         fn remove_element_from_document(

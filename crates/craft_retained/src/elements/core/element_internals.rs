@@ -17,6 +17,7 @@ use crate::elements::Element;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
+use crate::app::{request_layout, TAFFY_TREE};
 use crate::layout::TaffyTree;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
@@ -366,19 +367,24 @@ pub trait  ElementInternals: ElementData {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
+        request_layout();
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
-            let mut taffy_tree = self.element_data().taffy_tree.borrow_mut();
-            taffy_tree.mark_dirty(id);
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.mark_dirty(id);
+            });
         }
     }
 
     /// Updates taffy's style to reflect craft's style struct.
     fn update_taffy_style(&mut self) {
+        request_layout();
+
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
-            let mut taffy_tree = self.element_data().taffy_tree.borrow_mut();
-            taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
+            });
         }
     }
 

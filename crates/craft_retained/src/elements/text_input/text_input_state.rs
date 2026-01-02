@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+use crate::app::{request_layout, TAFFY_TREE};
 use crate::elements::core::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::elements::TextInput;
@@ -67,7 +68,7 @@ impl Default for TextInputState {
     fn default() -> Self {
         let default_style = TextInput::get_default_style();
         let mut editor = PlainEditor::new(default_style.font_size());
-        editor.set_scale(1.0f64);
+        editor.set_scale(1.0);
         let style_set = editor.edit_styles();
         default_style.add_styles_to_style_set(style_set);
         Self {
@@ -119,7 +120,7 @@ impl TextInputState {
         // NOTE: Cursor position should be relative to the top left of the text box.
         let cursor_pos = pointer_moved.current.logical_point();
         let cursor_pos: Point = (cursor_pos - self.origin).to_point();
-        let mut cursor_pos = Point::new(cursor_pos.x * self.scale_factor as f64, cursor_pos.y * self.scale_factor as f64);
+        let mut cursor_pos = Point::new(cursor_pos.x * self.scale_factor, cursor_pos.y * self.scale_factor);
         cursor_pos.y += scroll_y;
         self.cursor_pos = cursor_pos;
         // macOS seems to generate a spurious move after selecting word?
@@ -127,8 +128,7 @@ impl TextInputState {
             self.reset_blink();
             let cursor_pos = self.cursor_pos();
             self.driver(text_context).extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
-            // TODO: Fix
-            //request_layout();
+            request_layout();
         }
     }
 
@@ -164,9 +164,9 @@ impl TextInputState {
         self.content_widths = None;
 
         if let Some(id) = self.taffy_node {
-            // TODO: FIX
-            //let mut taffy_tree = self.element_data().taffy_tree.borrow_mut();
-            //taffy_tree.mark_dirty(id);
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.mark_dirty(id);
+            })
         }
     }
 
@@ -210,7 +210,7 @@ impl TextInputState {
                 AvailableSpace::Definite(width) => Some(width),
             })
             .map(|width| {
-                let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
+                let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
                 // Taffy may give a min width > max_width.
                 // Min-width is preserved in this scenario to ensure text is readable.
                 width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
@@ -223,7 +223,7 @@ impl TextInputState {
                 AvailableSpace::MaxContent => None,
                 AvailableSpace::Definite(height) => Some(height),
             })
-            .map(|height| dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor as f64).0);
+            .map(|height| dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor).0);
 
         self.editor.set_width(width_constraint);
         self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
@@ -234,8 +234,8 @@ impl TextInputState {
             self.text_render = Some(text_render_data::from_editor(layout));
         }
 
-        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor as f64).0;
-        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor as f64).0;
+        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor).0;
+        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor).0;
 
         let size = taffy::Size {
             width: logical_width,
@@ -288,8 +288,8 @@ impl TextInputState {
 
             start_time
                 + Duration::from_nanos(
-                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
-                )
+                ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
+            )
         })
     }
 

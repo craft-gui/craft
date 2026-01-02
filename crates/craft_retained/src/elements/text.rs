@@ -20,7 +20,7 @@ const MAX_CACHE_SIZE: usize = 16;
 use crate::elements::core::ElementInternals;
 #[cfg(feature = "accesskit")]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{Element, Window};
+use crate::elements::{Element};
 use crate::layout::TaffyTree;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
@@ -37,7 +37,6 @@ use ui_events::pointer::{PointerButton, PointerId};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::dpi;
-use crate::window_manager::WindowManager;
 
 // A stateful element that shows text.
 #[derive(Clone)]
@@ -77,13 +76,15 @@ pub struct TextState {
 }
 
 impl Text {
-    pub fn new_mw(window: &Rc<RefCell<Window>>, text: &str) -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Text {
-            element_data: ElementData::new(Rc::downgrade(window), me.clone(), false),
-            selectable: true,
-            state: TextState::default(),
-            me: me.clone(),
-        }));
+    pub fn new(text: &str) -> Rc<RefCell<Self>> {
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                element_data: ElementData::new(me.clone(), false),
+                selectable: true,
+                state: TextState::default(),
+                me: me.clone(),
+            })
+        });
 
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
             element: me.borrow().me.clone(),
@@ -93,10 +94,6 @@ impl Text {
         me.borrow_mut().text(text);
 
         me
-    }
-
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        Self::new_mw(&WindowManager::get_main_window(), text)
     }
 
     pub fn get_selectable(&self) -> bool {
@@ -163,6 +160,47 @@ impl crate::elements::Element for Text {
 }
 
 impl ElementInternals for Text {
+    fn apply_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree,
+        position: Point,
+        z_index: &mut u32,
+        transform: Affine,
+        _pointer: Option<Point>,
+        text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
+    ) {
+        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let result = taffy_tree.layout(node);
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
+
+        let dirty = has_new_layout
+            || transform != self.element_data.layout_item.get_transform()
+            || position != self.element_data.layout_item.position;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
+        if dirty {
+            self.resolve_box(position, transform, result, z_index);
+            self.apply_clip(clip_bounds);
+
+            self.apply_borders(scale_factor);
+        }
+
+        if has_new_layout {
+            taffy_tree.mark_seen(node);
+        }
+
+        let state: &mut TextState = &mut self.state;
+        if state.current_layout_key != state.last_requested_measure_key {
+            state.layout(
+                state.last_requested_measure_key.unwrap().known_dimensions(),
+                state.last_requested_measure_key.unwrap().available_space(),
+            );
+        }
+
+        state.try_update_text_render(text_context, self.element_data.style.selection_color());
+    }
+
     fn draw(
         &mut self,
         renderer: &mut RenderList,
@@ -237,47 +275,6 @@ impl ElementInternals for Text {
         }
 
         tree.nodes.push((current_node_id, current_node));
-    }
-
-    fn apply_layout(
-        &mut self,
-        taffy_tree: &mut TaffyTree,
-        position: Point,
-        z_index: &mut u32,
-        transform: Affine,
-        _pointer: Option<Point>,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
-        scale_factor: f64,
-    ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let result = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
-
-        let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
-        if dirty {
-            self.resolve_box(position, transform, result, z_index);
-            self.apply_clip(clip_bounds);
-
-            self.apply_borders(scale_factor);
-        }
-
-        if has_new_layout {
-            taffy_tree.mark_seen(node);
-        }
-
-        let state: &mut TextState = &mut self.state;
-        if state.current_layout_key != state.last_requested_measure_key {
-            state.layout(
-                state.last_requested_measure_key.unwrap().known_dimensions(),
-                state.last_requested_measure_key.unwrap().available_space(),
-            );
-        }
-
-        state.try_update_text_render(text_context, self.element_data.style.selection_color());
     }
 
     fn on_event(
