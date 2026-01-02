@@ -27,7 +27,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
 
                 let current_scroll_y = state.scroll_y();
                 state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                request_apply_layout();
+                request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -78,7 +78,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
                         let scroll_y = percent * element_data.layout_item.max_scroll_y;
 
                         state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout_item.max_scroll_y));
-                        request_apply_layout();
+                        request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
 
                         event.prevent_propagate();
                         event.prevent_defaults();
@@ -115,7 +115,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage
 
                     let current_scroll_y = state.scroll_y();
                     state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    request_apply_layout();
+                    request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();

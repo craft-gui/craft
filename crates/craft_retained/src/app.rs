@@ -13,6 +13,7 @@ use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+use taffy::NodeId;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use {
     crate::accessibility::access_handler::CraftAccessHandler,
@@ -471,8 +472,8 @@ pub fn request_layout() {
 }
 
 #[inline]
-pub fn request_apply_layout() {
+pub fn request_apply_layout(node: NodeId) {
     TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        taffy_tree.request_apply_layout();
+        taffy_tree.request_apply_layout(node);
     });
 }

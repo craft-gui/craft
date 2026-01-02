@@ -148,30 +148,34 @@ impl Window {
         };
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            //if taffy_tree.is_layout_dirty() {
+            let root_dirty = taffy_tree.is_layout_dirty(root_node);
+
+            if root_dirty {
                 /*let span = span!(Level::INFO, "layout(taffy)");
                 let _enter = span.enter();*/
                 taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
-            //}
+            }
 
             //if self.taffy_tree.borrow().is_apply_layout_dirty() {
             /*let span = span!(Level::INFO, "layout(apply)");
                     let _enter = span.enter();*/
 
-            // TODO: move into taffy_tree
-            let mut layout_order: u32 = 0;
-            let sf = self.effective_scale_factor();
-            self.apply_layout(
-                taffy_tree,
-                Point::new(0.0, 0.0),
-                &mut layout_order,
-                Affine::IDENTITY,
-                None,
-                text_context,
-                None,
-                sf
-            );
-            taffy_tree.apply_layout();
+            if root_dirty || taffy_tree.is_apply_layout_dirty(&root_node) {
+                // TODO: move into taffy_tree
+                let mut layout_order: u32 = 0;
+                let sf = self.effective_scale_factor();
+                self.apply_layout(
+                    taffy_tree,
+                    Point::new(0.0, 0.0),
+                    &mut layout_order,
+                    Affine::IDENTITY,
+                    None,
+                    text_context,
+                    None,
+                    sf
+                );
+                taffy_tree.apply_layout(root_node);
+            }
             //}
 
         });

@@ -9,7 +9,7 @@ pub struct TaffyTree {
     /// True if at least one node is dirty.
     is_layout_dirty: bool,
     /// True if the layout should be re-applied.
-    is_apply_layout_dirty: bool,
+    is_apply_layout_dirty: Vec<NodeId>,
 }
 
 impl TaffyTree {
@@ -17,7 +17,7 @@ impl TaffyTree {
         Self {
             inner: taffy::TaffyTree::<LayoutContext>::new(),
             is_layout_dirty: true,
-            is_apply_layout_dirty: true,
+            is_apply_layout_dirty: Vec::new(),
         }
     }
 
@@ -123,26 +123,41 @@ impl TaffyTree {
     #[inline(always)]
     pub fn request_layout(&mut self) {
         self.is_layout_dirty = true;
-        self.is_apply_layout_dirty = true;
+        self.is_apply_layout_dirty = Vec::new();
     }
 
     #[inline(always)]
-    pub fn request_apply_layout(&mut self) {
-        self.is_layout_dirty = true;
-        self.is_apply_layout_dirty = true;
+    pub fn request_apply_layout(&mut self, node: NodeId) {
+        let root = self.root_of(node);
+        if !self.is_apply_layout_dirty(&root) {
+            self.is_apply_layout_dirty.push(root);
+        }
     }
 
-    #[inline(always)]
+    /*#[inline(always)]
     pub fn is_layout_dirty(&self) -> bool {
         self.is_layout_dirty
+    }*/
+
+    #[inline(always)]
+    pub fn is_layout_dirty(&self, root: NodeId) -> bool {
+        self.inner.dirty(root).unwrap()
     }
 
     #[inline(always)]
-    pub fn is_apply_layout_dirty(&self) -> bool {
-        self.is_apply_layout_dirty
+    pub fn is_apply_layout_dirty(&self, root: &NodeId) -> bool {
+        self.is_apply_layout_dirty.contains(root)
     }
 
-    pub fn apply_layout(&mut self) {
-        self.is_apply_layout_dirty = false;
+    pub fn apply_layout(&mut self, root: NodeId) {
+        self.is_apply_layout_dirty.retain(|node| *node != root);
+    }
+
+    /// Get an node's root.
+    pub fn root_of(&self, mut node: NodeId) -> NodeId {
+        while let Some(parent) = self.inner.parent(node) {
+            node = parent;
+        }
+        node
     }
 }
