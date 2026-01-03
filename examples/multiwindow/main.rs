@@ -14,6 +14,10 @@ pub struct Counter {
 impl Counter {
     fn change(&mut self, delta: i64) {
         self.count += delta;
+
+        if self.count >= 10 {
+            counter();
+        }
     }
 
     fn count(&self) -> i64 {
@@ -105,9 +109,6 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
 
 fn main() {
     let _counter1 = counter();
-    let _counter2 = counter();
-
-    //let window_2 = Window::new();
 
     use craft_retained::CraftOptions;
     util::setup_logging();

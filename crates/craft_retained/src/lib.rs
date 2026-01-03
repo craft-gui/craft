@@ -172,8 +172,6 @@ pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let craft_app = Box::new(App {
         event_dispatcher: EventDispatcher::new(),
         app_sender: app_sender.clone(),
-        #[cfg(feature = "accesskit")]
-        accesskit_adapter: None,
         text_context: None,
         resource_manager,
         reload_fonts: false,
@@ -184,7 +182,8 @@ pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         target_scratch: Vec::new(),
 
         previous_animation_flags: Default::default(),
-        focus: None,
+        craft_options: craft_options.clone(),
+        active: false,
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

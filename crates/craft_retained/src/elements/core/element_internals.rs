@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle};
@@ -132,7 +132,7 @@ pub trait ElementInternals: ElementData {
     }
 
     /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(
         &mut self,
         tree: &mut accesskit::TreeUpdate,

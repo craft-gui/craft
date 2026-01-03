@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use craft_primitives::Color;
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_renderer::renderer::RenderList;
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
@@ -22,7 +22,7 @@ const MAX_CACHE_SIZE: usize = 16;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 use craft_primitives::ColorBrush;
 use craft_renderer::text_renderer_data::TextData;
@@ -38,7 +38,7 @@ use winit::dpi;
 
 use crate::elements::Element;
 use crate::elements::core::ElementInternals;
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::layout::TaffyTree;
 
@@ -234,7 +234,7 @@ impl ElementInternals for Text {
         renderer.draw_text(self.me.clone(), content_rectangle.scale(scale_factor), None, false);
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(
         &mut self,
         tree: &mut accesskit::TreeUpdate,

@@ -12,10 +12,10 @@ use core::fmt::{Debug, Display};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Node, NodeId, TreeUpdate};
 use craft_primitives::ColorBrush;
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::layout::LayoutAccessibility;
 
 use crate::app::request_layout;
@@ -100,7 +100,7 @@ pub struct PlainEditor {
     buffer: String,
     default_style: StyleSet<ColorBrush>,
     pub(crate) ranged_styles: RangedStyles,
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     layout_access: LayoutAccessibility,
     selection: Selection,
     /// Byte offsets of IME composing preedit text in the text buffer.
@@ -132,7 +132,7 @@ impl Default for PlainEditor {
             buffer: "".to_string(),
             default_style: StyleSet::new(1.0),
             ranged_styles: Default::default(),
-            #[cfg(feature = "accesskit")]
+            #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
             layout_access: Default::default(),
             selection: Default::default(),
             compose: None,
@@ -154,7 +154,7 @@ impl PlainEditor {
             default_style: StyleSet::new(font_size),
             buffer: Default::default(),
             layout: Default::default(),
-            #[cfg(feature = "accesskit")]
+            #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
             layout_access: Default::default(),
             selection: Default::default(),
             compose: None,
@@ -646,7 +646,7 @@ impl PlainEditorDriver<'_> {
         }
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     /// Select inside the editor based on the selection provided by accesskit.
     #[allow(dead_code)]
     pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
@@ -659,7 +659,7 @@ impl PlainEditorDriver<'_> {
     }
 
     // --- MARK: Rendering ---
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     /// Perform an accessibility update.
     #[allow(dead_code)]
     pub fn accessibility(
@@ -948,7 +948,7 @@ impl PlainEditor {
         if self.layout_dirty { None } else { Some(&self.layout) }
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     #[inline]
     /// Perform an accessibility update if the layout is valid.
     ///
@@ -1078,7 +1078,7 @@ impl PlainEditor {
         self.generation.nudge();
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     /// Perform an accessibility update, assuming that the layout is valid.
     ///
     /// The wrapper [`accessibility`](PlainEditorDriver::accessibility) on the driver type should

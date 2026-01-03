@@ -59,36 +59,11 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let craft_state = &mut self.craft_state;
+        self.craft_state.craft_app.on_resume(event_loop);
+    }
 
-        /*        let mut window_attributes =
-            WindowAttributes::default().with_title(craft_state.craft_options.window_title.as_str()).with_visible(false);
-
-        if let Some(window_size) = &craft_state.craft_options.window_size {
-            window_attributes =
-                window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
-        }*/
-
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.on_resume(craft_state, event_loop);
-        });
-
-        craft_state.craft_app.on_resume(event_loop);
-
-        /*#[cfg(target_arch = "wasm32")]
-        let window_attributes = {
-            let canvas = web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .get_element_by_id("canvas")
-                .unwrap()
-                .dyn_into::<web_sys::HtmlCanvasElement>()
-                .unwrap();
-
-            window_attributes.with_canvas(Some(canvas))
-        };*/
-        //craft_state.event_reducer.set_scale_factor(&window);
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        self.craft_state.craft_app.on_suspended(event_loop);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
@@ -107,7 +82,7 @@ impl ApplicationHandler for CraftWinitState {
             }
         });
 
-        /*#[cfg(feature = "accesskit")]
+        /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
             accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);
         }*/
@@ -184,6 +159,9 @@ impl ApplicationHandler for CraftWinitState {
             WindowEvent::RedrawRequested => {
                 craft_state.craft_app.on_request_redraw(window);
             }
+            WindowEvent::Moved(_) => {
+                craft_state.craft_app.on_move(window);
+            }
             _ => (),
         }
     }
@@ -229,6 +207,8 @@ impl ApplicationHandler for CraftWinitState {
                 });
             }
         }
+
+        craft_state.craft_app.on_about_to_wait(event_loop);
 
         if craft_state.close_requested {
             info!("Exiting winit event loop");

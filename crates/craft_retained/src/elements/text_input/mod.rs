@@ -18,7 +18,7 @@ use crate::app::ELEMENTS;
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element::Element;
 use crate::elements::element_data::ElementData;
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable;
 use crate::elements::text_input::text_input_state::TextInputState;
@@ -208,7 +208,7 @@ impl ElementInternals for TextInput {
         self.draw_scrollbar(renderer, scale_factor);
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(
         &mut self,
         tree: &mut accesskit::TreeUpdate,
