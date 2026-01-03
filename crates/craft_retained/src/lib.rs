@@ -1,66 +1,58 @@
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
+pub mod animations;
 pub mod craft_winit_state;
+pub mod document;
 pub mod elements;
 pub mod events;
-pub mod animations;
 mod options;
 pub mod style;
 #[cfg(test)]
 mod tests;
 pub mod text;
-pub mod document;
 
 mod app;
-pub use craft_primitives::geometry as geometry;
+pub use craft_primitives::geometry;
 pub mod layout;
 pub use craft_runtime::CraftRuntime;
-mod window_context;
+pub mod spatial;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
-pub mod spatial;
+mod window_context;
 mod window_manager;
-
-pub use options::CraftOptions;
-pub use craft_primitives::palette;
-pub use craft_primitives::Color;
-
-#[cfg(target_os = "android")]
-pub use winit::platform::android::activity::*;
-
-pub use craft_renderer::RendererType;
-use events::internal::InternalMessage;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
-pub use craft_resource_manager::ResourceIdentifier;
-
-use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
-
-pub use winit::window::{Cursor, CursorIcon};
-
-pub use utils::craft_error::CraftError;
 
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-#[cfg(target_arch = "wasm32")]
-use crate::wasm_queue::WASM_QUEUE;
-use craft_winit_state::CraftState;
 
+use app::App;
 use cfg_if::cfg_if;
 use craft_logging::info;
-
+pub use craft_primitives::{Color, palette};
+pub use craft_renderer::RendererType;
+use craft_renderer::renderer::Renderer;
+pub use craft_resource_manager::ResourceIdentifier;
+use craft_resource_manager::ResourceManager;
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
+use craft_winit_state::CraftState;
+use events::internal::InternalMessage;
+pub use options::CraftOptions;
+pub use utils::craft_error::CraftError;
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+#[cfg(target_os = "android")]
+pub use winit::platform::android::activity::*;
+pub use winit::window::{Cursor, CursorIcon};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
-use app::App;
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
+#[cfg(target_arch = "wasm32")]
+use crate::wasm_queue::WASM_QUEUE;
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
@@ -83,8 +75,10 @@ pub fn internal_craft_main_with_options(
 ) {
     info!("Craft started");
 
-    let event_loop =
-        EventLoopBuilder::default().with_android_app(app).build().expect("Failed to create winit event loop.");
+    let event_loop = EventLoopBuilder::default()
+        .with_android_app(app)
+        .build()
+        .expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
     let craft_state = setup_craft(root, options);
@@ -104,9 +98,7 @@ pub fn internal_craft_main_with_options(
 /// * `root` - The root element.
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
-pub fn craft_main(
-    options: CraftOptions,
-) {
+pub fn craft_main(options: CraftOptions) {
     internal_craft_main_with_options(Some(options));
 }
 
@@ -123,18 +115,12 @@ pub fn craft_main(
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 /// * `android_app` - The Android application instance.
 #[cfg(target_os = "android")]
-pub fn craft_main(
-    root: Rc<RefCell<dyn Element>>,
-    options: CraftOptions,
-    android_app: AndroidApp,
-) {
+pub fn craft_main(root: Rc<RefCell<dyn Element>>, options: CraftOptions, android_app: AndroidApp) {
     internal_craft_main_with_options(root, Some(options), android_app);
 }
 
 #[cfg(not(target_os = "android"))]
-fn internal_craft_main_with_options(
-    options: Option<CraftOptions>,
-) {
+fn internal_craft_main_with_options(options: Option<CraftOptions>) {
     use winit::event_loop::EventLoop;
 
     info!("Craft started");
@@ -146,9 +132,7 @@ fn internal_craft_main_with_options(
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
-pub fn setup_craft(
-    craft_options: Option<CraftOptions>,
-) -> CraftState {
+pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
 
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
@@ -178,7 +162,9 @@ pub fn setup_craft(
         }
     }
 
-    let runtime = runtime_receiver.blocking_recv().expect("Failed to receive runtime handle");
+    let runtime = runtime_receiver
+        .blocking_recv()
+        .expect("Failed to receive runtime handle");
     let runtime_copy = runtime.clone();
     #[allow(clippy::arc_with_non_send_sync)]
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));

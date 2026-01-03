@@ -8,25 +8,24 @@ pub(crate) mod tinyvg_resource;
 
 pub mod resource_event;
 
-pub use crate::identifier::ResourceIdentifier;
-use crate::image::ImageResource;
-use crate::resource::Resource;
-use crate::resource_data::ResourceData;
-use crate::resource_event::ResourceEvent;
-use crate::resource_type::ResourceType;
-use craft_logging::info;
-
-use craft_runtime::Sender;
-
-use crate::lock_free_map::LockFreeMap;
-use crate::tinyvg_resource::TinyVgResource;
-use ::image::ImageReader;
-use craft_runtime::CraftRuntimeHandle;
 use std::any::Any;
 use std::future::Future;
 use std::io::Cursor;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use ::image::ImageReader;
+use craft_logging::info;
+use craft_runtime::{CraftRuntimeHandle, Sender};
+
+pub use crate::identifier::ResourceIdentifier;
+use crate::image::ImageResource;
+use crate::lock_free_map::LockFreeMap;
+use crate::resource::Resource;
+use crate::resource_data::ResourceData;
+use crate::resource_event::ResourceEvent;
+use crate::resource_type::ResourceType;
+use crate::tinyvg_resource::TinyVgResource;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
@@ -42,6 +41,7 @@ impl ResourceManager {
             runtime: craft_runtime_handle,
         }
     }
+
     // TODO: FIx the duplicate code in this function.
     #[cfg(target_arch = "wasm32")]
     pub fn async_download_resource_and_send_message_on_finish<Message: From<ResourceEvent> + 'static>(
@@ -63,7 +63,9 @@ impl ResourceManager {
                     if let Some(image_resource) = &image {
                         let bytes = image_resource;
                         let cursor = Cursor::new(&bytes);
-                        let reader = ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
+                        let reader = ImageReader::new(cursor)
+                            .with_guessed_format()
+                            .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
                         let generic_resource = ResourceData::new(
                             resource_identifier.clone(),
@@ -150,7 +152,9 @@ impl ResourceManager {
                     if let Some(image_resource) = &image {
                         let bytes = image_resource;
                         let cursor = Cursor::new(&bytes);
-                        let reader = ImageReader::new(cursor).with_guessed_format().expect("Failed to guess format");
+                        let reader = ImageReader::new(cursor)
+                            .with_guessed_format()
+                            .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
                         let generic_resource = ResourceData::new(
                             resource_identifier.clone(),

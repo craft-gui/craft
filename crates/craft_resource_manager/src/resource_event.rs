@@ -1,6 +1,6 @@
+use crate::ResourceIdentifier;
 use crate::resource::Resource;
 use crate::resource_type::ResourceType;
-use crate::ResourceIdentifier;
 
 #[derive(Debug)]
 pub enum ResourceEvent {

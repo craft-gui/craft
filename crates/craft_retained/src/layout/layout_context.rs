@@ -1,19 +1,20 @@
 use std::cell::RefCell;
 use std::rc::Weak;
-use craft_resource_manager::resource::Resource;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use std::sync::Arc;
 
+use craft_resource_manager::resource::Resource;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use taffy::{AvailableSpace, Size};
+
 use crate::elements::{Text, TextInput};
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
-    pub element: Weak<RefCell<Text>>
+    pub element: Weak<RefCell<Text>>,
 }
 
 pub struct TaffyTextInputContext {
-    pub element: Weak<RefCell<TextInput>>
+    pub element: Weak<RefCell<TextInput>>,
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -34,8 +35,7 @@ pub enum AvailableSpaceKey {
     MaxContent,
 }
 
-impl TaffyTextContext {
-}
+impl TaffyTextContext {}
 
 pub struct ImageContext {
     pub(crate) resource_identifier: ResourceIdentifier,
@@ -44,10 +44,10 @@ pub struct ImageContext {
 impl ImageContext {
     pub(crate) fn new(resource_identifier: ResourceIdentifier) -> Self {
         Self {
-            resource_identifier
+            resource_identifier,
         }
     }
-    
+
     pub fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
@@ -57,7 +57,9 @@ impl ImageContext {
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(resource) = resource_manager.get(&self.resource_identifier) && let Resource::Image(image_data) = resource.as_ref() {
+        if let Some(resource) = resource_manager.get(&self.resource_identifier)
+            && let Resource::Image(image_data) = resource.as_ref()
+        {
             original_image_width = image_data.width as f32;
             original_image_height = image_data.height as f32;
         }
@@ -162,15 +164,19 @@ pub fn measure_content(
         None => Size::ZERO,
         Some(LayoutContext::Text(taffy_text_context)) => {
             let element = &taffy_text_context.element;
-            if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
-                return element.measure(known_dimensions, available_space, text_context)
+            if let Some(element) = element.upgrade()
+                && let Ok(mut element) = element.try_borrow_mut()
+            {
+                return element.measure(known_dimensions, available_space, text_context);
             }
             Size::ZERO
         }
         Some(LayoutContext::TextInput(taffy_text_input_context)) => {
             let element = &taffy_text_input_context.element;
-            if let Some(element) = element.upgrade() && let Ok(mut element) = element.try_borrow_mut() {
-                return element.state.measure(known_dimensions, available_space, text_context)
+            if let Some(element) = element.upgrade()
+                && let Ok(mut element) = element.try_borrow_mut()
+            {
+                return element.state.measure(known_dimensions, available_space, text_context);
             }
             Size::ZERO
         }
@@ -180,9 +186,7 @@ pub fn measure_content(
         Some(LayoutContext::TinyVg(tinyvg_context)) => {
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
-        Some(LayoutContext::Other(_measure_fn)) => {
-            Size::ZERO
-        }
+        Some(LayoutContext::Other(_measure_fn)) => Size::ZERO,
     }
 }
 
@@ -197,9 +201,10 @@ impl TinyVgContext {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
 
-        if let Some(resource) = resource_manager.get(&self.resource_identifier) &&
-            let Resource::TinyVg(resource) = resource.as_ref() && 
-            let Some(tinyvg) = &resource.tinyvg {
+        if let Some(resource) = resource_manager.get(&self.resource_identifier)
+            && let Resource::TinyVg(resource) = resource.as_ref()
+            && let Some(tinyvg) = &resource.tinyvg
+        {
             original_image_width = tinyvg.header.width as f32;
             original_image_height = tinyvg.header.height as f32;
         }

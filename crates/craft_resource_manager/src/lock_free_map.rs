@@ -1,8 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::ptr;
-use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 pub struct Node<K: Clone + Hash + PartialEq, V> {
     pub key: K,
@@ -18,12 +18,16 @@ pub struct Inner<K: Clone + Hash + PartialEq, V> {
 impl<K: Clone + Hash + PartialEq, V> Inner<K, V> {
     pub fn new(size: usize) -> Self {
         let size = size.next_power_of_two().max(1);
-        let buckets = (0..size).map(|_| AtomicPtr::new(ptr::null_mut())).collect::<Vec<_>>().into_boxed_slice();
+        let buckets = (0..size)
+            .map(|_| AtomicPtr::new(ptr::null_mut()))
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
         Inner {
             mask: size - 1,
             buckets,
         }
     }
+
     pub fn bucket(&self, key: &K) -> usize {
         let mut h = DefaultHasher::new();
         key.hash(&mut h);
@@ -51,6 +55,7 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             count: AtomicUsize::new(0),
         }
     }
+
     fn with_root<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&Arc<Inner<K, V>>) -> R,
@@ -64,6 +69,7 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             res
         }
     }
+
     fn resize_if_needed(&self) {
         let count = self.count.load(Ordering::Relaxed);
         self.with_root(|inner| {
@@ -98,6 +104,7 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             }
         });
     }
+
     pub fn insert(&self, key: K, value: Arc<V>) {
         self.resize_if_needed();
         self.with_root(|inner| {
@@ -112,6 +119,7 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
         });
         self.count.fetch_add(1, Ordering::Relaxed);
     }
+
     pub fn get(&self, key: &K) -> Option<Arc<V>> {
         self.with_root(|inner| {
             let idx = inner.bucket(key);

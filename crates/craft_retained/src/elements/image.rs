@@ -1,22 +1,23 @@
 //! Displays an image.
 
-use crate::app::{ELEMENTS, TAFFY_TREE};
-use crate::app::{PENDING_RESOURCES};
-use crate::elements::core::ElementInternals;
-use crate::elements::element_data::ElementData;
-use crate::elements::{Element};
-use crate::layout::layout_context::{ImageContext, LayoutContext};
-use crate::layout::TaffyTree;
-use crate::text::text_context::TextContext;
-use craft_primitives::geometry::Rectangle;
-use craft_renderer::RenderList;
-use craft_resource_manager::resource_type::ResourceType;
-use craft_resource_manager::ResourceIdentifier;
-use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
+
+use craft_primitives::geometry::Rectangle;
+use craft_renderer::RenderList;
+use craft_resource_manager::ResourceIdentifier;
+use craft_resource_manager::resource_type::ResourceType;
+use kurbo::{Affine, Point};
+
+use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
+use crate::elements::Element;
+use crate::elements::core::ElementInternals;
+use crate::elements::element_data::ElementData;
+use crate::layout::TaffyTree;
+use crate::layout::layout_context::{ImageContext, LayoutContext};
+use crate::text::text_context::TextContext;
 
 /// Displays an image.
 pub struct Image {
@@ -55,7 +56,11 @@ impl Image {
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let context = LayoutContext::Image(ImageContext::new(resource_identifier));
-            let node = self.element_data.layout_item.taffy_node_id.expect("Failed to get Image node");
+            let node = self
+                .element_data
+                .layout_item
+                .taffy_node_id
+                .expect("Failed to get Image node");
             taffy_tree.set_node_context(node, Some(context));
         });
 

@@ -1,25 +1,27 @@
 //! Stores one or more elements.
 
-use crate::app::{TAFFY_TREE, WINDOW_MANAGER};
-use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
-use crate::elements::element_data::ElementData;
-use crate::elements::{scrollable, Element};
-use crate::events::{CraftMessage, Event};
-use crate::layout::TaffyTree;
-use crate::text::text_context::TextContext;
-use craft_primitives::geometry::{Rectangle, Size};
-use craft_renderer::RenderList;
-use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
+use craft_primitives::geometry::{Rectangle, Size};
+use craft_renderer::RenderList;
+use craft_resource_manager::ResourceManager;
+use kurbo::{Affine, Point};
 use peniko::Color;
 use taffy::{AvailableSpace, NodeId};
 use winit::window::Window as WinitWindow;
+
 use crate::RendererBox;
-use craft_resource_manager::ResourceManager;
+use crate::app::{TAFFY_TREE, WINDOW_MANAGER};
+use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::element_data::ElementData;
+use crate::elements::{Element, scrollable};
+use crate::events::{CraftMessage, Event};
+use crate::layout::TaffyTree;
+use crate::text::text_context::TextContext;
 
 /// Stores one or more elements.
 ///
@@ -105,7 +107,9 @@ impl Window {
         }
         self.window_size = new_size;
         let size = self.window_size();
-        self.render_list.borrow_mut().set_cull(Some(Rectangle::new(0.0, 0.0, size.width as f32, size.height as f32)));
+        self.render_list
+            .borrow_mut()
+            .set_cull(Some(Rectangle::new(0.0, 0.0, size.width as f32, size.height as f32)));
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
@@ -130,13 +134,9 @@ impl Window {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn layout_window(
-        &mut self,
-        text_context: &mut TextContext,
-        resource_manager: Arc<ResourceManager>,
-    ) -> NodeId {
-        let root_node = self.
-            element_data
+    fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
+        let root_node = self
+            .element_data
             .layout_item
             .taffy_node_id
             .expect("A root element must have a layout node.");
@@ -158,7 +158,7 @@ impl Window {
 
             //if self.taffy_tree.borrow().is_apply_layout_dirty() {
             /*let span = span!(Level::INFO, "layout(apply)");
-                    let _enter = span.enter();*/
+            let _enter = span.enter();*/
 
             if root_dirty || taffy_tree.is_apply_layout_dirty(&root_node) {
                 // TODO: move into taffy_tree
@@ -172,12 +172,11 @@ impl Window {
                     None,
                     text_context,
                     None,
-                    sf
+                    sf,
                 );
                 taffy_tree.apply_layout(root_node);
             }
             //}
-
         });
 
         root_node
@@ -194,7 +193,10 @@ impl Window {
         );
 
         self.winit_window.clone().unwrap().pre_present_notify();
-        self.renderer.as_mut().unwrap().sort_and_cull_render_list(render_list.borrow_mut().deref_mut());
+        self.renderer
+            .as_mut()
+            .unwrap()
+            .sort_and_cull_render_list(render_list.borrow_mut().deref_mut());
 
         let window = Rectangle {
             x: 0.0,
@@ -202,11 +204,14 @@ impl Window {
             width: self.renderer.as_mut().unwrap().surface_width(),
             height: self.renderer.as_mut().unwrap().surface_height(),
         };
-        self.renderer.as_mut().unwrap().prepare_render_list(self.render_list.borrow_mut().deref_mut(), resource_manager.clone(), window);
+        self.renderer.as_mut().unwrap().prepare_render_list(
+            self.render_list.borrow_mut().deref_mut(),
+            resource_manager.clone(),
+            window,
+        );
 
         self.renderer.as_mut().unwrap().submit(resource_manager.clone());
     }
-
 }
 
 impl crate::elements::core::ElementData for Window {
@@ -311,7 +316,13 @@ impl ElementInternals for Window {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.map(|scroll_state| scroll_state.is_new()).unwrap_or_default() {
+        if !dirty
+            && self
+                .element_data
+                .scroll_state
+                .map(|scroll_state| scroll_state.is_new())
+                .unwrap_or_default()
+        {
             self.element_data.apply_scroll(layout);
             self.element_data.scroll_state.as_mut().unwrap().mark_old();
         }

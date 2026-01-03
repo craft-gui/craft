@@ -1,6 +1,7 @@
+use chrono::{DateTime, Utc};
+
 use crate::identifier::ResourceIdentifier;
 use crate::resource_type::ResourceType;
-use chrono::{DateTime, Utc};
 
 #[allow(dead_code)]
 #[derive(Debug)]

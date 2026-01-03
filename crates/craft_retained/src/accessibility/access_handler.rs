@@ -1,8 +1,9 @@
+use accesskit::{ActionHandler, ActionRequest};
 #[cfg(not(target_arch = "wasm32"))]
 use craft_runtime::CraftRuntimeHandle;
-use crate::events::internal::InternalMessage;
-use accesskit::{ActionHandler, ActionRequest};
 use craft_runtime::Sender;
+
+use crate::events::internal::InternalMessage;
 
 pub(crate) struct CraftAccessHandler {
     #[cfg(not(target_arch = "wasm32"))]

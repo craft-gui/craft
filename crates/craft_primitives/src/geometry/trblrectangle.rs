@@ -1,6 +1,5 @@
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
-pub struct TrblRectangle<T>
-{
+pub struct TrblRectangle<T> {
     pub top: T,
     pub right: T,
     pub bottom: T,
@@ -20,6 +19,7 @@ where
             left,
         }
     }
+
     pub const fn new_all(value: T) -> Self {
         Self {
             top: value,

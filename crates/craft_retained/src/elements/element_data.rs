@@ -1,18 +1,20 @@
-use crate::animations::animation::ActiveAnimation;
-use crate::elements::element_id::create_unique_element_id;
-use crate::elements::scroll_state::ScrollState;
-use crate::elements::{Element};
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
-use crate::layout::layout_item::LayoutItem;
-use crate::style::Style;
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+
 use craft_primitives::geometry::{Rectangle, Size};
 use rustc_hash::FxHashMap;
 use smol_str::SmolStr;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use taffy::{Layout, Overflow};
+
+use crate::animations::animation::ActiveAnimation;
 use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::elements::Element;
+use crate::elements::element_id::create_unique_element_id;
+use crate::elements::scroll_state::ScrollState;
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
+use crate::layout::layout_item::LayoutItem;
+use crate::style::Style;
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -56,7 +58,6 @@ pub struct ElementData {
 }
 
 impl ElementData {
-
     pub fn new(me: Weak<RefCell<dyn Element>>, scrollable: bool) -> Self {
         let mut default = Self {
             me,
@@ -127,7 +128,8 @@ impl ElementData {
 
             // Content Size = overflowed content size + padding
             // Scroll Height = Content Size
-            let scroll_height = (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
+            let scroll_height =
+                (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
             let scroll_track_width = self.layout_item.scrollbar_size.width;
 
             // The scroll track height is the height of the padding box.
@@ -147,8 +149,11 @@ impl ElementData {
             let scroll_thumb_height = scroll_track_height * visible_y;
             let scroll_thumb_height = scroll_thumb_height.max(15.0);
             let remaining_height = scroll_track_height - scroll_thumb_height;
-            let scroll_thumb_offset =
-                if max_scroll_y != 0.0 { state.scroll_y() / max_scroll_y * remaining_height } else { 0.0 };
+            let scroll_thumb_offset = if max_scroll_y != 0.0 {
+                state.scroll_y() / max_scroll_y * remaining_height
+            } else {
+                0.0
+            };
 
             let thumb_margin = self.style.scrollbar_thumb_margin();
             let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);

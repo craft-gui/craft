@@ -1,34 +1,31 @@
 mod render_context;
 mod tinyvg;
 
-use crate::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
+use std::any::Any;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
-use craft_primitives::geometry::Rectangle;
 use craft_primitives::Color;
+use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use vello_common::color::PremulRgba8;
 use vello_common::glyph::Glyph;
-use vello_common::paint::ImageId;
-use vello_common::paint::{ImageSource, PaintType};
+use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
-use vello_hybrid::RenderSize;
-use vello_hybrid::{RenderTargetConfig, Renderer};
+use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use crate::text_renderer_data::TextRenderLine;
-use crate::vello_hybrid::render_context::RenderContext;
-use crate::vello_hybrid::render_context::RenderSurface;
-use crate::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::Brush;
-use vello_hybrid::Scene;
+use crate::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
+use crate::text_renderer_data::TextRenderLine;
+use crate::vello_hybrid::render_context::{RenderContext, RenderSurface};
+use crate::vello_hybrid::tinyvg::draw_tiny_vg;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -107,7 +104,9 @@ impl VelloHybridRenderer {
             .await;
 
         // Create a vello Renderer for the surface (using its device id)
-        vello_renderer.renderers.resize_with(vello_renderer.context.devices.len(), || None);
+        vello_renderer
+            .renderers
+            .resize_with(vello_renderer.context.devices.len(), || None);
         vello_renderer.renderers[0].get_or_insert_with(|| create_vello_renderer(&vello_renderer.context, &surface));
 
         // Save the Window and Surface to a state variable
@@ -148,7 +147,8 @@ impl CraftRenderer for VelloHybridRenderer {
         };
         render_state.window_height = height;
         render_state.window_width = width;
-        self.context.resize_surface(&mut render_state.surface, width as u32, height as u32);
+        self.context
+            .resize_surface(&mut render_state.surface, width as u32, height as u32);
         self.scene = Scene::new(width as u16, height as u16);
     }
 
@@ -178,13 +178,19 @@ impl CraftRenderer for VelloHybridRenderer {
         let width = surface.config.width;
         let height = surface.config.height;
 
-        vello_draw_rect(&mut self.scene, Rectangle::new(0.0, 0.0, width as f32, height as f32), Color::WHITE);
+        vello_draw_rect(
+            &mut self.scene,
+            Rectangle::new(0.0, 0.0, width as f32, height as f32),
+            Color::WHITE,
+        );
 
         let renderer = self.renderers[surface.dev_id].as_mut().unwrap();
         let device_handle = &self.context.devices[surface.dev_id];
-        let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Blit Textures onto a Texture Atlas Encoder"),
-        });
+        let mut encoder = device_handle
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Blit Textures onto a Texture Atlas Encoder"),
+            });
 
         let mut images_were_uploaded = false;
 
@@ -248,7 +254,8 @@ impl CraftRenderer for VelloHybridRenderer {
                                 &mut encoder,
                                 &pixmap,
                             );
-                            self.images.insert(resource_identifier.clone(), (image_id, expiration_time));
+                            self.images
+                                .insert(resource_identifier.clone(), (image_id, expiration_time));
 
                             image_id
                         };
@@ -348,12 +355,17 @@ impl CraftRenderer for VelloHybridRenderer {
                             }
 
                             scene.set_paint(PaintType::from(
-                                text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                                text_render
+                                    .override_brush
+                                    .map(|b| b.color)
+                                    .unwrap_or_else(|| item.brush.color),
                             ));
                             scene.reset_transform();
 
-                            let glyph_run_builder =
-                                scene.glyph_run(&item.font).font_size(item.font_size).glyph_transform(text_transform);
+                            let glyph_run_builder = scene
+                                .glyph_run(&item.font)
+                                .font_size(item.font_size)
+                                .glyph_transform(text_transform);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -373,7 +385,13 @@ impl CraftRenderer for VelloHybridRenderer {
                     }
                 }
                 RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
-                    draw_tiny_vg(scene, *rectangle, &resource_manager, resource_identifier.clone(), override_color);
+                    draw_tiny_vg(
+                        scene,
+                        *rectangle,
+                        &resource_manager,
+                        resource_identifier.clone(),
+                        override_color,
+                    );
                 }
                 RenderCommand::PushLayer(rect) => {
                     let clip_path = Some(
@@ -401,7 +419,12 @@ impl CraftRenderer for VelloHybridRenderer {
         for expired_image_id in &expired_images {
             // Note: Expired images will have an entry in the images hashmap, but with a new ImageId.
             // Meaning, that we need to delete the detached/abandoned expired image id here.
-            renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, *expired_image_id);
+            renderer.destroy_image(
+                &device_handle.device,
+                &device_handle.queue,
+                &mut encoder,
+                *expired_image_id,
+            );
             images_were_uploaded = true;
         }
 
@@ -446,22 +469,36 @@ impl CraftRenderer for VelloHybridRenderer {
         let device_handle = &self.context.devices[surface.dev_id];
 
         // Get the surface's texture
-        let surface_texture = surface.surface.get_current_texture().expect("failed to get surface texture");
+        let surface_texture = surface
+            .surface
+            .get_current_texture()
+            .expect("failed to get surface texture");
 
         let render_size = RenderSize {
             width: surface.config.width,
             height: surface.config.height,
         };
 
-        let mut encoder = device_handle.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Vello Render to Surface pass"),
-        });
-        let texture_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = device_handle
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Vello Render to Surface pass"),
+            });
+        let texture_view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         self.renderers[surface.dev_id]
             .as_mut()
             .unwrap()
-            .render(&self.scene, &device_handle.device, &device_handle.queue, &mut encoder, &render_size, &texture_view)
+            .render(
+                &self.scene,
+                &device_handle.device,
+                &device_handle.queue,
+                &mut encoder,
+                &render_size,
+                &texture_view,
+            )
             .unwrap();
 
         device_handle.queue.submit([encoder.finish()]);
@@ -478,7 +515,11 @@ fn brush_to_paint(brush: &Brush) -> PaintType {
         Brush::Color(color) => PaintType::from(*color),
         Brush::Gradient(gradient) => {
             // Paint::Gradient does not exist yet, so we need to come back and fix this later.
-            let color = gradient.stops.first().map(|c| c.color.to_alpha_color()).unwrap_or(Color::BLACK);
+            let color = gradient
+                .stops
+                .first()
+                .map(|c| c.color.to_alpha_color())
+                .unwrap_or(Color::BLACK);
             PaintType::from(color)
         }
     }

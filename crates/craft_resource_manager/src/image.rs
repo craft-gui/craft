@@ -1,5 +1,6 @@
-use crate::resource_data::ResourceData;
 use image::{EncodableLayout, RgbaImage};
+
+use crate::resource_data::ResourceData;
 
 #[derive(Debug)]
 pub struct ImageResource {

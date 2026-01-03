@@ -1,14 +1,14 @@
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+
 use winit::window::Window;
+
 use crate::blank_renderer::BlankRenderer;
 use crate::renderer::Renderer;
 #[cfg(feature = "vello_renderer")]
 use crate::vello::VelloRenderer;
-
 #[cfg(feature = "vello_cpu_renderer")]
 use crate::vello_cpu::VelloCpuRenderer;
-
 #[cfg(feature = "vello_hybrid_renderer")]
 use crate::vello_hybrid::VelloHybridRenderer;
 
@@ -60,7 +60,6 @@ impl Display for RendererType {
 }
 
 impl RendererType {
-
     pub async fn create(&self, window: Arc<Window>) -> Box<dyn Renderer> {
         let renderer: Box<dyn Renderer> = match self {
             #[cfg(feature = "vello_renderer")]
@@ -73,7 +72,7 @@ impl RendererType {
                 // So the linter does not complain about window being unused.
                 let _ = window;
                 Box::new(BlankRenderer)
-            },
+            }
         };
 
         renderer

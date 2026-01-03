@@ -1,5 +1,6 @@
-use crate::resource_data::ResourceData;
 use tinyvg_rs::TinyVg;
+
+use crate::resource_data::ResourceData;
 
 #[derive(Debug)]
 pub struct TinyVgResource {

@@ -1,25 +1,25 @@
 //! A simple plain text editor and related types.
-use parley::{FontContext, LayoutContext, StyleProperty, StyleSet, layout::{
-    Affinity, Alignment, AlignmentOptions, Layout,
-}, Selection, Cursor, BoundingBox};
+use parley::layout::{Affinity, Alignment, AlignmentOptions, Layout};
+use parley::{BoundingBox, Cursor, FontContext, LayoutContext, Selection, StyleProperty, StyleSet};
 
 extern crate alloc;
-use alloc::{borrow::ToOwned, string::String, vec::Vec};
-use core::{
-    cmp::PartialEq,
-    default::Default,
-    fmt::{Debug, Display},
-    num::NonZeroUsize,
-    ops::Range,
-};
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::cmp::PartialEq;
+use core::default::Default;
+use core::fmt::{Debug, Display};
+use core::num::NonZeroUsize;
+use core::ops::Range;
 
 #[cfg(feature = "accesskit")]
-use parley::layout::LayoutAccessibility;
-#[cfg(feature = "accesskit")]
 use accesskit::{Node, NodeId, TreeUpdate};
-use crate::text::RangedStyles;
 use craft_primitives::ColorBrush;
+#[cfg(feature = "accesskit")]
+use parley::layout::LayoutAccessibility;
+
 use crate::app::request_layout;
+use crate::text::RangedStyles;
 
 /// Opaque representation of a generation.
 ///
@@ -46,7 +46,6 @@ impl Generation {
 pub struct SplitString<'source>(pub [&'source str; 2]);
 
 impl<'source> SplitString<'source> {
-
     /// Get the characters of this string.
     #[allow(dead_code)]
     pub fn chars(self) -> impl Iterator<Item = char> + 'source {
@@ -82,8 +81,9 @@ impl Display for SplitString<'_> {
 
 /// Iterate through the source strings.
 impl<'source> IntoIterator for SplitString<'source> {
-    type Item = &'source str;
     type IntoIter = <[&'source str; 2] as IntoIterator>::IntoIter;
+    type Item = &'source str;
+
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -95,8 +95,7 @@ impl<'source> IntoIterator for SplitString<'source> {
 /// which is kept up-to-date as needed.
 /// This layout is invalidated by a number.
 #[derive(Clone)]
-pub struct PlainEditor
-{
+pub struct PlainEditor {
     layout: Layout<ColorBrush>,
     buffer: String,
     default_style: StyleSet<ColorBrush>,
@@ -148,8 +147,7 @@ impl Default for PlainEditor {
     }
 }
 
-impl PlainEditor
-{
+impl PlainEditor {
     /// Create a new editor, with default font size `font_size`.
     pub fn new(font_size: f32) -> Self {
         Self {
@@ -179,20 +177,17 @@ impl PlainEditor
 ///
 /// This can perform operations which require the editor's layout to
 /// be up-to-date by refreshing it as necessary.
-pub struct PlainEditorDriver<'a>
-{
+pub struct PlainEditorDriver<'a> {
     pub editor: &'a mut PlainEditor,
     pub font_cx: &'a mut FontContext,
     pub layout_cx: &'a mut LayoutContext<ColorBrush>,
 }
 
-impl PlainEditorDriver<'_>
-{
+impl PlainEditorDriver<'_> {
     // --- MARK: Forced relayout ---
     /// Insert at cursor, or replace selection.
     pub fn insert_or_replace_selection(&mut self, s: &str) {
-        self.editor
-            .replace_selection(self.font_cx, self.layout_cx, s);
+        self.editor.replace_selection(self.font_cx, self.layout_cx, s);
     }
 
     /// Delete the selection.
@@ -215,8 +210,7 @@ impl PlainEditorDriver<'_>
             return;
         }
         self.editor.buffer.replace_range(range.clone(), "");
-        self.editor
-            .update_compose_for_replaced_range(range.clone(), 0);
+        self.editor.update_compose_for_replaced_range(range.clone(), 0);
         self.update_layout();
         let old_anchor = old_selection.anchor();
         let old_focus = old_selection.focus();
@@ -228,16 +222,8 @@ impl PlainEditorDriver<'_>
             (old_anchor.affinity(), old_focus.affinity())
         };
         self.editor.set_selection(Selection::new(
-            Cursor::from_byte_index(
-                &self.editor.layout,
-                old_anchor.index() - range.len(),
-                anchor_affinity,
-            ),
-            Cursor::from_byte_index(
-                &self.editor.layout,
-                old_focus.index() - range.len(),
-                focus_affinity,
-            ),
+            Cursor::from_byte_index(&self.editor.layout, old_anchor.index() - range.len(), anchor_affinity),
+            Cursor::from_byte_index(&self.editor.layout, old_focus.index() - range.len(), focus_affinity),
         ));
     }
 
@@ -251,9 +237,9 @@ impl PlainEditorDriver<'_>
         let selection_range = self.editor.selection.text_range();
         let range = selection_range.end
             ..selection_range
-            .end
-            .saturating_add(len.get())
-            .min(self.editor.buffer.len());
+                .end
+                .saturating_add(len.get())
+                .min(self.editor.buffer.len());
         if range.is_empty() || !self.editor.buffer.is_char_boundary(range.end) {
             return;
         }
@@ -266,11 +252,7 @@ impl PlainEditorDriver<'_>
     pub fn delete(&mut self) {
         if self.editor.selection.is_collapsed() {
             // Upstream cluster range
-            if let Some(range) = self
-                .editor
-                .selection
-                .focus()
-                .logical_clusters(&self.editor.layout)[1]
+            if let Some(range) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[1]
                 .as_ref()
                 .map(|cluster| cluster.text_range())
                 .and_then(|range| (!range.is_empty()).then_some(range))
@@ -294,10 +276,8 @@ impl PlainEditorDriver<'_>
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -308,12 +288,7 @@ impl PlainEditorDriver<'_>
     pub fn backdelete(&mut self) {
         if self.editor.selection.is_collapsed() {
             // Upstream cluster
-            if let Some(cluster) = self
-                .editor
-                .selection
-                .focus()
-                .logical_clusters(&self.editor.layout)[0]
-            {
+            if let Some(cluster) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[0] {
                 let range = cluster.text_range();
                 let end = range.end;
                 let start = if cluster.is_hard_line_break() || cluster.is_emoji() {
@@ -334,10 +309,8 @@ impl PlainEditorDriver<'_>
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -354,10 +327,8 @@ impl PlainEditorDriver<'_>
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
-                self.editor.set_selection(
-                    Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream)
-                        .into(),
-                );
+                self.editor
+                    .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
             self.delete_selection();
@@ -382,9 +353,7 @@ impl PlainEditorDriver<'_>
         debug_assert!(cursor.map(|cursor| cursor.1 <= text.len()).unwrap_or(true));
 
         let start = if let Some(preedit_range) = &self.editor.compose {
-            self.editor
-                .buffer
-                .replace_range(preedit_range.clone(), text);
+            self.editor.buffer.replace_range(preedit_range.clone(), text);
             preedit_range.start
         } else {
             if self.editor.selection.is_collapsed() {
@@ -467,19 +436,15 @@ impl PlainEditorDriver<'_>
     pub fn move_to_byte(&mut self, index: usize) {
         if self.editor.buffer.is_char_boundary(index) {
             self.refresh_layout();
-            self.editor
-                .set_selection(self.editor.cursor_at(index).into());
+            self.editor.set_selection(self.editor.cursor_at(index).into());
         }
     }
 
     /// Move the cursor to the start of the buffer.
     pub fn move_to_text_start(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MIN,
-            false,
-        ));
+        self.editor
+            .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, false));
     }
 
     /// Move the cursor to the start of the physical line.
@@ -492,11 +457,8 @@ impl PlainEditorDriver<'_>
     /// Move the cursor to the end of the buffer.
     pub fn move_to_text_end(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MAX,
-            false,
-        ));
+        self.editor
+            .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, false));
     }
 
     /// Move the cursor to the end of the physical line.
@@ -509,11 +471,8 @@ impl PlainEditorDriver<'_>
     /// Move up to the closest physical cluster boundary on the previous line, preserving the horizontal position for repeated movements.
     pub fn move_up(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_line(&self.editor.layout, false),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_line(&self.editor.layout, false));
     }
 
     /// Move down to the closest physical cluster boundary on the next line, preserving the horizontal position for repeated movements.
@@ -526,49 +485,40 @@ impl PlainEditorDriver<'_>
     /// Move to the next cluster left in visual order.
     pub fn move_left(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual(&self.editor.layout, false),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_visual(&self.editor.layout, false));
     }
 
     /// Move to the next cluster right in visual order.
     pub fn move_right(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual(&self.editor.layout, false),
-        );
+        self.editor
+            .set_selection(self.editor.selection.next_visual(&self.editor.layout, false));
     }
 
     /// Move to the next word boundary left.
     pub fn move_word_left(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual_word(&self.editor.layout, false),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, false));
     }
 
     /// Move to the next word boundary right.
     pub fn move_word_right(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual_word(&self.editor.layout, false),
-        );
+        self.editor
+            .set_selection(self.editor.selection.next_visual_word(&self.editor.layout, false));
     }
 
     /// Select the whole buffer.
     pub fn select_all(&mut self) {
         self.refresh_layout();
         self.editor.set_selection(
-            Selection::from_byte_index(&self.editor.layout, 0_usize, Affinity::default())
-                .move_lines(&self.editor.layout, isize::MAX, true),
+            Selection::from_byte_index(&self.editor.layout, 0_usize, Affinity::default()).move_lines(
+                &self.editor.layout,
+                isize::MAX,
+                true,
+            ),
         );
     }
 
@@ -580,11 +530,8 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point to the start of the buffer.
     pub fn select_to_text_start(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MIN,
-            true,
-        ));
+        self.editor
+            .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, true));
     }
 
     /// Move the selection focus point to the start of the physical line.
@@ -597,11 +544,8 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point to the end of the buffer.
     pub fn select_to_text_end(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(self.editor.selection.move_lines(
-            &self.editor.layout,
-            isize::MAX,
-            true,
-        ));
+        self.editor
+            .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, true));
     }
 
     /// Move the selection focus point to the end of the physical line.
@@ -614,11 +558,8 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point up to the nearest cluster boundary on the previous line, preserving the horizontal position for repeated movements.
     pub fn select_up(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_line(&self.editor.layout, true),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_line(&self.editor.layout, true));
     }
 
     /// Move the selection focus point down to the nearest cluster boundary on the next line, preserving the horizontal position for repeated movements.
@@ -631,11 +572,8 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point to the next cluster left in visual order.
     pub fn select_left(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual(&self.editor.layout, true),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_visual(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next cluster right in visual order.
@@ -648,21 +586,15 @@ impl PlainEditorDriver<'_>
     /// Move the selection focus point to the next word boundary left.
     pub fn select_word_left(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .previous_visual_word(&self.editor.layout, true),
-        );
+        self.editor
+            .set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, true));
     }
 
     /// Move the selection focus point to the next word boundary right.
     pub fn select_word_right(&mut self) {
         self.refresh_layout();
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .next_visual_word(&self.editor.layout, true),
-        );
+        self.editor
+            .set_selection(self.editor.selection.next_visual_word(&self.editor.layout, true));
         request_layout();
     }
 
@@ -686,11 +618,8 @@ impl PlainEditorDriver<'_>
     pub fn extend_selection_to_point(&mut self, x: f32, y: f32) {
         self.refresh_layout();
         // FIXME: This is usually the wrong way to handle selection extension for mouse moves, but not a regression.
-        self.editor.set_selection(
-            self.editor
-                .selection
-                .extend_to_point(&self.editor.layout, x, y),
-        );
+        self.editor
+            .set_selection(self.editor.selection.extend_to_point(&self.editor.layout, x, y));
     }
 
     /// Move the selection focus point to a byte index.
@@ -712,10 +641,8 @@ impl PlainEditorDriver<'_>
     pub fn select_byte_range(&mut self, start: usize, end: usize) {
         if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
             self.refresh_layout();
-            self.editor.set_selection(Selection::new(
-                self.editor.cursor_at(start),
-                self.editor.cursor_at(end),
-            ));
+            self.editor
+                .set_selection(Selection::new(self.editor.cursor_at(start), self.editor.cursor_at(end)));
         }
     }
 
@@ -724,11 +651,9 @@ impl PlainEditorDriver<'_>
     #[allow(dead_code)]
     pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
         self.refresh_layout();
-        if let Some(selection) = Selection::from_access_selection(
-            selection,
-            &self.editor.layout,
-            &self.editor.layout_access,
-        ) {
+        if let Some(selection) =
+            Selection::from_access_selection(selection, &self.editor.layout, &self.editor.layout_access)
+        {
             self.editor.set_selection(selection);
         }
     }
@@ -769,8 +694,7 @@ impl PlainEditorDriver<'_>
     }
 }
 
-impl PlainEditor
-{
+impl PlainEditor {
     /// Run a series of [`PlainEditorDriver`] methods.
     ///
     /// This type is only used to simplify methods which require both
@@ -851,10 +775,7 @@ impl PlainEditor
     /// selection on the focused line.
     pub fn ime_cursor_area(&self) -> BoundingBox {
         let (area, focus) = if let Some(preedit_range) = &self.compose {
-            let selection = Selection::new(
-                self.cursor_at(preedit_range.start),
-                self.cursor_at(preedit_range.end),
-            );
+            let selection = Selection::new(self.cursor_at(preedit_range.start), self.cursor_at(preedit_range.end));
 
             // Bound the entire preedit text.
             let mut area = None;
@@ -887,7 +808,7 @@ impl PlainEditor
         let font_size = downstream
             .or(upstream)
             .map(|cluster| cluster.run().font_size())
-            .unwrap_or(16.0/*ResolvedStyle::<T>::default().font_size*/);
+            .unwrap_or(16.0 /*ResolvedStyle::<T>::default().font_size*/);
         // Using 0.6 as an estimate of the average advance
         let inflate = 3. * 0.6 * font_size as f64;
         let editor_width = self.width.map(f64::from).unwrap_or(f64::INFINITY);
@@ -906,10 +827,7 @@ impl PlainEditor
     #[allow(dead_code)]
     pub fn text(&self) -> SplitString<'_> {
         if let Some(preedit_range) = &self.compose {
-            SplitString([
-                &self.buffer[..preedit_range.start],
-                &self.buffer[preedit_range.end..],
-            ])
+            SplitString([&self.buffer[..preedit_range.start], &self.buffer[preedit_range.end..]])
         } else {
             SplitString([&self.buffer, ""])
         }
@@ -994,11 +912,10 @@ impl PlainEditor
     }
 
     /// Sets the ranged styles provided for this editor.
-    pub fn set_ranged_styles(&mut self, ranged_styles: RangedStyles){
+    pub fn set_ranged_styles(&mut self, ranged_styles: RangedStyles) {
         self.layout_dirty = true;
         self.ranged_styles = ranged_styles;
     }
-
 
     /// Whether the editor is currently in IME composing mode.
     pub fn is_composing(&self) -> bool {
@@ -1028,11 +945,7 @@ impl PlainEditor
     ///
     /// The [`layout`](Self::layout) method should generally be preferred.
     pub fn try_layout(&self) -> Option<&Layout<ColorBrush>> {
-        if self.layout_dirty {
-            None
-        } else {
-            Some(&self.layout)
-        }
+        if self.layout_dirty { None } else { Some(&self.layout) }
     }
 
     #[cfg(feature = "accesskit")]
@@ -1111,12 +1024,7 @@ impl PlainEditor
         }
     }
 
-    fn replace_selection(
-        &mut self,
-        font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<ColorBrush>,
-        s: &str,
-    ) {
+    fn replace_selection(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>, s: &str) {
         let range = self.selection.text_range();
         let start = range.start;
         if self.selection.is_collapsed() {
@@ -1138,17 +1046,16 @@ impl PlainEditor
 
     /// Update the selection, and nudge the `Generation` if something other than `h_pos` changed.
     fn set_selection(&mut self, new_sel: Selection) {
-        if new_sel.focus() != self.selection.focus() || new_sel.anchor() != self.selection.anchor()
-        {
+        if new_sel.focus() != self.selection.focus() || new_sel.anchor() != self.selection.anchor() {
             self.generation.nudge();
         }
 
         self.selection = new_sel;
     }
+
     /// Update the layout.
     fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
-        let mut builder =
-            layout_cx.ranged_builder(font_cx, &self.buffer, self.scale as f32, self.quantize);
+        let mut builder = layout_cx.ranged_builder(font_cx, &self.buffer, self.scale as f32, self.quantize);
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
         }
@@ -1197,10 +1104,7 @@ impl PlainEditor
             y_offset,
         );
         if self.show_cursor {
-            if let Some(selection) = self
-                .selection
-                .to_access_selection(&self.layout, &self.layout_access)
-            {
+            if let Some(selection) = self.selection.to_access_selection(&self.layout, &self.layout_access) {
                 node.set_text_selection(selection);
             }
         } else {

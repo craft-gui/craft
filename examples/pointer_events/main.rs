@@ -1,18 +1,19 @@
-use craft_retained::elements::core::ElementData;
-use craft_retained::elements::{Element, Window};
-use craft_retained::events::ui_events::pointer::PointerId;
-use craft_retained::events::Event;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
-use craft_retained::{
-    elements::{Container, Text},
-    Color,
-};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use craft_retained::Color;
+use craft_retained::elements::core::ElementData;
+use craft_retained::elements::{Container, Element, Text, Window};
+use craft_retained::events::Event;
+use craft_retained::events::ui_events::pointer::PointerId;
+use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
+
 fn title(txt: &str) -> Rc<RefCell<Text>> {
     let title = Text::new(txt);
-    title.borrow_mut().font_size(24.0).padding(Unit::Px(0.0), Unit::Px(0.0), Unit::Px(25.0), Unit::Px(0.0));
+    title
+        .borrow_mut()
+        .font_size(24.0)
+        .padding(Unit::Px(0.0), Unit::Px(0.0), Unit::Px(25.0), Unit::Px(0.0));
 
     title
 }
@@ -57,7 +58,10 @@ fn event_log() -> (Rc<RefCell<Container>>, Rc<dyn Fn(String)>) {
         .on_pointer_button_down(Rc::new(move |_e, _pb_event| {
             let to_remove = event_log_copy.borrow().children().to_vec();
             for child in to_remove {
-                event_log_copy.borrow_mut().remove_child(child).expect("Failed to remove child!");
+                event_log_copy
+                    .borrow_mut()
+                    .remove_child(child)
+                    .expect("Failed to remove child!");
             }
         }));
 
@@ -71,12 +75,16 @@ fn event_log() -> (Rc<RefCell<Container>>, Rc<dyn Fn(String)>) {
 fn pointer_capture_example() -> Rc<RefCell<Container>> {
     let container = Container::new();
     let container_padding = 20.0;
-    container.borrow_mut().display(Display::Flex).flex_direction(FlexDirection::Column).padding(
-        Unit::Px(container_padding),
-        Unit::Px(container_padding),
-        Unit::Px(container_padding),
-        Unit::Px(container_padding),
-    );
+    container
+        .borrow_mut()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .padding(
+            Unit::Px(container_padding),
+            Unit::Px(container_padding),
+            Unit::Px(container_padding),
+            Unit::Px(container_padding),
+        );
 
     let draggable_text = Text::new("Draggable");
 
@@ -95,19 +103,24 @@ fn pointer_capture_example() -> Rc<RefCell<Container>> {
     let push_text_clone = push_text.clone();
 
     let draggable_text_clone = draggable_text.clone();
-    draggable_text.borrow_mut().on_pointer_moved(Rc::new(move |e, pointer_moved_event| {
-        let mouse_y = pointer_moved_event.current.logical_position().x as f32;
-        let half_size = draggable_text_clone.borrow_mut().computed_box_transformed().size.width / 2.0;
-        if draggable_text_clone.borrow_mut().has_pointer_capture(PointerId::new(1).unwrap()) {
-            draggable_text_clone.borrow_mut().position(Position::Relative).inset(
-                Unit::Px(0.0),
-                Unit::Px(0.0),
-                Unit::Px(0.0),
-                Unit::Px(mouse_y - half_size - container_padding),
-            );
-        }
-        e.prevent_defaults();
-    }));
+    draggable_text
+        .borrow_mut()
+        .on_pointer_moved(Rc::new(move |e, pointer_moved_event| {
+            let mouse_y = pointer_moved_event.current.logical_position().x as f32;
+            let half_size = draggable_text_clone.borrow_mut().computed_box_transformed().size.width / 2.0;
+            if draggable_text_clone
+                .borrow_mut()
+                .has_pointer_capture(PointerId::new(1).unwrap())
+            {
+                draggable_text_clone.borrow_mut().position(Position::Relative).inset(
+                    Unit::Px(0.0),
+                    Unit::Px(0.0),
+                    Unit::Px(0.0),
+                    Unit::Px(mouse_y - half_size - container_padding),
+                );
+            }
+            e.prevent_defaults();
+        }));
 
     draggable_text.borrow_mut().on_got_pointer_capture(Rc::new(move |_e| {
         push_text_clone("Got Pointer Capture".to_string());
@@ -127,12 +140,11 @@ fn pointer_capture_example() -> Rc<RefCell<Container>> {
 
 fn pointer_enter_leave_example() -> Rc<RefCell<Container>> {
     let container = Container::new();
-    container.borrow_mut().display(Display::Flex).flex_direction(FlexDirection::Column).padding(
-        Unit::Px(20.0),
-        Unit::Px(20.0),
-        Unit::Px(20.0),
-        Unit::Px(20.0),
-    );
+    container
+        .borrow_mut()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .padding(Unit::Px(20.0), Unit::Px(20.0), Unit::Px(20.0), Unit::Px(20.0));
 
     let (event_log, push_text) = event_log();
 
@@ -184,8 +196,8 @@ fn main() {
     let pointer_capture_event_log = Text::new("");
     let pointer_capture_draggable_container = Text::new("Draggable");
 
-
-    window.borrow_mut()
+    window
+        .borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow(Overflow::Visible, Overflow::Scroll)

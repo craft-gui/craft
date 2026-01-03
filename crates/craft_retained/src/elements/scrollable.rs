@@ -1,9 +1,10 @@
+use kurbo::Point;
+use ui_events::ScrollDelta;
+use ui_events::pointer::{PointerId, PointerType};
+
+use crate::app::request_apply_layout;
 use crate::elements::Element;
 use crate::events::{CraftMessage, Event};
-use kurbo::Point;
-use ui_events::pointer::{PointerId, PointerType};
-use ui_events::ScrollDelta;
-use crate::app::request_apply_layout;
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage, event: &mut Event) {

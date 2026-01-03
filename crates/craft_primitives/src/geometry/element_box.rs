@@ -1,4 +1,5 @@
 use kurbo::Affine;
+
 use crate::geometry::{Border, Margin, Padding, Point, Rectangle, Size};
 
 /// An element's box roughly analogous to CSS's box-model.
@@ -19,7 +20,10 @@ impl ElementBox {
     }
 
     pub fn margin_rectangle_position(&self) -> Point {
-        Point::new(self.position.x - self.margin.left as f64, self.position.y - self.margin.top as f64)
+        Point::new(
+            self.position.x - self.margin.left as f64,
+            self.position.y - self.margin.top as f64,
+        )
     }
 
     pub fn margin_rectangle_size(&self) -> Size<f32> {
@@ -111,6 +115,11 @@ impl ElementBox {
         let content_position = self.content_rectangle_position();
         let content_size = self.content_rectangle_size();
 
-        Rectangle::new(content_position.x as f32, content_position.y as f32, content_size.width, content_size.height)
+        Rectangle::new(
+            content_position.x as f32,
+            content_position.y as f32,
+            content_size.width,
+            content_size.height,
+        )
     }
 }

@@ -1,8 +1,10 @@
-use crate::layout::layout_context::{measure_content, LayoutContext};
-use crate::text::text_context::TextContext;
-use craft_resource_manager::ResourceManager;
 use std::sync::Arc;
+
+use craft_resource_manager::ResourceManager;
 use taffy::{Layout, NodeId, PrintTree, Size, Style};
+
+use crate::layout::layout_context::{LayoutContext, measure_content};
+use crate::text::text_context::TextContext;
 
 pub struct TaffyTree {
     inner: taffy::TaffyTree<LayoutContext>,

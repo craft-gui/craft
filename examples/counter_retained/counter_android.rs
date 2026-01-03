@@ -1,8 +1,9 @@
 #![cfg(target_os = "android")]
 
-use crate::counter::counter;
-use craft_retained::{craft_main, AndroidApp, CraftOptions};
+use craft_retained::{AndroidApp, CraftOptions, craft_main};
 use util::setup_logging;
+
+use crate::counter::counter;
 
 #[path = "main.rs"]
 mod counter;

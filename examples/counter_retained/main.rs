@@ -1,12 +1,10 @@
-use craft_retained::elements::{Element, Window};
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
-use craft_retained::{
-    elements::{Container, Text},
-    rgb, Color,
-};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use craft_retained::elements::{Container, Element, Text, Window};
+use craft_retained::events::ui_events::pointer::PointerButton;
+use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
+use craft_retained::{Color, rgb};
 
 #[derive(Default, Clone, Copy)]
 pub struct Counter {
@@ -47,7 +45,9 @@ fn create_button(
         .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
                 state.borrow_mut().change(delta);
-                count_text.borrow_mut().text(&format!("Count: {}", state.borrow().count()));
+                count_text
+                    .borrow_mut()
+                    .text(&format!("Count: {}", state.borrow().count()));
                 event.prevent_propagate();
             }
         }))
@@ -68,8 +68,20 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .gap(Unit::Px(20.0), Unit::Px(20.0))
-        .push(create_button("-", rgb(244, 67, 54), -1, count.clone(), count_text.clone()))
-        .push(create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone()));
+        .push(create_button(
+            "-",
+            rgb(244, 67, 54),
+            -1,
+            count.clone(),
+            count_text.clone(),
+        ))
+        .push(create_button(
+            "+",
+            rgb(76, 175, 80),
+            1,
+            count.clone(),
+            count_text.clone(),
+        ));
 
     container
         .borrow_mut()

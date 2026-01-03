@@ -1,10 +1,11 @@
-use crate::style::Style;
-use craft_primitives::geometry::borders::{CssRoundedRect, BOTTOM, LEFT, RIGHT, TOP};
+use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::{NodeId, Position};
+
+use crate::style::Style;
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
@@ -21,7 +22,6 @@ impl CssComputedBorder {
 }
 
 impl CssComputedBorder {
-
     pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
         let top = css_rect.get_side(TOP);
         let right = css_rect.get_side(RIGHT);
@@ -34,7 +34,6 @@ impl CssComputedBorder {
             background,
         }
     }
-
 }
 
 #[derive(Clone, Default)]
@@ -109,9 +108,24 @@ impl LayoutItem {
 
         self.content_size = Size::new(result.content_size.width, result.content_size.height);
         self.computed_box = ElementBox {
-            margin: Margin::new(result.margin.top, result.margin.right, result.margin.bottom, result.margin.left),
-            border: Border::new(result.border.top, result.border.right, result.border.bottom, result.border.left),
-            padding: Padding::new(result.padding.top, result.padding.right, result.padding.bottom, result.padding.left),
+            margin: Margin::new(
+                result.margin.top,
+                result.margin.right,
+                result.margin.bottom,
+                result.margin.left,
+            ),
+            border: Border::new(
+                result.border.top,
+                result.border.right,
+                result.border.bottom,
+                result.border.left,
+            ),
+            padding: Padding::new(
+                result.padding.top,
+                result.padding.right,
+                result.padding.bottom,
+                result.padding.left,
+            ),
             position: at_position,
             size,
         };
@@ -127,7 +141,6 @@ impl LayoutItem {
         scale_factor: f64,
         border_color: &TrblRectangle<Color>,
     ) {
-
         let element_rect = self.computed_box_transformed;
         let border_spec = BorderSpec {
             rect: element_rect.border_rectangle(),
@@ -141,11 +154,10 @@ impl LayoutItem {
         }
         self.cache_border_spec = Some(border_spec);
 
-        let is_rectangle =
-            border_radius[0] == (0.0, 0.0) &&
-            border_radius[1] == (0.0, 0.0) &&
-            border_radius[2] == (0.0, 0.0) &&
-            border_radius[3] == (0.0, 0.0);
+        let is_rectangle = border_radius[0] == (0.0, 0.0)
+            && border_radius[1] == (0.0, 0.0)
+            && border_radius[2] == (0.0, 0.0)
+            && border_radius[3] == (0.0, 0.0);
 
         // OPTIMIZATION: Don't compute the border if no border style values have been modified.
         // Note: even if all radii are 0.0, if the color varies between two edges,
@@ -157,7 +169,12 @@ impl LayoutItem {
         let borders = element_rect.border;
         let border_spec = CssRoundedRect::new(
             element_rect.border_rectangle().to_kurbo(),
-            [borders.top as f64, borders.right as f64, borders.bottom as f64, borders.left as f64],
+            [
+                borders.top as f64,
+                borders.right as f64,
+                borders.bottom as f64,
+                borders.left as f64,
+            ],
             border_radius.map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64)),
         );
 
@@ -177,7 +194,7 @@ impl LayoutItem {
         match &self.computed_border {
             ComputedBorder::None => {}
             ComputedBorder::Simple => {
-                let padding_rect =self.computed_box_transformed.padding_rectangle().scale(scale_factor);
+                let padding_rect = self.computed_box_transformed.padding_rectangle().scale(scale_factor);
                 let border_rect = self.computed_box_transformed.border_rectangle();
                 // Draw the background.
                 if background_color.components[3] != 0.0 {
@@ -190,13 +207,23 @@ impl LayoutItem {
                 }
             }
             ComputedBorder::CssComputedBorder(computed_border) => {
-                draw_borders_generic(renderer, computed_border, current_style.border_color().to_array(), background_color);
+                draw_borders_generic(
+                    renderer,
+                    computed_border,
+                    current_style.border_color().to_array(),
+                    background_color,
+                );
             }
         }
     }
 }
 
-pub(crate) fn draw_borders_generic(renderer: &mut RenderList, computed_border: &CssComputedBorder, side_colors: [Color; 4], bg_color: Color) {
+pub(crate) fn draw_borders_generic(
+    renderer: &mut RenderList,
+    computed_border: &CssComputedBorder,
+    side_colors: [Color; 4],
+    bg_color: Color,
+) {
     let background_color = bg_color;
 
     if background_color.components[3] != 0.0 {

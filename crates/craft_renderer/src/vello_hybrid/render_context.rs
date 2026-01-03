@@ -6,14 +6,10 @@
     reason = "This is a shared module between examples; not all examples use all functionality from it"
 )]
 
-use winit::window::Window;
-
 use vello_hybrid::{RenderTargetConfig, Renderer};
-use wgpu::{
-    Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTarget,
-    TextureFormat,
-};
+use wgpu::{Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTarget, TextureFormat};
 use winit::event_loop::ActiveEventLoop;
+use winit::window::Window;
 
 /// Helper function that creates a Winit window and returns it (wrapped in an Arc for sharing)
 pub(crate) fn create_winit_window(
@@ -94,7 +90,9 @@ impl RenderContext {
         format: TextureFormat,
     ) -> RenderSurface<'w> {
         self.create_render_surface(
-            self.instance.create_surface(window.into()).expect("Error creating surface"),
+            self.instance
+                .create_surface(window.into())
+                .expect("Error creating surface"),
             width,
             height,
             present_mode,
@@ -154,7 +152,12 @@ impl RenderContext {
     /// Finds or creates a compatible device handle id.
     pub(crate) async fn device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
         let compatible = match compatible_surface {
-            Some(s) => self.devices.iter().enumerate().find(|(_, d)| d.adapter.is_surface_supported(s)).map(|(i, _)| i),
+            Some(s) => self
+                .devices
+                .iter()
+                .enumerate()
+                .find(|(_, d)| d.adapter.is_surface_supported(s))
+                .map(|(i, _)| i),
             None => (!self.devices.is_empty()).then_some(0),
         };
         if compatible.is_none() {
@@ -165,7 +168,9 @@ impl RenderContext {
 
     /// Creates a compatible device handle id.
     async fn new_device(&mut self, compatible_surface: Option<&Surface<'_>>) -> Option<usize> {
-        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface).await.ok()?;
+        let adapter = wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface)
+            .await
+            .ok()?;
         #[cfg(feature = "vello_hybrid_renderer_webgl")]
         let limits = Limits {
             max_color_attachments: 4,
@@ -177,15 +182,13 @@ impl RenderContext {
         let limits = Limits::default();
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    required_features: Features::empty(),
-                    required_limits: limits,
-                    memory_hints: MemoryHints::default(),
-                    trace: Default::default(),
-                },
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: None,
+                required_features: Features::empty(),
+                required_limits: limits,
+                memory_hints: MemoryHints::default(),
+                trace: Default::default(),
+            })
             .await
             .ok()?;
         let device_handle = DeviceHandle {

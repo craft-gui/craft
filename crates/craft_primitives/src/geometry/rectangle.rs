@@ -1,6 +1,7 @@
-use crate::geometry::Point;
-use peniko::kurbo;
 use dpi;
+use peniko::kurbo;
+
+use crate::geometry::Point;
 
 /// A structure representing a rectangle in 2D space.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -108,7 +109,6 @@ impl Rectangle {
         }
     }
 
-
     pub fn intersection(&self, other: &Rectangle) -> Option<Rectangle> {
         let x0 = self.x.max(other.x);
         let y0 = self.y.max(other.y);
@@ -124,10 +124,7 @@ impl Rectangle {
 
     #[inline(always)]
     pub fn intersects(&self, other: &Rectangle) -> bool {
-        self.x < other.right()
-            && self.right() > other.x
-            && self.y < other.bottom()
-            && self.bottom() > other.y
+        self.x < other.right() && self.right() > other.x && self.y < other.bottom() && self.bottom() > other.y
     }
 }
 

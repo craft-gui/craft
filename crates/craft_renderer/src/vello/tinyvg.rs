@@ -1,14 +1,16 @@
-use crate::tinyvg_helpers;
+use std::sync::Arc;
+
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{Affine, Line, Stroke};
-use peniko::{kurbo, Color, Fill};
-use std::sync::Arc;
+use peniko::{Color, Fill, kurbo};
 use tinyvg_rs::color_table::ColorTable;
 use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg_rs::common::Unit;
 use vello::Scene;
+
+use crate::tinyvg_helpers;
 
 pub(crate) fn draw_path(
     scene: &mut Scene,
@@ -77,7 +79,15 @@ pub(crate) fn draw_tiny_vg(
                     let path = Path {
                         segments: vec![segment],
                     };
-                    draw_path(scene, &path, &data.style, None, &tiny_vg.color_table, &affine, override_color);
+                    draw_path(
+                        scene,
+                        &path,
+                        &data.style,
+                        None,
+                        &tiny_vg.color_table,
+                        &affine,
+                        override_color,
+                    );
                 }
                 DrawCommand::FillRectangles(data) => {
                     let brush = tinyvg_helpers::get_brush(&data.style, &tiny_vg.color_table, override_color);
@@ -88,7 +98,15 @@ pub(crate) fn draw_tiny_vg(
                     }
                 }
                 DrawCommand::FillPath(data) => {
-                    draw_path(scene, &data.path, &data.style, None, &tiny_vg.color_table, &affine, override_color);
+                    draw_path(
+                        scene,
+                        &data.path,
+                        &data.style,
+                        None,
+                        &tiny_vg.color_table,
+                        &affine,
+                        override_color,
+                    );
                 }
                 DrawCommand::DrawLines(data) => {
                     let brush = tinyvg_helpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
@@ -106,8 +124,10 @@ pub(crate) fn draw_tiny_vg(
 
                     let mut start = data.points[0];
                     for point in &data.points {
-                        let line =
-                            Line::new(tinyvg_helpers::to_kurbo_point(start), tinyvg_helpers::to_kurbo_point(*point));
+                        let line = Line::new(
+                            tinyvg_helpers::to_kurbo_point(start),
+                            tinyvg_helpers::to_kurbo_point(*point),
+                        );
                         scene.stroke(&Stroke::new(data.line_width.0), affine, &brush, None, &line);
                         start = *point;
                     }
@@ -117,8 +137,10 @@ pub(crate) fn draw_tiny_vg(
 
                     let mut start = data.points[0];
                     for point in &data.points {
-                        let line =
-                            Line::new(tinyvg_helpers::to_kurbo_point(start), tinyvg_helpers::to_kurbo_point(*point));
+                        let line = Line::new(
+                            tinyvg_helpers::to_kurbo_point(start),
+                            tinyvg_helpers::to_kurbo_point(*point),
+                        );
                         scene.stroke(&Stroke::new(data.line_width.0), affine, &brush, None, &line);
                         start = *point;
                     }
@@ -147,7 +169,15 @@ pub(crate) fn draw_tiny_vg(
                     let path = Path {
                         segments: vec![segment],
                     };
-                    draw_path(scene, &path, &data.fill_style, None, &tiny_vg.color_table, &affine, override_color);
+                    draw_path(
+                        scene,
+                        &path,
+                        &data.fill_style,
+                        None,
+                        &tiny_vg.color_table,
+                        &affine,
+                        override_color,
+                    );
                     draw_path(
                         scene,
                         &path,
@@ -169,7 +199,15 @@ pub(crate) fn draw_tiny_vg(
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
-                    draw_path(scene, &data.path, &data.fill_style, None, &tiny_vg.color_table, &affine, override_color);
+                    draw_path(
+                        scene,
+                        &data.path,
+                        &data.fill_style,
+                        None,
+                        &tiny_vg.color_table,
+                        &affine,
+                        override_color,
+                    );
                     draw_path(
                         scene,
                         &data.path,

@@ -1,21 +1,23 @@
-use crate::app::{queue_event};
-use crate::elements::core::ElementInternals;
-use crate::elements::element_data::ElementData;
-use crate::elements::{Element};
-use crate::events::{CraftMessage, Event};
-use crate::palette;
-use crate::style::Unit;
-use crate::text::text_context::TextContext;
+use std::any::Any;
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+
 use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 use peniko::Color;
-use std::any::Any;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
+
+use crate::app::queue_event;
+use crate::elements::Element;
+use crate::elements::core::ElementInternals;
+use crate::elements::element_data::ElementData;
+use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
+use crate::palette;
+use crate::style::Unit;
+use crate::text::text_context::TextContext;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -46,20 +48,22 @@ pub struct Slider {
 
 impl Slider {
     pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| RefCell::new(Self {
-            element_data: ElementData::new(me.clone(), false),
-            step: 1.0,
-            min: 0.0,
-            max: 100.0,
-            direction: Default::default(),
-            value: 0.0,
-            dragging: false,
-            thumb_size: thumb_size as f64,
-            thumb_background_color: Color::BLACK,
-            thumb_border_radius: None,
-            track_background_color: Some(palette::css::DODGER_BLUE),
-            track_border_radius: None,
-        }));
+        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                element_data: ElementData::new(me.clone(), false),
+                step: 1.0,
+                min: 0.0,
+                max: 100.0,
+                direction: Default::default(),
+                value: 0.0,
+                dragging: false,
+                thumb_size: thumb_size as f64,
+                thumb_background_color: Color::BLACK,
+                thumb_border_radius: None,
+                track_background_color: Some(palette::css::DODGER_BLUE),
+                track_border_radius: None,
+            })
+        });
 
         me.borrow_mut().background_color(palette::css::LIGHT_GRAY);
         let border_radius = 25.0;
@@ -67,7 +71,7 @@ impl Slider {
             (border_radius, border_radius),
             (border_radius, border_radius),
             (border_radius, border_radius),
-            (border_radius, border_radius)
+            (border_radius, border_radius),
         );
         if me.borrow_mut().direction == SliderDirection::Horizontal {
             me.borrow_mut().width(Unit::Px(140.0));
@@ -77,9 +81,8 @@ impl Slider {
             me.borrow_mut().width(Unit::Px(10.0));
         }
 
-
         // TODO: FIX
-       /* {
+        /* {
             let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
             let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
             me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
@@ -159,7 +162,13 @@ impl Slider {
         self.thumb_background_color
     }
 
-    pub fn thumb_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> &mut Self {
+    pub fn thumb_border_radius(
+        &mut self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> &mut Self {
         self.thumb_border_radius = Some([top, right, bottom, left]);
         self
     }
@@ -177,7 +186,13 @@ impl Slider {
         self.track_background_color
     }
 
-    pub fn track_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> &mut Self {
+    pub fn track_border_radius(
+        &mut self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> &mut Self {
         self.track_border_radius = Some([top, right, bottom, left]);
         self
     }
@@ -185,7 +200,6 @@ impl Slider {
     pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
         self.track_border_radius
     }
-
 }
 
 impl crate::elements::core::ElementData for Slider {
@@ -205,7 +219,12 @@ impl Element for Slider {
 
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
-        let thumb_rect = Rectangle::new(thumb_pos.x as f32, thumb_pos.y as f32, thumb_size as f32, thumb_size as f32);
+        let thumb_rect = Rectangle::new(
+            thumb_pos.x as f32,
+            thumb_pos.y as f32,
+            thumb_size as f32,
+            thumb_size as f32,
+        );
 
         if thumb_rect.contains(&point) {
             return true;
@@ -231,7 +250,6 @@ impl Element for Slider {
 }
 
 impl ElementInternals for Slider {
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -247,7 +265,9 @@ impl ElementInternals for Slider {
         let layout = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
-        let dirty = has_new_layout || transform != self.element_data.layout_item.get_transform() || position != self.element_data.layout_item.position ;
+        let dirty = has_new_layout
+            || transform != self.element_data.layout_item.get_transform()
+            || position != self.element_data.layout_item.position;
         self.element_data.layout_item.has_new_layout = has_new_layout;
 
         if dirty {
@@ -299,9 +319,7 @@ impl ElementInternals for Slider {
                     Code::End => Some(self.max),
                     Code::PageUp => Some(self.compute_step(10, self.value)),
                     Code::PageDown => Some(self.compute_step(-10, self.value)),
-                    _ => {
-                        None
-                    }
+                    _ => None,
                 };
 
                 if let Some(new_value) = new_value {
@@ -316,7 +334,10 @@ impl ElementInternals for Slider {
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.release_pointer_capture(PointerId::new(1).unwrap());
 
-                let value = self.compute_slider_value(&Point::new(pointer_button_update.state.position.x, pointer_button_update.state.position.y));
+                let value = self.compute_slider_value(&Point::new(
+                    pointer_button_update.state.position.x,
+                    pointer_button_update.state.position.y,
+                ));
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
@@ -327,7 +348,10 @@ impl ElementInternals for Slider {
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.set_pointer_capture(PointerId::new(1).unwrap());
 
-                let value = self.compute_slider_value(&Point::new(pointer_button_update.state.position.x, pointer_button_update.state.position.y));
+                let value = self.compute_slider_value(&Point::new(
+                    pointer_button_update.state.position.x,
+                    pointer_button_update.state.position.y,
+                ));
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
@@ -338,7 +362,10 @@ impl ElementInternals for Slider {
                     return;
                 }
 
-                let value = self.compute_slider_value(&Point::new(pointer_update.current.position.x, pointer_update.current.position.y));
+                let value = self.compute_slider_value(&Point::new(
+                    pointer_update.current.position.x,
+                    pointer_update.current.position.y,
+                ));
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());

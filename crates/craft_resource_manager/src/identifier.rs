@@ -1,11 +1,10 @@
-use crate::ResourceIdentifier::{Bytes, File};
-
-#[cfg(feature = "http_client")]
-use crate::ResourceIdentifier::Url;
-
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::{fmt, fs};
+
+#[cfg(feature = "http_client")]
+use crate::ResourceIdentifier::Url;
+use crate::ResourceIdentifier::{Bytes, File};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ResourceIdentifier {

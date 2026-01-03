@@ -1,16 +1,15 @@
-use craft_retained::elements::{Element, Window};
-use craft_retained::elements::{Container, Text};
-use craft_retained::events::ui_events::pointer::PointerButtonEvent;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::Event;
-use craft_retained::style::{AlignItems, JustifyContent, Overflow, Wrap};
-use craft_retained::style::{Display, FlexDirection, Unit};
-use craft_retained::{rgb, Color};
+use craft_retained::events::ui_events::pointer::PointerButtonEvent;
+use craft_retained::palette::css::WHITE;
+use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Wrap};
+use craft_retained::{Color, rgb};
 use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
-use std::cell::RefCell;
-use std::rc::{Rc};
-use craft_retained::palette::css::WHITE;
 
 const ADJECTIVES: &[&str] = &[
     "pretty",
@@ -40,8 +39,9 @@ const ADJECTIVES: &[&str] = &[
     "fancy",
 ];
 
-const COLOURS: &[&str] =
-    &["red", "yellow", "blue", "green", "pink", "brown", "purple", "brown", "white", "black", "orange"];
+const COLOURS: &[&str] = &[
+    "red", "yellow", "blue", "green", "pink", "brown", "purple", "brown", "white", "black", "orange",
+];
 
 const NOUNS: &[&str] = &[
     "table", "chair", "house", "bbq", "desk", "car", "pony", "cookie", "sandwich", "burger", "pizza", "mouse",
@@ -98,7 +98,10 @@ impl State {
     pub fn remove_all_rows(&mut self) {
         let to_remove = self.element.borrow().children().to_vec();
         for child in to_remove {
-            self.element.borrow_mut().remove_child(child).expect("Failed to remove child!");
+            self.element
+                .borrow_mut()
+                .remove_child(child)
+                .expect("Failed to remove child!");
         }
     }
 
@@ -108,13 +111,18 @@ impl State {
             self.rows.swap(1, 998);
             let child_1 = self.element.borrow().children()[1].clone();
             let child_2 = self.element.borrow().children()[998].clone();
-            self.element.borrow_mut().swap_child(child_1, child_2).expect("Failed to swap children");
+            self.element
+                .borrow_mut()
+                .swap_child(child_1, child_2)
+                .expect("Failed to swap children");
         }
     }
 
     pub fn append_rows(&mut self) {
         // Collect all new rows that need to be appended
-        let new_rows: Vec<Rc<RefCell<dyn Element>>> = self.store.data
+        let new_rows: Vec<Rc<RefCell<dyn Element>>> = self
+            .store
+            .data
             .iter()
             .skip(self.rows.len())
             .map(|data| {
@@ -125,7 +133,12 @@ impl State {
 
         self.rows.extend(new_rows.iter().cloned());
 
-        self.element.borrow_mut().as_any_mut().downcast_mut::<Container>().unwrap().extend(new_rows);
+        self.element
+            .borrow_mut()
+            .as_any_mut()
+            .downcast_mut::<Container>()
+            .unwrap()
+            .extend(new_rows);
     }
 
     pub fn select(&mut self, row: Option<usize>) {
@@ -152,15 +165,14 @@ impl State {
         }
 
         let id_text = Text::new(&data.id.to_string());
-        id_text.borrow_mut()
+        id_text
+            .borrow_mut()
             .width(Unit::Px(60.0))
             .margin(Unit::Px(0.0), Unit::Px(12.0), Unit::Px(0.0), Unit::Px(0.0));
 
         let label_text = Text::new(&data.label);
 
-        row.borrow_mut()
-            .push(id_text)
-            .push(label_text);
+        row.borrow_mut().push(id_text).push(label_text);
 
         row
     }
@@ -313,7 +325,8 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     text.borrow_mut().font_size(32.0).color(Color::BLACK);
 
     let text_container = Container::new();
-    text_container.borrow_mut()
+    text_container
+        .borrow_mut()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .width(Unit::Percentage(50.0))
@@ -321,9 +334,9 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
         .align_items(Some(AlignItems::Center))
         .push(text);
 
-
     let header = Container::new();
-    header.borrow_mut()
+    header
+        .borrow_mut()
         .background_color(rgb(238, 238, 238))
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
@@ -340,7 +353,8 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
 
 fn build_data_list() -> Rc<RefCell<Container>> {
     let data_list = Container::new();
-    data_list.borrow_mut()
+    data_list
+        .borrow_mut()
         .flex_direction(FlexDirection::Column)
         .width(Unit::Percentage(100.0));
     data_list
@@ -348,7 +362,8 @@ fn build_data_list() -> Rc<RefCell<Container>> {
 
 fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let buttons = Container::new();
-    buttons.borrow_mut()
+    buttons
+        .borrow_mut()
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::FlexEnd))
         .align_items(Some(AlignItems::Start))

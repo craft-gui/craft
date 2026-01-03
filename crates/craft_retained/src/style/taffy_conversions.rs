@@ -1,6 +1,7 @@
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Wrap};
 use taffy::{FlexWrap, Overflow};
+
 use crate::animations::Animation;
+use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Wrap};
 
 fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     match unit {
@@ -27,7 +28,6 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 }
 
 impl Style {
-
     pub fn animation(&self, animation: &str) -> Option<&Animation> {
         self.animations.iter().find(|ani| ani.name == animation)
     }

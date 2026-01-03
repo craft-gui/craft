@@ -1,18 +1,20 @@
-use crate::style::{Style, StyleProperty, Unit};
-use craft_primitives::geometry::TrblRectangle;
-use kurbo::{CubicBez, ParamCurve, Point};
-use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::iter::zip;
 use std::time::Duration;
+
+use craft_primitives::geometry::TrblRectangle;
+use kurbo::{CubicBez, ParamCurve, Point};
+use smallvec::SmallVec;
 use smol_str::SmolStr;
+
+use crate::style::{Style, StyleProperty, Unit};
 
 #[derive(Clone, Debug)]
 pub struct KeyFrame {
     /// The action / styles interpolated at `offset_percentage`.
     /// Range [0.0, 100.0]
     offset_percentage: f32,
-    
+
     /// The list of styles interpolated to an element at this keyframe.
     properties: SmallVec<[StyleProperty; 3]>,
 }
@@ -24,15 +26,14 @@ impl KeyFrame {
             properties: SmallVec::new(),
         }
     }
-    
+
     pub fn push(mut self, property: StyleProperty) -> Self {
         self.properties.push(property);
         self
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-#[derive(PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum AnimationStatus {
     Paused,
     Playing,
@@ -54,11 +55,10 @@ impl FixedCubicBezier {
                 Point::new(x1 as f64, y1 as f64),
                 Point::new(x2 as f64, y2 as f64),
                 Point::new(1.0, 1.0),
-            )
+            ),
         }
     }
 }
-
 
 /// The motion of an animation modeled with a mathematical function.
 #[derive(Default, Copy, Clone, Debug)]
@@ -90,7 +90,7 @@ pub struct Animation {
 #[derive(Copy, Clone, Debug)]
 pub enum LoopAmount {
     Infinite,
-    Fixed(u32)
+    Fixed(u32),
 }
 
 impl Animation {
@@ -103,12 +103,12 @@ impl Animation {
             loop_amount: LoopAmount::Fixed(1),
         }
     }
-    
+
     pub fn push(mut self, key_frame: KeyFrame) -> Self {
         self.key_frames.push(key_frame);
         self
     }
-    
+
     pub fn loop_amount(mut self, loop_amount: LoopAmount) -> Self {
         self.loop_amount = loop_amount;
         self
@@ -137,7 +137,7 @@ impl AnimationFlags {
     pub fn set_needs_relayout(&mut self, needs_relayout: bool) {
         self.needs_relayout |= needs_relayout;
     }
-    
+
     /// Returns whether we need to perform a relayout or not.
     pub fn needs_relayout(&self) -> bool {
         self.needs_relayout
@@ -155,14 +155,13 @@ impl AnimationFlags {
 }
 
 impl ActiveAnimation {
-    
-    /// Advances an active animation, and it is also responsible for tracking the status and element_state. 
+    /// Advances an active animation, and it is also responsible for tracking the status and element_state.
     pub fn tick(&mut self, animation_flags: &mut AnimationFlags, animation: &Animation, delta: Duration) {
         if self.status == AnimationStatus::Playing {
             self.current += delta;
 
             let is_completed = self.current >= animation.duration;
-            
+
             match &mut self.loop_amount {
                 LoopAmount::Infinite => {
                     if is_completed {
@@ -183,13 +182,17 @@ impl ActiveAnimation {
                     }
                 }
             }
-            
         }
     }
 
     /// Called after `tick`, and is responsible for using the current animation time and
     /// computing an interpolated style from a provided `Animation`.
-    pub fn compute_style(&mut self, element_style: &Style, animation: &Animation, animation_flags: &mut AnimationFlags) -> Style {
+    pub fn compute_style(
+        &mut self,
+        element_style: &Style,
+        animation: &Animation,
+        animation_flags: &mut AnimationFlags,
+    ) -> Style {
         if self.status != AnimationStatus::Playing {
             return element_style.clone();
         }
@@ -209,7 +212,7 @@ impl ActiveAnimation {
         }
 
         let (keyframe_start, keyframe_end) = find_keyframe_pair(pos, animation);
-        
+
         let mut style = Style::default();
         let mut start_map = HashMap::new();
         let mut end_map = HashMap::new();
@@ -217,12 +220,16 @@ impl ActiveAnimation {
         for prop in &keyframe_start.properties {
             start_map.insert(std::mem::discriminant(prop), prop);
         }
-        
+
         for prop in &keyframe_end.properties {
             end_map.insert(std::mem::discriminant(prop), prop);
         }
 
-        for key in start_map.keys().chain(end_map.keys()).collect::<std::collections::HashSet<_>>() {
+        for key in start_map
+            .keys()
+            .chain(end_map.keys())
+            .collect::<std::collections::HashSet<_>>()
+        {
             let start_prop = start_map.get(key);
             let end_prop = end_map.get(key);
 
@@ -257,9 +264,7 @@ impl ActiveAnimation {
                     ease_in_out.cubic_bez.eval(local_t as f64).y
                 }
                 // https://developer.mozilla.org/en-US/docs/Web/CSS/animation-timing-function#cubic-beziernumber_01_number_number_01_number
-                TimingFunction::BezierCurve(cubic_bezier) => {
-                    cubic_bezier.cubic_bez.eval(local_t as f64).y
-                }
+                TimingFunction::BezierCurve(cubic_bezier) => cubic_bezier.cubic_bez.eval(local_t as f64).y,
             };
 
             fn lerp(a: f32, b: f32, t: f32) -> f32 {
@@ -271,26 +276,26 @@ impl ActiveAnimation {
                 let resolved_start = match start {
                     Unit::Px(px) => px,
                     Unit::Percentage(percent) => percent,
-                    Unit::Auto => panic!("Unit must not be auto.")
+                    Unit::Auto => panic!("Unit must not be auto."),
                 };
-                
+
                 let resolved_end = match end {
                     Unit::Px(px) => px,
                     Unit::Percentage(percent) => percent,
-                    Unit::Auto => panic!("Unit must not be auto.")
+                    Unit::Auto => panic!("Unit must not be auto."),
                 };
                 let new = lerp(resolved_start, resolved_end, t as f32);
-                
+
                 // Naively asserts that start and end must be the same Unit type.
                 let new = match start {
                     Unit::Px(_) => Unit::Px(new),
                     Unit::Percentage(_) => Unit::Percentage(new),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
-                
+
                 set_prop(new);
             }
-            
+
             match (start_prop, end_prop) {
                 (Some(StyleProperty::Background(start)), Some(StyleProperty::Background(end))) => {
                     let new_color = start.lerp_rect(*end, t as f32);
@@ -306,8 +311,7 @@ impl ActiveAnimation {
                     style.set_font_size(new);
                     animation_flags.set_needs_relayout(true);
                 }
-                (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) 
-                => {
+                (Some(StyleProperty::Width(start)), Some(StyleProperty::Width(end))) => {
                     resolve_unit(*start, *end, t, &mut |new| {
                         style.set_width(new);
                     });
@@ -321,27 +325,26 @@ impl ActiveAnimation {
                 }
 
                 (Some(StyleProperty::Inset(start)), Some(StyleProperty::Inset(end))) => {
-                    let trlb = zip(start.to_array(), end.to_array()).map(|(start, end)| {
-                        let mut inset_unit = Unit::Auto;
-                        resolve_unit(start, end, t, &mut |new| {
-                            inset_unit = new;
-                        });
-                        
-                        inset_unit
-                    }).collect::<Vec<Unit>>();
+                    let trlb = zip(start.to_array(), end.to_array())
+                        .map(|(start, end)| {
+                            let mut inset_unit = Unit::Auto;
+                            resolve_unit(start, end, t, &mut |new| {
+                                inset_unit = new;
+                            });
+
+                            inset_unit
+                        })
+                        .collect::<Vec<Unit>>();
 
                     let inset = TrblRectangle::new(trlb[0], trlb[1], trlb[2], trlb[3]);
-                    
+
                     style.set_inset(inset);
                     animation_flags.set_needs_relayout(true);
                 }
-                
+
                 _ => {}
             }
-
         }
-
-
 
         style
     }

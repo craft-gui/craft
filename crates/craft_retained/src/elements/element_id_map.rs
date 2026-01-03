@@ -1,17 +1,18 @@
 use std::cell::RefCell;
 use std::rc::Weak;
+
 use rustc_hash::FxHashMap;
+
 use crate::elements::Element;
 
 /// Maps element ids to Weak<Refcell<dyn Element>>
 
 #[derive(Default, Clone)]
 pub struct ElementIdMap {
-    map: FxHashMap<u64, Weak<RefCell<dyn Element>>>
+    map: FxHashMap<u64, Weak<RefCell<dyn Element>>>,
 }
 
 impl ElementIdMap {
-
     pub fn new() -> Self {
         Self::default()
     }
@@ -36,5 +37,4 @@ impl ElementIdMap {
     pub fn get(&self, id: u64) -> Option<&Weak<RefCell<dyn Element>>> {
         self.map.get(&id)
     }
-
 }

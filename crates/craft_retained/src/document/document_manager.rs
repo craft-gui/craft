@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+
 use winit::window::WindowId;
-use crate::app::{CURRENT_WINDOW_ID};
+
+use crate::app::CURRENT_WINDOW_ID;
 use crate::document::Document;
 
 /// A wrapper to get a document with a window id or the current document.
@@ -23,6 +25,7 @@ impl DocumentManager {
         let window_id_key = &CURRENT_WINDOW_ID.get().unwrap();
         self.documents.get_mut(window_id_key).unwrap()
     }
+
     pub fn get_document_by_window_id(&mut self, window_id: WindowId) -> Option<&mut Document> {
         self.documents.get_mut(&window_id)
     }

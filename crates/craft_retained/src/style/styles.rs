@@ -1,17 +1,14 @@
-use crate::style::style_flags::StyleFlags;
-use craft_primitives::Color;
 use std::borrow::Cow;
-
-pub use taffy::BoxSizing;
-pub use taffy::Overflow;
-pub use taffy::Position;
-
-use craft_primitives::geometry::TrblRectangle;
-use craft_primitives::ColorBrush;
-use smallvec::SmallVec;
 use std::fmt;
 use std::fmt::Debug;
+
+use craft_primitives::geometry::TrblRectangle;
+use craft_primitives::{Color, ColorBrush};
+use smallvec::SmallVec;
+pub use taffy::{BoxSizing, Overflow, Position};
+
 use crate::animations::Animation;
+use crate::style::style_flags::StyleFlags;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Unit {
@@ -87,32 +84,24 @@ pub struct ScrollbarColor {
 }
 
 impl Weight {
-    /// Thin weight (100), the thinnest value.
-    pub const THIN: Weight = Weight(100);
-
-    /// Extra light weight (200).
-    pub const EXTRA_LIGHT: Weight = Weight(200);
-
-    /// Light weight (300).
-    pub const LIGHT: Weight = Weight(300);
-
-    /// Normal (400).
-    pub const NORMAL: Weight = Weight(400);
-
-    /// Medium weight (500, higher than normal).
-    pub const MEDIUM: Weight = Weight(500);
-
-    /// Semibold weight (600).
-    pub const SEMIBOLD: Weight = Weight(600);
-
-    /// Bold weight (700).
-    pub const BOLD: Weight = Weight(700);
-
-    /// Extra-bold weight (800).
-    pub const EXTRA_BOLD: Weight = Weight(800);
-
     /// Black weight (900), the thickest value.
     pub const BLACK: Weight = Weight(900);
+    /// Bold weight (700).
+    pub const BOLD: Weight = Weight(700);
+    /// Extra-bold weight (800).
+    pub const EXTRA_BOLD: Weight = Weight(800);
+    /// Extra light weight (200).
+    pub const EXTRA_LIGHT: Weight = Weight(200);
+    /// Light weight (300).
+    pub const LIGHT: Weight = Weight(300);
+    /// Medium weight (500, higher than normal).
+    pub const MEDIUM: Weight = Weight(500);
+    /// Normal (400).
+    pub const NORMAL: Weight = Weight(400);
+    /// Semibold weight (600).
+    pub const SEMIBOLD: Weight = Weight(600);
+    /// Thin weight (100), the thinnest value.
+    pub const THIN: Weight = Weight(100);
 }
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Debug)]
@@ -249,9 +238,9 @@ impl TextStyleProperty {
                 Some(parley::StyleProperty::FontStyle(font_style))
             }
 
-            TextStyleProperty::FontWeight(font_weight) => {
-                Some(parley::StyleProperty::FontWeight(parley::FontWeight::new(font_weight.0 as f32)))
-            }
+            TextStyleProperty::FontWeight(font_weight) => Some(parley::StyleProperty::FontWeight(
+                parley::FontWeight::new(font_weight.0 as f32),
+            )),
             TextStyleProperty::Underline(underline) => Some(parley::StyleProperty::Underline(*underline)),
             TextStyleProperty::UnderlineOffset(offset) => Some(parley::StyleProperty::UnderlineOffset(Some(*offset))),
 
@@ -337,7 +326,13 @@ macro_rules! style_property {
             pub fn $get(&self) -> $inner {
                 self.properties
                     .iter()
-                    .find_map(|p| if let StyleProperty::$variant(val) = p { Some(*val) } else { None })
+                    .find_map(|p| {
+                        if let StyleProperty::$variant(val) = p {
+                            Some(*val)
+                        } else {
+                            None
+                        }
+                    })
                     .unwrap_or($default)
             }
 
@@ -353,12 +348,40 @@ macro_rules! style_property {
     };
 }
 
-style_property!(box_sizing, set_box_sizing, BoxSizing, BoxSizing, BOX_SIZING, BoxSizing::BorderBox);
+style_property!(
+    box_sizing,
+    set_box_sizing,
+    BoxSizing,
+    BoxSizing,
+    BOX_SIZING,
+    BoxSizing::BorderBox
+);
 style_property!(position, set_position, Position, Position, POSITION, Position::Relative);
-style_property!(margin, set_margin, Margin, TrblRectangle<Unit>, MARGIN, TrblRectangle::new_all(Unit::Px(0.0)));
-style_property!(padding, set_padding, Padding, TrblRectangle<Unit>, PADDING, TrblRectangle::new_all(Unit::Px(0.0)));
+style_property!(
+    margin,
+    set_margin,
+    Margin,
+    TrblRectangle<Unit>,
+    MARGIN,
+    TrblRectangle::new_all(Unit::Px(0.0))
+);
+style_property!(
+    padding,
+    set_padding,
+    Padding,
+    TrblRectangle<Unit>,
+    PADDING,
+    TrblRectangle::new_all(Unit::Px(0.0))
+);
 style_property!(gap, set_gap, Gap, [Unit; 2], GAP, [Unit::Px(0.0); 2]);
-style_property!(inset, set_inset, Inset, TrblRectangle<Unit>, INSET, TrblRectangle::new_all(Unit::Px(0.0)));
+style_property!(
+    inset,
+    set_inset,
+    Inset,
+    TrblRectangle<Unit>,
+    INSET,
+    TrblRectangle::new_all(Unit::Px(0.0))
+);
 
 style_property!(width, set_width, Width, Unit, WIDTH, Unit::Auto);
 style_property!(height, set_height, Height, Unit, HEIGHT, Unit::Auto);
@@ -369,22 +392,78 @@ style_property!(min_height, set_min_height, MinHeight, Unit, MIN_HEIGHT, Unit::A
 
 style_property!(display, set_display, Display, Display, DISPLAY, Display::Flex);
 style_property!(wrap, set_wrap, Wrap, Wrap, WRAP, Wrap::default());
-style_property!(align_items, set_align_items, AlignItems, Option<AlignItems>, ALIGN_ITEMS, None);
-style_property!(justify_content, set_justify_content, JustifyContent, Option<JustifyContent>, JUSTIFY_CONTENT, None);
-style_property!(flex_direction, set_flex_direction, FlexDirection, FlexDirection, FLEX_DIRECTION, FlexDirection::Row);
+style_property!(
+    align_items,
+    set_align_items,
+    AlignItems,
+    Option<AlignItems>,
+    ALIGN_ITEMS,
+    None
+);
+style_property!(
+    justify_content,
+    set_justify_content,
+    JustifyContent,
+    Option<JustifyContent>,
+    JUSTIFY_CONTENT,
+    None
+);
+style_property!(
+    flex_direction,
+    set_flex_direction,
+    FlexDirection,
+    FlexDirection,
+    FLEX_DIRECTION,
+    FlexDirection::Row
+);
 style_property!(flex_grow, set_flex_grow, FlexGrow, f32, FLEX_GROW, 0.0);
 style_property!(flex_shrink, set_flex_shrink, FlexShrink, f32, FLEX_SHRINK, 1.0);
 style_property!(flex_basis, set_flex_basis, FlexBasis, Unit, FLEX_BASIS, Unit::Auto);
 
-style_property!(font_family, set_font_family, FontFamily, FontFamily, FONT_FAMILY, FontFamily::default());
+style_property!(
+    font_family,
+    set_font_family,
+    FontFamily,
+    FontFamily,
+    FONT_FAMILY,
+    FontFamily::default()
+);
 style_property!(color, set_color, Color, Color, COLOR, Color::BLACK);
-style_property!(background, set_background, Background, Color, BACKGROUND, Color::TRANSPARENT);
+style_property!(
+    background,
+    set_background,
+    Background,
+    Color,
+    BACKGROUND,
+    Color::TRANSPARENT
+);
 style_property!(font_size, set_font_size, FontSize, f32, FONT_SIZE, 16.0);
 style_property!(line_height, set_line_height, LineHeight, f32, LINE_HEIGHT, 1.2);
-style_property!(font_weight, set_font_weight, FontWeight, Weight, FONT_WEIGHT, Weight::default());
-style_property!(font_style, set_font_style, FontStyle, FontStyle, FONT_STYLE, FontStyle::default());
+style_property!(
+    font_weight,
+    set_font_weight,
+    FontWeight,
+    Weight,
+    FONT_WEIGHT,
+    Weight::default()
+);
+style_property!(
+    font_style,
+    set_font_style,
+    FontStyle,
+    FontStyle,
+    FONT_STYLE,
+    FontStyle::default()
+);
 style_property!(underline, set_underline, Underline, Option<Underline>, UNDERLINE, None);
-style_property!(overflow, set_overflow, Overflow, [Overflow; 2], OVERFLOW, [Overflow::default(); 2]);
+style_property!(
+    overflow,
+    set_overflow,
+    Overflow,
+    [Overflow; 2],
+    OVERFLOW,
+    [Overflow::default(); 2]
+);
 
 style_property!(
     border_color,
@@ -402,7 +481,14 @@ style_property!(
     BORDER_WIDTH,
     TrblRectangle::new_all(Unit::Px(0.0))
 );
-style_property!(border_radius, set_border_radius, BorderRadius, [(f32, f32); 4], BORDER_RADIUS, [(0.0, 0.0); 4]);
+style_property!(
+    border_radius,
+    set_border_radius,
+    BorderRadius,
+    [(f32, f32); 4],
+    BORDER_RADIUS,
+    [(0.0, 0.0); 4]
+);
 
 style_property!(
     scrollbar_color,
@@ -442,7 +528,11 @@ style_property!(
     ScrollbarWidth,
     f32,
     SCROLLBAR_WIDTH,
-    if cfg!(any(target_os = "android", target_os = "ios")) { 0.0 } else { 10.0 }
+    if cfg!(any(target_os = "android", target_os = "ios")) {
+        0.0
+    } else {
+        10.0
+    }
 );
 
 style_property!(visible, set_visible, Visible, bool, VISIBLE, true);
@@ -454,10 +544,16 @@ style_property!(
     SELECTION_COLOR,
     Color::from_rgb8(0, 120, 215)
 );
-style_property!(cursor_color, set_cursor_color, CursorColor, Option<Color>, CURSOR_COLOR, None);
+style_property!(
+    cursor_color,
+    set_cursor_color,
+    CursorColor,
+    Option<Color>,
+    CURSOR_COLOR,
+    None
+);
 
 impl Style {
-
     fn remove_property(&mut self, f: impl Fn(&StyleProperty) -> bool) {
         if let Some(pos) = self.properties.iter().position(f) {
             self.properties.remove(pos);
@@ -646,12 +742,16 @@ impl Style {
             Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
         };
 
-        style_set.insert(parley::StyleProperty::from(parley::FontStack::List(font_stack_cow_list)));
+        style_set.insert(parley::StyleProperty::from(parley::FontStack::List(
+            font_stack_cow_list,
+        )));
         style_set.insert(parley::StyleProperty::FontSize(font_size));
         style_set.insert(parley::StyleProperty::FontStyle(font_style));
         style_set.insert(parley::StyleProperty::FontWeight(font_weight));
         style_set.insert(parley::StyleProperty::Brush(brush));
-        style_set.insert(parley::StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(line_height)));
+        style_set.insert(parley::StyleProperty::LineHeight(parley::LineHeight::FontSizeRelative(
+            line_height,
+        )));
         style_set.insert(parley::StyleProperty::Underline(has_underline));
         style_set.insert(parley::StyleProperty::UnderlineBrush(underline_brush));
         style_set.insert(parley::StyleProperty::UnderlineOffset(underline_offset));

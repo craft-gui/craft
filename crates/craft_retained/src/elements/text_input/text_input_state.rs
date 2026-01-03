@@ -1,32 +1,30 @@
-use crate::layout::layout_context::TextHashKey;
-use craft_primitives::geometry::{Point, Rectangle};
-use craft_renderer::text_renderer_data::TextRender;
 use std::collections::HashMap;
 use std::ops::Range;
-use taffy::{AvailableSpace, NodeId};
-
-use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
-
-use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::{Duration, Instant};
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Node, TreeUpdate};
-#[cfg(not(target_arch = "wasm32"))]
-use std::time::{Duration, Instant};
-#[cfg(target_arch = "wasm32")]
-use web_time::{Duration, Instant};
-
-use crate::app::{request_layout, TAFFY_TREE};
-use crate::elements::core::ElementInternals;
-use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::TextInput;
-use crate::style::{Style, TextStyleProperty};
-use crate::text::text_context::TextContext;
-use crate::text::{text_render_data, RangedStyles};
+use craft_primitives::geometry::{Point, Rectangle};
+use craft_renderer::text_renderer_data::TextRender;
 use parley::{Affinity, ContentWidths, Cursor, Selection};
 use peniko::Color;
+use taffy::{AvailableSpace, NodeId};
+use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerUpdate;
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
 use winit::dpi;
+
+use crate::app::{TAFFY_TREE, request_layout};
+use crate::elements::TextInput;
+use crate::elements::core::ElementInternals;
+use crate::elements::text_input::parley_box_to_rect;
+use crate::layout::layout_context::TextHashKey;
+use crate::style::{Style, TextStyleProperty};
+use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
+use crate::text::text_context::TextContext;
+use crate::text::{RangedStyles, text_render_data};
 
 #[derive(Clone)]
 pub struct TextInputState {
@@ -127,7 +125,8 @@ impl TextInputState {
         if self.is_pointer_down() && prev_pos != self.cursor_pos() && !self.editor.is_composing() {
             self.reset_blink();
             let cursor_pos = self.cursor_pos();
-            self.driver(text_context).extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
+            self.driver(text_context)
+                .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
             request_layout();
         }
     }
@@ -197,7 +196,8 @@ impl TextInputState {
 
         if self.editor.try_layout().is_none() || self.is_layout_dirty || self.content_widths.is_none() {
             self.editor.set_width(None);
-            self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+            self.editor
+                .refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
             self.content_widths = Some(self.editor.try_layout().unwrap().calculate_content_widths());
         }
 
@@ -226,7 +226,8 @@ impl TextInputState {
             .map(|height| dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor).0);
 
         self.editor.set_width(width_constraint);
-        self.editor.refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+        self.editor
+            .refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
         let layout = self.editor.try_layout().unwrap();
 
         if last_pass {
@@ -288,8 +289,8 @@ impl TextInputState {
 
             start_time
                 + Duration::from_nanos(
-                ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
-            )
+                    ((phase.as_nanos() / self.blink_period.as_nanos() + 1) * self.blink_period.as_nanos()) as u64,
+                )
         })
     }
 
@@ -302,7 +303,8 @@ impl TextInputState {
     }
 
     fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
-        self.editor.driver(&mut text_context.font_context, &mut text_context.layout_context)
+        self.editor
+            .driver(&mut text_context.font_context, &mut text_context.layout_context)
     }
 
     /// Set's the scale factor.
@@ -375,7 +377,16 @@ impl TextInputState {
         #[allow(unused)]
         let (shift, action_mod) = self
             .modifiers
-            .map(|mods| (mods.shift(), if cfg!(target_os = "macos") { mods.meta() } else { mods.ctrl() }))
+            .map(|mods| {
+                (
+                    mods.shift(),
+                    if cfg!(target_os = "macos") {
+                        mods.meta()
+                    } else {
+                        mods.ctrl()
+                    },
+                )
+            })
             .unwrap_or_default();
 
         let mut driver = self.driver(text_context);
@@ -582,7 +593,12 @@ impl TextInputState {
         for (selection, color) in backgrounds.iter() {
             selection.geometry_with(layout, |rect, line| {
                 text_renderer.lines[line].backgrounds.push((
-                    Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32),
+                    Rectangle::new(
+                        rect.x0 as f32,
+                        rect.y0 as f32,
+                        rect.width() as f32,
+                        rect.height() as f32,
+                    ),
                     *color,
                 ));
             });
@@ -592,7 +608,9 @@ impl TextInputState {
             line.selections.clear();
         }
         self.editor.selection_geometry_with(|rect, line| {
-            text_renderer.lines[line].selections.push((parley_box_to_rect(rect), style.selection_color()));
+            text_renderer.lines[line]
+                .selections
+                .push((parley_box_to_rect(rect), style.selection_color()));
         });
 
         if focused {
@@ -612,7 +630,8 @@ impl TextInputState {
         x_offset: f64,
         y_offset: f64,
     ) {
-        self.editor.try_accessibility(tree, current_node, next_node_id, x_offset, y_offset);
+        self.editor
+            .try_accessibility(tree, current_node, next_node_id, x_offset, y_offset);
     }
 }
 

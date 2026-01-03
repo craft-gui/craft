@@ -1,7 +1,5 @@
 mod slider;
-mod slider_logic;
 mod slider_draw;
+mod slider_logic;
 
-
-pub use slider::Slider;
-pub use slider::SliderDirection;
+pub use slider::{Slider, SliderDirection};

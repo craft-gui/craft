@@ -1,3 +1,1 @@
-pub use tracing::{debug, error, info, warn, Level};
-
-pub use tracing::span;
+pub use tracing::{Level, debug, error, info, span, warn};

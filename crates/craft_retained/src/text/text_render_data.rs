@@ -1,8 +1,8 @@
 use craft_primitives::ColorBrush;
-use parley::{Layout, PositionedLayoutItem};
-use peniko::kurbo::{Affine, Line};
 pub(crate) use craft_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
 use craft_renderer::text_renderer_data::{TextRenderItem, TextRenderItemLine};
+use parley::{Layout, PositionedLayoutItem};
+use peniko::kurbo::{Affine, Line};
 
 pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
     let mut text_render = TextRender {
@@ -48,7 +48,11 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
                     (glyph_run.offset() as f64, y as f64),
                     ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
                 );
-                Some(TextRenderItemLine { line, width, brush: underline_brush })
+                Some(TextRenderItemLine {
+                    line,
+                    width,
+                    brush: underline_brush,
+                })
             } else {
                 None
             };
@@ -59,7 +63,9 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             let font = run.font();
             let font_size = run.font_size();
             let synthesis = run.synthesis();
-            let glyph_xform = synthesis.skew().map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
+            let glyph_xform = synthesis
+                .skew()
+                .map(|angle| Affine::skew(angle.to_radians().tan() as f64, 0.0));
 
             let glyphs = glyph_run.glyphs().map(|glyph| {
                 let gx = x + glyph.x;
@@ -93,7 +99,11 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
                     (glyph_run.offset() as f64, y as f64),
                     ((glyph_run.offset() + glyph_run.advance()) as f64, y as f64),
                 );
-                Some(TextRenderItemLine { line, width, brush: strikethrough_brush })
+                Some(TextRenderItemLine {
+                    line,
+                    width,
+                    brush: strikethrough_brush,
+                })
             } else {
                 None
             };

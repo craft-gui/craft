@@ -1,49 +1,38 @@
-use crate::elements::{ElementIdMap, Window};
-use crate::events::internal::InternalMessage;
-use crate::events::CraftMessage;
-use crate::events::{Event, EventDispatcher};
-use crate::text::text_context::TextContext;
-use craft_logging::info;
-use craft_primitives::geometry::{Size, Point};
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
-use craft_runtime::CraftRuntimeHandle;
-use std::cell::Cell;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use taffy::NodeId;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use {
-    crate::accessibility::access_handler::CraftAccessHandler,
-    crate::accessibility::activation_handler::CraftActivationHandler,
-    crate::accessibility::deactivation_handler::CraftDeactivationHandler,
-};
-#[cfg(feature = "accesskit")]
-use {
-    accesskit::{Role, TreeUpdate},
-    accesskit_winit::Adapter,
-};
 
+use craft_logging::info;
+use craft_primitives::geometry::{Point, Size};
+use craft_resource_manager::resource_event::ResourceEvent;
+use craft_resource_manager::resource_type::ResourceType;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_runtime::{CraftRuntimeHandle, Sender};
+use taffy::NodeId;
+use ui_events::ScrollDelta;
+use ui_events::ScrollDelta::PixelDelta;
+use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
+use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
+use winit::event::Ime;
+use winit::event_loop::ActiveEventLoop;
+use winit::window::WindowId;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use {crate::accessibility::access_handler::CraftAccessHandler, crate::accessibility::activation_handler::CraftActivationHandler, crate::accessibility::deactivation_handler::CraftDeactivationHandler};
+#[cfg(feature = "accesskit")]
+use {accesskit::{Role, TreeUpdate}, accesskit_winit::Adapter};
 
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
-use crate::elements::Element;
-use craft_resource_manager::resource_event::ResourceEvent;
-use craft_resource_manager::resource_type::ResourceType;
-use craft_runtime::Sender;
-use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
-use ui_events::ScrollDelta;
-use ui_events::ScrollDelta::PixelDelta;
-use winit::event::Ime;
-use winit::event_loop::ActiveEventLoop;
-use winit::window::{WindowId};
 use crate::elements::core::ElementInternals;
+use crate::elements::{Element, ElementIdMap, Window};
+use crate::events::internal::InternalMessage;
+use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;
+use crate::text::text_context::TextContext;
 use crate::window_manager::WindowManager;
 
 thread_local! {
@@ -241,7 +230,9 @@ impl App {
     fn on_request_redraw_internal(&mut self, window: Rc<RefCell<Window>>) {
         self.update_resources();
 
-        window.borrow_mut().on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
+        window
+            .borrow_mut()
+            .on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
     }
 
     pub fn on_pointer_scroll(&mut self, window: Rc<RefCell<Window>>, pointer_scroll_update: PointerScrollEvent) {
@@ -286,7 +277,9 @@ impl App {
             CraftMessage::PointerButtonDown(pointer_event)
         };
         let message = event;
-        window.borrow_mut().set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
+        window
+            .borrow_mut()
+            .set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
         self.dispatch_event(window.clone(), &message, true);
 
@@ -299,7 +292,9 @@ impl App {
         mouse_moved.current.position.x /= zoom;
         mouse_moved.current.position.y /= zoom;
 
-        window.borrow_mut().set_mouse_position(Some(mouse_moved.current.logical_point()));
+        window
+            .borrow_mut()
+            .set_mouse_position(Some(mouse_moved.current.logical_point()));
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);
 
@@ -367,7 +362,8 @@ impl App {
                     && resource.data().is_some()
                 {
                     // Todo: Load the font into the text context.
-                    self.resource_manager.insert(resource_identifier.clone(), Arc::new(resource));
+                    self.resource_manager
+                        .insert(resource_identifier.clone(), Arc::new(resource));
                     self.reload_fonts = true;
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                     self.resource_manager.insert(resource_identifier, Arc::new(resource));
@@ -426,7 +422,11 @@ impl App {
             toolkit_version: None,
         };
 
-        let focus_id = self.focus.clone().map(|node| node.upgrade().unwrap().borrow().id()).unwrap_or(0);
+        let focus_id = self
+            .focus
+            .clone()
+            .map(|node| node.upgrade().unwrap().borrow().id())
+            .unwrap_or(0);
         let mut tree_update = TreeUpdate {
             nodes: vec![],
             tree: Some(tree),
@@ -452,11 +452,12 @@ impl App {
                     {
                         continue;
                     }
-                    self.resource_manager.async_download_resource_and_send_message_on_finish(
-                        self.app_sender.clone(),
-                        resource.clone(),
-                        resource_type,
-                    );
+                    self.resource_manager
+                        .async_download_resource_and_send_message_on_finish(
+                            self.app_sender.clone(),
+                            resource.clone(),
+                            resource_type,
+                        );
                     in_progress.push_back((resource, resource_type));
                 }
             });

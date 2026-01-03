@@ -1,29 +1,27 @@
 mod mouse_wheel;
 
-pub mod internal;
 mod event_dispatch;
-mod pointer_capture;
 mod helpers;
+pub mod internal;
+mod pointer_capture;
 //#[cfg(test)]
 //mod tests;
 
-pub use mouse_wheel::MouseWheel;
-pub use winit::event::ElementState;
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
+
+pub(crate) use event_dispatch::EventDispatcher;
+pub use mouse_wheel::MouseWheel;
 pub use ui_events;
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
-pub use winit::event::Ime;
-pub use winit::event::Modifiers;
-pub use winit::event::MouseButton;
-use crate::PinnedFutureAny;
-use crate::utils::cloneable_any::CloneableAny;
+pub use winit::event::{ElementState, Ime, Modifiers, MouseButton};
 
-pub(crate) use event_dispatch::EventDispatcher;
+use crate::PinnedFutureAny;
 use crate::elements::Element;
+use crate::utils::cloneable_any::CloneableAny;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
@@ -70,19 +68,18 @@ impl CraftMessage {
         matches!(
             self,
             CraftMessage::PointerMovedEvent(_)
-            | CraftMessage::PointerButtonUp(_)
-            | CraftMessage::PointerButtonDown(_)
-            | CraftMessage::GotPointerCapture()
-            | CraftMessage::LostPointerCapture()
-            | CraftMessage::PointerScroll(_)
+                | CraftMessage::PointerButtonUp(_)
+                | CraftMessage::PointerButtonDown(_)
+                | CraftMessage::GotPointerCapture()
+                | CraftMessage::LostPointerCapture()
+                | CraftMessage::PointerScroll(_)
         )
     }
 
     pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
         matches!(
             self,
-            CraftMessage::GotPointerCapture()
-            | CraftMessage::LostPointerCapture()
+            CraftMessage::GotPointerCapture() | CraftMessage::LostPointerCapture()
         )
     }
 
@@ -94,7 +91,6 @@ impl CraftMessage {
     }
 }
 pub type UserMessage = dyn CloneableAny;
-
 
 /// The result of an update.
 pub struct Event {
@@ -108,7 +104,6 @@ pub struct Event {
     pub prevent_defaults: bool,
 }
 
-
 #[derive(Debug, Clone, Copy, Default)]
 pub enum FocusAction {
     #[default]
@@ -118,7 +113,6 @@ pub enum FocusAction {
 }
 
 impl Event {
-
     #[cfg(not(target_arch = "wasm32"))]
     pub fn async_result<T: Send + Sync + 'static + Clone>(t: T) -> Box<dyn CloneableAny + Send + Sync + 'static> {
         Box::new(t)
@@ -173,5 +167,4 @@ impl Event {
     pub fn prevent_propagate(&mut self) {
         self.propagate = false;
     }
-
 }

@@ -1,34 +1,35 @@
 mod text_input_state;
 
-use crate::app::ELEMENTS;
-use crate::elements::element::Element;
-use crate::elements::element_data::ElementData;
-use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
-use crate::style::{Display, Style, Unit};
-use craft_primitives::geometry::{Point, Rectangle, TrblRectangle};
-use craft_primitives::Color;
-use craft_renderer::renderer::{RenderList, TextScroll};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
-use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
-#[cfg(feature = "accesskit")]
-use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{scrollable};
-use crate::elements::text_input::text_input_state::TextInputState;
-use crate::events::{CraftMessage, Event};
-use crate::layout::TaffyTree;
-use crate::text::text_context::TextContext;
-use crate::text::text_render_data::TextRender;
-use crate::text::RangedStyles;
-use crate::utils::cloneable_any::CloneableAny;
+use craft_primitives::Color;
+use craft_primitives::geometry::{Point, Rectangle, TrblRectangle};
+use craft_renderer::renderer::{RenderList, TextScroll};
 use craft_renderer::text_renderer_data::TextData;
 use kurbo::Affine;
 use parley::BoundingBox;
 use ui_events::pointer::PointerButton;
 use winit::event::Ime;
+
+use crate::app::ELEMENTS;
+use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::element::Element;
+use crate::elements::element_data::ElementData;
+#[cfg(feature = "accesskit")]
+use crate::elements::element_id::create_unique_element_id;
+use crate::elements::scrollable;
+use crate::elements::text_input::text_input_state::TextInputState;
+use crate::events::{CraftMessage, Event};
+use crate::layout::TaffyTree;
+use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
+use crate::style::{Display, Style, Unit};
+use crate::text::RangedStyles;
+use crate::text::text_context::TextContext;
+use crate::text::text_render_data::TextRender;
+use crate::utils::cloneable_any::CloneableAny;
 
 // A stateful element that shows text.
 #[derive(Clone)]
@@ -133,7 +134,13 @@ impl ElementInternals for TextInput {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.map(|scroll_state| scroll_state.is_new()).unwrap_or_default() {
+        if !dirty
+            && self
+                .element_data
+                .scroll_state
+                .map(|scroll_state| scroll_state.is_new())
+                .unwrap_or_default()
+        {
             let result = taffy_tree.layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.scroll_state.as_mut().unwrap().mark_old();
@@ -150,7 +157,8 @@ impl ElementInternals for TextInput {
             true,
         );
 
-        self.state.render_text(self.is_focused(), self.element_data.current_style());
+        self.state
+            .render_text(self.is_focused(), self.element_data.current_style());
     }
 
     fn draw(
@@ -216,8 +224,12 @@ impl ElementInternals for TextInput {
         let current_node_id = accesskit::NodeId(self.element_data.internal_id);
 
         let mut current_node = accesskit::Node::new(accesskit::Role::TextInput);
-        let padding_box =
-            self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box = self
+            .element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
 
         current_node.set_bounds(accesskit::Rect {
             x0: padding_box.left() as f64,

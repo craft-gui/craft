@@ -1,26 +1,24 @@
 mod tinyvg;
 
+use std::any::Any;
+use std::sync::Arc;
+
+use craft_primitives::Color;
+use craft_primitives::geometry::Rectangle;
+use craft_resource_manager::ResourceManager;
+use craft_resource_manager::resource::Resource;
+use peniko::{BrushRef, ImageAlphaType};
+use vello::kurbo::{Affine, Rect, Stroke};
+use vello::peniko::{BlendMode, Blob, Fill};
+use vello::{AaConfig, Error, Glyph, RendererOptions, Scene, kurbo, peniko};
+use wgpu::util::TextureBlitter;
+use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
+use winit::window::Window;
+
 use crate::image_adapter::ImageAdapter;
 use crate::renderer::{RenderCommand, RenderList, Renderer, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello::tinyvg::draw_tiny_vg;
-use craft_primitives::geometry::Rectangle;
-use craft_primitives::Color;
-use craft_resource_manager::resource::Resource;
-use craft_resource_manager::ResourceManager;
-use peniko::{BrushRef, ImageAlphaType};
-use std::any::Any;
-use std::sync::Arc;
-use vello::kurbo::{Affine, Rect, Stroke};
-use vello::peniko::{BlendMode, Blob, Fill};
-use vello::{kurbo, peniko, AaConfig, Error, RendererOptions};
-use vello::{Glyph, Scene};
-use wgpu::util::TextureBlitter;
-use wgpu::{
-    Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture,
-    Texture, TextureFormat, TextureView,
-};
-use winit::window::Window;
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,
@@ -69,7 +67,9 @@ impl RenderSurface {
                         panic!("Failed to acquire surface texture: {err:?}");
                     }
                 }
-                self.surface.get_current_texture().expect("Failed to get surface texture after resize")
+                self.surface
+                    .get_current_texture()
+                    .expect("Failed to get surface texture after resize")
             }
         }
     }
@@ -280,7 +280,13 @@ impl Renderer for VelloRenderer {
                     vello_draw_rect(scene, *rectangle, *fill_color);
                 }
                 RenderCommand::DrawRectOutline(rectangle, outline_color, thickness) => {
-                    self.scene.stroke(&Stroke::new(*thickness), Affine::IDENTITY, outline_color, None, &rectangle.to_kurbo());
+                    self.scene.stroke(
+                        &Stroke::new(*thickness),
+                        Affine::IDENTITY,
+                        outline_color,
+                        None,
+                        &rectangle.to_kurbo(),
+                    );
                 }
                 RenderCommand::DrawImage(rectangle, resource_identifier) => {
                     let resource = resource_manager.get(resource_identifier);
@@ -392,7 +398,10 @@ impl Renderer for VelloRenderer {
                                 .draw_glyphs(&item.font)
                                 .font_size(item.font_size)
                                 .brush(BrushRef::Solid(
-                                    text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                                    text_render
+                                        .override_brush
+                                        .map(|b| b.color)
+                                        .unwrap_or_else(|| item.brush.color),
                                 ))
                                 .transform(text_transform)
                                 .glyph_transform(item.glyph_transform)
@@ -471,9 +480,11 @@ impl Renderer for VelloRenderer {
 
         if !self.render_into_texture {
             let swapchain_surface_texture =
-                self.render_surface.get_swapchain_surface_texture(&self.device, width, height);
-            let swapchain_surface_texture_view =
-                swapchain_surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+                self.render_surface
+                    .get_swapchain_surface_texture(&self.device, width, height);
+            let swapchain_surface_texture_view = swapchain_surface_texture
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
             let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Surface Blit"),
             });

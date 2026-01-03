@@ -1,13 +1,15 @@
-use crate::text_renderer_data::TextData;
-use craft_primitives::geometry::Rectangle;
-use craft_primitives::Color;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
-use peniko::kurbo::Shape;
-use peniko::{kurbo, BrushRef, Gradient};
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Weak;
 use std::sync::Arc;
+
+use craft_primitives::Color;
+use craft_primitives::geometry::Rectangle;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use peniko::kurbo::Shape;
+use peniko::{BrushRef, Gradient, kurbo};
+
+use crate::text_renderer_data::TextData;
 
 #[derive(Clone)]
 pub enum RenderCommand {
@@ -131,7 +133,6 @@ impl RenderList {
         self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
-
     #[inline(always)]
     pub fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
         if let Some(cull) = &self.cull {
@@ -149,7 +150,8 @@ impl RenderList {
                 return;
             }
         }
-        self.commands.push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
+        self.commands
+            .push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
     }
 
     #[inline(always)]
@@ -175,12 +177,14 @@ impl RenderList {
                 return;
             }
         }
-        self.commands.push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
+        self.commands
+            .push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
     }
 
     #[inline(always)]
     pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.commands.push(RenderCommand::DrawImage(rectangle, resource_identifier));
+        self.commands
+            .push(RenderCommand::DrawImage(rectangle, resource_identifier));
     }
 
     #[inline(always)]
@@ -190,7 +194,11 @@ impl RenderList {
         resource_identifier: ResourceIdentifier,
         override_color: Option<Color>,
     ) {
-        self.commands.push(RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color));
+        self.commands.push(RenderCommand::DrawTinyVg(
+            rectangle,
+            resource_identifier,
+            override_color,
+        ));
     }
 
     #[inline(always)]
@@ -224,7 +232,7 @@ pub trait Renderer: Any {
     fn surface_height(&self) -> f32;
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
-    
+
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
     fn sort_and_cull_render_list(&mut self, render_list: &mut RenderList) {
@@ -257,7 +265,9 @@ pub trait Renderer: Any {
                 RenderCommand::StartOverlay => {
                     // Overlay Start
                     unsafe {
-                        (*current).children.push(SortedItem::Overlay(SortedCommands { children: vec![] }));
+                        (*current)
+                            .children
+                            .push(SortedItem::Overlay(SortedCommands { children: vec![] }));
                         match (*current).children.last_mut() {
                             Some(SortedItem::Overlay(overlay)) => {
                                 stack.push(overlay);

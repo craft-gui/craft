@@ -1,5 +1,6 @@
-use crate::events::internal::InternalMessage;
 use std::cell::RefCell;
+
+use crate::events::internal::InternalMessage;
 
 pub const WASM_QUEUE_SIZE: usize = 100;
 

@@ -1,7 +1,7 @@
+use craft_primitives::ColorBrush;
 use craft_primitives::geometry::Rectangle;
 use peniko::Color;
 use peniko::kurbo::{Affine, Line};
-use craft_primitives::ColorBrush;
 
 #[derive(Clone, Debug)]
 pub struct TextRender {
@@ -49,5 +49,4 @@ pub struct TextRenderGlyph {
 
 pub trait TextData {
     fn get_text_renderer(&self) -> Option<&TextRender>;
-
 }

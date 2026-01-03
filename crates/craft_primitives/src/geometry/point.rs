@@ -1,5 +1,4 @@
 use dpi::PhysicalPosition;
-
 pub use kurbo::Point;
 
 /// A “Point-converter” extension trait.

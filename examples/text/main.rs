@@ -1,9 +1,6 @@
-use craft_retained::elements::{Element, TextInput, Window};
+use craft_retained::elements::{Container, Element, TextInput, Window};
+use craft_retained::rgb;
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
-use craft_retained::{
-    elements::Container,
-    rgb,
-};
 
 fn main() {
     let container = Container::new();

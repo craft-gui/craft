@@ -1,37 +1,28 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-#[cfg(target_arch = "wasm32")]
-use {
-    wasm_bindgen::JsCast,
-    winit::platform::web::WindowAttributesExtWebSys,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
 
-#[cfg(target_arch = "wasm32")]
-use {crate::wasm_queue::WasmQueue, crate::wasm_queue::WASM_QUEUE};
-
-use crate::events::internal::InternalMessage;
-use crate::{CraftOptions};
 use craft_logging::info;
-
+use craft_primitives::geometry::Size;
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender};
+use ui_events::pointer::PointerEvent;
+use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
-use winit::window::{WindowId};
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
+use winit::window::WindowId;
 #[cfg(target_arch = "wasm32")]
-use web_time as time;
+use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
+#[cfg(target_arch = "wasm32")]
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
-use craft_runtime::Receiver;
-use craft_runtime::Sender;
-use craft_runtime::CraftRuntimeHandle;
-
+use crate::CraftOptions;
 use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER};
-use ui_events::pointer::{PointerEvent};
-use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
-use craft_primitives::geometry::Size;
 use crate::document::Document;
+use crate::events::internal::InternalMessage;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
@@ -58,9 +49,7 @@ pub(crate) struct CraftWinitState {
 
 impl CraftWinitState {
     pub(crate) fn new(craft_state: CraftState) -> Self {
-        Self {
-            craft_state,
-        }
+        Self { craft_state }
     }
 }
 
@@ -71,19 +60,18 @@ impl ApplicationHandler for CraftWinitState {
 
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let craft_state = &mut self.craft_state;
-        
-/*        let mut window_attributes =
+
+        /*        let mut window_attributes =
             WindowAttributes::default().with_title(craft_state.craft_options.window_title.as_str()).with_visible(false);
 
         if let Some(window_size) = &craft_state.craft_options.window_size {
             window_attributes =
                 window_attributes.with_inner_size(LogicalSize::new(window_size.width, window_size.height));
         }*/
-        
+
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.on_resume(craft_state, event_loop);
         });
-
 
         craft_state.craft_app.on_resume(event_loop);
 
@@ -104,15 +92,10 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
-        let window: Option<Rc<RefCell<crate::elements::Window>>> = WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-           window_manager.get_window_by_id(window_id)
-        });
+        let window: Option<Rc<RefCell<crate::elements::Window>>> =
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
 
-        let window = if let Some(window) = window {
-            window
-        } else {
-            return
-        };
+        let window = if let Some(window) = window { window } else { return };
 
         let craft_state = &mut self.craft_state;
 
@@ -149,10 +132,14 @@ impl ApplicationHandler for CraftWinitState {
                 Some(WindowEventTranslation::Pointer(pointer_event)) => {
                     match pointer_event {
                         PointerEvent::Down(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(window, pointer_button_update, false);
+                            craft_state
+                                .craft_app
+                                .on_pointer_button(window, pointer_button_update, false);
                         }
                         PointerEvent::Up(pointer_button_update) => {
-                            craft_state.craft_app.on_pointer_button(window, pointer_button_update, true);
+                            craft_state
+                                .craft_app
+                                .on_pointer_button(window, pointer_button_update, true);
                         }
                         PointerEvent::Move(pointer_update) => {
                             craft_state.craft_app.on_pointer_moved(window, pointer_update);
@@ -162,8 +149,8 @@ impl ApplicationHandler for CraftWinitState {
                         PointerEvent::Leave(_) => {}
                         PointerEvent::Scroll(pointer_scroll_update) => {
                             craft_state.craft_app.on_pointer_scroll(window, pointer_scroll_update);
-                        },
-                        PointerEvent::Gesture(_) => todo!()
+                        }
+                        PointerEvent::Gesture(_) => todo!(),
                     }
                     return;
                 }
@@ -174,7 +161,7 @@ impl ApplicationHandler for CraftWinitState {
         match event {
             WindowEvent::CloseRequested => {
                 WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                   window_manager.close_window(&window);
+                    window_manager.close_window(&window);
                     if window_manager.is_empty() {
                         craft_state.close_requested = true;
                         craft_state.craft_app.on_close_requested();
@@ -252,7 +239,11 @@ impl ApplicationHandler for CraftWinitState {
 
         // Switch to Poll mode if we are running animations.
 
-        let has_active_animation = self.craft_state.craft_app.previous_animation_flags.has_active_animation();
+        let has_active_animation = self
+            .craft_state
+            .craft_app
+            .previous_animation_flags
+            .has_active_animation();
 
         if has_active_animation {
             event_loop.set_control_flow(ControlFlow::Poll);

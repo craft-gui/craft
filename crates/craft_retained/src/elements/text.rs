@@ -1,3 +1,14 @@
+use std::any::Any;
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+
+use craft_primitives::Color;
+use craft_primitives::geometry::{Point, Rectangle};
+use craft_renderer::renderer::RenderList;
+#[cfg(feature = "accesskit")]
+use parley::LayoutAccessibility;
+use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
+
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
@@ -5,23 +16,12 @@ use crate::style::Style;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
-use craft_primitives::geometry::{Point, Rectangle};
-use craft_primitives::Color;
-use craft_renderer::renderer::RenderList;
-#[cfg(feature = "accesskit")]
-use parley::LayoutAccessibility;
-use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
-use std::any::Any;
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 
 const MAX_CACHE_SIZE: usize = 16;
 
-use crate::elements::core::ElementInternals;
-#[cfg(feature = "accesskit")]
-use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{Element};
-use crate::layout::TaffyTree;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role};
 use craft_primitives::ColorBrush;
@@ -29,14 +29,18 @@ use craft_renderer::text_renderer_data::TextData;
 use kurbo::Affine;
 use rustc_hash::FxHashMap;
 use smol_str::{SmolStr, ToSmolStr};
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
 use taffy::{AvailableSpace, Size};
 use time::{Duration, Instant};
 use ui_events::pointer::{PointerButton, PointerId};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::dpi;
+
+use crate::elements::Element;
+use crate::elements::core::ElementInternals;
+#[cfg(feature = "accesskit")]
+use crate::elements::element_id::create_unique_element_id;
+use crate::layout::TaffyTree;
 
 // A stateful element that shows text.
 #[derive(Clone)]
@@ -135,7 +139,12 @@ impl Text {
         available_space: Size<AvailableSpace>,
         text_context: &mut TextContext,
     ) -> Size<f32> {
-        self.state.measure(&self.element_data.style, known_dimensions, available_space, text_context)
+        self.state.measure(
+            &self.element_data.style,
+            known_dimensions,
+            available_space,
+            text_context,
+        )
     }
 }
 
@@ -232,8 +241,12 @@ impl ElementInternals for Text {
         parent_index: Option<usize>,
         scale_factor: f64,
     ) {
-        let padding_box =
-            self.element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box = self
+            .element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
 
         let state: &mut TextState = &mut self.state;
         if state.layout.is_none() {
@@ -297,7 +310,11 @@ impl ElementInternals for Text {
             let state: &mut TextState = &mut self.state;
             match message {
                 CraftMessage::PointerButtonDown(pointer_button) => {
-                    if pointer_button.button.map(|button| button == PointerButton::Primary).unwrap_or_default() {
+                    if pointer_button
+                        .button
+                        .map(|button| button == PointerButton::Primary)
+                        .unwrap_or_default()
+                    {
                         state.update_text_selection(self.element_data.style.selection_color());
                         state.pointer_down = true;
                         state.cursor_reset();
@@ -326,7 +343,11 @@ impl ElementInternals for Text {
                     }
                 }
                 CraftMessage::PointerButtonUp(pointer_button) => {
-                    if pointer_button.button.map(|button| button == PointerButton::Primary).unwrap_or_default() {
+                    if pointer_button
+                        .button
+                        .map(|button| button == PointerButton::Primary)
+                        .unwrap_or_default()
+                    {
                         state.update_text_selection(self.element_data.style.selection_color());
                         state.pointer_down = false;
                         state.cursor_reset();
@@ -460,7 +481,9 @@ impl TextState {
     pub fn extend_selection_to_point(&mut self, point: Point) {
         let scale_factor = self.layout.as_ref().unwrap().scale() as f64;
         let point = Point::new(point.x * scale_factor, point.y * scale_factor);
-        self.selection = self.selection.extend_to_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
+        self.selection = self
+            .selection
+            .extend_to_point(self.layout.as_ref().unwrap(), point.x as f32, point.y as f32);
     }
 
     pub fn select_word_at_point(&mut self, point: Point) {
@@ -500,7 +523,12 @@ impl TextState {
             }
             self.selection.geometry_with(layout, |rect, line| {
                 text_renderer.lines[line].selections.push((
-                    Rectangle::new(rect.x0 as f32, rect.y0 as f32, rect.width() as f32, rect.height() as f32),
+                    Rectangle::new(
+                        rect.x0 as f32,
+                        rect.y0 as f32,
+                        rect.width() as f32,
+                        rect.height() as f32,
+                    ),
                     selection_color,
                 ));
             });

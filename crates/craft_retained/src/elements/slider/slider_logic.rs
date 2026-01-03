@@ -1,6 +1,7 @@
 use kurbo::Point;
-use crate::elements::core::ElementInternals;
+
 use crate::elements::Slider;
+use crate::elements::core::ElementInternals;
 use crate::elements::slider::slider::SliderDirection;
 
 impl Slider {
@@ -29,8 +30,11 @@ impl Slider {
             content_rectangle.bottom() as f64
         };
 
-        let pointer_position_component =
-            if self.get_direction() == SliderDirection::Horizontal { pointer_position.x } else { pointer_position.y };
+        let pointer_position_component = if self.get_direction() == SliderDirection::Horizontal {
+            pointer_position.x
+        } else {
+            pointer_position.y
+        };
 
         // [0, 1]
         let mut normalized_value = (pointer_position_component - start) / (end - start);
@@ -84,8 +88,9 @@ impl Slider {
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
-    use super::*;
     use std::rc::Rc;
+
+    use super::*;
 
     fn make_test_slider() -> Rc<RefCell<Slider>> {
         let slider = Slider::new(16.0);
@@ -96,7 +101,7 @@ mod tests {
     fn steps_one() {
         let slider_ref = make_test_slider();
         let mut slider = slider_ref.borrow_mut();
-        
+
         slider.value(50.0);
         let next_step = slider.compute_step(1, slider.get_value());
 
@@ -107,7 +112,7 @@ mod tests {
     fn steps_down_one() {
         let slider_ref = make_test_slider();
         let mut slider = slider_ref.borrow_mut();
-        
+
         slider.value(50.0);
         let next_step = slider.compute_step(-1, slider.get_value());
 

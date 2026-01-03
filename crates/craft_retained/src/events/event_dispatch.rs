@@ -1,23 +1,18 @@
-use crate::elements::Element;
-use crate::events::{CraftMessage, Event, FocusAction};
-
-use crate::app::dequeue_event;
-use crate::events::helpers::{
-    call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list,
-};
-use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
-use crate::text::text_context::TextContext;
-use craft_primitives::geometry::Point;
-use craft_renderer::RenderList;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
-pub(super) fn dispatch_capturing_event(
-    _message: &CraftMessage,
-    _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>,
-) {
-}
+use craft_primitives::geometry::Point;
+use craft_renderer::RenderList;
+
+use crate::app::dequeue_event;
+use crate::elements::Element;
+use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
+use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
+use crate::events::{CraftMessage, Event, FocusAction};
+use crate::text::text_context::TextContext;
+
+pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn Element>>>) {}
 
 /// Dispatches 1 event to many elements.
 /// The first dispatch happens at the top-most visual element.

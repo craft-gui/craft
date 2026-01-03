@@ -1,28 +1,27 @@
 pub(crate) mod tinyvg;
 
-use crate::image_adapter::ImageAdapter;
-use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
-use crate::text_renderer_data::TextRenderLine;
-use crate::vello_cpu::tinyvg::draw_tiny_vg;
-use crate::{Brush, RenderCommand};
-use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::resource::Resource;
-use craft_resource_manager::ResourceManager;
-use peniko::kurbo::Affine;
-use peniko::kurbo::Shape;
-use peniko::{kurbo, Blob, Color, Fill, ImageAlphaType};
-use softbuffer::Buffer;
 use std::any::Any;
-use std::num::NonZero;
-use std::num::NonZeroU32;
-use std::ops::Deref;
-use std::ops::DerefMut;
+use std::num::{NonZero, NonZeroU32};
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+
+use craft_primitives::geometry::Rectangle;
+use craft_resource_manager::ResourceManager;
+use craft_resource_manager::resource::Resource;
+use peniko::kurbo::{Affine, Shape};
+use peniko::{Blob, Color, Fill, ImageAlphaType, kurbo};
+use softbuffer::Buffer;
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
+
+use crate::image_adapter::ImageAdapter;
+use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
+use crate::text_renderer_data::TextRenderLine;
+use crate::vello_cpu::tinyvg::draw_tiny_vg;
+use crate::{Brush, RenderCommand};
 
 pub struct Surface {
     inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
@@ -114,7 +113,10 @@ impl Renderer for VelloCpuRenderer {
         self.window_width = width as u16;
         self.window_height = height as u16;
         self.surface
-            .resize(NonZeroU32::new(width as u32).unwrap(), NonZeroU32::new(height as u32).unwrap())
+            .resize(
+                NonZeroU32::new(width as u32).unwrap(),
+                NonZeroU32::new(height as u32).unwrap(),
+            )
             .expect("TODO: panic message");
         self.pixmap = Pixmap::new(width as u16, height as u16);
         self.render_context = RenderContext::new(width as u16, height as u16);
@@ -277,7 +279,10 @@ impl Renderer for VelloCpuRenderer {
                             }
 
                             self.render_context.set_paint(PaintType::from(
-                                text_render.override_brush.map(|b| b.color).unwrap_or_else(|| item.brush.color),
+                                text_render
+                                    .override_brush
+                                    .map(|b| b.color)
+                                    .unwrap_or_else(|| item.brush.color),
                             ));
                             self.render_context.reset_transform();
 

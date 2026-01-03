@@ -1,7 +1,8 @@
-use reqwest::blocking::get;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
+
+use reqwest::blocking::get;
 use syntect::dumps::dump_to_file;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxDefinition, SyntaxSetBuilder};
@@ -44,7 +45,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         let contents = get(*theme_url)?.text()?;
 
         // Use the filename from the URL directly
-        let filename = theme_url.split('/').next_back().ok_or("Invalid URL, no filename found")?;
+        let filename = theme_url
+            .split('/')
+            .next_back()
+            .ok_or("Invalid URL, no filename found")?;
 
         let theme_path = theme_dir.join(filename);
         fs::write(&theme_path, contents)?;

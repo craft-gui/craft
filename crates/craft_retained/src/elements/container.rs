@@ -1,18 +1,20 @@
 //! Stores one or more elements.
 
-use crate::app::TAFFY_TREE;
-use crate::elements::core::{resolve_clip_for_scrollable, ElementInternals};
-use crate::elements::element_data::ElementData;
-use crate::elements::{scrollable, Element};
-use crate::events::{CraftMessage, Event};
-use crate::layout::TaffyTree;
-use crate::text::text_context::TextContext;
-use craft_primitives::geometry::Rectangle;
-use craft_renderer::RenderList;
-use kurbo::{Affine, Point};
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+
+use craft_primitives::geometry::Rectangle;
+use craft_renderer::RenderList;
+use kurbo::{Affine, Point};
+
+use crate::app::TAFFY_TREE;
+use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::element_data::ElementData;
+use crate::elements::{Element, scrollable};
+use crate::events::{CraftMessage, Event};
+use crate::layout::TaffyTree;
+use crate::text::text_context::TextContext;
 
 /// Stores one or more elements.
 ///
@@ -136,7 +138,13 @@ impl ElementInternals for Container {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.map(|scroll_state| scroll_state.is_new()).unwrap_or_default() {
+        if !dirty
+            && self
+                .element_data
+                .scroll_state
+                .map(|scroll_state| scroll_state.is_new())
+                .unwrap_or_default()
+        {
             self.element_data.apply_scroll(layout);
             self.element_data.scroll_state.as_mut().unwrap().mark_old();
         }

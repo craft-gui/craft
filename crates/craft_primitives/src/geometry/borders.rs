@@ -1,7 +1,7 @@
-use kurbo::{Arc, BezPath, PathEl, Point, Rect, Shape, Vec2};
-
 use std::f64::consts::{FRAC_PI_2, PI};
 use std::ops::Add;
+
+use kurbo::{Arc, BezPath, PathEl, Point, Rect, Shape, Vec2};
 pub const TOP_LEFT: usize = 0;
 pub const TOP_RIGHT: usize = 1;
 pub const BOTTOM_RIGHT: usize = 2;
@@ -88,8 +88,7 @@ impl CssRoundedRect {
             let width_y = css_rounded_rect.widths[CORNER_VERTICAL_SIDE[corner]];
             let is_sharp = is_inner_radius_sharp(width_x, outer_radius.x, width_y, outer_radius.y);
             if !is_sharp {
-                css_rounded_rect.inner_radii[corner] =
-                    Vec2::new(outer_radius.x - width_x, outer_radius.y - width_y);
+                css_rounded_rect.inner_radii[corner] = Vec2::new(outer_radius.x - width_x, outer_radius.y - width_y);
             }
 
             let inner_radius = css_rounded_rect.inner_radii[corner];
@@ -107,13 +106,10 @@ impl CssRoundedRect {
                 std::mem::swap(&mut side_for_radius_x, &mut side_for_radius_y);
             }
 
-            let outer_sweep_angle =
-                intersect_angle(outer_x, outer_y, side_for_radius_x, side_for_radius_y);
-            let inner_sweep_angle =
-                intersect_angle(inner_x, inner_y, side_for_radius_x, side_for_radius_y);
+            let outer_sweep_angle = intersect_angle(outer_x, outer_y, side_for_radius_x, side_for_radius_y);
+            let inner_sweep_angle = intersect_angle(inner_x, inner_y, side_for_radius_x, side_for_radius_y);
 
-            css_rounded_rect.intersect_angles[corner] =
-                Vec2::new(inner_sweep_angle, outer_sweep_angle);
+            css_rounded_rect.intersect_angles[corner] = Vec2::new(inner_sweep_angle, outer_sweep_angle);
         }
 
         css_rounded_rect.compute_arcs();
@@ -127,14 +123,8 @@ impl CssRoundedRect {
 
             let radius_sign = CORNER_RADIUS_SIGN[corner];
 
-            let outer_radius = Vec2::new(
-                radius_sign.x * outer_radius.x,
-                radius_sign.y * outer_radius.y,
-            );
-            let inner_radius = Vec2::new(
-                radius_sign.x * inner_radius.x,
-                radius_sign.y * inner_radius.y,
-            );
+            let outer_radius = Vec2::new(radius_sign.x * outer_radius.x, radius_sign.y * outer_radius.y);
+            let inner_radius = Vec2::new(radius_sign.x * inner_radius.x, radius_sign.y * inner_radius.y);
 
             if is_outer_radius_sharp(outer_radius) {
                 continue;
@@ -239,10 +229,7 @@ impl CssRoundedRect {
             let vertical_side = CORNER_VERTICAL_SIDE[next_corner];
             let horizontal_width = self.widths[horizontal_side];
             let vertical_width = self.widths[vertical_side];
-            let inside_corner = next_rect_corner.add(Vec2::new(
-                horizontal_width * offset.x,
-                vertical_width * offset.y,
-            ));
+            let inside_corner = next_rect_corner.add(Vec2::new(horizontal_width * offset.x, vertical_width * offset.y));
             path.line_to(inside_corner);
         }
 
@@ -256,10 +243,7 @@ impl CssRoundedRect {
             let vertical_side = CORNER_VERTICAL_SIDE[corner];
             let horizontal_width = self.widths[horizontal_side];
             let vertical_width = self.widths[vertical_side];
-            let inside_corner = rect_corner.add(Vec2::new(
-                horizontal_width * offset.x,
-                vertical_width * offset.y,
-            ));
+            let inside_corner = rect_corner.add(Vec2::new(horizontal_width * offset.x, vertical_width * offset.y));
             path.line_to(inside_corner);
         }
         path.close_path();
@@ -273,19 +257,12 @@ impl CssRoundedRect {
         let box_height = self.height();
 
         let f_top_x = box_width / (self.outer_radii[TOP_LEFT].x + self.outer_radii[TOP_RIGHT].x);
-        let f_bottom_x =
-            box_width / (self.outer_radii[BOTTOM_LEFT].x + self.outer_radii[BOTTOM_RIGHT].x);
+        let f_bottom_x = box_width / (self.outer_radii[BOTTOM_LEFT].x + self.outer_radii[BOTTOM_RIGHT].x);
 
-        let f_left_y =
-            box_height / (self.outer_radii[BOTTOM_LEFT].y + self.outer_radii[TOP_LEFT].y);
-        let f_right_y =
-            box_height / (self.outer_radii[BOTTOM_RIGHT].y + self.outer_radii[TOP_RIGHT].y);
+        let f_left_y = box_height / (self.outer_radii[BOTTOM_LEFT].y + self.outer_radii[TOP_LEFT].y);
+        let f_right_y = box_height / (self.outer_radii[BOTTOM_RIGHT].y + self.outer_radii[TOP_RIGHT].y);
 
-        let radius_scale = f_top_x
-            .min(f_left_y)
-            .min(f_bottom_x)
-            .min(f_right_y)
-            .min(1.0);
+        let radius_scale = f_top_x.min(f_left_y).min(f_bottom_x).min(f_right_y).min(1.0);
 
         for radius in &mut self.outer_radii {
             *radius *= radius_scale;
@@ -310,12 +287,7 @@ impl CssRoundedRect {
 }
 
 /// Calculate the angle of intersection between the quarter-ellipse and a line from the border point to the corner point.
-fn intersect_angle(
-    top_left_radius_x: f64,
-    top_left_radius_y: f64,
-    top_width: f64,
-    right_width: f64,
-) -> f64 {
+fn intersect_angle(top_left_radius_x: f64, top_left_radius_y: f64, top_width: f64, right_width: f64) -> f64 {
     // 1. Set up the equations and solve for the intersection point using the quadratic formula.
     // 2. To get the angle, we use the parametric equation of the ellipse, solving for the angle.
 
@@ -489,10 +461,7 @@ impl Shape for CssRoundedRect {
                 let border_radius = self.outer_radii[corner];
                 let sign = CORNER_RADIUS_SIGN[corner];
                 let corner_point = self.corners[corner];
-                let border_point = corner_point.add(Vec2::new(
-                    border_radius.x * sign.x,
-                    border_radius.y * sign.y,
-                ));
+                let border_point = corner_point.add(Vec2::new(border_radius.x * sign.x, border_radius.y * sign.y));
                 let quarter_ellipse_bounds = Rect::from_points(corner_point, border_point);
                 if quarter_ellipse_bounds.contains(p) && arc.contains(p) {
                     return 0;
@@ -519,8 +488,9 @@ fn is_outer_radius_sharp(radii: Vec2) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::f64::consts::FRAC_PI_2;
+
+    use super::*;
 
     const EPS: f64 = 1e-9;
 

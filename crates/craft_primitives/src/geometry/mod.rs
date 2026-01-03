@@ -6,8 +6,7 @@ mod size;
 mod trblrectangle;
 
 pub use element_box::ElementBox;
-pub use point::Point;
-pub use point::PointConverter;
+pub use point::{Point, PointConverter};
 pub use rectangle::Rectangle;
 pub use size::Size;
 pub use trblrectangle::TrblRectangle;

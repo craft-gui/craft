@@ -1,28 +1,28 @@
-use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
-use crate::events::{CraftMessage, Event};
-use crate::layout::layout_item::{draw_borders_generic, CssComputedBorder, LayoutItem};
-use crate::style::{Display, Style};
-use crate::text::text_context::TextContext;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::Duration;
+
+#[cfg(feature = "accesskit")]
+use accesskit::{Action, Role};
+use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point, Vec2};
 use rustc_hash::FxHashMap;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time::Duration;
-use taffy::{Overflow};
+use taffy::Overflow;
 
-use crate::elements::core::element_data::ElementData;
+use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
+use crate::app::{TAFFY_TREE, request_layout};
 use crate::elements::Element;
-#[cfg(feature = "accesskit")]
-use accesskit::{Action, Role};
-use craft_primitives::geometry::borders::CssRoundedRect;
-use crate::app::{request_layout, TAFFY_TREE};
+use crate::elements::core::element_data::ElementData;
+use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
+use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
+use crate::style::{Display, Style};
+use crate::text::text_context::TextContext;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
-pub trait  ElementInternals: ElementData {
-
+pub trait ElementInternals: ElementData {
     /// A helper to apply the layout for all children.
     fn apply_layout_children(
         &mut self,
@@ -147,8 +147,12 @@ pub trait  ElementInternals: ElementData {
             current_node.add_action(Action::Click);
         }
 
-        let padding_box =
-            self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_box = self
+            .element_data()
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
 
         current_node.set_bounds(accesskit::Rect {
             x0: padding_box.left() as f64,
@@ -167,7 +171,9 @@ pub trait  ElementInternals: ElementData {
         tree.nodes.push((current_node_id, current_node));
 
         for child in self.element_data_mut().children.iter_mut() {
-            child.borrow_mut().compute_accessibility_tree(tree, Some(current_index), scale_factor);
+            child
+                .borrow_mut()
+                .compute_accessibility_tree(tree, Some(current_index), scale_factor);
         }
     }
 
@@ -210,7 +216,9 @@ pub trait  ElementInternals: ElementData {
         let border_radius = current_style.border_radius();
         let border_color = &current_style.border_color();
 
-        self.element_data_mut().layout_item.apply_borders(has_border, border_radius, scale_factor, border_color);
+        self.element_data_mut()
+            .layout_item
+            .apply_borders(has_border, border_radius, scale_factor, border_color);
     }
 
     /// Called after layout, and is responsible for updating the animation state of an element.
@@ -291,20 +299,32 @@ pub trait  ElementInternals: ElementData {
             !ed.on_lost_pointer_capture;*/
         if hit_testable {
             let id = self.element_data().internal_id;
-            renderer.push_hit_testable(id, self.element_data().layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor));
+            renderer.push_hit_testable(
+                id,
+                self.element_data()
+                    .layout_item
+                    .computed_box_transformed
+                    .padding_rectangle()
+                    .scale(scale_factor),
+            );
         }
     }
 
     fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
         let current_style = self.element_data().current_style();
 
-        self.element_data().layout_item.draw_borders(renderer, current_style, scale_factor);
+        self.element_data()
+            .layout_item
+            .draw_borders(renderer, current_style, scale_factor);
     }
 
     fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
         let element_data = self.element_data();
-        let padding_rectangle =
-            element_data.layout_item.computed_box_transformed.padding_rectangle().scale(scale_factor);
+        let padding_rectangle = element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -330,8 +350,16 @@ pub trait  ElementInternals: ElementData {
             .scrollbar_thumb_radius()
             .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
         // let scrollbar_thumb_radius = self.element_data().current_style().
-        let track_rect = self.element_data_mut().layout_item.computed_scroll_track.scale(scale_factor);
-        let thumb_rect = self.element_data_mut().layout_item.computed_scroll_thumb.scale(scale_factor);
+        let track_rect = self
+            .element_data_mut()
+            .layout_item
+            .computed_scroll_track
+            .scale(scale_factor);
+        let thumb_rect = self
+            .element_data_mut()
+            .layout_item
+            .computed_scroll_thumb
+            .scale(scale_factor);
 
         let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
         let mut computed_border_spec = CssComputedBorder::new(border_spec);

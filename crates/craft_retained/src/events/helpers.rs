@@ -1,13 +1,15 @@
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
+use craft_renderer::RenderList;
+use kurbo::Point;
+
+use crate::app::ELEMENTS;
 use crate::elements::Element;
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
-use kurbo::Point;
-use std::cell::RefCell;
-use std::collections::VecDeque;
-use std::rc::Rc;
-use craft_renderer::RenderList;
-use crate::app::ELEMENTS;
 
 pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
     let mut current_target = Some(Rc::clone(&target));
@@ -146,5 +148,7 @@ pub(super) fn call_default_element_event_handler(
     text_context: &mut Option<TextContext>,
     message: &CraftMessage,
 ) {
-    current_target.borrow_mut().on_event(message, text_context.as_mut().unwrap(), event, Some(target.clone()));
+    current_target
+        .borrow_mut()
+        .on_event(message, text_context.as_mut().unwrap(), event, Some(target.clone()));
 }

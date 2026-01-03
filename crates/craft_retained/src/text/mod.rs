@@ -1,24 +1,21 @@
+pub(crate) mod parley_editor;
 pub mod text_context;
 pub(crate) mod text_render_data;
-pub(crate) mod parley_editor;
 
-pub use parley;
 use std::ops::Range;
 
-use crate::style::TextStyleProperty;
+pub use parley;
 pub use text_render_data::from_editor;
 
-#[derive(Clone)]
-#[derive(Default)]
-#[derive(PartialEq)]
-pub struct RangedStyles  {
+use crate::style::TextStyleProperty;
+
+#[derive(Clone, Default, PartialEq)]
+pub struct RangedStyles {
     pub styles: Vec<(Range<usize>, TextStyleProperty)>,
 }
 
 impl RangedStyles {
     pub fn new(styles: Vec<(Range<usize>, TextStyleProperty)>) -> Self {
-        Self { 
-            styles
-        }
+        Self { styles }
     }
 }

@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+
 use crate::elements::Element;
 
 /// The trait to provide common element data.

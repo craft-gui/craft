@@ -1,9 +1,7 @@
-use cfg_if::cfg_if;
 use std::future::Future;
 
-pub use tokio::sync::mpsc::Sender;
-pub use tokio::sync::mpsc::Receiver;
-pub use tokio::sync::mpsc::channel;
+use cfg_if::cfg_if;
+pub use tokio::sync::mpsc::{Receiver, Sender, channel};
 
 pub struct CraftRuntime {
     #[cfg(not(target_arch = "wasm32"))]

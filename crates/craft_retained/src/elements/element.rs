@@ -1,25 +1,19 @@
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::document::Document;
-use crate::elements::core::ElementData;
-use crate::elements::ElementIdMap;
-use crate::events::{
-    KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler,
-    PointerUpdateHandler, SliderValueChangedHandler,
-};
-
-use crate::style::{
-    AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
-    Weight, Wrap,
-};
-use crate::{CraftError};
-use craft_primitives::geometry::Point;
-use craft_primitives::geometry::{ElementBox, TrblRectangle};
-use craft_primitives::Color;
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+
+use craft_primitives::Color;
+use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use taffy::{BoxSizing, Overflow, Position};
 use ui_events::pointer::PointerId;
+
+use crate::CraftError;
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+use crate::document::Document;
+use crate::elements::ElementIdMap;
+use crate::elements::core::ElementData;
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
+use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, Weight, Wrap};
 
 /// The element trait for end-users.
 pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
@@ -29,9 +23,15 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         child_2: Rc<RefCell<dyn Element>>,
     ) -> Result<(), CraftError> {
         let children = &mut self.element_data_mut().children;
-        let position_1 = children.iter().position(|x| Rc::ptr_eq(x, &child_1)).ok_or(CraftError::ElementNotFound)?;
+        let position_1 = children
+            .iter()
+            .position(|x| Rc::ptr_eq(x, &child_1))
+            .ok_or(CraftError::ElementNotFound)?;
 
-        let position_2 = children.iter().position(|x| Rc::ptr_eq(x, &child_2)).ok_or(CraftError::ElementNotFound)?;
+        let position_2 = children
+            .iter()
+            .position(|x| Rc::ptr_eq(x, &child_2))
+            .ok_or(CraftError::ElementNotFound)?;
 
         // Swap the children.
         self.element_data_mut().children.swap(position_1, position_2);
@@ -82,7 +82,10 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     fn remove_child(&mut self, child: Rc<RefCell<dyn Element>>) -> Result<Rc<RefCell<dyn Element>>, CraftError> {
         // Find the node.
         let children = &mut self.element_data_mut().children;
-        let position = children.iter().position(|x| Rc::ptr_eq(x, &child)).ok_or(CraftError::ElementNotFound)?;
+        let position = children
+            .iter()
+            .position(|x| Rc::ptr_eq(x, &child))
+            .ok_or(CraftError::ElementNotFound)?;
 
         let child = children[position].clone();
 
@@ -166,7 +169,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
-        self.element_data_mut().on_slider_value_changed.push(on_slider_value_changed);
+        self.element_data_mut()
+            .on_slider_value_changed
+            .push(on_slider_value_changed);
         self
     }
 
@@ -182,7 +187,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
-        self.element_data_mut().on_got_pointer_capture.push(on_got_pointer_capture);
+        self.element_data_mut()
+            .on_got_pointer_capture
+            .push(on_got_pointer_capture);
         self
     }
 
@@ -190,7 +197,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
-        self.element_data_mut().on_lost_pointer_capture.push(on_lost_pointer_capture);
+        self.element_data_mut()
+            .on_lost_pointer_capture
+            .push(on_lost_pointer_capture);
         self
     }
 
@@ -198,7 +207,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     where
         Self: Sized,
     {
-        self.element_data_mut().on_pointer_button_down.push(on_pointer_button_down);
+        self.element_data_mut()
+            .on_pointer_button_down
+            .push(on_pointer_button_down);
         self
     }
 
@@ -275,7 +286,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
             // TODO (POINTER CAPTURE)
             // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-            current_doc.pending_pointer_captures.insert(pointer_id, self.element_data().me.clone());
+            current_doc
+                .pending_pointer_captures
+                .insert(pointer_id, self.element_data().me.clone());
         });
     }
 
@@ -301,7 +314,11 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
         DOCUMENTS.with_borrow_mut(|docs| {
             let current_doc = docs.get_current_document();
-            current_doc.pending_pointer_captures.get(&pointer_id).cloned().map(|w| w.as_ptr())
+            current_doc
+                .pending_pointer_captures
+                .get(&pointer_id)
+                .cloned()
+                .map(|w| w.as_ptr())
                 == Some(self.element_data().me.clone().as_ptr())
         })
     }
@@ -358,7 +375,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        self.style_mut().set_margin(TrblRectangle::new(top, right, bottom, left));
+        self.style_mut()
+            .set_margin(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
     }
 
@@ -371,7 +389,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        self.style_mut().set_padding(TrblRectangle::new(top, right, bottom, left));
+        self.style_mut()
+            .set_padding(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
     }
 
@@ -695,7 +714,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
-        self.style_mut().set_border_color(TrblRectangle::new(top, right, bottom, left));
+        self.style_mut()
+            .set_border_color(TrblRectangle::new(top, right, bottom, left));
     }
 
     fn border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
@@ -707,7 +727,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        self.style_mut().set_border_width(TrblRectangle::new(top, right, bottom, left));
+        self.style_mut()
+            .set_border_width(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
     }
 
@@ -744,7 +765,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
-        self.style_mut().set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
+        self.style_mut()
+            .set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
     }
 
     fn scrollbar_thumb_radius(

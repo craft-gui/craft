@@ -1,17 +1,16 @@
-use crate::app::DOCUMENTS;
-use crate::elements::Element;
-use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
-use crate::events::CraftMessage;
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
-use std::rc::Weak;
+use std::rc::{Rc, Weak};
+
 use ui_events::pointer::PointerId;
 
+use crate::app::DOCUMENTS;
+use crate::elements::Element;
+use crate::events::CraftMessage;
+use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
+
 /// Returns the currently pointer captured element or None.
-pub(super) fn find_pointer_capture_target(
-    message: &CraftMessage,
-) -> Option<Rc<RefCell<dyn Element>>> {
+pub(super) fn find_pointer_capture_target(message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
     // 9.4 Implicit pointer capture
     // https://w3c.github.io/pointerevents/#implicit-pointer-capture
     //
@@ -96,9 +95,7 @@ pub(super) fn process_pending_pointer_capture() {
     });
 }
 
-pub(super) fn maybe_handle_implicit_pointer_capture_release(
-    message: &CraftMessage,
-) {
+pub(super) fn maybe_handle_implicit_pointer_capture_release(message: &CraftMessage) {
     // 9.5 Implicit release of pointer capture
     // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
     let is_pointer_up_event = matches!(message, CraftMessage::PointerButtonUp(_));
