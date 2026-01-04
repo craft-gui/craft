@@ -30,7 +30,7 @@ fn create_button(
         .border_width(px(1), px(2), px(3), px(4))
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
-        .padding(px(15), px(30.0), px(15), px(30))
+        .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
         .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
