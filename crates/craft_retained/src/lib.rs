@@ -49,6 +49,7 @@ use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBui
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
+use crate::style::Unit;
 use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
@@ -217,4 +218,22 @@ pub fn rgb(r: u8, g: u8, b: u8) -> Color {
 
 pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color::from_rgba8(r, g, b, a)
+}
+
+pub fn px<U>(val: U) -> Unit
+where
+    U: Into<f64>,
+{
+    Unit::Px(val.into() as f32)
+}
+
+pub fn pct<U>(val: U) -> Unit
+where
+    U: Into<f64>,
+{
+    Unit::Percentage(val.into() as f32)
+}
+
+pub const fn auto() -> Unit {
+    Unit::Auto
 }

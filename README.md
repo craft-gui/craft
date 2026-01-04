@@ -11,11 +11,11 @@ Craft is a library for creating desktops user interfaces. craft_retained provide
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::CraftOptions;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, FlexDirection, JustifyContent, Unit};
+use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
 use craft_retained::{Color, rgb};
+use craft_retained::{CraftOptions, pct, px};
 
 fn create_button(
     label: &str,
@@ -27,10 +27,10 @@ fn create_button(
     let border_color = rgb(0, 0, 0);
     Container::new()
         .borrow_mut()
-        .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
+        .border_width(px(1), px(2), px(3), px(4))
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
-        .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
+        .padding(px(15), px(30.0), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
         .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
@@ -60,14 +60,14 @@ fn main() {
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
-        .width(Unit::Percentage(100.0))
-        .height(Unit::Percentage(100.0))
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .width(pct(100))
+        .height(pct(100))
+        .gap(px(20), px(20))
         .push(count_text.clone())
         .push({
             Container::new()
                 .borrow_mut()
-                .gap(Unit::Px(20.0), Unit::Px(20.0))
+                .gap(px(20), px(20))
                 .push(create_button(
                     "-",
                     rgb(244, 67, 54),
@@ -87,5 +87,4 @@ fn main() {
 
     craft_retained::craft_main(CraftOptions::basic("Counter"));
 }
-
 ```
