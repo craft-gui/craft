@@ -19,7 +19,6 @@ pub mod spatial;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
-mod window_context;
 mod window_manager;
 
 use std::future::Future;
