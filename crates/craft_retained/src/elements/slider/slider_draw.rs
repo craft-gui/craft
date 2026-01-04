@@ -4,7 +4,7 @@ use craft_renderer::RenderList;
 use kurbo::Vec2;
 
 use crate::elements::slider::slider::SliderDirection;
-use crate::elements::{Element, Slider};
+use crate::elements::{ElementImpl, SliderInner};
 use crate::layout::layout_item::{CssComputedBorder, draw_borders_generic};
 
 fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
@@ -17,14 +17,14 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
     ]
 }
 
-impl Slider {
+impl SliderInner {
     pub(super) fn draw_track(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         if let Some(track_color) = self.get_track_color() {
-            let mut element_rect = self.computed_box_transformed();
+            let mut element_rect = self.get_computed_box_transformed();
             let thumb_pos = self.thumb_position(self.get_value());
 
             if self.get_direction() == SliderDirection::Horizontal {
-                element_rect.size.width = (thumb_pos.x - self.computed_box_transformed().position.x) as f32;
+                element_rect.size.width = (thumb_pos.x - self.get_computed_box_transformed().position.x) as f32;
 
                 // HACK: When the value track is visible add some extra width to make sure there are no gaps in the value track color.
                 // The background track may show through on the left edge if the thumb is round.
@@ -32,7 +32,7 @@ impl Slider {
                     element_rect.size.width += self.get_thumb_size() as f32 / 2.0;
                 }
             } else {
-                element_rect.size.height = (thumb_pos.y - self.computed_box_transformed().position.y) as f32;
+                element_rect.size.height = (thumb_pos.y - self.get_computed_box_transformed().position.y) as f32;
 
                 // HACK: When the value track is visible add some extra height to make sure there are no gaps in the value track color.
                 // The background track may show through on the top edge if the thumb is round.

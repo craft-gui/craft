@@ -12,15 +12,21 @@ use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
 use crate::elements::ElementIdMap;
 use crate::elements::core::ElementData;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
-use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, Weight, Wrap};
+use crate::events::{
+    KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler,
+    PointerUpdateHandler, SliderValueChangedHandler,
+};
+use crate::style::{
+    AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
+    Weight, Wrap,
+};
 
 /// The element trait for end-users.
-pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
+pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
     fn swap_child(
         &mut self,
-        child_1: Rc<RefCell<dyn Element>>,
-        child_2: Rc<RefCell<dyn Element>>,
+        child_1: Rc<RefCell<dyn ElementImpl>>,
+        child_2: Rc<RefCell<dyn ElementImpl>>,
     ) -> Result<(), CraftError> {
         let children = &mut self.element_data_mut().children;
         let position_1 = children
@@ -79,7 +85,10 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     ///
     /// # Panics
     /// Panics if the corresponding Taffy layout nodes fail to be removed.
-    fn remove_child(&mut self, child: Rc<RefCell<dyn Element>>) -> Result<Rc<RefCell<dyn Element>>, CraftError> {
+    fn remove_child(
+        &mut self,
+        child: Rc<RefCell<dyn ElementImpl>>,
+    ) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
         // Find the node.
         let children = &mut self.element_data_mut().children;
         let position = children
@@ -110,7 +119,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
         // TODO: Move to document
         fn remove_element_from_document(
-            node: Rc<RefCell<dyn Element>>,
+            node: Rc<RefCell<dyn ElementImpl>>,
             document: &mut Document,
             elements: &mut ElementIdMap,
         ) {
@@ -132,37 +141,17 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             });
         });
 
-        child.borrow_mut().unfocus_dyn();
+        child.borrow_mut().unfocus();
 
         Ok(child)
     }
 
-    /// Appends a child to the element.
-    fn push(&mut self, _child: Rc<RefCell<dyn Element>>) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn push(&mut self, _child: Rc<RefCell<dyn ElementImpl>>) {
         panic!("Pushing children is not supported.")
     }
 
-    fn push_dyn(&mut self, _child: Rc<RefCell<dyn Element>>) {
-        panic!("Pushing children is not supported.")
-    }
-
-    /// Appends multiple children to the element.
-    fn extend(&mut self, _children: impl IntoIterator<Item = Rc<RefCell<dyn Element>>>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        panic!("")
-    }
-
-    fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
-        self
     }
 
     fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self
@@ -175,70 +164,42 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self
     }
 
-    fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) {
         self.element_data_mut().on_pointer_leave.push(on_pointer_leave);
-        self
     }
 
-    fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
         self.element_data_mut()
             .on_got_pointer_capture
             .push(on_got_pointer_capture);
-        self
     }
 
-    fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) {
         self.element_data_mut()
             .on_lost_pointer_capture
             .push(on_lost_pointer_capture);
-        self
     }
 
-    fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
         self.element_data_mut()
             .on_pointer_button_down
             .push(on_pointer_button_down);
-        self
     }
 
-    fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) {
         self.element_data_mut().on_pointer_button_up.push(on_pointer_button_up);
-        self
     }
 
-    fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
         self.element_data_mut().on_pointer_moved.push(on_pointer_moved);
-        self
     }
 
-    fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) {
         self.element_data_mut().on_keyboard_input.push(on_keyboard_input);
-        self
     }
 
     /// Returns the element's [`ElementBox`].
-    fn computed_box_transformed(&self) -> ElementBox {
+    fn get_computed_box_transformed(&self) -> ElementBox {
         self.element_data().layout_item.computed_box_transformed
     }
 
@@ -327,25 +288,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
-    fn display(&mut self, display: Display) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_display(display);
-        self
-    }
-
     fn set_display(&mut self, display: Display) {
         self.style_mut().set_display(display);
         self.update_taffy_style();
-    }
-
-    fn box_sizing(&mut self, box_sizing: BoxSizing) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_box_sizing(box_sizing);
-        self
     }
 
     fn set_box_sizing(&mut self, box_sizing: BoxSizing) {
@@ -353,25 +298,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn position(&mut self, position: Position) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_position(position);
-        self
-    }
-
     fn set_position(&mut self, position: Position) {
         self.style_mut().set_position(position);
         self.update_taffy_style();
-    }
-
-    fn margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_margin(top, right, bottom, left);
-        self
     }
 
     fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
@@ -380,26 +309,10 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_padding(top, right, bottom, left);
-        self
-    }
-
     fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_padding(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-    }
-
-    fn gap(&mut self, row_gap: Unit, column_gap: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_gap(row_gap, column_gap);
-        self
     }
 
     fn set_gap(&mut self, row_gap: Unit, column_gap: Unit) {
@@ -407,25 +320,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_inset(top, right, bottom, left);
-        self
-    }
-
     fn set_inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
-    }
-
-    fn min_width(&mut self, min_width: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_min_width(min_width);
-        self
     }
 
     fn set_min_width(&mut self, min_width: Unit) {
@@ -433,25 +330,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn min_height(&mut self, min_height: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_min_height(min_height);
-        self
-    }
-
     fn set_min_height(&mut self, min_height: Unit) {
         self.style_mut().set_min_height(min_height);
         self.update_taffy_style();
-    }
-
-    fn width(&mut self, width: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_width(width);
-        self
     }
 
     fn set_width(&mut self, width: Unit) {
@@ -459,25 +340,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn height(&mut self, height: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_height(height);
-        self
-    }
-
     fn set_height(&mut self, height: Unit) {
         self.style_mut().set_height(height);
         self.update_taffy_style();
-    }
-
-    fn max_width(&mut self, max_width: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_max_width(max_width);
-        self
     }
 
     fn set_max_width(&mut self, max_width: Unit) {
@@ -485,25 +350,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn max_height(&mut self, max_height: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_max_height(max_height);
-        self
-    }
-
     fn set_max_height(&mut self, max_height: Unit) {
         self.style_mut().set_max_height(max_height);
         self.update_taffy_style();
-    }
-
-    fn wrap(&mut self, wrap: Wrap) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_wrap(wrap);
-        self
     }
 
     fn set_wrap(&mut self, wrap: Wrap) {
@@ -511,25 +360,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn align_items(&mut self, align_items: Option<AlignItems>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_align_items(align_items);
-        self
-    }
-
     fn set_align_items(&mut self, align_items: Option<AlignItems>) {
         self.style_mut().set_align_items(align_items);
         self.update_taffy_style();
-    }
-
-    fn justify_content(&mut self, justify_content: Option<JustifyContent>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_justify_content(justify_content);
-        self
     }
 
     fn set_justify_content(&mut self, justify_content: Option<JustifyContent>) {
@@ -537,25 +370,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn flex_direction(&mut self, flex_direction: FlexDirection) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_flex_direction(flex_direction);
-        self
-    }
-
     fn set_flex_direction(&mut self, flex_direction: FlexDirection) {
         self.style_mut().set_flex_direction(flex_direction);
         self.update_taffy_style();
-    }
-
-    fn flex_grow(&mut self, flex_grow: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_flex_grow(flex_grow);
-        self
     }
 
     fn set_flex_grow(&mut self, flex_grow: f32) {
@@ -563,25 +380,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn flex_shrink(&mut self, flex_shrink: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_flex_shrink(flex_shrink);
-        self
-    }
-
     fn set_flex_shrink(&mut self, flex_shrink: f32) {
         self.style_mut().set_flex_shrink(flex_shrink);
         self.update_taffy_style();
-    }
-
-    fn flex_basis(&mut self, flex_basis: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_flex_basis(flex_basis);
-        self
     }
 
     fn set_flex_basis(&mut self, flex_basis: Unit) {
@@ -589,25 +390,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn font_family(&mut self, font_family: FontFamily) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_font_family(font_family);
-        self
-    }
-
     fn set_font_family(&mut self, font_family: FontFamily) {
         self.style_mut().set_font_family(font_family);
         self.update_taffy_style();
-    }
-
-    fn color(&mut self, color: Color) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_color(color);
-        self
     }
 
     fn set_color(&mut self, color: Color) {
@@ -615,24 +400,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn background_color(&mut self, color: Color) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_background_color(color);
-        self
-    }
-
     fn set_background_color(&mut self, color: Color) {
         self.style_mut().set_background(color);
-    }
-
-    fn font_size(&mut self, font_size: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_font_size(font_size);
-        self
     }
 
     fn set_font_size(&mut self, font_size: f32) {
@@ -640,25 +409,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn line_height(&mut self, line_height: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_line_height(line_height);
-        self
-    }
-
     fn set_line_height(&mut self, line_height: f32) {
         self.style_mut().set_line_height(line_height);
         self.update_taffy_style();
-    }
-
-    fn font_weight(&mut self, font_weight: Weight) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_font_weight(font_weight);
-        self
     }
 
     fn set_font_weight(&mut self, font_weight: Weight) {
@@ -666,25 +419,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn font_style(&mut self, font_style: FontStyle) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_font_style(font_style);
-        self
-    }
-
     fn set_font_style(&mut self, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
         self.update_taffy_style();
-    }
-
-    fn underline(&mut self, underline: Option<Underline>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_underline(underline);
-        self
     }
 
     fn set_underline(&mut self, underline: Option<Underline>) {
@@ -692,38 +429,14 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.update_taffy_style();
     }
 
-    fn overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_overflow(overflow_x, overflow_y);
-        self
-    }
-
     fn set_overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
         self.update_taffy_style();
     }
 
-    fn border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_border_color(top, right, bottom, left);
-        self
-    }
-
     fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
         self.style_mut()
             .set_border_color(TrblRectangle::new(top, right, bottom, left));
-    }
-
-    fn border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_border_width(top, right, bottom, left);
-        self
     }
 
     fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
@@ -744,24 +457,8 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
         self.style_mut().set_border_radius([top, right, bottom, left]);
     }
 
-    fn scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_scrollbar_color(scrollbar_color);
-        self
-    }
-
     fn set_scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) {
         self.style_mut().set_scrollbar_color(scrollbar_color);
-    }
-
-    fn scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_scrollbar_thumb_margin(top, right, bottom, left);
-        self
     }
 
     fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
@@ -769,42 +466,12 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             .set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
     }
 
-    fn scrollbar_thumb_radius(
-        &mut self,
-        top: (f32, f32),
-        right: (f32, f32),
-        bottom: (f32, f32),
-        left: (f32, f32),
-    ) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_scrollbar_thumb_radius(top, right, bottom, left);
-        self
-    }
-
     fn set_scrollbar_thumb_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
     }
 
-    fn scrollbar_width(&mut self, scrollbar_width: f32) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_scrollbar_width(scrollbar_width);
-        self
-    }
-
     fn set_scrollbar_width(&mut self, scrollbar_width: f32) {
         self.style_mut().set_scrollbar_width(scrollbar_width);
-    }
-
-    fn selection_color(&mut self, selection_color: Color) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_selection_color(selection_color);
-        self
     }
 
     fn set_selection_color(&mut self, selection_color: Color) {
@@ -814,10 +481,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     /// Sets focus on the specified element, if it can be focused.
     ///
     /// The focused element is the element that will receive keyboard and similar events by default.
-    fn focus(&mut self)
-    where
-        Self: Sized,
-    {
+    fn focus(&mut self) {
         // Todo: check if the element is focusable. Should we return a result?
         FOCUS.with_borrow_mut(|focus| {
             *focus = Some(self.element_data().me.clone());
@@ -838,17 +502,7 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     /// Removes focus if the element has focus.
-    fn unfocus(&mut self) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.unfocus_dyn();
-
-        self
-    }
-
-    /// Removes focus if the element has focus.
-    fn unfocus_dyn(&mut self) {
+    fn unfocus(&mut self) {
         if self.is_focused() {
             FOCUS.with(|focus| {
                 *focus.borrow_mut() = None;
@@ -857,7 +511,309 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
     }
 
     /// Re-
-    fn to_rc(&self) -> Rc<RefCell<dyn Element>> {
+    fn to_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
         self.element_data().me.upgrade().unwrap()
     }
+}
+
+pub trait AsElement {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>>;
+}
+
+pub trait Element: Clone + AsElement {
+    fn get_children(&self) -> Vec<Rc<RefCell<dyn ElementImpl>>> {
+        self.as_element_rc().borrow().children().iter().cloned().collect()
+    }
+
+    fn remove_child(&self, child: Rc<RefCell<dyn ElementImpl>>) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.as_element_rc().borrow_mut().remove_child(child)
+    }
+
+    fn swap_child(
+        &self,
+        child_1: Rc<RefCell<dyn ElementImpl>>,
+        child_2: Rc<RefCell<dyn ElementImpl>>,
+    ) -> Result<(), CraftError> {
+        self.as_element_rc().borrow_mut().swap_child(child_1, child_2)
+    }
+
+    fn push(self, child: impl AsElement) -> Self {
+        let child_rc = child.as_element_rc();
+        self.as_element_rc().borrow_mut().push(child_rc);
+        self
+    }
+
+    /*fn extend(self, children: impl IntoIterator<Item = Rc<RefCell<dyn ElementImpl>>>) -> Self {
+        self.as_element_rc().borrow_mut().extend(children);
+        self
+    }*/
+
+    fn on_pointer_enter(self, on_pointer_enter: PointerEnterHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_pointer_enter(on_pointer_enter);
+        self
+    }
+
+    fn on_pointer_leave(self, on_pointer_leave: PointerLeaveHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_pointer_leave(on_pointer_leave);
+        self
+    }
+
+    fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_pointer_button_down(on_pointer_button_down);
+        self
+    }
+
+    fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_pointer_moved(on_pointer_moved);
+        self
+    }
+
+    fn on_pointer_button_up(self, on_pointer_button_up: PointerEventHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_pointer_button_up(on_pointer_button_up);
+        self
+    }
+
+    fn on_lost_pointer_capture(self, on_lost_pointer_capture: PointerCaptureHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_lost_pointer_capture(on_lost_pointer_capture);
+        self
+    }
+
+    fn on_got_pointer_capture(self, on_got_pointer_capture: PointerCaptureHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_got_pointer_capture(on_got_pointer_capture);
+        self
+    }
+
+    fn on_keyboard_input(self, on_keyboard_input: KeyboardInputHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_keyboard_input(on_keyboard_input);
+        self
+    }
+
+    fn display(self, display: Display) -> Self {
+        self.as_element_rc().borrow_mut().set_display(display);
+        self
+    }
+
+    fn box_sizing(self, box_sizing: BoxSizing) -> Self {
+        self.as_element_rc().borrow_mut().set_box_sizing(box_sizing);
+        self
+    }
+
+    fn position(self, position: Position) -> Self {
+        self.as_element_rc().borrow_mut().set_position(position);
+        self
+    }
+
+    fn margin(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_margin(top, right, bottom, left);
+        self
+    }
+
+    fn padding(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_padding(top, right, bottom, left);
+        self
+    }
+
+    fn gap(self, row_gap: Unit, column_gap: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_gap(row_gap, column_gap);
+        self
+    }
+
+    fn inset(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_inset(top, right, bottom, left);
+        self
+    }
+
+    fn min_width(self, min_width: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_min_width(min_width);
+        self
+    }
+
+    fn min_height(self, min_height: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_min_height(min_height);
+        self
+    }
+
+    fn width(self, width: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_width(width);
+        self
+    }
+
+    fn height(self, height: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_height(height);
+        self
+    }
+
+    fn max_width(self, max_width: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_max_width(max_width);
+        self
+    }
+
+    fn max_height(self, max_height: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_max_height(max_height);
+        self
+    }
+
+    fn wrap(self, wrap: Wrap) -> Self {
+        self.as_element_rc().borrow_mut().set_wrap(wrap);
+        self
+    }
+
+    fn align_items(self, align_items: Option<AlignItems>) -> Self {
+        self.as_element_rc().borrow_mut().set_align_items(align_items);
+        self
+    }
+
+    fn justify_content(self, justify_content: Option<JustifyContent>) -> Self {
+        self.as_element_rc().borrow_mut().set_justify_content(justify_content);
+        self
+    }
+
+    fn flex_direction(self, flex_direction: FlexDirection) -> Self {
+        self.as_element_rc().borrow_mut().set_flex_direction(flex_direction);
+        self
+    }
+
+    fn flex_grow(self, flex_grow: f32) -> Self {
+        self.as_element_rc().borrow_mut().set_flex_grow(flex_grow);
+        self
+    }
+
+    fn flex_shrink(self, flex_shrink: f32) -> Self {
+        self.as_element_rc().borrow_mut().set_flex_shrink(flex_shrink);
+        self
+    }
+
+    fn flex_basis(self, flex_basis: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_flex_basis(flex_basis);
+        self
+    }
+
+    fn font_family(self, font_family: FontFamily) -> Self {
+        self.as_element_rc().borrow_mut().set_font_family(font_family);
+        self
+    }
+
+    fn color(self, color: Color) -> Self {
+        self.as_element_rc().borrow_mut().set_color(color);
+        self
+    }
+
+    fn background_color(self, background_color: Color) -> Self {
+        self.as_element_rc().borrow_mut().set_background_color(background_color);
+        self
+    }
+
+    fn font_size(self, font_size: f32) -> Self {
+        self.as_element_rc().borrow_mut().set_font_size(font_size);
+        self
+    }
+
+    fn line_height(self, line_height: f32) -> Self {
+        self.as_element_rc().borrow_mut().set_line_height(line_height);
+        self
+    }
+
+    fn font_weight(self, font_weight: Weight) -> Self {
+        self.as_element_rc().borrow_mut().set_font_weight(font_weight);
+        self
+    }
+
+    fn font_style(self, font_style: FontStyle) -> Self {
+        self.as_element_rc().borrow_mut().set_font_style(font_style);
+        self
+    }
+
+    fn underline(self, underline: Option<Underline>) -> Self {
+        self.as_element_rc().borrow_mut().set_underline(underline);
+        self
+    }
+
+    fn overflow(self, overflow_x: Overflow, overflow_y: Overflow) -> Self {
+        self.as_element_rc().borrow_mut().set_overflow(overflow_x, overflow_y);
+        self
+    }
+
+    fn border_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_color(top, right, bottom, left);
+        self
+    }
+
+    fn border_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_width(top, right, bottom, left);
+        self
+    }
+
+    fn border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_radius(top, right, bottom, left);
+        self
+    }
+
+    fn scrollbar_color(self, scrollbar_color: ScrollbarColor) -> Self {
+        self.as_element_rc().borrow_mut().set_scrollbar_color(scrollbar_color);
+        self
+    }
+
+    fn scrollbar_thumb_margin(self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_scrollbar_thumb_margin(top, right, bottom, left);
+        self
+    }
+
+    fn set_scrollbar_thumb_radius(
+        self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_scrollbar_thumb_radius(top, right, bottom, left);
+        self
+    }
+
+    fn scrollbar_width(self, selection_color: Color) -> Self {
+        self.as_element_rc().borrow_mut().set_selection_color(selection_color);
+        self
+    }
+
+    fn focus(self) -> Self {
+        self.as_element_rc().borrow_mut().focus();
+        self
+    }
+
+    fn is_focused(&self) -> bool {
+        self.as_element_rc().borrow_mut().is_focused()
+    }
+
+    fn unfocus(self) -> Self {
+        self.as_element_rc().borrow_mut().unfocus();
+        self
+    }
+
+    fn get_computed_box_transformed(&self) -> ElementBox {
+        self.as_element_rc().borrow().get_computed_box_transformed()
+    }
+
+    fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
+        self.as_element_rc().borrow().has_pointer_capture(pointer_id)
+    }
+
 }

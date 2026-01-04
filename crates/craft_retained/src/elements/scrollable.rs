@@ -3,11 +3,11 @@ use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
 
 use crate::app::request_apply_layout;
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 use crate::events::{CraftMessage, Event};
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn on_scroll_events(element: &mut dyn Element, message: &CraftMessage, event: &mut Event) {
+pub(crate) fn on_scroll_events(element: &mut dyn ElementImpl, message: &CraftMessage, event: &mut Event) {
     let element_data = element.element_data_mut();
 
     if element_data.is_scrollable()

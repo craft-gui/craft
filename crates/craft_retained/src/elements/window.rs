@@ -28,15 +28,21 @@ use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER};
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, scrollable};
+use crate::elements::{ElementImpl, scrollable, Element};
+use crate::elements::element::AsElement;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 
+#[derive(Clone)]
+pub struct Window {
+    pub inner: Rc<RefCell<WindowInternal>>
+}
+
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
-pub struct Window {
+pub struct WindowInternal {
     element_data: ElementData,
     /// The physical window size from winit.
     pub(crate) window_size: Size<f32>,
@@ -57,9 +63,9 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new() -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            RefCell::new(Self {
+    pub fn new() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<WindowInternal>>| {
+            RefCell::new(WindowInternal {
                 element_data: ElementData::new(me.clone(), true),
                 window_size: Default::default(),
                 scale_factor: 1.0,
@@ -73,21 +79,104 @@ impl Window {
             })
         });
 
-        me.borrow_mut().element_data.create_layout_node(None);
+        inner.borrow_mut().element_data.create_layout_node(None);
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.add_window(me.clone());
+            window_manager.add_window(Window {inner: inner.clone()});
         });
 
-        me
+        Window {
+            inner
+        }
     }
+}
+
+impl Window {
+
+    pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
+        self.inner.borrow().winit_window()
+    }
+
+    pub fn set_winit_window(&self, window: Option<Arc<WinitWindow>>) {
+        self.inner.borrow_mut().set_winit_window(window)
+    }
+
+    pub fn set_scale_factor(&self, scale_factor: f64) {
+        self.inner.borrow_mut().set_scale_factor(scale_factor)
+    }
+
+    /// Get the effective scale factor factoring window scale factor and zoom.
+    pub fn effective_scale_factor(&self) -> f64 {
+        self.inner.borrow().effective_scale_factor()
+    }
+
+    /// Get the logical size of the window.
+    pub fn window_size(&self) -> Size<f64> {
+        self.inner.borrow().window_size()
+    }
+
+    pub(crate) fn zoom_in(&self) {
+        self.inner.borrow_mut().zoom_in()
+    }
+
+    pub(crate) fn zoom_out(&self) {
+        self.inner.borrow_mut().zoom_out()
+    }
+
+    pub(crate) fn zoom_scale_factor(&self) -> f64 {
+        self.inner.borrow().zoom_scale_factor()
+    }
+
+    pub(crate) fn mouse_position(&self) -> Option<Point> {
+        self.inner.borrow().mouse_position()
+    }
+
+    pub(crate) fn on_resize(&self, new_size: Size<f32>) {
+        self.inner.borrow_mut().on_resize(new_size)
+    }
+
+    pub(crate) fn set_mouse_position(&self, point: Option<Point>) {
+        self.inner.borrow_mut().set_mouse_position(point)
+    }
+
+    pub(crate) fn on_redraw(&self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
+        self.inner.borrow_mut().on_redraw(text_context, resource_manager)
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    pub fn on_request_redraw(&self, craft_app: &mut App) -> Option<TreeUpdate> {
+        self.inner.borrow_mut().on_request_redraw(craft_app)
+    }
+
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    pub(crate) fn compute_accessibility_tree_window(&self) -> TreeUpdate {
+        self.inner.borrow_mut().compute_accessibility_tree_window()
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
+    pub fn on_request_redraw(&self, craft_app: &mut App) {
+       self.inner.borrow_mut().on_request_redraw(craft_app)
+    }
+
+    pub(crate) fn create(&self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
+        self.inner.borrow_mut().create(craft_app, event_loop)
+    }
+}
+
+impl WindowInternal {
 
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.winit_window.clone()
     }
 
-    pub fn set_winit_window(&mut self, window: Arc<WinitWindow>) {
-        self.winit_window = Some(window);
+    pub fn set_winit_window(&mut self, window: Option<Arc<WinitWindow>>) {
+        self.winit_window = window;
+    }
+
+    pub fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.scale_factor = scale_factor;
     }
 
     /// Get the effective scale factor factoring window scale factor and zoom.
@@ -154,7 +243,6 @@ impl Window {
         self.draw_window(text_context, resource_manager);
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
         let root_node = self
             .element_data
@@ -240,7 +328,7 @@ impl Window {
                 .create_window(WindowAttributes::default().with_visible(false))
                 .expect("Failed to create window"),
         );
-        self.set_winit_window(winit_window.clone());
+        self.set_winit_window(Some(winit_window.clone()));
 
         let renderer_type = craft_app.craft_options.renderer;
 
@@ -341,7 +429,15 @@ impl Window {
     }
 }
 
-impl crate::elements::core::ElementData for Window {
+impl Element for Window {}
+
+impl AsElement for Window {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::core::ElementData for WindowInternal {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -351,12 +447,9 @@ impl crate::elements::core::ElementData for Window {
     }
 }
 
-impl Element for Window {
-    fn push(&mut self, child: Rc<RefCell<dyn Element>>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
+impl ElementImpl for WindowInternal {
+    fn push(&mut self, child: Rc<RefCell<dyn ElementImpl>>) {
+        let me: Weak<RefCell<dyn ElementImpl>> = self.element_data.me.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
 
@@ -368,39 +461,6 @@ impl Element for Window {
                 taffy_tree.add_child(parent_id, child_id);
             }
         });
-
-        self
-    }
-
-    fn push_dyn(&mut self, child: Rc<RefCell<dyn Element>>) {
-        self.push(child);
-    }
-
-    /// Appends multiple typed children in one call
-    fn extend(&mut self, children: impl IntoIterator<Item = Rc<RefCell<dyn Element>>>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
-        let children: Vec<_> = children.into_iter().collect();
-
-        for child in &children {
-            child.borrow_mut().element_data_mut().parent = Some(me.clone());
-        }
-
-        self.element_data.children.extend(children.iter().cloned());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            for child in &children {
-                if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
-                    taffy_tree.add_child(parent_id, child_id);
-                }
-            }
-        });
-
-        self
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -412,7 +472,7 @@ impl Element for Window {
     }
 }
 
-impl ElementInternals for Window {
+impl ElementInternals for WindowInternal {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

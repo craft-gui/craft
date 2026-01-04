@@ -4,14 +4,14 @@ use std::rc::Weak;
 
 use ui_events::pointer::PointerId;
 
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
 pub struct Document {
     /// Tracks elements that are *currently* pointer captured.
-    pub(crate) pointer_captures: HashMap<PointerId, Weak<RefCell<dyn Element>>>,
+    pub(crate) pointer_captures: HashMap<PointerId, Weak<RefCell<dyn ElementImpl>>>,
     /// Tracks elements that *should* be pointer captured.
-    pub(crate) pending_pointer_captures: HashMap<PointerId, Weak<RefCell<dyn Element>>>,
+    pub(crate) pending_pointer_captures: HashMap<PointerId, Weak<RefCell<dyn ElementImpl>>>,
 }
 
 impl Default for Document {

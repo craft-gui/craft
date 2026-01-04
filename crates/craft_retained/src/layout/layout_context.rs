@@ -6,15 +6,15 @@ use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use taffy::{AvailableSpace, Size};
 
-use crate::elements::{Text, TextInput};
+use crate::elements::{TextInner, TextInputInner};
 use crate::text::text_context::TextContext;
 
 pub struct TaffyTextContext {
-    pub element: Weak<RefCell<Text>>,
+    pub element: Weak<RefCell<TextInner>>,
 }
 
 pub struct TaffyTextInputContext {
-    pub element: Weak<RefCell<TextInput>>,
+    pub element: Weak<RefCell<TextInputInner>>,
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]

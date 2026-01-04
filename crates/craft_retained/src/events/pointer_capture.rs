@@ -5,16 +5,16 @@ use std::rc::{Rc, Weak};
 use ui_events::pointer::PointerId;
 
 use crate::app::DOCUMENTS;
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 use crate::events::CraftMessage;
 use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
 
 /// Returns the currently pointer captured element or None.
-pub(super) fn find_pointer_capture_target(message: &CraftMessage) -> Option<Rc<RefCell<dyn Element>>> {
+pub(super) fn find_pointer_capture_target(message: &CraftMessage) -> Option<Rc<RefCell<dyn ElementImpl>>> {
     // 9.4 Implicit pointer capture
     // https://w3c.github.io/pointerevents/#implicit-pointer-capture
     //
-    let pointer_capture_element_id: Option<Weak<RefCell<dyn Element>>> = DOCUMENTS.with_borrow_mut(|docs| {
+    let pointer_capture_element_id: Option<Weak<RefCell<dyn ElementImpl>>> = DOCUMENTS.with_borrow_mut(|docs| {
         let key = &PointerId::new(1).unwrap();
         if matches!(message, CraftMessage::GotPointerCapture()) {
             // Check pending (step 2):
@@ -49,7 +49,7 @@ pub(super) fn process_pending_pointer_capture() {
         let target = find_pointer_capture_target(&msg);
 
         if let Some(target) = target {
-            let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+            let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = VecDeque::new();
             let mut current_target = Some(Rc::clone(&target));
             while let Some(node) = current_target {
                 targets.push_back(Rc::clone(&node));
@@ -70,7 +70,7 @@ pub(super) fn process_pending_pointer_capture() {
         let target = find_pointer_capture_target(&msg);
 
         if let Some(target) = target {
-            let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+            let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = VecDeque::new();
             let mut current_target = Some(Rc::clone(&target));
             while let Some(node) = current_target {
                 targets.push_back(Rc::clone(&node));

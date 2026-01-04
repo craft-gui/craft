@@ -36,15 +36,21 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 use winit::dpi;
 
-use crate::elements::Element;
+use crate::elements::{Element, ElementImpl};
 use crate::elements::core::ElementInternals;
+use crate::elements::element::AsElement;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::layout::TaffyTree;
 
-// A stateful element that shows text.
 #[derive(Clone)]
 pub struct Text {
+    pub inner: Rc<RefCell<TextInner>>,
+}
+
+// A stateful element that shows text.
+#[derive(Clone)]
+pub struct TextInner {
     element_data: ElementData,
     selectable: bool,
     pub(crate) state: TextState,
@@ -80,9 +86,9 @@ pub struct TextState {
 }
 
 impl Text {
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            RefCell::new(Self {
+    pub fn new(text: &str) -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInner>>| {
+            RefCell::new(TextInner {
                 element_data: ElementData::new(me.clone(), false),
                 selectable: true,
                 state: TextState::default(),
@@ -91,20 +97,48 @@ impl Text {
         });
 
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
-            element: me.borrow().me.clone(),
+            element: inner.borrow().me.clone(),
         }));
-        me.borrow_mut().element_data.create_layout_node(text_context);
+        inner.borrow_mut().element_data.create_layout_node(text_context);
 
-        me.borrow_mut().text(text);
+        inner.borrow_mut().set_text(text);
 
-        me
+        Text {
+            inner
+        }
     }
+
+    pub fn get_selectable(&self) -> bool {
+        self.inner.borrow().selectable
+    }
+
+    pub fn selectable(self, selectable: bool) -> Self {
+        self.inner.borrow_mut().set_selectable(selectable);
+        self
+    }
+
+    pub fn get_text(&self) -> String {
+        self.inner.borrow().get_text().to_owned()
+    }
+
+    pub fn text(self, text: &str) -> Self {
+        self.inner.borrow_mut().set_text(text);
+        self
+    }
+
+    pub fn set_text_smol_str(self, text: SmolStr) -> Self {
+        self.inner.borrow_mut().set_text_smol_str(text);
+        self
+    }
+}
+
+impl TextInner {
 
     pub fn get_selectable(&self) -> bool {
         self.selectable
     }
 
-    pub fn selectable(&mut self, selectable: bool) -> &mut Self {
+    pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
         self
     }
@@ -117,7 +151,7 @@ impl Text {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn text(&mut self, text: &str) -> &mut Self {
+    pub fn set_text(&mut self, text: &str) -> &mut Self {
         self.set_text_smol_str(text.to_smolstr());
         self
     }
@@ -148,7 +182,15 @@ impl Text {
     }
 }
 
-impl crate::elements::core::ElementData for Text {
+impl Element for Text {}
+
+impl AsElement for Text {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::core::ElementData for TextInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -158,7 +200,7 @@ impl crate::elements::core::ElementData for Text {
     }
 }
 
-impl crate::elements::Element for Text {
+impl crate::elements::ElementImpl for TextInner {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -168,7 +210,7 @@ impl crate::elements::Element for Text {
     }
 }
 
-impl ElementInternals for Text {
+impl ElementInternals for TextInner {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -222,7 +264,7 @@ impl ElementInternals for Text {
         }
         self.add_hit_testable(renderer, true, scale_factor);
 
-        let computed_box_transformed = self.computed_box_transformed();
+        let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(renderer, scale_factor);
@@ -305,7 +347,7 @@ impl ElementInternals for Text {
 
         // Handle selection.
         if self.selectable {
-            let text_position = self.computed_box_transformed().content_rectangle();
+            let text_position = self.get_computed_box_transformed().content_rectangle();
 
             let state: &mut TextState = &mut self.state;
             match message {
@@ -536,7 +578,7 @@ impl TextState {
     }
 }
 
-impl TextData for Text {
+impl TextData for TextInner {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }

@@ -13,7 +13,7 @@ use taffy::Overflow;
 
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::app::{TAFFY_TREE};
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 use crate::elements::core::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -421,7 +421,7 @@ pub trait ElementInternals: ElementData {
     }
 }
 
-pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn Element, clip_bounds: Option<Rectangle>) {
+pub(crate) fn resolve_clip_for_scrollable(element: &mut dyn ElementImpl, clip_bounds: Option<Rectangle>) {
     let element_data = element.element_data_mut();
     if element_data.is_scrollable() {
         let scroll_clip_bounds = element_data.layout_item.computed_box_transformed.padding_rectangle();

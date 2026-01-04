@@ -11,32 +11,49 @@ use kurbo::{Affine, Point};
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, scrollable};
+use crate::elements::{ElementImpl, scrollable};
+use crate::elements::element::{AsElement, Element};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 
+#[derive(Clone)]
+pub struct Container {
+    pub inner: Rc<RefCell<ContainerInner>>,
+}
+
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
-pub struct Container {
+pub struct ContainerInner {
     element_data: ElementData,
 }
 
 impl Container {
-    pub fn new() -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            RefCell::new(Self {
+    pub fn new() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {
+            RefCell::new(ContainerInner {
                 element_data: ElementData::new(me.clone(), true),
             })
         });
 
-        me.borrow_mut().element_data.create_layout_node(None);
-        me
+        inner.borrow_mut().element_data.create_layout_node(None);
+
+        Self {
+            inner
+        }
     }
 }
 
-impl crate::elements::core::ElementData for Container {
+impl Element for Container {}
+
+impl AsElement for Container {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::core::ElementData for ContainerInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -46,12 +63,9 @@ impl crate::elements::core::ElementData for Container {
     }
 }
 
-impl Element for Container {
-    fn push(&mut self, child: Rc<RefCell<dyn Element>>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
+impl ElementImpl for ContainerInner {
+    fn push(&mut self, child: Rc<RefCell<dyn ElementImpl>>) {
+        let me: Weak<RefCell<dyn ElementImpl>> = self.element_data.me.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
 
@@ -63,39 +77,6 @@ impl Element for Container {
                 taffy_tree.add_child(parent_id, child_id);
             }
         });
-
-        self
-    }
-
-    fn push_dyn(&mut self, child: Rc<RefCell<dyn Element>>) {
-        self.push(child);
-    }
-
-    /// Appends multiple typed children in one call
-    fn extend(&mut self, children: impl IntoIterator<Item = Rc<RefCell<dyn Element>>>) -> &mut Self
-    where
-        Self: Sized,
-    {
-        let me: Weak<RefCell<dyn Element>> = self.element_data.me.clone();
-        let children: Vec<_> = children.into_iter().collect();
-
-        for child in &children {
-            child.borrow_mut().element_data_mut().parent = Some(me.clone());
-        }
-
-        self.element_data.children.extend(children.iter().cloned());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            for child in &children {
-                if let Some(child_id) = child.borrow().element_data().layout_item.taffy_node_id {
-                    taffy_tree.add_child(parent_id, child_id);
-                }
-            }
-        });
-
-        self
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -107,7 +88,7 @@ impl Element for Container {
     }
 }
 
-impl ElementInternals for Container {
+impl ElementInternals for ContainerInner {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

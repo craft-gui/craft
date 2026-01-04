@@ -3,112 +3,70 @@ use std::rc::Rc;
 
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
+use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
 use craft_retained::{Color, rgb};
-
-#[derive(Default, Clone, Copy)]
-pub struct Counter {
-    count: i64,
-}
-
-impl Counter {
-    fn change(&mut self, delta: i64) {
-        self.count += delta;
-    }
-
-    fn count(&self) -> i64 {
-        self.count
-    }
-}
+use craft_retained::{CraftOptions, pct, px};
 
 fn create_button(
     label: &str,
     base_color: Color,
     delta: i64,
-    state: Rc<RefCell<Counter>>,
-    count_text: Rc<RefCell<Text>>,
-) -> Rc<RefCell<Container>> {
+    state: Rc<RefCell<i64>>,
+    count_text: Text,
+) -> Container {
     let border_color = rgb(0, 0, 0);
-    let label = Text::new(label);
-    label.borrow_mut().font_size(24.0).color(Color::WHITE).selectable(false);
-    let container = Container::new();
-    container
-        .borrow_mut()
-        .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
+    Container::new()
+        .border_width(px(1), px(2), px(3), px(4))
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
-        .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
-        .display(Display::Flex)
+        .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
         .background_color(base_color)
         .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
-                state.borrow_mut().change(delta);
-                count_text
-                    .borrow_mut()
-                    .text(&format!("Count: {}", state.borrow().count()));
+                *state.borrow_mut() += delta;
+                count_text.clone().text(&format!("Count: {}", state.borrow()));
                 event.prevent_propagate();
             }
         }))
-        .push(label);
-    container
+        .push({
+            Text::new(label)
+                .font_size(24.0)
+                .color(Color::WHITE)
+                .selectable(false)
+        })
 }
 
-pub fn counter() -> Rc<RefCell<dyn Element>> {
-    let count = Rc::new(RefCell::new(Counter::default()));
+fn main() {
+    let count = Rc::new(RefCell::new(0));
+    let count_text = Text::new(&format!("Count: {}", count.borrow()));
 
-    let container = Window::new();
-
-    let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
-
-    let button = Container::new();
-    button
-        .borrow_mut()
-        .display(Display::Flex)
-        .flex_direction(FlexDirection::Row)
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
-        .push(create_button(
-            "-",
-            rgb(244, 67, 54),
-            -1,
-            count.clone(),
-            count_text.clone(),
-        ))
-        .push(create_button(
-            "+",
-            rgb(76, 175, 80),
-            1,
-            count.clone(),
-            count_text.clone(),
-        ));
-
-    container
-        .borrow_mut()
-        .display(Display::Flex)
+    Window::new()
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
-        .width(Unit::Percentage(100.0))
-        .height(Unit::Percentage(100.0))
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
-        .push(count_text)
-        .font_size(72.0)
-        .color(rgb(50, 50, 50))
-        .push(button);
+        .width(pct(100))
+        .height(pct(100))
+        .gap(px(20), px(20))
+        .push(count_text.clone())
+        .push({
+            Container::new()
+                .gap(px(20), px(20))
+                .push(create_button(
+                    "-",
+                    rgb(244, 67, 54),
+                    -1,
+                    count.clone(),
+                    count_text.clone(),
+                ))
+                .push(create_button(
+                    "+",
+                    rgb(76, 175, 80),
+                    1,
+                    count.clone(),
+                    count_text.clone(),
+                ))
+        });
 
-    let root = Container::new();
-    root.borrow_mut().push(container);
-
-    root
-}
-
-#[allow(unused)]
-#[cfg(not(target_os = "android"))]
-fn main() {
-    let counter = counter();
-
-    use craft_retained::CraftOptions;
-    util::setup_logging();
     craft_retained::craft_main(CraftOptions::basic("Counter"));
 }

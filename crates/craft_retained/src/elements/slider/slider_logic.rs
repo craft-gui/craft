@@ -1,10 +1,10 @@
 use kurbo::Point;
 
-use crate::elements::Slider;
+use crate::elements::SliderInner;
 use crate::elements::core::ElementInternals;
 use crate::elements::slider::slider::SliderDirection;
 
-impl Slider {
+impl SliderInner {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {
         let delta = by.abs() as f64 * self.get_step();
 
@@ -92,8 +92,8 @@ mod tests {
 
     use super::*;
 
-    fn make_test_slider() -> Rc<RefCell<Slider>> {
-        let slider = Slider::new(16.0);
+    fn make_test_slider() -> Rc<RefCell<SliderInner>> {
+        let slider = SliderInner::new(16.0);
         slider
     }
 
@@ -102,7 +102,7 @@ mod tests {
         let slider_ref = make_test_slider();
         let mut slider = slider_ref.borrow_mut();
 
-        slider.value(50.0);
+        slider.set_value(50.0);
         let next_step = slider.compute_step(1, slider.get_value());
 
         assert_eq!(next_step as i32, 51i32);
@@ -113,7 +113,7 @@ mod tests {
         let slider_ref = make_test_slider();
         let mut slider = slider_ref.borrow_mut();
 
-        slider.value(50.0);
+        slider.set_value(50.0);
         let next_step = slider.compute_step(-1, slider.get_value());
 
         assert_eq!(next_step as i32, 49i32);

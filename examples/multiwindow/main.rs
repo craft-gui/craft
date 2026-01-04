@@ -30,14 +30,11 @@ fn create_button(
     base_color: Color,
     delta: i64,
     state: Rc<RefCell<Counter>>,
-    count_text: Rc<RefCell<Text>>,
-) -> Rc<RefCell<Container>> {
+    count_text: Text,
+) -> Container {
     let border_color = rgb(0, 0, 0);
-    let label = Text::new(label);
-    label.borrow_mut().font_size(24.0).color(Color::WHITE).selectable(false);
-    let container = Container::new();
-    container
-        .borrow_mut()
+    let label = Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false);
+    let container = Container::new()
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
@@ -49,9 +46,7 @@ fn create_button(
         .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
                 state.borrow_mut().change(delta);
-                count_text
-                    .borrow_mut()
-                    .text(&format!("Count: {}", state.borrow().count()));
+                count_text.clone().text(&format!("Count: {}", state.borrow().count()));
                 event.prevent_propagate();
             }
         }))
@@ -59,16 +54,12 @@ fn create_button(
     container
 }
 
-pub fn counter() -> Rc<RefCell<dyn Element>> {
+pub fn counter() -> Window {
     let count = Rc::new(RefCell::new(Counter::default()));
-
-    let window = Window::new();
 
     let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
 
-    let button = Container::new();
-    button
-        .borrow_mut()
+    let button = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .gap(Unit::Px(20.0), Unit::Px(20.0))
@@ -87,8 +78,7 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
             count_text.clone(),
         ));
 
-    window
-        .borrow_mut()
+    Window::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
@@ -99,12 +89,7 @@ pub fn counter() -> Rc<RefCell<dyn Element>> {
         .push(count_text)
         .font_size(72.0)
         .color(rgb(50, 50, 50))
-        .push(button);
-
-    let root = Container::new();
-    root.borrow_mut().push(window);
-
-    root
+        .push(button)
 }
 
 fn main() {

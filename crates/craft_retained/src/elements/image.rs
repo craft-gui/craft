@@ -12,7 +12,7 @@ use craft_resource_manager::resource_type::ResourceType;
 use kurbo::{Affine, Point};
 
 use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 use crate::elements::core::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::layout::TaffyTree;
@@ -82,7 +82,7 @@ impl crate::elements::core::ElementData for Image {
     }
 }
 
-impl Element for Image {
+impl ElementImpl for Image {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -125,7 +125,7 @@ impl ElementInternals for Image {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
 
-        let computed_box_transformed = self.computed_box_transformed();
+        let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(renderer, scale_factor);
 

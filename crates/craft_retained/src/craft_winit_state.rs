@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
@@ -67,7 +65,7 @@ impl ApplicationHandler for CraftWinitState {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
-        let window: Option<Rc<RefCell<crate::elements::Window>>> =
+        let window: Option<crate::elements::Window> =
             WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
 
         let window = if let Some(window) = window { window } else { return };

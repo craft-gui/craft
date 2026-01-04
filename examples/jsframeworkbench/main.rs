@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, Window};
+use craft_retained::elements::{Container, Element, Text, TextInner, Window};
 use craft_retained::events::Event;
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::palette::css::WHITE;
@@ -62,13 +62,13 @@ impl Data {
 
 pub struct State {
     store: Store,
-    rows: Vec<Rc<RefCell<dyn Element>>>,
+    rows: Vec<Container>,
     selected_row: Option<usize>,
-    element: Rc<RefCell<dyn Element>>,
+    element: Container,
 }
 
 impl State {
-    fn new(element: Rc<RefCell<dyn Element>>) -> Self {
+    fn new(element: Container) -> Self {
         Self {
             store: Store::new(),
             rows: Vec::new(),
@@ -96,10 +96,9 @@ impl State {
     }
 
     pub fn remove_all_rows(&mut self) {
-        let to_remove = self.element.borrow().children().to_vec();
+        let to_remove = self.element.get_children();
         for child in to_remove {
             self.element
-                .borrow_mut()
                 .remove_child(child)
                 .expect("Failed to remove child!");
         }
@@ -109,10 +108,9 @@ impl State {
         if self.store.data.len() >= 999 {
             self.store.swap_rows();
             self.rows.swap(1, 998);
-            let child_1 = self.element.borrow().children()[1].clone();
-            let child_2 = self.element.borrow().children()[998].clone();
+            let child_1 = self.element.get_children()[1].clone();
+            let child_2 = self.element.get_children()[998].clone();
             self.element
-                .borrow_mut()
                 .swap_child(child_1, child_2)
                 .expect("Failed to swap children");
         }
@@ -120,7 +118,7 @@ impl State {
 
     pub fn append_rows(&mut self) {
         // Collect all new rows that need to be appended
-        let new_rows: Vec<Rc<RefCell<dyn Element>>> = self
+        let new_rows: Vec<Container> = self
             .store
             .data
             .iter()
@@ -133,48 +131,32 @@ impl State {
 
         self.rows.extend(new_rows.iter().cloned());
 
-        self.element
-            .borrow_mut()
-            .as_any_mut()
-            .downcast_mut::<Container>()
-            .unwrap()
-            .extend(new_rows);
+        for row in new_rows {
+            self.element.clone().push(row);
+        }
     }
 
     pub fn select(&mut self, row: Option<usize>) {
         self.selected_row = row;
     }
 
-    pub fn create_row(data: &Data) -> Rc<RefCell<dyn Element>> {
-        let row = Container::new();
+    pub fn create_row(data: &Data) -> Container {
 
-        {
-            let mut row_mut = row.borrow_mut();
-            row_mut
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Row)
-                .width(Unit::Auto)
-                //.align_items(Some(AlignItems::Center))
-                .padding(Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0))
-                .border_color(
-                    Color::from_rgb8(230, 230, 230),
-                    Color::from_rgb8(230, 230, 230),
-                    Color::from_rgb8(230, 230, 230),
-                    Color::from_rgb8(230, 230, 230),
-                );
-        }
-
-        let id_text = Text::new(&data.id.to_string());
-        id_text
-            .borrow_mut()
-            .width(Unit::Px(60.0))
-            .margin(Unit::Px(0.0), Unit::Px(12.0), Unit::Px(0.0), Unit::Px(0.0));
-
-        let label_text = Text::new(&data.label);
-
-        row.borrow_mut().push(id_text).push(label_text);
-
-        row
+        Container::new()
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Row)
+            .width(Unit::Auto)
+            .padding(Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0))
+            .border_color(
+                Color::from_rgb8(230, 230, 230),
+                Color::from_rgb8(230, 230, 230),
+                Color::from_rgb8(230, 230, 230),
+                Color::from_rgb8(230, 230, 230),
+            ).push(
+            Text::new(&data.id.to_string())
+                .width(Unit::Px(60.0))
+                .margin(Unit::Px(0.0), Unit::Px(12.0), Unit::Px(0.0), Unit::Px(0.0))
+            ).push(Text::new(&data.label))
     }
 
     pub fn add(&mut self) {
@@ -192,10 +174,10 @@ impl State {
     pub fn update(&mut self) {
         self.store.update();
         for (index, data) in self.store.data.iter().enumerate().step_by(10) {
-            let container = self.rows[index].borrow_mut();
-            let mut text = container.children()[1].borrow_mut();
-            if let Some(text) = text.as_any_mut().downcast_mut::<Text>() {
-                text.text(&data.label);
+            let container = self.rows[index].clone();
+            let text = container.get_children()[1].clone();
+            if let Some(text) = text.borrow_mut().as_any_mut().downcast_mut::<TextInner>() {
+                text.set_text(&data.label);
             }
         }
     }
@@ -293,13 +275,11 @@ impl Store {
 fn main() {
     //util::setup_logging();
 
-    let root = Window::new();
-
     let data_list = build_data_list();
     let state = Rc::new(RefCell::new(State::new(data_list.clone())));
 
     let body = build_body(state);
-    root.borrow_mut()
+    Window::new()
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
         .push(body);
@@ -308,12 +288,10 @@ fn main() {
     craft_retained::craft_main(CraftOptions::basic("jsframeworkbench"));
 }
 
-fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
-    let body = Container::new();
-
+fn build_body(state: Rc<RefCell<State>>) -> Container {
     let buttons = build_buttons(state.clone());
 
-    body.borrow_mut()
+    let body = Container::new()
         .overflow(Overflow::Visible, Overflow::Scroll)
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
@@ -321,12 +299,10 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
         .align_items(Some(AlignItems::Start))
         .padding(Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0));
 
-    let text = Text::new(r#"Craft-"keyed""#);
-    text.borrow_mut().font_size(32.0).color(Color::BLACK);
+    let text = Text::new(r#"Craft-"keyed""#)
+        .font_size(32.0).color(Color::BLACK);
 
-    let text_container = Container::new();
-    text_container
-        .borrow_mut()
+    let text_container = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .width(Unit::Percentage(50.0))
@@ -334,9 +310,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
         .align_items(Some(AlignItems::Center))
         .push(text);
 
-    let header = Container::new();
-    header
-        .borrow_mut()
+    let header = Container::new()
         .background_color(rgb(238, 238, 238))
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
@@ -346,24 +320,19 @@ fn build_body(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
         .width(Unit::Percentage(100.0))
         .push(buttons);
 
-    body.borrow_mut().push(header).push(state.borrow().element.clone());
-
     body
+        .push(header)
+        .push(state.borrow().element.clone())
 }
 
-fn build_data_list() -> Rc<RefCell<Container>> {
-    let data_list = Container::new();
-    data_list
-        .borrow_mut()
+fn build_data_list() -> Container {
+    Container::new()
         .flex_direction(FlexDirection::Column)
-        .width(Unit::Percentage(100.0));
-    data_list
+        .width(Unit::Percentage(100.0))
 }
 
-fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
-    let buttons = Container::new();
-    buttons
-        .borrow_mut()
+fn build_buttons(state: Rc<RefCell<State>>) -> Container {
+    let buttons = Container::new()
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::FlexEnd))
         .align_items(Some(AlignItems::Start))
@@ -394,27 +363,21 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Rc<RefCell<Container>> {
     let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap_rows());
 
     buttons
-        .borrow_mut()
         .push(btn_create_1k)
         .push(btn_create_10k)
         .push(btn_append_1k)
         .push(btn_update_10th_row)
         .push(btn_clear)
-        .push(btn_swap);
-
-    buttons
+        .push(btn_swap)
 }
 
-fn build_button<F>(label: &str, callback: F) -> Rc<RefCell<Container>>
+fn build_button<F>(label: &str, callback: F) -> Container
 where
     F: Fn(&mut Event, &PointerButtonEvent) + 'static,
-{
-    let button = Container::new();
 
     {
         let border_color = Color::from_rgb8(111, 111, 111);
-        button
-            .borrow_mut()
+        Container::new()
             .background_color(Color::from_rgb8(211, 211, 211))
             .border_color(border_color, border_color, border_color, border_color)
             .flex_direction(FlexDirection::Row)
@@ -425,14 +388,8 @@ where
             .height(Unit::Px(35.0))
             .background_color(Color::from_rgb8(51, 122, 183))
             .color(WHITE)
-            .border_radius((4.0, 4.0), (4.0, 4.0), (4.0, 4.0), (4.0, 4.0));
-    }
-
-    let text = Text::new(label);
-    text.borrow_mut().selectable(false).color(Color::WHITE);
-    button.borrow_mut().push(text);
-
-    button.borrow_mut().on_pointer_button_up(Rc::new(callback));
-
-    button
+            .border_radius((4.0, 4.0), (4.0, 4.0), (4.0, 4.0), (4.0, 4.0))
+            .push(
+                Text::new(label).selectable(false).color(Color::WHITE)
+            ).on_pointer_button_up(Rc::new(callback))
 }

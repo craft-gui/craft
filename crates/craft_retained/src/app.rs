@@ -27,7 +27,7 @@ use crate::CraftOptions;
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::core::ElementInternals;
-use crate::elements::{Element, ElementIdMap, Window};
+use crate::elements::{ElementImpl, ElementIdMap, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;
@@ -42,7 +42,7 @@ thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
-    pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn Element>>>> = RefCell::new(None);
+    pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementImpl >>>> = RefCell::new(None);
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
 
@@ -85,7 +85,7 @@ pub struct App {
     pub(crate) modifiers: Modifiers,
     pub redraw_flags: RedrawFlags,
 
-    pub(super) target_scratch: Vec<Rc<RefCell<dyn Element>>>,
+    pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementImpl>>>,
 
     pub(crate) previous_animation_flags: AnimationFlags,
 
@@ -142,8 +142,8 @@ impl App {
     }
 
     /// Handles the window resize event.
-    pub fn on_resize(&mut self, window: Rc<RefCell<Window>>, new_size: Size<f32>) {
-        window.borrow_mut().on_resize(new_size);
+    pub fn on_resize(&mut self, window: Window, new_size: Size<f32>) {
+        window.on_resize(new_size);
     }
 
     /// Initialize any data needed to layout/render text.
@@ -185,11 +185,11 @@ impl App {
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub fn on_request_redraw(&mut self, window: Rc<RefCell<Window>>) -> Option<TreeUpdate> {
+    pub fn on_request_redraw(&mut self, window: Window) -> Option<TreeUpdate> {
         self.on_request_redraw_internal(window.clone());
 
-        let tree_update = window.borrow_mut().compute_accessibility_tree_window();
-        if let Some(accesskit_adapter) = &mut window.borrow_mut().accesskit_adapter {
+        let tree_update = window.compute_accessibility_tree_window();
+        if let Some(accesskit_adapter) = &mut window.inner.borrow_mut().accesskit_adapter {
             accesskit_adapter.update_if_active(|| tree_update);
             None
         } else {
@@ -199,21 +199,19 @@ impl App {
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
-    pub fn on_request_redraw(&mut self, window: Rc<RefCell<Window>>) {
+    pub fn on_request_redraw(&mut self, window: Window) {
         self.on_request_redraw_internal(window);
     }
 
-    pub fn on_move(&mut self, _window: Rc<RefCell<Window>>) {}
+    pub fn on_move(&mut self, _window: Window) {}
 
-    fn on_request_redraw_internal(&mut self, window: Rc<RefCell<Window>>) {
+    fn on_request_redraw_internal(&mut self, window: Window) {
         self.update_resources();
 
-        window
-            .borrow_mut()
-            .on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
+        window.on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
     }
 
-    pub fn on_pointer_scroll(&mut self, window: Rc<RefCell<Window>>, pointer_scroll_update: PointerScrollEvent) {
+    pub fn on_pointer_scroll(&mut self, window: Window, pointer_scroll_update: PointerScrollEvent) {
         if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse
         {
             let y: f32 = match pointer_scroll_update.delta {
@@ -222,13 +220,13 @@ impl App {
                 PixelDelta(physical) => physical.y as f32,
             };
             if y < 0.0 {
-                window.borrow_mut().zoom_out();
+                window.zoom_out();
             } else {
-                window.borrow_mut().zoom_in();
+                window.zoom_in();
             }
-            let scale_factor = window.borrow().effective_scale_factor();
-            window.borrow_mut().scale_factor(scale_factor);
-            window.borrow_mut().mark_dirty();
+            let scale_factor = window.effective_scale_factor();
+            window.inner.borrow_mut().set_scale_factor(scale_factor);
+            window.inner.borrow_mut().mark_dirty();
             //style_root_element(window.borrow_mut().deref_mut(), window.borrow().window_size());
             self.request_redraw(RedrawFlags::new(true));
             return;
@@ -241,9 +239,9 @@ impl App {
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_pointer_button(&mut self, window: Rc<RefCell<Window>>, pointer_event: PointerButtonEvent, is_up: bool) {
+    pub fn on_pointer_button(&mut self, window: Window, pointer_event: PointerButtonEvent, is_up: bool) {
         let mut pointer_event = pointer_event;
-        let zoom = window.borrow().zoom_scale_factor();
+        let zoom = window.zoom_scale_factor();
         pointer_event.state.position.x /= zoom;
         pointer_event.state.position.y /= zoom;
 
@@ -256,7 +254,6 @@ impl App {
         };
         let message = event;
         window
-            .borrow_mut()
             .set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
         self.dispatch_event(window.clone(), &message, true);
@@ -264,15 +261,13 @@ impl App {
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_pointer_moved(&mut self, window: Rc<RefCell<Window>>, mouse_moved: PointerUpdate) {
+    pub fn on_pointer_moved(&mut self, window: Window, mouse_moved: PointerUpdate) {
         let mut mouse_moved = mouse_moved;
-        let zoom = window.borrow().zoom_scale_factor();
+        let zoom = window.zoom_scale_factor();
         mouse_moved.current.position.x /= zoom;
         mouse_moved.current.position.y /= zoom;
 
-        window
-            .borrow_mut()
-            .set_mouse_position(Some(mouse_moved.current.logical_point()));
+        window.set_mouse_position(Some(mouse_moved.current.logical_point()));
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);
 
@@ -281,7 +276,7 @@ impl App {
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    pub fn on_ime(&mut self, window: Rc<RefCell<Window>>, ime: Ime) {
+    pub fn on_ime(&mut self, window: Window, ime: Ime) {
         let event = CraftMessage::ImeEvent(ime);
         let message = event;
 
@@ -290,32 +285,32 @@ impl App {
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    fn dispatch_event(&mut self, window: Rc<RefCell<Window>>, message: &CraftMessage, _is_style: bool) {
-        let mouse_pos = Some(window.borrow().mouse_position());
-        let render_list = window.borrow().render_list.clone();
+    fn dispatch_event(&mut self, window: Window, message: &CraftMessage, _is_style: bool) {
+        let mouse_pos = Some(window.mouse_position());
+        let render_list = window.inner.borrow().render_list.clone();
         self.event_dispatcher.dispatch_event(
             message,
             mouse_pos.unwrap_or_default(),
-            window.clone(),
+            window.inner.clone(),
             &mut self.text_context,
             render_list.borrow_mut().deref_mut(),
             &mut self.target_scratch,
         );
-        window.borrow().winit_window().unwrap().request_redraw();
+        window.winit_window().unwrap().request_redraw();
     }
 
-    pub fn on_keyboard_input(&mut self, window: Rc<RefCell<Window>>, keyboard_input: KeyboardEvent) {
+    pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
         if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
             self.modifiers.set(Modifiers::CONTROL, false);
         }
         if keyboard_input.modifiers.ctrl() {
             if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
-                window.borrow_mut().zoom_in();
+                window.zoom_in();
                 self.request_redraw(RedrawFlags::new(true));
                 return;
             } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
-                window.borrow_mut().zoom_out();
+                window.zoom_out();
                 self.request_redraw(RedrawFlags::new(true));
                 return;
             }

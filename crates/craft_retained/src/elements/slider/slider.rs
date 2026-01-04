@@ -10,8 +10,9 @@ use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 
 use crate::app::queue_event;
-use crate::elements::Element;
+use crate::elements::{Element, ElementImpl};
 use crate::elements::core::ElementInternals;
+use crate::elements::element::AsElement;
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -26,7 +27,12 @@ pub enum SliderDirection {
     Vertical,
 }
 
+#[derive(Clone)]
 pub struct Slider {
+    pub inner: Rc<RefCell<SliderInner>>,
+}
+
+pub struct SliderInner {
     element_data: ElementData,
 
     step: f64,
@@ -47,6 +53,117 @@ pub struct Slider {
 }
 
 impl Slider {
+    pub fn new(thumb_size: f32) -> Self {
+        Self {
+            inner: SliderInner::new(thumb_size)
+        }
+    }
+
+    pub fn value(self, value: f64) -> Self {
+        self.inner.borrow_mut().set_value(value);
+        self
+    }
+
+    pub fn get_value(&self) -> f64 {
+        self.inner.borrow().get_value()
+    }
+
+    pub fn step(self, value: f64) -> Self {
+        self.inner.borrow_mut().set_step(value);
+        self
+    }
+
+    pub fn get_step(&self) -> f64 {
+        self.inner.borrow().get_step()
+    }
+
+    pub fn min(self, min: f64) -> Self {
+        self.inner.borrow_mut().set_min(min);
+        self
+    }
+
+    pub fn get_min(&self) -> f64 {
+        self.inner.borrow().get_min()
+    }
+
+    pub fn max(self, max: f64) -> Self {
+        self.inner.borrow_mut().set_max(max);
+        self
+    }
+
+    pub fn get_max(&self) -> f64 {
+        self.inner.borrow().get_max()
+    }
+
+    pub fn direction(self, direction: SliderDirection) -> Self {
+        self.inner.borrow_mut().set_direction(direction);
+        self
+    }
+
+    pub fn get_direction(&self) -> SliderDirection {
+        self.inner.borrow().get_direction()
+    }
+
+    pub fn thumb_size(self, thumb_size: f64) -> Self {
+        self.inner.borrow_mut().set_thumb_size(thumb_size);
+        self
+    }
+
+    pub fn get_thumb_size(&self) -> f64 {
+        self.inner.borrow().get_thumb_size()
+    }
+
+    pub fn thumb_color(self, thumb_background_color: Color) -> Self {
+        self.inner.borrow_mut().set_thumb_color(thumb_background_color);
+        self
+    }
+
+    pub fn get_thumb_color(&self) -> Color {
+        self.inner.borrow().get_thumb_color()
+    }
+
+    pub fn thumb_border_radius(
+        self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> Self {
+        self.inner.borrow_mut().set_thumb_border_radius(top, right, bottom, left);
+        self
+    }
+
+    pub fn get_thumb_border_radius(&self) -> Option<[(f32, f32); 4]> {
+        self.inner.borrow().get_thumb_border_radius()
+    }
+
+    pub fn track_color(self, track_background_color: Color) -> Self {
+        self.inner.borrow_mut().set_track_color(track_background_color);
+        self
+    }
+
+    pub fn get_track_color(&self) -> Option<Color> {
+        self.inner.borrow().get_track_color()
+    }
+
+    pub fn track_border_radius(
+        self,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> Self {
+        self.inner.borrow_mut().set_track_border_radius(top, right, bottom, left);
+        self
+    }
+
+    pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
+        self.inner.borrow().get_track_border_radius()
+    }
+
+}
+
+impl SliderInner {
     pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
         let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
@@ -65,7 +182,7 @@ impl Slider {
             })
         });
 
-        me.borrow_mut().background_color(palette::css::LIGHT_GRAY);
+        me.borrow_mut().set_background_color(palette::css::LIGHT_GRAY);
         let border_radius = 25.0;
         me.borrow_mut().border_radius(
             (border_radius, border_radius),
@@ -74,11 +191,11 @@ impl Slider {
             (border_radius, border_radius),
         );
         if me.borrow_mut().direction == SliderDirection::Horizontal {
-            me.borrow_mut().width(Unit::Px(140.0));
-            me.borrow_mut().height(Unit::Px(10.0));
+            me.borrow_mut().set_width(Unit::Px(140.0));
+            me.borrow_mut().set_height(Unit::Px(10.0));
         } else {
-            me.borrow_mut().height(Unit::Px(140.0));
-            me.borrow_mut().width(Unit::Px(10.0));
+            me.borrow_mut().set_height(Unit::Px(140.0));
+            me.borrow_mut().set_width(Unit::Px(10.0));
         }
 
         // TODO: FIX
@@ -95,9 +212,8 @@ impl Slider {
         me
     }
 
-    pub fn value(&mut self, value: f64) -> &mut Self {
+    pub fn set_value(&mut self, value: f64) {
         self.value = value;
-        self
     }
 
     pub fn get_value(&self) -> f64 {
@@ -105,9 +221,8 @@ impl Slider {
     }
 
     /// Set the slider step value. Defaults to 1.
-    pub fn step(&mut self, value: f64) -> &mut Self {
+    pub fn set_step(&mut self, value: f64) {
         self.step = value;
-        self
     }
 
     pub fn get_step(&self) -> f64 {
@@ -115,9 +230,8 @@ impl Slider {
     }
 
     /// Set the minimum slider value. Defaults to 0.
-    pub fn min(&mut self, min: f64) -> &mut Self {
+    pub fn set_min(&mut self, min: f64) {
         self.min = min;
-        self
     }
 
     pub fn get_min(&self) -> f64 {
@@ -125,9 +239,8 @@ impl Slider {
     }
 
     /// Set the max slider value. Defaults to 100.
-    pub fn max(&mut self, max: f64) -> &mut Self {
+    pub fn set_max(&mut self, max: f64) {
         self.max = max;
-        self
     }
 
     pub fn get_max(&self) -> f64 {
@@ -135,66 +248,60 @@ impl Slider {
     }
 
     /// Set the slider direction.
-    pub fn direction(&mut self, direction: SliderDirection) -> &mut Self {
+    pub fn set_direction(&mut self, direction: SliderDirection) {
         self.direction = direction;
-        self
     }
 
     pub fn get_direction(&self) -> SliderDirection {
         self.direction
     }
 
-    pub fn thumb_size(&mut self, thumb_size: f64) -> &mut Self {
+    pub fn set_thumb_size(&mut self, thumb_size: f64) {
         self.thumb_size = thumb_size;
-        self
     }
 
     pub fn get_thumb_size(&self) -> f64 {
         self.thumb_size
     }
 
-    pub fn thumb_color(&mut self, thumb_background_color: Color) -> &mut Self {
+    pub fn set_thumb_color(&mut self, thumb_background_color: Color) {
         self.thumb_background_color = thumb_background_color;
-        self
     }
 
     pub fn get_thumb_color(&self) -> Color {
         self.thumb_background_color
     }
 
-    pub fn thumb_border_radius(
+    pub fn set_thumb_border_radius(
         &mut self,
         top: (f32, f32),
         right: (f32, f32),
         bottom: (f32, f32),
         left: (f32, f32),
-    ) -> &mut Self {
+    ) {
         self.thumb_border_radius = Some([top, right, bottom, left]);
-        self
     }
 
     pub fn get_thumb_border_radius(&self) -> Option<[(f32, f32); 4]> {
         self.thumb_border_radius
     }
 
-    pub fn track_color(&mut self, track_background_color: Color) -> &mut Self {
+    pub fn set_track_color(&mut self, track_background_color: Color) {
         self.track_background_color = Some(track_background_color);
-        self
     }
 
     pub fn get_track_color(&self) -> Option<Color> {
         self.track_background_color
     }
 
-    pub fn track_border_radius(
+    pub fn set_track_border_radius(
         &mut self,
         top: (f32, f32),
         right: (f32, f32),
         bottom: (f32, f32),
         left: (f32, f32),
-    ) -> &mut Self {
+    ) {
         self.track_border_radius = Some([top, right, bottom, left]);
-        self
     }
 
     pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
@@ -202,7 +309,15 @@ impl Slider {
     }
 }
 
-impl crate::elements::core::ElementData for Slider {
+impl Element for Slider {}
+
+impl AsElement for Slider {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::core::ElementData for SliderInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -212,7 +327,7 @@ impl crate::elements::core::ElementData for Slider {
     }
 }
 
-impl Element for Slider {
+impl ElementImpl for SliderInner {
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
         let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
@@ -249,7 +364,7 @@ impl Element for Slider {
     }
 }
 
-impl ElementInternals for Slider {
+impl ElementInternals for SliderInner {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

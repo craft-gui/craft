@@ -17,7 +17,7 @@ use web_time::{Duration, Instant};
 use winit::dpi;
 
 use crate::app::{TAFFY_TREE, request_layout};
-use crate::elements::TextInput;
+use crate::elements::{TextInputInner};
 use crate::elements::core::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::layout::layout_context::TextHashKey;
@@ -64,7 +64,7 @@ pub struct TextInputState {
 
 impl Default for TextInputState {
     fn default() -> Self {
-        let default_style = TextInput::get_default_style();
+        let default_style = TextInputInner::get_default_style();
         let mut editor = PlainEditor::new(default_style.font_size(), None);
         editor.set_scale(1.0);
         let style_set = editor.edit_styles();
@@ -251,7 +251,7 @@ impl TextInputState {
     }
 
     #[allow(dead_code)]
-    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInput) -> Option<String> {
+    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInputInner) -> Option<String> {
         if let Some(ranged_styles) = &element.ranged_styles {
             let layout = self.editor.try_layout().unwrap();
             for (range, style) in ranged_styles.styles.iter() {

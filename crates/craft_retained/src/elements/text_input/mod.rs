@@ -16,11 +16,11 @@ use winit::event::Ime;
 
 use crate::app::ELEMENTS;
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
-use crate::elements::element::Element;
+use crate::elements::element::{AsElement, ElementImpl};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::scrollable;
+use crate::elements::{scrollable, Element};
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -31,9 +31,14 @@ use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 use crate::utils::cloneable_any::CloneableAny;
 
-// A stateful element that shows text.
 #[derive(Clone)]
 pub struct TextInput {
+    pub inner: Rc<RefCell<TextInputInner>>,
+}
+
+// A stateful element that shows text.
+#[derive(Clone)]
+pub struct TextInputInner {
     element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
@@ -55,13 +60,13 @@ pub enum TextInputMessage {
 }
 
 impl TextInput {
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        let default_style = Self::get_default_style();
+    pub fn new(text: &str) -> Self {
+        let default_style = TextInputInner::get_default_style();
 
         let text_input_state = TextInputState::default();
 
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            RefCell::new(Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInputInner>>| {
+            RefCell::new(TextInputInner {
                 text: Some(text.to_string()),
                 element_data: ElementData::new(me.clone(), true),
                 use_text_value_on_update: true,
@@ -71,29 +76,73 @@ impl TextInput {
                 me: me.clone(),
             })
         });
-        me.borrow_mut().element_data.style = default_style;
+        inner.borrow_mut().element_data.style = default_style;
 
-        me.borrow_mut().text(text);
+        inner.borrow_mut().set_text(text);
 
         let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
-            element: me.borrow().me.clone(),
+            element: inner.borrow().me.clone(),
         }));
-        me.borrow_mut().element_data.create_layout_node(context);
+        inner.borrow_mut().element_data.create_layout_node(context);
 
 
-        let taffy_id = me.borrow().element_data.layout_item.taffy_node_id;
-        me.borrow_mut().state.taffy_id = taffy_id;
-        me.borrow_mut().state.editor.taffy_id = taffy_id;
+        let taffy_id = inner.borrow().element_data.layout_item.taffy_node_id;
+        inner.borrow_mut().state.taffy_id = taffy_id;
+        inner.borrow_mut().state.editor.taffy_id = taffy_id;
 
         ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().deref());
+            elements.insert(inner.borrow().deref());
         });
 
-        me
+        Self {
+            inner
+        }
+    }
+
+    /// Whether the text input will update the editor every update with the user provided text.
+    /// NOTE: The editor will always use the user provided text on initialization.
+    pub fn use_text_value_on_update(self, use_initial_text_value: bool) -> Self {
+        self.inner.borrow_mut().use_text_value_on_update(use_initial_text_value);
+        self
+    }
+
+    pub fn disable(self) -> Self {
+        self.inner.borrow_mut().disable();
+        self
+    }
+
+    pub fn get_disabled(&self) -> bool {
+        self.inner.borrow().disabled
+    }
+
+    pub fn get_text(&self) -> String {
+        self.inner.borrow().state.editor().raw_text().to_owned()
+    }
+
+    /// Set the text.
+    ///
+    /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
+    /// render caches will be computed in the next layout/render pass.
+    pub fn set_text(self, text: &str) -> Self {
+        self.inner.borrow_mut().set_text(text);
+        self
+    }
+
+    pub fn ranged_styles(self, ranged_styles: RangedStyles) -> Self {
+        self.inner.borrow_mut().set_ranged_styles(ranged_styles);
+        self
     }
 }
 
-impl crate::elements::core::ElementData for TextInput {
+impl Element for TextInput {}
+
+impl AsElement for TextInput {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::core::ElementData for TextInputInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -103,7 +152,7 @@ impl crate::elements::core::ElementData for TextInput {
     }
 }
 
-impl ElementInternals for TextInput {
+impl ElementInternals for TextInputInner {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -372,12 +421,11 @@ impl ElementInternals for TextInput {
     }
 }
 
-impl TextInput {
+impl TextInputInner {
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
-    pub fn use_text_value_on_update(mut self, use_initial_text_value: bool) -> Self {
+    pub fn use_text_value_on_update(&mut self, use_initial_text_value: bool) {
         self.use_text_value_on_update = use_initial_text_value;
-        self
     }
 
     pub fn disable(&mut self) -> &mut Self {
@@ -397,20 +445,20 @@ impl TextInput {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn text(&mut self, text: &str) -> &mut Self {
+    pub fn set_text(&mut self, text: &str) -> &mut Self {
         self.state.set_text(text);
         self.mark_dirty();
         self
     }
 
-    pub fn ranged_styles(&mut self, ranged_styles: RangedStyles) -> &mut Self {
+    pub fn set_ranged_styles(&mut self, ranged_styles: RangedStyles) -> &mut Self {
         self.state.set_ranged_styles(ranged_styles);
         self.mark_dirty();
         self
     }
 }
 
-impl TextData for TextInput {
+impl TextData for TextInputInner {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }
@@ -425,7 +473,7 @@ fn parley_box_to_rect(bounding_box: BoundingBox) -> Rectangle {
     )
 }
 
-impl Element for TextInput {
+impl ElementImpl for TextInputInner {
     fn as_any(&self) -> &dyn Any {
         self
     }

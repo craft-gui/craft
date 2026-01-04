@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use winit::event_loop::ActiveEventLoop;
@@ -8,7 +7,7 @@ use crate::app::App;
 use crate::elements::Window;
 
 pub(crate) struct WindowManager {
-    windows: Vec<Rc<RefCell<Window>>>,
+    windows: Vec<Window>,
 }
 
 impl WindowManager {
@@ -18,13 +17,13 @@ impl WindowManager {
         }
     }
 
-    pub(crate) fn add_window(&mut self, window: Rc<RefCell<Window>>) {
+    pub(crate) fn add_window(&mut self, window: Window) {
         self.windows.push(window);
     }
 
-    pub(crate) fn get_window_by_id(&self, window_id: WindowId) -> Option<Rc<RefCell<Window>>> {
+    pub(crate) fn get_window_by_id(&self, window_id: WindowId) -> Option<Window> {
         for window in &self.windows {
-            let winit_window = window.borrow_mut().winit_window();
+            let winit_window = window.winit_window();
             if winit_window.is_some() && winit_window.unwrap().id() == window_id {
                 return Some(window.clone());
             }
@@ -35,7 +34,7 @@ impl WindowManager {
 
     pub(crate) fn on_resume(&mut self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
         for window_element in &self.windows {
-            window_element.borrow_mut().create(craft_app, event_loop);
+            window_element.create(craft_app, event_loop);
         }
     }
 
@@ -46,19 +45,19 @@ impl WindowManager {
 
         // Create windows that were created during the program run.
         for window_element in &self.windows {
-            if window_element.borrow().winit_window.is_none() {
-                window_element.borrow_mut().create(craft_app, event_loop);
+            if window_element.winit_window().is_none() {
+                window_element.create(craft_app, event_loop);
             }
         }
     }
 
-    pub fn close_window(&mut self, window: &Rc<RefCell<Window>>) {
+    pub fn close_window(&mut self, window: &Window) {
         self.windows.retain(|w| {
-            let is_target = Rc::ptr_eq(w, window);
+            let is_target = Rc::ptr_eq(&w.inner, &window.inner);
 
             if is_target {
-                w.borrow_mut().winit_window = None;
-                w.borrow_mut().renderer = None;
+                w.set_winit_window(None);
+                w.inner.borrow_mut().renderer = None;
             }
 
             !is_target

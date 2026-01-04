@@ -6,16 +6,16 @@ use craft_renderer::RenderList;
 use kurbo::Point;
 
 use crate::app::ELEMENTS;
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
 
-pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<Rc<RefCell<dyn Element>>> {
+pub(super) fn freeze_target_list(target: Rc<RefCell<dyn ElementImpl>>) -> VecDeque<Rc<RefCell<dyn ElementImpl>>> {
     let mut current_target = Some(Rc::clone(&target));
 
     // Gather and "freeze" the elements we will visit.
-    let mut targets: VecDeque<Rc<RefCell<dyn Element>>> = VecDeque::new();
+    let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = VecDeque::new();
     while let Some(node) = current_target {
         targets.push_back(Rc::clone(&node));
         current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
@@ -26,12 +26,12 @@ pub(super) fn freeze_target_list(target: Rc<RefCell<dyn Element>>) -> VecDeque<R
 
 /// Find the target that should be visited.
 pub(super) fn find_target(
-    root: &Rc<RefCell<dyn Element>>,
+    root: &Rc<RefCell<dyn ElementImpl>>,
     mouse_position: Option<Point>,
     message: &CraftMessage,
     render_list: &mut RenderList,
-    target_scratch: &mut Vec<Rc<RefCell<dyn Element>>>,
-) -> Rc<RefCell<dyn Element>> {
+    target_scratch: &mut Vec<Rc<RefCell<dyn ElementImpl>>>,
+) -> Rc<RefCell<dyn ElementImpl>> {
     let mut target = find_pointer_capture_target(message);
     if let Some(target) = target {
         return target;
@@ -63,7 +63,7 @@ pub(super) fn find_target(
 
 pub(super) fn call_user_event_handlers(
     event: &mut Event,
-    current_target: &Rc<RefCell<dyn Element>>,
+    current_target: &Rc<RefCell<dyn ElementImpl>>,
     message: &CraftMessage,
 ) {
     match message {
@@ -143,8 +143,8 @@ pub(super) fn call_user_event_handlers(
 
 pub(super) fn call_default_element_event_handler(
     event: &mut Event,
-    current_target: &Rc<RefCell<dyn Element>>,
-    target: &Rc<RefCell<dyn Element>>,
+    current_target: &Rc<RefCell<dyn ElementImpl>>,
+    target: &Rc<RefCell<dyn ElementImpl>>,
     text_context: &mut Option<TextContext>,
     message: &CraftMessage,
 ) {

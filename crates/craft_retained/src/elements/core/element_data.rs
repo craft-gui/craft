@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use crate::elements::Element;
+use crate::elements::ElementImpl;
 
 /// The trait to provide common element data.
 pub trait ElementData {
@@ -17,12 +17,12 @@ pub trait ElementData {
     }
 
     /// Returns the element's parent element.
-    fn parent(&self) -> Option<Weak<RefCell<dyn Element>>> {
+    fn parent(&self) -> Option<Weak<RefCell<dyn ElementImpl>>> {
         self.element_data().parent.clone()
     }
 
     /// Returns the element's children.
-    fn children(&self) -> &[Rc<RefCell<dyn Element>>] {
+    fn children(&self) -> &[Rc<RefCell<dyn ElementImpl>>] {
         self.element_data().children.as_slice()
     }
 }
