@@ -23,7 +23,9 @@ use {accesskit::{Action, Role}, accesskit_winit::Adapter};
 use crate::RendererBox;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
-use crate::app::{App, FOCUS, TAFFY_TREE, WINDOW_MANAGER};
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use crate::app::FOCUS;
+use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER};
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
 use crate::elements::{Element, scrollable};
