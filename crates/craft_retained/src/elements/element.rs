@@ -855,4 +855,9 @@ pub trait Element: ElementData + crate::elements::core::ElementInternals + Any {
             });
         }
     }
+
+    /// Re-
+    fn to_rc(&self) -> Rc<RefCell<dyn Element>> {
+        self.element_data().me.upgrade().unwrap()
+    }
 }

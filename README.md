@@ -1,3 +1,91 @@
 # 📜 Craft
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](./LICENSE)
 [![Discord](https://img.shields.io/discord/1382383100562243746?logo=discord&logoColor=%23ffffff&labelColor=%236A7EC2&color=%237389D8)](https://discord.gg/Atb8nuAub2)
+
+Craft is a library for creating desktops user interfaces. craft_retained provides platform independent widgets.
+
+
+## Example
+
+```rust
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use craft_retained::CraftOptions;
+use craft_retained::elements::{Container, Element, Text, Window};
+use craft_retained::events::ui_events::pointer::PointerButton;
+use craft_retained::style::{AlignItems, FlexDirection, JustifyContent, Unit};
+use craft_retained::{Color, rgb};
+
+fn create_button(
+    label: &str,
+    base_color: Color,
+    delta: i64,
+    state: Rc<RefCell<i64>>,
+    count_text: Rc<RefCell<Text>>,
+) -> Rc<RefCell<dyn Element>> {
+    let border_color = rgb(0, 0, 0);
+    Container::new()
+        .borrow_mut()
+        .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
+        .border_color(border_color, border_color, border_color, border_color)
+        .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
+        .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
+        .justify_content(Some(JustifyContent::Center))
+        .background_color(base_color)
+        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
+            if pointer_button_event.button == Some(PointerButton::Primary) {
+                *state.borrow_mut() += delta;
+                count_text.borrow_mut().text(&format!("Count: {}", state.borrow()));
+                event.prevent_propagate();
+            }
+        }))
+        .push({
+            Text::new(label)
+                .borrow_mut()
+                .font_size(24.0)
+                .color(Color::WHITE)
+                .selectable(false)
+                .to_rc()
+        })
+        .to_rc()
+}
+
+fn main() {
+    let count = Rc::new(RefCell::new(0));
+    let count_text = Text::new(&format!("Count: {}", count.borrow()));
+
+    Window::new()
+        .borrow_mut()
+        .flex_direction(FlexDirection::Column)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .width(Unit::Percentage(100.0))
+        .height(Unit::Percentage(100.0))
+        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .push(count_text.clone())
+        .push({
+            Container::new()
+                .borrow_mut()
+                .gap(Unit::Px(20.0), Unit::Px(20.0))
+                .push(create_button(
+                    "-",
+                    rgb(244, 67, 54),
+                    -1,
+                    count.clone(),
+                    count_text.clone(),
+                ))
+                .push(create_button(
+                    "+",
+                    rgb(76, 175, 80),
+                    1,
+                    count.clone(),
+                    count_text.clone(),
+                ))
+                .to_rc()
+        });
+
+    craft_retained::craft_main(CraftOptions::basic("Counter"));
+}
+
+```
