@@ -31,7 +31,6 @@ pub struct TextInputState {
     pub(crate) taffy_id: Option<NodeId>,
     origin: Point,
 
-    taffy_node: Option<NodeId>,
     pub is_active: bool,
     #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
@@ -73,7 +72,6 @@ impl Default for TextInputState {
         Self {
             taffy_id: None,
             origin: Default::default(),
-            taffy_node: None,
             ime_state: ImeState::default(),
             is_active: false,
             editor,
@@ -129,7 +127,7 @@ impl TextInputState {
             let cursor_pos = self.cursor_pos();
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
-            if let Some(taffy_id) = self.taffy_node {
+            if let Some(taffy_id) = self.taffy_id {
                 request_layout(taffy_id);
             }
         }
@@ -166,7 +164,7 @@ impl TextInputState {
         self.text_render = None;
         self.content_widths = None;
 
-        if let Some(id) = self.taffy_node {
+        if let Some(id) = self.taffy_id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
                 taffy_tree.mark_dirty(id);
             })
