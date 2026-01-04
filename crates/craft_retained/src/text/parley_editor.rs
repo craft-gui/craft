@@ -96,6 +96,7 @@ impl<'source> IntoIterator for SplitString<'source> {
 /// This layout is invalidated by a number.
 #[derive(Clone)]
 pub struct PlainEditor {
+    pub(crate) taffy_id: Option<taffy::NodeId>,
     layout: Layout<ColorBrush>,
     buffer: String,
     default_style: StyleSet<ColorBrush>,
@@ -128,6 +129,7 @@ pub struct PlainEditor {
 impl Default for PlainEditor {
     fn default() -> Self {
         PlainEditor {
+            taffy_id: None,
             layout: Default::default(),
             buffer: "".to_string(),
             default_style: StyleSet::new(1.0),
@@ -149,8 +151,9 @@ impl Default for PlainEditor {
 
 impl PlainEditor {
     /// Create a new editor, with default font size `font_size`.
-    pub fn new(font_size: f32) -> Self {
+    pub fn new(font_size: f32, taffy_id: Option<taffy::NodeId>) -> Self {
         Self {
+            taffy_id,
             default_style: StyleSet::new(font_size),
             buffer: Default::default(),
             layout: Default::default(),
@@ -426,7 +429,9 @@ impl PlainEditorDriver<'_> {
         self.refresh_layout();
         self.editor
             .set_selection(Selection::from_point(&self.editor.layout, x, y));
-        request_layout();
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_layout(taffy_id);
+        }
     }
 
     /// Move the cursor to a byte index.
@@ -595,7 +600,9 @@ impl PlainEditorDriver<'_> {
         self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_visual_word(&self.editor.layout, true));
-        request_layout();
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_layout(taffy_id);
+        }
     }
 
     /// Select the word at the point.
@@ -603,7 +610,9 @@ impl PlainEditorDriver<'_> {
         self.refresh_layout();
         self.editor
             .set_selection(Selection::word_from_point(&self.editor.layout, x, y));
-        request_layout();
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_layout(taffy_id);
+        }
     }
 
     /// Select the physical line at the point.
@@ -611,7 +620,9 @@ impl PlainEditorDriver<'_> {
         self.refresh_layout();
         let line = Selection::line_from_point(&self.editor.layout, x, y);
         self.editor.set_selection(line);
-        request_layout();
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_layout(taffy_id);
+        }
     }
 
     /// Move the selection focus point to the cluster boundary closest to point.

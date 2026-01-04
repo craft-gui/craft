@@ -80,6 +80,11 @@ impl TextInput {
         }));
         me.borrow_mut().element_data.create_layout_node(context);
 
+
+        let taffy_id = me.borrow().element_data.layout_item.taffy_node_id;
+        me.borrow_mut().state.taffy_id = taffy_id;
+        me.borrow_mut().state.editor.taffy_id = taffy_id;
+
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(me.borrow().deref());
         });

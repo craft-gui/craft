@@ -28,13 +28,14 @@ use crate::text::{RangedStyles, text_render_data};
 
 #[derive(Clone)]
 pub struct TextInputState {
+    pub(crate) taffy_id: Option<NodeId>,
     origin: Point,
 
     taffy_node: Option<NodeId>,
     pub is_active: bool,
     #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
-    editor: PlainEditor,
+    pub(crate) editor: PlainEditor,
 
     cache: HashMap<TextHashKey, taffy::Size<f32>>,
 
@@ -65,11 +66,12 @@ pub struct TextInputState {
 impl Default for TextInputState {
     fn default() -> Self {
         let default_style = TextInput::get_default_style();
-        let mut editor = PlainEditor::new(default_style.font_size());
+        let mut editor = PlainEditor::new(default_style.font_size(), None);
         editor.set_scale(1.0);
         let style_set = editor.edit_styles();
         default_style.add_styles_to_style_set(style_set);
         Self {
+            taffy_id: None,
             origin: Default::default(),
             taffy_node: None,
             ime_state: ImeState::default(),
@@ -127,7 +129,9 @@ impl TextInputState {
             let cursor_pos = self.cursor_pos();
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
-            request_layout();
+            if let Some(taffy_id) = self.taffy_node {
+                request_layout(taffy_id);
+            }
         }
     }
 

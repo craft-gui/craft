@@ -12,7 +12,7 @@ use rustc_hash::FxHashMap;
 use taffy::Overflow;
 
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
-use crate::app::{TAFFY_TREE, request_layout};
+use crate::app::{TAFFY_TREE};
 use crate::elements::Element;
 use crate::elements::core::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
@@ -395,7 +395,6 @@ pub trait ElementInternals: ElementData {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
-        request_layout();
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
@@ -406,8 +405,6 @@ pub trait ElementInternals: ElementData {
 
     /// Updates taffy's style to reflect craft's style struct.
     fn update_taffy_style(&mut self) {
-        request_layout();
-
         let id = self.element_data().layout_item.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {

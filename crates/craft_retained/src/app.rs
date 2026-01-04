@@ -415,9 +415,9 @@ impl App {
 }
 
 #[inline]
-pub fn request_layout() {
+pub fn request_layout(taffy_node: NodeId) {
     TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        taffy_tree.request_layout();
+        taffy_tree.mark_dirty(taffy_node);
     });
 }
 
