@@ -27,16 +27,16 @@ use crate::accessibility::{access_handler::CraftAccessHandler, activation_handle
 use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER};
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
-use crate::elements::element_data::ElementData;
-use crate::elements::{ElementImpl, scrollable, Element};
 use crate::elements::element::AsElement;
+use crate::elements::element_data::ElementData;
+use crate::elements::{Element, ElementImpl, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct Window {
-    pub inner: Rc<RefCell<WindowInternal>>
+    pub inner: Rc<RefCell<WindowInternal>>,
 }
 
 /// Stores one or more elements.
@@ -82,17 +82,16 @@ impl Window {
         inner.borrow_mut().element_data.create_layout_node(None);
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.add_window(Window {inner: inner.clone()});
+            window_manager.add_window(Window {
+                inner: inner.clone(),
+            });
         });
 
-        Window {
-            inner
-        }
+        Window { inner }
     }
 }
 
 impl Window {
-
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.inner.borrow().winit_window()
     }
@@ -157,7 +156,7 @@ impl Window {
     /// Updates the reactive tree, layouts the elements, and draws the view.
     #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
     pub fn on_request_redraw(&self, craft_app: &mut App) {
-       self.inner.borrow_mut().on_request_redraw(craft_app)
+        self.inner.borrow_mut().on_request_redraw(craft_app)
     }
 
     pub(crate) fn create(&self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
@@ -166,7 +165,6 @@ impl Window {
 }
 
 impl WindowInternal {
-
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.winit_window.clone()
     }

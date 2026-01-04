@@ -27,7 +27,7 @@ use crate::CraftOptions;
 use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::core::ElementInternals;
-use crate::elements::{ElementImpl, ElementIdMap, Window};
+use crate::elements::{ElementIdMap, ElementImpl, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;
@@ -253,8 +253,7 @@ impl App {
             CraftMessage::PointerButtonDown(pointer_event)
         };
         let message = event;
-        window
-            .set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
+        window.set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
         self.dispatch_event(window.clone(), &message, true);
 

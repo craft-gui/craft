@@ -36,11 +36,11 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 use winit::dpi;
 
-use crate::elements::{Element, ElementImpl};
 use crate::elements::core::ElementInternals;
 use crate::elements::element::AsElement;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
+use crate::elements::{Element, ElementImpl};
 use crate::layout::TaffyTree;
 
 #[derive(Clone)]
@@ -103,9 +103,7 @@ impl Text {
 
         inner.borrow_mut().set_text(text);
 
-        Text {
-            inner
-        }
+        Text { inner }
     }
 
     pub fn get_selectable(&self) -> bool {
@@ -133,7 +131,6 @@ impl Text {
 }
 
 impl TextInner {
-
     pub fn get_selectable(&self) -> bool {
         self.selectable
     }

@@ -20,8 +20,8 @@ use crate::elements::element::{AsElement, ElementImpl};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{scrollable, Element};
 use crate::elements::text_input::text_input_state::TextInputState;
+use crate::elements::{Element, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -85,7 +85,6 @@ impl TextInput {
         }));
         inner.borrow_mut().element_data.create_layout_node(context);
 
-
         let taffy_id = inner.borrow().element_data.layout_item.taffy_node_id;
         inner.borrow_mut().state.taffy_id = taffy_id;
         inner.borrow_mut().state.editor.taffy_id = taffy_id;
@@ -94,9 +93,7 @@ impl TextInput {
             elements.insert(inner.borrow().deref());
         });
 
-        Self {
-            inner
-        }
+        Self { inner }
     }
 
     /// Whether the text input will update the editor every update with the user provided text.

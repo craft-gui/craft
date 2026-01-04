@@ -12,14 +12,8 @@ use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
 use crate::elements::ElementIdMap;
 use crate::elements::core::ElementData;
-use crate::events::{
-    KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler,
-    PointerUpdateHandler, SliderValueChangedHandler,
-};
-use crate::style::{
-    AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit,
-    Weight, Wrap,
-};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
+use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, Weight, Wrap};
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
@@ -566,9 +560,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_pointer_moved(on_pointer_moved);
+        self.as_element_rc().borrow_mut().on_pointer_moved(on_pointer_moved);
         self
     }
 
@@ -815,5 +807,4 @@ pub trait Element: Clone + AsElement {
     fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
         self.as_element_rc().borrow().has_pointer_capture(pointer_id)
     }
-
 }

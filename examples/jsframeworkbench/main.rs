@@ -98,9 +98,7 @@ impl State {
     pub fn remove_all_rows(&mut self) {
         let to_remove = self.element.get_children();
         for child in to_remove {
-            self.element
-                .remove_child(child)
-                .expect("Failed to remove child!");
+            self.element.remove_child(child).expect("Failed to remove child!");
         }
     }
 
@@ -141,7 +139,6 @@ impl State {
     }
 
     pub fn create_row(data: &Data) -> Container {
-
         Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Row)
@@ -152,11 +149,14 @@ impl State {
                 Color::from_rgb8(230, 230, 230),
                 Color::from_rgb8(230, 230, 230),
                 Color::from_rgb8(230, 230, 230),
-            ).push(
-            Text::new(&data.id.to_string())
-                .width(Unit::Px(60.0))
-                .margin(Unit::Px(0.0), Unit::Px(12.0), Unit::Px(0.0), Unit::Px(0.0))
-            ).push(Text::new(&data.label))
+            )
+            .push(Text::new(&data.id.to_string()).width(Unit::Px(60.0)).margin(
+                Unit::Px(0.0),
+                Unit::Px(12.0),
+                Unit::Px(0.0),
+                Unit::Px(0.0),
+            ))
+            .push(Text::new(&data.label))
     }
 
     pub fn add(&mut self) {
@@ -299,8 +299,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .align_items(Some(AlignItems::Start))
         .padding(Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0));
 
-    let text = Text::new(r#"Craft-"keyed""#)
-        .font_size(32.0).color(Color::BLACK);
+    let text = Text::new(r#"Craft-"keyed""#).font_size(32.0).color(Color::BLACK);
 
     let text_container = Container::new()
         .display(Display::Flex)
@@ -320,9 +319,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .width(Unit::Percentage(100.0))
         .push(buttons);
 
-    body
-        .push(header)
-        .push(state.borrow().element.clone())
+    body.push(header).push(state.borrow().element.clone())
 }
 
 fn build_data_list() -> Container {
@@ -374,22 +371,20 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
 fn build_button<F>(label: &str, callback: F) -> Container
 where
     F: Fn(&mut Event, &PointerButtonEvent) + 'static,
-
-    {
-        let border_color = Color::from_rgb8(111, 111, 111);
-        Container::new()
-            .background_color(Color::from_rgb8(211, 211, 211))
-            .border_color(border_color, border_color, border_color, border_color)
-            .flex_direction(FlexDirection::Row)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
-            .gap(Unit::Px(12.0), Unit::Px(12.0))
-            .width(Unit::Px(250.0))
-            .height(Unit::Px(35.0))
-            .background_color(Color::from_rgb8(51, 122, 183))
-            .color(WHITE)
-            .border_radius((4.0, 4.0), (4.0, 4.0), (4.0, 4.0), (4.0, 4.0))
-            .push(
-                Text::new(label).selectable(false).color(Color::WHITE)
-            ).on_pointer_button_up(Rc::new(callback))
+{
+    let border_color = Color::from_rgb8(111, 111, 111);
+    Container::new()
+        .background_color(Color::from_rgb8(211, 211, 211))
+        .border_color(border_color, border_color, border_color, border_color)
+        .flex_direction(FlexDirection::Row)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .gap(Unit::Px(12.0), Unit::Px(12.0))
+        .width(Unit::Px(250.0))
+        .height(Unit::Px(35.0))
+        .background_color(Color::from_rgb8(51, 122, 183))
+        .color(WHITE)
+        .border_radius((4.0, 4.0), (4.0, 4.0), (4.0, 4.0), (4.0, 4.0))
+        .push(Text::new(label).selectable(false).color(Color::WHITE))
+        .on_pointer_button_up(Rc::new(callback))
 }

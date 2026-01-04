@@ -12,7 +12,7 @@ use rustc_hash::FxHashMap;
 use taffy::Overflow;
 
 use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
-use crate::app::{TAFFY_TREE};
+use crate::app::TAFFY_TREE;
 use crate::elements::ElementImpl;
 use crate::elements::core::element_data::ElementData;
 use crate::events::{CraftMessage, Event};

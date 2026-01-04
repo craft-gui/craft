@@ -10,9 +10,9 @@ use kurbo::{Affine, Point};
 
 use crate::app::TAFFY_TREE;
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::element::{AsElement, Element};
 use crate::elements::element_data::ElementData;
 use crate::elements::{ElementImpl, scrollable};
-use crate::elements::element::{AsElement, Element};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -39,9 +39,7 @@ impl Container {
 
         inner.borrow_mut().element_data.create_layout_node(None);
 
-        Self {
-            inner
-        }
+        Self { inner }
     }
 }
 

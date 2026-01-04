@@ -4,16 +4,9 @@ use std::rc::Rc;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use craft_retained::{Color, rgb};
-use craft_retained::{CraftOptions, pct, px};
+use craft_retained::{Color, CraftOptions, pct, px, rgb};
 
-fn create_button(
-    label: &str,
-    base_color: Color,
-    delta: i64,
-    state: Rc<RefCell<i64>>,
-    count_text: Text,
-) -> Container {
+fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
     Container::new()
         .border_width(px(1), px(2), px(3), px(4))
@@ -29,12 +22,7 @@ fn create_button(
                 event.prevent_propagate();
             }
         }))
-        .push({
-            Text::new(label)
-                .font_size(24.0)
-                .color(Color::WHITE)
-                .selectable(false)
-        })
+        .push({ Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false) })
 }
 
 fn main() {

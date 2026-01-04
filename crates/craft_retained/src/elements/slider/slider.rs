@@ -10,10 +10,10 @@ use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 
 use crate::app::queue_event;
-use crate::elements::{Element, ElementImpl};
 use crate::elements::core::ElementInternals;
 use crate::elements::element::AsElement;
 use crate::elements::element_data::ElementData;
+use crate::elements::{Element, ElementImpl};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::palette;
@@ -55,7 +55,7 @@ pub struct SliderInner {
 impl Slider {
     pub fn new(thumb_size: f32) -> Self {
         Self {
-            inner: SliderInner::new(thumb_size)
+            inner: SliderInner::new(thumb_size),
         }
     }
 
@@ -122,14 +122,10 @@ impl Slider {
         self.inner.borrow().get_thumb_color()
     }
 
-    pub fn thumb_border_radius(
-        self,
-        top: (f32, f32),
-        right: (f32, f32),
-        bottom: (f32, f32),
-        left: (f32, f32),
-    ) -> Self {
-        self.inner.borrow_mut().set_thumb_border_radius(top, right, bottom, left);
+    pub fn thumb_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
+        self.inner
+            .borrow_mut()
+            .set_thumb_border_radius(top, right, bottom, left);
         self
     }
 
@@ -146,21 +142,16 @@ impl Slider {
         self.inner.borrow().get_track_color()
     }
 
-    pub fn track_border_radius(
-        self,
-        top: (f32, f32),
-        right: (f32, f32),
-        bottom: (f32, f32),
-        left: (f32, f32),
-    ) -> Self {
-        self.inner.borrow_mut().set_track_border_radius(top, right, bottom, left);
+    pub fn track_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
+        self.inner
+            .borrow_mut()
+            .set_track_border_radius(top, right, bottom, left);
         self
     }
 
     pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
         self.inner.borrow().get_track_border_radius()
     }
-
 }
 
 impl SliderInner {

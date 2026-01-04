@@ -14,16 +14,10 @@ mod text_input;
 mod window;
 
 pub use container::Container;
-pub use element::Element;
-pub use element::ElementImpl;
+pub use element::{Element, ElementImpl};
 pub use element_id_map::ElementIdMap;
 pub use image::Image;
-pub use slider::Slider;
-pub use slider::SliderDirection;
-pub use text::Text;
-pub use text_input::TextInput;
+pub use slider::{Slider, SliderDirection, SliderInner};
+pub use text::{Text, TextInner};
+pub use text_input::{TextInput, TextInputInner};
 pub use window::Window;
-
-pub use text::TextInner;
-pub use text_input::TextInputInner;
-pub use slider::SliderInner;

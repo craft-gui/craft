@@ -12,7 +12,8 @@ use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_releas
 use crate::events::{CraftMessage, Event, FocusAction};
 use crate::text::text_context::TextContext;
 
-pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn ElementImpl>>>) {}
+pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn ElementImpl>>>) {
+}
 
 /// Dispatches 1 event to many elements.
 /// The first dispatch happens at the top-most visual element.
@@ -161,7 +162,8 @@ impl EventDispatcher {
         }*/
 
         // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn ElementImpl>> = find_target(&root, mouse_position, message, render_list, target_scratch);
+        let target: Rc<RefCell<dyn ElementImpl>> =
+            find_target(&root, mouse_position, message, render_list, target_scratch);
         let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = freeze_target_list(target);
 
         self.maybe_dispatch_pointer_leave(text_context, &targets);
