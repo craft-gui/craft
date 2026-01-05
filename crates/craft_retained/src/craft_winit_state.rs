@@ -142,7 +142,7 @@ impl ApplicationHandler for CraftWinitState {
                 });
             }
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                craft_state.craft_app.on_scale_factor_changed(scale_factor);
+                craft_state.craft_app.on_scale_factor_changed(window, scale_factor);
             }
             WindowEvent::Resized(new_size) => {
                 let new_size = Size::<f32> {

@@ -110,7 +110,7 @@ impl Window {
     }
 
     /// Get the logical size of the window.
-    pub fn window_size(&self) -> Size<f64> {
+    pub fn window_size(&self) -> Size<f32> {
         self.inner.borrow().window_size()
     }
 
@@ -122,7 +122,7 @@ impl Window {
         self.inner.borrow_mut().zoom_out()
     }
 
-    pub(crate) fn zoom_scale_factor(&self) -> f64 {
+    pub fn zoom_scale_factor(&self) -> f64 {
         self.inner.borrow().zoom_scale_factor()
     }
 
@@ -162,6 +162,10 @@ impl Window {
     pub(crate) fn create(&self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
         self.inner.borrow_mut().create(craft_app, event_loop)
     }
+
+    pub(crate) fn on_scale_factor_changed(&self, scale_factor: f64) {
+        self.inner.borrow_mut().on_scale_factor_changed(scale_factor);
+    }
 }
 
 impl WindowInternal {
@@ -173,20 +177,16 @@ impl WindowInternal {
         self.winit_window = window;
     }
 
-    pub fn set_scale_factor(&mut self, scale_factor: f64) {
-        self.scale_factor = scale_factor;
-    }
-
     /// Get the effective scale factor factoring window scale factor and zoom.
     pub fn effective_scale_factor(&self) -> f64 {
         self.scale_factor * self.zoom_scale_factor
     }
 
     /// Get the logical size of the window.
-    pub fn window_size(&self) -> Size<f64> {
+    pub fn window_size(&self) -> Size<f32> {
         Size::new(
-            self.window_size.width as f64 * self.effective_scale_factor(),
-            self.window_size.height as f64 * self.effective_scale_factor(),
+            self.window_size.width / self.effective_scale_factor() as f32,
+            self.window_size.height / self.effective_scale_factor() as f32,
         )
     }
 
@@ -217,7 +217,7 @@ impl WindowInternal {
         let size = self.window_size();
         self.render_list
             .borrow_mut()
-            .set_cull(Some(Rectangle::new(0.0, 0.0, size.width as f32, size.height as f32)));
+            .set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
@@ -239,6 +239,12 @@ impl WindowInternal {
         self.layout_window(text_context, resource_manager.clone());
 
         self.draw_window(text_context, resource_manager);
+    }
+
+    pub(crate) fn on_scale_factor_changed(&mut self, scale_factor: f64) {
+        self.scale_factor = scale_factor;
+        self.set_scale_factor(self.effective_scale_factor());
+        self.on_resize(self.window_size);
     }
 
     fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
@@ -296,7 +302,7 @@ impl WindowInternal {
             render_list.borrow_mut().deref_mut(),
             text_context,
             None,
-            self.scale_factor,
+            self.effective_scale_factor(),
         );
 
         self.winit_window.clone().unwrap().pre_present_notify();

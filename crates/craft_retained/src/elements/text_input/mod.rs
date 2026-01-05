@@ -412,7 +412,8 @@ impl ElementInternals for TextInputInner {
         style
     }
 
-    fn scale_factor(&mut self, scale_factor: f64) {
+    fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
         self.mark_dirty();
     }

@@ -413,7 +413,8 @@ impl ElementInternals for TextInner {
         }
     }
 
-    fn scale_factor(&mut self, scale_factor: f64) {
+    fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.apply_borders(scale_factor);
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
         self.mark_dirty();
@@ -460,7 +461,7 @@ impl TextState {
             AvailableSpace::MinContent => Some(content_widths.min),
             AvailableSpace::MaxContent => Some(content_widths.max),
             AvailableSpace::Definite(width) => {
-                let scaled_width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor as f64).0;
+                let scaled_width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
                 Some(scaled_width.clamp(content_widths.min, content_widths.max))
             }
         });

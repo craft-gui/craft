@@ -115,11 +115,8 @@ impl App {
         info!("Craft application is closing.");
     }
 
-    pub fn on_scale_factor_changed(&mut self, _scale_factor: f64) {
-        /*self.window_context.scale_factor = scale_factor;
-        self.on_resize(self.window.as_ref().unwrap().inner_size());
-        self.root.borrow_mut().scale_factor(self.window_context.effective_scale_factor());
-        style_root_element(self.root.borrow_mut().deref_mut(), self.window_context.window_size());*/
+    pub fn on_scale_factor_changed(&mut self, window: Window, scale_factor: f64) {
+        window.on_scale_factor_changed(scale_factor);
     }
 
     pub fn on_resume(&mut self, event_loop: &ActiveEventLoop) {
@@ -241,7 +238,7 @@ impl App {
 
     pub fn on_pointer_button(&mut self, window: Window, pointer_event: PointerButtonEvent, is_up: bool) {
         let mut pointer_event = pointer_event;
-        let zoom = window.zoom_scale_factor();
+        let zoom = window.effective_scale_factor();
         pointer_event.state.position.x /= zoom;
         pointer_event.state.position.y /= zoom;
 
@@ -262,7 +259,7 @@ impl App {
 
     pub fn on_pointer_moved(&mut self, window: Window, mouse_moved: PointerUpdate) {
         let mut mouse_moved = mouse_moved;
-        let zoom = window.zoom_scale_factor();
+        let zoom = window.effective_scale_factor();
         mouse_moved.current.position.x /= zoom;
         mouse_moved.current.position.y /= zoom;
 
