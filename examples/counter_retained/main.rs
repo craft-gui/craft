@@ -22,7 +22,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
                 event.prevent_propagate();
             }
         }))
-        .push({ Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false) })
+        .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }
 
 fn main() {
