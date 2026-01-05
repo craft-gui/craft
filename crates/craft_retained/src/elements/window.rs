@@ -214,7 +214,7 @@ impl WindowInternal {
             renderer.resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
         }
         self.window_size = new_size;
-        let size = self.window_size();
+        let size = self.window_size;
         self.render_list
             .borrow_mut()
             .set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
