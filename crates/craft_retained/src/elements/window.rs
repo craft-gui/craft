@@ -333,6 +333,7 @@ impl WindowInternal {
                 .expect("Failed to create window"),
         );
         self.set_winit_window(Some(winit_window.clone()));
+        self.on_scale_factor_changed(winit_window.scale_factor());
 
         let renderer_type = craft_app.craft_options.renderer;
 
