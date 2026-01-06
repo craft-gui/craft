@@ -73,27 +73,11 @@ impl Window {
     {
         let inner = WindowInternal::new(Some(f));
 
-        inner.borrow_mut().element_data.create_layout_node(None);
-
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.add_window(Window {
-                inner: inner.clone(),
-            });
-        });
-
         Window { inner }
     }
 
     pub fn new() -> Self {
         let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>);
-
-        inner.borrow_mut().element_data.create_layout_node(None);
-
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.add_window(Window {
-                inner: inner.clone(),
-            });
-        });
 
         Window { inner }
     }
@@ -181,7 +165,7 @@ impl WindowInternal {
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
-        Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
             RefCell::new(Self {
                 element_data: ElementData::new(me.clone(), true),
                 window_size: Default::default(),
@@ -195,7 +179,17 @@ impl WindowInternal {
                 accesskit_adapter: None,
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
             })
-        })
+        });
+
+        inner.borrow_mut().element_data.create_layout_node(None);
+
+        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            window_manager.add_window(Window {
+                inner: inner.clone(),
+            });
+        });
+
+        inner
     }
 
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
