@@ -39,6 +39,8 @@ pub struct Window {
     pub inner: Rc<RefCell<WindowInternal>>,
 }
 
+pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
+
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
@@ -60,24 +62,30 @@ pub struct WindowInternal {
     // Will be empty when paused.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     pub(crate) accesskit_adapter: Option<Adapter>,
+
+    advanced_window_fn: Option<WindowConstructor>,
 }
 
 impl Window {
-    pub fn new() -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<WindowInternal>>| {
-            RefCell::new(WindowInternal {
-                element_data: ElementData::new(me.clone(), true),
-                window_size: Default::default(),
-                scale_factor: 1.0,
-                zoom_scale_factor: 1.0,
-                mouse_positon: None,
-                renderer: None,
-                render_list: Rc::new(RefCell::new(RenderList::new())),
-                winit_window: None,
-                #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-                accesskit_adapter: None,
-            })
+    pub fn new_advanced<F>(f: F) -> Self
+    where
+        F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
+    {
+        let inner = WindowInternal::new(Some(f));
+
+        inner.borrow_mut().element_data.create_layout_node(None);
+
+        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            window_manager.add_window(Window {
+                inner: inner.clone(),
+            });
         });
+
+        Window { inner }
+    }
+
+    pub fn new() -> Self {
+        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>);
 
         inner.borrow_mut().element_data.create_layout_node(None);
 
@@ -169,6 +177,27 @@ impl Window {
 }
 
 impl WindowInternal {
+    pub fn new<F>(f: Option<F>) -> Rc<RefCell<Self>>
+    where
+        F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
+    {
+        Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
+            RefCell::new(Self {
+                element_data: ElementData::new(me.clone(), true),
+                window_size: Default::default(),
+                scale_factor: 1.0,
+                zoom_scale_factor: 1.0,
+                mouse_positon: None,
+                renderer: None,
+                render_list: Rc::new(RefCell::new(RenderList::new())),
+                winit_window: None,
+                #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+                accesskit_adapter: None,
+                advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
+            })
+        })
+    }
+
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.winit_window.clone()
     }
@@ -327,11 +356,13 @@ impl WindowInternal {
     }
 
     pub(crate) fn create(&mut self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
-        let winit_window = Arc::new(
+        let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
+            (*window_fn)(event_loop)
+        } else {
             event_loop
                 .create_window(WindowAttributes::default().with_visible(false))
-                .expect("Failed to create window"),
-        );
+                .expect("Failed to create window")
+        });
         self.set_winit_window(Some(winit_window.clone()));
         self.on_scale_factor_changed(winit_window.scale_factor());
 

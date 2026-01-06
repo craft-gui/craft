@@ -46,7 +46,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementImpl, message: &CraftMes
 
                         if container_rectangle.contains(&pointer_button.state.logical_point()) && !in_scroll_bar {
                             state.scroll_click = Some(Point::new(
-                                pointer_button.state.position.x,
+                                pointer_button.state.logical_point().x,
                                 pointer_button.state.logical_point().y,
                             ));
                             event.prevent_propagate();

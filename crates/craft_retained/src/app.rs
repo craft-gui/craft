@@ -237,12 +237,7 @@ impl App {
     }
 
     pub fn on_pointer_button(&mut self, window: Window, pointer_event: PointerButtonEvent, is_up: bool) {
-        let mut pointer_event = pointer_event;
-        let zoom = window.effective_scale_factor();
-        pointer_event.state.position.x /= zoom;
-        pointer_event.state.position.y /= zoom;
-
-        let cursor_position = pointer_event.state.position;
+        let cursor_position = pointer_event.state.logical_point();
 
         let event = if is_up {
             CraftMessage::PointerButtonUp(pointer_event)
@@ -258,11 +253,6 @@ impl App {
     }
 
     pub fn on_pointer_moved(&mut self, window: Window, mouse_moved: PointerUpdate) {
-        let mut mouse_moved = mouse_moved;
-        let zoom = window.effective_scale_factor();
-        mouse_moved.current.position.x /= zoom;
-        mouse_moved.current.position.y /= zoom;
-
         window.set_mouse_position(Some(mouse_moved.current.logical_point()));
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);

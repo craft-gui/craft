@@ -399,6 +399,9 @@ impl ElementInternals for TextInner {
                     // NOTE: Cursor position should be relative to the top left of the text box.
                     state.cursor_pos = pointer_moved.current.logical_point()
                         - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
+                    state.cursor_pos.x /= state.scale_factor;
+                    state.cursor_pos.y /= state.scale_factor;
+                    println!("SF: {}", state.scale_factor);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
                         state.update_text_selection(self.element_data.style.selection_color());

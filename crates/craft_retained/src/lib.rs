@@ -42,7 +42,7 @@ pub use utils::craft_error::CraftError;
 use web_time as time;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
-pub use winit::window::{Cursor, CursorIcon};
+pub use winit::window::{Cursor, CursorIcon, WindowAttributes};
 #[cfg(target_os = "android")]
 use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 

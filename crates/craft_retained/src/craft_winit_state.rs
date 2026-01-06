@@ -92,7 +92,10 @@ impl ApplicationHandler for CraftWinitState {
                 ..
             }
         ) {
-            match craft_state.event_reducer.reduce(1.0, &event) {
+            match craft_state
+                .event_reducer
+                .reduce(window.effective_scale_factor(), &event)
+            {
                 Some(WindowEventTranslation::Keyboard(keyboard_event)) => {
                     use ui_events::keyboard::{Key, NamedKey};
                     if keyboard_event.state.is_down() && matches!(keyboard_event.key, Key::Named(NamedKey::Escape)) {
