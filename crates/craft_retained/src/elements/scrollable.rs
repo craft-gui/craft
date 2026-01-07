@@ -17,7 +17,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementImpl, message: &CraftMes
             CraftMessage::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
                     ScrollDelta::LineDelta(_x, y) => {
-                        y * element_data.style.font_size().max(12.0) * element_data.style.line_height()
+                        y * element_data.style.get_font_size().max(12.0) * element_data.style.get_line_height()
                     }
                     ScrollDelta::PixelDelta(physical) => physical.y as f32,
                     ScrollDelta::PageDelta(_x, y) => y,

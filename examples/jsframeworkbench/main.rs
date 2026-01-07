@@ -5,7 +5,7 @@ use craft_retained::elements::{Container, Element, Text, TextInner, Window};
 use craft_retained::events::Event;
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::palette::css::WHITE;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, Wrap};
+use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, FlexWrap};
 use craft_retained::{Color, rgb};
 use rand::rng;
 use rand::rngs::ThreadRng;
@@ -334,7 +334,7 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
         .justify_content(Some(JustifyContent::FlexEnd))
         .align_items(Some(AlignItems::Start))
         .gap(Unit::Px(12.0), Unit::Px(12.0))
-        .wrap(Wrap::Wrap)
+        .wrap(FlexWrap::Wrap)
         .max_height(Unit::Px(150.0));
 
     let state1 = state.clone();

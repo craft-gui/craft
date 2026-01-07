@@ -65,7 +65,7 @@ pub struct TextInputState {
 impl Default for TextInputState {
     fn default() -> Self {
         let default_style = TextInputInner::get_default_style();
-        let mut editor = PlainEditor::new(default_style.font_size(), None);
+        let mut editor = PlainEditor::new(default_style.get_font_size(), None);
         editor.set_scale(1.0);
         let style_set = editor.edit_styles();
         default_style.add_styles_to_style_set(style_set);
@@ -612,11 +612,11 @@ impl TextInputState {
         self.editor.selection_geometry_with(|rect, line| {
             text_renderer.lines[line]
                 .selections
-                .push((parley_box_to_rect(rect), style.selection_color()));
+                .push((parley_box_to_rect(rect), style.get_selection_color()));
         });
 
         if focused {
-            let color = style.cursor_color().unwrap_or(style.color());
+            let color = style.get_cursor_color().unwrap_or(style.get_color());
             text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
         } else {
             text_renderer.cursor = None;

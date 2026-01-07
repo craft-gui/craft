@@ -3,9 +3,9 @@ use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rec
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
-use taffy::{NodeId, Position};
+use taffy::NodeId;
 
-use crate::style::Style;
+use crate::style::{Position, Style};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
@@ -188,7 +188,7 @@ impl LayoutItem {
     }
 
     pub fn draw_borders(&self, renderer: &mut RenderList, current_style: &Style, scale_factor: f64) {
-        let background_color = current_style.background();
+        let background_color = current_style.get_background_color();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         match &self.computed_border {
@@ -201,7 +201,7 @@ impl LayoutItem {
                     renderer.draw_rect(padding_rect, background_color);
                 }
                 let thickness = self.cache_border_spec.as_ref().unwrap().width.top;
-                let border_color = current_style.border_color().top;
+                let border_color = current_style.get_border_color().top;
                 if thickness != 0.0 && border_color.components[3] != 0.0 {
                     renderer.draw_rect_outline(border_rect, border_color, thickness as f64);
                 }
@@ -210,7 +210,7 @@ impl LayoutItem {
                 draw_borders_generic(
                     renderer,
                     computed_border,
-                    current_style.border_color().to_array(),
+                    current_style.get_border_color().to_array(),
                     background_color,
                 );
             }

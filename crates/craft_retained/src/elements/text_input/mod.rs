@@ -76,7 +76,7 @@ impl TextInput {
                 me: me.clone(),
             })
         });
-        inner.borrow_mut().element_data.style = default_style;
+        *inner.borrow_mut().element_data.style = *default_style;
 
         inner.borrow_mut().set_text(text);
 
@@ -393,11 +393,11 @@ impl ElementInternals for TextInputInner {
         resolve_clip_for_scrollable(self, clip_bounds);
     }
 
-    fn get_default_style() -> Style
+    fn get_default_style() -> Box<Style>
     where
         Self: Sized,
     {
-        let mut style = Style::default();
+        let mut style = Style::new();
 
         style.set_display(Display::Block);
 

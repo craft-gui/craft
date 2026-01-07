@@ -246,7 +246,7 @@ impl ElementInternals for TextInner {
             );
         }
 
-        state.try_update_text_render(text_context, self.element_data.style.selection_color());
+        state.try_update_text_render(text_context, self.element_data.style.get_selection_color());
     }
 
     fn draw(
@@ -354,7 +354,7 @@ impl ElementInternals for TextInner {
                         .map(|button| button == PointerButton::Primary)
                         .unwrap_or_default()
                     {
-                        state.update_text_selection(self.element_data.style.selection_color());
+                        state.update_text_selection(self.element_data.style.get_selection_color());
                         state.pointer_down = true;
                         state.cursor_reset();
                         let now = Instant::now();
@@ -387,7 +387,7 @@ impl ElementInternals for TextInner {
                         .map(|button| button == PointerButton::Primary)
                         .unwrap_or_default()
                     {
-                        state.update_text_selection(self.element_data.style.selection_color());
+                        state.update_text_selection(self.element_data.style.get_selection_color());
                         state.pointer_down = false;
                         state.cursor_reset();
                         self.release_pointer_capture(PointerId::new(1).unwrap());
@@ -401,10 +401,9 @@ impl ElementInternals for TextInner {
                         - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
                     state.cursor_pos.x /= state.scale_factor;
                     state.cursor_pos.y /= state.scale_factor;
-                    println!("SF: {}", state.scale_factor);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
-                        state.update_text_selection(self.element_data.style.selection_color());
+                        state.update_text_selection(self.element_data.style.get_selection_color());
                         state.cursor_reset();
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos);

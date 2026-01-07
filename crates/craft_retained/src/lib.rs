@@ -1,6 +1,5 @@
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
-pub mod animations;
 pub mod craft_winit_state;
 pub mod document;
 pub mod elements;
@@ -181,7 +180,6 @@ pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         redraw_flags: RedrawFlags::new(true),
         target_scratch: Vec::new(),
 
-        previous_animation_flags: Default::default(),
         craft_options: craft_options.clone(),
         active: false,
     });

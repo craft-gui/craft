@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::Duration;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
@@ -8,17 +7,14 @@ use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point, Vec2};
-use rustc_hash::FxHashMap;
-use taffy::Overflow;
 
-use crate::animations::animation::{ActiveAnimation, AnimationFlags, AnimationStatus};
 use crate::app::TAFFY_TREE;
 use crate::elements::ElementImpl;
 use crate::elements::core::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
-use crate::style::{Display, Style};
+use crate::style::{Display, Overflow, Style};
 use crate::text::text_context::TextContext;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
@@ -51,7 +47,7 @@ pub trait ElementInternals: ElementData {
     /// A helper to check if the element is visible.
     fn is_visible(&self) -> bool {
         let style = &self.element_data().style;
-        style.visible() && style.display() != Display::None
+        style.get_visible() && style.get_display() != Display::None
     }
 
     /// A helper to draw all children.
@@ -195,7 +191,7 @@ pub trait ElementInternals: ElementData {
         result: &taffy::Layout,
         layout_order: &mut u32,
     ) {
-        let position = self.element_data().style.position();
+        let position = self.element_data().style.get_position();
         self.element_data_mut().layout_item.resolve_box(
             relative_position,
             scroll_transform,
@@ -213,68 +209,12 @@ pub trait ElementInternals: ElementData {
     fn apply_borders(&mut self, scale_factor: f64) {
         let current_style = self.element_data().current_style();
         let has_border = current_style.has_border();
-        let border_radius = current_style.border_radius();
-        let border_color = &current_style.border_color();
+        let border_radius = current_style.get_border_radius();
+        let border_color = &current_style.get_border_color();
 
         self.element_data_mut()
             .layout_item
             .apply_borders(has_border, border_radius, scale_factor, border_color);
-    }
-
-    /// Called after layout, and is responsible for updating the animation state of an element.
-    fn on_animation_frame(&mut self, animation_flags: &mut AnimationFlags, delta_time: Duration) {
-        let base_state = self.element_data_mut();
-
-        // If we don't have an animation in the current style then try to fall back to the normal style.
-        let current_style = if let Some(current_style) = base_state.current_style_mut_no_fallback() {
-            current_style
-        } else {
-            &mut base_state.style
-        };
-
-        // This is pretty hacky, but we can avoid allocating a hashmap for every element.
-        let active_animations = {
-            if base_state.animations.is_none() {
-                base_state.animations = Some(FxHashMap::default());
-            }
-
-            base_state.animations.as_mut().unwrap()
-        };
-
-        let current_style_animations = &mut current_style.animations;
-        for ani in &mut *current_style_animations {
-            if !active_animations.contains_key(&ani.name) {
-                active_animations.insert(
-                    ani.name.clone(),
-                    ActiveAnimation {
-                        current: Duration::ZERO,
-                        status: AnimationStatus::Playing,
-                        loop_amount: ani.loop_amount,
-                    },
-                );
-            }
-        }
-
-        active_animations.retain(|key, _| current_style_animations.iter().any(|ani| &ani.name == key));
-
-        active_animations.retain(|anim_name, active_animation| {
-            if active_animation.status == AnimationStatus::Playing {
-                animation_flags.set_has_active_animation(true);
-            }
-
-            if let Some(animation) = current_style.animation(anim_name) {
-                active_animation.tick(animation_flags, animation, delta_time);
-                let new_style = active_animation.compute_style(current_style, animation, animation_flags);
-                *current_style = Style::merge(current_style, &new_style);
-                true
-            } else {
-                false
-            }
-        });
-
-        for child in self.children() {
-            child.borrow_mut().on_animation_frame(animation_flags, delta_time);
-        }
     }
 
     /// A bit of a hack to reset the layout item of an element recursively.
@@ -342,12 +282,12 @@ pub trait ElementInternals: ElementData {
             return;
         }
 
-        let border_color = self.element_data().current_style().border_color();
-        let scrollbar_color = self.element_data().current_style().scrollbar_color();
+        let border_color = self.element_data().current_style().get_border_color();
+        let scrollbar_color = self.element_data().current_style().get_scrollbar_color();
         let scrollbar_thumb_radius = self
             .element_data()
             .current_style()
-            .scrollbar_thumb_radius()
+            .get_scrollbar_thumb_radius()
             .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
         // let scrollbar_thumb_radius = self.element_data().current_style().
         let track_rect = self
@@ -377,7 +317,7 @@ pub trait ElementInternals: ElementData {
     fn should_start_new_layer(&self) -> bool {
         let element_data = self.element_data();
 
-        element_data.current_style().overflow()[1] == Overflow::Scroll
+        element_data.current_style().get_overflow()[1] == Overflow::Scroll
     }
 
     /// Returns the element's [`ElementBox`] without any transforms applied.
@@ -386,11 +326,11 @@ pub trait ElementInternals: ElementData {
     }
 
     /// Gets
-    fn get_default_style() -> Style
+    fn get_default_style() -> Box<Style>
     where
         Self: Sized,
     {
-        Style::default()
+        Style::new()
     }
 
     /// Mark layout node dirty.

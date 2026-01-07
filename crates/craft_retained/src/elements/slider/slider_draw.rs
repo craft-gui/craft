@@ -45,7 +45,7 @@ impl SliderInner {
             let thumb_radii = if let Some(br) = self.get_track_border_radius() {
                 border_radius_to_vec_radius(br)
             } else {
-                border_radius_to_vec_radius(self.style().border_radius())
+                border_radius_to_vec_radius(self.style().get_border_radius())
             };
 
             let css_rounded_rect = CssRoundedRect::new(

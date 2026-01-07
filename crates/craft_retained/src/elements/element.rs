@@ -4,7 +4,6 @@ use std::rc::{Rc, Weak};
 
 use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
-use taffy::{BoxSizing, Overflow, Position};
 use ui_events::pointer::PointerId;
 
 use crate::CraftError;
@@ -13,7 +12,7 @@ use crate::document::Document;
 use crate::elements::ElementIdMap;
 use crate::elements::core::ElementData;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
-use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, Weight, Wrap};
+use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, FontWeight, FlexWrap, BoxSizing, Position, Overflow};
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
@@ -349,7 +348,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         self.update_taffy_style();
     }
 
-    fn set_wrap(&mut self, wrap: Wrap) {
+    fn set_wrap(&mut self, wrap: FlexWrap) {
         self.style_mut().set_wrap(wrap);
         self.update_taffy_style();
     }
@@ -395,7 +394,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
     }
 
     fn set_background_color(&mut self, color: Color) {
-        self.style_mut().set_background(color);
+        self.style_mut().set_background_color(color);
     }
 
     fn set_font_size(&mut self, font_size: f32) {
@@ -408,7 +407,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         self.update_taffy_style();
     }
 
-    fn set_font_weight(&mut self, font_weight: Weight) {
+    fn set_font_weight(&mut self, font_weight: FontWeight) {
         self.style_mut().set_font_weight(font_weight);
         self.update_taffy_style();
     }
@@ -655,7 +654,7 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn wrap(self, wrap: Wrap) -> Self {
+    fn wrap(self, wrap: FlexWrap) -> Self {
         self.as_element_rc().borrow_mut().set_wrap(wrap);
         self
     }
@@ -715,7 +714,7 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn font_weight(self, font_weight: Weight) -> Self {
+    fn font_weight(self, font_weight: FontWeight) -> Self {
         self.as_element_rc().borrow_mut().set_font_weight(font_weight);
         self
     }

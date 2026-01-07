@@ -24,7 +24,6 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
 use crate::CraftOptions;
-use crate::animations::animation::AnimationFlags;
 use crate::document::DocumentManager;
 use crate::elements::core::ElementInternals;
 use crate::elements::{ElementIdMap, ElementImpl, Window};
@@ -86,9 +85,6 @@ pub struct App {
     pub redraw_flags: RedrawFlags,
 
     pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementImpl>>>,
-
-    pub(crate) previous_animation_flags: AnimationFlags,
-
     pub(crate) craft_options: CraftOptions,
 
     /// True if the winit app is active.

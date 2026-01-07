@@ -1,7 +1,4 @@
-use taffy::{FlexWrap, Overflow};
-
-use crate::animations::Animation;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, Wrap};
+use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, FlexWrap, Overflow, BoxSizing, Position};
 
 fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     match unit {
@@ -28,68 +25,65 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 }
 
 impl Style {
-    pub fn animation(&self, animation: &str) -> Option<&Animation> {
-        self.animations.iter().find(|ani| ani.name == animation)
-    }
 
     pub fn to_taffy_style(&self) -> taffy::Style {
         let style = self;
 
         let gap = taffy::Size {
-            width: unit_to_taffy_length_percentage(style.gap()[0]),
-            height: unit_to_taffy_length_percentage(style.gap()[1]),
+            width: unit_to_taffy_length_percentage(style.get_gap()[0]),
+            height: unit_to_taffy_length_percentage(style.get_gap()[1]),
         };
 
-        let display = match style.display() {
+        let display = match style.get_display() {
             Display::Flex => taffy::Display::Flex,
             Display::Block => taffy::Display::Block,
             Display::None => taffy::Display::None,
         };
 
         let size = taffy::Size {
-            width: unit_to_taffy_dimension(style.width()),
-            height: unit_to_taffy_dimension(style.height()),
+            width: unit_to_taffy_dimension(style.get_width()),
+            height: unit_to_taffy_dimension(style.get_height()),
         };
 
         let max_size = taffy::Size {
-            width: unit_to_taffy_dimension(style.max_width()),
-            height: unit_to_taffy_dimension(style.max_height()),
+            width: unit_to_taffy_dimension(style.get_max_width()),
+            height: unit_to_taffy_dimension(style.get_max_height()),
         };
 
         let min_size = taffy::Size {
-            width: unit_to_taffy_dimension(style.min_width()),
-            height: unit_to_taffy_dimension(style.min_height()),
+            width: unit_to_taffy_dimension(style.get_min_width()),
+            height: unit_to_taffy_dimension(style.get_min_height()),
         };
 
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto(style.margin().left),
-            right: unit_to_taffy_lengthpercentageauto(style.margin().right),
-            top: unit_to_taffy_lengthpercentageauto(style.margin().top),
-            bottom: unit_to_taffy_lengthpercentageauto(style.margin().bottom),
+            left: unit_to_taffy_lengthpercentageauto(style.get_margin().left),
+            right: unit_to_taffy_lengthpercentageauto(style.get_margin().right),
+            top: unit_to_taffy_lengthpercentageauto(style.get_margin().top),
+            bottom: unit_to_taffy_lengthpercentageauto(style.get_margin().bottom),
         };
 
         let padding: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage(style.padding().left),
-            right: unit_to_taffy_length_percentage(style.padding().right),
-            top: unit_to_taffy_length_percentage(style.padding().top),
-            bottom: unit_to_taffy_length_percentage(style.padding().bottom),
+            left: unit_to_taffy_length_percentage(style.get_padding().left),
+            right: unit_to_taffy_length_percentage(style.get_padding().right),
+            top: unit_to_taffy_length_percentage(style.get_padding().top),
+            bottom: unit_to_taffy_length_percentage(style.get_padding().bottom),
         };
 
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage(style.border_width().left),
-            right: unit_to_taffy_length_percentage(style.border_width().right),
-            top: unit_to_taffy_length_percentage(style.border_width().top),
-            bottom: unit_to_taffy_length_percentage(style.border_width().bottom),
+            left: unit_to_taffy_length_percentage(style.get_border_width().left),
+            right: unit_to_taffy_length_percentage(style.get_border_width().right),
+            top: unit_to_taffy_length_percentage(style.get_border_width().top),
+            bottom: unit_to_taffy_length_percentage(style.get_border_width().bottom),
         };
 
         let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto(style.inset().left),
-            right: unit_to_taffy_lengthpercentageauto(style.inset().right),
-            top: unit_to_taffy_lengthpercentageauto(style.inset().top),
-            bottom: unit_to_taffy_lengthpercentageauto(style.inset().bottom),
+            left: unit_to_taffy_lengthpercentageauto(style.get_inset().left),
+            right: unit_to_taffy_lengthpercentageauto(style.get_inset().right),
+            top: unit_to_taffy_lengthpercentageauto(style.get_inset().top),
+            bottom: unit_to_taffy_lengthpercentageauto(style.get_inset().bottom),
         };
 
-        let align_items = match style.align_items() {
+        let align_items = match style.get_align_items() {
             None => None,
             Some(AlignItems::Start) => Some(taffy::AlignItems::Start),
             Some(AlignItems::End) => Some(taffy::AlignItems::End),
@@ -100,7 +94,7 @@ impl Style {
             Some(AlignItems::Stretch) => Some(taffy::AlignItems::Stretch),
         };
 
-        let justify_content = match style.justify_content() {
+        let justify_content = match style.get_justify_content() {
             None => None,
             Some(JustifyContent::Start) => Some(taffy::JustifyContent::Start),
             Some(JustifyContent::End) => Some(taffy::JustifyContent::End),
@@ -113,40 +107,52 @@ impl Style {
             Some(JustifyContent::SpaceAround) => Some(taffy::JustifyContent::SpaceAround),
         };
 
-        let flex_direction = match style.flex_direction() {
+        let flex_direction = match style.get_flex_direction() {
             FlexDirection::Row => taffy::FlexDirection::Row,
             FlexDirection::Column => taffy::FlexDirection::Column,
             FlexDirection::RowReverse => taffy::FlexDirection::RowReverse,
             FlexDirection::ColumnReverse => taffy::FlexDirection::ColumnReverse,
         };
 
-        let flex_wrap = match style.wrap() {
-            Wrap::NoWrap => FlexWrap::NoWrap,
-            Wrap::Wrap => FlexWrap::Wrap,
-            Wrap::WrapReverse => FlexWrap::WrapReverse,
+        let flex_wrap = match style.get_wrap() {
+            FlexWrap::NoWrap => taffy::FlexWrap::NoWrap,
+            FlexWrap::Wrap => taffy::FlexWrap::Wrap,
+            FlexWrap::WrapReverse => taffy::FlexWrap::WrapReverse,
         };
 
-        let flex_grow = style.flex_grow();
-        let flex_shrink = style.flex_shrink();
-        let flex_basis: taffy::Dimension = unit_to_taffy_dimension(style.flex_basis());
+        let flex_grow = style.get_flex_grow();
+        let flex_shrink = style.get_flex_shrink();
+        let flex_basis: taffy::Dimension = unit_to_taffy_dimension(style.get_flex_basis());
 
-        fn overflow_to_taffy_overflow(overflow: Overflow) -> Overflow {
-            overflow
+        fn overflow_to_taffy_overflow(overflow: Overflow) -> taffy::Overflow {
+            match overflow {
+                Overflow::Visible => taffy::Overflow::Visible,
+                Overflow::Clip => taffy::Overflow::Clip,
+                Overflow::Hidden => taffy::Overflow::Hidden,
+                Overflow::Scroll => taffy::Overflow::Scroll,
+            }
         }
 
-        let overflow_x = overflow_to_taffy_overflow(style.overflow()[0]);
-        let overflow_y = overflow_to_taffy_overflow(style.overflow()[1]);
+        let overflow_x = overflow_to_taffy_overflow(style.get_overflow()[0]);
+        let overflow_y = overflow_to_taffy_overflow(style.get_overflow()[1]);
 
-        let scrollbar_width = style.scrollbar_width();
+        let scrollbar_width = style.get_scrollbar_width();
+        let box_sizing = match style.get_box_sizing() {
+            BoxSizing::BorderBox => taffy::BoxSizing::BorderBox,
+            BoxSizing::ContentBox => taffy::BoxSizing::ContentBox,
+        };
 
-        let box_sizing = taffy::BoxSizing::BorderBox;
+        let position = match style.get_position() {
+            Position::Relative => taffy::Position::Relative,
+            Position::Absolute => taffy::Position::Absolute
+        };
 
         taffy::Style {
             gap,
             box_sizing,
             inset,
             scrollbar_width,
-            position: style.position(),
+            position,
             size,
             min_size,
             max_size,

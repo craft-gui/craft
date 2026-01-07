@@ -2,11 +2,9 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::{Rectangle, Size};
-use rustc_hash::FxHashMap;
 use smol_str::SmolStr;
-use taffy::{Layout, Overflow};
+use taffy::Layout;
 
-use crate::animations::animation::ActiveAnimation;
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::ElementImpl;
 use crate::elements::element_id::create_unique_element_id;
@@ -14,7 +12,7 @@ use crate::elements::scroll_state::ScrollState;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::LayoutItem;
-use crate::style::Style;
+use crate::style::{Overflow, Style};
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -26,7 +24,7 @@ pub struct ElementData {
     pub(crate) parent: Option<Weak<RefCell<dyn ElementImpl>>>,
 
     /// The style of the element.
-    pub style: Style,
+    pub style: Box<Style>,
 
     /// Stores the layout data for an element.
     pub layout_item: LayoutItem,
@@ -39,8 +37,6 @@ pub struct ElementData {
 
     /// A unique id for this element. Within a craft app the id will be unique even across windows.
     pub(crate) internal_id: u64,
-
-    pub(crate) animations: Option<FxHashMap<SmolStr, ActiveAnimation>>,
 
     /// Scrollbar state for elements that may have a scrollbar.
     pub(super) scroll_state: Option<ScrollState>,
@@ -62,12 +58,11 @@ impl ElementData {
         let mut default = Self {
             me,
             parent: None,
-            style: Default::default(),
+            style: Style::new(),
             layout_item: Default::default(),
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
-            animations: None,
             scroll_state: None,
 
             on_slider_value_changed: Vec::new(),
@@ -112,7 +107,7 @@ impl ElementData {
         self.layout_item.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
 
         if let Some(state) = &mut self.scroll_state {
-            if self.style.overflow()[1] != Overflow::Scroll {
+            if self.style.get_overflow()[1] != Overflow::Scroll {
                 return;
             }
 
@@ -155,7 +150,7 @@ impl ElementData {
                 0.0
             };
 
-            let thumb_margin = self.style.scrollbar_thumb_margin();
+            let thumb_margin = self.style.get_scrollbar_thumb_margin();
             let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
             let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
@@ -174,7 +169,7 @@ impl ElementData {
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.overflow()[1] == taffy::Overflow::Scroll
+        self.style.get_overflow()[1] == Overflow::Scroll
     }
 
     pub fn current_style(&self) -> &Style {
