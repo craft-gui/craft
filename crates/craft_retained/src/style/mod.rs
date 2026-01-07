@@ -62,7 +62,18 @@ pub enum AlignContent {
     SpaceAround,
 }
 
-pub type JustifyContent = AlignContent;
+#[derive(Clone, Copy, Debug)]
+pub enum JustifyContent {
+    Start,
+    End,
+    FlexStart,
+    FlexEnd,
+    Center,
+    Stretch,
+    SpaceBetween,
+    SpaceEvenly,
+    SpaceAround,
+}
 
 #[derive(Clone, Copy, Debug)]
 pub enum FlexDirection {
