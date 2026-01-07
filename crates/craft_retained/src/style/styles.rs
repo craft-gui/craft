@@ -161,7 +161,7 @@ impl Style {
     }
 
     pub fn get_inset(&self) -> TrblRectangle<Unit> {
-        self.margin.get()
+        self.inset.get()
     }
     pub fn set_inset(&mut self, val: TrblRectangle<Unit>) {
         self.is_dirty = true;

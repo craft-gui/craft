@@ -56,31 +56,31 @@ impl Style {
         };
 
         let margin: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto(style.get_margin().left),
-            right: unit_to_taffy_lengthpercentageauto(style.get_margin().right),
             top: unit_to_taffy_lengthpercentageauto(style.get_margin().top),
+            right: unit_to_taffy_lengthpercentageauto(style.get_margin().right),
             bottom: unit_to_taffy_lengthpercentageauto(style.get_margin().bottom),
+            left: unit_to_taffy_lengthpercentageauto(style.get_margin().left),
         };
 
         let padding: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage(style.get_padding().left),
-            right: unit_to_taffy_length_percentage(style.get_padding().right),
             top: unit_to_taffy_length_percentage(style.get_padding().top),
+            right: unit_to_taffy_length_percentage(style.get_padding().right),
             bottom: unit_to_taffy_length_percentage(style.get_padding().bottom),
+            left: unit_to_taffy_length_percentage(style.get_padding().left),
         };
 
         let border: taffy::Rect<taffy::LengthPercentage> = taffy::Rect {
-            left: unit_to_taffy_length_percentage(style.get_border_width().left),
-            right: unit_to_taffy_length_percentage(style.get_border_width().right),
             top: unit_to_taffy_length_percentage(style.get_border_width().top),
+            right: unit_to_taffy_length_percentage(style.get_border_width().right),
             bottom: unit_to_taffy_length_percentage(style.get_border_width().bottom),
+            left: unit_to_taffy_length_percentage(style.get_border_width().left),
         };
 
         let inset: taffy::Rect<taffy::LengthPercentageAuto> = taffy::Rect {
-            left: unit_to_taffy_lengthpercentageauto(style.get_inset().left),
-            right: unit_to_taffy_lengthpercentageauto(style.get_inset().right),
             top: unit_to_taffy_lengthpercentageauto(style.get_inset().top),
+            right: unit_to_taffy_lengthpercentageauto(style.get_inset().right),
             bottom: unit_to_taffy_lengthpercentageauto(style.get_inset().bottom),
+            left: unit_to_taffy_lengthpercentageauto(style.get_inset().left),
         };
 
         let align_items = match style.get_align_items() {
