@@ -4,7 +4,7 @@ use std::rc::Rc;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, pct, px, rgb};
+use craft_retained::{Color, CraftOptions, pct, px, rgb, CraftCallback};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
@@ -56,5 +56,19 @@ fn main() {
                 ))
         });
 
-    craft_retained::craft_main(CraftOptions::basic("Counter"));
+    //craft_retained::craft_main(CraftOptions::basic("Counter"));
+
+    let c = Container::new();
+    let c_clone = c.clone();
+
+    // 1.85 stable async closure
+    let cb = CraftCallback(Box::new(move || {
+        let c = c_clone.clone();
+        async move {
+            println!("Crafting...");
+            c.width(px(100));
+        }
+    }));
+    craft_retained::craft_test(CraftOptions::test("", cb));
 }
+    

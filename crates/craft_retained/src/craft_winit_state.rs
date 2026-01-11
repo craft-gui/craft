@@ -174,6 +174,8 @@ impl ApplicationHandler for CraftWinitState {
 
         let craft_state = &mut self.craft_state;
 
+        craft_state.runtime.update();
+        
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
                     craft_state.runtime.borrow_tokio_runtime().block_on(async {

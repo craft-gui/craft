@@ -19,6 +19,7 @@ mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
 mod window_manager;
+mod craftcallback;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -50,6 +51,8 @@ use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::style::Unit;
 use crate::utils::cloneable_any::CloneableAny;
+
+pub use craftcallback::CraftCallback;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
 
@@ -98,6 +101,11 @@ pub fn internal_craft_main_with_options(
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
 pub fn craft_main(options: CraftOptions) {
+    internal_craft_main_with_options(Some(options));
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn craft_test(options: CraftOptions) {
     internal_craft_main_with_options(Some(options));
 }
 

@@ -128,6 +128,11 @@ impl App {
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.on_about_to_wait(self, event_loop);
         });
+
+        if let Some(callback) = self.craft_options.craft_callback.take() {
+            let future = callback.call();
+            self.runtime.spawn_current_thread(future);
+        }
     }
 
     pub fn on_suspended(&mut self, _event_loop: &ActiveEventLoop) {

@@ -1,3 +1,4 @@
+use crate::craftcallback::CraftCallback;
 use craft_primitives::geometry::Size;
 use craft_renderer::RendererType;
 
@@ -19,6 +20,7 @@ pub struct CraftOptions {
     pub window_title: String,
     /// The initial size of the window.
     pub window_size: Option<Size<f32>>,
+    pub craft_callback: Option<CraftCallback>,
 }
 
 impl Default for CraftOptions {
@@ -27,6 +29,7 @@ impl Default for CraftOptions {
             renderer: RendererType::default(),
             window_title: "craft".to_string(),
             window_size: None,
+            craft_callback: None,
         }
     }
 }
@@ -37,6 +40,16 @@ impl CraftOptions {
             renderer: RendererType::default(),
             window_title: title.to_string(),
             window_size: None,
+            craft_callback: None,
+        }
+    }
+
+    pub fn test(title: &str, callback: CraftCallback) -> Self {
+        Self {
+            renderer: RendererType::default(),
+            window_title: title.to_string(),
+            window_size: None,
+            craft_callback: Some(callback),
         }
     }
 }
