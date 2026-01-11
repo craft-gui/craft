@@ -68,7 +68,7 @@ default-features = false
 features = ["std"]
 
 [target.'cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))'.dependencies.clipboard-rs]
-version = "0.3.0"
+version = "0.3.1"
 optional = true
 
 [dependencies.pulldown-cmark]
@@ -105,11 +105,13 @@ workspace = true
 features = ["android-native-activity"]
 
 [dependencies.ui-events]
-version = "0.2.0"
+git = "https://github.com/AustinMReppert/ui-events"
+rev = "7bc839dff9548883b0e0aaea85e48ab5f74caf05"
 features = ["kurbo"]
 
 [dependencies.ui-events-winit]
-version = "0.2.0"
+git = "https://github.com/AustinMReppert/ui-events"
+rev = "7bc839dff9548883b0e0aaea85e48ab5f74caf05"
 features = []
 
 [dependencies.parley]
@@ -123,12 +125,12 @@ default-features = false
 features = []
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.wasm-bindgen]
-version = "0.2.100"
+version = "0.2.106"
 default-features = false
 features = ["std", "msrv"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3.77"
+version = "0.3.83"
 default-features = false
 features = [
     "Document",
@@ -137,7 +139,7 @@ features = [
 ]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies.open]
-version = "5.3.2"
+version = "5.3.3"
 default-features = false
 optional = true
 features = []

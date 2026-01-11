@@ -28,18 +28,18 @@ debug = true
 #debug = false
 
 [workspace.dependencies]
-reqwest = { version = "0.12.19", default-features = false }
+reqwest = { version = "0.13.1", default-features = false }
 tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19"}
 
 [workspace.dependencies.peniko]
-version = "0.5.0"
+version = "0.6.0"
 default-features = false
 features = ["std"]
 
 
 [workspace.dependencies.kurbo]
-version = "0.12.0"
+version = "0.13.0"
 default-features = false
 features = ["std"]
 
@@ -49,12 +49,12 @@ default-features = false
 features = []
 
 [workspace.dependencies.tokio]
-version = "1.48.0"
+version = "1.49.0"
 default-features = false
 features = ["sync", "time"]
 
 [workspace.dependencies.image]
-version = "0.25.8"
+version = "0.25.9"
 default-features = false
 features = []
 

@@ -186,6 +186,7 @@ impl RenderContext {
                 label: None,
                 required_features: Features::empty(),
                 required_limits: limits,
+                experimental_features: Default::default(),
                 memory_hints: MemoryHints::default(),
                 trace: Default::default(),
             })

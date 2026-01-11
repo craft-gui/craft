@@ -202,6 +202,7 @@ async fn new_device(instance: &Instance, surface: &Surface<'_>) -> (Device, Queu
             label: None,
             required_features: features & maybe_features,
             required_limits: limits,
+            experimental_features: Default::default(),
             memory_hints: MemoryHints::default(),
             trace: Default::default(),
         })
@@ -442,7 +443,7 @@ impl Renderer for VelloRenderer {
                         (rect.x + rect.width) as f64,
                         (rect.y + rect.height) as f64,
                     );
-                    scene.push_layer(BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                    scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();

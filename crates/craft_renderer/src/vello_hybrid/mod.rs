@@ -401,7 +401,7 @@ impl CraftRenderer for VelloHybridRenderer {
                         )
                         .into_path(0.1),
                     );
-                    scene.push_layer(clip_path.as_ref(), None, None, None);
+                    scene.push_layer(clip_path.as_ref(), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();

@@ -317,7 +317,7 @@ impl Renderer for VelloCpuRenderer {
                         )
                         .into_path(0.1),
                     );
-                    self.render_context.push_layer(clip_path.as_ref(), None, None, None);
+                    self.render_context.push_layer(clip_path.as_ref(), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     self.render_context.pop_layer();
