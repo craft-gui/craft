@@ -142,11 +142,21 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
       - name: Install native dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libfontconfig1-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libfontconfig1-dev \
+            xvfb
+
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
-      - name: Run Unit Tests
-        run: cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
+
+      - name: Run Unit Tests (with Xvfb)
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+            cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
+  
