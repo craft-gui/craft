@@ -138,38 +138,22 @@ jobs:
         run: cargo test --package craft_retained --no-fail-fast --verbose
 
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     env:
       CRAFT_RETAINED_TEST: generate-all
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      # Adapted from https://github.com/bevyengine/bevy/blob/b446374392adc70aceb92621b080d1a6cf7a7392/.github/workflows/validation-jobs.yml#L74-L79
-      - name: Install xvfb, llvmpipe and lavapipe
-        # https://launchpad.net/~kisak/+archive/ubuntu/turtle
-        run: |
-          sudo apt-get update -y -qq
-          sudo add-apt-repository ppa:kisak/turtle -y
-          sudo apt-get update
-          sudo apt install -y xvfb libegl-mesa0 libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
-
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            libfontconfig1-dev \
-            libxkbcommon-x11-0
 
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
 
-      - name: Run Unit Tests (with Xvfb)
+      - name: Run Unit Tests
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
-            cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
+          cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
 
       - name: Generate Kompari report
         if: always()
