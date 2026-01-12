@@ -151,7 +151,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
 
-      - name: Run Unit Tests
+      - name: Run Integration Tests
         run: |
           cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
 
