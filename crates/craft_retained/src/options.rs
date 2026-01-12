@@ -1,6 +1,8 @@
 use craft_primitives::geometry::Size;
 use craft_renderer::RendererType;
 
+use crate::craftcallback::CraftCallback;
+
 /// Configuration options for the Craft application.
 ///
 /// This struct holds various options that can be used to customize the behavior
@@ -19,6 +21,7 @@ pub struct CraftOptions {
     pub window_title: String,
     /// The initial size of the window.
     pub window_size: Option<Size<f32>>,
+    pub craft_callback: Option<CraftCallback>,
 }
 
 impl Default for CraftOptions {
@@ -27,6 +30,7 @@ impl Default for CraftOptions {
             renderer: RendererType::default(),
             window_title: "craft".to_string(),
             window_size: None,
+            craft_callback: None,
         }
     }
 }
@@ -37,6 +41,19 @@ impl CraftOptions {
             renderer: RendererType::default(),
             window_title: title.to_string(),
             window_size: None,
+            craft_callback: None,
+        }
+    }
+
+    pub fn test(title: &str, callback: CraftCallback) -> Self {
+        Self {
+            #[cfg(feature = "vello_cpu_renderer")]
+            renderer: RendererType::VelloCPU,
+            #[cfg(not(feature = "vello_cpu_renderer"))]
+            renderer: RendererType::default(),
+            window_title: title.to_string(),
+            window_size: None,
+            craft_callback: Some(callback),
         }
     }
 }

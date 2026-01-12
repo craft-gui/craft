@@ -29,6 +29,12 @@ pub struct ContainerInner {
     element_data: ElementData,
 }
 
+impl Default for Container {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Container {
     pub fn new() -> Self {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {

@@ -18,7 +18,7 @@ use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
-use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
+use crate::renderer::{RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::{Brush, RenderCommand};
@@ -317,7 +317,8 @@ impl Renderer for VelloCpuRenderer {
                         )
                         .into_path(0.1),
                     );
-                    self.render_context.push_layer(clip_path.as_ref(), None, None, None, None);
+                    self.render_context
+                        .push_layer(clip_path.as_ref(), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     self.render_context.pop_layer();
@@ -346,6 +347,14 @@ impl Renderer for VelloCpuRenderer {
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
         self.render_context.reset();
+    }
+
+    fn screenshot(&self) -> Screenshot {
+        Screenshot {
+            width: self.pixmap.width(),
+            height: self.pixmap.height(),
+            pixels: self.pixmap.data_as_u8_slice().to_vec(),
+        }
     }
 }
 

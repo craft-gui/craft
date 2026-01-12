@@ -472,7 +472,7 @@ impl TextState {
             AvailableSpace::MinContent => None,
             AvailableSpace::MaxContent => None,
             AvailableSpace::Definite(height) => {
-                let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor as f64).0;
+                let scaled_height = dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor).0;
                 Some(scaled_height)
             }
         });
@@ -484,8 +484,8 @@ impl TextState {
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));
 
-        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(width, self.scale_factor as f64).0;
-        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(height, self.scale_factor as f64).0;
+        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(width, self.scale_factor).0;
+        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(height, self.scale_factor).0;
 
         let size = Size {
             width: logical_width,

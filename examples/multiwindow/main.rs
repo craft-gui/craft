@@ -34,7 +34,7 @@ fn create_button(
 ) -> Container {
     let border_color = rgb(0, 0, 0);
     let label = Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false);
-    let container = Container::new()
+    Container::new()
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
@@ -50,8 +50,7 @@ fn create_button(
                 event.prevent_propagate();
             }
         }))
-        .push(label);
-    container
+        .push(label)
 }
 
 pub fn counter() -> Window {

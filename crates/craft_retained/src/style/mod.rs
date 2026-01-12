@@ -4,8 +4,9 @@ mod taffy_conversions;
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
-use peniko::Color;
+
 use craft_primitives::ColorBrush;
+use peniko::Color;
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -188,12 +189,18 @@ pub enum Position {
 }
 
 #[derive(Clone, Debug, Copy)]
-pub struct StyleProperty<T> where T: Clone + Debug + Copy {
+pub struct StyleProperty<T>
+where
+    T: Clone + Debug + Copy,
+{
     property: T,
     is_dirty: bool,
 }
 
-impl<T> StyleProperty<T> where T: Clone + Debug + Copy {
+impl<T> StyleProperty<T>
+where
+    T: Clone + Debug + Copy,
+{
     pub fn new(property: T) -> StyleProperty<T> {
         Self {
             property,
@@ -209,7 +216,7 @@ impl<T> StyleProperty<T> where T: Clone + Debug + Copy {
 
     #[inline(always)]
     pub fn get(&self) -> T {
-        self.property.clone()
+        self.property
     }
 
     #[inline(always)]

@@ -3,7 +3,7 @@ use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_renderer::RenderList;
 use kurbo::Vec2;
 
-use crate::elements::slider::slider::SliderDirection;
+use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementImpl, SliderInner};
 use crate::layout::layout_item::{CssComputedBorder, draw_borders_generic};
 

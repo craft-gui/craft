@@ -14,6 +14,7 @@ mod app;
 pub use craft_primitives::geometry;
 pub mod layout;
 pub use craft_runtime::CraftRuntime;
+mod craftcallback;
 pub mod spatial;
 mod utils;
 #[cfg(target_arch = "wasm32")]
@@ -34,6 +35,7 @@ pub use craft_resource_manager::ResourceIdentifier;
 use craft_resource_manager::ResourceManager;
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
 use craft_winit_state::CraftState;
+pub use craftcallback::CraftCallback;
 use events::internal::InternalMessage;
 pub use options::CraftOptions;
 pub use utils::craft_error::CraftError;
@@ -60,6 +62,8 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
 pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send;
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
+
+pub use {craft_runtime, image};
 
 #[cfg(not(target_arch = "wasm32"))]
 type RendererBox = Box<dyn Renderer>;
@@ -98,6 +102,11 @@ pub fn internal_craft_main_with_options(
 /// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
 #[cfg(not(target_os = "android"))]
 pub fn craft_main(options: CraftOptions) {
+    internal_craft_main_with_options(Some(options));
+}
+
+#[cfg(not(target_os = "android"))]
+pub fn craft_test(options: CraftOptions) {
     internal_craft_main_with_options(Some(options));
 }
 

@@ -1,0 +1,10 @@
+[package]
+name = "xtask"
+publish = false
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+kompari = { git = "https://github.com/linebender/kompari.git", rev = "63476ab8a6413cd5add210b76c1d2d671dd67212" }
+kompari-tasks = { git = "https://github.com/linebender/kompari.git", rev = "63476ab8a6413cd5add210b76c1d2d671dd67212" }

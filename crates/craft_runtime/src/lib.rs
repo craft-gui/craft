@@ -2,6 +2,12 @@ use std::future::Future;
 
 use cfg_if::cfg_if;
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
+pub use tokio::*;
+
+thread_local! {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) static LOCAL_SET: tokio::task::LocalSet = tokio::task::LocalSet::new();
+}
 
 pub struct CraftRuntime {
     #[cfg(not(target_arch = "wasm32"))]
@@ -21,7 +27,9 @@ impl Default for CraftRuntime {
             if #[cfg(target_arch = "wasm32")] {
                 Self { }
             } else {
-                Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
+                Self {
+                    tokio_runtime: tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to create tokio runtime."),
+                }
             }
         }
     }
@@ -40,7 +48,9 @@ impl CraftRuntime {
             if #[cfg(target_arch = "wasm32")] {
                 Self { }
             } else {
-                Self { tokio_runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Failed to create tokio runtime.") }
+                Self {
+                    tokio_runtime: tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to create tokio runtime."),
+                }
             }
         }
     }
@@ -50,7 +60,9 @@ impl CraftRuntime {
             if #[cfg(target_arch = "wasm32")] {
                 CraftRuntimeHandle { }
             } else {
-                CraftRuntimeHandle { tokio_runtime: self.tokio_runtime.handle().clone() }
+                CraftRuntimeHandle {
+                    tokio_runtime: self.tokio_runtime.handle().clone(),
+                }
             }
         }
     }
@@ -136,6 +148,29 @@ impl CraftRuntime {
 }
 
 impl CraftRuntimeHandle {
+    pub fn update_local_set(&self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        LOCAL_SET.with(|local_set| {
+            self.tokio_runtime.block_on(async {
+                local_set
+                    .run_until(async {
+                        tokio::task::yield_now().await;
+                    })
+                    .await;
+            });
+        });
+    }
+
+    #[allow(dead_code)]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn spawn_current_thread<F>(&self, future: F)
+    where
+        F: Future + 'static,
+        F::Output: 'static,
+    {
+        LOCAL_SET.with(|ls| ls.spawn_local(future));
+    }
+
     #[allow(dead_code)]
     #[cfg(target_arch = "wasm32")]
     pub fn spawn<F>(&self, future: F)

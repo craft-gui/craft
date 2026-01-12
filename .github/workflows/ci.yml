@@ -18,7 +18,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+      - name: Install native dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libfontconfig1-dev
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
@@ -35,6 +36,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libfontconfig1-dev
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
@@ -75,7 +78,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
+      - name: Install native dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libfontconfig1-dev
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
@@ -122,6 +126,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: sudo apt-get update; sudo apt-get install --no-install-recommends libfontconfig1-dev
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
         with:
@@ -130,3 +136,35 @@ jobs:
         run: cargo test --package craft_retained --no-run
       - name: Run Unit Tests
         run: cargo test --package craft_retained --no-fail-fast --verbose
+
+  integration-tests:
+    runs-on: windows-latest
+    env:
+      CRAFT_RETAINED_TEST: generate-all
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+
+      - name: Run Integration Tests
+        run: |
+          cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
+
+      - name: Generate Kompari report
+        if: always()
+        run: cargo xtask report
+
+      - name: Upload Kompari report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kompari-report
+          path: |
+            report.html
+            crates/craft_retained/tests/current
+            crates/craft_retained/tests/snapshots

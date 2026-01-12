@@ -1,4 +1,4 @@
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Style, Unit, FlexWrap, Overflow, BoxSizing, Position};
+use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Position, Style, Unit};
 
 fn unit_to_taffy_dimension(unit: Unit) -> taffy::Dimension {
     match unit {
@@ -25,7 +25,6 @@ fn unit_to_taffy_length_percentage(unit: Unit) -> taffy::LengthPercentage {
 }
 
 impl Style {
-
     pub fn to_taffy_style(&self) -> taffy::Style {
         let style = self;
 
@@ -144,7 +143,7 @@ impl Style {
 
         let position = match style.get_position() {
             Position::Relative => taffy::Position::Relative,
-            Position::Absolute => taffy::Position::Absolute
+            Position::Absolute => taffy::Position::Absolute,
         };
 
         taffy::Style {

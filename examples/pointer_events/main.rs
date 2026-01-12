@@ -113,9 +113,9 @@ fn pointer_enter_leave_example() -> Container {
     let pointer_enter_leave_log = move |is_enter: bool, node_name: &'static str| {
         let push_text_clone_2 = push_text.clone();
         let pointer_event_name = if is_enter { "Pointer Enter" } else { "Pointer Leave" };
-        return Rc::new(move |_event: &mut Event| {
+        Rc::new(move |_event: &mut Event| {
             push_text_clone_2(format!("{}: {}", pointer_event_name, node_name));
-        });
+        })
     };
 
     let parent = Container::new()

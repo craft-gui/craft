@@ -13,10 +13,8 @@ impl CssComputedBorder {
 
         self.background.apply_affine(scale_factor);
 
-        for side in self.sides.iter_mut() {
-            if let Some(side) = side {
-                side.apply_affine(scale_factor);
-            }
+        for side in self.sides.iter_mut().flatten() {
+            side.apply_affine(scale_factor);
         }
     }
 }

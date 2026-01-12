@@ -355,10 +355,11 @@ impl CssRectPathIter {
         if let Some(iter) = &mut self.current_corner_iter {
             if let Some(el) = iter.next() {
                 // Turn MoveTo into LineTo except for the first corner
-                if self.current_corner != 1 && matches!(el, PathEl::MoveTo(_)) {
-                    if let PathEl::MoveTo(p) = el {
-                        return Some(PathEl::LineTo(p));
-                    }
+                if self.current_corner != 1
+                    && matches!(el, PathEl::MoveTo(_))
+                    && let PathEl::MoveTo(p) = el
+                {
+                    return Some(PathEl::LineTo(p));
                 }
                 return Some(el);
             } else {

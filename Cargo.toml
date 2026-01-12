@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "crates/craft_retained",
     "crates/craft_logger",
+    "xtask",
     "examples/util",
     "examples/counter_retained",
     "examples/multiwindow",
