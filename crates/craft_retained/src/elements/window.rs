@@ -251,7 +251,8 @@ impl WindowInternal {
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
-            self.window.as_ref().unwrap().request_redraw();
+            // TODO: Fix
+            //self.window.as_ref().unwrap().request_redraw();
         }
     }
 
