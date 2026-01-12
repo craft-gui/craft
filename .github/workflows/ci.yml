@@ -159,8 +159,11 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
 
       - name: Run Unit Tests (with Xvfb)
+        env:
+          CRAFT_RETAINED_TEST: generate-all
+          LIBGL_ALWAYS_SOFTWARE: 1
         run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" \
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x32" \
             cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
 
       - name: Generate Kompari report
