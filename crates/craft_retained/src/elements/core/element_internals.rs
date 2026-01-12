@@ -20,6 +20,7 @@ use crate::text::text_context::TextContext;
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData {
     /// A helper to apply the layout for all children.
+    #[allow(clippy::too_many_arguments)]
     fn apply_layout_children(
         &mut self,
         taffy_tree: &mut TaffyTree,

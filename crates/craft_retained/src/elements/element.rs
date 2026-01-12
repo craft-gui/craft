@@ -547,7 +547,7 @@ pub trait AsElement {
 
 pub trait Element: Clone + AsElement {
     fn get_children(&self) -> Vec<Rc<RefCell<dyn ElementImpl>>> {
-        self.as_element_rc().borrow().children().iter().cloned().collect()
+        self.as_element_rc().borrow().children().to_vec()
     }
 
     fn remove_child(&self, child: Rc<RefCell<dyn ElementImpl>>) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {

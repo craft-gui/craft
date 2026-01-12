@@ -125,30 +125,30 @@ impl RenderList {
 
     #[inline(always)]
     pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
-        if let Some(cull) = &self.cull {
-            if !cull.intersects(&rectangle) {
-                return;
-            }
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&rectangle)
+        {
+            return;
         }
         self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
     }
 
     #[inline(always)]
     pub fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
-        if let Some(cull) = &self.cull {
-            if !cull.intersects(&bounding_box) {
-                return;
-            }
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&bounding_box)
+        {
+            return;
         }
         self.targets.push((id, bounding_box));
     }
 
     #[inline(always)]
     pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, thickness: f64) {
-        if let Some(cull) = &self.cull {
-            if !cull.intersects(&rectangle) {
-                return;
-            }
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&rectangle)
+        {
+            return;
         }
         self.commands
             .push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
@@ -156,10 +156,10 @@ impl RenderList {
 
     #[inline(always)]
     pub fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush) {
-        if let Some(cull) = &self.cull {
-            if !cull.intersects(&Rectangle::from_kurbo(path.bounding_box())) {
-                return;
-            }
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&Rectangle::from_kurbo(path.bounding_box()))
+        {
+            return;
         }
         self.commands.push(RenderCommand::FillBezPath(path, brush));
     }
@@ -172,10 +172,10 @@ impl RenderList {
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
-        if let Some(cull) = &self.cull {
-            if !cull.intersects(&rectangle) {
-                return;
-            }
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&rectangle)
+        {
+            return;
         }
         self.commands
             .push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));

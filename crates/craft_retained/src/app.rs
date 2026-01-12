@@ -39,8 +39,8 @@ thread_local! {
     /// Records document-level state (focus, pointer captures, etc.) for internal use.
     pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
-    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = RefCell::new(VecDeque::new());
+    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementImpl >>>> = RefCell::new(None);
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
@@ -58,17 +58,13 @@ thread_local! {
 /// Only user-registered event callbacks will be dispatched.
 pub fn queue_event(event: Event, message: CraftMessage) {
     EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        return event_queue.push_back((event, message));
+        event_queue.push_back((event, message));
     });
 }
 
 /// Pops from the front of the event dispatch queue and returns the result.
 pub(crate) fn dequeue_event() -> Option<(Event, CraftMessage)> {
-    let event = EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        return event_queue.pop_front();
-    });
-
-    event
+    EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| event_queue.pop_front())
 }
 
 /// Enqueues an event at the back of the dispatch queue.
@@ -77,17 +73,13 @@ pub(crate) fn dequeue_event() -> Option<(Event, CraftMessage)> {
 /// Only user-registered event callbacks will be dispatched.
 pub fn queue_window_event(window_id: WindowId, event: WindowEvent) {
     WINDOW_EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        return event_queue.push_back((window_id, event));
+        event_queue.push_back((window_id, event));
     });
 }
 
 /// Pops from the front of the event dispatch queue and returns the result.
 pub(crate) fn dequeue_window_event() -> Option<(WindowId, WindowEvent)> {
-    let event = WINDOW_EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        return event_queue.pop_front();
-    });
-
-    event
+    WINDOW_EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| event_queue.pop_front())
 }
 
 pub struct App {
@@ -295,11 +287,11 @@ impl App {
     }
 
     fn dispatch_event(&mut self, window: Window, message: &CraftMessage, _is_style: bool) {
-        let mouse_pos = Some(window.mouse_position());
+        let mouse_pos = window.mouse_position();
         let render_list = window.inner.borrow().render_list.clone();
         self.event_dispatcher.dispatch_event(
             message,
-            mouse_pos.unwrap_or_default(),
+            mouse_pos,
             window.inner.clone(),
             &mut self.text_context,
             render_list.borrow_mut().deref_mut(),
@@ -361,40 +353,6 @@ impl App {
             window.request_redraw();
         }*/
     }
-
-    /// "Animates" a tree by calling `on_animation_frame` and changing an element's styles.
-    /*#[allow(dead_code)]
-    fn animate_tree(&mut self, delta_time: &Duration, layout_origin: Point, viewport_size: LogicalSize<f32>) {
-        /*let span = span!(Level::INFO, "animate_tree");
-        let _enter = span.enter();*/
-
-        let old_has_active_animation = self.previous_animation_flags.has_active_animation();
-        let root_element = self.root.clone();
-
-        // Damage track across recursive calls to `on_animation_frame`.
-        let mut animation_flags = AnimationFlags::default();
-        root_element.borrow_mut().on_animation_frame(&mut animation_flags, *delta_time);
-        self.previous_animation_flags = animation_flags;
-
-        // Perform a relayout if an animation used any layout effecting style property.
-        if animation_flags.needs_relayout() || old_has_active_animation {
-            root_element.borrow_mut().reset_layout_item();
-
-            self.layout_tree(
-                viewport_size,
-                layout_origin,
-                self.window_context.effective_scale_factor(),
-                self.window_context.mouse_position,
-            );
-        }
-
-        // Request a redraw if there is at least one animation playing.
-        // ControlFlow::Poll is set in `about_to_wait`.
-        if animation_flags.has_active_animation() || old_has_active_animation {
-            // Winit does not guarantee when a redraw event will happen, but that should be fine, at worst we redraw an extra time.
-            self.request_redraw(RedrawFlags::new(old_has_active_animation));
-        }
-    }*/
 
     fn update_resources(&mut self) {
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {

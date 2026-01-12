@@ -151,7 +151,7 @@ impl CraftRuntimeHandle {
     pub fn update_local_set(&self) {
         #[cfg(not(target_arch = "wasm32"))]
         LOCAL_SET.with(|local_set| {
-            let _ = self.tokio_runtime.block_on(async {
+            self.tokio_runtime.block_on(async {
                 local_set
                     .run_until(async {
                         tokio::task::yield_now().await;

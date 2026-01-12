@@ -2,7 +2,7 @@ use kurbo::Point;
 
 use crate::elements::SliderInner;
 use crate::elements::core::ElementInternals;
-use crate::elements::slider::slider::SliderDirection;
+use crate::elements::slider::slider_element::SliderDirection;
 
 impl SliderInner {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {
@@ -93,8 +93,7 @@ mod tests {
     use super::*;
 
     fn make_test_slider() -> Rc<RefCell<SliderInner>> {
-        let slider = SliderInner::new(16.0);
-        slider
+        SliderInner::new(16.0)
     }
 
     #[test]

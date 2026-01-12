@@ -436,7 +436,7 @@ impl TextInputInner {
     }
 
     pub fn get_text(&self) -> &str {
-        &self.state.editor().raw_text()
+        self.state.editor().raw_text()
     }
 
     /// Set the text.

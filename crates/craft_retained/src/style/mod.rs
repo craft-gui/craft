@@ -216,7 +216,7 @@ where
 
     #[inline(always)]
     pub fn get(&self) -> T {
-        self.property.clone()
+        self.property
     }
 
     #[inline(always)]

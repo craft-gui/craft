@@ -3,11 +3,12 @@ extern crate libtest_mimic_collect;
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use image::RgbImage;
+
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
 use craft_retained::{Color, CraftCallback, CraftOptions, pct, px, rgb};
+use image::RgbImage;
 use libtest_mimic_collect::TestCollection;
 use libtest_mimic_collect::libtest_mimic::Arguments;
 
@@ -61,7 +62,6 @@ fn counter() {
                 .push(add_button.clone())
         });
 
-
     let result_image: Rc<RefCell<Option<RgbImage>>> = Rc::new(RefCell::new(None));
     let result_image_clone = result_image.clone();
     let cb = CraftCallback(Box::new(move || {
@@ -86,7 +86,6 @@ fn counter() {
             let dynamic_img = image::DynamicImage::ImageRgba8(img_buffer);
             *result_image.borrow_mut() = Some(dynamic_img.to_rgb8());
             window.close();
-
         }
     }));
     craft_retained::craft_test(CraftOptions::test("counter_test", cb));

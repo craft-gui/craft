@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use image::RgbImage;
 
 /// Directory where current tests creates images
-fn current_dir() -> PathBuf {
+pub fn current_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -16,7 +16,7 @@ fn current_dir() -> PathBuf {
 }
 
 /// Directory with blessed snapshots
-fn snapshot_dir() -> PathBuf {
+pub fn snapshot_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
@@ -25,14 +25,14 @@ fn snapshot_dir() -> PathBuf {
         .join("snapshots")
 }
 
-fn is_generate_all_mode() -> bool {
+pub fn is_generate_all_mode() -> bool {
     std::env::var("CRAFT_RETAINED_TEST")
-        .map(|x| x.to_ascii_lowercase() == "generate-all")
+        .map(|x| x.eq_ignore_ascii_case("generate-all"))
         .unwrap_or(false)
 }
 
 /// Check an image against snapshot
-pub(crate) fn check_snapshot(image: RgbImage, image_name: &str) {
+pub fn check_snapshot(image: RgbImage, image_name: &str) {
     let snapshot_dir = snapshot_dir();
     println!("Snapshots DIR: {}", snapshot_dir.to_str().unwrap());
     let snapshot = image::ImageReader::open(snapshot_dir.join(image_name))

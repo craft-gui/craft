@@ -67,6 +67,12 @@ pub struct WindowInternal {
     advanced_window_fn: Option<WindowConstructor>,
 }
 
+impl Default for Window {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Window {
     pub fn new_advanced<F>(f: F) -> Self
     where
@@ -287,8 +293,8 @@ impl WindowInternal {
 
         let window_size = self.window_size();
         let available_space: taffy::Size<AvailableSpace> = taffy::Size {
-            width: AvailableSpace::Definite(window_size.width as f32),
-            height: AvailableSpace::Definite(window_size.height as f32),
+            width: AvailableSpace::Definite(window_size.width),
+            height: AvailableSpace::Definite(window_size.height),
         };
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
@@ -437,10 +443,10 @@ impl WindowInternal {
         };
 
         let focus_id = FOCUS.with_borrow_mut(|focus| {
-            if let Some(focus) = focus {
-                if let Some(focus) = focus.upgrade() {
-                    return focus.borrow().element_data().internal_id;
-                }
+            if let Some(focus) = focus
+                && let Some(focus) = focus.upgrade()
+            {
+                return focus.borrow().element_data().internal_id;
             }
             window_accesskit_id
         });

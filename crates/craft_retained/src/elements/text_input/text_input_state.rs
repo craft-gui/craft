@@ -300,7 +300,7 @@ impl TextInputState {
     pub fn cursor_blink(&mut self) {
         self.cursor_visible = self.start_time.is_some_and(|start_time| {
             let elapsed = Instant::now().duration_since(start_time);
-            (elapsed.as_millis() / self.blink_period.as_millis()) % 2 == 0
+            (elapsed.as_millis() / self.blink_period.as_millis()).is_multiple_of(2)
         });
     }
 
@@ -532,7 +532,7 @@ impl TextInputState {
         self.clear_cache();
     }
 
-    pub fn ime_pre_edit(&mut self, text_context: &mut TextContext, text: &String, cursor: &Option<(usize, usize)>) {
+    pub fn ime_pre_edit(&mut self, text_context: &mut TextContext, text: &str, cursor: &Option<(usize, usize)>) {
         if text.is_empty() {
             self.driver(text_context).clear_compose();
         } else {
