@@ -148,6 +148,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
             libfontconfig1-dev \
+            libxkbcommon-x11-0 \
             xvfb
 
       - name: Install Stable Toolchain
