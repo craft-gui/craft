@@ -172,4 +172,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kompari-report
-          path: report.html
+          path: |
+            report.html
+            crates/craft_retained/tests/current
+            crates/craft_retained/tests/snapshots
