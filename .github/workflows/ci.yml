@@ -130,3 +130,15 @@ jobs:
         run: cargo test --package craft_retained --no-run
       - name: Run Unit Tests
         run: cargo test --package craft_retained --no-fail-fast --verbose
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+      - name: Run Unit Tests
+        run: cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
