@@ -13,11 +13,11 @@ mod slider;
 mod text_input;
 mod window;
 
-pub use container::Container;
+pub use container::{Container, ContainerInner};
 pub use element::{Element, ElementImpl};
 pub use element_id_map::ElementIdMap;
 pub use image::Image;
 pub use slider::{Slider, SliderDirection, SliderInner};
 pub use text::{Text, TextInner};
 pub use text_input::{TextInput, TextInputInner};
-pub use window::Window;
+pub use window::{Window, WindowInternal};
