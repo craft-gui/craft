@@ -164,6 +164,7 @@ jobs:
             cargo test --test counter --no-default-features --features="vello_cpu_renderer png"
 
       - name: Generate Kompari report
+        if: always()
         run: cargo xtask report
 
       - name: Upload Kompari report
