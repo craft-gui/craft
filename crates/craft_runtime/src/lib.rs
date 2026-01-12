@@ -1,6 +1,8 @@
-use cfg_if::cfg_if;
 use std::future::Future;
+
+use cfg_if::cfg_if;
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
+pub use tokio::*;
 
 thread_local! {
     #[cfg(not(target_arch = "wasm32"))]
@@ -146,14 +148,15 @@ impl CraftRuntime {
 }
 
 impl CraftRuntimeHandle {
-
-    pub fn update(&self) {
+    pub fn update_local_set(&self) {
         #[cfg(not(target_arch = "wasm32"))]
         LOCAL_SET.with(|local_set| {
             let _ = self.tokio_runtime.block_on(async {
-                local_set.run_until(async {
-                    tokio::task::yield_now().await;
-                }).await;
+                local_set
+                    .run_until(async {
+                        tokio::task::yield_now().await;
+                    })
+                    .await;
             });
         });
     }

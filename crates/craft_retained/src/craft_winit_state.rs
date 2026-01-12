@@ -18,7 +18,7 @@ use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
 use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
 use crate::CraftOptions;
-use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER};
+use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER, dequeue_window_event};
 use crate::document::Document;
 use crate::events::internal::InternalMessage;
 
@@ -172,10 +172,17 @@ impl ApplicationHandler for CraftWinitState {
             return;
         }
 
+        {
+            let craft_state = &mut self.craft_state;
+            craft_state.runtime.update_local_set();
+        }
+
+        while let Some((window_id, event)) = dequeue_window_event() {
+            self.window_event(event_loop, window_id, event);
+        }
+
         let craft_state = &mut self.craft_state;
 
-        craft_state.runtime.update();
-        
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
                     craft_state.runtime.borrow_tokio_runtime().block_on(async {

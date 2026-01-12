@@ -5,7 +5,7 @@ use craft_retained::elements::{Container, Element, Text, TextInner, Window};
 use craft_retained::events::Event;
 use craft_retained::events::ui_events::pointer::PointerButtonEvent;
 use craft_retained::palette::css::WHITE;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit, FlexWrap};
+use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
 use craft_retained::{Color, rgb};
 use rand::rng;
 use rand::rngs::ThreadRng;

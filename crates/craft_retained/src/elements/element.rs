@@ -1,18 +1,23 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use ui_events::pointer::PointerId;
+use winit::dpi::PhysicalPosition;
+use winit::event::WindowEvent::{CursorMoved, MouseInput};
+use winit::event::{DeviceId, ElementState, MouseButton};
 
 use crate::CraftError;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE, queue_window_event};
 use crate::document::Document;
 use crate::elements::ElementIdMap;
 use crate::elements::core::ElementData;
+use crate::elements::window::WindowInternal;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
-use crate::style::{AlignItems, Display, FlexDirection, FontFamily, FontStyle, JustifyContent, ScrollbarColor, Style, Underline, Unit, FontWeight, FlexWrap, BoxSizing, Position, Overflow};
+use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
@@ -507,6 +512,33 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
     fn to_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
         self.element_data().me.upgrade().unwrap()
     }
+
+    /// Returns the root element.
+    fn get_root_element(&self) -> Weak<RefCell<dyn ElementImpl>> {
+        let mut root_ancestor: Weak<RefCell<dyn ElementImpl>> = self.element_data().me.clone();
+        loop {
+            let me = root_ancestor.upgrade().unwrap();
+            if let Some(parent) = me.borrow().parent() {
+                root_ancestor = parent;
+            } else {
+                break;
+            }
+        }
+        root_ancestor
+    }
+
+    /// Gets the winit window of this element.
+    ///
+    /// This will panic if the element does not have a window as its root.
+    fn get_winit_window(&self) -> Option<Arc<winit::window::Window>> {
+        let root = self.get_root_element().upgrade().unwrap();
+        root.borrow()
+            .as_any()
+            .downcast_ref::<WindowInternal>()
+            .unwrap()
+            .winit_window
+            .clone()
+    }
 }
 
 pub trait AsElement {
@@ -805,5 +837,32 @@ pub trait Element: Clone + AsElement {
 
     fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
         self.as_element_rc().borrow().has_pointer_capture(pointer_id)
+    }
+
+    #[allow(async_fn_in_trait)]
+    async fn click(&self) {
+        let pos = self
+            .as_element_rc()
+            .borrow()
+            .get_computed_box_transformed()
+            .padding_rectangle();
+        let mouse_move = CursorMoved {
+            device_id: DeviceId::dummy(),
+            position: PhysicalPosition::new(pos.x as f64, pos.y as f64),
+        };
+        let mouse_down = MouseInput {
+            device_id: DeviceId::dummy(),
+            state: ElementState::Pressed,
+            button: MouseButton::Left,
+        };
+        let mouse_up = MouseInput {
+            device_id: DeviceId::dummy(),
+            state: ElementState::Released,
+            button: MouseButton::Left,
+        };
+        let window_id = self.as_element_rc().borrow().get_winit_window().unwrap().id();
+        queue_window_event(window_id, mouse_move);
+        queue_window_event(window_id, mouse_down);
+        queue_window_event(window_id, mouse_up);
     }
 }

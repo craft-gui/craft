@@ -10,11 +10,12 @@ use std::sync::Arc;
 use accesskit::TreeUpdate;
 use craft_primitives::geometry::{Rectangle, Size};
 use craft_renderer::RenderList;
-use craft_renderer::renderer::Renderer;
+use craft_renderer::renderer::{Renderer, Screenshot};
 use craft_resource_manager::ResourceManager;
 use kurbo::{Affine, Point};
 use peniko::Color;
 use taffy::{AvailableSpace, NodeId};
+use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -25,7 +26,7 @@ use crate::RendererBox;
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::app::FOCUS;
-use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER};
+use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element::AsElement;
 use crate::elements::element_data::ElementData;
@@ -81,9 +82,15 @@ impl Window {
 
         Window { inner }
     }
-}
 
-impl Window {
+    pub fn screenshot(&self) -> Screenshot {
+        self.inner.borrow().screenshot()
+    }
+
+    pub fn close(&self) {
+        self.inner.borrow().close();
+    }
+
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.inner.borrow().winit_window()
     }
@@ -456,6 +463,16 @@ impl WindowInternal {
             craft_app.text_context.as_mut().unwrap(),
             craft_app.resource_manager.clone(),
         );
+    }
+
+    fn screenshot(&self) -> Screenshot {
+        self.renderer.as_ref().unwrap().screenshot()
+    }
+
+    fn close(&self) {
+        if let Some(winit_window) = &self.winit_window {
+            queue_window_event(winit_window.id(), WindowEvent::CloseRequested);
+        }
     }
 }
 

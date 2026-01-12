@@ -313,4 +313,18 @@ pub trait Renderer: Any {
     );
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);
+
+    fn screenshot(&self) -> Screenshot {
+        Screenshot {
+            width: 0,
+            height: 0,
+            pixels: Vec::new(),
+        }
+    }
+}
+
+pub struct Screenshot {
+    pub width: u16,
+    pub height: u16,
+    pub pixels: Vec<u8>,
 }

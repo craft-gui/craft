@@ -14,12 +14,12 @@ mod app;
 pub use craft_primitives::geometry;
 pub mod layout;
 pub use craft_runtime::CraftRuntime;
+mod craftcallback;
 pub mod spatial;
 mod utils;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
 mod window_manager;
-mod craftcallback;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -35,6 +35,7 @@ pub use craft_resource_manager::ResourceIdentifier;
 use craft_resource_manager::ResourceManager;
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
 use craft_winit_state::CraftState;
+pub use craftcallback::CraftCallback;
 use events::internal::InternalMessage;
 pub use options::CraftOptions;
 pub use utils::craft_error::CraftError;
@@ -51,8 +52,6 @@ use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::style::Unit;
 use crate::utils::cloneable_any::CloneableAny;
-
-pub use craftcallback::CraftCallback;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
 
@@ -63,6 +62,8 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
 pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send;
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
+
+pub use {craft_runtime, image};
 
 #[cfg(not(target_arch = "wasm32"))]
 type RendererBox = Box<dyn Renderer>;

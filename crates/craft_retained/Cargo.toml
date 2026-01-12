@@ -11,6 +11,7 @@ repository = "https://github.com/craft-gui/craft"
 [features]
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
+vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
 
 system_fonts = ["parley/system"]
 
@@ -163,3 +164,13 @@ version = "0.1.1"
 path = "../craft_resource_manager"
 default-features = false
 version = "0.1.1"
+
+[dev-dependencies]
+libtest-mimic-collect  = "0.3.3"
+
+
+[[test]]
+name = "counter"
+path = "tests/counter.rs"
+harness = false
+required-features = ["vello_cpu_renderer", "png"]
