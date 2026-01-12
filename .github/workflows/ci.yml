@@ -158,7 +158,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            libfontconfig1-dev
+            libfontconfig1-dev \
+            libxkbcommon-x11-0
 
       - name: Install Stable Toolchain
         uses: dtolnay/rust-toolchain@master
