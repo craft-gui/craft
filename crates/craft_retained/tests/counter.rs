@@ -70,11 +70,11 @@ fn counter() {
         let result_image = result_image_clone.clone();
         async move {
             for _ in 0..3 {
-                craft_retained::craft_runtime::time::sleep(craft_runtime::time::Duration::from_millis(1000)).await;
+                craft_retained::craft_runtime::time::sleep(craft_runtime::time::Duration::from_millis(500)).await;
                 add_button.click().await;
             }
 
-            craft_retained::craft_runtime::time::sleep(craft_runtime::time::Duration::from_millis(30000)).await;
+            craft_retained::craft_runtime::time::sleep(craft_runtime::time::Duration::from_millis(500)).await;
 
             let screenshot = window.clone().screenshot();
             let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(

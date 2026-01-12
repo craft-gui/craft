@@ -8,7 +8,7 @@ use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent::{CursorMoved, MouseInput};
-use winit::event::{DeviceId, ElementState, MouseButton, WindowEvent};
+use winit::event::{DeviceId, ElementState, MouseButton};
 
 use crate::CraftError;
 use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE, queue_window_event};
@@ -861,12 +861,8 @@ pub trait Element: Clone + AsElement {
             button: MouseButton::Left,
         };
         let window_id = self.as_element_rc().borrow().get_winit_window().unwrap().id();
-        queue_window_event(window_id, WindowEvent::RedrawRequested);
         queue_window_event(window_id, mouse_move);
-        queue_window_event(window_id, WindowEvent::RedrawRequested);
         queue_window_event(window_id, mouse_down);
-        queue_window_event(window_id, WindowEvent::RedrawRequested);
         queue_window_event(window_id, mouse_up);
-        queue_window_event(window_id, WindowEvent::RedrawRequested);
     }
 }

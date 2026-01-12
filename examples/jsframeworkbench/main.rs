@@ -121,7 +121,7 @@ impl State {
             .data
             .iter()
             .skip(self.rows.len())
-            .map(|data| Self::create_row(data))
+            .map(Self::create_row)
             .collect();
 
         self.rows.extend(new_rows.iter().cloned());
