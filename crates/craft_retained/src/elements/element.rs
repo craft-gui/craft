@@ -2,7 +2,6 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use taffy::CoreStyle;
 use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use ui_events::pointer::PointerId;
