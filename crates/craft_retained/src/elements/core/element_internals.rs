@@ -19,6 +19,26 @@ use crate::text::text_context::TextContext;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData {
+    fn position_in_parent(&self) -> Option<usize> {
+        let parent = self.parent();
+
+        // @OPTIMIZE: We are copying the vec here.
+        if let Some(parent) = parent && let Some(parent) = parent.upgrade() {
+
+            let me_ptr = self.element_data().me.clone().upgrade().unwrap();
+            let children = parent.borrow_mut().element_data().children.clone();
+
+            let self_position = children
+                .iter()
+                .position(|x| Rc::ptr_eq(x, &me_ptr))
+                .unwrap();
+
+            Some(self_position)
+        } else {
+            None
+        }
+    }
+
     /// A helper to apply the layout for all children.
     #[allow(clippy::too_many_arguments)]
     fn apply_layout_children(

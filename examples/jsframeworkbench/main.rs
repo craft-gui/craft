@@ -96,10 +96,7 @@ impl State {
     }
 
     pub fn remove_all_rows(&mut self) {
-        let to_remove = self.element.get_children();
-        for child in to_remove {
-            self.element.remove_child(child).expect("Failed to remove child!");
-        }
+        self.element.remove_all_children();
     }
 
     pub fn swap_rows(&mut self) {

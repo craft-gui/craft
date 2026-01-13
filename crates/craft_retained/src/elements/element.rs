@@ -2,7 +2,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
+use taffy::CoreStyle;
 use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use ui_events::pointer::PointerId;
@@ -21,6 +21,44 @@ use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, Font
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
+    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.children().first().cloned().ok_or(CraftError::ElementNotFound)
+    }
+
+    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.children().last().cloned().ok_or(CraftError::ElementNotFound)
+    }
+
+    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        let parent = self.parent();
+        let position = self.position_in_parent();
+
+        if let Some(position) = position && let Some(parent) = parent.unwrap().upgrade() {
+            if let Some(next_sibling) = parent.borrow().children().get(position - 1) {
+                Ok(next_sibling.clone())
+            } else {
+                Err(CraftError::ElementNotFound)
+            }
+        } else {
+            Err(CraftError::ElementNotFound)
+        }
+    }
+
+    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        let parent = self.parent();
+        let position = self.position_in_parent();
+
+        if let Some(position) = position && let Some(parent) = parent.unwrap().upgrade() {
+            if let Some(next_sibling) = parent.borrow().children().get(position + 1) {
+                Ok(next_sibling.clone())
+            } else {
+                Err(CraftError::ElementNotFound)
+            }
+        } else {
+            Err(CraftError::ElementNotFound)
+        }
+    }
+
     fn swap_child(
         &mut self,
         child_1: Rc<RefCell<dyn ElementImpl>>,
@@ -142,6 +180,13 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         child.borrow_mut().unfocus();
 
         Ok(child)
+    }
+
+    fn remove_all_children(&mut self) {
+        // @OPTIMIZE: We are copying the vec here.
+        for child in self.element_data().children.clone().iter().rev() {
+            self.remove_child(child.clone()).unwrap();
+        }
     }
 
     fn push(&mut self, _child: Rc<RefCell<dyn ElementImpl>>) {
@@ -550,8 +595,37 @@ pub trait Element: Clone + AsElement {
         self.as_element_rc().borrow().children().to_vec()
     }
 
+    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.as_element_rc().borrow().get_previous_sibling()
+    }
+
+    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.as_element_rc().borrow().get_next_sibling()
+    }
+
+    fn get_parent(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        let parent = self.as_element_rc().borrow().parent();
+        if let Some(parent) = parent {
+            parent.upgrade().ok_or(CraftError::ElementNotFound)
+        } else {
+            Err(CraftError::ElementNotFound)
+        }
+    }
+
+    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.as_element_rc().borrow().get_first_child()
+    }
+
+    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        self.as_element_rc().borrow().get_last_child()
+    }
+
     fn remove_child(&self, child: Rc<RefCell<dyn ElementImpl>>) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
         self.as_element_rc().borrow_mut().remove_child(child)
+    }
+
+    fn remove_all_children(&self) {
+       self.as_element_rc().borrow_mut().remove_all_children()
     }
 
     fn swap_child(
@@ -567,11 +641,6 @@ pub trait Element: Clone + AsElement {
         self.as_element_rc().borrow_mut().push(child_rc);
         self
     }
-
-    /*fn extend(self, children: impl IntoIterator<Item = Rc<RefCell<dyn ElementImpl>>>) -> Self {
-        self.as_element_rc().borrow_mut().extend(children);
-        self
-    }*/
 
     fn on_pointer_enter(self, on_pointer_enter: PointerEnterHandler) -> Self {
         self.as_element_rc().borrow_mut().on_pointer_enter(on_pointer_enter);
