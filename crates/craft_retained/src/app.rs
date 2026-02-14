@@ -347,7 +347,7 @@ impl App {
         }
     }
 
-    fn request_redraw(&mut self, redraw_flags: RedrawFlags) {
+    pub(crate) fn request_redraw(&mut self, redraw_flags: RedrawFlags) {
         self.redraw_flags = redraw_flags;
         /*if let Some(window) = &self.window {
             window.request_redraw();

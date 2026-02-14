@@ -3,7 +3,7 @@ use std::time;
 
 use craft_logging::info;
 use craft_primitives::geometry::Size;
-use craft_runtime::{CraftRuntimeHandle, Receiver, Sender};
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work};
 use ui_events::pointer::PointerEvent;
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
 #[cfg(target_arch = "wasm32")]
@@ -216,6 +216,22 @@ impl ApplicationHandler for CraftWinitState {
                     });
                 });
             }
+        }
+
+        // Do work sent from other threads and update all the windows.
+        let mut work_done = false;
+        loop {
+            if let Some(work) = pop_gui_thread_work() {
+                work();
+                work_done = true;
+            } else {
+                break;
+            }
+        }
+        if work_done {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.redraw_all(&mut craft_state.craft_app);
+            });
         }
 
         craft_state.craft_app.on_about_to_wait(event_loop);

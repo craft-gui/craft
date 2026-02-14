@@ -2,6 +2,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
 use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
 use ui_events::pointer::PointerId;
@@ -32,7 +33,9 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         let parent = self.parent();
         let position = self.position_in_parent();
 
-        if let Some(position) = position && let Some(parent) = parent.unwrap().upgrade() {
+        if let Some(position) = position
+            && let Some(parent) = parent.unwrap().upgrade()
+        {
             if let Some(next_sibling) = parent.borrow().children().get(position - 1) {
                 Ok(next_sibling.clone())
             } else {
@@ -47,7 +50,9 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         let parent = self.parent();
         let position = self.position_in_parent();
 
-        if let Some(position) = position && let Some(parent) = parent.unwrap().upgrade() {
+        if let Some(position) = position
+            && let Some(parent) = parent.unwrap().upgrade()
+        {
             if let Some(next_sibling) = parent.borrow().children().get(position + 1) {
                 Ok(next_sibling.clone())
             } else {
@@ -624,7 +629,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn remove_all_children(&self) {
-       self.as_element_rc().borrow_mut().remove_all_children()
+        self.as_element_rc().borrow_mut().remove_all_children()
     }
 
     fn swap_child(

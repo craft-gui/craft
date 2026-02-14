@@ -32,6 +32,20 @@ impl WindowManager {
         None
     }
 
+    // Improve this.
+    pub(crate) fn redraw_all(&mut self, craft_app: &mut App) {
+        if !craft_app.active {
+            return;
+        }
+
+        // Create windows that were created during the program run.
+        for window_element in &self.windows {
+            if let Some(winit_window) = window_element.winit_window() {
+                winit_window.request_redraw();
+            }
+        }
+    }
+
     pub(crate) fn on_resume(&mut self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
         for window_element in &self.windows {
             window_element.create(craft_app, event_loop);

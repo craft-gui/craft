@@ -23,15 +23,13 @@ pub trait ElementInternals: ElementData {
         let parent = self.parent();
 
         // @OPTIMIZE: We are copying the vec here.
-        if let Some(parent) = parent && let Some(parent) = parent.upgrade() {
-
+        if let Some(parent) = parent
+            && let Some(parent) = parent.upgrade()
+        {
             let me_ptr = self.element_data().me.clone().upgrade().unwrap();
             let children = parent.borrow_mut().element_data().children.clone();
 
-            let self_position = children
-                .iter()
-                .position(|x| Rc::ptr_eq(x, &me_ptr))
-                .unwrap();
+            let self_position = children.iter().position(|x| Rc::ptr_eq(x, &me_ptr)).unwrap();
 
             Some(self_position)
         } else {

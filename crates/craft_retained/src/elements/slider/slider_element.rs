@@ -173,6 +173,8 @@ impl SliderInner {
             })
         });
 
+        me.borrow_mut().element_data.create_layout_node(None);
+
         me.borrow_mut().set_background_color(palette::css::LIGHT_GRAY);
         let border_radius = 25.0;
         me.borrow_mut().border_radius(
