@@ -6,9 +6,8 @@ use std::sync::Arc;
 use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
-use peniko::kurbo::Shape;
-use peniko::{BrushRef, Gradient, kurbo};
-
+use peniko::kurbo::{BezPath, Shape, Vec2};
+use peniko::{BrushRef, Gradient};
 use crate::text_renderer_data::TextData;
 
 #[derive(Clone)]
@@ -20,9 +19,19 @@ pub enum RenderCommand {
     DrawText(Weak<RefCell<dyn TextData>>, Rectangle, Option<TextScroll>, bool),
     PushLayer(Rectangle),
     PopLayer,
-    FillBezPath(kurbo::BezPath, Brush),
+    FillBezPath(BezPath, Brush),
     StartOverlay,
     EndOverlay,
+    BoxShadowOutset(BoxShadowOutset)
+}
+
+#[derive(Clone)]
+pub struct BoxShadowOutset {
+    pub offset: Vec2,
+    pub outline: BezPath,
+    pub path: BezPath,
+    pub blur_radius: f64,
+    pub color: Color,
 }
 
 #[derive(Clone, Debug)]
@@ -155,7 +164,7 @@ impl RenderList {
     }
 
     #[inline(always)]
-    pub fn fill_bez_path(&mut self, path: kurbo::BezPath, brush: Brush) {
+    pub fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
         if let Some(cull) = &self.cull
             && !cull.intersects(&Rectangle::from_kurbo(path.bounding_box()))
         {
@@ -219,6 +228,21 @@ impl RenderList {
         self.commands.push(RenderCommand::EndOverlay);
     }
 
+    #[inline(always)]
+    pub fn draw_outset_box_shadow(
+        &mut self,
+        box_shadow: BoxShadowOutset,
+        //rectangle: Rectangle,
+    ) {
+/*        if let Some(cull) = &self.cull
+            && !cull.intersects(&rectangle)
+        {
+            return;
+        }*/
+        self.commands
+            .push(RenderCommand::BoxShadowOutset(box_shadow));
+    }
+
     pub fn set_cull(&mut self, cull: Option<Rectangle>) {
         self.cull = cull;
     }
@@ -251,6 +275,15 @@ pub trait Renderer: Any {
                 | RenderCommand::DrawTinyVg(rect, _, _)
                 | RenderCommand::DrawText(_, rect, _, _) => *rect,
                 RenderCommand::FillBezPath(path, _) => Rectangle::from_kurbo(path.bounding_box()),
+                | RenderCommand::BoxShadowOutset(box_shadow) => {
+                    let bounding_box = box_shadow.path.bounding_box();
+                    Rectangle::new(
+                        (bounding_box.x0 + box_shadow.offset.x) as f32,
+                        (bounding_box.y0 + box_shadow.offset.y) as f32,
+                        (bounding_box.x1 + box_shadow.offset.x) as f32,
+                        (bounding_box.y1 + box_shadow.offset.y) as f32
+                    )
+                }
                 _ => unreachable!("Cannot compute the bounding rect of this render command."),
             }
         }

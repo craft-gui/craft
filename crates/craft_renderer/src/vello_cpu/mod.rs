@@ -1,5 +1,10 @@
 pub(crate) mod tinyvg;
 
+use vello_common::filter_effects::FilterFunction;
+use vello_common::filter_effects::Filter;
+use peniko::Compose;
+use peniko::Mix;
+use peniko::BlendMode;
 use std::any::Any;
 use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
@@ -18,7 +23,7 @@ use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
-use crate::renderer::{RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
+use crate::renderer::{BoxShadowOutset, RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::{Brush, RenderCommand};
@@ -336,7 +341,11 @@ impl Renderer for VelloCpuRenderer {
                         override_color,
                     );
                 }
-                _ => {}
+                RenderCommand::StartOverlay => {}
+                RenderCommand::EndOverlay => {}
+                RenderCommand::BoxShadowOutset(box_shadow) => {
+                    self.draw_outset_box_shadow(&box_shadow)
+                }
             }
         });
     }
@@ -374,6 +383,44 @@ impl VelloCpuRenderer {
         }
 
         buffer
+    }
+
+    pub fn draw_outset_box_shadow(&mut self, box_shadow: &BoxShadowOutset) {
+        let transform = Affine::IDENTITY;
+        //let border_path = box_shadow.outline;
+        //let box_shadow_path = self.box_shadow_path.clone().unwrap();
+
+        self.render_context.push_layer(
+            None,
+            Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
+            None,
+            None,
+            None,
+        );
+
+        // --- 1️⃣ Draw shadow with offset ---
+        self.render_context.set_transform(transform * Affine::translate(box_shadow.offset));
+
+        self.render_context.set_filter_effect(Filter::from_function(FilterFunction::Blur {
+            radius: box_shadow.blur_radius as f32,
+        }));
+
+        self.render_context.set_paint(box_shadow.color);
+        self.render_context.fill_path(&box_shadow.path);
+
+        self.render_context.reset_filter_effect();
+
+        // --- 2️⃣ Restore original transform ---
+        self.render_context.set_transform(transform);
+
+        // --- 3️⃣ Punch interior using NON-offset border ---
+        self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
+        self.render_context.set_paint(Color::WHITE);
+        self.render_context.fill_path(&box_shadow.outline);
+
+        self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+
+        self.render_context.pop_layer();
     }
 }
 

@@ -3,15 +3,18 @@ use std::rc::Rc;
 
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, pct, px, rgb};
+use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
+use craft_retained::{Color, CraftOptions, pct, px, rgb, rgba};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
+    let mut shadow_color = base_color;
+    shadow_color.components[3] = 1.0;
     Container::new()
+        .box_shadows(vec![BoxShadow::new(false, 0.0, 0.0, 5.0, 5.0, shadow_color)])
         .border_width(px(1), px(2), px(3), px(4))
         .border_color(border_color, border_color, border_color, border_color)
-        .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
+        .border_radius((10.0, 0.0), (5.0, 10.0), (130.0, 10.0), (10.0, 50.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
