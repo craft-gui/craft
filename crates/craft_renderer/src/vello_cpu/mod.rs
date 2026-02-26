@@ -432,6 +432,10 @@ impl VelloCpuRenderer {
 
             self.render_context.pop_layer();
         }
+
+        //self.render_context.set_paint(Color::from_rgb8(0, 0, 255));
+        //self.render_context.set_stroke(Stroke::new(5.0));
+        //self.render_context.stroke_path(&box_shadow.outline.to_path(0.1));
     }
 }
 

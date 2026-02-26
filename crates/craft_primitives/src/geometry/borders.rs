@@ -56,6 +56,7 @@ pub struct CssRoundedRect {
     corners_arcs: [[Option<Arc>; 4]; 4],
 
     background_arcs: [Option<Arc>; 4],
+    background_inner_arcs: [Option<Arc>; 4],
 
     widths: [f64; 4],
 }
@@ -72,6 +73,7 @@ impl CssRoundedRect {
             intersect_angles: [Vec2::default(); 4],
             corners_arcs: [[None; 4]; 4],
             background_arcs: [None; 4],
+            background_inner_arcs: [None; 4],
             widths,
             corners: [
                 Point::new(rect.x0, rect.y0),
@@ -121,6 +123,34 @@ impl CssRoundedRect {
 
         for corner in CORNERS {
             if let Some(arc) = &self.background_arcs[corner] {
+                let arc_path = arc.to_path(0.1);
+                if corner == TOP_LEFT {
+                    // For the very first segment, we MoveTo the start of the arc
+                    outline_path.extend(arc_path);
+                } else {
+                    // For subsequent corners, we LineTo the start of the arc to close the gaps
+                    extend_path_with_arc(&mut outline_path, &arc_path);
+                }
+            } else {
+                // If there is no arc (sharp corner), move or line to the corner point
+                let p = self.corners[corner];
+                if corner == TOP_LEFT {
+                    outline_path.move_to(p);
+                } else {
+                    outline_path.line_to(p);
+                }
+            }
+        }
+
+        outline_path.close_path();
+        outline_path
+    }
+
+    pub fn get_inline(&self) -> BezPath {
+        let mut outline_path = BezPath::new();
+
+        for corner in CORNERS {
+            if let Some(arc) = &self.background_inner_arcs[corner] {
                 let arc_path = arc.to_path(0.1);
                 if corner == TOP_LEFT {
                     // For the very first segment, we MoveTo the start of the arc
@@ -248,9 +278,18 @@ impl CssRoundedRect {
                 0.0,
             );
 
+            let background_inner_arc = Arc::new(
+                center,
+                self.inner_radii[corner],
+                CORNER_START_ANGLES[corner],
+                FRAC_PI_2,
+                0.0,
+            );
+
             self.corners_arcs[corner][0] = Some(outside_1st_arc);
             self.corners_arcs[corner][1] = Some(outside_2nd_arc);
             self.background_arcs[corner] = Some(background_arc);
+            self.background_inner_arcs[corner] = Some(background_inner_arc);
 
             if is_outer_radius_sharp(inner_radius) {
                 continue;
