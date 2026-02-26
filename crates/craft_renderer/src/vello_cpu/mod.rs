@@ -23,7 +23,7 @@ use vello_cpu::{Pixmap, RenderContext};
 use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
-use crate::renderer::{BoxShadowOutset, RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
+use crate::renderer::{BoxShadowCmd, RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello_cpu::tinyvg::draw_tiny_vg;
 use crate::{Brush, RenderCommand};
@@ -343,8 +343,8 @@ impl Renderer for VelloCpuRenderer {
                 }
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
-                RenderCommand::BoxShadowOutset(box_shadow) => {
-                    self.draw_outset_box_shadow(&box_shadow)
+                RenderCommand::BoxShadowCmd(box_shadow) => {
+                    self.draw_box_shadow(&box_shadow)
                 }
             }
         });
@@ -385,42 +385,53 @@ impl VelloCpuRenderer {
         buffer
     }
 
-    pub fn draw_outset_box_shadow(&mut self, box_shadow: &BoxShadowOutset) {
-        let transform = Affine::IDENTITY;
-        //let border_path = box_shadow.outline;
-        //let box_shadow_path = self.box_shadow_path.clone().unwrap();
-
-        self.render_context.push_layer(
-            None,
-            Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
-            None,
-            None,
-            None,
-        );
-
-        // --- 1️⃣ Draw shadow with offset ---
-        self.render_context.set_transform(transform * Affine::translate(box_shadow.offset));
-
-        self.render_context.set_filter_effect(Filter::from_function(FilterFunction::Blur {
+    pub fn draw_box_shadow(&mut self, box_shadow: &BoxShadowCmd) {
+        let radius = box_shadow.blur_radius / 2.0;
+        let filter = Some(Filter::from_function(FilterFunction::Blur {
             radius: box_shadow.blur_radius as f32,
         }));
 
-        self.render_context.set_paint(box_shadow.color);
-        self.render_context.fill_path(&box_shadow.path);
+        if box_shadow.inset {
+            let mut clip_path = kurbo::BezPath::new();
+            let outline_rect = box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
+            clip_path.extend(&outline_rect.to_path(0.1));
+            clip_path.extend(&box_shadow.path);
+            self.render_context.push_layer(
+                Some(&box_shadow.outline),
+                None,
+                None,
+                None,
+                filter,
+            );
+            self.render_context.set_fill_rule(Fill::EvenOdd);
+            self.render_context.set_paint(box_shadow.color);
+            self.render_context.fill_path(&clip_path);
+            self.render_context.pop_layer();
+            self.render_context.set_fill_rule(Fill::NonZero);
+        } else {
+            self.render_context.push_layer(
+                None,
+                Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
+                None,
+                None,
+                filter,
+            );
 
-        self.render_context.reset_filter_effect();
+            self.render_context.set_transform(Affine::translate(box_shadow.offset));
 
-        // --- 2️⃣ Restore original transform ---
-        self.render_context.set_transform(transform);
+            self.render_context.set_paint(box_shadow.color);
+            self.render_context.fill_path(&box_shadow.path);
 
-        // --- 3️⃣ Punch interior using NON-offset border ---
-        self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
-        self.render_context.set_paint(Color::WHITE);
-        self.render_context.fill_path(&box_shadow.outline);
+            self.render_context.set_transform(Affine::IDENTITY);
 
-        self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+            self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
+            self.render_context.set_paint(Color::WHITE);
+            self.render_context.fill_path(&box_shadow.outline);
 
-        self.render_context.pop_layer();
+            self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+
+            self.render_context.pop_layer();
+        }
     }
 }
 

@@ -8,13 +8,20 @@ use craft_retained::{Color, CraftOptions, pct, px, rgb, rgba};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
-    let mut shadow_color = base_color;
-    shadow_color.components[3] = 1.0;
     Container::new()
-        .box_shadows(vec![BoxShadow::new(false, 0.0, 0.0, 5.0, 5.0, shadow_color)])
-        .border_width(px(1), px(2), px(3), px(4))
+        .box_shadows(vec![
+            BoxShadow::new(false, 0.0, 5.0, 5.0, 0.0, rgba(0, 0, 0, 200)),
+
+            // 2. The Big Drop (Heavy and visible)
+            // Offset is 25.0 - this will be very obvious.
+            BoxShadow::new(false, 0.0, 25.0, 35.0, 0.0, rgba(0, 0, 0, 150)),
+
+            // 3. Inner "Plastic" Highlight
+            BoxShadow::new(true, 0.0, 4.0, 4.0, 0.0, rgba(255, 255, 255, 120)),
+        ])
+        .border_width(px(0), px(0), px(0), px(0))
         .border_color(border_color, border_color, border_color, border_color)
-        .border_radius((10.0, 0.0), (5.0, 10.0), (130.0, 10.0), (10.0, 50.0))
+        .border_radius((8.0, 8.0), (8.0, 8.0), (8.0, 8.0), (8.0, 8.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
@@ -45,14 +52,14 @@ fn main() {
                 .gap(px(20), px(20))
                 .push(create_button(
                     "-",
-                    rgb(244, 67, 54),
+                    rgb(244, 63, 94),
                     -1,
                     count.clone(),
                     count_text.clone(),
                 ))
                 .push(create_button(
                     "+",
-                    rgb(76, 175, 80),
+                    rgb(16, 185, 129),
                     1,
                     count.clone(),
                     count_text.clone(),

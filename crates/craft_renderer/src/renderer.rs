@@ -22,16 +22,18 @@ pub enum RenderCommand {
     FillBezPath(BezPath, Brush),
     StartOverlay,
     EndOverlay,
-    BoxShadowOutset(BoxShadowOutset)
+    BoxShadowCmd(BoxShadowCmd)
 }
 
 #[derive(Clone)]
-pub struct BoxShadowOutset {
+pub struct BoxShadowCmd {
+    pub inset: bool,
     pub offset: Vec2,
     pub outline: BezPath,
     pub path: BezPath,
     pub blur_radius: f64,
     pub color: Color,
+    pub border_box: Rectangle,
 }
 
 #[derive(Clone, Debug)]
@@ -231,7 +233,7 @@ impl RenderList {
     #[inline(always)]
     pub fn draw_outset_box_shadow(
         &mut self,
-        box_shadow: BoxShadowOutset,
+        box_shadow: BoxShadowCmd,
         //rectangle: Rectangle,
     ) {
 /*        if let Some(cull) = &self.cull
@@ -240,7 +242,7 @@ impl RenderList {
             return;
         }*/
         self.commands
-            .push(RenderCommand::BoxShadowOutset(box_shadow));
+            .push(RenderCommand::BoxShadowCmd(box_shadow));
     }
 
     pub fn set_cull(&mut self, cull: Option<Rectangle>) {
@@ -275,7 +277,7 @@ pub trait Renderer: Any {
                 | RenderCommand::DrawTinyVg(rect, _, _)
                 | RenderCommand::DrawText(_, rect, _, _) => *rect,
                 RenderCommand::FillBezPath(path, _) => Rectangle::from_kurbo(path.bounding_box()),
-                | RenderCommand::BoxShadowOutset(box_shadow) => {
+                | RenderCommand::BoxShadowCmd(box_shadow) => {
                     let bounding_box = box_shadow.path.bounding_box();
                     Rectangle::new(
                         (bounding_box.x0 + box_shadow.offset.x) as f32,
