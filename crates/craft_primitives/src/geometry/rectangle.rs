@@ -126,6 +126,10 @@ impl Rectangle {
     pub fn intersects(&self, other: &Rectangle) -> bool {
         self.x < other.right() && self.right() > other.x && self.y < other.bottom() && self.bottom() > other.y
     }
+
+    pub fn expand(&self, radius: f32) -> Self {
+        Rectangle::new(self.x - radius, self.y - radius, self.width + radius, self.height + radius)
+    }
 }
 
 /*impl From<taffy::Rect<f32>> for Rectangle {

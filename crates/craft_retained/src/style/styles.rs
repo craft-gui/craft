@@ -5,6 +5,7 @@ use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::{Color, ColorBrush};
 
 use crate::style::*;
+use crate::style::box_shadow::BoxShadow;
 
 #[derive(Clone, Debug)]
 pub struct Style {
@@ -56,6 +57,8 @@ pub struct Style {
     visible: StyleProperty<bool>,
     selection_color: StyleProperty<Color>,
     cursor_color: StyleProperty<Option<Color>>,
+
+    box_shadows: StyleProperty<Vec<BoxShadow>>,
 
     /// Set to true anytime a setter is called.
     pub is_dirty: bool,
@@ -116,6 +119,7 @@ impl Style {
             visible: StyleProperty::new(true),
             selection_color: StyleProperty::new(Color::from_rgb8(0, 120, 215)),
             cursor_color: StyleProperty::new(None),
+            box_shadows: StyleProperty::new(Vec::new()),
         })
     }
 }
@@ -470,6 +474,14 @@ impl Style {
     pub fn set_cursor_color(&mut self, val: Option<Color>) {
         self.is_dirty = true;
         self.cursor_color.set(val);
+    }
+
+    pub fn get_box_shadows(&self) -> Vec<BoxShadow> {
+        self.box_shadows.get()
+    }
+
+    pub fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
+        self.box_shadows = StyleProperty::new(box_shadows)
     }
 }
 
