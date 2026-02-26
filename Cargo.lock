@@ -1394,12 +1394,9 @@ dependencies = [
 
 [[package]]
 name = "fearless_simd"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fb2907d1f08b2b316b9223ced5b0e89d87028ba8deae9764741dba8ff7f3903"
-dependencies = [
- "bytemuck",
-]
+checksum = "76258897e51fd156ee03b6246ea53f3e0eb395d0b327e9961c4fc4c8b2fa151a"
 
 [[package]]
 name = "filetime"
@@ -5058,7 +5055,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vello"
 version = "0.7.0"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "futures-intrusive",
@@ -5076,7 +5073,7 @@ dependencies = [
 [[package]]
 name = "vello_api"
 version = "0.7.0"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "peniko",
@@ -5085,22 +5082,24 @@ dependencies = [
 [[package]]
 name = "vello_common"
 version = "0.0.6"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "fearless_simd",
+ "guillotiere",
  "hashbrown 0.16.1",
  "log",
  "peniko",
  "png 0.17.16",
  "skrifa 0.40.0",
  "smallvec",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
 name = "vello_cpu"
 version = "0.0.6"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "hashbrown 0.16.1",
@@ -5111,7 +5110,7 @@ dependencies = [
 [[package]]
 name = "vello_encoding"
 version = "0.7.0"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -5123,7 +5122,7 @@ dependencies = [
 [[package]]
 name = "vello_hybrid"
 version = "0.0.6"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "guillotiere",
@@ -5139,7 +5138,7 @@ dependencies = [
 [[package]]
 name = "vello_shaders"
 version = "0.7.0"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 dependencies = [
  "bytemuck",
  "log",
@@ -5151,7 +5150,7 @@ dependencies = [
 [[package]]
 name = "vello_sparse_shaders"
 version = "0.0.6"
-source = "git+https://github.com/linebender/vello.git?rev=b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68#b2e21aa7f7470096fc5fed6ccf6c680cb9a71f68"
+source = "git+https://github.com/linebender/vello.git?rev=ab333dc5205c00fb527a36ff8466abd35798c6b6#ab333dc5205c00fb527a36ff8466abd35798c6b6"
 
 [[package]]
 name = "version_check"
