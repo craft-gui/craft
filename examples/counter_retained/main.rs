@@ -11,12 +11,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
     Container::new()
         .box_shadows(vec![
             BoxShadow::new(false, 0.0, 5.0, 5.0, 0.0, rgba(0, 0, 0, 200)),
-
-            // 2. The Big Drop (Heavy and visible)
-            // Offset is 25.0 - this will be very obvious.
             BoxShadow::new(false, 0.0, 25.0, 35.0, 0.0, rgba(0, 0, 0, 150)),
-
-            // 3. Inner "Plastic" Highlight
             BoxShadow::new(true, 0.0, 4.0, 4.0, 0.0, rgba(255, 255, 255, 120)),
         ])
         .border_width(px(0), px(0), px(0), px(0))
