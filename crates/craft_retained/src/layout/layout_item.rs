@@ -85,24 +85,10 @@ impl LayoutItem {
             Position::Absolute => relative_position + from_taffy_point(result.location).to_vec2(),
         };
 
-        let mut size = Size {
+        let size = Size {
             width: result.size.width,
             height: result.size.height,
         };
-        // FIXME: Don't use the content size for position absolute containers.
-        // The following is a broken layout using result.size.
-        // └──  FLEX COL [x: 1    y: 44   w: 140  h: 45   content_w: 139  content_h: 142  border: l:1 r:1 t:1 b:1, padding: l:12 r:12 t:8 b:8] (NodeId(4294967303))
-        //     ├──  LEAF [x: 13   y: 9    w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967298))
-        //     ├──  LEAF [x: 13   y: 34   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967299))
-        //     ├──  LEAF [x: 13   y: 59   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967300))
-        //     ├──  LEAF [x: 13   y: 84   w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967301))
-        //     └──  LEAF [x: 13   y: 109  w: 114  h: 25   content_w: 29   content_h: 25   border: l:0 r:0 t:0 b:0, padding: l:0 r:0 t:0 b:0] (NodeId(4294967302))
-        if position == Position::Absolute {
-            size = Size::new(
-                f32::max(result.size.width, result.content_size.width),
-                f32::max(result.size.height, result.content_size.height),
-            );
-        }
 
         self.content_size = Size::new(result.content_size.width, result.content_size.height);
         self.computed_box = ElementBox {

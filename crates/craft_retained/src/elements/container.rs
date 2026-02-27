@@ -119,26 +119,21 @@ impl ElementInternals for ContainerInner {
             // For scroll changes from taffy;
             self.element_data.apply_scroll(layout);
             self.apply_clip(clip_bounds);
-            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+            self.element_data.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
-        if !dirty
-            && self
-                .element_data
-                .scroll_state
-                .map(|scroll_state| scroll_state.is_new())
-                .unwrap_or_default()
+        if !dirty && self.element_data.scroll_state.is_new()
         {
             self.element_data.apply_scroll(layout);
-            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+            self.element_data.scroll_state.mark_old();
         }
 
         if has_new_layout {
             taffy_tree.mark_seen(node);
         }
 
-        let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
+        let scroll_y = self.element_data.scroll().scroll_y() as f64;
         let child_transform = Affine::translate((0.0, -scroll_y));
 
         self.apply_layout_children(

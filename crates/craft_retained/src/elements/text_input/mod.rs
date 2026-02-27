@@ -176,7 +176,7 @@ impl ElementInternals for TextInputInner {
             self.apply_borders(scale_factor);
 
             self.element_data.apply_scroll(result);
-            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+            self.element_data.scroll_state.mark_old();
 
             let text_position = self.computed_box().content_rectangle();
             self.state.set_origin(&text_position.position());
@@ -185,16 +185,11 @@ impl ElementInternals for TextInputInner {
         }
 
         // For manual scroll updates.
-        if !dirty
-            && self
-                .element_data
-                .scroll_state
-                .map(|scroll_state| scroll_state.is_new())
-                .unwrap_or_default()
+        if !dirty && self.element_data.scroll_state.is_new()
         {
             let result = taffy_tree.layout(node);
             self.element_data.apply_scroll(result);
-            self.element_data.scroll_state.as_mut().unwrap().mark_old();
+            self.element_data.scroll_state.mark_old();
         }
 
         if has_new_layout {
@@ -238,7 +233,7 @@ impl ElementInternals for TextInputInner {
 
         let text_scroll = if is_scrollable {
             Some(TextScroll::new(
-                self.element_data.scroll().map_or(0.0, |s| s.scroll_y()),
+                self.element_data.scroll().scroll_y(),
                 self.element_data.layout_item.computed_scroll_track.height,
             ))
         } else {
@@ -320,7 +315,7 @@ impl ElementInternals for TextInputInner {
             return;
         }
 
-        let scroll_y = self.element_data.scroll().map_or(0.0, |s| s.scroll_y() as f64);
+        let scroll_y = self.element_data.scroll().scroll_y() as f64;
 
         let focused = self.is_focused();
 

@@ -30,6 +30,15 @@ impl Unit {
     pub fn is_auto(&self) -> bool {
         matches!(self, Unit::Auto)
     }
+
+    /// Gets the raw unit value. The backing f32 or 0 if self == Unit::Auto
+    pub fn raw_value(&self) -> f32 {
+        match self {
+            Unit::Px(px) => *px,
+            Unit::Percentage(pct) => *pct,
+            Unit::Auto => 0.0
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

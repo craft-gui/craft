@@ -138,6 +138,13 @@ pub(super) fn call_user_event_handlers(
                 (*handler)(event);
             }
         }
+        CraftMessage::Scroll() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_scroll {
+                (*handler)(event);
+            }
+        }
     }
 }
 

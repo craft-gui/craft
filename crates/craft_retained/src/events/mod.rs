@@ -32,6 +32,7 @@ pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 
 pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
+pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
 
 #[derive(Clone)]
 pub enum EventDispatchType {
@@ -49,6 +50,7 @@ pub enum CraftMessage {
     KeyboardInputEvent(KeyboardEvent),
     PointerMovedEvent(PointerUpdate),
     PointerScroll(PointerScrollEvent),
+    Scroll(),
     ImeEvent(Ime),
     TextInputChanged(String),
     LinkClicked(String),

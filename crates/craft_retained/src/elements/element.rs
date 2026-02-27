@@ -3,21 +3,22 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use craft_primitives::Color;
 use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
+use craft_primitives::Color;
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent::{CursorMoved, MouseInput};
 use winit::event::{DeviceId, ElementState, MouseButton};
 
-use crate::CraftError;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE, queue_window_event};
+use crate::app::{queue_window_event, DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
-use crate::elements::ElementIdMap;
 use crate::elements::core::ElementData;
+use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::window::WindowInternal;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
+use crate::elements::ElementIdMap;
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
+use crate::CraftError;
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
@@ -227,6 +228,10 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
             .push(on_lost_pointer_capture);
     }
 
+    fn set_id(&mut self, id: &str) {
+        self.element_data_mut().id = Some(id.into());
+    }
+
     fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
         self.element_data_mut()
             .on_pointer_button_down
@@ -243,6 +248,34 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
 
     fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) {
         self.element_data_mut().on_keyboard_input.push(on_keyboard_input);
+    }
+
+    fn on_scroll(&mut self, on_scroll: ScrollHandler) {
+        self.element_data_mut().on_scroll.push(on_scroll);
+    }
+
+    fn scroll_to_child_by_id_with_options(&mut self, id: &str, options: ScrollOptions) {
+        crate::elements::scrollable::scroll_to_child_by_id_with_options(self.element_data_mut(), id, options);
+    }
+
+    fn scroll_to(&mut self, y: f32) {
+        crate::elements::scrollable::scroll_to(self.element_data_mut(), y);
+    }
+
+    fn scroll_to_top(&mut self) {
+        crate::elements::scrollable::scroll_to_top(self.element_data_mut());
+    }
+
+    fn scroll_to_bottom(&mut self) {
+        crate::elements::scrollable::scroll_to_bottom(self.element_data_mut());
+    }
+
+    fn scroll_by(&mut self, y: f32) {
+        crate::elements::scrollable::scroll_by(self.element_data_mut(), y);
+    }
+
+    fn get_scroll_state(&self) -> ScrollState {
+        self.element_data().scroll_state
     }
 
     /// Returns the element's [`ElementBox`].
@@ -656,6 +689,13 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn id(self, id: &str) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_id(id);
+        self
+    }
+
     fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
         self.as_element_rc()
             .borrow_mut()
@@ -692,6 +732,60 @@ pub trait Element: Clone + AsElement {
     fn on_keyboard_input(self, on_keyboard_input: KeyboardInputHandler) -> Self {
         self.as_element_rc().borrow_mut().on_keyboard_input(on_keyboard_input);
         self
+    }
+
+    fn on_scroll(self, on_scroll: ScrollHandler) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .on_scroll(on_scroll);
+        self
+    }
+
+    fn scroll_to_child_by_id(self, id: &str) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_to_child_by_id_with_options(id, ScrollOptions::default());
+        self
+    }
+
+    fn scroll_to_child_by_id_with_options(self, id: &str, options: ScrollOptions) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_to_child_by_id_with_options(id, options);
+        self
+    }
+    fn scroll_to(self, y: f32) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_to(y);
+        self
+    }
+
+    fn scroll_to_top(self) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_to_top();
+        self
+    }
+
+    fn scroll_to_bottom(self) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_to_bottom();
+        self
+    }
+
+    fn scroll_by(self, y: f32) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .scroll_by(y);
+        self
+    }
+
+    fn get_scroll_state(&self) -> ScrollState {
+        self.as_element_rc()
+            .borrow_mut()
+            .get_scroll_state()
     }
 
     fn display(self, display: Display) -> Self {

@@ -1,15 +1,13 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-
-use craft_primitives::geometry::{Rectangle, Size};
 use smol_str::SmolStr;
 use taffy::Layout;
 
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::ElementImpl;
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::scroll_state::ScrollState;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, SliderValueChangedHandler};
+use crate::elements::scrollable::{apply_scroll_layout, ScrollState};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout_item::LayoutItem;
 use crate::style::{Overflow, Style};
@@ -39,7 +37,8 @@ pub struct ElementData {
     pub(crate) internal_id: u64,
 
     /// Scrollbar state for elements that may have a scrollbar.
-    pub(super) scroll_state: Option<ScrollState>,
+    pub(super) scroll_state: ScrollState,
+    pub(super) is_scrollable: bool,
 
     // Events:
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
@@ -51,11 +50,12 @@ pub struct ElementData {
     pub on_pointer_button_up: Vec<PointerEventHandler>,
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
+    pub on_scroll: Vec<ScrollHandler>,
 }
 
 impl ElementData {
     pub fn new(me: Weak<RefCell<dyn ElementImpl>>, scrollable: bool) -> Self {
-        let mut default = Self {
+        let default = Self {
             me,
             parent: None,
             style: Style::new(),
@@ -63,8 +63,8 @@ impl ElementData {
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
-            scroll_state: None,
-
+            scroll_state: ScrollState::default(),
+            is_scrollable: scrollable,
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),
             on_pointer_leave: Vec::new(),
@@ -74,12 +74,8 @@ impl ElementData {
             on_pointer_button_up: Vec::new(),
             on_pointer_moved: Vec::new(),
             on_keyboard_input: Vec::new(),
+            on_scroll: Vec::new(),
         };
-
-        // Create scroll state if needed.
-        if scrollable {
-            default.scroll_state = Some(ScrollState::default());
-        }
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert_id(default.internal_id, default.me.clone());
@@ -103,73 +99,17 @@ impl ElementData {
 
     /// Computes the scrollbar's tack and thumb layout.
     pub(crate) fn apply_scroll(&mut self, layout: &Layout) {
-        self.layout_item.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
-        self.layout_item.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
-
-        if let Some(state) = &mut self.scroll_state {
-            if self.style.get_overflow()[1] != Overflow::Scroll {
-                return;
-            }
-
-            let box_transformed = self.layout_item.computed_box_transformed;
-
-            // Client Height = padding box height.
-            let client_height = box_transformed.padding_rectangle().height;
-
-            let mut content_height = self.layout_item.content_size.height;
-            // Taffy is adding the top border and padding height to the content size.
-            content_height -= box_transformed.border.top;
-            content_height -= box_transformed.padding.top;
-
-            // Content Size = overflowed content size + padding
-            // Scroll Height = Content Size
-            let scroll_height =
-                (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
-            let scroll_track_width = self.layout_item.scrollbar_size.width;
-
-            // The scroll track height is the height of the padding box.
-            let scroll_track_height = client_height;
-
-            let max_scroll_y = (scroll_height - client_height).max(0.0);
-            self.layout_item.max_scroll_y = max_scroll_y;
-
-            self.layout_item.computed_scroll_track = Rectangle::new(
-                box_transformed.padding_rectangle().right() - scroll_track_width,
-                box_transformed.padding_rectangle().top(),
-                scroll_track_width,
-                scroll_track_height,
-            );
-
-            let visible_y = (client_height / scroll_height).clamp(0.0, 1.0);
-            let scroll_thumb_height = scroll_track_height * visible_y;
-            let scroll_thumb_height = scroll_thumb_height.max(15.0);
-            let remaining_height = scroll_track_height - scroll_thumb_height;
-            let scroll_thumb_offset = if max_scroll_y != 0.0 {
-                state.scroll_y() / max_scroll_y * remaining_height
-            } else {
-                0.0
-            };
-
-            let thumb_margin = self.style.get_scrollbar_thumb_margin();
-            let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
-            let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
-
-            self.layout_item.computed_scroll_thumb = self.layout_item.computed_scroll_track;
-            self.layout_item.computed_scroll_thumb.x += thumb_margin.left;
-            self.layout_item.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
-            self.layout_item.computed_scroll_thumb.width = scroll_thumb_width;
-            self.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
-        }
+       apply_scroll_layout(self, layout);
     }
 
-    pub(crate) fn scroll(&self) -> Option<&ScrollState> {
-        self.scroll_state.as_ref()
+    pub(crate) fn scroll(&self) -> ScrollState {
+        self.scroll_state
     }
 }
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.get_overflow()[1] == Overflow::Scroll
+        self.style.get_overflow()[1] == Overflow::Scroll && self.is_scrollable
     }
 
     pub fn current_style(&self) -> &Style {

@@ -2,7 +2,6 @@ mod container;
 pub mod core;
 mod element;
 mod element_data;
-mod scroll_state;
 mod text;
 
 mod element_id;
@@ -21,3 +20,4 @@ pub use slider::{Slider, SliderDirection, SliderInner};
 pub use text::{Text, TextInner};
 pub use text_input::{TextInput, TextInputInner};
 pub use window::{Window, WindowInternal};
+pub use scrollable::{ScrollToBox, ScrollOptions};
