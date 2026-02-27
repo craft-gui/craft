@@ -271,7 +271,10 @@ impl CraftRenderer for VelloHybridRenderer {
                         scene.set_transform(transform);
 
                         scene.set_paint(PaintType::Image(vello_common::paint::Image {
-                            image: ImageSource::OpaqueId(image_id),
+                            image: ImageSource::OpaqueId {
+                                id: image_id,
+                                may_have_opacities: true,
+                            },
                             sampler: Default::default(),
                         }));
 
