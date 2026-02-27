@@ -1,12 +1,14 @@
 mod styles;
 mod taffy_conversions;
+mod box_shadow;
 
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
 
 use craft_primitives::ColorBrush;
-use peniko::Color;
+use craft_primitives::Color;
+pub use box_shadow::BoxShadow;
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -197,10 +199,10 @@ pub enum Position {
     Absolute,
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug)]
 pub struct StyleProperty<T>
 where
-    T: Clone + Debug + Copy,
+    T: Clone + Debug,
 {
     property: T,
     is_dirty: bool,
@@ -208,7 +210,7 @@ where
 
 impl<T> StyleProperty<T>
 where
-    T: Clone + Debug + Copy,
+    T: Clone + Debug,
 {
     pub fn new(property: T) -> StyleProperty<T> {
         Self {
@@ -223,9 +225,10 @@ where
         self.is_dirty = true;
     }
 
+    // TODO: Return a ref.
     #[inline(always)]
     pub fn get(&self) -> T {
-        self.property
+        self.property.clone()
     }
 
     #[inline(always)]

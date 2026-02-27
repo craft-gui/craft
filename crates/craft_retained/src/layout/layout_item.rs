@@ -4,8 +4,8 @@ use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::NodeId;
-
-use crate::style::{Position, Style};
+use craft_renderer::renderer::BoxShadowCmd;
+use crate::style::{BoxShadow, Position, Style};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
@@ -28,6 +28,7 @@ impl CssComputedBorder {
         let background = css_rect.to_path(0.1f64);
 
         Self {
+            css_rect,
             sides: [top, right, bottom, left],
             background,
         }
@@ -56,6 +57,7 @@ pub struct LayoutItem {
 
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
+    cache_box_shadows: Option<ComputedBoxShadows>,
     computed_border: ComputedBorder,
     /// True if the layout is new.
     pub has_new_layout: bool,
@@ -124,6 +126,7 @@ impl LayoutItem {
         border_radius: [(f32, f32); 4],
         scale_factor: f64,
         border_color: &TrblRectangle<Color>,
+        box_shadows: Vec<BoxShadow>,
     ) {
         let element_rect = self.computed_box_transformed;
         let border_spec = BorderSpec {
@@ -131,9 +134,10 @@ impl LayoutItem {
             width: element_rect.border,
             radii: border_radius,
             scale_factor,
+            box_shadows,
         };
 
-        if Some(border_spec) == self.cache_border_spec {
+        if Some(&border_spec) == self.cache_border_spec.as_ref() {
             return;
         }
         self.cache_border_spec = Some(border_spec);
@@ -148,8 +152,10 @@ impl LayoutItem {
         // then the color will split diagonally and cannot be drawn as a rect.
         if !has_border || (is_rectangle && border_color.are_edges_uniform()) {
             self.computed_border = ComputedBorder::Simple;
+            self.apply_box_shadows(scale_factor, border_radius);
             return;
         }
+
         let borders = element_rect.border;
         let border_spec = CssRoundedRect::new(
             element_rect.border_rectangle().to_kurbo(),
@@ -165,6 +171,91 @@ impl LayoutItem {
         let mut computed = CssComputedBorder::new(border_spec);
         computed.scale(scale_factor);
         self.computed_border = ComputedBorder::CssComputedBorder(computed);
+
+        self.apply_box_shadows(scale_factor, border_radius);
+    }
+
+    fn apply_box_shadows(&mut self, scale_factor: f64, border_radius: [(f32, f32); 4],) {
+        let scale_transform = Affine::scale(scale_factor);
+        let box_shadows = &self.cache_border_spec.as_ref().unwrap().box_shadows;
+        match &self.computed_border {
+            ComputedBorder::CssComputedBorder(css_rect) => {
+                let mut outline = css_rect.css_rect.get_outline();
+                let mut inline = css_rect.css_rect.get_inline();
+                outline.apply_affine(scale_transform);
+                inline.apply_affine(scale_transform);
+                let mut cache_box_shadows = ComputedBoxShadows {
+                    outline: BezPathOrRect::BezPath(outline),
+                    inline: BezPathOrRect::BezPath(inline),
+                    box_shadows: Vec::with_capacity(box_shadows.len()),
+                    border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
+                };
+                for box_shadow in box_shadows {
+                    let offset = Vec2::new(box_shadow.offset_x, box_shadow.offset_y);
+
+                    if box_shadow.inset {
+                        let element_rect = self.computed_box_transformed;
+                        let borders = element_rect.border;
+                        let inset_css_rect = CssRoundedRect::new(
+                            element_rect.border_rectangle().to_kurbo().inflate(-box_shadow.spread_radius, -box_shadow.spread_radius),
+                            [
+                                borders.top as f64,
+                                borders.right as f64,
+                                borders.bottom as f64,
+                                borders.left as f64,
+                            ],
+                            border_radius.map(|radii| Vec2::new((radii.0 as f64 - box_shadow.spread_radius).max(0.0), (radii.1 as f64 - box_shadow.spread_radius).max(0.0))),
+                        );
+                        let mut inset_rect_outline = inset_css_rect.get_outline();
+                        inset_rect_outline.apply_affine(Affine::translate(offset));
+                        inset_rect_outline.apply_affine(scale_transform);
+                        cache_box_shadows.box_shadows.push(ComputedBoxShadow {
+                            inset: box_shadow.inset,
+                            shape: BezPathOrRect::BezPath(inset_rect_outline),
+                            offset: offset * scale_factor,
+                            blur_radius: box_shadow.blur_radius * scale_factor,
+                            color: box_shadow.color,
+                        })
+                    } else {
+                        let mut shape = css_rect.css_rect.get_outline_with_radius(box_shadow.spread_radius);
+                        shape.apply_affine(Affine::translate(offset));
+                        shape.apply_affine(scale_transform);
+                        cache_box_shadows.box_shadows.push(ComputedBoxShadow {
+                            inset: box_shadow.inset,
+                            shape: BezPathOrRect::BezPath(shape),
+                            offset: offset * scale_factor,
+                            blur_radius: box_shadow.blur_radius * scale_factor,
+                            color: box_shadow.color,
+                        })
+                    }
+                }
+                self.cache_box_shadows = Some(cache_box_shadows);
+            }
+            ComputedBorder::Simple => {
+                let outline = self.computed_box_transformed.border_rectangle();
+                let inline = self.computed_box_transformed.padding_rectangle();
+
+                let mut cache_box_shadows = ComputedBoxShadows {
+                    outline: BezPathOrRect::Rect(outline),
+                    inline: BezPathOrRect::Rect(inline),
+                    box_shadows: Vec::with_capacity(box_shadows.len()),
+                    border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
+                };
+                for box_shadow in box_shadows {
+                    let radius_modifier = if box_shadow.inset {-1.0} else {1.0};
+                    let offset = Vec2::new(box_shadow.offset_x, box_shadow.offset_y);
+                    cache_box_shadows.box_shadows.push(ComputedBoxShadow {
+                        inset: box_shadow.inset,
+                        shape: BezPathOrRect::Rect(outline.expand((box_shadow.spread_radius * radius_modifier) as f32).scale(scale_factor)),
+                        offset: offset * scale_factor,
+                        blur_radius: box_shadow.blur_radius * scale_factor,
+                        color: box_shadow.color,
+                    })
+                }
+                self.cache_box_shadows = Some(cache_box_shadows);
+            }
+            ComputedBorder::None => {}
+        }
     }
 
     pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -172,6 +263,24 @@ impl LayoutItem {
     }
 
     pub fn draw_borders(&self, renderer: &mut RenderList, current_style: &Style, scale_factor: f64) {
+        if let Some(cache_box_shadows) = &self.cache_box_shadows {
+            for shadow in &cache_box_shadows.box_shadows {
+                if shadow.inset {
+                    continue;
+                }
+
+                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                    inset: false,
+                    offset: shadow.offset,
+                    outline: cache_box_shadows.outline.to_path(),
+                    path: shadow.shape.to_path(),
+                    blur_radius: shadow.blur_radius,
+                    color: shadow.color,
+                    border_box: cache_box_shadows.border_box,
+                });
+            }
+        }
+
         let background_color = current_style.get_background_color();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
@@ -199,6 +308,24 @@ impl LayoutItem {
                 );
             }
         }
+
+        if let Some(cache_box_shadows) = &self.cache_box_shadows {
+            for shadow in &cache_box_shadows.box_shadows {
+                if !shadow.inset {
+                    continue;
+                }
+
+                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                    inset: true,
+                    offset: shadow.offset,
+                    outline: cache_box_shadows.inline.to_path(),
+                    path: shadow.shape.to_path(),
+                    blur_radius: shadow.blur_radius,
+                    color: shadow.color,
+                    border_box: cache_box_shadows.border_box,
+                });
+            }
+        }
     }
 }
 
@@ -224,17 +351,55 @@ pub(crate) fn draw_borders_generic(
 }
 
 #[derive(Clone)]
+enum BezPathOrRect {
+    Rect(Rectangle),
+    BezPath(BezPath),
+}
+
+impl BezPathOrRect {
+
+    pub fn to_path(&self) -> BezPath {
+        match self {
+            BezPathOrRect::Rect(rect) => {
+                rect.to_kurbo().to_path(0.1)
+            }
+            BezPathOrRect::BezPath(path) => {path.clone()}
+        }
+    }
+
+}
+
+#[derive(Clone)]
+struct ComputedBoxShadow {
+    pub inset: bool,
+    pub shape: BezPathOrRect,
+    pub offset: Vec2,
+    pub blur_radius: f64,
+    pub color: Color,
+}
+
+#[derive(Clone)]
+pub(crate) struct ComputedBoxShadows {
+    outline: BezPathOrRect,
+    inline: BezPathOrRect,
+    box_shadows: Vec<ComputedBoxShadow>,
+    border_box: Rectangle,
+}
+
+#[derive(Clone)]
 pub(crate) struct CssComputedBorder {
+    css_rect: CssRoundedRect,
     sides: [Option<BezPath>; 4],
     background: BezPath,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct BorderSpec {
     rect: Rectangle,
     width: TrblRectangle<f32>,
     radii: [(f32, f32); 4],
     scale_factor: f64,
+    box_shadows: Vec<BoxShadow>,
 }
 
 #[derive(Clone, Default)]

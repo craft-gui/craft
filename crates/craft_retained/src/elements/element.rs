@@ -10,15 +10,15 @@ use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent::{CursorMoved, MouseInput};
 use winit::event::{DeviceId, ElementState, MouseButton};
 
-use crate::app::{queue_window_event, DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+use crate::CraftError;
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE, queue_window_event};
 use crate::document::Document;
 use crate::elements::core::ElementData;
+use crate::elements::ElementIdMap;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::window::WindowInternal;
-use crate::elements::ElementIdMap;
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
-use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
-use crate::CraftError;
+use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 
 /// The element trait for end-users.
 pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
@@ -558,6 +558,10 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         self.style_mut().set_selection_color(selection_color);
     }
 
+    fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
+        self.style_mut().set_box_shadows(box_shadows);
+    }
+
     /// Sets focus on the specified element, if it can be focused.
     ///
     /// The focused element is the element that will receive keyboard and similar events by default.
@@ -981,6 +985,11 @@ pub trait Element: Clone + AsElement {
 
     fn scrollbar_width(self, selection_color: Color) -> Self {
         self.as_element_rc().borrow_mut().set_selection_color(selection_color);
+        self
+    }
+
+    fn box_shadows(self, box_shadows: Vec<BoxShadow>) -> Self {
+        self.as_element_rc().borrow_mut().set_box_shadows(box_shadows);
         self
     }
 

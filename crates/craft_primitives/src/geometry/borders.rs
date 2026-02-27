@@ -56,6 +56,7 @@ pub struct CssRoundedRect {
     corners_arcs: [[Option<Arc>; 4]; 4],
 
     background_arcs: [Option<Arc>; 4],
+    background_inner_arcs: [Option<Arc>; 4],
 
     widths: [f64; 4],
 }
@@ -72,6 +73,7 @@ impl CssRoundedRect {
             intersect_angles: [Vec2::default(); 4],
             corners_arcs: [[None; 4]; 4],
             background_arcs: [None; 4],
+            background_inner_arcs: [None; 4],
             widths,
             corners: [
                 Point::new(rect.x0, rect.y0),
@@ -116,6 +118,124 @@ impl CssRoundedRect {
         css_rounded_rect
     }
 
+    pub fn get_outline(&self) -> BezPath {
+        let mut outline_path = BezPath::new();
+
+        for corner in CORNERS {
+            if let Some(arc) = &self.background_arcs[corner] {
+                let arc_path = arc.to_path(0.1);
+                if corner == TOP_LEFT {
+                    // For the very first segment, we MoveTo the start of the arc
+                    outline_path.extend(arc_path);
+                } else {
+                    // For subsequent corners, we LineTo the start of the arc to close the gaps
+                    extend_path_with_arc(&mut outline_path, &arc_path);
+                }
+            } else {
+                // If there is no arc (sharp corner), move or line to the corner point
+                let p = self.corners[corner];
+                if corner == TOP_LEFT {
+                    outline_path.move_to(p);
+                } else {
+                    outline_path.line_to(p);
+                }
+            }
+        }
+
+        outline_path.close_path();
+        outline_path
+    }
+
+    pub fn get_inline(&self) -> BezPath {
+        let mut outline_path = BezPath::new();
+
+        for corner in CORNERS {
+            if let Some(arc) = &self.background_inner_arcs[corner] {
+                let arc_path = arc.to_path(0.1);
+                if corner == TOP_LEFT {
+                    // For the very first segment, we MoveTo the start of the arc
+                    outline_path.extend(arc_path);
+                } else {
+                    // For subsequent corners, we LineTo the start of the arc to close the gaps
+                    extend_path_with_arc(&mut outline_path, &arc_path);
+                }
+            } else {
+                // If there is no arc (sharp corner), move or line to the corner point
+                let p = self.corners[corner];
+                if corner == TOP_LEFT {
+                    outline_path.move_to(p);
+                } else {
+                    outline_path.line_to(p);
+                }
+            }
+        }
+
+        outline_path.close_path();
+        outline_path
+    }
+
+    /// Get an outline with a radius relative to the outline.
+    pub fn get_outline_with_radius(&self, radius: f64) -> BezPath {
+        let mut box_shadow_arcs: [Option<Arc>; 4] = [None; 4];
+
+        for corner in CORNERS {
+            let outer_radius = self.outer_radii[corner];
+            let radius_sign = CORNER_RADIUS_SIGN[corner];
+
+            let outer_radius = Vec2::new(
+                radius_sign.x * outer_radius.x,
+                radius_sign.y * outer_radius.y,
+            );
+
+            if is_outer_radius_sharp(outer_radius) {
+                continue;
+            }
+
+            let center = self.corners[corner].add(outer_radius);
+
+            let box_shadow_arc = Arc::new(
+                center,
+                self.outer_radii[corner]
+                    + Vec2::new(radius, radius),
+                CORNER_START_ANGLES[corner],
+                FRAC_PI_2,
+                0.0,
+            );
+            box_shadow_arcs[corner] = Some(box_shadow_arc);
+        }
+
+        let mut outline_path = BezPath::new();
+
+        for corner in CORNERS {
+            if let Some(arc) = &box_shadow_arcs[corner] {
+                let arc_path = arc.to_path(0.1);
+                if corner == TOP_LEFT {
+                    // For the very first segment, we MoveTo the start of the arc
+                    outline_path.extend(arc_path);
+                } else {
+                    // For subsequent corners, we LineTo the start of the arc to close the gaps
+                    extend_path_with_arc(&mut outline_path, &arc_path);
+                }
+            } else {
+                // If there is no arc (sharp corner), move or line to the corner point
+                let sign = CORNER_RADIUS_SIGN[corner];
+                let p = self.corners[corner]
+                    + Vec2::new(
+                    -sign.x * radius,
+                    -sign.y * radius,
+                );
+                if corner == TOP_LEFT {
+                    outline_path.move_to(p);
+                } else {
+                    outline_path.line_to(p);
+                }
+            }
+        }
+
+        outline_path.close_path();
+        outline_path
+    }
+
     fn compute_arcs(&mut self) {
         for corner in CORNERS {
             let outer_radius = self.outer_radii[corner];
@@ -158,9 +278,18 @@ impl CssRoundedRect {
                 0.0,
             );
 
+            let background_inner_arc = Arc::new(
+                center,
+                self.inner_radii[corner],
+                CORNER_START_ANGLES[corner],
+                FRAC_PI_2,
+                0.0,
+            );
+
             self.corners_arcs[corner][0] = Some(outside_1st_arc);
             self.corners_arcs[corner][1] = Some(outside_2nd_arc);
             self.background_arcs[corner] = Some(background_arc);
+            self.background_inner_arcs[corner] = Some(background_inner_arc);
 
             if is_outer_radius_sharp(inner_radius) {
                 continue;
