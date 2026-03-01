@@ -137,18 +137,16 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
     while let Some(child) = queue.pop_front().clone() {
         let child = child.borrow();
         let element_data = child.element_data();
-        if let Some(child_id) = element_data.id.as_ref() {
-            if child_id.as_str() == id {
-                let box_model_selected = match options.to {
-                    ScrollToBox::BorderBox => element_data.layout_item.computed_box.border_rectangle(),
-                    ScrollToBox::MarginBox => element_data.layout_item.computed_box.margin_rectangle(),
-                    ScrollToBox::PaddingBox => element_data.layout_item.computed_box.padding_rectangle(),
-                    ScrollToBox::ContentBox => element_data.layout_item.computed_box.content_rectangle()
-                };
-                let distance_from_parent = box_model_selected.y - top_py;
-                child_y = Some(distance_from_parent);
-                break;
-            }
+        if let Some(child_id) = element_data.id.as_ref() && child_id.as_str() == id {
+            let box_model_selected = match options.to {
+                ScrollToBox::BorderBox => element_data.layout_item.computed_box.border_rectangle(),
+                ScrollToBox::MarginBox => element_data.layout_item.computed_box.margin_rectangle(),
+                ScrollToBox::PaddingBox => element_data.layout_item.computed_box.padding_rectangle(),
+                ScrollToBox::ContentBox => element_data.layout_item.computed_box.content_rectangle()
+            };
+            let distance_from_parent = box_model_selected.y - top_py;
+            child_y = Some(distance_from_parent);
+            break;
         }
 
         for child in child.children() {
