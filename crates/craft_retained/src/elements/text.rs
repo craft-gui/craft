@@ -198,14 +198,6 @@ impl crate::elements::ElementData for TextInner {
 }
 
 impl ElementInternals for TextInner {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -419,6 +411,14 @@ impl ElementInternals for TextInner {
         self.state.is_render_dirty = true;
         self.mark_dirty();
         self.state.scale_factor = scale_factor;
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

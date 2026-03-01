@@ -83,14 +83,6 @@ impl crate::elements::ElementData for Image {
 
 
 impl ElementInternals for Image {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -128,5 +120,13 @@ impl ElementInternals for Image {
         self.draw_borders(renderer, scale_factor);
 
         renderer.draw_image(content_rectangle.scale(scale_factor), self.resource_identifier.clone());
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

@@ -320,41 +320,6 @@ impl crate::elements::ElementData for SliderInner {
 }
 
 impl ElementInternals for SliderInner {
-    fn in_bounds(&self, point: Point) -> bool {
-        let element_data = &self.element_data;
-        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
-
-        let thumb_pos = self.thumb_position(self.get_value());
-        let thumb_size = self.get_thumb_size();
-        let thumb_rect = Rectangle::new(
-            thumb_pos.x as f32,
-            thumb_pos.y as f32,
-            thumb_size as f32,
-            thumb_size as f32,
-        );
-
-        if thumb_rect.contains(&point) {
-            return true;
-        }
-
-        if let Some(clip) = element_data.layout_item.clip_bounds {
-            match rect.intersection(&clip) {
-                Some(bounds) => bounds.contains(&point),
-                None => false,
-            }
-        } else {
-            rect.contains(&point)
-        }
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -480,5 +445,40 @@ impl ElementInternals for SliderInner {
         }
 
         //println!("Slider Value: {}", self.value);
+    }
+
+    fn in_bounds(&self, point: Point) -> bool {
+        let element_data = &self.element_data;
+        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
+
+        let thumb_pos = self.thumb_position(self.get_value());
+        let thumb_size = self.get_thumb_size();
+        let thumb_rect = Rectangle::new(
+            thumb_pos.x as f32,
+            thumb_pos.y as f32,
+            thumb_size as f32,
+            thumb_size as f32,
+        );
+
+        if thumb_rect.contains(&point) {
+            return true;
+        }
+
+        if let Some(clip) = element_data.layout_item.clip_bounds {
+            match rect.intersection(&clip) {
+                Some(bounds) => bounds.contains(&point),
+                None => false,
+            }
+        } else {
+            rect.contains(&point)
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

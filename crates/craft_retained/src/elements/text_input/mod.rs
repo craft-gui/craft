@@ -149,14 +149,6 @@ impl crate::elements::ElementData for TextInputInner {
 }
 
 impl ElementInternals for TextInputInner {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -418,6 +410,14 @@ impl ElementInternals for TextInputInner {
         self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
         self.mark_dirty();
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

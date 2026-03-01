@@ -501,29 +501,6 @@ impl crate::elements::ElementData for WindowInternal {
 }
 
 impl ElementInternals for WindowInternal {
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child.clone());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
-            if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id);
-            }
-        });
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -661,5 +638,28 @@ impl ElementInternals for WindowInternal {
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
         resolve_clip_for_scrollable(self, clip_bounds);
+    }
+
+    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
+        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
+        child.borrow_mut().element_data_mut().parent = Some(me);
+        self.element_data.children.push(child.clone());
+
+        // Add the children's taffy node.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            if let Some(child_id) = child_id {
+                taffy_tree.add_child(parent_id, child_id);
+            }
+        });
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
