@@ -10,10 +10,9 @@ use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 
 use crate::app::queue_event;
-use crate::elements::core::ElementInternals;
-use crate::elements::element::AsElement;
+use crate::elements::{ElementInternals, AsElement};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, ElementImpl};
+use crate::elements::{Element};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::palette;
@@ -305,12 +304,12 @@ impl SliderInner {
 impl Element for Slider {}
 
 impl AsElement for Slider {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::core::ElementData for SliderInner {
+impl crate::elements::ElementData for SliderInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -320,7 +319,7 @@ impl crate::elements::core::ElementData for SliderInner {
     }
 }
 
-impl ElementImpl for SliderInner {
+impl ElementInternals for SliderInner {
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
         let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
@@ -355,9 +354,7 @@ impl ElementImpl for SliderInner {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
-}
 
-impl ElementInternals for SliderInner {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

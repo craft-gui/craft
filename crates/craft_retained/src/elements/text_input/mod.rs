@@ -15,8 +15,7 @@ use ui_events::pointer::PointerButton;
 use winit::event::Ime;
 
 use crate::app::ELEMENTS;
-use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
-use crate::elements::element::{AsElement, ElementImpl};
+use crate::elements::{ElementInternals, resolve_clip_for_scrollable, AsElement};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
@@ -134,12 +133,12 @@ impl TextInput {
 impl Element for TextInput {}
 
 impl AsElement for TextInput {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::core::ElementData for TextInputInner {
+impl crate::elements::ElementData for TextInputInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -150,6 +149,14 @@ impl crate::elements::core::ElementData for TextInputInner {
 }
 
 impl ElementInternals for TextInputInner {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -464,14 +471,4 @@ fn parley_box_to_rect(bounding_box: BoundingBox) -> Rectangle {
         bounding_box.width() as f32,
         bounding_box.height() as f32,
     )
-}
-
-impl ElementImpl for TextInputInner {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }

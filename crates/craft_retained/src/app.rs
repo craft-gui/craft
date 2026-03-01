@@ -25,8 +25,8 @@ use winit::window::WindowId;
 
 use crate::CraftOptions;
 use crate::document::DocumentManager;
-use crate::elements::core::ElementInternals;
-use crate::elements::{ElementIdMap, ElementImpl, Window};
+use crate::elements::ElementInternals;
+use crate::elements::{ElementIdMap, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;
@@ -41,7 +41,7 @@ thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementImpl >>>> = RefCell::new(None);
+    pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementInternals>>>> = RefCell::new(None);
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
     static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, CraftMessage)>> = RefCell::new(VecDeque::with_capacity(10));
 
@@ -98,7 +98,7 @@ pub struct App {
     pub(crate) modifiers: Modifiers,
     pub redraw_flags: RedrawFlags,
 
-    pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementImpl>>>,
+    pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementInternals>>>,
     pub(crate) craft_options: CraftOptions,
 
     /// True if the winit app is active.

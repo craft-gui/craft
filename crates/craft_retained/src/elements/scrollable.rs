@@ -8,7 +8,7 @@ use ui_events::pointer::{PointerId, PointerType};
 use craft_primitives::geometry::{Rectangle, Size};
 use crate::app::{queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
-use crate::elements::ElementImpl;
+use crate::elements::ElementInternals;
 use crate::events::{CraftMessage, Event};
 use crate::style::Overflow;
 
@@ -127,7 +127,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
         return;
     }
 
-    let mut queue: VecDeque<Rc<RefCell<dyn ElementImpl>>> = VecDeque::new();
+    let mut queue: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
     for child in data.children.as_slice() {
         queue.push_back(child.clone());
     }
@@ -229,7 +229,7 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
 
 /// Updates the scroll state when an event occurs.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn on_scroll_events(element: &mut dyn ElementImpl, message: &CraftMessage, event: &mut Event) {
+pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
     let element_data = element.element_data_mut();
 
     if element_data.is_scrollable() {

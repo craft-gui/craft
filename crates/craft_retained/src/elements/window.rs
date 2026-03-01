@@ -27,10 +27,9 @@ use crate::accessibility::{access_handler::CraftAccessHandler, activation_handle
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
-use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
-use crate::elements::element::AsElement;
+use crate::elements::{AsElement, ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, ElementImpl, scrollable};
+use crate::elements::{Element, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -486,12 +485,12 @@ impl WindowInternal {
 impl Element for Window {}
 
 impl AsElement for Window {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::core::ElementData for WindowInternal {
+impl crate::elements::ElementData for WindowInternal {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -501,9 +500,9 @@ impl crate::elements::core::ElementData for WindowInternal {
     }
 }
 
-impl ElementImpl for WindowInternal {
-    fn push(&mut self, child: Rc<RefCell<dyn ElementImpl>>) {
-        let me: Weak<RefCell<dyn ElementImpl>> = self.element_data.me.clone();
+impl ElementInternals for WindowInternal {
+    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
+        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
 
@@ -524,9 +523,7 @@ impl ElementImpl for WindowInternal {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
-}
 
-impl ElementInternals for WindowInternal {
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

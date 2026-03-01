@@ -9,10 +9,9 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 
 use crate::app::TAFFY_TREE;
-use crate::elements::core::{ElementInternals, resolve_clip_for_scrollable};
-use crate::elements::element::{AsElement, Element};
+use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element};
 use crate::elements::element_data::ElementData;
-use crate::elements::{ElementImpl, scrollable};
+use crate::elements::{scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -52,43 +51,18 @@ impl Container {
 impl Element for Container {}
 
 impl AsElement for Container {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::core::ElementData for ContainerInner {
+impl crate::elements::ElementData for ContainerInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
 
     fn element_data_mut(&mut self) -> &mut ElementData {
         &mut self.element_data
-    }
-}
-
-impl ElementImpl for ContainerInner {
-    fn push(&mut self, child: Rc<RefCell<dyn ElementImpl>>) {
-        let me: Weak<RefCell<dyn ElementImpl>> = self.element_data.me.clone();
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child.clone());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
-            if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id);
-            }
-        });
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 
@@ -185,5 +159,28 @@ impl ElementInternals for ContainerInner {
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
         resolve_clip_for_scrollable(self, clip_bounds);
+    }
+
+    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
+        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
+        child.borrow_mut().element_data_mut().parent = Some(me);
+        self.element_data.children.push(child.clone());
+
+        // Add the children's taffy node.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            if let Some(child_id) = child_id {
+                taffy_tree.add_child(parent_id, child_id);
+            }
+        });
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

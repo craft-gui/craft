@@ -20,7 +20,7 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 pub use winit::event::{ElementState, Ime, Modifiers, MouseButton};
 
 use crate::PinnedFutureAny;
-use crate::elements::ElementImpl;
+use crate::elements::ElementInternals;
 use crate::utils::cloneable_any::CloneableAny;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
@@ -96,7 +96,7 @@ pub type UserMessage = dyn CloneableAny;
 
 /// The result of an update.
 pub struct Event {
-    pub target: Rc<RefCell<dyn ElementImpl>>,
+    pub target: Rc<RefCell<dyn ElementInternals>>,
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -137,7 +137,7 @@ impl Event {
 }
 
 impl Event {
-    pub fn new(target: Rc<RefCell<dyn ElementImpl>>) -> Self {
+    pub fn new(target: Rc<RefCell<dyn ElementInternals>>) -> Self {
         Event {
             target,
             propagate: true,
