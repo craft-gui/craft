@@ -1,7 +1,7 @@
 use kurbo::Point;
 
 use crate::elements::SliderInner;
-use crate::elements::core::ElementInternals;
+use crate::elements::ElementInternals;
 use crate::elements::slider::slider_element::SliderDirection;
 
 impl SliderInner {

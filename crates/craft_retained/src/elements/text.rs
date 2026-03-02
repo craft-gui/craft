@@ -36,11 +36,11 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 use winit::dpi;
 
-use crate::elements::core::ElementInternals;
-use crate::elements::element::AsElement;
+use crate::elements::ElementInternals;
+use crate::elements::AsElement;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{Element, ElementImpl};
+use crate::elements::{Element};
 use crate::layout::TaffyTree;
 
 #[derive(Clone)]
@@ -182,28 +182,18 @@ impl TextInner {
 impl Element for Text {}
 
 impl AsElement for Text {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::core::ElementData for TextInner {
+impl crate::elements::ElementData for TextInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
 
     fn element_data_mut(&mut self) -> &mut ElementData {
         &mut self.element_data
-    }
-}
-
-impl crate::elements::ElementImpl for TextInner {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 
@@ -421,6 +411,14 @@ impl ElementInternals for TextInner {
         self.state.is_render_dirty = true;
         self.mark_dirty();
         self.state.scale_factor = scale_factor;
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 

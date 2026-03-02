@@ -18,7 +18,7 @@ use winit::dpi;
 
 use crate::app::{TAFFY_TREE, request_layout};
 use crate::elements::TextInputInner;
-use crate::elements::core::ElementInternals;
+use crate::elements::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};

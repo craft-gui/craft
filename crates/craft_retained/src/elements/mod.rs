@@ -1,6 +1,5 @@
 mod container;
-pub mod core;
-mod element;
+mod traits;
 mod element_data;
 mod text;
 
@@ -12,8 +11,8 @@ mod slider;
 mod text_input;
 mod window;
 
+pub use traits::{ElementInternals, ElementData, Element, AsElement, resolve_clip_for_scrollable};
 pub use container::{Container, ContainerInner};
-pub use element::{Element, ElementImpl};
 pub use element_id_map::ElementIdMap;
 pub use image::Image;
 pub use slider::{Slider, SliderDirection, SliderInner};

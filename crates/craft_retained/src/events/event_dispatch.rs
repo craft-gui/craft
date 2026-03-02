@@ -6,20 +6,20 @@ use craft_primitives::geometry::Point;
 use craft_renderer::RenderList;
 
 use crate::app::dequeue_event;
-use crate::elements::ElementImpl;
+use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
 use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
 use crate::events::{CraftMessage, Event, FocusAction};
 use crate::text::text_context::TextContext;
 
-pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn ElementImpl>>>) {
+pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>) {
 }
 
 /// Dispatches 1 event to many elements.
 /// The first dispatch happens at the top-most visual element.
 pub(super) fn dispatch_bubbling_event(
     message: &CraftMessage,
-    targets: &mut VecDeque<Rc<RefCell<dyn ElementImpl>>>,
+    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
 ) -> Event {
     let target = targets[0].clone();
     let mut base_event = Event::new(target.clone());
@@ -39,7 +39,7 @@ pub(super) fn dispatch_bubbling_event(
 pub(crate) struct EventDispatcher {
     /// A "frozen" target list used to diff against the current target list.
     /// This is useful for pointer enter, leave, etc.
-    previous_targets: VecDeque<Weak<RefCell<dyn ElementImpl>>>,
+    previous_targets: VecDeque<Weak<RefCell<dyn ElementInternals>>>,
 }
 
 impl EventDispatcher {
@@ -56,7 +56,7 @@ impl EventDispatcher {
         &self,
         message: &CraftMessage,
         text_context: &mut Option<TextContext>,
-        target: &Rc<RefCell<dyn ElementImpl>>,
+        target: &Rc<RefCell<dyn ElementInternals>>,
     ) {
         let mut base_event = Event::new(target.clone());
 
@@ -77,7 +77,7 @@ impl EventDispatcher {
     pub(super) fn maybe_dispatch_pointer_leave(
         &self,
         text_context: &mut Option<TextContext>,
-        targets: &VecDeque<Rc<RefCell<dyn ElementImpl>>>,
+        targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         for prev_target in self.previous_targets.iter() {
             let mut found = false;
@@ -114,7 +114,7 @@ impl EventDispatcher {
     pub(super) fn maybe_dispatch_pointer_enter(
         &self,
         text_context: &mut Option<TextContext>,
-        targets: &VecDeque<Rc<RefCell<dyn ElementImpl>>>,
+        targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         for target in targets.iter().rev() {
             let mut found = false;
@@ -148,10 +148,10 @@ impl EventDispatcher {
         &mut self,
         message: &CraftMessage,
         mouse_position: Option<Point>,
-        root: Rc<RefCell<dyn ElementImpl>>,
+        root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut Option<TextContext>,
         render_list: &mut RenderList,
-        target_scratch: &mut Vec<Rc<RefCell<dyn ElementImpl>>>,
+        target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         let mut _focus = FocusAction::None;
         /*let span = span!(Level::INFO, "dispatch event");
@@ -162,9 +162,9 @@ impl EventDispatcher {
         }*/
 
         // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn ElementImpl>> =
+        let target: Rc<RefCell<dyn ElementInternals>> =
             find_target(&root, mouse_position, message, render_list, target_scratch);
-        let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = freeze_target_list(target);
+        let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(target);
 
         self.maybe_dispatch_pointer_leave(text_context, &targets);
         self.maybe_dispatch_pointer_enter(text_context, &targets);
@@ -197,7 +197,7 @@ impl EventDispatcher {
 
         // Drain the event dispatch queue and invoke user callbacks.
         while let Some((event, message)) = dequeue_event() {
-            let mut targets: VecDeque<Rc<RefCell<dyn ElementImpl>>> = freeze_target_list(event.target);
+            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target);
             // Handle capturing
             dispatch_capturing_event(&message, &mut targets);
 

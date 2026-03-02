@@ -344,7 +344,7 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
                 RenderCommand::BoxShadowCmd(box_shadow) => {
-                    self.draw_box_shadow(&box_shadow)
+                    self.draw_box_shadow(box_shadow)
                 }
             }
         });

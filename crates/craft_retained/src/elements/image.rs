@@ -12,8 +12,7 @@ use craft_resource_manager::resource_type::ResourceType;
 use kurbo::{Affine, Point};
 
 use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
-use crate::elements::ElementImpl;
-use crate::elements::core::ElementInternals;
+use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
@@ -72,7 +71,7 @@ impl Image {
     }
 }
 
-impl crate::elements::core::ElementData for Image {
+impl crate::elements::ElementData for Image {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -82,15 +81,6 @@ impl crate::elements::core::ElementData for Image {
     }
 }
 
-impl ElementImpl for Image {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
 
 impl ElementInternals for Image {
     fn apply_layout(
@@ -130,5 +120,13 @@ impl ElementInternals for Image {
         self.draw_borders(renderer, scale_factor);
 
         renderer.draw_image(content_rectangle.scale(scale_factor), self.resource_identifier.clone());
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

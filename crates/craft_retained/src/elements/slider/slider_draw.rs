@@ -4,7 +4,8 @@ use craft_renderer::RenderList;
 use kurbo::Vec2;
 
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementImpl, SliderInner};
+use crate::elements::{SliderInner};
+use crate::elements::ElementInternals;
 use crate::layout::layout_item::{CssComputedBorder, draw_borders_generic};
 
 fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {

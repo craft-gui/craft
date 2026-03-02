@@ -220,14 +220,11 @@ impl ApplicationHandler for CraftWinitState {
 
         // Do work sent from other threads and update all the windows.
         let mut work_done = false;
-        loop {
-            if let Some(work) = pop_gui_thread_work() {
-                work();
-                work_done = true;
-            } else {
-                break;
-            }
+        while let Some(work) = pop_gui_thread_work() {
+            work();
+            work_done = true;
         }
+
         if work_done {
             WINDOW_MANAGER.with_borrow_mut(|window_manager| {
                 window_manager.redraw_all(&mut craft_state.craft_app);

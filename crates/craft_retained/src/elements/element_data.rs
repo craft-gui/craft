@@ -4,7 +4,7 @@ use smol_str::SmolStr;
 use taffy::Layout;
 
 use crate::app::{ELEMENTS, TAFFY_TREE};
-use crate::elements::ElementImpl;
+use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{apply_scroll_layout, ScrollState};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
@@ -16,10 +16,10 @@ use crate::style::{Overflow, Style};
 #[derive(Clone)]
 pub struct ElementData {
     /// A cyclic weak pointer to the element.
-    pub(crate) me: Weak<RefCell<dyn ElementImpl>>,
+    pub(crate) me: Weak<RefCell<dyn ElementInternals>>,
 
     /// The Element's parent.
-    pub(crate) parent: Option<Weak<RefCell<dyn ElementImpl>>>,
+    pub(crate) parent: Option<Weak<RefCell<dyn ElementInternals>>>,
 
     /// The style of the element.
     pub style: Box<Style>,
@@ -28,7 +28,7 @@ pub struct ElementData {
     pub layout_item: LayoutItem,
 
     /// The children of the element.
-    pub children: Vec<Rc<RefCell<dyn ElementImpl>>>,
+    pub children: Vec<Rc<RefCell<dyn ElementInternals>>>,
 
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,
@@ -54,7 +54,7 @@ pub struct ElementData {
 }
 
 impl ElementData {
-    pub fn new(me: Weak<RefCell<dyn ElementImpl>>, scrollable: bool) -> Self {
+    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, scrollable: bool) -> Self {
         let default = Self {
             me,
             parent: None,

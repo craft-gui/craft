@@ -2,35 +2,398 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-use craft_primitives::geometry::{ElementBox, Point, TrblRectangle};
-use craft_primitives::Color;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use accesskit::{Action, Role};
+use craft_primitives::geometry::borders::CssRoundedRect;
+use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
+use craft_renderer::RenderList;
+use kurbo::{Affine, Point, Vec2};
+use peniko::Color;
 use ui_events::pointer::PointerId;
-use winit::dpi::PhysicalPosition;
-use winit::event::WindowEvent::{CursorMoved, MouseInput};
-use winit::event::{DeviceId, ElementState, MouseButton};
-
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::CraftError;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE, queue_window_event};
 use crate::document::Document;
-use crate::elements::core::ElementData;
-use crate::elements::ElementIdMap;
-use crate::elements::scrollable::{ScrollOptions, ScrollState};
-use crate::elements::window::WindowInternal;
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
+use crate::elements::scrollable::ScrollState;
+use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::layout::TaffyTree;
+use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
+use crate::text::text_context::TextContext;
 
-/// The element trait for end-users.
-pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + Any {
-    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+/// Internal element methods that should typically be ignored by users. Public for custom elements.
+pub trait ElementInternals: ElementData + Any {
+    fn position_in_parent(&self) -> Option<usize> {
+        let parent = self.parent();
+
+        // @OPTIMIZE: We are copying the vec here.
+        if let Some(parent) = parent
+            && let Some(parent) = parent.upgrade()
+        {
+            let me_ptr = self.element_data().me.clone().upgrade().unwrap();
+            let children = parent.borrow_mut().element_data().children.clone();
+
+            let self_position = children.iter().position(|x| Rc::ptr_eq(x, &me_ptr)).unwrap();
+
+            Some(self_position)
+        } else {
+            None
+        }
+    }
+
+    /// A helper to apply the layout for all children.
+    #[allow(clippy::too_many_arguments)]
+    fn apply_layout_children(
+        &mut self,
+        taffy_tree: &mut TaffyTree,
+        z_index: &mut u32,
+        transform: Affine,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
+        scale_factor: f64,
+        _dirty: bool,
+    ) {
+        for child in &self.element_data().children {
+            child.borrow_mut().apply_layout(
+                taffy_tree,
+                self.element_data().layout_item.computed_box.position,
+                z_index,
+                transform,
+                pointer,
+                text_context,
+                self.element_data().layout_item.clip_bounds,
+                scale_factor,
+            );
+        }
+    }
+
+    /// A helper to check if the element is visible.
+    fn is_visible(&self) -> bool {
+        let style = &self.element_data().style;
+        style.get_visible() && style.get_display() != Display::None
+    }
+
+    /// A helper to draw all children.
+    fn draw_children(
+        &mut self,
+        renderer: &mut RenderList,
+        text_context: &mut TextContext,
+        pointer: Option<Point>,
+        scale_factor: f64,
+    ) {
+        for child in self.children() {
+            child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
+        }
+    }
+
+    /// A helper to re-apply the style to the layout node when dirty.
+    fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree) {
+        let element_data = self.element_data_mut();
+        if element_data.style.is_dirty {
+            let node_id = element_data.layout_item.taffy_node_id.unwrap();
+            let style: taffy::Style = element_data.style.to_taffy_style();
+            taffy_tree.set_style(node_id, style);
+            element_data.style.is_dirty = false;
+        }
+    }
+
+    /// Applies the layout results from the [`TaffyTree`].
+    /// This method retrieves the computed layout for `root_node` and updates the
+    /// element’s internal state accordingly. It resolves the element's position,
+    /// transform, clipping, borders, and stacking order, producing the final
+    /// layout state used for rendering.
+    ///
+    /// # Parameters
+    /// - `taffy_tree`: The layout tree containing the computed results.
+    /// - `root_node`: The node whose layout information should be applied.
+    /// - `position`: The absolute position of the element within its parent context.
+    /// - `z_index`: A mutable counter used to assign stacking order as elements
+    ///   are processed.
+    /// - `transform`: The accumulated transform to apply to this element.
+    /// - `pointer`: The current pointer position, if available, for hit-testing.
+    /// - `text_context`: Context used for text layout and measurement.
+    /// - `clip_bounds`: Optional clipping rectangle inherited from ancestors.
+    ///
+    /// # Effects
+    /// This function mutates internal element state to reflect the final resolved
+    /// layout and may trigger updates such as clipping regions, border geometry,
+    /// and z-index assignment.
+    #[allow(clippy::too_many_arguments)]
+    fn apply_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree,
+        position: Point,
+        z_index: &mut u32,
+        transform: Affine,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
+    );
+
+    /// Draws the element and its visual contents.
+    ///
+    /// Implementations should use the provided [`RenderList`] to issue
+    /// drawing commands.
+    ///
+    /// - `renderer`: the active render list to draw into.
+    /// - `text_context`: text shaping and layout context.
+    /// - `pointer`: optional pointer position for hover effects.
+    /// - `window`: optional window handle.
+    /// - `scale_factor`: scale factor.
+    fn draw(
+        &mut self,
+        _renderer: &mut RenderList,
+        _text_context: &mut TextContext,
+        _pointer: Option<Point>,
+        _scale_factor: f64,
+    ) {
+    }
+
+    /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    fn compute_accessibility_tree(
+        &mut self,
+        tree: &mut accesskit::TreeUpdate,
+        parent_index: Option<usize>,
+        scale_factor: f64,
+    ) {
+        let current_node_id = accesskit::NodeId(self.element_data().internal_id);
+
+        let mut current_node = accesskit::Node::new(Role::GenericContainer);
+        if !self.element_data().on_pointer_button_up.is_empty() {
+            current_node.set_role(Role::Button);
+            current_node.add_action(Action::Click);
+        }
+
+        let padding_box = self
+            .element_data()
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        let current_index = tree.nodes.len(); // The current node is the last one added.
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+
+        for child in self.element_data_mut().children.iter_mut() {
+            child
+                .borrow_mut()
+                .compute_accessibility_tree(tree, Some(current_index), scale_factor);
+        }
+    }
+
+    /// Handles default events.
+    fn on_event(
+        &mut self,
+        _message: &CraftMessage,
+        _text_context: &mut TextContext,
+        _event: &mut Event,
+        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
+    ) {
+    }
+
+    /// Computes this element's box model.
+    fn resolve_box(
+        &mut self,
+        relative_position: Point,
+        scroll_transform: Affine,
+        result: &taffy::Layout,
+        layout_order: &mut u32,
+    ) {
+        let position = self.element_data().style.get_position();
+        self.element_data_mut().layout_item.resolve_box(
+            relative_position,
+            scroll_transform,
+            result,
+            layout_order,
+            position,
+        );
+    }
+
+    /// Computes this element's clip box.
+    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        self.element_data_mut().layout_item.resolve_clip(clip_bounds);
+    }
+
+    fn apply_borders(&mut self, scale_factor: f64) {
+        let current_style = self.element_data().current_style();
+        let has_border = current_style.has_border();
+        let border_radius = current_style.get_border_radius();
+        let border_color = &current_style.get_border_color();
+        let box_shadows = current_style.get_box_shadows();
+
+        self.element_data_mut()
+            .layout_item
+            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
+    }
+
+    /// A bit of a hack to reset the layout item of an element recursively.
+    fn reset_layout_item(&mut self) {
+        self.element_data_mut().layout_item = LayoutItem::default();
+
+        for child in self.element_data_mut().children.iter_mut() {
+            child.borrow_mut().reset_layout_item();
+        }
+    }
+
+    fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
+        /*let ed = self.element_data().borrow();
+        let has_events =
+            !ed.on_pointer_button_up.is_empty() ||
+            !ed.on_pointer_moved.is_empty() ||
+            !ed.on_keyboard_input.is_empty() ||
+            !ed.on_pointer_button_down.is_empty() ||
+            !ed.on_got_pointer_capture.is_empty() ||
+            !ed.on_pointer_enter.is_empty() ||
+            !ed.on_pointer_leave.is_empty() ||
+            !ed.on_lost_pointer_capture;*/
+        if hit_testable {
+            let id = self.element_data().internal_id;
+            renderer.push_hit_testable(
+                id,
+                self.element_data()
+                    .layout_item
+                    .computed_box_transformed
+                    .padding_rectangle()
+                    .scale(scale_factor),
+            );
+        }
+    }
+
+    fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
+        let current_style = self.element_data().current_style();
+
+        self.element_data()
+            .layout_item
+            .draw_borders(renderer, current_style, scale_factor);
+    }
+
+    fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
+        let element_data = self.element_data();
+        let padding_rectangle = element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
+
+        if self.should_start_new_layer() {
+            renderer.push_layer(padding_rectangle);
+        }
+    }
+
+    fn maybe_end_layer(&self, renderer: &mut RenderList) {
+        if self.should_start_new_layer() {
+            renderer.pop_layer();
+        }
+    }
+
+    fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+        if !self.element_data().is_scrollable() {
+            return;
+        }
+
+        let border_color = self.element_data().current_style().get_border_color();
+        let scrollbar_color = self.element_data().current_style().get_scrollbar_color();
+        let scrollbar_thumb_radius = self
+            .element_data()
+            .current_style()
+            .get_scrollbar_thumb_radius()
+            .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
+        // let scrollbar_thumb_radius = self.element_data().current_style().
+        let track_rect = self
+            .element_data_mut()
+            .layout_item
+            .computed_scroll_track
+            .scale(scale_factor);
+        let thumb_rect = self
+            .element_data_mut()
+            .layout_item
+            .computed_scroll_thumb
+            .scale(scale_factor);
+
+        let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
+        let mut computed_border_spec = CssComputedBorder::new(border_spec);
+        computed_border_spec.scale(scale_factor);
+
+        renderer.draw_rect(track_rect, scrollbar_color.track_color);
+        draw_borders_generic(
+            renderer,
+            &computed_border_spec,
+            border_color.to_array(),
+            scrollbar_color.thumb_color,
+        );
+    }
+
+    fn should_start_new_layer(&self) -> bool {
+        let element_data = self.element_data();
+
+        element_data.current_style().get_overflow()[1] == Overflow::Scroll
+    }
+
+    /// Returns the element's [`ElementBox`] without any transforms applied.
+    fn computed_box(&self) -> ElementBox {
+        self.element_data().layout_item.computed_box
+    }
+
+    /// Gets
+    fn get_default_style() -> Box<Style>
+    where
+        Self: Sized,
+    {
+        Style::new()
+    }
+
+    /// Mark layout node dirty.
+    fn mark_dirty(&mut self) {
+        let id = self.element_data().layout_item.taffy_node_id;
+        if let Some(id) = id {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.mark_dirty(id);
+            });
+        }
+    }
+
+    /// Updates taffy's style to reflect craft's style struct.
+    fn update_taffy_style(&mut self) {
+        let id = self.element_data().layout_item.taffy_node_id;
+        if let Some(id) = id {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
+            });
+        }
+    }
+
+    /// Set's this element's scale factor. This should not be used to scale individual elements.
+    fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.apply_borders(scale_factor);
+        for child in &self.element_data().children {
+            child.borrow_mut().set_scale_factor(scale_factor);
+        }
+    }
+
+    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         self.children().first().cloned().ok_or(CraftError::ElementNotFound)
     }
 
-    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         self.children().last().cloned().ok_or(CraftError::ElementNotFound)
     }
 
-    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         let parent = self.parent();
         let position = self.position_in_parent();
 
@@ -47,7 +410,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         }
     }
 
-    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         let parent = self.parent();
         let position = self.position_in_parent();
 
@@ -66,8 +429,8 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
 
     fn swap_child(
         &mut self,
-        child_1: Rc<RefCell<dyn ElementImpl>>,
-        child_2: Rc<RefCell<dyn ElementImpl>>,
+        child_1: Rc<RefCell<dyn ElementInternals>>,
+        child_2: Rc<RefCell<dyn ElementInternals>>,
     ) -> Result<(), CraftError> {
         let children = &mut self.element_data_mut().children;
         let position_1 = children
@@ -128,8 +491,8 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
     /// Panics if the corresponding Taffy layout nodes fail to be removed.
     fn remove_child(
         &mut self,
-        child: Rc<RefCell<dyn ElementImpl>>,
-    ) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
+        child: Rc<RefCell<dyn ElementInternals>>,
+    ) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         // Find the node.
         let children = &mut self.element_data_mut().children;
         let position = children
@@ -160,7 +523,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
 
         // TODO: Move to document
         fn remove_element_from_document(
-            node: Rc<RefCell<dyn ElementImpl>>,
+            node: Rc<RefCell<dyn ElementInternals>>,
             document: &mut Document,
             elements: &mut ElementIdMap,
         ) {
@@ -194,7 +557,7 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
         }
     }
 
-    fn push(&mut self, _child: Rc<RefCell<dyn ElementImpl>>) {
+    fn push(&mut self, _child: Rc<RefCell<dyn ElementInternals>>) {
         panic!("Pushing children is not supported.")
     }
 
@@ -595,13 +958,13 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
     }
 
     /// Re-
-    fn to_rc(&self) -> Rc<RefCell<dyn ElementImpl>> {
+    fn to_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.element_data().me.upgrade().unwrap()
     }
 
     /// Returns the root element.
-    fn get_root_element(&self) -> Weak<RefCell<dyn ElementImpl>> {
-        let mut root_ancestor: Weak<RefCell<dyn ElementImpl>> = self.element_data().me.clone();
+    fn get_root_element(&self) -> Weak<RefCell<dyn ElementInternals>> {
+        let mut root_ancestor: Weak<RefCell<dyn ElementInternals>> = self.element_data().me.clone();
         loop {
             let me = root_ancestor.upgrade().unwrap();
             if let Some(parent) = me.borrow().parent() {
@@ -627,418 +990,16 @@ pub trait ElementImpl: ElementData + crate::elements::core::ElementInternals + A
     }
 }
 
-pub trait AsElement {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementImpl>>;
-}
-
-pub trait Element: Clone + AsElement {
-    fn get_children(&self) -> Vec<Rc<RefCell<dyn ElementImpl>>> {
-        self.as_element_rc().borrow().children().to_vec()
-    }
-
-    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        self.as_element_rc().borrow().get_previous_sibling()
-    }
-
-    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        self.as_element_rc().borrow().get_next_sibling()
-    }
-
-    fn get_parent(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        let parent = self.as_element_rc().borrow().parent();
-        if let Some(parent) = parent {
-            parent.upgrade().ok_or(CraftError::ElementNotFound)
+pub fn resolve_clip_for_scrollable(element: &mut dyn ElementInternals, clip_bounds: Option<Rectangle>) {
+    let element_data = element.element_data_mut();
+    if element_data.is_scrollable() {
+        let scroll_clip_bounds = element_data.layout_item.computed_box_transformed.padding_rectangle();
+        if let Some(clip_bounds) = clip_bounds {
+            element_data.layout_item.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
         } else {
-            Err(CraftError::ElementNotFound)
+            element_data.layout_item.clip_bounds = Some(scroll_clip_bounds);
         }
-    }
-
-    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        self.as_element_rc().borrow().get_first_child()
-    }
-
-    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        self.as_element_rc().borrow().get_last_child()
-    }
-
-    fn remove_child(&self, child: Rc<RefCell<dyn ElementImpl>>) -> Result<Rc<RefCell<dyn ElementImpl>>, CraftError> {
-        self.as_element_rc().borrow_mut().remove_child(child)
-    }
-
-    fn remove_all_children(&self) {
-        self.as_element_rc().borrow_mut().remove_all_children()
-    }
-
-    fn swap_child(
-        &self,
-        child_1: Rc<RefCell<dyn ElementImpl>>,
-        child_2: Rc<RefCell<dyn ElementImpl>>,
-    ) -> Result<(), CraftError> {
-        self.as_element_rc().borrow_mut().swap_child(child_1, child_2)
-    }
-
-    fn push(self, child: impl AsElement) -> Self {
-        let child_rc = child.as_element_rc();
-        self.as_element_rc().borrow_mut().push(child_rc);
-        self
-    }
-
-    fn on_pointer_enter(self, on_pointer_enter: PointerEnterHandler) -> Self {
-        self.as_element_rc().borrow_mut().on_pointer_enter(on_pointer_enter);
-        self
-    }
-
-    fn on_pointer_leave(self, on_pointer_leave: PointerLeaveHandler) -> Self {
-        self.as_element_rc().borrow_mut().on_pointer_leave(on_pointer_leave);
-        self
-    }
-
-    fn id(self, id: &str) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_id(id);
-        self
-    }
-
-    fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_pointer_button_down(on_pointer_button_down);
-        self
-    }
-
-    fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
-        self.as_element_rc().borrow_mut().on_pointer_moved(on_pointer_moved);
-        self
-    }
-
-    fn on_pointer_button_up(self, on_pointer_button_up: PointerEventHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_pointer_button_up(on_pointer_button_up);
-        self
-    }
-
-    fn on_lost_pointer_capture(self, on_lost_pointer_capture: PointerCaptureHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_lost_pointer_capture(on_lost_pointer_capture);
-        self
-    }
-
-    fn on_got_pointer_capture(self, on_got_pointer_capture: PointerCaptureHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_got_pointer_capture(on_got_pointer_capture);
-        self
-    }
-
-    fn on_keyboard_input(self, on_keyboard_input: KeyboardInputHandler) -> Self {
-        self.as_element_rc().borrow_mut().on_keyboard_input(on_keyboard_input);
-        self
-    }
-
-    fn on_scroll(self, on_scroll: ScrollHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_scroll(on_scroll);
-        self
-    }
-
-    fn scroll_to_child_by_id(self, id: &str) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_child_by_id_with_options(id, ScrollOptions::default());
-        self
-    }
-
-    fn scroll_to_child_by_id_with_options(self, id: &str, options: ScrollOptions) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_child_by_id_with_options(id, options);
-        self
-    }
-    fn scroll_to(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to(y);
-        self
-    }
-
-    fn scroll_to_top(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_top();
-        self
-    }
-
-    fn scroll_to_bottom(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_bottom();
-        self
-    }
-
-    fn scroll_by(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_by(y);
-        self
-    }
-
-    fn get_scroll_state(&self) -> ScrollState {
-        self.as_element_rc()
-            .borrow_mut()
-            .get_scroll_state()
-    }
-
-    fn display(self, display: Display) -> Self {
-        self.as_element_rc().borrow_mut().set_display(display);
-        self
-    }
-
-    fn box_sizing(self, box_sizing: BoxSizing) -> Self {
-        self.as_element_rc().borrow_mut().set_box_sizing(box_sizing);
-        self
-    }
-
-    fn position(self, position: Position) -> Self {
-        self.as_element_rc().borrow_mut().set_position(position);
-        self
-    }
-
-    fn margin(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_margin(top, right, bottom, left);
-        self
-    }
-
-    fn padding(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_padding(top, right, bottom, left);
-        self
-    }
-
-    fn gap(self, row_gap: Unit, column_gap: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_gap(row_gap, column_gap);
-        self
-    }
-
-    fn inset(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_inset(top, right, bottom, left);
-        self
-    }
-
-    fn min_width(self, min_width: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_min_width(min_width);
-        self
-    }
-
-    fn min_height(self, min_height: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_min_height(min_height);
-        self
-    }
-
-    fn width(self, width: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_width(width);
-        self
-    }
-
-    fn height(self, height: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_height(height);
-        self
-    }
-
-    fn max_width(self, max_width: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_max_width(max_width);
-        self
-    }
-
-    fn max_height(self, max_height: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_max_height(max_height);
-        self
-    }
-
-    fn wrap(self, wrap: FlexWrap) -> Self {
-        self.as_element_rc().borrow_mut().set_wrap(wrap);
-        self
-    }
-
-    fn align_items(self, align_items: Option<AlignItems>) -> Self {
-        self.as_element_rc().borrow_mut().set_align_items(align_items);
-        self
-    }
-
-    fn justify_content(self, justify_content: Option<JustifyContent>) -> Self {
-        self.as_element_rc().borrow_mut().set_justify_content(justify_content);
-        self
-    }
-
-    fn flex_direction(self, flex_direction: FlexDirection) -> Self {
-        self.as_element_rc().borrow_mut().set_flex_direction(flex_direction);
-        self
-    }
-
-    fn flex_grow(self, flex_grow: f32) -> Self {
-        self.as_element_rc().borrow_mut().set_flex_grow(flex_grow);
-        self
-    }
-
-    fn flex_shrink(self, flex_shrink: f32) -> Self {
-        self.as_element_rc().borrow_mut().set_flex_shrink(flex_shrink);
-        self
-    }
-
-    fn flex_basis(self, flex_basis: Unit) -> Self {
-        self.as_element_rc().borrow_mut().set_flex_basis(flex_basis);
-        self
-    }
-
-    fn font_family(self, font_family: FontFamily) -> Self {
-        self.as_element_rc().borrow_mut().set_font_family(font_family);
-        self
-    }
-
-    fn color(self, color: Color) -> Self {
-        self.as_element_rc().borrow_mut().set_color(color);
-        self
-    }
-
-    fn background_color(self, background_color: Color) -> Self {
-        self.as_element_rc().borrow_mut().set_background_color(background_color);
-        self
-    }
-
-    fn font_size(self, font_size: f32) -> Self {
-        self.as_element_rc().borrow_mut().set_font_size(font_size);
-        self
-    }
-
-    fn line_height(self, line_height: f32) -> Self {
-        self.as_element_rc().borrow_mut().set_line_height(line_height);
-        self
-    }
-
-    fn font_weight(self, font_weight: FontWeight) -> Self {
-        self.as_element_rc().borrow_mut().set_font_weight(font_weight);
-        self
-    }
-
-    fn font_style(self, font_style: FontStyle) -> Self {
-        self.as_element_rc().borrow_mut().set_font_style(font_style);
-        self
-    }
-
-    fn underline(self, underline: Option<Underline>) -> Self {
-        self.as_element_rc().borrow_mut().set_underline(underline);
-        self
-    }
-
-    fn overflow(self, overflow_x: Overflow, overflow_y: Overflow) -> Self {
-        self.as_element_rc().borrow_mut().set_overflow(overflow_x, overflow_y);
-        self
-    }
-
-    fn border_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_border_color(top, right, bottom, left);
-        self
-    }
-
-    fn border_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_border_width(top, right, bottom, left);
-        self
-    }
-
-    fn border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_border_radius(top, right, bottom, left);
-        self
-    }
-
-    fn scrollbar_color(self, scrollbar_color: ScrollbarColor) -> Self {
-        self.as_element_rc().borrow_mut().set_scrollbar_color(scrollbar_color);
-        self
-    }
-
-    fn scrollbar_thumb_margin(self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_scrollbar_thumb_margin(top, right, bottom, left);
-        self
-    }
-
-    fn set_scrollbar_thumb_radius(
-        self,
-        top: (f32, f32),
-        right: (f32, f32),
-        bottom: (f32, f32),
-        left: (f32, f32),
-    ) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_scrollbar_thumb_radius(top, right, bottom, left);
-        self
-    }
-
-    fn scrollbar_width(self, selection_color: Color) -> Self {
-        self.as_element_rc().borrow_mut().set_selection_color(selection_color);
-        self
-    }
-
-    fn box_shadows(self, box_shadows: Vec<BoxShadow>) -> Self {
-        self.as_element_rc().borrow_mut().set_box_shadows(box_shadows);
-        self
-    }
-
-    fn focus(self) -> Self {
-        self.as_element_rc().borrow_mut().focus();
-        self
-    }
-
-    fn is_focused(&self) -> bool {
-        self.as_element_rc().borrow_mut().is_focused()
-    }
-
-    fn unfocus(self) -> Self {
-        self.as_element_rc().borrow_mut().unfocus();
-        self
-    }
-
-    fn get_computed_box_transformed(&self) -> ElementBox {
-        self.as_element_rc().borrow().get_computed_box_transformed()
-    }
-
-    fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
-        self.as_element_rc().borrow().has_pointer_capture(pointer_id)
-    }
-
-    #[allow(async_fn_in_trait)]
-    async fn click(&self) {
-        let pos = self
-            .as_element_rc()
-            .borrow()
-            .get_computed_box_transformed()
-            .padding_rectangle();
-        let mouse_move = CursorMoved {
-            device_id: DeviceId::dummy(),
-            position: PhysicalPosition::new(pos.x as f64, pos.y as f64),
-        };
-        let mouse_down = MouseInput {
-            device_id: DeviceId::dummy(),
-            state: ElementState::Pressed,
-            button: MouseButton::Left,
-        };
-        let mouse_up = MouseInput {
-            device_id: DeviceId::dummy(),
-            state: ElementState::Released,
-            button: MouseButton::Left,
-        };
-        let window_id = self.as_element_rc().borrow().get_winit_window().unwrap().id();
-        queue_window_event(window_id, mouse_move);
-        queue_window_event(window_id, mouse_down);
-        queue_window_event(window_id, mouse_up);
+    } else {
+        element_data.layout_item.clip_bounds = clip_bounds;
     }
 }
