@@ -18,7 +18,7 @@ use craft_primitives::ColorBrush;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::layout::LayoutAccessibility;
 
-use crate::app::request_layout;
+use crate::app::{request_layout, request_apply_layout};
 use crate::text::RangedStyles;
 
 /// Opaque representation of a generation.
@@ -240,9 +240,9 @@ impl PlainEditorDriver<'_> {
         let selection_range = self.editor.selection.text_range();
         let range = selection_range.end
             ..selection_range
-                .end
-                .saturating_add(len.get())
-                .min(self.editor.buffer.len());
+            .end
+            .saturating_add(len.get())
+            .min(self.editor.buffer.len());
         if range.is_empty() || !self.editor.buffer.is_char_boundary(range.end) {
             return;
         }
@@ -426,12 +426,9 @@ impl PlainEditorDriver<'_> {
     // --- MARK: Cursor Movement ---
     /// Move the cursor to the cluster boundary nearest this point in the layout.
     pub fn move_to_point(&mut self, x: f32, y: f32) {
-        self.refresh_layout();
         self.editor
             .set_selection(Selection::from_point(&self.editor.layout, x, y));
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_layout(taffy_id);
-        }
+        self.request_apply_layout();
     }
 
     /// Move the cursor to a byte index.
@@ -443,81 +440,81 @@ impl PlainEditorDriver<'_> {
             self.refresh_layout();
             self.editor.set_selection(self.editor.cursor_at(index).into());
         }
+        self.request_apply_layout();
     }
 
     /// Move the cursor to the start of the buffer.
     pub fn move_to_text_start(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, false));
+        self.request_apply_layout();
     }
 
     /// Move the cursor to the start of the physical line.
     pub fn move_to_line_start(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.line_start(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move the cursor to the end of the buffer.
     pub fn move_to_text_end(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, false));
+        self.request_apply_layout();
     }
 
     /// Move the cursor to the end of the physical line.
     pub fn move_to_line_end(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.line_end(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move up to the closest physical cluster boundary on the previous line, preserving the horizontal position for repeated movements.
     pub fn move_up(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_line(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move down to the closest physical cluster boundary on the next line, preserving the horizontal position for repeated movements.
     pub fn move_down(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_line(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move to the next cluster left in visual order.
     pub fn move_left(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_visual(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move to the next cluster right in visual order.
     pub fn move_right(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_visual(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move to the next word boundary left.
     pub fn move_word_left(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Move to the next word boundary right.
     pub fn move_word_right(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_visual_word(&self.editor.layout, false));
+        self.request_apply_layout();
     }
 
     /// Select the whole buffer.
     pub fn select_all(&mut self) {
-        self.refresh_layout();
         self.editor.set_selection(
             Selection::from_byte_index(&self.editor.layout, 0_usize, Affinity::default()).move_lines(
                 &self.editor.layout,
@@ -525,112 +522,111 @@ impl PlainEditorDriver<'_> {
                 true,
             ),
         );
+        self.request_apply_layout();
+    }
+
+    fn request_apply_layout(&self) {
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_apply_layout(taffy_id);
+        }
     }
 
     /// Collapse selection into caret.
     pub fn collapse_selection(&mut self) {
         self.editor.set_selection(self.editor.selection.collapse());
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the start of the buffer.
     pub fn select_to_text_start(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MIN, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the start of the physical line.
     pub fn select_to_line_start(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.line_start(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the end of the buffer.
     pub fn select_to_text_end(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the end of the physical line.
     pub fn select_to_line_end(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.line_end(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point up to the nearest cluster boundary on the previous line, preserving the horizontal position for repeated movements.
     pub fn select_up(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_line(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point down to the nearest cluster boundary on the next line, preserving the horizontal position for repeated movements.
     pub fn select_down(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_line(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the next cluster left in visual order.
     pub fn select_left(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_visual(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the next cluster right in visual order.
     pub fn select_right(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_visual(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the next word boundary left.
     pub fn select_word_left(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, true));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the next word boundary right.
     pub fn select_word_right(&mut self) {
-        self.refresh_layout();
         self.editor
             .set_selection(self.editor.selection.next_visual_word(&self.editor.layout, true));
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_layout(taffy_id);
-        }
+        self.request_apply_layout();
     }
 
     /// Select the word at the point.
     pub fn select_word_at_point(&mut self, x: f32, y: f32) {
-        self.refresh_layout();
         self.editor
             .set_selection(Selection::word_from_point(&self.editor.layout, x, y));
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_layout(taffy_id);
-        }
+        self.request_apply_layout();
     }
 
     /// Select the physical line at the point.
     pub fn select_line_at_point(&mut self, x: f32, y: f32) {
-        self.refresh_layout();
         let line = Selection::line_from_point(&self.editor.layout, x, y);
         self.editor.set_selection(line);
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_layout(taffy_id);
-        }
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to the cluster boundary closest to point.
     pub fn extend_selection_to_point(&mut self, x: f32, y: f32) {
-        self.refresh_layout();
         // FIXME: This is usually the wrong way to handle selection extension for mouse moves, but not a regression.
         self.editor
             .set_selection(self.editor.selection.extend_to_point(&self.editor.layout, x, y));
+        self.request_apply_layout();
     }
 
     /// Move the selection focus point to a byte index.
@@ -639,9 +635,9 @@ impl PlainEditorDriver<'_> {
     #[allow(dead_code)]
     pub fn extend_selection_to_byte(&mut self, index: usize) {
         if self.editor.buffer.is_char_boundary(index) {
-            self.refresh_layout();
             self.editor
                 .set_selection(self.editor.selection.extend(self.editor.cursor_at(index)));
+            self.request_apply_layout();
         }
     }
 
@@ -651,9 +647,9 @@ impl PlainEditorDriver<'_> {
     #[allow(dead_code)]
     pub fn select_byte_range(&mut self, start: usize, end: usize) {
         if self.editor.buffer.is_char_boundary(start) && self.editor.buffer.is_char_boundary(end) {
-            self.refresh_layout();
             self.editor
                 .set_selection(Selection::new(self.editor.cursor_at(start), self.editor.cursor_at(end)));
+            self.request_apply_layout();
         }
     }
 
