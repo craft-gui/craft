@@ -12,6 +12,8 @@ repository = "https://github.com/craft-gui/craft"
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
 vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
+vello_hybrid_renderer = ["craft_renderer/vello_hybrid_renderer"]
+vello_renderer = ["craft_renderer/vello_renderer"]
 
 system_fonts = ["parley/system"]
 
