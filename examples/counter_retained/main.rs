@@ -34,7 +34,7 @@ fn main() {
     let count = Rc::new(RefCell::new(0));
     let count_text = Text::new(&format!("Count: {}", count.borrow()));
 
-    Window::new()
+    Window::new("Counter")
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))

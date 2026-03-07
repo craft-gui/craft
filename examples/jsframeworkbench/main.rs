@@ -273,7 +273,7 @@ fn main() {
     let state = Rc::new(RefCell::new(State::new(data_list.clone())));
 
     let body = build_body(state);
-    Window::new()
+    Window::new("JsFrameworkBench")
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
         .push(body);

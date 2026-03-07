@@ -41,7 +41,7 @@ fn counter() {
 
     let add_button = create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone());
 
-    let window = Window::new()
+    let window = Window::new("Counter")
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))

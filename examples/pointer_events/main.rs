@@ -154,7 +154,7 @@ fn main() {
     let pointer_capture_event_log = Text::new("");
     let pointer_capture_draggable_container = Text::new("Draggable");
 
-    Window::new()
+    Window::new("Pointer Events")
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow(Overflow::Visible, Overflow::Scroll)

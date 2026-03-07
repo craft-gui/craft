@@ -18,7 +18,7 @@ use craft_primitives::ColorBrush;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::layout::LayoutAccessibility;
 
-use crate::app::{request_layout, request_apply_layout};
+use crate::app::{request_apply_layout};
 use crate::text::RangedStyles;
 
 /// Opaque representation of a generation.

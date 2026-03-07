@@ -77,7 +77,7 @@ pub fn counter() -> Window {
             count_text.clone(),
         ));
 
-    Window::new()
+    Window::new("MultiWindow")
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))

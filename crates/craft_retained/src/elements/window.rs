@@ -64,11 +64,13 @@ pub struct WindowInternal {
     pub(crate) accesskit_adapter: Option<Adapter>,
 
     advanced_window_fn: Option<WindowConstructor>,
+
+    title: Option<String>,
 }
 
 impl Default for Window {
     fn default() -> Self {
-        Self::new()
+        Self::new("Craft")
     }
 }
 
@@ -77,13 +79,13 @@ impl Window {
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
-        let inner = WindowInternal::new(Some(f));
+        let inner = WindowInternal::new(Some(f), None);
 
         Window { inner }
     }
 
-    pub fn new() -> Self {
-        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>);
+    pub fn new(title: &str) -> Self {
+        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title));
 
         Window { inner }
     }
@@ -173,7 +175,7 @@ impl Window {
 }
 
 impl WindowInternal {
-    pub fn new<F>(f: Option<F>) -> Rc<RefCell<Self>>
+    pub fn new<F>(f: Option<F>, title: Option<&str>) -> Rc<RefCell<Self>>
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
@@ -190,6 +192,7 @@ impl WindowInternal {
                 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
                 accesskit_adapter: None,
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
+                title: title.map(|title| title.to_string()),
             })
         });
 
@@ -367,7 +370,7 @@ impl WindowInternal {
             (*window_fn)(event_loop)
         } else {
             event_loop
-                .create_window(WindowAttributes::default().with_visible(false))
+                .create_window(WindowAttributes::default().with_title(self.title.as_ref().unwrap()).with_visible(false))
                 .expect("Failed to create window")
         });
         self.set_winit_window(Some(winit_window.clone()));

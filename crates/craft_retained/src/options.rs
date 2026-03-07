@@ -18,7 +18,7 @@ pub struct CraftOptions {
     /// The title of the application window.
     ///
     /// Defaults to `"craft"`.
-    pub window_title: String,
+    pub app_name: String,
     /// The initial size of the window.
     pub window_size: Option<Size<f32>>,
     pub craft_callback: Option<CraftCallback>,
@@ -28,7 +28,7 @@ impl Default for CraftOptions {
     fn default() -> Self {
         Self {
             renderer: RendererType::default(),
-            window_title: "craft".to_string(),
+            app_name: "craft".to_string(),
             window_size: None,
             craft_callback: None,
         }
@@ -36,10 +36,10 @@ impl Default for CraftOptions {
 }
 
 impl CraftOptions {
-    pub fn basic(title: &str) -> Self {
+    pub fn basic(app_name: &str) -> Self {
         Self {
             renderer: RendererType::default(),
-            window_title: title.to_string(),
+            app_name: app_name.to_string(),
             window_size: None,
             craft_callback: None,
         }
@@ -51,7 +51,7 @@ impl CraftOptions {
             renderer: RendererType::VelloCPU,
             #[cfg(not(feature = "vello_cpu_renderer"))]
             renderer: RendererType::default(),
-            window_title: title.to_string(),
+            app_name: title.to_string(),
             window_size: None,
             craft_callback: Some(callback),
         }

@@ -3,7 +3,7 @@ use craft_retained::rgb;
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
 
 fn main() {
-    let root = Window::new();
+    let root = Window::new("Text");
     root.push(
         Container::new()
             .display(Display::Flex)
