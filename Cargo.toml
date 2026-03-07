@@ -50,7 +50,7 @@ default-features = false
 features = []
 
 [workspace.dependencies.tokio]
-version = "1.49.0"
+version = "1.50.0"
 default-features = false
 features = ["sync", "time"]
 
@@ -73,6 +73,6 @@ features = ["std"]
 version = "1.0.1"
 
 [workspace.dependencies.winit]
-version = "0.30.12"
+version = "0.30.13"
 default-features = false
 features = []
