@@ -991,15 +991,5 @@ pub trait ElementInternals: ElementData + Any {
 }
 
 pub fn resolve_clip_for_scrollable(element: &mut dyn ElementInternals, clip_bounds: Option<Rectangle>) {
-    let element_data = element.element_data_mut();
-    if element_data.is_scrollable() {
-        let scroll_clip_bounds = element_data.layout.computed_box_transformed.padding_rectangle();
-        if let Some(clip_bounds) = clip_bounds {
-            element_data.layout.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
-        } else {
-            element_data.layout.clip_bounds = Some(scroll_clip_bounds);
-        }
-    } else {
-        element_data.layout.clip_bounds = clip_bounds;
-    }
+    element.element_data_mut().layout.resolve_clip_for_scrollable(clip_bounds);
 }

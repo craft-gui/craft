@@ -6,7 +6,7 @@ use peniko::Color;
 use taffy::NodeId;
 use craft_renderer::renderer::BoxShadowCmd;
 use crate::elements::scrollable::ScrollState;
-use crate::style::{BoxShadow, Position, Style};
+use crate::style::{BoxShadow, Overflow, Position, Style};
 
 impl CssComputedBorder {
     pub(crate) fn scale(&mut self, scale_factor: f64) {
@@ -68,6 +68,9 @@ pub struct Layout {
     /// Scrollbar state for elements that may have a scrollbar.
     pub scroll_state: ScrollState,
     is_scrollable: bool,
+    
+    pub scrollbar_thumb_margin: TrblRectangle<f32>,
+    pub scrollbar_thumb_radius: [(f32, f32); 4],
 }
 
 impl Layout {
@@ -76,6 +79,20 @@ impl Layout {
             is_scrollable,
             ..Default::default()
         }
+    }
+
+    pub fn is_dirty(&self, transform: Affine, position: Point) -> bool {
+        self.has_new_layout
+            || transform != self.get_transform()
+            || position != self.position
+    }
+
+    pub fn taffy_node_id(&self) -> NodeId {
+        self.taffy_node_id.unwrap()
+    }
+
+    pub fn taffy_node_id_mut(&mut self) -> &mut NodeId {
+        self.taffy_node_id.as_mut().unwrap()
     }
 
     pub(crate) fn is_scrollable(&self) -> bool {
@@ -341,6 +358,19 @@ impl Layout {
                     border_box: cache_box_shadows.border_box,
                 });
             }
+        }
+    }
+
+    pub fn resolve_clip_for_scrollable(&mut self, clip_bounds: Option<Rectangle>) {
+        if self.is_scrollable() {
+            let scroll_clip_bounds = self.computed_box_transformed.padding_rectangle();
+            if let Some(clip_bounds) = clip_bounds {
+                self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
+            } else {
+                self.clip_bounds = Some(scroll_clip_bounds);
+            }
+        } else {
+            self.clip_bounds = clip_bounds;
         }
     }
 }

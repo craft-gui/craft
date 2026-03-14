@@ -210,8 +210,8 @@ impl ElementInternals for TextInner {
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.taffy_node_id.unwrap();
-        let result = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let result = taffy_tree.get_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()

@@ -107,12 +107,12 @@ impl TaffyTree {
 
     /// Return this node layout relative to its parent
     #[inline]
-    pub fn layout(&self, node: NodeId) -> &Layout {
+    pub fn get_layout(&self, node: NodeId) -> &Layout {
         self.inner.layout(node).unwrap()
     }
 
     #[inline(always)]
-    pub fn get_has_new_layout(&self, node_id: NodeId) -> bool {
+    pub fn has_new_layout(&self, node_id: NodeId) -> bool {
         self.inner.get_has_new_layout(node_id)
     }
 

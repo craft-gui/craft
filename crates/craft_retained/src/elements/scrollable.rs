@@ -9,7 +9,8 @@ use crate::app::{queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementInternals;
 use crate::events::{CraftMessage, Event};
-use crate::style::Overflow;
+use crate::layout::layout::Layout;
+use crate::style::{Overflow, Style};
 
 /**
 
@@ -160,21 +161,24 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 }
 
 /// Computes the scrollbar's tack and thumb layout.
-pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &taffy::Layout) {
-    element.layout.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
-    element.layout.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
-    let state = &mut element.layout.scroll_state;
+pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layout: &taffy::Layout) {
+    layout.scrollbar_thumb_margin = style.get_scrollbar_thumb_margin();
+    layout.scrollbar_thumb_radius = style.get_scrollbar_thumb_radius();
 
-    if element.style.get_overflow()[1] != Overflow::Scroll {
+    layout.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
+    layout.computed_scrollbar_size = Size::new(taffy_layout.scroll_width(), taffy_layout.scroll_height());
+    let state = &mut layout.scroll_state;
+
+    if style.get_overflow()[1] != Overflow::Scroll {
         return;
     }
 
-    let box_transformed = element.layout.computed_box_transformed;
+    let box_transformed = layout.computed_box_transformed;
 
     // Client Height = padding box height.
     let client_height = box_transformed.padding_rectangle().height;
 
-    let mut content_height = element.layout.content_size.height;
+    let mut content_height = layout.content_size.height;
     // Taffy is adding the top border and padding height to the content size.
     content_height -= box_transformed.border.top;
     content_height -= box_transformed.padding.top;
@@ -183,19 +187,19 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &taffy::Lay
     // Scroll Height = Content Size
     let scroll_height =
         (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
-    let scroll_track_width = element.layout.scrollbar_size.width;
+    let scroll_track_width = layout.scrollbar_size.width;
 
     // The scroll track height is the height of the padding box.
     let scroll_track_height = client_height;
 
     let max_scroll_y = (scroll_height - client_height).max(0.0);
-    element.layout.max_scroll_y = max_scroll_y;
+    layout.max_scroll_y = max_scroll_y;
     // The scroll amount can be updated by the user, but it should be clamped here when
     // the computed max scroll height is calculated.
     state.set_scroll_y(state.scroll_y().min(max_scroll_y));
     state.mark_old();
 
-    element.layout.computed_scroll_track = Rectangle::new(
+    layout.computed_scroll_track = Rectangle::new(
         box_transformed.padding_rectangle().right() - scroll_track_width,
         box_transformed.padding_rectangle().top(),
         scroll_track_width,
@@ -212,15 +216,15 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &taffy::Lay
         0.0
     };
 
-    let thumb_margin = element.style.get_scrollbar_thumb_margin();
+    let thumb_margin = layout.scrollbar_thumb_margin;
     let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
     let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
-    element.layout.computed_scroll_thumb = element.layout.computed_scroll_track;
-    element.layout.computed_scroll_thumb.x += thumb_margin.left;
-    element.layout.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
-    element.layout.computed_scroll_thumb.width = scroll_thumb_width;
-    element.layout.computed_scroll_thumb.height = scroll_thumb_height;
+    layout.computed_scroll_thumb = layout.computed_scroll_track;
+    layout.computed_scroll_thumb.x += thumb_margin.left;
+    layout.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
+    layout.computed_scroll_thumb.width = scroll_thumb_width;
+    layout.computed_scroll_thumb.height = scroll_thumb_height;
 }
 
 

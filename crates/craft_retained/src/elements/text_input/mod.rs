@@ -161,7 +161,7 @@ impl ElementInternals for TextInputInner {
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.taffy_node_id.unwrap();
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
@@ -169,7 +169,7 @@ impl ElementInternals for TextInputInner {
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
-            let result = taffy_tree.layout(node);
+            let result = taffy_tree.get_layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
             self.apply_borders(scale_factor);
@@ -186,7 +186,7 @@ impl ElementInternals for TextInputInner {
         // For manual scroll updates.
         if !dirty && self.element_data.layout.scroll_state.is_new()
         {
-            let result = taffy_tree.layout(node);
+            let result = taffy_tree.get_layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();
         }

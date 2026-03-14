@@ -92,7 +92,7 @@ impl ElementData {
 
     /// Computes the scrollbar's tack and thumb layout.
     pub(crate) fn apply_scroll(&mut self, layout: &taffy::Layout) {
-       apply_scroll_layout(self, layout);
+       apply_scroll_layout(&self.style, &mut self.layout, layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {
