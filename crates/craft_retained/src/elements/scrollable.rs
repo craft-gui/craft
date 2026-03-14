@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use kurbo::Point;
-use taffy::Layout;
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
 use craft_primitives::geometry::{Rectangle, Size};
@@ -94,7 +93,7 @@ impl ScrollState {
 }
 
 pub(crate) fn scroll_to_bottom(data: &mut ElementData) {
-    let bottom_y = data.layout_item.max_scroll_y;
+    let bottom_y = data.layout.max_scroll_y;
     scroll_to(data, bottom_y);
 }
 
@@ -109,9 +108,9 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
         return;
     }
 
-    data.layout_item.scroll_state.set_scroll_y(f32::max(0.0, y));
+    data.layout.scroll_state.set_scroll_y(f32::max(0.0, y));
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
-    request_apply_layout(data.layout_item.taffy_node_id.unwrap());
+    request_apply_layout(data.layout.taffy_node_id.unwrap());
     queue_event(new_event, CraftMessage::Scroll());
 }
 
@@ -132,17 +131,17 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
         queue.push_back(child.clone());
     }
 
-    let top_py = data.layout_item.computed_box.padding_rectangle().top();
+    let top_py = data.layout.computed_box.padding_rectangle().top();
 
     while let Some(child) = queue.pop_front().clone() {
         let child = child.borrow();
         let element_data = child.element_data();
         if let Some(child_id) = element_data.id.as_ref() && child_id.as_str() == id {
             let box_model_selected = match options.to {
-                ScrollToBox::BorderBox => element_data.layout_item.computed_box.border_rectangle(),
-                ScrollToBox::MarginBox => element_data.layout_item.computed_box.margin_rectangle(),
-                ScrollToBox::PaddingBox => element_data.layout_item.computed_box.padding_rectangle(),
-                ScrollToBox::ContentBox => element_data.layout_item.computed_box.content_rectangle()
+                ScrollToBox::BorderBox => element_data.layout.computed_box.border_rectangle(),
+                ScrollToBox::MarginBox => element_data.layout.computed_box.margin_rectangle(),
+                ScrollToBox::PaddingBox => element_data.layout.computed_box.padding_rectangle(),
+                ScrollToBox::ContentBox => element_data.layout.computed_box.content_rectangle()
             };
             let distance_from_parent = box_model_selected.y - top_py;
             child_y = Some(distance_from_parent);
@@ -161,21 +160,21 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 }
 
 /// Computes the scrollbar's tack and thumb layout.
-pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
-    element.layout_item.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
-    element.layout_item.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
-    let state = &mut element.layout_item.scroll_state;
+pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &taffy::Layout) {
+    element.layout.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
+    element.layout.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
+    let state = &mut element.layout.scroll_state;
 
     if element.style.get_overflow()[1] != Overflow::Scroll {
         return;
     }
 
-    let box_transformed = element.layout_item.computed_box_transformed;
+    let box_transformed = element.layout.computed_box_transformed;
 
     // Client Height = padding box height.
     let client_height = box_transformed.padding_rectangle().height;
 
-    let mut content_height = element.layout_item.content_size.height;
+    let mut content_height = element.layout.content_size.height;
     // Taffy is adding the top border and padding height to the content size.
     content_height -= box_transformed.border.top;
     content_height -= box_transformed.padding.top;
@@ -184,19 +183,19 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
     // Scroll Height = Content Size
     let scroll_height =
         (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
-    let scroll_track_width = element.layout_item.scrollbar_size.width;
+    let scroll_track_width = element.layout.scrollbar_size.width;
 
     // The scroll track height is the height of the padding box.
     let scroll_track_height = client_height;
 
     let max_scroll_y = (scroll_height - client_height).max(0.0);
-    element.layout_item.max_scroll_y = max_scroll_y;
+    element.layout.max_scroll_y = max_scroll_y;
     // The scroll amount can be updated by the user, but it should be clamped here when
     // the computed max scroll height is calculated.
     state.set_scroll_y(state.scroll_y().min(max_scroll_y));
     state.mark_old();
 
-    element.layout_item.computed_scroll_track = Rectangle::new(
+    element.layout.computed_scroll_track = Rectangle::new(
         box_transformed.padding_rectangle().right() - scroll_track_width,
         box_transformed.padding_rectangle().top(),
         scroll_track_width,
@@ -217,11 +216,11 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
     let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
     let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
-    element.layout_item.computed_scroll_thumb = element.layout_item.computed_scroll_track;
-    element.layout_item.computed_scroll_thumb.x += thumb_margin.left;
-    element.layout_item.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
-    element.layout_item.computed_scroll_thumb.width = scroll_thumb_width;
-    element.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
+    element.layout.computed_scroll_thumb = element.layout.computed_scroll_track;
+    element.layout.computed_scroll_thumb.x += thumb_margin.left;
+    element.layout.computed_scroll_thumb.y += scroll_thumb_offset + thumb_margin.top;
+    element.layout.computed_scroll_thumb.width = scroll_thumb_width;
+    element.layout.computed_scroll_thumb.height = scroll_thumb_height;
 }
 
 
@@ -231,7 +230,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
     let element_data = element.element_data_mut();
 
     if element_data.is_scrollable() {
-        let state = &mut element_data.layout_item.scroll_state;
+        let state = &mut element_data.layout.scroll_state;
         match message {
             CraftMessage::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
@@ -243,11 +242,11 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                 };
                 let delta = -delta;
                 // Todo: Scroll physics
-                let max_scroll_y = element_data.layout_item.max_scroll_y;
+                let max_scroll_y = element_data.layout.max_scroll_y;
 
                 let current_scroll_y = state.scroll_y();
                 state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
+                request_apply_layout(element_data.layout.taffy_node_id.unwrap());
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -256,10 +255,10 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                 if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
                     // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                     if pointer_button.pointer.pointer_type == PointerType::Touch {
-                        let container_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
+                        let container_rectangle = element_data.layout.computed_box_transformed.padding_rectangle();
 
                         let in_scroll_bar = element_data
-                            .layout_item
+                            .layout
                             .computed_scroll_thumb
                             .contains(&pointer_button.state.logical_point());
 
@@ -272,7 +271,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                             event.prevent_defaults();
                         }
                     } else if element_data
-                        .layout_item
+                        .layout
                         .computed_scroll_thumb
                         .contains(&pointer_button.state.logical_point())
                     {
@@ -287,18 +286,18 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                         event.prevent_propagate();
                         event.prevent_defaults();
                     } else if element_data
-                        .layout_item
+                        .layout
                         .computed_scroll_track
                         .contains(&pointer_button.state.logical_point())
                     {
                         let offset_y =
-                            pointer_button.state.position.y as f32 - element_data.layout_item.computed_scroll_track.y;
+                            pointer_button.state.position.y as f32 - element_data.layout.computed_scroll_track.y;
 
-                        let percent = offset_y / element_data.layout_item.computed_scroll_track.height;
-                        let scroll_y = percent * element_data.layout_item.max_scroll_y;
+                        let percent = offset_y / element_data.layout.computed_scroll_track.height;
+                        let scroll_y = percent * element_data.layout.max_scroll_y;
 
-                        state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout_item.max_scroll_y));
-                        request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
+                        state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout.max_scroll_y));
+                        request_apply_layout(element_data.layout.taffy_node_id.unwrap());
 
                         event.prevent_propagate();
                         event.prevent_defaults();
@@ -319,10 +318,10 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                     // Todo: Translate scroll wheel pixel to scroll position for diff.
                     let delta = (pointer_motion.current.position.y - click.y) as f32;
 
-                    let max_scroll_y = element_data.layout_item.max_scroll_y;
+                    let max_scroll_y = element_data.layout.max_scroll_y;
 
-                    let click_y_offset = element_data.layout_item.computed_scroll_track.height
-                        - element_data.layout_item.computed_scroll_thumb.height;
+                    let click_y_offset = element_data.layout.computed_scroll_track.height
+                        - element_data.layout.computed_scroll_thumb.height;
                     if click_y_offset <= 0.0 {
                         return;
                     }
@@ -335,7 +334,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
 
                     let current_scroll_y = state.scroll_y();
                     state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
+                    request_apply_layout(element_data.layout.taffy_node_id.unwrap());
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();

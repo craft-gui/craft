@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use smol_str::SmolStr;
-use taffy::Layout;
 
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::ElementInternals;
@@ -9,7 +8,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{apply_scroll_layout, ScrollState};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
-use crate::layout::layout_item::LayoutItem;
+use crate::layout::layout::Layout;
 use crate::style::{Overflow, Style};
 
 /// Stores common data to most elements.
@@ -25,7 +24,7 @@ pub struct ElementData {
     pub style: Box<Style>,
 
     /// Stores the layout data for an element.
-    pub layout_item: LayoutItem,
+    pub layout: Layout,
 
     /// The children of the element.
     pub children: Vec<Rc<RefCell<dyn ElementInternals>>>,
@@ -55,7 +54,7 @@ impl ElementData {
             me,
             parent: None,
             style: Style::new(),
-            layout_item: LayoutItem::new(is_scrollable),
+            layout: Layout::new(is_scrollable),
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
@@ -87,23 +86,23 @@ impl ElementData {
             } else {
                 taffy_tree.new_leaf(style)
             };
-            self.layout_item.taffy_node_id = Some(node_id);
+            self.layout.taffy_node_id = Some(node_id);
         });
     }
 
     /// Computes the scrollbar's tack and thumb layout.
-    pub(crate) fn apply_scroll(&mut self, layout: &Layout) {
+    pub(crate) fn apply_scroll(&mut self, layout: &taffy::Layout) {
        apply_scroll_layout(self, layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {
-        self.layout_item.scroll_state
+        self.layout.scroll_state
     }
 }
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.get_overflow()[1] == Overflow::Scroll && self.layout_item.is_scrollable()
+        self.style.get_overflow()[1] == Overflow::Scroll && self.layout.is_scrollable()
     }
 
     pub fn current_style(&self) -> &Style {

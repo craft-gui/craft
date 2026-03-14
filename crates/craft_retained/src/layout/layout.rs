@@ -37,7 +37,7 @@ impl CssComputedBorder {
 }
 
 #[derive(Clone, Default)]
-pub struct LayoutItem {
+pub struct Layout {
     /// The taffy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
     pub taffy_node_id: Option<NodeId>,
@@ -70,7 +70,7 @@ pub struct LayoutItem {
     is_scrollable: bool,
 }
 
-impl LayoutItem {
+impl Layout {
     pub(crate) fn new(is_scrollable: bool) -> Self {
         Self {
             is_scrollable,

@@ -331,14 +331,14 @@ impl ElementInternals for SliderInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let node = self.element_data.layout.taffy_node_id.unwrap();
         let layout = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
@@ -449,7 +449,7 @@ impl ElementInternals for SliderInner {
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
-        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout.computed_box_transformed.border_rectangle();
 
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
@@ -464,7 +464,7 @@ impl ElementInternals for SliderInner {
             return true;
         }
 
-        if let Some(clip) = element_data.layout_item.clip_bounds {
+        if let Some(clip) = element_data.layout.clip_bounds {
             match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,

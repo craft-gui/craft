@@ -209,14 +209,14 @@ impl ElementInternals for TextInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let node = self.element_data.layout.taffy_node_id.unwrap();
         let result = taffy_tree.layout(node);
         let has_new_layout = taffy_tree.get_has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
         if dirty {
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
@@ -272,7 +272,7 @@ impl ElementInternals for TextInner {
     ) {
         let padding_box = self
             .element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);
