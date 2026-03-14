@@ -36,10 +36,6 @@ pub struct ElementData {
     /// A unique id for this element. Within a craft app the id will be unique even across windows.
     pub(crate) internal_id: u64,
 
-    /// Scrollbar state for elements that may have a scrollbar.
-    pub(super) scroll_state: ScrollState,
-    pub(super) is_scrollable: bool,
-
     // Events:
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
@@ -54,17 +50,15 @@ pub struct ElementData {
 }
 
 impl ElementData {
-    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, scrollable: bool) -> Self {
+    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
         let default = Self {
             me,
             parent: None,
             style: Style::new(),
-            layout_item: Default::default(),
+            layout_item: LayoutItem::new(is_scrollable),
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
-            scroll_state: ScrollState::default(),
-            is_scrollable: scrollable,
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),
             on_pointer_leave: Vec::new(),
@@ -103,13 +97,13 @@ impl ElementData {
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {
-        self.scroll_state
+        self.layout_item.scroll_state
     }
 }
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.get_overflow()[1] == Overflow::Scroll && self.is_scrollable
+        self.style.get_overflow()[1] == Overflow::Scroll && self.layout_item.is_scrollable()
     }
 
     pub fn current_style(&self) -> &Style {

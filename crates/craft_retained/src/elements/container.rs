@@ -93,14 +93,14 @@ impl ElementInternals for ContainerInner {
             // For scroll changes from taffy;
             self.element_data.apply_scroll(layout);
             self.apply_clip(clip_bounds);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout_item.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new()
+        if !dirty && self.element_data.layout_item.scroll_state.is_new()
         {
             self.element_data.apply_scroll(layout);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout_item.scroll_state.mark_old();
         }
 
         if has_new_layout {

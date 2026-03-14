@@ -638,7 +638,7 @@ pub trait ElementInternals: ElementData + Any {
     }
 
     fn get_scroll_state(&self) -> ScrollState {
-        self.element_data().scroll_state
+        self.element_data().layout_item.scroll_state
     }
 
     /// Returns the element's [`ElementBox`].

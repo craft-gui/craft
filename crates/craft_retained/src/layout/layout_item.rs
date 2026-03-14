@@ -5,6 +5,7 @@ use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::NodeId;
 use craft_renderer::renderer::BoxShadowCmd;
+use crate::elements::scrollable::ScrollState;
 use crate::style::{BoxShadow, Position, Style};
 
 impl CssComputedBorder {
@@ -63,9 +64,24 @@ pub struct LayoutItem {
     pub has_new_layout: bool,
     transform: Affine,
     pub position: Point,
+
+    /// Scrollbar state for elements that may have a scrollbar.
+    pub scroll_state: ScrollState,
+    is_scrollable: bool,
 }
 
 impl LayoutItem {
+    pub(crate) fn new(is_scrollable: bool) -> Self {
+        Self {
+            is_scrollable,
+            ..Default::default()
+        }
+    }
+
+    pub(crate) fn is_scrollable(&self) -> bool {
+        self.is_scrollable
+    }
+
     pub(crate) fn get_transform(&self) -> Affine {
         self.transform
     }

@@ -109,7 +109,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
         return;
     }
 
-    data.scroll_state.set_scroll_y(f32::max(0.0, y));
+    data.layout_item.scroll_state.set_scroll_y(f32::max(0.0, y));
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
     request_apply_layout(data.layout_item.taffy_node_id.unwrap());
     queue_event(new_event, CraftMessage::Scroll());
@@ -164,7 +164,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
     element.layout_item.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
     element.layout_item.computed_scrollbar_size = Size::new(layout.scroll_width(), layout.scroll_height());
-    let state = &mut element.scroll_state;
+    let state = &mut element.layout_item.scroll_state;
 
     if element.style.get_overflow()[1] != Overflow::Scroll {
         return;
@@ -231,7 +231,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
     let element_data = element.element_data_mut();
 
     if element_data.is_scrollable() {
-        let state = &mut element_data.scroll_state;
+        let state = &mut element_data.layout_item.scroll_state;
         match message {
             CraftMessage::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
