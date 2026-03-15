@@ -21,6 +21,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::{Element, scrollable};
+use crate::elements::traits::DeepClone;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -149,6 +150,10 @@ impl crate::elements::ElementData for TextInputInner {
 }
 
 impl ElementInternals for TextInputInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -308,7 +313,7 @@ impl ElementInternals for TextInputInner {
     ) {
         self.state.is_active = true;
 
-        scrollable::on_scroll_events(self, self.style(), &mut self.element_data.layout, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
 
         if !event.propagate {
             return;

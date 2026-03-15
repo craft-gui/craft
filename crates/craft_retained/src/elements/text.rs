@@ -41,6 +41,7 @@ use crate::elements::AsElement;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::{Element};
+use crate::elements::traits::DeepClone;
 use crate::layout::TaffyTree;
 
 #[derive(Clone)]
@@ -198,6 +199,10 @@ impl crate::elements::ElementData for TextInner {
 }
 
 impl ElementInternals for TextInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

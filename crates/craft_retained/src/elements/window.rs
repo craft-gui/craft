@@ -30,6 +30,7 @@ use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::{AsElement, ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
 use crate::elements::{Element, scrollable};
+use crate::elements::traits::DeepClone;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -66,6 +67,12 @@ pub struct WindowInternal {
     advanced_window_fn: Option<WindowConstructor>,
 
     title: Option<String>,
+}
+
+impl Clone for WindowInternal {
+    fn clone(&self) -> Self {
+        todo!()
+    }
 }
 
 impl Default for Window {
@@ -504,6 +511,10 @@ impl crate::elements::ElementData for WindowInternal {
 }
 
 impl ElementInternals for WindowInternal {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -636,7 +647,7 @@ impl ElementInternals for WindowInternal {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::on_scroll_events(self, self.style(), &mut self.element_data.layout, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {

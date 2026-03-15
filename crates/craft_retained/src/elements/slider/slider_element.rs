@@ -13,6 +13,7 @@ use crate::app::queue_event;
 use crate::elements::{ElementInternals, AsElement};
 use crate::elements::element_data::ElementData;
 use crate::elements::{Element};
+use crate::elements::traits::DeepClone;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::palette;
@@ -31,6 +32,7 @@ pub struct Slider {
     pub inner: Rc<RefCell<SliderInner>>,
 }
 
+#[derive(Clone)]
 pub struct SliderInner {
     element_data: ElementData,
 
@@ -320,6 +322,10 @@ impl crate::elements::ElementData for SliderInner {
 }
 
 impl ElementInternals for SliderInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

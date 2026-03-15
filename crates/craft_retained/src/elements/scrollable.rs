@@ -1,15 +1,17 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use kurbo::Point;
+use kurbo::{Point, Vec2};
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
 use craft_primitives::geometry::{Rectangle, Size};
+use craft_primitives::geometry::borders::CssRoundedRect;
+use craft_renderer::RenderList;
 use crate::app::{queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::ElementInternals;
 use crate::events::{CraftMessage, Event};
-use crate::layout::layout::Layout;
+use crate::layout::layout::{draw_borders_generic, CssComputedBorder, Layout};
 use crate::style::{Overflow, Style};
 
 /**
@@ -227,12 +229,38 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
     layout.computed_scroll_thumb.height = scroll_thumb_height;
 }
 
+pub struct HandleScrollLogicResult {
+    pub request_apply_layout: bool,
+    pub release_pointer_capture: bool,
+    pub set_pointer_capture: bool,
+}
 
-/// Updates the scroll state when an event occurs.
+pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
+    let mut element_data  = element.element_data_mut();
+    let result = handle_scroll_logic_advance(&*element_data.style, &mut element_data.layout, message, event);
+
+    if result.request_apply_layout {
+        request_apply_layout(element.element_data().layout.taffy_node_id());
+    }
+
+    if result.set_pointer_capture {
+        element.set_pointer_capture(PointerId::new(1).unwrap())
+    }
+
+    if result.release_pointer_capture {
+        element.release_pointer_capture(PointerId::new(1).unwrap());
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style, layout: &mut Layout, message: &CraftMessage, event: &mut Event) {
+pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, message: &CraftMessage, event: &mut Event) -> HandleScrollLogicResult {
+    let mut result = HandleScrollLogicResult {
+        request_apply_layout: false,
+        release_pointer_capture: false,
+        set_pointer_capture: false,
+    };
 
-    if layout.is_scrollable() {
+    if layout.is_scrollable_layout() && style.get_overflow()[1] == Overflow::Scroll {
         let state = &mut layout.scroll_state;
         match message {
             CraftMessage::PointerScroll(mouse_wheel) => {
@@ -249,7 +277,8 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
 
                 let current_scroll_y = state.scroll_y();
                 state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                request_apply_layout(layout.taffy_node_id.unwrap());
+
+                result.request_apply_layout = true;
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -282,10 +311,12 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
                         ));
 
                         // FIXME: Turn pointer capture on with the correct device id.
-                        element.set_pointer_capture(PointerId::new(1).unwrap());
+                        //element.set_pointer_capture(PointerId::new(1).unwrap());
 
                         event.prevent_propagate();
                         event.prevent_defaults();
+
+                        result.set_pointer_capture = true;
                     } else if layout
                         .computed_scroll_track
                         .contains(&pointer_button.state.logical_point())
@@ -297,7 +328,8 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
                         let scroll_y = percent * layout.max_scroll_y;
 
                         state.set_scroll_y(scroll_y.clamp(0.0, layout.max_scroll_y));
-                        request_apply_layout(layout.taffy_node_id.unwrap());
+
+                        result.request_apply_layout = true;
 
                         event.prevent_propagate();
                         event.prevent_defaults();
@@ -307,10 +339,10 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
             CraftMessage::PointerButtonUp(_pointer_button) => {
                 if state.scroll_click.is_some() {
                     state.scroll_click = None;
-                    // FIXME: Turn pointer capture off with the correct device id.
-                    element.release_pointer_capture(PointerId::new(1).unwrap());
                     event.prevent_propagate();
                     event.prevent_defaults();
+
+                    result.release_pointer_capture = true;
                 }
             }
             CraftMessage::PointerMovedEvent(pointer_motion) => {
@@ -323,7 +355,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
                     let click_y_offset = layout.computed_scroll_track.height
                         - layout.computed_scroll_thumb.height;
                     if click_y_offset <= 0.0 {
-                        return;
+                        return result;
                     }
                     let mut delta = max_scroll_y * (delta / (click_y_offset));
 
@@ -334,7 +366,8 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
 
                     let current_scroll_y = state.scroll_y();
                     state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    request_apply_layout(layout.taffy_node_id.unwrap());
+                    result.request_apply_layout = true;
+
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();
@@ -342,5 +375,38 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style
             }
             _ => {}
         }
+    };
+
+    result
+}
+
+pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut RenderList, scale_factor: f64) {
+    if !(layout.is_scrollable_layout() && style.get_overflow()[1] == Overflow::Scroll) {
+        return;
     }
+
+    let border_color = style.get_border_color();
+    let scrollbar_color = style.get_scrollbar_color();
+    let scrollbar_thumb_radius = style
+        .get_scrollbar_thumb_radius()
+        .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
+    // let scrollbar_thumb_radius = self.element_data().current_style().
+    let track_rect = layout
+        .computed_scroll_track
+        .scale(scale_factor);
+    let thumb_rect = layout
+        .computed_scroll_thumb
+        .scale(scale_factor);
+
+    let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
+    let mut computed_border_spec = CssComputedBorder::new(border_spec);
+    computed_border_spec.scale(scale_factor);
+
+    renderer.draw_rect(track_rect, scrollbar_color.track_color);
+    draw_borders_generic(
+        renderer,
+        &computed_border_spec,
+        border_color.to_array(),
+        scrollbar_color.thumb_color,
+    );
 }

@@ -13,8 +13,8 @@ use ui_events::pointer::PointerId;
 use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::CraftError;
 use crate::document::Document;
-use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
-use crate::elements::scrollable::ScrollState;
+use crate::elements::{AsElement, ElementData, ElementIdMap, ScrollOptions, WindowInternal};
+use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
@@ -23,6 +23,8 @@ use crate::text::text_context::TextContext;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData + Any {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>>;
+
     fn position_in_parent(&self) -> Option<usize> {
         let parent = self.parent();
 
@@ -302,40 +304,8 @@ pub trait ElementInternals: ElementData + Any {
     }
 
     fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
-        if !self.element_data().is_scrollable() {
-            return;
-        }
-
-        let border_color = self.element_data().current_style().get_border_color();
-        let scrollbar_color = self.element_data().current_style().get_scrollbar_color();
-        let scrollbar_thumb_radius = self
-            .element_data()
-            .current_style()
-            .get_scrollbar_thumb_radius()
-            .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
-        // let scrollbar_thumb_radius = self.element_data().current_style().
-        let track_rect = self
-            .element_data_mut()
-            .layout
-            .computed_scroll_track
-            .scale(scale_factor);
-        let thumb_rect = self
-            .element_data_mut()
-            .layout
-            .computed_scroll_thumb
-            .scale(scale_factor);
-
-        let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
-        let mut computed_border_spec = CssComputedBorder::new(border_spec);
-        computed_border_spec.scale(scale_factor);
-
-        renderer.draw_rect(track_rect, scrollbar_color.track_color);
-        draw_borders_generic(
-            renderer,
-            &computed_border_spec,
-            border_color.to_array(),
-            scrollbar_color.thumb_color,
-        );
+        let element_data = self.element_data();
+        draw_scrollbar(&element_data.style, &element_data.layout, renderer, scale_factor);
     }
 
     fn should_start_new_layer(&self) -> bool {

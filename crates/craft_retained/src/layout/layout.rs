@@ -81,12 +81,6 @@ impl Layout {
         }
     }
 
-    pub fn is_dirty(&self, transform: Affine, position: Point) -> bool {
-        self.has_new_layout
-            || transform != self.get_transform()
-            || position != self.position
-    }
-
     pub fn taffy_node_id(&self) -> NodeId {
         self.taffy_node_id.unwrap()
     }
@@ -95,7 +89,8 @@ impl Layout {
         self.taffy_node_id.as_mut().unwrap()
     }
 
-    pub(crate) fn is_scrollable(&self) -> bool {
+    /// This only returns if an element is a scrollable, not if Overflow[1] == true.
+    pub(crate) fn is_scrollable_layout(&self) -> bool {
         self.is_scrollable
     }
 
@@ -362,7 +357,7 @@ impl Layout {
     }
 
     pub fn resolve_clip_for_scrollable(&mut self, clip_bounds: Option<Rectangle>) {
-        if self.is_scrollable() {
+        if self.is_scrollable_layout() {
             let scroll_clip_bounds = self.computed_box_transformed.padding_rectangle();
             if let Some(clip_bounds) = clip_bounds {
                 self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);

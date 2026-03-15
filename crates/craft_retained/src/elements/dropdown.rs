@@ -5,17 +5,18 @@ use std::rc::{Rc, Weak};
 use craft_primitives::geometry::{Rectangle, TrblRectangle};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
-
-use crate::app::TAFFY_TREE;
-use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element};
-use crate::elements::element_data::ElementData;
+use ui_events::pointer::PointerId;
+use crate::app::{request_apply_layout, TAFFY_TREE};
+use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element, ElementData};
+use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::{scrollable};
-use crate::elements::scrollable::apply_scroll_layout;
+use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout::Layout;
 use crate::layout::TaffyTree;
 use crate::{px, rgb, rgba};
-use crate::style::{BoxShadow, Display, FlexDirection, Overflow, Position, Style};
+use crate::elements::traits::DeepClone;
+use crate::style::{BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -23,6 +24,7 @@ pub struct Dropdown {
     pub inner: Rc<RefCell<DropdownInner>>,
 }
 
+#[derive(Clone)]
 pub struct Shape {
     pub layout: Layout,
     pub style: Box<Style>,
@@ -47,11 +49,14 @@ impl Shape {
         });
     }
 
-    pub fn apply_simple_layout(&mut self, taffy_tree: &mut TaffyTree, transform: Affine, position: Point, z_index: &mut u32, scale_factor: f64, clip_bounds: Option<Rectangle>,) {
+    pub fn apply_simple_layout(&mut self, taffy_tree: &mut TaffyTree, transform: Affine, position: Point, z_index: &mut u32, scale_factor: f64, clip_bounds: Option<Rectangle>) {
         let node = self.layout.taffy_node_id();
         let taffy_layout = taffy_tree.get_layout(node);
         self.layout.has_new_layout = taffy_tree.has_new_layout(node);
-        let dirty = self.layout.is_dirty(transform, position);
+
+        let dirty = self.layout.has_new_layout
+            || transform != self.layout.get_transform()
+            || position != self.layout.position;
 
         if dirty {
             self.layout.resolve_box(position, transform, taffy_layout, z_index, self.style.get_position());
@@ -85,10 +90,12 @@ impl Shape {
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
+#[derive(Clone)]
 pub struct DropdownInner {
-    element_data: ElementData,
+    element_data: ElementDataStruct,
     floating_window: Shape,
     is_floating_window_hidden: bool,
+    selected_element: Option<Rc<RefCell<dyn ElementInternals>>>
 }
 
 impl Default for Dropdown {
@@ -101,9 +108,10 @@ impl Dropdown {
     pub fn new() -> Self {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<DropdownInner>>| {
             RefCell::new(DropdownInner {
-                element_data: ElementData::new(me.clone(), true),
+                element_data: ElementDataStruct::new(me.clone(), true),
                 floating_window: Shape::new(true),
                 is_floating_window_hidden: true,
+                selected_element: None,
             })
         });
 
@@ -114,11 +122,13 @@ impl Dropdown {
         inner.borrow_mut().floating_window.style.set_flex_direction(FlexDirection::Column);
 
         inner.borrow_mut().floating_window.style.set_box_shadows(vec![
-            BoxShadow::new(false, 0.0, 0.0, 10.0, 1.0, rgba(0, 0, 0, 30)),
-            BoxShadow::new(false, 0.0, 8.0, 16.0, -2.0, rgba(0, 0, 0, 50)),
-            BoxShadow::new(true, 0.0, 1.0, 1.0, 0.0, rgba(255, 255, 255, 30)),
+            BoxShadow::new(false, 0.0, 4.0, 16.0, 0.0, rgba(0, 0, 0, 140)), // 0.55
+            BoxShadow::new(false, 0.0, 20.0, 60.0, 0.0, rgba(0, 0, 0, 90)),  // 0.35
         ]);
-        let border_color = rgba(0, 0, 0, 20); // Very faint black
+
+        let border_color = rgba(0, 0, 0, 64);
+        inner.borrow_mut().floating_window.style.set_padding(TrblRectangle::new_all(px(2.0)));
+        inner.borrow_mut().floating_window.style.set_width(Unit::Percentage(100.0));
         inner.borrow_mut().floating_window.style.set_overflow([Overflow::Visible, Overflow::Scroll]);
         inner.borrow_mut().floating_window.style.set_border_color(TrblRectangle::new_all(border_color));
         inner.borrow_mut().floating_window.style.set_height(px(100.0));
@@ -147,16 +157,20 @@ impl AsElement for Dropdown {
 }
 
 impl crate::elements::ElementData for DropdownInner {
-    fn element_data(&self) -> &ElementData {
+    fn element_data(&self) -> &ElementDataStruct {
         &self.element_data
     }
 
-    fn element_data_mut(&mut self) -> &mut ElementData {
+    fn element_data_mut(&mut self) -> &mut ElementDataStruct {
         &mut self.element_data
     }
 }
 
 impl ElementInternals for DropdownInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -171,7 +185,9 @@ impl ElementInternals for DropdownInner {
         let node = self.element_data.layout.taffy_node_id();
         let layout = taffy_tree.get_layout(node);
         self.element_data.layout.has_new_layout = taffy_tree.has_new_layout(node);
-        let dirty = self.element_data.layout.is_dirty(transform, position);
+        let dirty = self.element_data.layout.has_new_layout
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
@@ -188,7 +204,7 @@ impl ElementInternals for DropdownInner {
             self.element_data.layout.computed_box.position.y + self.element_data.layout.computed_box.size.height as f64
         );
 
-        self.floating_window.apply_simple_layout(taffy_tree, transform, floating_window_position, z_index, scale_factor, None /*clip_bounds*/);
+        self.floating_window.apply_simple_layout(taffy_tree, transform, floating_window_position, z_index, scale_factor, None);
         let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64;
         let child_transform = Affine::translate((0.0, -scroll_y));
 
@@ -242,21 +258,24 @@ impl ElementInternals for DropdownInner {
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
 
-        /*if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
-        }*/
+        if let Some(selected_element) = &self.selected_element {
+            let mut binding = selected_element.borrow_mut();
+            binding.element_data_mut().layout.computed_box_transformed = self.element_data.layout.computed_box_transformed.clone();
+            binding.draw(renderer, text_context, pointer, scale_factor);
+        }
 
-        if true || !self.is_floating_window_hidden {
-            renderer.start_overlay();
-            self.draw_borders(renderer, scale_factor);
+        if !self.is_floating_window_hidden {
+            //renderer.start_overlay();
 
             let current_style = self.floating_window.style.as_ref();
             self.floating_window.layout.draw_borders(renderer, current_style, scale_factor);
 
-            self.maybe_start_layer(renderer, scale_factor);
+            renderer.push_layer(self.floating_window.layout.computed_box_transformed.padding_rectangle().scale(scale_factor));
             self.draw_children(renderer, text_context, pointer, scale_factor);
-            self.maybe_end_layer(renderer);
-            renderer.end_overlay();
+            renderer.pop_layer();
+
+            draw_scrollbar(&self.floating_window.style, &self.floating_window.layout, renderer, scale_factor);
+           // renderer.end_overlay();
         }
     }
 
@@ -267,11 +286,8 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        let mut element_data = self.element_data;
-        scrollable::on_scroll_events(
+        scrollable::handle_scroll_logic(
             self,
-            &element_data.style,
-            &mut element_data.layout,
             message,
             event
         );
@@ -281,19 +297,44 @@ impl ElementInternals for DropdownInner {
             _ => None
         };
 
-        // if self.is_floating_window_hidden {
-        //     return;
-        // }
-
-        let floating_window_rect = self.floating_window.layout.computed_box_transformed.border_rectangle();
-
-        //let scroll_result = scrollable::on_scroll_events_no_pointer_advance(&self.floating_window.style, &mut self.floating_window.layout, message, event);
-        //scrollable::on_scroll_events_handle_advance_result(self, scroll_result);
-
-
         if let Some(pb) = pb {
-            self.is_floating_window_hidden = !self.is_floating_window_hidden;
+            // TODO Should pb.state.position be in logical coordinates?
+            let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
+
+            if self.element_data.layout.computed_box_transformed.border_rectangle().contains(&pointer_position) {
+                self.is_floating_window_hidden = !self.is_floating_window_hidden;
+            }
+
+            if !self.floating_window.layout.computed_box_transformed.border_rectangle().contains(&pointer_position) || self.is_floating_window_hidden {
+                return;
+            }
+
+            for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
+                let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+
+                if contains {
+                    self.is_floating_window_hidden = !self.is_floating_window_hidden.clone();
+                    self.selected_element = Some(child.clone().borrow().deep_clone());
+                    break;
+                }
+            }
         }
+
+        let mut floating_window = &mut self.floating_window;
+
+        // Clean this up soon!
+        let result = handle_scroll_logic_advance(&*floating_window.style, &mut floating_window.layout, message, event);
+
+        if result.request_apply_layout {
+            request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
+        }
+
+        if result.set_pointer_capture {
+            self.set_pointer_capture(PointerId::new(1).unwrap())
+        } else if result.release_pointer_capture {
+            self.release_pointer_capture(PointerId::new(1).unwrap());
+        }
+        // ---
 
 
     }

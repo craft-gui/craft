@@ -12,6 +12,7 @@ use crate::app::TAFFY_TREE;
 use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element};
 use crate::elements::element_data::ElementData;
 use crate::elements::{scrollable};
+use crate::elements::traits::DeepClone;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -24,6 +25,7 @@ pub struct Container {
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
+#[derive(Clone)]
 pub struct ContainerInner {
     element_data: ElementData,
 }
@@ -67,6 +69,10 @@ impl crate::elements::ElementData for ContainerInner {
 }
 
 impl ElementInternals for ContainerInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+    
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -154,7 +160,7 @@ impl ElementInternals for ContainerInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::on_scroll_events(self, self.style(), &mut self.element_data.layout, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {

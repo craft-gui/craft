@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::ElementBox;
 use craft_primitives::Color;
@@ -9,11 +9,12 @@ use winit::event::WindowEvent::{CursorMoved, MouseInput};
 use winit::event::{DeviceId, ElementState, MouseButton};
 
 use crate::app::queue_window_event;
-use crate::elements::{AsElement, ElementInternals};
+use crate::elements::{AsElement, ContainerInner, ElementInternals};
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Underline, Unit};
 use crate::CraftError;
+use crate::elements::element_data::ElementData;
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.

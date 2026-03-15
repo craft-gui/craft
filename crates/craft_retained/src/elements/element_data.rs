@@ -91,8 +91,8 @@ impl ElementData {
     }
 
     /// Computes the scrollbar's tack and thumb layout.
-    pub(crate) fn apply_scroll(&mut self, layout: &taffy::Layout) {
-       apply_scroll_layout(&self.style, &mut self.layout, layout);
+    pub(crate) fn apply_scroll(&mut self, taffy_layout: &taffy::Layout) {
+       apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {
@@ -102,7 +102,7 @@ impl ElementData {
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.get_overflow()[1] == Overflow::Scroll && self.layout.is_scrollable()
+        self.style.get_overflow()[1] == Overflow::Scroll && self.layout.is_scrollable_layout()
     }
 
     pub fn current_style(&self) -> &Style {

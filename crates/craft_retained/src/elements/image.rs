@@ -14,11 +14,13 @@ use kurbo::{Affine, Point};
 use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
+use crate::elements::traits::DeepClone;
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
 
 /// Displays an image.
+#[derive(Clone)]
 pub struct Image {
     is_image_dirty: bool,
     resource_identifier: ResourceIdentifier,
@@ -83,6 +85,10 @@ impl crate::elements::ElementData for Image {
 
 
 impl ElementInternals for Image {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

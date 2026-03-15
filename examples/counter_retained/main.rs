@@ -1,19 +1,27 @@
 use craft_retained::elements::{Dropdown, Element, Text, Window};
-use craft_retained::style::{AlignItems, FlexDirection, JustifyContent, Unit};
-use craft_retained::{pct, px, Color, CraftOptions};
+use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent, Overflow, Unit};
+use craft_retained::{pct, px, rgba, Color, CraftOptions};
 
 fn main() {
-
+    let border_color = rgba(0, 0, 0, 255);
     Window::new("Counter")
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
+        .background_color(Color::WHITE)
         .width(pct(100))
         .height(pct(100))
         .gap(px(20), px(20))
         .push({
             Dropdown::new()
-                .background_color(Color::from_rgb8(150, 150, 152))
+                .box_shadows(vec![
+                    BoxShadow::new(true, 0.0, 20.0, 16.0, 0.0, rgba(0, 0, 0, 50)),  // 0.35
+                ])
+                .overflow(Default::default(), Overflow::Scroll)
+                .border_color(border_color, border_color, border_color, border_color)
+                .border_width(px(1), px(1), px(1), px(1))
+                .border_radius((6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0))
+
                 .width(Unit::Px(100.0))
                 .height(Unit::Px(30.0))
                 .push(Text::new("Item 1").selectable(true))
