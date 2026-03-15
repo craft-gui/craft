@@ -165,7 +165,7 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
     layout.scrollbar_thumb_margin = style.get_scrollbar_thumb_margin();
     layout.scrollbar_thumb_radius = style.get_scrollbar_thumb_radius();
 
-    layout.scrollbar_size = Size::new(layout.scrollbar_size.width, layout.scrollbar_size.height);
+    layout.scrollbar_size = Size::new(taffy_layout.scrollbar_size.width, taffy_layout.scrollbar_size.height);
     layout.computed_scrollbar_size = Size::new(taffy_layout.scroll_width(), taffy_layout.scroll_height());
     let state = &mut layout.scroll_state;
 
@@ -230,27 +230,26 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
 
 /// Updates the scroll state when an event occurs.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
-    let element_data = element.element_data_mut();
+pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, style: &Style, layout: &mut Layout, message: &CraftMessage, event: &mut Event) {
 
-    if element_data.is_scrollable() {
-        let state = &mut element_data.layout.scroll_state;
+    if layout.is_scrollable() {
+        let state = &mut layout.scroll_state;
         match message {
             CraftMessage::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
                     ScrollDelta::LineDelta(_x, y) => {
-                        y * element_data.style.get_font_size().max(12.0) * element_data.style.get_line_height()
+                        y * style.get_font_size().max(12.0) * style.get_line_height()
                     }
                     ScrollDelta::PixelDelta(physical) => physical.y as f32,
                     ScrollDelta::PageDelta(_x, y) => y,
                 };
                 let delta = -delta;
                 // Todo: Scroll physics
-                let max_scroll_y = element_data.layout.max_scroll_y;
+                let max_scroll_y = layout.max_scroll_y;
 
                 let current_scroll_y = state.scroll_y();
                 state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                request_apply_layout(element_data.layout.taffy_node_id.unwrap());
+                request_apply_layout(layout.taffy_node_id.unwrap());
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -259,10 +258,9 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                 if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
                     // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                     if pointer_button.pointer.pointer_type == PointerType::Touch {
-                        let container_rectangle = element_data.layout.computed_box_transformed.padding_rectangle();
+                        let container_rectangle = layout.computed_box_transformed.padding_rectangle();
 
-                        let in_scroll_bar = element_data
-                            .layout
+                        let in_scroll_bar = layout
                             .computed_scroll_thumb
                             .contains(&pointer_button.state.logical_point());
 
@@ -274,8 +272,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                             event.prevent_propagate();
                             event.prevent_defaults();
                         }
-                    } else if element_data
-                        .layout
+                    } else if layout
                         .computed_scroll_thumb
                         .contains(&pointer_button.state.logical_point())
                     {
@@ -289,19 +286,18 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
 
                         event.prevent_propagate();
                         event.prevent_defaults();
-                    } else if element_data
-                        .layout
+                    } else if layout
                         .computed_scroll_track
                         .contains(&pointer_button.state.logical_point())
                     {
                         let offset_y =
-                            pointer_button.state.position.y as f32 - element_data.layout.computed_scroll_track.y;
+                            pointer_button.state.position.y as f32 - layout.computed_scroll_track.y;
 
-                        let percent = offset_y / element_data.layout.computed_scroll_track.height;
-                        let scroll_y = percent * element_data.layout.max_scroll_y;
+                        let percent = offset_y / layout.computed_scroll_track.height;
+                        let scroll_y = percent * layout.max_scroll_y;
 
-                        state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout.max_scroll_y));
-                        request_apply_layout(element_data.layout.taffy_node_id.unwrap());
+                        state.set_scroll_y(scroll_y.clamp(0.0, layout.max_scroll_y));
+                        request_apply_layout(layout.taffy_node_id.unwrap());
 
                         event.prevent_propagate();
                         event.prevent_defaults();
@@ -322,10 +318,10 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                     // Todo: Translate scroll wheel pixel to scroll position for diff.
                     let delta = (pointer_motion.current.position.y - click.y) as f32;
 
-                    let max_scroll_y = element_data.layout.max_scroll_y;
+                    let max_scroll_y = layout.max_scroll_y;
 
-                    let click_y_offset = element_data.layout.computed_scroll_track.height
-                        - element_data.layout.computed_scroll_thumb.height;
+                    let click_y_offset = layout.computed_scroll_track.height
+                        - layout.computed_scroll_thumb.height;
                     if click_y_offset <= 0.0 {
                         return;
                     }
@@ -338,7 +334,7 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
 
                     let current_scroll_y = state.scroll_y();
                     state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    request_apply_layout(element_data.layout.taffy_node_id.unwrap());
+                    request_apply_layout(layout.taffy_node_id.unwrap());
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();

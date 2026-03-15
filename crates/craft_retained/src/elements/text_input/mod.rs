@@ -308,7 +308,7 @@ impl ElementInternals for TextInputInner {
     ) {
         self.state.is_active = true;
 
-        scrollable::on_scroll_events(self, message, event);
+        scrollable::on_scroll_events(self, self.style(), &mut self.element_data.layout, message, event);
 
         if !event.propagate {
             return;

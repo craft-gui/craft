@@ -154,7 +154,7 @@ impl ElementInternals for ContainerInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::on_scroll_events(self, message, event);
+        scrollable::on_scroll_events(self, self.style(), &mut self.element_data.layout, message, event);
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
