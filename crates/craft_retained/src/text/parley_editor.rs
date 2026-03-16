@@ -2,6 +2,8 @@
 use parley::layout::{Affinity, Alignment, AlignmentOptions, Layout};
 use parley::{BoundingBox, Cursor, FontContext, LayoutContext, Selection, StyleProperty, StyleSet};
 
+use crate::text::text_commands::{Backspace, Delete, TextInsertion, TextReplace};
+
 extern crate alloc;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
@@ -15,11 +17,13 @@ use core::ops::Range;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Node, NodeId, TreeUpdate};
 use craft_primitives::ColorBrush;
+use craft_undo::UndoManager;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::layout::LayoutAccessibility;
 
-use crate::app::{request_apply_layout};
+use crate::app::{request_apply_layout, request_layout};
 use crate::text::RangedStyles;
+use crate::text::text_commands::TextCommand;
 
 /// Opaque representation of a generation.
 ///
@@ -124,6 +128,7 @@ pub struct PlainEditor {
     // alignment_dirty: bool,
     alignment: Alignment,
     generation: Generation,
+    undo_manager: UndoManager<TextCommand>,
 }
 
 impl Default for PlainEditor {
@@ -145,6 +150,7 @@ impl Default for PlainEditor {
             layout_dirty: false,
             alignment: Default::default(),
             generation: Default::default(),
+            undo_manager: UndoManager::new(),
         }
     }
 }
@@ -172,6 +178,91 @@ impl PlainEditor {
             // to redraw if they haven't already.
             generation: Generation(1),
             ranged_styles: RangedStyles::new(vec![]),
+            undo_manager: UndoManager::new(),
+        }
+    }
+
+    pub fn undo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) -> bool {
+        let command = self.undo_manager.undo_command();
+        if command.is_none() {
+            return false;
+        }
+        let command = command.unwrap();
+        match command {
+            TextCommand::TextInsertion(text_insertion) => {
+                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
+                let end = Cursor::from_byte_index(
+                    &self.layout,
+                    text_insertion.range.start + text_insertion.str.len(),
+                    Affinity::Downstream,
+                );
+                self.set_selection(Selection::new(start, end));
+                self.replace_selection(font_cx, layout_cx, "", false);
+                true
+            }
+            TextCommand::Backspace(backspace) => {
+                let text = backspace.str.clone();
+                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text, false);
+                false
+            }
+            TextCommand::Delete(delete) => {
+                let text = delete.str.clone();
+                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text, false);
+                self.set_selection(Selection::new(start, start));
+                false
+            }
+            TextCommand::TextReplace(text_replace) => {
+                let selection = text_replace.selection;
+                let old_str = text_replace.old_str.clone();
+                let range = text_replace.selection.text_range();
+                let new_start = Cursor::from_byte_index(&self.layout, range.start, Affinity::Downstream);
+                let new_end = Cursor::from_byte_index(
+                    &self.layout,
+                    range.start + text_replace.new_str.len(),
+                    Affinity::Downstream,
+                );
+                self.set_selection(Selection::new(new_start, new_end));
+                self.replace_selection(font_cx, layout_cx, &old_str, false);
+                self.set_selection(selection);
+                false
+            }
+        }
+    }
+
+    pub fn redo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) -> bool {
+        let command = self.undo_manager.redo_command();
+        if command.is_none() {
+            return false;
+        }
+        let command = command.unwrap().clone();
+        match command {
+            TextCommand::TextInsertion(text_insertion) => {
+                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text_insertion.str, false);
+                true
+            }
+            TextCommand::Backspace(backspace) => {
+                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.driver(font_cx, layout_cx).backdelete(false);
+                true
+            }
+            TextCommand::Delete(delete) => {
+                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.driver(font_cx, layout_cx).backdelete(false);
+                true
+            }
+            TextCommand::TextReplace(text_replace) => {
+                self.set_selection(text_replace.selection);
+                self.replace_selection(font_cx, layout_cx, &text_replace.new_str, false);
+                true
+            }
         }
     }
 }
@@ -187,15 +278,30 @@ pub struct PlainEditorDriver<'a> {
 }
 
 impl PlainEditorDriver<'_> {
+    pub fn undo(&mut self) {
+        if self.editor.undo(self.font_cx, self.layout_cx) {
+            self.refresh_layout();
+            self.request_layout();
+        }
+    }
+
+    pub fn redo(&mut self) {
+        if self.editor.redo(self.font_cx, self.layout_cx) {
+            self.refresh_layout();
+            self.request_layout();
+        }
+    }
+
     // --- MARK: Forced relayout ---
     /// Insert at cursor, or replace selection.
-    pub fn insert_or_replace_selection(&mut self, s: &str) {
-        self.editor.replace_selection(self.font_cx, self.layout_cx, s);
+    pub fn insert_or_replace_selection(&mut self, s: &str, manage_commands: bool) {
+        self.editor
+            .replace_selection(self.font_cx, self.layout_cx, s, manage_commands);
     }
 
     /// Delete the selection.
-    pub fn delete_selection(&mut self) {
-        self.insert_or_replace_selection("");
+    pub fn delete_selection(&mut self, manage_commands: bool) {
+        self.insert_or_replace_selection("", manage_commands);
     }
 
     /// Delete the specified numbers of bytes before the selection.
@@ -240,9 +346,9 @@ impl PlainEditorDriver<'_> {
         let selection_range = self.editor.selection.text_range();
         let range = selection_range.end
             ..selection_range
-            .end
-            .saturating_add(len.get())
-            .min(self.editor.buffer.len());
+                .end
+                .saturating_add(len.get())
+                .min(self.editor.buffer.len());
         if range.is_empty() || !self.editor.buffer.is_char_boundary(range.end) {
             return;
         }
@@ -252,7 +358,7 @@ impl PlainEditorDriver<'_> {
     }
 
     /// Delete the selection or the next cluster (typical ‘delete’ behavior).
-    pub fn delete(&mut self) {
+    pub fn delete(&mut self, manage_commands: bool) {
         if self.editor.selection.is_collapsed() {
             // Upstream cluster range
             if let Some(range) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[1]
@@ -260,22 +366,38 @@ impl PlainEditorDriver<'_> {
                 .map(|cluster| cluster.text_range())
                 .and_then(|range| (!range.is_empty()).then_some(range))
             {
+                if manage_commands && let Some(text) = self.editor.buffer.get(range.clone()) {
+                    let command = TextCommand::Delete(Delete::new(
+                        text.to_string(),
+                        range.clone(),
+                        self.editor.selection.focus().affinity(),
+                    ));
+                    self.editor.undo_manager.execute_command(command);
+                }
                 self.editor.buffer.replace_range(range.clone(), "");
                 self.editor.update_compose_for_replaced_range(range, 0);
                 self.update_layout();
             }
         } else {
-            self.delete_selection();
+            self.delete_selection(manage_commands);
         }
     }
 
     /// Delete the selection or up to the next word boundary (typical ‘ctrl + delete’ behavior).
-    pub fn delete_word(&mut self) {
+    pub fn delete_word(&mut self, manage_commands: bool) {
         if self.editor.selection.is_collapsed() {
             let focus = self.editor.selection.focus();
             let start = focus.index();
             let end = focus.next_logical_word(&self.editor.layout).index();
-            if self.editor.buffer.get(start..end).is_some() {
+            if let Some(word) = self.editor.buffer.get(start..end) {
+                if manage_commands {
+                    let command = TextCommand::Delete(Delete::new(
+                        word.to_string(),
+                        start..end,
+                        self.editor.selection.focus().affinity(),
+                    ));
+                    self.editor.undo_manager.execute_command(command);
+                }
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
@@ -283,12 +405,12 @@ impl PlainEditorDriver<'_> {
                     .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
-            self.delete_selection();
+            self.delete_selection(manage_commands);
         }
     }
 
     /// Delete the selection or the previous cluster (typical ‘backspace’ behavior).
-    pub fn backdelete(&mut self) {
+    pub fn backdelete(&mut self, manage_commands: bool) {
         if self.editor.selection.is_collapsed() {
             // Upstream cluster
             if let Some(cluster) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[0] {
@@ -309,6 +431,16 @@ impl PlainEditorDriver<'_> {
                     };
                     start
                 };
+                if manage_commands {
+                    if let Some(text) = self.editor.buffer.get(range.clone()) {
+                        let command = TextCommand::Backspace(Backspace::new(
+                            text.to_string(),
+                            range.clone(),
+                            self.editor.selection.focus().affinity(),
+                        ));
+                        self.editor.undo_manager.execute_command(command);
+                    }
+                }
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
@@ -316,17 +448,25 @@ impl PlainEditorDriver<'_> {
                     .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
-            self.delete_selection();
+            self.delete_selection(manage_commands);
         }
     }
 
     /// Delete the selection or back to the previous word boundary (typical ‘ctrl + backspace’ behavior).
-    pub fn backdelete_word(&mut self) {
+    pub fn backdelete_word(&mut self, manage_commands: bool) {
         if self.editor.selection.is_collapsed() {
             let focus = self.editor.selection.focus();
             let end = focus.index();
             let start = focus.previous_logical_word(&self.editor.layout).index();
-            if self.editor.buffer.get(start..end).is_some() {
+            if let Some(word) = self.editor.buffer.get(start..end) {
+                if manage_commands {
+                    let command = TextCommand::Backspace(Backspace::new(
+                        word.to_string(),
+                        start..end,
+                        self.editor.selection.focus().affinity(),
+                    ));
+                    self.editor.undo_manager.execute_command(command);
+                }
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);
                 self.update_layout();
@@ -334,7 +474,7 @@ impl PlainEditorDriver<'_> {
                     .set_selection(Cursor::from_byte_index(&self.editor.layout, start, Affinity::Downstream).into());
             }
         } else {
-            self.delete_selection();
+            self.delete_selection(manage_commands);
         }
     }
 
@@ -450,6 +590,13 @@ impl PlainEditorDriver<'_> {
         self.request_apply_layout();
     }
 
+    /// Move the cursor to just after the previous hard line break (such as `\n`).
+    pub fn move_to_hard_line_start(&mut self) {
+        self.editor
+            .set_selection(self.editor.selection.hard_line_start(&self.editor.layout, false));
+        self.request_apply_layout();
+    }
+
     /// Move the cursor to the start of the physical line.
     pub fn move_to_line_start(&mut self) {
         self.editor
@@ -461,6 +608,13 @@ impl PlainEditorDriver<'_> {
     pub fn move_to_text_end(&mut self) {
         self.editor
             .set_selection(self.editor.selection.move_lines(&self.editor.layout, isize::MAX, false));
+        self.request_apply_layout();
+    }
+
+    /// Move the cursor to just before the next hard line break (such as `\n`).
+    pub fn move_to_hard_line_end(&mut self) {
+        self.editor
+            .set_selection(self.editor.selection.hard_line_end(&self.editor.layout, false));
         self.request_apply_layout();
     }
 
@@ -531,6 +685,12 @@ impl PlainEditorDriver<'_> {
         }
     }
 
+    fn request_layout(&self) {
+        if let Some(taffy_id) = self.editor.taffy_id {
+            request_layout(taffy_id);
+        }
+    }
+
     /// Collapse selection into caret.
     pub fn collapse_selection(&mut self) {
         self.editor.set_selection(self.editor.selection.collapse());
@@ -551,6 +711,21 @@ impl PlainEditorDriver<'_> {
         self.request_apply_layout();
     }
 
+    /// Move the selection focus point to the start of the physical line.
+    pub fn select_to_hard_line_start(&mut self) {
+        self.editor
+            .set_selection(self.editor.selection.hard_line_start(&self.editor.layout, true));
+        self.request_apply_layout();
+    }
+
+    /// Move the anchor to the line start.
+    pub fn move_anchor_to_line_start(&mut self) {
+        let anchor = self.editor.selection.line_start(&self.editor.layout, true).focus();
+        let focus = self.editor.selection.focus();
+        self.editor.set_selection(Selection::new(anchor, focus));
+        self.request_apply_layout();
+    }
+
     /// Move the selection focus point to the end of the buffer.
     pub fn select_to_text_end(&mut self) {
         self.editor
@@ -562,6 +737,13 @@ impl PlainEditorDriver<'_> {
     pub fn select_to_line_end(&mut self) {
         self.editor
             .set_selection(self.editor.selection.line_end(&self.editor.layout, true));
+        self.request_apply_layout();
+    }
+
+    /// Move the selection focus point to the end of the physical line.
+    pub fn select_to_hard_line_end(&mut self) {
+        self.editor
+            .set_selection(self.editor.selection.hard_line_end(&self.editor.layout, true));
         self.request_apply_layout();
     }
 
@@ -597,6 +779,19 @@ impl PlainEditorDriver<'_> {
     pub fn select_word_left(&mut self) {
         self.editor
             .set_selection(self.editor.selection.previous_visual_word(&self.editor.layout, true));
+        self.request_apply_layout();
+    }
+
+    /// Move the selection anchor point to the next word boundary left.
+    pub fn move_anchor_word_left(&mut self) {
+        let anchor = self
+            .editor
+            .selection
+            .previous_visual_word(&self.editor.layout, true)
+            .focus();
+        let focus = self.editor.selection.focus();
+        let new_selection = Selection::new(anchor, focus);
+        self.editor.set_selection(new_selection);
         self.request_apply_layout();
     }
 
@@ -1031,15 +1226,25 @@ impl PlainEditor {
         }
     }
 
-    fn replace_selection(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>, s: &str) {
+    fn replace_selection(
+        &mut self,
+        font_cx: &mut FontContext,
+        layout_cx: &mut LayoutContext<ColorBrush>,
+        s: &str,
+        manage_commands: bool,
+    ) {
         let range = self.selection.text_range();
-        let start = range.start;
-        if self.selection.is_collapsed() {
+        let selection = self.selection;
+        let start = range.clone().start;
+        let is_collapsed = self.selection.is_collapsed();
+        let mut old_str = None;
+        if is_collapsed {
             self.buffer.insert_str(start, s);
         } else {
+            old_str = Some(self.buffer.get(range.clone()).unwrap().to_string());
             self.buffer.replace_range(range.clone(), s);
         }
-        self.update_compose_for_replaced_range(range, s.len());
+        self.update_compose_for_replaced_range(range.clone(), s.len());
 
         self.update_layout(font_cx, layout_cx);
         let new_index = start.saturating_add(s.len());
@@ -1049,6 +1254,27 @@ impl PlainEditor {
             Affinity::Upstream
         };
         self.set_selection(Cursor::from_byte_index(&self.layout, new_index, affinity).into());
+
+        if manage_commands {
+            if is_collapsed {
+                self.undo_manager
+                    .execute_command(TextCommand::TextInsertion(TextInsertion::new(
+                        s.to_string(),
+                        range.clone(),
+                        self.selection.focus().affinity(),
+                    )));
+                self.undo_manager.merge();
+            } else {
+                self.undo_manager
+                    .execute_command(TextCommand::TextReplace(TextReplace::new(
+                        s.to_string(),
+                        old_str.unwrap(),
+                        selection,
+                        self.selection.focus().affinity(),
+                        self.selection,
+                    )));
+            }
+        }
     }
 
     /// Update the selection, and nudge the `Generation` if something other than `h_pos` changed.

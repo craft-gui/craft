@@ -1032,6 +1032,7 @@ dependencies = [
  "craft_renderer",
  "craft_resource_manager",
  "craft_runtime",
+ "craft_undo",
  "image",
  "kurbo",
  "libtest-mimic-collect",
@@ -1062,6 +1063,10 @@ dependencies = [
  "tokio",
  "wasm-bindgen-futures",
 ]
+
+[[package]]
+name = "craft_undo"
+version = "0.1.1"
 
 [[package]]
 name = "crc32fast"

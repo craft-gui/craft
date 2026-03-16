@@ -304,7 +304,7 @@ impl TextInputState {
         });
     }
 
-    fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
+    pub(crate) fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
         self.editor
             .driver(&mut text_context.font_context, &mut text_context.layout_context)
     }
@@ -363,7 +363,7 @@ impl TextInputState {
     ///
     /// This requires a relayout.
     pub fn insert_or_replace_selection(&mut self, text_context: &mut TextContext, text: &str) {
-        self.driver(text_context).insert_or_replace_selection(text);
+        self.driver(text_context).insert_or_replace_selection(text, true);
         self.clear_cache();
     }
 
@@ -376,24 +376,34 @@ impl TextInputState {
 
         self.modifiers = Some(keyboard_event.modifiers);
 
-        #[allow(unused)]
-        let (shift, action_mod) = self
-            .modifiers
-            .map(|mods| {
-                (
-                    mods.shift(),
-                    if cfg!(target_os = "macos") {
-                        mods.meta()
-                    } else {
-                        mods.ctrl()
-                    },
-                )
-            })
-            .unwrap_or_default();
+        const IS_MAC: bool = if cfg!(target_os = "macos") {true} else {false};
+
+        let (shift, action_mod, word_mod) = self.modifiers.map(|mods| {
+            if IS_MAC {
+                // mac: cmd for actions, alt for words
+                (mods.shift(), mods.meta(), mods.alt())
+            } else {
+                // windows/linux: Ctrl for both
+                (mods.shift(), mods.ctrl(), mods.ctrl())
+            }
+        }).unwrap_or_default();
 
         let mut driver = self.driver(text_context);
 
         match &keyboard_event.key {
+            #[cfg(target_os = "windows")]
+            Key::Character(c) if action_mod && c.to_lowercase() == "y" => {
+                driver.redo();
+                self.clear_cache();
+            }
+            Key::Character(c) if action_mod && c.to_lowercase() == "z" => {
+                if shift {
+                    driver.redo();
+                } else {
+                    driver.undo();
+                }
+                self.clear_cache();
+            }
             Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                 match c.to_lowercase().as_str() {
                     "c" => copy(&mut driver),
@@ -418,12 +428,12 @@ impl TextInputState {
                 }
             }
             Key::Named(NamedKey::ArrowLeft) => {
-                if action_mod {
-                    if shift {
-                        driver.select_word_left();
-                    } else {
-                        driver.move_word_left();
-                    }
+                if IS_MAC && action_mod {
+                    // mac: Cmd + Left = Line Start
+                    if shift { driver.select_to_line_start(); } else { driver.move_to_line_start(); }
+                } else if word_mod {
+                    // windows: ctrl + left | mac: alt + left = word left
+                    if shift { driver.select_word_left(); } else { driver.move_word_left(); }
                 } else if shift {
                     driver.select_left();
                 } else {
@@ -431,7 +441,15 @@ impl TextInputState {
                 }
             }
             Key::Named(NamedKey::ArrowRight) => {
-                if action_mod {
+                if IS_MAC && action_mod {
+                    // mac: cmd + right = end of line
+                    if shift {
+                        driver.select_to_line_end();
+                    } else {
+                        driver.move_to_line_end();
+                    }
+                } else if word_mod {
+                    // windows/linux: ctrl + right | mac: alt + right = word right
                     if shift {
                         driver.select_word_right();
                     } else {
@@ -444,14 +462,44 @@ impl TextInputState {
                 }
             }
             Key::Named(NamedKey::ArrowUp) => {
-                if shift {
+                if IS_MAC && action_mod {
+                    // mac: cmd + up = document start
+                    if shift {
+                        driver.select_to_text_start();
+                    } else {
+                        driver.move_to_text_start();
+                    }
+                }  else if word_mod {
+                    if shift {
+                        driver.select_left();
+                        driver.select_to_hard_line_start();
+                    } else {
+                        driver.move_left();
+                        driver.move_to_hard_line_start();
+                    }
+                } else if shift {
                     driver.select_up();
                 } else {
                     driver.move_up();
                 }
             }
             Key::Named(NamedKey::ArrowDown) => {
-                if shift {
+                if IS_MAC && action_mod {
+                    // mac: cmd + down = end of document
+                    if shift {
+                        driver.select_to_text_end();
+                    } else {
+                        driver.move_to_text_end();
+                    }
+                } else if word_mod {
+                    if shift {
+                        driver.select_to_hard_line_end();
+                        driver.select_right();
+                    } else {
+                        driver.move_to_hard_line_end();
+                        driver.move_right();
+                    }
+                } else if shift {
                     driver.select_down();
                 } else {
                     driver.move_down();
@@ -486,32 +534,39 @@ impl TextInputState {
                 }
             }
             Key::Named(NamedKey::Delete) => {
-                if action_mod {
-                    driver.delete_word();
-                    self.clear_cache();
+                if word_mod {
+                    driver.delete_word(true);
                 } else {
-                    driver.delete();
-                    self.clear_cache();
+                    driver.delete(true);
                 }
-                //generate_text_changed_event(&mut self.state.editor);
-            }
-            Key::Named(NamedKey::Backspace) => {
-                if action_mod {
-                    driver.backdelete_word();
-                    self.clear_cache();
-                } else {
-                    driver.backdelete();
-                    self.clear_cache();
-                }
-                //generate_text_changed_event(&mut self.state.editor);
-            }
-            Key::Named(NamedKey::Enter) => {
-                driver.insert_or_replace_selection("\n");
                 self.clear_cache();
                 //generate_text_changed_event(&mut self.state.editor);
             }
-            Key::Character(s) => {
-                driver.insert_or_replace_selection(s);
+            Key::Named(NamedKey::Backspace) => {
+                if IS_MAC && action_mod {
+                    driver.move_anchor_to_line_start();
+                    driver.insert_or_replace_selection("", true);
+                } else if word_mod {
+                    if IS_MAC {
+                        driver.move_anchor_word_left();
+                        self.insert_or_replace_selection(text_context, "");
+                    } else {
+                        driver.backdelete_word(true);
+                    }
+                } else {
+                    driver.backdelete(true);
+                }
+
+                self.clear_cache();
+                //generate_text_changed_event(&mut self.state.editor);
+            }
+            Key::Named(NamedKey::Enter) => {
+                driver.insert_or_replace_selection("\n", true);
+                self.clear_cache();
+                //generate_text_changed_event(&mut self.state.editor);
+            }
+            Key::Character(character) => {
+                driver.insert_or_replace_selection(character, true);
                 self.clear_cache();
                 //generate_text_changed_event(&mut self.state.editor);
             }
@@ -663,7 +718,7 @@ fn paste(drv: &mut PlainEditorDriver) {
     use clipboard_rs::{Clipboard, ClipboardContext};
     let cb = ClipboardContext::new().unwrap();
     let text = cb.get_text().unwrap_or_default();
-    drv.insert_or_replace_selection(&text);
+    drv.insert_or_replace_selection(&text, true);
 }
 
 #[cfg(not(all(
@@ -681,7 +736,7 @@ fn cut(drv: &mut PlainEditorDriver) {
     if let Some(text) = drv.editor.selected_text() {
         let cb = ClipboardContext::new().unwrap();
         cb.set_text(text.to_owned()).ok();
-        drv.delete_selection();
+        drv.delete_selection(true);
     }
 }
 

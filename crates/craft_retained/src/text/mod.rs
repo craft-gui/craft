@@ -1,6 +1,7 @@
 pub(crate) mod parley_editor;
 pub mod text_context;
 pub(crate) mod text_render_data;
+pub mod text_commands;
 
 use std::ops::Range;
 
