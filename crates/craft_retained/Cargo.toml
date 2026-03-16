@@ -31,7 +31,7 @@ default = ["clipboard", "accesskit"]
 
 [dependencies]
 craft_logging = { path = "../craft_logger", version = "0.1.0" }
-craft_undo = {path = "../craft_undo", version = "0.1.0"}
+craft_undo = {path = "../craft_undo", version = "0.1.1"}
 
 smol_str = "0.3.4"
 
