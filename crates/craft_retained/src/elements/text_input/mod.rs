@@ -15,12 +15,11 @@ use ui_events::pointer::PointerButton;
 use winit::event::Ime;
 
 use crate::app::ELEMENTS;
-use crate::elements::{ElementInternals, resolve_clip_for_scrollable, AsElement};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
-use crate::elements::{Element, scrollable};
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -184,8 +183,7 @@ impl ElementInternals for TextInputInner {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new()
-        {
+        if !dirty && self.element_data.scroll_state.is_new() {
             let result = taffy_tree.layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.scroll_state.mark_old();
@@ -349,6 +347,7 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
+
                 self.state.key_press(text_context, keyboard_event);
             }
             CraftMessage::PointerButtonDown(pointer_button) => {

@@ -11,7 +11,12 @@ members = [
     "examples/pointer_events",
     "examples/text",
     "examples/jsframeworkbench",
-    "crates/syntect_dumper", "crates/craft_renderer", "crates/craft_primitives", "crates/craft_resource_manager", "crates/craft_runtime",
+    "crates/syntect_dumper",
+    "crates/craft_renderer",
+    "crates/craft_primitives",
+    "crates/craft_resource_manager",
+    "crates/craft_runtime",
+    "crates/craft_undo",
 ]
 
 [workspace.package]
