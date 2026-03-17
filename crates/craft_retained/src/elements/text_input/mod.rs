@@ -178,6 +178,9 @@ impl ElementInternals for TextInputInner {
 
             let text_position = self.computed_box().content_rectangle();
             self.state.set_origin(&text_position.position());
+            if self.is_focused() {
+                self.state.maybe_scroll_to_cursor(&mut self.element_data);
+            }
 
             self.state.is_layout_dirty = false;
         }
@@ -347,8 +350,7 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
-
-                self.state.key_press(text_context, keyboard_event);
+                self.state.key_press(text_context, keyboard_event, &mut self.element_data);
             }
             CraftMessage::PointerButtonDown(pointer_button) => {
                 if pointer_button.button == Some(PointerButton::Primary) {

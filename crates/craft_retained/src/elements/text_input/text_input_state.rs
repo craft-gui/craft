@@ -16,7 +16,8 @@ use ui_events::pointer::PointerUpdate;
 use web_time::{Duration, Instant};
 use winit::dpi;
 
-use crate::app::{TAFFY_TREE, request_layout};
+use crate::app::{TAFFY_TREE, request_apply_layout};
+use crate::elements::element_data::ElementData;
 use crate::elements::TextInputInner;
 use crate::elements::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
@@ -128,9 +129,35 @@ impl TextInputState {
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
             if let Some(taffy_id) = self.taffy_id {
-                request_layout(taffy_id);
+                request_apply_layout(taffy_id);
             }
         }
+    }
+
+    /// Returns a suggested scroll offset (y) to ensure the cursor is visible
+    /// within a viewport of the given height.
+    pub fn calculate_scroll_to_cursor(&self, viewport_height: f32, current_scroll_y: f32) -> f32 {
+        // TODO: Rewrite this function. It is likely incorrect.
+        let cursor_rect = if let Some(r) = self.editor.cursor_geometry(1.0) {
+            parley_box_to_rect(r)
+        } else {
+            return current_scroll_y;
+        };
+
+        let margin = 2.0;
+        let cursor_top = cursor_rect.top() as f32 - margin;
+        let cursor_bottom = cursor_rect.bottom() as f32 + margin;
+
+        let mut new_scroll = current_scroll_y;
+
+        if cursor_top < current_scroll_y {
+            new_scroll = cursor_top;
+        }
+        else if cursor_bottom > current_scroll_y + viewport_height {
+            new_scroll = cursor_bottom - viewport_height;
+        }
+
+        new_scroll.max(0.0)
     }
 
     /// Set the origin of the text input state.
@@ -213,9 +240,11 @@ impl TextInputState {
             })
             .map(|width| {
                 let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
+                // TODO: Ignored old comment. Does this issue still happen?
                 // Taffy may give a min width > max_width.
                 // Min-width is preserved in this scenario to ensure text is readable.
-                width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
+                //width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
+                width
             });
 
         let _height_constraint: Option<f32> = known_dimensions
@@ -359,6 +388,15 @@ impl TextInputState {
         self.reset_blink();
     }
 
+    pub fn maybe_scroll_to_cursor(&mut self, element_data: &mut ElementData) {
+        let height = element_data.layout_item.computed_box_transformed.padding_rectangle_size().height;
+        let x = self.calculate_scroll_to_cursor(height, element_data.scroll_state.scroll_y());
+        if x < 0.0 {
+            return;
+        }
+        element_data.scroll_state.set_scroll_y(x);
+    }
+
     /// Insert at cursor, or replace selection.
     ///
     /// This requires a relayout.
@@ -371,7 +409,7 @@ impl TextInputState {
         self.pointer_down
     }
 
-    pub fn key_press(&mut self, text_context: &mut TextContext, keyboard_event: &KeyboardEvent) {
+    pub fn key_press(&mut self, text_context: &mut TextContext, keyboard_event: &KeyboardEvent, element_data: &mut ElementData) {
         // TODO: self.reset_blink();
 
         self.modifiers = Some(keyboard_event.modifiers);
@@ -439,6 +477,7 @@ impl TextInputState {
                 } else {
                     driver.move_left();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowRight) => {
                 if IS_MAC && action_mod {
@@ -460,6 +499,7 @@ impl TextInputState {
                 } else {
                     driver.move_right();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowUp) => {
                 if IS_MAC && action_mod {
@@ -482,6 +522,7 @@ impl TextInputState {
                 } else {
                     driver.move_up();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowDown) => {
                 if IS_MAC && action_mod {
@@ -504,6 +545,7 @@ impl TextInputState {
                 } else {
                     driver.move_down();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::Home) => {
                 if action_mod {
@@ -517,6 +559,7 @@ impl TextInputState {
                 } else {
                     driver.move_to_line_start();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::End) => {
                 let mut drv = self.driver(text_context);
@@ -532,6 +575,7 @@ impl TextInputState {
                 } else {
                     drv.move_to_line_end();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::Delete) => {
                 if word_mod {
