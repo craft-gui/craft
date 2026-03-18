@@ -11,18 +11,20 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use kurbo::{Affine, Stroke};
+use peniko::{BlendMode, Compose, Fill, Mix};
 use peniko::kurbo::Shape;
 use vello_common::color::PremulRgba8;
 use vello_common::glyph::Glyph;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
+use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
 use wgpu::TextureFormat;
 use winit::window::Window;
 
 use crate::Brush;
-use crate::renderer::{RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
+use crate::renderer::{BoxShadowCmd, RenderCommand, RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello_hybrid::render_context::{RenderContext, RenderSurface};
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
@@ -118,11 +120,61 @@ impl VelloHybridRenderer {
 
         vello_renderer
     }
+
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
     scene.set_paint(PaintType::from(fill_color));
     scene.fill_rect(&rectangle.to_kurbo());
+}
+
+fn draw_box_shadow(scene: &mut Scene, box_shadow: &BoxShadowCmd) {
+    let radius = box_shadow.blur_radius / 2.0;
+    let filter = Some(Filter::from_function(FilterFunction::Blur {
+        radius: box_shadow.blur_radius as f32,
+    }));
+
+    if box_shadow.inset {
+        let mut clip_path = kurbo::BezPath::new();
+        let outline_rect = box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
+        clip_path.extend(&outline_rect.to_path(0.1));
+        clip_path.extend(&box_shadow.path);
+        scene.push_layer(
+            Some(&box_shadow.outline),
+            None,
+            None,
+            None,
+            filter,
+        );
+        scene.set_fill_rule(Fill::EvenOdd);
+        scene.set_paint(box_shadow.color);
+        scene.fill_path(&clip_path);
+        scene.pop_layer();
+        scene.set_fill_rule(Fill::NonZero);
+    } else {
+        scene.push_layer(
+            None,
+            Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
+            None,
+            None,
+            filter,
+        );
+
+        scene.set_transform(Affine::translate(box_shadow.offset));
+
+        scene.set_paint(box_shadow.color);
+        scene.fill_path(&box_shadow.path);
+
+        scene.set_transform(Affine::IDENTITY);
+
+        scene.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
+        scene.set_paint(Color::WHITE);
+        scene.fill_path(&box_shadow.outline);
+
+        scene.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+
+        scene.pop_layer();
+    }
 }
 
 impl CraftRenderer for VelloHybridRenderer {
@@ -413,7 +465,12 @@ impl CraftRenderer for VelloHybridRenderer {
                     scene.set_paint(brush_to_paint(brush));
                     scene.fill_path(path);
                 }
-                _ => {}
+
+                RenderCommand::StartOverlay => {}
+                RenderCommand::EndOverlay => {}
+                RenderCommand::BoxShadowCmd(box_shadow) => {
+                    draw_box_shadow(scene, box_shadow)
+                }
             }
         });
 
