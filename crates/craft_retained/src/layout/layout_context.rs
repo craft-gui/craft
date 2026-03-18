@@ -9,10 +9,12 @@ use taffy::{AvailableSpace, Size};
 use crate::elements::{TextInner, TextInputInner};
 use crate::text::text_context::TextContext;
 
+#[derive(Clone)]
 pub struct TaffyTextContext {
     pub element: Weak<RefCell<TextInner>>,
 }
 
+#[derive(Clone)]
 pub struct TaffyTextInputContext {
     pub element: Weak<RefCell<TextInputInner>>,
 }
@@ -37,6 +39,7 @@ pub enum AvailableSpaceKey {
 
 impl TaffyTextContext {}
 
+#[derive(Clone)]
 pub struct ImageContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }
@@ -88,6 +91,7 @@ pub type LayoutFn = fn(
     text_context: &mut TextContext,
 ) -> Size<f32>;
 
+#[derive(Clone)]
 pub enum LayoutContext {
     Text(TaffyTextContext),
     TextInput(TaffyTextInputContext),
@@ -140,6 +144,7 @@ impl TextHashKey {
     }
 }
 
+#[derive(Clone)]
 pub struct TinyVgContext {
     pub(crate) resource_identifier: ResourceIdentifier,
 }

@@ -1,6 +1,8 @@
-use craft_retained::elements::{Dropdown, Element, Text, Window};
+use std::path::PathBuf;
+use std::str::FromStr;
+use craft_retained::elements::{Dropdown, Element, Image, Slider, Text, TextInput, Window};
 use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent, Overflow, Unit};
-use craft_retained::{pct, px, rgba, Color, CraftOptions};
+use craft_retained::{pct, px, rgba, Color, CraftOptions, ResourceIdentifier};
 
 fn main() {
     let border_color = rgba(0, 0, 0, 255);
@@ -26,9 +28,20 @@ fn main() {
                 .height(Unit::Px(30.0))
                 .push(Text::new("Item 1").selectable(true))
                 .push(Text::new("Item 2").selectable(true))
-                .push(Text::new("Item 3").selectable(true))
+                .push(Text::new("Item 3")
+                    .border_color(border_color, border_color, border_color, border_color)
+                    .border_width(px(1), px(1), px(1), px(1))
+                    .border_radius((6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0))
+                    .selectable(true))
                 .push(Text::new("Item 4").selectable(true))
                 .push(Text::new("Item 5").selectable(true))
+                .push(
+                    Slider::new(20.0)
+                        .min_width(Unit::Px(200.0))
+                        .width(Unit::Px(200.0))
+                        .height(Unit::Px(20.0))
+                        .min_height(Unit::Px(20.0))
+                )
                 .push(Text::new("Item 6").selectable(true))
                 .push(Text::new("Item 7").selectable(true))
                 .push(Text::new("Item 8").selectable(true))

@@ -368,6 +368,11 @@ impl Layout {
             self.clip_bounds = clip_bounds;
         }
     }
+
+    pub fn reset_border_cache(&mut self) {
+        self.cache_border_spec = None;
+        self.cache_box_shadows = None;
+    }
 }
 
 pub(crate) fn draw_borders_generic(

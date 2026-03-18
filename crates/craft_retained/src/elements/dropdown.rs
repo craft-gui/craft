@@ -14,9 +14,9 @@ use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_sc
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout::Layout;
 use crate::layout::TaffyTree;
-use crate::{px, rgb, rgba};
+use crate::{px, rgb, rgba, CraftError};
 use crate::elements::traits::DeepClone;
-use crate::style::{BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
+use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, JustifyContent, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -116,8 +116,11 @@ impl Dropdown {
         });
 
         inner.borrow_mut().element_data.create_layout_node(None);
+        inner.borrow_mut().element_data.style.set_display(Display::Flex);
+        inner.borrow_mut().element_data.style.set_justify_content(Some(JustifyContent::Center));
+        inner.borrow_mut().element_data.style.set_align_items(Some(AlignItems::Center));
 
-        //inner.borrow_mut().floating_window.style.set_position(Position::Absolute);
+        inner.borrow_mut().floating_window.style.set_position(Position::Absolute);
         inner.borrow_mut().floating_window.style.set_display(Display::Flex);
         inner.borrow_mut().floating_window.style.set_flex_direction(FlexDirection::Column);
 
@@ -166,6 +169,28 @@ impl crate::elements::ElementData for DropdownInner {
     }
 }
 
+impl DropdownInner {
+    fn set_selected_element(&mut self, child_index: usize) {
+        // Remove the old selected element from the layout tree.
+        if let Some(old_selected_element) = &self.selected_element {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.remove_subtree(old_selected_element.borrow().element_data().layout.taffy_node_id());
+            });
+        }
+
+        let child = self.element_data.children.get(child_index).expect("There is no child at this index.");
+        self.selected_element = Some(child.clone().borrow().deep_clone());
+        let selected_element_id = self.selected_element.as_ref().unwrap().borrow().element_data().layout.taffy_node_id();
+
+        // Add the selected element to the parent's layout tree at index 1.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
+            taffy_tree.add_child_at_index(parent_id, selected_element_id, 1);
+        });
+
+    }
+}
+
 impl ElementInternals for DropdownInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
@@ -197,6 +222,19 @@ impl ElementInternals for DropdownInner {
         }
         taffy_tree.mark_seen(node);
 
+        if let Some(selected_element) = &self.selected_element {
+            selected_element.borrow_mut().apply_layout(
+                taffy_tree,
+                self.element_data().layout.computed_box.position,
+                z_index,
+                transform,
+                pointer,
+                text_context,
+                self.element_data().layout.clip_bounds,
+                scale_factor,
+            );
+            taffy_tree.mark_seen(selected_element.borrow().element_data().layout.taffy_node_id());
+        }
 
         // Position the floating window below the dropdown with a gap.
         let floating_window_position = Point::new(
@@ -204,7 +242,10 @@ impl ElementInternals for DropdownInner {
             self.element_data.layout.computed_box.position.y + self.element_data.layout.computed_box.size.height as f64
         );
 
+
         self.floating_window.apply_simple_layout(taffy_tree, transform, floating_window_position, z_index, scale_factor, None);
+
+
         let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64;
         let child_transform = Affine::translate((0.0, -scroll_y));
 
@@ -260,7 +301,6 @@ impl ElementInternals for DropdownInner {
 
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
-            binding.element_data_mut().layout.computed_box_transformed = self.element_data.layout.computed_box_transformed.clone();
             binding.draw(renderer, text_context, pointer, scale_factor);
         }
 
@@ -275,7 +315,7 @@ impl ElementInternals for DropdownInner {
             renderer.pop_layer();
 
             draw_scrollbar(&self.floating_window.style, &self.floating_window.layout, renderer, scale_factor);
-           // renderer.end_overlay();
+           //renderer.end_overlay();
         }
     }
 
@@ -286,12 +326,6 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::handle_scroll_logic(
-            self,
-            message,
-            event
-        );
-
         let pb = match message {
             CraftMessage::PointerButtonUp(pb) => Some(pb),
             _ => None
@@ -314,15 +348,17 @@ impl ElementInternals for DropdownInner {
 
                 if contains {
                     self.is_floating_window_hidden = !self.is_floating_window_hidden.clone();
-                    self.selected_element = Some(child.clone().borrow().deep_clone());
+                    self.set_selected_element(child_index);
                     break;
                 }
             }
         }
 
-        let mut floating_window = &mut self.floating_window;
+        if self.is_floating_window_hidden {
+            return;
+        }
 
-        // Clean this up soon!
+        let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&*floating_window.style, &mut floating_window.layout, message, event);
 
         if result.request_apply_layout {
