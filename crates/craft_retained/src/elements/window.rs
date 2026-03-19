@@ -21,6 +21,8 @@ use winit::window::{Window as WinitWindow, WindowAttributes};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use {accesskit::{Action, Role}, accesskit_winit::Adapter};
 
+use craft_logging::info;
+
 use crate::RendererBox;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
@@ -33,6 +35,17 @@ use crate::elements::{Element, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
+
+#[cfg(target_arch = "wasm32")]
+use crate::events::internal::InternalMessage;
+#[cfg(target_arch = "wasm32")]
+use crate::wasm_queue::WASM_QUEUE;
+
+#[cfg(target_arch = "wasm32")]
+use {
+    wasm_bindgen::JsCast,
+    winit::platform::web::WindowAttributesExtWebSys,
+};
 
 #[derive(Clone)]
 pub struct Window {
@@ -384,8 +397,23 @@ impl WindowInternal {
         let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
             (*window_fn)(event_loop)
         } else {
+            let window_attributes = WindowAttributes::default().with_title(self.title.as_ref().unwrap()).with_visible(false);
+            #[cfg(target_arch = "wasm32")]
+            let window_attributes = {
+                let canvas = web_sys::window()
+                    .unwrap()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("canvas")
+                    .unwrap()
+                    .dyn_into::<web_sys::HtmlCanvasElement>()
+                    .unwrap();
+
+                window_attributes.with_canvas(Some(canvas))
+            };
+
             event_loop
-                .create_window(WindowAttributes::default().with_title(self.title.as_ref().unwrap()).with_visible(false))
+                .create_window(window_attributes)
                 .expect("Failed to create window")
         });
         self.set_winit_window(Some(winit_window.clone()));
@@ -400,15 +428,15 @@ impl WindowInternal {
                     renderer
                 });
                 self.renderer = Some(renderer);
+                info!("RENDERER CREATED")
             } else {
-                let app_sender = craft_state.app_sender.clone();
-                let window_copy_2 = window_copy.clone();
-                craft_state.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
-                    app_sender
-                        .send(InternalMessage::RendererCreated(window_copy_2, renderer))
-                        .await
-                        .expect("Failed to send RendererCreated message");
+                let window_copy_2 = winit_window.clone();
+                craft_app.runtime.spawn(async move {
+                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
+                    WASM_QUEUE.with_borrow_mut(|wasm_queue| {
+                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2, renderer));
+                    });
+                    info!("RENDERER CREATED")
                 });
             }
         }

@@ -143,6 +143,8 @@ impl App {
             window_manager.on_about_to_wait(self, event_loop);
         });
 
+        // TODO: Allow on wasm
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(callback) = self.craft_options.craft_callback.take() {
             let future = callback.call();
             self.runtime.spawn_current_thread(future);

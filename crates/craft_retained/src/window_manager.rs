@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
-
 use crate::app::App;
 use crate::elements::Window;
 

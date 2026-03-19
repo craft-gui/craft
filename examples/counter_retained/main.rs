@@ -5,6 +5,7 @@ use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
 use craft_retained::{Color, CraftOptions, pct, px, rgb, rgba};
+use util::setup_logging;
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
@@ -31,6 +32,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
 }
 
 fn main() {
+    setup_logging();
     let count = Rc::new(RefCell::new(0));
     let count_text = Text::new(&format!("Count: {}", count.borrow()));
 
