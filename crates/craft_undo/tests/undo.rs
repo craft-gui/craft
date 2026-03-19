@@ -3,19 +3,15 @@ use craft_undo::{Command, UndoManager};
 #[derive(Debug, PartialEq)]
 enum TextCommand {
     Insert(String),
-    Delete,
 }
 
 impl Command for TextCommand {
     fn merge(&mut self, other: &Self) -> bool {
-        match self {
-            TextCommand::Insert(left) => {
-                if let TextCommand::Insert(right) = other {
-                    left.push_str(&right);
-                    return true;
-                }
-            }
-            _ => {}
+        if let TextCommand::Insert(left) = self
+            && let TextCommand::Insert(right) = other
+        {
+            left.push_str(right);
+            return true;
         }
         false
     }
