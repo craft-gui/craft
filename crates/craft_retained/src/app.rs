@@ -236,10 +236,6 @@ impl App {
             } else {
                 window.zoom_in();
             }
-            let scale_factor = window.effective_scale_factor();
-            window.inner.borrow_mut().set_scale_factor(scale_factor);
-            window.inner.borrow_mut().mark_dirty();
-            //style_root_element(window.borrow_mut().deref_mut(), window.borrow().window_size());
             self.request_redraw(RedrawFlags::new(true));
             return;
         }

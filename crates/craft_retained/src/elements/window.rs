@@ -207,6 +207,12 @@ impl WindowInternal {
         inner
     }
 
+    pub fn request_redraw(&self) {
+        if let Some(winit_window) = &self.winit_window {
+            winit_window.request_redraw();
+        }
+    }
+
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.winit_window.clone()
     }
@@ -230,10 +236,19 @@ impl WindowInternal {
 
     pub(crate) fn zoom_in(&mut self) {
         self.zoom_scale_factor += 0.01;
+        self.update_zoom();
     }
 
     pub(crate) fn zoom_out(&mut self) {
         self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
+        self.update_zoom();
+    }
+
+    pub fn update_zoom(&mut self) {
+        let scale_factor = self.effective_scale_factor();
+        self.set_scale_factor(scale_factor);
+        self.mark_dirty();
+        self.request_redraw();
     }
 
     pub(crate) fn zoom_scale_factor(&self) -> f64 {
