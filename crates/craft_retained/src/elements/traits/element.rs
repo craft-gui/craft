@@ -1,19 +1,19 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_primitives::geometry::ElementBox;
 use craft_primitives::Color;
+use craft_primitives::geometry::ElementBox;
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent::{CursorMoved, MouseInput};
 use winit::event::{DeviceId, ElementState, MouseButton};
 
+use crate::CraftError;
 use crate::app::queue_window_event;
-use crate::elements::{AsElement, ElementInternals};
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
+use crate::elements::{AsElement, ElementInternals};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Underline, Unit};
-use crate::CraftError;
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
@@ -48,7 +48,10 @@ pub trait Element: Clone + AsElement {
         self.as_element_rc().borrow().get_last_child()
     }
 
-    fn remove_child(&self, child: Rc<RefCell<dyn ElementInternals>>) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
+    fn remove_child(
+        &self,
+        child: Rc<RefCell<dyn ElementInternals>>,
+    ) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         self.as_element_rc().borrow_mut().remove_child(child)
     }
 
@@ -81,9 +84,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn id(self, id: &str) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_id(id);
+        self.as_element_rc().borrow_mut().set_id(id);
         self
     }
 
@@ -126,9 +127,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn on_scroll(self, on_scroll: ScrollHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_scroll(on_scroll);
+        self.as_element_rc().borrow_mut().on_scroll(on_scroll);
         self
     }
 
@@ -146,37 +145,27 @@ pub trait Element: Clone + AsElement {
         self
     }
     fn scroll_to(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to(y);
+        self.as_element_rc().borrow_mut().scroll_to(y);
         self
     }
 
     fn scroll_to_top(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_top();
+        self.as_element_rc().borrow_mut().scroll_to_top();
         self
     }
 
     fn scroll_to_bottom(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_bottom();
+        self.as_element_rc().borrow_mut().scroll_to_bottom();
         self
     }
 
     fn scroll_by(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_by(y);
+        self.as_element_rc().borrow_mut().scroll_by(y);
         self
     }
 
     fn get_scroll_state(&self) -> ScrollState {
-        self.as_element_rc()
-            .borrow_mut()
-            .get_scroll_state()
+        self.as_element_rc().borrow_mut().get_scroll_state()
     }
 
     fn display(self, display: Display) -> Self {

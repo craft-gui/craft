@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+
 use crate::elements::ElementInternals;
 
 /// Used as a super trait in `Element`, so that

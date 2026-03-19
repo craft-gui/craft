@@ -2,6 +2,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
@@ -10,11 +11,12 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point, Vec2};
 use peniko::Color;
 use ui_events::pointer::PointerId;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+
 use crate::CraftError;
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
-use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::elements::scrollable::ScrollState;
+use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
@@ -236,9 +238,13 @@ pub trait ElementInternals: ElementData + Any {
         let border_color = &current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
 
-        self.element_data_mut()
-            .layout_item
-            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
+        self.element_data_mut().layout_item.apply_borders(
+            has_border,
+            border_radius,
+            scale_factor,
+            border_color,
+            box_shadows,
+        );
     }
 
     /// A bit of a hack to reset the layout item of an element recursively.

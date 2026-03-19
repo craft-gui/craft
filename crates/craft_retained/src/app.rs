@@ -25,8 +25,7 @@ use winit::window::WindowId;
 
 use crate::CraftOptions;
 use crate::document::DocumentManager;
-use crate::elements::ElementInternals;
-use crate::elements::{ElementIdMap, Window};
+use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;

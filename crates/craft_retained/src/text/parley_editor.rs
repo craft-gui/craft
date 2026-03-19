@@ -431,15 +431,13 @@ impl PlainEditorDriver<'_> {
                     };
                     start
                 };
-                if manage_commands {
-                    if let Some(text) = self.editor.buffer.get(range.clone()) {
-                        let command = TextCommand::Backspace(Backspace::new(
-                            text.to_string(),
-                            range.clone(),
-                            self.editor.selection.focus().affinity(),
-                        ));
-                        self.editor.undo_manager.execute_command(command);
-                    }
+                if manage_commands && let Some(text) = self.editor.buffer.get(range.clone()) {
+                    let command = TextCommand::Backspace(Backspace::new(
+                        text.to_string(),
+                        range.clone(),
+                        self.editor.selection.focus().affinity(),
+                    ));
+                    self.editor.undo_manager.execute_command(command);
                 }
                 self.editor.buffer.replace_range(start..end, "");
                 self.editor.update_compose_for_replaced_range(start..end, 0);

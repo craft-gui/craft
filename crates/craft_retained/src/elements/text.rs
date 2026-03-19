@@ -36,11 +36,9 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 use winit::dpi;
 
-use crate::elements::ElementInternals;
-use crate::elements::AsElement;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{Element};
+use crate::elements::{AsElement, Element, ElementInternals};
 use crate::layout::TaffyTree;
 
 #[derive(Clone)]
@@ -338,51 +336,39 @@ impl ElementInternals for TextInner {
 
             let state: &mut TextState = &mut self.state;
             match message {
-                CraftMessage::PointerButtonDown(pointer_button) => {
-                    if pointer_button
-                        .button
-                        .map(|button| button == PointerButton::Primary)
-                        .unwrap_or_default()
-                    {
-                        state.update_text_selection(self.element_data.style.get_selection_color());
-                        state.pointer_down = true;
-                        state.cursor_reset();
-                        let now = Instant::now();
-                        if let Some(last) = state.last_click_time.take() {
-                            if now.duration_since(last).as_secs_f64() < 0.25 {
-                                state.click_count = (state.click_count + 1) % 4;
-                            } else {
-                                state.click_count = 1;
-                            }
+                CraftMessage::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
+                    state.update_text_selection(self.element_data.style.get_selection_color());
+                    state.pointer_down = true;
+                    state.cursor_reset();
+                    let now = Instant::now();
+                    if let Some(last) = state.last_click_time.take() {
+                        if now.duration_since(last).as_secs_f64() < 0.25 {
+                            state.click_count = (state.click_count + 1) % 4;
                         } else {
                             state.click_count = 1;
                         }
-                        state.last_click_time = Some(now);
-                        let click_count = state.click_count;
-                        let cursor_pos = state.cursor_pos;
-                        match click_count {
-                            2 => state.select_word_at_point(cursor_pos),
-                            3 => state.select_line_at_point(cursor_pos),
-                            _ => state.move_to_point(cursor_pos),
-                        }
-                        if click_count == 1 {
-                            self.set_pointer_capture(PointerId::new(1).unwrap());
-                        }
-                        event.prevent_defaults();
+                    } else {
+                        state.click_count = 1;
                     }
+                    state.last_click_time = Some(now);
+                    let click_count = state.click_count;
+                    let cursor_pos = state.cursor_pos;
+                    match click_count {
+                        2 => state.select_word_at_point(cursor_pos),
+                        3 => state.select_line_at_point(cursor_pos),
+                        _ => state.move_to_point(cursor_pos),
+                    }
+                    if click_count == 1 {
+                        self.set_pointer_capture(PointerId::new(1).unwrap());
+                    }
+                    event.prevent_defaults();
                 }
-                CraftMessage::PointerButtonUp(pointer_button) => {
-                    if pointer_button
-                        .button
-                        .map(|button| button == PointerButton::Primary)
-                        .unwrap_or_default()
-                    {
-                        state.update_text_selection(self.element_data.style.get_selection_color());
-                        state.pointer_down = false;
-                        state.cursor_reset();
-                        self.release_pointer_capture(PointerId::new(1).unwrap());
-                        event.prevent_defaults();
-                    }
+                CraftMessage::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
+                    state.update_text_selection(self.element_data.style.get_selection_color());
+                    state.pointer_down = false;
+                    state.cursor_reset();
+                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                    event.prevent_defaults();
                 }
                 CraftMessage::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;

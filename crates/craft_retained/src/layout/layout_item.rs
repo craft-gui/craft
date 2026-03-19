@@ -1,10 +1,11 @@
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
+use craft_renderer::renderer::BoxShadowCmd;
 use craft_renderer::{Brush, RenderList};
 use kurbo::{Affine, BezPath, Shape, Vec2};
 use peniko::Color;
 use taffy::NodeId;
-use craft_renderer::renderer::BoxShadowCmd;
+
 use crate::style::{BoxShadow, Position, Style};
 
 impl CssComputedBorder {
@@ -170,16 +171,16 @@ impl LayoutItem {
 
         let mut computed = CssComputedBorder::new(border_spec);
         computed.scale(scale_factor);
-        self.computed_border = ComputedBorder::CssComputedBorder(computed);
+        self.computed_border = ComputedBorder::CssComputed(Box::new(computed));
 
         self.apply_box_shadows(scale_factor, border_radius);
     }
 
-    fn apply_box_shadows(&mut self, scale_factor: f64, border_radius: [(f32, f32); 4],) {
+    fn apply_box_shadows(&mut self, scale_factor: f64, border_radius: [(f32, f32); 4]) {
         let scale_transform = Affine::scale(scale_factor);
         let box_shadows = &self.cache_border_spec.as_ref().unwrap().box_shadows;
         match &self.computed_border {
-            ComputedBorder::CssComputedBorder(css_rect) => {
+            ComputedBorder::CssComputed(css_rect) => {
                 let mut outline = css_rect.css_rect.get_outline();
                 let mut inline = css_rect.css_rect.get_inline();
                 outline.apply_affine(scale_transform);
@@ -197,14 +198,22 @@ impl LayoutItem {
                         let element_rect = self.computed_box_transformed;
                         let borders = element_rect.border;
                         let inset_css_rect = CssRoundedRect::new(
-                            element_rect.border_rectangle().to_kurbo().inflate(-box_shadow.spread_radius, -box_shadow.spread_radius),
+                            element_rect
+                                .border_rectangle()
+                                .to_kurbo()
+                                .inflate(-box_shadow.spread_radius, -box_shadow.spread_radius),
                             [
                                 borders.top as f64,
                                 borders.right as f64,
                                 borders.bottom as f64,
                                 borders.left as f64,
                             ],
-                            border_radius.map(|radii| Vec2::new((radii.0 as f64 - box_shadow.spread_radius).max(0.0), (radii.1 as f64 - box_shadow.spread_radius).max(0.0))),
+                            border_radius.map(|radii| {
+                                Vec2::new(
+                                    (radii.0 as f64 - box_shadow.spread_radius).max(0.0),
+                                    (radii.1 as f64 - box_shadow.spread_radius).max(0.0),
+                                )
+                            }),
                         );
                         let mut inset_rect_outline = inset_css_rect.get_outline();
                         inset_rect_outline.apply_affine(Affine::translate(offset));
@@ -242,11 +251,15 @@ impl LayoutItem {
                     border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
                 };
                 for box_shadow in box_shadows {
-                    let radius_modifier = if box_shadow.inset {-1.0} else {1.0};
+                    let radius_modifier = if box_shadow.inset { -1.0 } else { 1.0 };
                     let offset = Vec2::new(box_shadow.offset_x, box_shadow.offset_y);
                     cache_box_shadows.box_shadows.push(ComputedBoxShadow {
                         inset: box_shadow.inset,
-                        shape: BezPathOrRect::Rect(outline.expand((box_shadow.spread_radius * radius_modifier) as f32).scale(scale_factor)),
+                        shape: BezPathOrRect::Rect(
+                            outline
+                                .expand((box_shadow.spread_radius * radius_modifier) as f32)
+                                .scale(scale_factor),
+                        ),
                         offset: offset * scale_factor,
                         blur_radius: box_shadow.blur_radius * scale_factor,
                         color: box_shadow.color,
@@ -299,7 +312,7 @@ impl LayoutItem {
                     renderer.draw_rect_outline(border_rect, border_color, thickness as f64);
                 }
             }
-            ComputedBorder::CssComputedBorder(computed_border) => {
+            ComputedBorder::CssComputed(computed_border) => {
                 draw_borders_generic(
                     renderer,
                     computed_border,
@@ -357,16 +370,12 @@ enum BezPathOrRect {
 }
 
 impl BezPathOrRect {
-
     pub fn to_path(&self) -> BezPath {
         match self {
-            BezPathOrRect::Rect(rect) => {
-                rect.to_kurbo().to_path(0.1)
-            }
-            BezPathOrRect::BezPath(path) => {path.clone()}
+            BezPathOrRect::Rect(rect) => rect.to_kurbo().to_path(0.1),
+            BezPathOrRect::BezPath(path) => path.clone(),
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -404,7 +413,7 @@ struct BorderSpec {
 
 #[derive(Clone, Default)]
 pub(crate) enum ComputedBorder {
-    CssComputedBorder(CssComputedBorder),
+    CssComputed(Box<CssComputedBorder>),
     Simple,
     #[default]
     None,

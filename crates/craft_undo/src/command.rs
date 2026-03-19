@@ -4,8 +4,9 @@ pub trait Command {
 
 #[cfg(test)]
 mod tests {
-    use super::Command;
     use alloc::string::{String, ToString};
+
+    use super::Command;
 
     enum TextCommand {
         Insert(String),

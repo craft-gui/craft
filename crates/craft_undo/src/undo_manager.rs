@@ -1,5 +1,6 @@
-use crate::Command;
 use alloc::vec::Vec;
+
+use crate::Command;
 
 #[derive(Default, Clone)]
 pub struct UndoManager<T: Command> {

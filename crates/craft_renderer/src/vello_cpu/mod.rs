@@ -1,10 +1,5 @@
 pub(crate) mod tinyvg;
 
-use vello_common::filter_effects::FilterFunction;
-use vello_common::filter_effects::Filter;
-use peniko::Compose;
-use peniko::Mix;
-use peniko::BlendMode;
 use std::any::Any;
 use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
@@ -14,8 +9,9 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
 use peniko::kurbo::{Affine, Shape};
-use peniko::{Blob, Color, Fill, ImageAlphaType, kurbo};
+use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
 use softbuffer::Buffer;
+use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
@@ -343,9 +339,7 @@ impl Renderer for VelloCpuRenderer {
                 }
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
-                RenderCommand::BoxShadowCmd(box_shadow) => {
-                    self.draw_box_shadow(box_shadow)
-                }
+                RenderCommand::BoxShadowCmd(box_shadow) => self.draw_box_shadow(box_shadow),
             }
         });
     }
@@ -396,13 +390,8 @@ impl VelloCpuRenderer {
             let outline_rect = box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
             clip_path.extend(&outline_rect.to_path(0.1));
             clip_path.extend(&box_shadow.path);
-            self.render_context.push_layer(
-                Some(&box_shadow.outline),
-                None,
-                None,
-                None,
-                filter,
-            );
+            self.render_context
+                .push_layer(Some(&box_shadow.outline), None, None, None, filter);
             self.render_context.set_fill_rule(Fill::EvenOdd);
             self.render_context.set_paint(box_shadow.color);
             self.render_context.fill_path(&clip_path);
@@ -424,11 +413,13 @@ impl VelloCpuRenderer {
 
             self.render_context.set_transform(Affine::IDENTITY);
 
-            self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
+            self.render_context
+                .set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
             self.render_context.set_paint(Color::WHITE);
             self.render_context.fill_path(&box_shadow.outline);
 
-            self.render_context.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+            self.render_context
+                .set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
 
             self.render_context.pop_layer();
         }

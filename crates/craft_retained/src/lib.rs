@@ -63,7 +63,8 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
-pub use {craft_runtime, image};
+pub use craft_runtime;
+pub use image;
 
 #[cfg(not(target_arch = "wasm32"))]
 type RendererBox = Box<dyn Renderer>;

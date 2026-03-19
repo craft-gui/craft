@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Weak;
 
 use ui_events::pointer::PointerId;
+
 use crate::elements::ElementInternals;
 
 /// Stores window specific information like pointer captures, focus (soon), etc.

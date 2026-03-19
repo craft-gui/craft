@@ -1,14 +1,13 @@
+mod box_shadow;
 mod styles;
 mod taffy_conversions;
-mod box_shadow;
 
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
 
-use craft_primitives::ColorBrush;
-use craft_primitives::Color;
 pub use box_shadow::BoxShadow;
+use craft_primitives::{Color, ColorBrush};
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -38,7 +37,7 @@ impl Unit {
         match self {
             Unit::Px(px) => *px,
             Unit::Percentage(pct) => *pct,
-            Unit::Auto => 0.0
+            Unit::Auto => 0.0,
         }
     }
 }

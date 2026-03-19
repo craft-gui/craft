@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::TreeUpdate;
+use craft_logging::info;
 use craft_primitives::geometry::{Rectangle, Size};
 use craft_renderer::RenderList;
 use craft_renderer::renderer::{Renderer, Screenshot};
@@ -20,8 +21,8 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use {accesskit::{Action, Role}, accesskit_winit::Adapter};
-
-use craft_logging::info;
+#[cfg(target_arch = "wasm32")]
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
 use crate::RendererBox;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -29,23 +30,15 @@ use crate::accessibility::{access_handler::CraftAccessHandler, activation_handle
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
-use crate::elements::{AsElement, ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, scrollable};
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+#[cfg(target_arch = "wasm32")]
+use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
-
-#[cfg(target_arch = "wasm32")]
-use crate::events::internal::InternalMessage;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
-
-#[cfg(target_arch = "wasm32")]
-use {
-    wasm_bindgen::JsCast,
-    winit::platform::web::WindowAttributesExtWebSys,
-};
 
 #[derive(Clone)]
 pub struct Window {
@@ -397,7 +390,9 @@ impl WindowInternal {
         let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
             (*window_fn)(event_loop)
         } else {
-            let window_attributes = WindowAttributes::default().with_title(self.title.as_ref().unwrap()).with_visible(false);
+            let window_attributes = WindowAttributes::default()
+                .with_title(self.title.as_ref().unwrap())
+                .with_visible(false);
             #[cfg(target_arch = "wasm32")]
             let window_attributes = {
                 let canvas = web_sys::window()
@@ -577,8 +572,7 @@ impl ElementInternals for WindowInternal {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new()
-        {
+        if !dirty && self.element_data.scroll_state.is_new() {
             self.element_data.apply_scroll(layout);
             self.element_data.scroll_state.mark_old();
         }

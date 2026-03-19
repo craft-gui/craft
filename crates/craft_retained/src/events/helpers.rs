@@ -11,7 +11,9 @@ use crate::events::pointer_capture::find_pointer_capture_target;
 use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
 
-pub(super) fn freeze_target_list(target: Rc<RefCell<dyn ElementInternals>>) -> VecDeque<Rc<RefCell<dyn ElementInternals>>> {
+pub(super) fn freeze_target_list(
+    target: Rc<RefCell<dyn ElementInternals>>,
+) -> VecDeque<Rc<RefCell<dyn ElementInternals>>> {
     let mut current_target = Some(Rc::clone(&target));
 
     // Gather and "freeze" the elements we will visit.

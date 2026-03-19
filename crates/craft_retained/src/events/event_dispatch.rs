@@ -12,7 +12,10 @@ use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_releas
 use crate::events::{CraftMessage, Event, FocusAction};
 use crate::text::text_context::TextContext;
 
-pub(super) fn dispatch_capturing_event(_message: &CraftMessage, _targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>) {
+pub(super) fn dispatch_capturing_event(
+    _message: &CraftMessage,
+    _targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
+) {
 }
 
 /// Dispatches 1 event to many elements.

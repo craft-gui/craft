@@ -18,9 +18,8 @@ use winit::dpi;
 
 use crate::app::{TAFFY_TREE, request_apply_layout};
 use crate::elements::element_data::ElementData;
-use crate::elements::TextInputInner;
-use crate::elements::ElementInternals;
 use crate::elements::text_input::parley_box_to_rect;
+use crate::elements::{ElementInternals, TextInputInner};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
@@ -145,15 +144,14 @@ impl TextInputState {
         };
 
         let margin = 2.0;
-        let cursor_top = cursor_rect.top() as f32 - margin;
-        let cursor_bottom = cursor_rect.bottom() as f32 + margin;
+        let cursor_top = cursor_rect.top() - margin;
+        let cursor_bottom = cursor_rect.bottom() + margin;
 
         let mut new_scroll = current_scroll_y;
 
         if cursor_top < current_scroll_y {
             new_scroll = cursor_top;
-        }
-        else if cursor_bottom > current_scroll_y + viewport_height {
+        } else if cursor_bottom > current_scroll_y + viewport_height {
             new_scroll = cursor_bottom - viewport_height;
         }
 
@@ -389,7 +387,11 @@ impl TextInputState {
     }
 
     pub fn maybe_scroll_to_cursor(&mut self, element_data: &mut ElementData) {
-        let height = element_data.layout_item.computed_box_transformed.padding_rectangle_size().height;
+        let height = element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle_size()
+            .height;
         let x = self.calculate_scroll_to_cursor(height, element_data.scroll_state.scroll_y());
         if x < 0.0 {
             return;
@@ -409,22 +411,30 @@ impl TextInputState {
         self.pointer_down
     }
 
-    pub fn key_press(&mut self, text_context: &mut TextContext, keyboard_event: &KeyboardEvent, element_data: &mut ElementData) {
+    pub fn key_press(
+        &mut self,
+        text_context: &mut TextContext,
+        keyboard_event: &KeyboardEvent,
+        element_data: &mut ElementData,
+    ) {
         // TODO: self.reset_blink();
 
         self.modifiers = Some(keyboard_event.modifiers);
 
-        const IS_MAC: bool = if cfg!(target_os = "macos") {true} else {false};
+        const IS_MAC: bool = cfg!(target_os = "macos");
 
-        let (shift, action_mod, word_mod) = self.modifiers.map(|mods| {
-            if IS_MAC {
-                // mac: cmd for actions, alt for words
-                (mods.shift(), mods.meta(), mods.alt())
-            } else {
-                // windows/linux: Ctrl for both
-                (mods.shift(), mods.ctrl(), mods.ctrl())
-            }
-        }).unwrap_or_default();
+        let (shift, action_mod, word_mod) = self
+            .modifiers
+            .map(|mods| {
+                if IS_MAC {
+                    // mac: cmd for actions, alt for words
+                    (mods.shift(), mods.meta(), mods.alt())
+                } else {
+                    // windows/linux: Ctrl for both
+                    (mods.shift(), mods.ctrl(), mods.ctrl())
+                }
+            })
+            .unwrap_or_default();
 
         let mut driver = self.driver(text_context);
 
@@ -468,10 +478,18 @@ impl TextInputState {
             Key::Named(NamedKey::ArrowLeft) => {
                 if IS_MAC && action_mod {
                     // mac: Cmd + Left = Line Start
-                    if shift { driver.select_to_line_start(); } else { driver.move_to_line_start(); }
+                    if shift {
+                        driver.select_to_line_start();
+                    } else {
+                        driver.move_to_line_start();
+                    }
                 } else if word_mod {
                     // windows: ctrl + left | mac: alt + left = word left
-                    if shift { driver.select_word_left(); } else { driver.move_word_left(); }
+                    if shift {
+                        driver.select_word_left();
+                    } else {
+                        driver.move_word_left();
+                    }
                 } else if shift {
                     driver.select_left();
                 } else {
@@ -509,7 +527,7 @@ impl TextInputState {
                     } else {
                         driver.move_to_text_start();
                     }
-                }  else if word_mod {
+                } else if word_mod {
                     if shift {
                         driver.select_left();
                         driver.select_to_hard_line_start();

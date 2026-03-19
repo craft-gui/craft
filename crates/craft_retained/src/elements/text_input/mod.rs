@@ -350,18 +350,17 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
-                self.state.key_press(text_context, keyboard_event, &mut self.element_data);
+                self.state
+                    .key_press(text_context, keyboard_event, &mut self.element_data);
             }
-            CraftMessage::PointerButtonDown(pointer_button) => {
-                if pointer_button.button == Some(PointerButton::Primary) {
-                    self.focus();
-                    self.state.pointer_down(text_context);
-                }
+            CraftMessage::PointerButtonDown(pointer_button)
+                if pointer_button.button == Some(PointerButton::Primary) =>
+            {
+                self.focus();
+                self.state.pointer_down(text_context);
             }
-            CraftMessage::PointerButtonUp(pointer_button) => {
-                if pointer_button.button == Some(PointerButton::Primary) {
-                    self.state.pointer_up();
-                }
+            CraftMessage::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+                self.state.pointer_up();
             }
             CraftMessage::PointerMovedEvent(pointer_moved) => {
                 self.state.move_pointer(text_context, pointer_moved, scroll_y);

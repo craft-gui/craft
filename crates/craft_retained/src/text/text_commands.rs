@@ -1,6 +1,7 @@
 use std::ops::Range;
-use parley::{Affinity, Selection};
+
 use craft_undo::Command;
+use parley::{Affinity, Selection};
 
 #[derive(Clone)]
 pub struct TextInsertion {
@@ -10,15 +11,13 @@ pub struct TextInsertion {
 }
 
 impl TextInsertion {
-
-    pub fn new(str: String, range: Range<usize>, affinity: Affinity,) -> Self {
+    pub fn new(str: String, range: Range<usize>, affinity: Affinity) -> Self {
         Self {
             str,
             range,
             affinity,
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -31,8 +30,13 @@ pub struct TextReplace {
 }
 
 impl TextReplace {
-
-    pub fn new(new_str: String, old_str: String, selection: Selection, affinity: Affinity, new_selection: Selection) -> Self {
+    pub fn new(
+        new_str: String,
+        old_str: String,
+        selection: Selection,
+        affinity: Affinity,
+        new_selection: Selection,
+    ) -> Self {
         Self {
             new_str,
             old_str,
@@ -41,7 +45,6 @@ impl TextReplace {
             new_selection,
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -52,15 +55,13 @@ pub struct Backspace {
 }
 
 impl Backspace {
-
-    pub fn new(str: String, range: Range<usize>, affinity: Affinity,) -> Self {
+    pub fn new(str: String, range: Range<usize>, affinity: Affinity) -> Self {
         Self {
             str,
             range,
             affinity,
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -71,15 +72,13 @@ pub struct Delete {
 }
 
 impl Delete {
-
-    pub fn new(str: String, range: Range<usize>, affinity: Affinity,) -> Self {
+    pub fn new(str: String, range: Range<usize>, affinity: Affinity) -> Self {
         Self {
             str,
             range,
             affinity,
         }
     }
-
 }
 
 #[derive(Clone)]
@@ -94,7 +93,13 @@ impl Command for TextCommand {
     fn merge(&mut self, other: &Self) -> bool {
         match (self, other) {
             (TextCommand::TextInsertion(left), TextCommand::TextInsertion(right)) => {
-                if right.str.eq(" ") || right.str.eq("\n") || right.str.eq(".") || left.str.eq(" ") || left.str.eq("\n") || left.str.eq("."){
+                if right.str.eq(" ")
+                    || right.str.eq("\n")
+                    || right.str.eq(".")
+                    || left.str.eq(" ")
+                    || left.str.eq("\n")
+                    || left.str.eq(".")
+                {
                     return false;
                 }
 

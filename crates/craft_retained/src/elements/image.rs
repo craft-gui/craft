@@ -81,7 +81,6 @@ impl crate::elements::ElementData for Image {
     }
 }
 
-
 impl ElementInternals for Image {
     fn apply_layout(
         &mut self,

@@ -4,8 +4,8 @@ use std::fmt::Debug;
 use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::{Color, ColorBrush};
 
-use crate::style::*;
 use crate::style::box_shadow::BoxShadow;
+use crate::style::*;
 
 #[derive(Clone, Debug)]
 pub struct Style {

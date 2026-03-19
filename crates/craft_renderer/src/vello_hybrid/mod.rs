@@ -11,14 +11,14 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use kurbo::{Affine, Stroke};
-use peniko::{BlendMode, Compose, Fill, Mix};
 use peniko::kurbo::Shape;
+use peniko::{BlendMode, Compose, Fill, Mix};
 use vello_common::color::PremulRgba8;
+use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::glyph::Glyph;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
-use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
 use wgpu::TextureFormat;
 use winit::window::Window;
@@ -120,7 +120,6 @@ impl VelloHybridRenderer {
 
         vello_renderer
     }
-
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
@@ -139,13 +138,7 @@ fn draw_box_shadow(scene: &mut Scene, box_shadow: &BoxShadowCmd) {
         let outline_rect = box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
         clip_path.extend(&outline_rect.to_path(0.1));
         clip_path.extend(&box_shadow.path);
-        scene.push_layer(
-            Some(&box_shadow.outline),
-            None,
-            None,
-            None,
-            filter,
-        );
+        scene.push_layer(Some(&box_shadow.outline), None, None, None, filter);
         scene.set_fill_rule(Fill::EvenOdd);
         scene.set_paint(box_shadow.color);
         scene.fill_path(&clip_path);
@@ -468,9 +461,7 @@ impl CraftRenderer for VelloHybridRenderer {
 
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
-                RenderCommand::BoxShadowCmd(box_shadow) => {
-                    draw_box_shadow(scene, box_shadow)
-                }
+                RenderCommand::BoxShadowCmd(box_shadow) => draw_box_shadow(scene, box_shadow),
             }
         });
 

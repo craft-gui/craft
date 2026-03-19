@@ -1,14 +1,16 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
+
+use craft_primitives::geometry::{Rectangle, Size};
 use kurbo::Point;
 use taffy::Layout;
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
-use craft_primitives::geometry::{Rectangle, Size};
+
 use crate::app::{queue_event, request_apply_layout};
-use crate::elements::element_data::ElementData;
 use crate::elements::ElementInternals;
+use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::style::Overflow;
 
@@ -48,7 +50,10 @@ pub struct ScrollOptions {
 
 impl ScrollOptions {
     pub fn new(to: ScrollToBox, offset: Point) -> Self {
-        ScrollOptions { to , offset: Some(offset) }
+        ScrollOptions {
+            to,
+            offset: Some(offset),
+        }
     }
 }
 
@@ -102,7 +107,6 @@ pub(crate) fn scroll_to_top(data: &mut ElementData) {
     scroll_to(data, 0.0);
 }
 
-
 /// Scroll to y. A valid y is in the interval [0, max_scroll_y].
 pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
     if !data.is_scrollable() {
@@ -116,7 +120,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
 }
 
 /// Scroll an amount y from the current scroll position.
-pub (crate) fn scroll_by(data: &mut ElementData, y: f32) {
+pub(crate) fn scroll_by(data: &mut ElementData, y: f32) {
     scroll_to(data, data.scroll().scroll_y() + y);
 }
 
@@ -137,12 +141,14 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
     while let Some(child) = queue.pop_front().clone() {
         let child = child.borrow();
         let element_data = child.element_data();
-        if let Some(child_id) = element_data.id.as_ref() && child_id.as_str() == id {
+        if let Some(child_id) = element_data.id.as_ref()
+            && child_id.as_str() == id
+        {
             let box_model_selected = match options.to {
                 ScrollToBox::BorderBox => element_data.layout_item.computed_box.border_rectangle(),
                 ScrollToBox::MarginBox => element_data.layout_item.computed_box.margin_rectangle(),
                 ScrollToBox::PaddingBox => element_data.layout_item.computed_box.padding_rectangle(),
-                ScrollToBox::ContentBox => element_data.layout_item.computed_box.content_rectangle()
+                ScrollToBox::ContentBox => element_data.layout_item.computed_box.content_rectangle(),
             };
             let distance_from_parent = box_model_selected.y - top_py;
             child_y = Some(distance_from_parent);
@@ -182,8 +188,7 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
 
     // Content Size = overflowed content size + padding
     // Scroll Height = Content Size
-    let scroll_height =
-        (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
+    let scroll_height = (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
     let scroll_track_width = element.layout_item.scrollbar_size.width;
 
     // The scroll track height is the height of the padding box.
@@ -224,7 +229,6 @@ pub(crate) fn apply_scroll_layout(element: &mut ElementData, layout: &Layout) {
     element.layout_item.computed_scroll_thumb.height = scroll_thumb_height;
 }
 
-
 /// Updates the scroll state when an event occurs.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
@@ -252,67 +256,65 @@ pub(crate) fn on_scroll_events(element: &mut dyn ElementInternals, message: &Cra
                 event.prevent_propagate();
                 event.prevent_defaults();
             }
-            CraftMessage::PointerButtonDown(pointer_button) => {
-                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
-                    // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
-                    if pointer_button.pointer.pointer_type == PointerType::Touch {
-                        let container_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
+            CraftMessage::PointerButtonDown(pointer_button)
+                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) =>
+            {
+                // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
+                if pointer_button.pointer.pointer_type == PointerType::Touch {
+                    let container_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
 
-                        let in_scroll_bar = element_data
-                            .layout_item
-                            .computed_scroll_thumb
-                            .contains(&pointer_button.state.logical_point());
-
-                        if container_rectangle.contains(&pointer_button.state.logical_point()) && !in_scroll_bar {
-                            state.scroll_click = Some(Point::new(
-                                pointer_button.state.logical_point().x,
-                                pointer_button.state.logical_point().y,
-                            ));
-                            event.prevent_propagate();
-                            event.prevent_defaults();
-                        }
-                    } else if element_data
+                    let in_scroll_bar = element_data
                         .layout_item
                         .computed_scroll_thumb
-                        .contains(&pointer_button.state.logical_point())
-                    {
+                        .contains(&pointer_button.state.logical_point());
+
+                    if container_rectangle.contains(&pointer_button.state.logical_point()) && !in_scroll_bar {
                         state.scroll_click = Some(Point::new(
                             pointer_button.state.logical_point().x,
                             pointer_button.state.logical_point().y,
                         ));
-
-                        // FIXME: Turn pointer capture on with the correct device id.
-                        element.set_pointer_capture(PointerId::new(1).unwrap());
-
-                        event.prevent_propagate();
-                        event.prevent_defaults();
-                    } else if element_data
-                        .layout_item
-                        .computed_scroll_track
-                        .contains(&pointer_button.state.logical_point())
-                    {
-                        let offset_y =
-                            pointer_button.state.position.y as f32 - element_data.layout_item.computed_scroll_track.y;
-
-                        let percent = offset_y / element_data.layout_item.computed_scroll_track.height;
-                        let scroll_y = percent * element_data.layout_item.max_scroll_y;
-
-                        state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout_item.max_scroll_y));
-                        request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
-
                         event.prevent_propagate();
                         event.prevent_defaults();
                     }
-                }
-            }
-            CraftMessage::PointerButtonUp(_pointer_button) => {
-                if state.scroll_click.is_some() {
-                    state.scroll_click = None;
-                    // FIXME: Turn pointer capture off with the correct device id.
-                    element.release_pointer_capture(PointerId::new(1).unwrap());
+                } else if element_data
+                    .layout_item
+                    .computed_scroll_thumb
+                    .contains(&pointer_button.state.logical_point())
+                {
+                    state.scroll_click = Some(Point::new(
+                        pointer_button.state.logical_point().x,
+                        pointer_button.state.logical_point().y,
+                    ));
+
+                    // FIXME: Turn pointer capture on with the correct device id.
+                    element.set_pointer_capture(PointerId::new(1).unwrap());
+
+                    event.prevent_propagate();
+                    event.prevent_defaults();
+                } else if element_data
+                    .layout_item
+                    .computed_scroll_track
+                    .contains(&pointer_button.state.logical_point())
+                {
+                    let offset_y =
+                        pointer_button.state.position.y as f32 - element_data.layout_item.computed_scroll_track.y;
+
+                    let percent = offset_y / element_data.layout_item.computed_scroll_track.height;
+                    let scroll_y = percent * element_data.layout_item.max_scroll_y;
+
+                    state.set_scroll_y(scroll_y.clamp(0.0, element_data.layout_item.max_scroll_y));
+                    request_apply_layout(element_data.layout_item.taffy_node_id.unwrap());
+
                     event.prevent_propagate();
                     event.prevent_defaults();
                 }
+            }
+            CraftMessage::PointerButtonUp(_pointer_button) if state.scroll_click.is_some() => {
+                state.scroll_click = None;
+                // FIXME: Turn pointer capture off with the correct device id.
+                element.release_pointer_capture(PointerId::new(1).unwrap());
+                event.prevent_propagate();
+                event.prevent_defaults();
             }
             CraftMessage::PointerMovedEvent(pointer_motion) => {
                 if let Some(click) = state.scroll_click {
