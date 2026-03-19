@@ -446,11 +446,11 @@ impl WindowInternal {
                 self.renderer = Some(renderer);
                 info!("Created renderer")
             } else {
-                let winit_window = winit_window.clone();
+                let window_copy_2 = winit_window.clone();
                 craft_app.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
+                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
                     WASM_QUEUE.with_borrow_mut(|wasm_queue| {
-                        wasm_queue.push(InternalMessage::RendererCreated(winit_window, renderer));
+                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2.clone(), renderer));
                     });
                     info!("Created renderer")
                 });
