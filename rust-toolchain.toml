@@ -1,4 +1,4 @@
 [toolchain]
 channel = "nightly-2026-03-14"
 components = ["rustc", "cargo", "rust-std", "rust-src", "rust-analyzer", "clippy", "rustfmt"]
-targets = ["x86_64-pc-windows-msvc"]
+targets = ["x86_64-pc-windows-msvc", "aarch64-apple-ios", "aarch64-linux-android"]
