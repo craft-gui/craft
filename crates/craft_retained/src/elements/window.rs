@@ -10,8 +10,8 @@ use std::sync::Arc;
 use accesskit::TreeUpdate;
 use craft_logging::info;
 use craft_primitives::geometry::{Rectangle, Size};
-use craft_renderer::RenderList;
 use craft_renderer::renderer::{Renderer, Screenshot};
+use craft_renderer::{RenderList, RendererType};
 use craft_resource_manager::ResourceManager;
 use kurbo::{Affine, Point};
 use peniko::Color;
@@ -24,7 +24,11 @@ use {accesskit::{Action, Role}, accesskit_winit::Adapter};
 #[cfg(target_arch = "wasm32")]
 use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
-use crate::RendererBox;
+#[cfg(not(target_arch = "wasm32"))]
+type RendererBox = Box<dyn Renderer>;
+#[cfg(target_arch = "wasm32")]
+type RendererBox = Box<dyn Renderer>;
+
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -72,6 +76,12 @@ pub struct WindowInternal {
     advanced_window_fn: Option<WindowConstructor>,
 
     title: Option<String>,
+
+    /// The type of renderer to use.
+    ///
+    /// The renderer is chosen based on the features enabled at compile time.
+    /// See [`RendererType`] for details.
+    renderer_type: RendererType,
 }
 
 impl Default for Window {
@@ -81,17 +91,27 @@ impl Default for Window {
 }
 
 impl Window {
-    pub fn new_advanced<F>(f: F) -> Self
+    pub fn new_advanced<F>(window_fn: F, renderer_type: RendererType) -> Self
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
-        let inner = WindowInternal::new(Some(f), None);
+        let inner = WindowInternal::new(Some(window_fn), None, renderer_type);
 
         Window { inner }
     }
 
     pub fn new(title: &str) -> Self {
-        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title));
+        let inner = WindowInternal::new(
+            None::<fn(&ActiveEventLoop) -> WinitWindow>,
+            Some(title),
+            RendererType::default(),
+        );
+
+        Window { inner }
+    }
+
+    pub fn new_with_renderer(title: &str, renderer_type: RendererType) -> Self {
+        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title), renderer_type);
 
         Window { inner }
     }
@@ -181,7 +201,7 @@ impl Window {
 }
 
 impl WindowInternal {
-    pub fn new<F>(f: Option<F>, title: Option<&str>) -> Rc<RefCell<Self>>
+    pub fn new<F>(f: Option<F>, title: Option<&str>, renderer_type: RendererType) -> Rc<RefCell<Self>>
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
@@ -199,6 +219,7 @@ impl WindowInternal {
                 accesskit_adapter: None,
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
                 title: title.map(|title| title.to_string()),
+                renderer_type,
             })
         });
 
@@ -414,7 +435,7 @@ impl WindowInternal {
         self.set_winit_window(Some(winit_window.clone()));
         self.on_scale_factor_changed(winit_window.scale_factor());
 
-        let renderer_type = craft_app.craft_options.renderer;
+        let renderer_type = self.renderer_type;
 
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
@@ -425,11 +446,11 @@ impl WindowInternal {
                 self.renderer = Some(renderer);
                 info!("Created renderer")
             } else {
-                let window_copy_2 = winit_window.clone();
+                let winit_window = winit_window.clone();
                 craft_app.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
+                    let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
                     WASM_QUEUE.with_borrow_mut(|wasm_queue| {
-                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2, renderer));
+                        wasm_queue.push(InternalMessage::RendererCreated(winit_window, renderer));
                     });
                     info!("Created renderer")
                 });

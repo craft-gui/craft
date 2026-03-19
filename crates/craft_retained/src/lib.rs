@@ -25,14 +25,11 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-pub use crate::utils::style_helpers::{rgb, rgba, px, pct, auto};
-
 use app::App;
 use cfg_if::cfg_if;
 use craft_logging::info;
 pub use craft_primitives::{Color, palette};
 pub use craft_renderer::RendererType;
-use craft_renderer::renderer::Renderer;
 pub use craft_resource_manager::ResourceIdentifier;
 use craft_resource_manager::ResourceManager;
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
@@ -41,17 +38,18 @@ pub use craftcallback::CraftCallback;
 use events::internal::InternalMessage;
 pub use options::CraftOptions;
 pub use utils::craft_error::CraftError;
+use winit::event_loop::EventLoopBuilder;
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopBuilderExtAndroid;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, WindowAttributes};
-#[cfg(target_os = "android")]
-use {winit::platform::android::EventLoopBuilderExtAndroid};
-use winit::event_loop::EventLoopBuilder;
 
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
+pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
 
@@ -63,25 +61,18 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
-pub use craft_runtime;
-pub use image;
-
 #[cfg(target_os = "android")]
 use std::cell::RefCell;
+
+pub use craft_runtime;
+pub use image;
 
 #[cfg(target_os = "android")]
 thread_local! {
     static ANDROID_APP: RefCell<Option<AndroidApp>> = const { RefCell::new(None) };
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-type RendererBox = Box<dyn Renderer>;
-#[cfg(target_arch = "wasm32")]
-type RendererBox = Box<dyn Renderer>;
-
-pub fn internal_craft_main_with_options(
-    options: Option<CraftOptions>,
-) {
+fn craft_main_internal(options: Option<CraftOptions>) {
     info!("Craft started");
 
     let mut event_loop_builder = EventLoopBuilder::default();
@@ -99,21 +90,24 @@ pub fn internal_craft_main_with_options(
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
-/// Starts the Craft application with the provided component specification, global state, and configuration options.
+/// Starts the Craft application.
 ///
-/// This function serves as the main entry point for launching a Craft application. It accepts a component
-/// specification, a boxed global state, and optional configuration options, then delegates to the internal
-/// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
-/// behavior via [`CraftOptions`] without interacting directly with lower-level details.
+/// This will block the current thread until all [`crate::elements::Window`] instances have been closed.
+/// # Example
+/// ```no_run
+/// use craft_retained::{craft_main, CraftOptions};
+/// use craft_retained::elements::Window;
 ///
-/// # Parameters
-///
-/// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
+/// fn main() {
+///     Window::new("Craft");
+///     craft_main(CraftOptions::default());
+/// }
+/// ```
 pub fn craft_main(options: CraftOptions) {
-    internal_craft_main_with_options(Some(options));
+    craft_main_internal(Some(options));
 }
 
-pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
+fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
 
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);

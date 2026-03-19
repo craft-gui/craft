@@ -4,7 +4,7 @@ use std::rc::Rc;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, pct, px, rgb, rgba};
+use craft_retained::{Color, CraftOptions, craft_main, pct, px, rgb, rgba};
 use util::setup_logging;
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
@@ -63,5 +63,5 @@ pub(crate) fn main() {
                 ))
         });
 
-    craft_retained::craft_main(CraftOptions::basic("Counter"));
+    craft_main(CraftOptions::basic("Counter"));
 }

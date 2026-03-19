@@ -4,6 +4,7 @@ extern crate libtest_mimic_collect;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use craft_renderer::RendererType;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
@@ -41,7 +42,7 @@ fn counter() {
 
     let add_button = create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone());
 
-    let window = Window::new("Counter")
+    let window = Window::new_with_renderer("Counter", RendererType::VelloCPU)
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
