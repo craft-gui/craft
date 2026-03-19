@@ -92,8 +92,10 @@ fn craft_main_internal(options: Option<CraftOptions>) {
 
 /// Starts the Craft application.
 ///
-/// This will block the current thread until all [`crate::elements::Window`] instances have been closed.
+/// This will block the current thread until all [`Window`](elements::Window) instances have been closed.
+///
 /// # Example
+///
 /// ```no_run
 /// use craft_retained::{craft_main, CraftOptions};
 /// use craft_retained::elements::Window;
