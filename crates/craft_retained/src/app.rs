@@ -17,8 +17,6 @@ use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
 use winit::event::{Ime, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;

@@ -88,7 +88,7 @@ fn counter() {
             window.close();
         }
     }));
-    craft_retained::craft_test(CraftOptions::test("counter_test", cb));
+    craft_retained::craft_main(CraftOptions::test("counter_test", cb));
     test_utils::check_snapshot(result_image.take().unwrap(), "counter.png");
 }
 

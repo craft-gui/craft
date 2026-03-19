@@ -31,7 +31,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }
 
-fn main() {
+pub(crate) fn main() {
     setup_logging();
     let count = Rc::new(RefCell::new(0));
     let count_text = Text::new(&format!("Count: {}", count.borrow()));

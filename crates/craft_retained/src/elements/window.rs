@@ -423,7 +423,7 @@ impl WindowInternal {
                     renderer
                 });
                 self.renderer = Some(renderer);
-                info!("RENDERER CREATED")
+                info!("Created renderer")
             } else {
                 let window_copy_2 = winit_window.clone();
                 craft_app.runtime.spawn(async move {
@@ -431,7 +431,7 @@ impl WindowInternal {
                     WASM_QUEUE.with_borrow_mut(|wasm_queue| {
                         wasm_queue.push(InternalMessage::RendererCreated(window_copy_2, renderer));
                     });
-                    info!("RENDERER CREATED")
+                    info!("Created renderer")
                 });
             }
         }

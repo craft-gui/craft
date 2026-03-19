@@ -14,8 +14,6 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowId;
 #[cfg(target_arch = "wasm32")]
 use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
-#[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
 use crate::CraftOptions;
 use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER, dequeue_window_event};
