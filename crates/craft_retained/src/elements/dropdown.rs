@@ -5,9 +5,10 @@ use std::rc::{Rc, Weak};
 use craft_primitives::geometry::{Rectangle, TrblRectangle};
 use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
+use peniko::Color;
 use ui_events::pointer::PointerId;
-use crate::app::{request_apply_layout, TAFFY_TREE};
-use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element, ElementData};
+use crate::app::{request_apply_layout, CURRENT_WINDOW_ID, TAFFY_TREE, WINDOW_MANAGER};
+use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element, ElementData, Window};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::{scrollable};
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
@@ -15,6 +16,7 @@ use crate::events::{CraftMessage, Event};
 use crate::layout::layout::Layout;
 use crate::layout::TaffyTree;
 use crate::{px, rgb, rgba, CraftError};
+use crate::document::DocumentManager;
 use crate::elements::traits::DeepClone;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, JustifyContent, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
@@ -95,7 +97,10 @@ pub struct DropdownInner {
     element_data: ElementDataStruct,
     floating_window: Shape,
     is_floating_window_hidden: bool,
-    selected_element: Option<Rc<RefCell<dyn ElementInternals>>>
+    selected_element: Option<Rc<RefCell<dyn ElementInternals>>>,
+    selected_element_index: Option<usize>,
+    selected_bg_color: Option<Color>,
+    hovered_bg_color: Option<Color>,
 }
 
 impl Default for Dropdown {
@@ -112,6 +117,9 @@ impl Dropdown {
                 floating_window: Shape::new(true),
                 is_floating_window_hidden: true,
                 selected_element: None,
+                selected_element_index: None,
+                selected_bg_color: Some(Color::from_rgba8(109, 113, 228, 100)),
+                hovered_bg_color: Some(Color::from_rgba8(100, 100, 100, 100)),
             })
         });
 
@@ -180,6 +188,7 @@ impl DropdownInner {
 
         let child = self.element_data.children.get(child_index).expect("There is no child at this index.");
         self.selected_element = Some(child.clone().borrow().deep_clone());
+        self.selected_element_index = Some(child_index);
         let selected_element_id = self.selected_element.as_ref().unwrap().borrow().element_data().layout.taffy_node_id();
 
         // Add the selected element to the parent's layout tree at index 1.
@@ -311,7 +320,23 @@ impl ElementInternals for DropdownInner {
             self.floating_window.layout.draw_borders(renderer, current_style, scale_factor);
 
             renderer.push_layer(self.floating_window.layout.computed_box_transformed.padding_rectangle().scale(scale_factor));
-            self.draw_children(renderer, text_context, pointer, scale_factor);
+
+            for (index, child) in self.children().iter().enumerate() {
+                let mut child_rect = child.borrow_mut().element_data().layout.computed_box_transformed.border_rectangle();
+                child_rect.x = self.floating_window.layout.computed_box_transformed.position.x as f32;
+                child_rect.width = self.floating_window.layout.computed_box_transformed.size.width as f32;
+
+
+
+                if let Some(selected_index) = self.selected_element_index && index == selected_index {
+                    renderer.draw_rect(child_rect, self.selected_bg_color.unwrap());
+                } else if child.borrow_mut().element_data().is_hovered {
+                    renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
+                }
+
+                child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
+            }
+
             renderer.pop_layer();
 
             draw_scrollbar(&self.floating_window.style, &self.floating_window.layout, renderer, scale_factor);
@@ -326,6 +351,10 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
+        if self.is_floating_window_hidden {
+            self.release_pointer_capture(PointerId::new(1).unwrap());
+        }
+
         let pb = match message {
             CraftMessage::PointerButtonUp(pb) => Some(pb),
             _ => None
@@ -352,10 +381,6 @@ impl ElementInternals for DropdownInner {
                     break;
                 }
             }
-        }
-
-        if self.is_floating_window_hidden {
-            return;
         }
 
         let floating_window = &mut self.floating_window;

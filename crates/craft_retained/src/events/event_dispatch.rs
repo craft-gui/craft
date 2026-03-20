@@ -25,7 +25,7 @@ pub(super) fn dispatch_bubbling_event(
     let mut base_event = Event::new(target.clone());
 
     // Call the callback handlers.
-    for current_target in targets.iter() {
+    for current_target in targets.iter_mut() {
         call_user_event_handlers(&mut base_event, current_target, message);
         if !base_event.propagate {
             break;

@@ -46,6 +46,7 @@ pub struct ElementData {
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
     pub on_scroll: Vec<ScrollHandler>,
+    pub is_hovered: bool
 }
 
 impl ElementData {
@@ -68,6 +69,7 @@ impl ElementData {
             on_pointer_moved: Vec::new(),
             on_keyboard_input: Vec::new(),
             on_scroll: Vec::new(),
+            is_hovered: false,
         };
 
         ELEMENTS.with_borrow_mut(|elements| {

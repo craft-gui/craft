@@ -68,14 +68,16 @@ pub(super) fn call_user_event_handlers(
 ) {
     match message {
         CraftMessage::PointerEnter() => {
-            let element_data = current_target.borrow().element_data().clone();
+            current_target.borrow_mut().element_data_mut().is_hovered = true;
+            let mut element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_enter {
                 (*handler)(event);
             }
         }
         CraftMessage::PointerLeave() => {
-            let element_data = current_target.borrow().element_data().clone();
+            current_target.borrow_mut().element_data_mut().is_hovered = false;
+            let mut element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_leave {
                 (*handler)(event);
