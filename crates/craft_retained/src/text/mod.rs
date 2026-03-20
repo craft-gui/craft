@@ -1,4 +1,5 @@
 pub(crate) mod parley_editor;
+pub mod text_commands;
 pub mod text_context;
 pub(crate) mod text_render_data;
 

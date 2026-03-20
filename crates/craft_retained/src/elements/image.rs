@@ -83,7 +83,6 @@ impl crate::elements::ElementData for Image {
     }
 }
 
-
 impl ElementInternals for Image {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()

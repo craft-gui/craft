@@ -8,9 +8,10 @@ use std::sync::Arc;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::TreeUpdate;
+use craft_logging::info;
 use craft_primitives::geometry::{Rectangle, Size};
-use craft_renderer::RenderList;
 use craft_renderer::renderer::{Renderer, Screenshot};
+use craft_renderer::{RenderList, RendererType};
 use craft_resource_manager::ResourceManager;
 use kurbo::{Affine, Point};
 use peniko::Color;
@@ -20,20 +21,29 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use {accesskit::{Action, Role}, accesskit_winit::Adapter};
+#[cfg(target_arch = "wasm32")]
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
-use crate::RendererBox;
+#[cfg(not(target_arch = "wasm32"))]
+type RendererBox = Box<dyn Renderer>;
+#[cfg(target_arch = "wasm32")]
+type RendererBox = Box<dyn Renderer>;
+
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
-use crate::elements::{AsElement, ElementInternals, resolve_clip_for_scrollable};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element, scrollable};
 use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+#[cfg(target_arch = "wasm32")]
+use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
+#[cfg(target_arch = "wasm32")]
+use crate::wasm_queue::WASM_QUEUE;
 
 #[derive(Clone)]
 pub struct Window {
@@ -67,6 +77,12 @@ pub struct WindowInternal {
     advanced_window_fn: Option<WindowConstructor>,
 
     title: Option<String>,
+
+    /// The type of renderer to use.
+    ///
+    /// The renderer is chosen based on the features enabled at compile time.
+    /// See [`RendererType`] for details.
+    renderer_type: RendererType,
 }
 
 impl Clone for WindowInternal {
@@ -82,17 +98,27 @@ impl Default for Window {
 }
 
 impl Window {
-    pub fn new_advanced<F>(f: F) -> Self
+    pub fn new_advanced<F>(window_fn: F, renderer_type: RendererType) -> Self
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
-        let inner = WindowInternal::new(Some(f), None);
+        let inner = WindowInternal::new(Some(window_fn), None, renderer_type);
 
         Window { inner }
     }
 
     pub fn new(title: &str) -> Self {
-        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title));
+        let inner = WindowInternal::new(
+            None::<fn(&ActiveEventLoop) -> WinitWindow>,
+            Some(title),
+            RendererType::default(),
+        );
+
+        Window { inner }
+    }
+
+    pub fn new_with_renderer(title: &str, renderer_type: RendererType) -> Self {
+        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title), renderer_type);
 
         Window { inner }
     }
@@ -182,7 +208,7 @@ impl Window {
 }
 
 impl WindowInternal {
-    pub fn new<F>(f: Option<F>, title: Option<&str>) -> Rc<RefCell<Self>>
+    pub fn new<F>(f: Option<F>, title: Option<&str>, renderer_type: RendererType) -> Rc<RefCell<Self>>
     where
         F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
     {
@@ -200,6 +226,7 @@ impl WindowInternal {
                 accesskit_adapter: None,
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
                 title: title.map(|title| title.to_string()),
+                renderer_type,
             })
         });
 
@@ -212,6 +239,12 @@ impl WindowInternal {
         });
 
         inner
+    }
+
+    pub fn request_redraw(&self) {
+        if let Some(winit_window) = &self.winit_window {
+            winit_window.request_redraw();
+        }
     }
 
     pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
@@ -237,10 +270,19 @@ impl WindowInternal {
 
     pub(crate) fn zoom_in(&mut self) {
         self.zoom_scale_factor += 0.01;
+        self.update_zoom();
     }
 
     pub(crate) fn zoom_out(&mut self) {
         self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
+        self.update_zoom();
+    }
+
+    pub fn update_zoom(&mut self) {
+        let scale_factor = self.effective_scale_factor();
+        self.set_scale_factor(scale_factor);
+        self.mark_dirty();
+        self.request_redraw();
     }
 
     pub(crate) fn zoom_scale_factor(&self) -> f64 {
@@ -376,14 +418,31 @@ impl WindowInternal {
         let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
             (*window_fn)(event_loop)
         } else {
+            let window_attributes = WindowAttributes::default()
+                .with_title(self.title.as_ref().unwrap())
+                .with_visible(false);
+            #[cfg(target_arch = "wasm32")]
+            let window_attributes = {
+                let canvas = web_sys::window()
+                    .unwrap()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("canvas")
+                    .unwrap()
+                    .dyn_into::<web_sys::HtmlCanvasElement>()
+                    .unwrap();
+
+                window_attributes.with_canvas(Some(canvas))
+            };
+
             event_loop
-                .create_window(WindowAttributes::default().with_title(self.title.as_ref().unwrap()).with_visible(false))
+                .create_window(window_attributes)
                 .expect("Failed to create window")
         });
         self.set_winit_window(Some(winit_window.clone()));
         self.on_scale_factor_changed(winit_window.scale_factor());
 
-        let renderer_type = craft_app.craft_options.renderer;
+        let renderer_type = self.renderer_type;
 
         cfg_if::cfg_if! {
             if #[cfg(not(target_arch = "wasm32"))] {
@@ -392,15 +451,15 @@ impl WindowInternal {
                     renderer
                 });
                 self.renderer = Some(renderer);
+                info!("Created renderer")
             } else {
-                let app_sender = craft_state.app_sender.clone();
-                let window_copy_2 = window_copy.clone();
-                craft_state.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy).await;
-                    app_sender
-                        .send(InternalMessage::RendererCreated(window_copy_2, renderer))
-                        .await
-                        .expect("Failed to send RendererCreated message");
+                let winit_window = winit_window.clone();
+                craft_app.runtime.spawn(async move {
+                    let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
+                    WASM_QUEUE.with_borrow_mut(|wasm_queue| {
+                        wasm_queue.push(InternalMessage::RendererCreated(winit_window, renderer));
+                    });
+                    info!("Created renderer")
                 });
             }
         }

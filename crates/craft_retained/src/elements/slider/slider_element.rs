@@ -10,10 +10,9 @@ use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 
 use crate::app::queue_event;
-use crate::elements::{ElementInternals, AsElement};
 use crate::elements::element_data::ElementData;
-use crate::elements::{Element};
 use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::palette;

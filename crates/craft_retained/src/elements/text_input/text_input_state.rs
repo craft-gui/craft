@@ -16,10 +16,10 @@ use ui_events::pointer::PointerUpdate;
 use web_time::{Duration, Instant};
 use winit::dpi;
 
-use crate::app::{TAFFY_TREE, request_layout};
-use crate::elements::TextInputInner;
-use crate::elements::ElementInternals;
+use crate::app::{TAFFY_TREE, request_apply_layout};
+use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
+use crate::elements::{ElementInternals, TextInputInner};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
@@ -128,9 +128,34 @@ impl TextInputState {
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
             if let Some(taffy_id) = self.taffy_id {
-                request_layout(taffy_id);
+                request_apply_layout(taffy_id);
             }
         }
+    }
+
+    /// Returns a suggested scroll offset (y) to ensure the cursor is visible
+    /// within a viewport of the given height.
+    pub fn calculate_scroll_to_cursor(&self, viewport_height: f32, current_scroll_y: f32) -> f32 {
+        // TODO: Rewrite this function. It is likely incorrect.
+        let cursor_rect = if let Some(r) = self.editor.cursor_geometry(1.0) {
+            parley_box_to_rect(r)
+        } else {
+            return current_scroll_y;
+        };
+
+        let margin = 2.0;
+        let cursor_top = cursor_rect.top() - margin;
+        let cursor_bottom = cursor_rect.bottom() + margin;
+
+        let mut new_scroll = current_scroll_y;
+
+        if cursor_top < current_scroll_y {
+            new_scroll = cursor_top;
+        } else if cursor_bottom > current_scroll_y + viewport_height {
+            new_scroll = cursor_bottom - viewport_height;
+        }
+
+        new_scroll.max(0.0)
     }
 
     /// Set the origin of the text input state.
@@ -213,9 +238,11 @@ impl TextInputState {
             })
             .map(|width| {
                 let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
+                // TODO: Ignored old comment. Does this issue still happen?
                 // Taffy may give a min width > max_width.
                 // Min-width is preserved in this scenario to ensure text is readable.
-                width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
+                //width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
+                width
             });
 
         let _height_constraint: Option<f32> = known_dimensions
@@ -304,7 +331,7 @@ impl TextInputState {
         });
     }
 
-    fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
+    pub(crate) fn driver<'a>(&'a mut self, text_context: &'a mut TextContext) -> PlainEditorDriver<'a> {
         self.editor
             .driver(&mut text_context.font_context, &mut text_context.layout_context)
     }
@@ -359,11 +386,24 @@ impl TextInputState {
         self.reset_blink();
     }
 
+    pub fn maybe_scroll_to_cursor(&mut self, element_data: &mut ElementData) {
+        let height = element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle_size()
+            .height;
+        let x = self.calculate_scroll_to_cursor(height, element_data.scroll_state.scroll_y());
+        if x < 0.0 {
+            return;
+        }
+        element_data.scroll_state.set_scroll_y(x);
+    }
+
     /// Insert at cursor, or replace selection.
     ///
     /// This requires a relayout.
     pub fn insert_or_replace_selection(&mut self, text_context: &mut TextContext, text: &str) {
-        self.driver(text_context).insert_or_replace_selection(text);
+        self.driver(text_context).insert_or_replace_selection(text, true);
         self.clear_cache();
     }
 
@@ -371,29 +411,47 @@ impl TextInputState {
         self.pointer_down
     }
 
-    pub fn key_press(&mut self, text_context: &mut TextContext, keyboard_event: &KeyboardEvent) {
+    pub fn key_press(
+        &mut self,
+        text_context: &mut TextContext,
+        keyboard_event: &KeyboardEvent,
+        element_data: &mut ElementData,
+    ) {
         // TODO: self.reset_blink();
 
         self.modifiers = Some(keyboard_event.modifiers);
 
-        #[allow(unused)]
-        let (shift, action_mod) = self
+        const IS_MAC: bool = cfg!(target_os = "macos");
+
+        let (shift, action_mod, word_mod) = self
             .modifiers
             .map(|mods| {
-                (
-                    mods.shift(),
-                    if cfg!(target_os = "macos") {
-                        mods.meta()
-                    } else {
-                        mods.ctrl()
-                    },
-                )
+                if IS_MAC {
+                    // mac: cmd for actions, alt for words
+                    (mods.shift(), mods.meta(), mods.alt())
+                } else {
+                    // windows/linux: Ctrl for both
+                    (mods.shift(), mods.ctrl(), mods.ctrl())
+                }
             })
             .unwrap_or_default();
 
         let mut driver = self.driver(text_context);
 
         match &keyboard_event.key {
+            #[cfg(target_os = "windows")]
+            Key::Character(c) if action_mod && c.to_lowercase() == "y" => {
+                driver.redo();
+                self.clear_cache();
+            }
+            Key::Character(c) if action_mod && c.to_lowercase() == "z" => {
+                if shift {
+                    driver.redo();
+                } else {
+                    driver.undo();
+                }
+                self.clear_cache();
+            }
             Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                 match c.to_lowercase().as_str() {
                     "c" => copy(&mut driver),
@@ -418,7 +476,15 @@ impl TextInputState {
                 }
             }
             Key::Named(NamedKey::ArrowLeft) => {
-                if action_mod {
+                if IS_MAC && action_mod {
+                    // mac: Cmd + Left = Line Start
+                    if shift {
+                        driver.select_to_line_start();
+                    } else {
+                        driver.move_to_line_start();
+                    }
+                } else if word_mod {
+                    // windows: ctrl + left | mac: alt + left = word left
                     if shift {
                         driver.select_word_left();
                     } else {
@@ -429,9 +495,18 @@ impl TextInputState {
                 } else {
                     driver.move_left();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowRight) => {
-                if action_mod {
+                if IS_MAC && action_mod {
+                    // mac: cmd + right = end of line
+                    if shift {
+                        driver.select_to_line_end();
+                    } else {
+                        driver.move_to_line_end();
+                    }
+                } else if word_mod {
+                    // windows/linux: ctrl + right | mac: alt + right = word right
                     if shift {
                         driver.select_word_right();
                     } else {
@@ -442,20 +517,53 @@ impl TextInputState {
                 } else {
                     driver.move_right();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowUp) => {
-                if shift {
+                if IS_MAC && action_mod {
+                    // mac: cmd + up = document start
+                    if shift {
+                        driver.select_to_text_start();
+                    } else {
+                        driver.move_to_text_start();
+                    }
+                } else if word_mod {
+                    if shift {
+                        driver.select_left();
+                        driver.select_to_hard_line_start();
+                    } else {
+                        driver.move_left();
+                        driver.move_to_hard_line_start();
+                    }
+                } else if shift {
                     driver.select_up();
                 } else {
                     driver.move_up();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::ArrowDown) => {
-                if shift {
+                if IS_MAC && action_mod {
+                    // mac: cmd + down = end of document
+                    if shift {
+                        driver.select_to_text_end();
+                    } else {
+                        driver.move_to_text_end();
+                    }
+                } else if word_mod {
+                    if shift {
+                        driver.select_to_hard_line_end();
+                        driver.select_right();
+                    } else {
+                        driver.move_to_hard_line_end();
+                        driver.move_right();
+                    }
+                } else if shift {
                     driver.select_down();
                 } else {
                     driver.move_down();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::Home) => {
                 if action_mod {
@@ -469,6 +577,7 @@ impl TextInputState {
                 } else {
                     driver.move_to_line_start();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::End) => {
                 let mut drv = self.driver(text_context);
@@ -484,34 +593,42 @@ impl TextInputState {
                 } else {
                     drv.move_to_line_end();
                 }
+                self.maybe_scroll_to_cursor(element_data);
             }
             Key::Named(NamedKey::Delete) => {
-                if action_mod {
-                    driver.delete_word();
-                    self.clear_cache();
+                if word_mod {
+                    driver.delete_word(true);
                 } else {
-                    driver.delete();
-                    self.clear_cache();
+                    driver.delete(true);
                 }
-                //generate_text_changed_event(&mut self.state.editor);
-            }
-            Key::Named(NamedKey::Backspace) => {
-                if action_mod {
-                    driver.backdelete_word();
-                    self.clear_cache();
-                } else {
-                    driver.backdelete();
-                    self.clear_cache();
-                }
-                //generate_text_changed_event(&mut self.state.editor);
-            }
-            Key::Named(NamedKey::Enter) => {
-                driver.insert_or_replace_selection("\n");
                 self.clear_cache();
                 //generate_text_changed_event(&mut self.state.editor);
             }
-            Key::Character(s) => {
-                driver.insert_or_replace_selection(s);
+            Key::Named(NamedKey::Backspace) => {
+                if IS_MAC && action_mod {
+                    driver.move_anchor_to_line_start();
+                    driver.insert_or_replace_selection("", true);
+                } else if word_mod {
+                    if IS_MAC {
+                        driver.move_anchor_word_left();
+                        self.insert_or_replace_selection(text_context, "");
+                    } else {
+                        driver.backdelete_word(true);
+                    }
+                } else {
+                    driver.backdelete(true);
+                }
+
+                self.clear_cache();
+                //generate_text_changed_event(&mut self.state.editor);
+            }
+            Key::Named(NamedKey::Enter) => {
+                driver.insert_or_replace_selection("\n", true);
+                self.clear_cache();
+                //generate_text_changed_event(&mut self.state.editor);
+            }
+            Key::Character(character) => {
+                driver.insert_or_replace_selection(character, true);
                 self.clear_cache();
                 //generate_text_changed_event(&mut self.state.editor);
             }
@@ -663,7 +780,7 @@ fn paste(drv: &mut PlainEditorDriver) {
     use clipboard_rs::{Clipboard, ClipboardContext};
     let cb = ClipboardContext::new().unwrap();
     let text = cb.get_text().unwrap_or_default();
-    drv.insert_or_replace_selection(&text);
+    drv.insert_or_replace_selection(&text, true);
 }
 
 #[cfg(not(all(
@@ -681,7 +798,7 @@ fn cut(drv: &mut PlainEditorDriver) {
     if let Some(text) = drv.editor.selected_text() {
         let cb = ClipboardContext::new().unwrap();
         cb.set_text(text.to_owned()).ok();
-        drv.delete_selection();
+        drv.delete_selection(true);
     }
 }
 

@@ -30,7 +30,6 @@ use cfg_if::cfg_if;
 use craft_logging::info;
 pub use craft_primitives::{Color, palette};
 pub use craft_renderer::RendererType;
-use craft_renderer::renderer::Renderer;
 pub use craft_resource_manager::ResourceIdentifier;
 use craft_resource_manager::ResourceManager;
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
@@ -39,19 +38,18 @@ pub use craftcallback::CraftCallback;
 use events::internal::InternalMessage;
 pub use options::CraftOptions;
 pub use utils::craft_error::CraftError;
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
+use winit::event_loop::EventLoopBuilder;
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopBuilderExtAndroid;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, WindowAttributes};
-#[cfg(target_os = "android")]
-use {winit::event_loop::EventLoopBuilder, winit::platform::android::EventLoopBuilderExtAndroid};
 
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
-use crate::style::Unit;
 use crate::utils::cloneable_any::CloneableAny;
+pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
 
@@ -63,76 +61,28 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 
 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
-pub use {craft_runtime, image};
+#[cfg(target_os = "android")]
+use std::cell::RefCell;
 
-#[cfg(not(target_arch = "wasm32"))]
-type RendererBox = Box<dyn Renderer>;
-#[cfg(target_arch = "wasm32")]
-type RendererBox = Box<dyn Renderer>;
+pub use craft_runtime;
+pub use image;
 
 #[cfg(target_os = "android")]
-pub fn internal_craft_main_with_options(
-    root: Rc<RefCell<dyn Element>>,
-    options: Option<CraftOptions>,
-    app: AndroidApp,
-) {
+thread_local! {
+    static ANDROID_APP: RefCell<Option<AndroidApp>> = const { RefCell::new(None) };
+}
+
+fn craft_main_internal(options: Option<CraftOptions>) {
     info!("Craft started");
 
-    let event_loop = EventLoopBuilder::default()
-        .with_android_app(app)
-        .build()
-        .expect("Failed to create winit event loop.");
-    info!("Created winit event loop.");
+    let mut event_loop_builder = EventLoopBuilder::default();
 
-    let craft_state = setup_craft(root, options);
-    let mut winit_craft_state = CraftWinitState::new(craft_state);
-    event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
-}
-
-/// Starts the Craft application with the provided component specification, global state, and configuration options.
-///
-/// This function serves as the main entry point for launching a Craft application. It accepts a component
-/// specification, a boxed global state, and optional configuration options, then delegates to the internal
-/// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
-/// behavior via [`CraftOptions`] without interacting directly with lower-level details.
-///
-/// # Parameters
-///
-/// * `root` - The root element.
-/// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
-#[cfg(not(target_os = "android"))]
-pub fn craft_main(options: CraftOptions) {
-    internal_craft_main_with_options(Some(options));
-}
-
-#[cfg(not(target_os = "android"))]
-pub fn craft_test(options: CraftOptions) {
-    internal_craft_main_with_options(Some(options));
-}
-
-/// Starts the Craft application with the provided component specification, global state, and configuration options.
-///
-/// This function serves as the main entry point for launching a Craft application. It accepts a component
-/// specification, a boxed global state, and optional configuration options, then delegates to the internal
-/// launcher [`internal_craft_main_with_options`]. This abstraction allows users to configure their application
-/// behavior via [`CraftOptions`] without interacting directly with lower-level details.
-///
-/// # Parameters
-///
-/// * `root` - The root element.
-/// * `options` - An optional [`CraftOptions`] configuration. If `None` is provided, default options will be applied.
-/// * `android_app` - The Android application instance.
-#[cfg(target_os = "android")]
-pub fn craft_main(root: Rc<RefCell<dyn Element>>, options: CraftOptions, android_app: AndroidApp) {
-    internal_craft_main_with_options(root, Some(options), android_app);
-}
-
-#[cfg(not(target_os = "android"))]
-fn internal_craft_main_with_options(options: Option<CraftOptions>) {
-    use winit::event_loop::EventLoop;
-
-    info!("Craft started");
-    let event_loop = EventLoop::new().expect("Failed to create winit event loop.");
+    #[cfg(target_os = "android")]
+    {
+        let app = ANDROID_APP.take().expect("craft_set_android_app must be called.");
+        event_loop_builder.with_android_app(app);
+    }
+    let event_loop = event_loop_builder.build().expect("Failed to create winit event loop.");
     info!("Created winit event loop.");
 
     let craft_state = setup_craft(options);
@@ -140,7 +90,26 @@ fn internal_craft_main_with_options(options: Option<CraftOptions>) {
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
-pub fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
+/// Starts the Craft application.
+///
+/// This will block the current thread until all [`Window`](elements::Window) instances have been closed.
+///
+/// # Example
+///
+/// ```no_run
+/// use craft_retained::{craft_main, CraftOptions};
+/// use craft_retained::elements::Window;
+///
+/// fn main() {
+///     Window::new("Craft");
+///     craft_main(CraftOptions::default());
+/// }
+/// ```
+pub fn craft_main(options: CraftOptions) {
+    craft_main_internal(Some(options));
+}
+
+fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
 
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
@@ -219,28 +188,9 @@ async fn async_main(mut app_receiver: Receiver<InternalMessage>, winit_sender: S
     }
 }
 
-pub fn rgb(r: u8, g: u8, b: u8) -> Color {
-    Color::from_rgb8(r, g, b)
-}
-
-pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
-    Color::from_rgba8(r, g, b, a)
-}
-
-pub fn px<U>(val: U) -> Unit
-where
-    U: Into<f64>,
-{
-    Unit::Px(val.into() as f32)
-}
-
-pub fn pct<U>(val: U) -> Unit
-where
-    U: Into<f64>,
-{
-    Unit::Percentage(val.into() as f32)
-}
-
-pub const fn auto() -> Unit {
-    Unit::Auto
+#[cfg(target_os = "android")]
+pub fn craft_set_android_app(app: AndroidApp) {
+    ANDROID_APP.with_borrow_mut(|android_app| {
+        *android_app = Some(app);
+    })
 }

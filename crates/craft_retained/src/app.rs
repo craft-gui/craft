@@ -17,16 +17,13 @@ use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
 use winit::event::{Ime, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
 use crate::CraftOptions;
 use crate::document::DocumentManager;
-use crate::elements::ElementInternals;
-use crate::elements::{ElementIdMap, Window};
+use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
 use crate::layout::TaffyTree;
@@ -143,6 +140,8 @@ impl App {
             window_manager.on_about_to_wait(self, event_loop);
         });
 
+        // TODO: Allow on wasm
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(callback) = self.craft_options.craft_callback.take() {
             let future = callback.call();
             self.runtime.spawn_current_thread(future);
@@ -236,10 +235,6 @@ impl App {
             } else {
                 window.zoom_in();
             }
-            let scale_factor = window.effective_scale_factor();
-            window.inner.borrow_mut().set_scale_factor(scale_factor);
-            window.inner.borrow_mut().mark_dirty();
-            //style_root_element(window.borrow_mut().deref_mut(), window.borrow().window_size());
             self.request_redraw(RedrawFlags::new(true));
             return;
         }

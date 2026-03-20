@@ -32,10 +32,10 @@ pub enum RendererType {
 impl Default for RendererType {
     fn default() -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "vello_renderer")] {
-                RendererType::Vello
-            } else if #[cfg(feature = "vello_hybrid_renderer")]{
+            if #[cfg(feature = "vello_hybrid_renderer")] {
                 RendererType::VelloHybrid
+            } else if #[cfg(feature = "vello_renderer")]{
+                RendererType::Vello
             } else if #[cfg(feature = "vello_cpu_renderer")]{
                 RendererType::VelloCPU
             } else {

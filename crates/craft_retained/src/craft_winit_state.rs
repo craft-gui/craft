@@ -14,8 +14,6 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowId;
 #[cfg(target_arch = "wasm32")]
 use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
-#[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
 use crate::CraftOptions;
 use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER, dequeue_window_event};
@@ -193,7 +191,6 @@ impl ApplicationHandler for CraftWinitState {
                             }
                             #[cfg(target_arch = "wasm32")]
                             InternalMessage::RendererCreated(window, renderer) => {
-                                craft_state.craft_app.on_resume(window, renderer);
                             }
                         }
                     }
@@ -206,11 +203,14 @@ impl ApplicationHandler for CraftWinitState {
                                 craft_state.craft_app.on_resource_event(resource_event);
                             }
                             #[cfg(target_arch = "wasm32")]
-                            InternalMessage::RendererCreated(window, renderer) => {
-                                craft_state.craft_app.on_resume(window, renderer, event_loop);
-                                if let Some(window) = craft_state.craft_app.window.as_ref() {
-                                    window.request_redraw();
-                                }
+                            InternalMessage::RendererCreated(winit_window, renderer) => {
+                                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                                    let window = window_manager.get_window_by_id(winit_window.id());
+                                    window.clone().unwrap().inner.borrow_mut().renderer = Some(renderer);
+                                    let sz = Size::new(winit_window.inner_size().width as f32, winit_window.inner_size().height as f32);
+                                    window.unwrap().on_resize(sz);
+                                    window_manager.redraw_all(&mut craft_state.craft_app);
+                                });
                             }
                         }
                     });

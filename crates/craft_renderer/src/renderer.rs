@@ -8,6 +8,7 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::{ResourceIdentifier, ResourceManager};
 use peniko::kurbo::{BezPath, Shape, Vec2};
 use peniko::{BrushRef, Gradient};
+
 use crate::text_renderer_data::TextData;
 
 #[derive(Clone)]
@@ -22,7 +23,7 @@ pub enum RenderCommand {
     FillBezPath(BezPath, Brush),
     StartOverlay,
     EndOverlay,
-    BoxShadowCmd(BoxShadowCmd)
+    BoxShadowCmd(BoxShadowCmd),
 }
 
 #[derive(Clone)]
@@ -236,13 +237,12 @@ impl RenderList {
         box_shadow: BoxShadowCmd,
         //rectangle: Rectangle,
     ) {
-/*        if let Some(cull) = &self.cull
+        /*        if let Some(cull) = &self.cull
             && !cull.intersects(&rectangle)
         {
             return;
         }*/
-        self.commands
-            .push(RenderCommand::BoxShadowCmd(box_shadow));
+        self.commands.push(RenderCommand::BoxShadowCmd(box_shadow));
     }
 
     pub fn set_cull(&mut self, cull: Option<Rectangle>) {
@@ -277,13 +277,13 @@ pub trait Renderer: Any {
                 | RenderCommand::DrawTinyVg(rect, _, _)
                 | RenderCommand::DrawText(_, rect, _, _) => *rect,
                 RenderCommand::FillBezPath(path, _) => Rectangle::from_kurbo(path.bounding_box()),
-                | RenderCommand::BoxShadowCmd(box_shadow) => {
+                RenderCommand::BoxShadowCmd(box_shadow) => {
                     let bounding_box = box_shadow.path.bounding_box();
                     Rectangle::new(
                         (bounding_box.x0 + box_shadow.offset.x) as f32,
                         (bounding_box.y0 + box_shadow.offset.y) as f32,
                         (bounding_box.x1 + box_shadow.offset.x) as f32,
-                        (bounding_box.y1 + box_shadow.offset.y) as f32
+                        (bounding_box.y1 + box_shadow.offset.y) as f32,
                     )
                 }
                 _ => unreachable!("Cannot compute the bounding rect of this render command."),

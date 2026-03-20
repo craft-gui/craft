@@ -182,10 +182,7 @@ impl CssRoundedRect {
             let outer_radius = self.outer_radii[corner];
             let radius_sign = CORNER_RADIUS_SIGN[corner];
 
-            let outer_radius = Vec2::new(
-                radius_sign.x * outer_radius.x,
-                radius_sign.y * outer_radius.y,
-            );
+            let outer_radius = Vec2::new(radius_sign.x * outer_radius.x, radius_sign.y * outer_radius.y);
 
             if is_outer_radius_sharp(outer_radius) {
                 continue;
@@ -195,8 +192,7 @@ impl CssRoundedRect {
 
             let box_shadow_arc = Arc::new(
                 center,
-                self.outer_radii[corner]
-                    + Vec2::new(radius, radius),
+                self.outer_radii[corner] + Vec2::new(radius, radius),
                 CORNER_START_ANGLES[corner],
                 FRAC_PI_2,
                 0.0,
@@ -219,11 +215,7 @@ impl CssRoundedRect {
             } else {
                 // If there is no arc (sharp corner), move or line to the corner point
                 let sign = CORNER_RADIUS_SIGN[corner];
-                let p = self.corners[corner]
-                    + Vec2::new(
-                    -sign.x * radius,
-                    -sign.y * radius,
-                );
+                let p = self.corners[corner] + Vec2::new(-sign.x * radius, -sign.y * radius);
                 if corner == TOP_LEFT {
                     outline_path.move_to(p);
                 } else {

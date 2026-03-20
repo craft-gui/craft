@@ -15,13 +15,12 @@ use ui_events::pointer::PointerButton;
 use winit::event::Ime;
 
 use crate::app::ELEMENTS;
-use crate::elements::{ElementInternals, resolve_clip_for_scrollable, AsElement};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
-use crate::elements::{Element, scrollable};
 use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
@@ -184,6 +183,9 @@ impl ElementInternals for TextInputInner {
 
             let text_position = self.computed_box().content_rectangle();
             self.state.set_origin(&text_position.position());
+            if self.is_focused() {
+                self.state.maybe_scroll_to_cursor(&mut self.element_data);
+            }
 
             self.state.is_layout_dirty = false;
         }
@@ -354,18 +356,17 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
-                self.state.key_press(text_context, keyboard_event);
+                self.state
+                    .key_press(text_context, keyboard_event, &mut self.element_data);
             }
-            CraftMessage::PointerButtonDown(pointer_button) => {
-                if pointer_button.button == Some(PointerButton::Primary) {
-                    self.focus();
-                    self.state.pointer_down(text_context);
-                }
+            CraftMessage::PointerButtonDown(pointer_button)
+                if pointer_button.button == Some(PointerButton::Primary) =>
+            {
+                self.focus();
+                self.state.pointer_down(text_context);
             }
-            CraftMessage::PointerButtonUp(pointer_button) => {
-                if pointer_button.button == Some(PointerButton::Primary) {
-                    self.state.pointer_up();
-                }
+            CraftMessage::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+                self.state.pointer_up();
             }
             CraftMessage::PointerMovedEvent(pointer_moved) => {
                 self.state.move_pointer(text_context, pointer_moved, scroll_y);

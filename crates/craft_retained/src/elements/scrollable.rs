@@ -4,12 +4,13 @@ use std::rc::Rc;
 use kurbo::{Point, Vec2};
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
+
 use craft_primitives::geometry::{Rectangle, Size};
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_renderer::RenderList;
 use crate::app::{queue_event, request_apply_layout};
-use crate::elements::element_data::ElementData;
 use crate::elements::ElementInternals;
+use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
 use crate::layout::layout::{draw_borders_generic, CssComputedBorder, Layout};
 use crate::style::{Overflow, Style};
@@ -50,7 +51,10 @@ pub struct ScrollOptions {
 
 impl ScrollOptions {
     pub fn new(to: ScrollToBox, offset: Point) -> Self {
-        ScrollOptions { to , offset: Some(offset) }
+        ScrollOptions {
+            to,
+            offset: Some(offset),
+        }
     }
 }
 
@@ -104,7 +108,6 @@ pub(crate) fn scroll_to_top(data: &mut ElementData) {
     scroll_to(data, 0.0);
 }
 
-
 /// Scroll to y. A valid y is in the interval [0, max_scroll_y].
 pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
     if !data.is_scrollable() {
@@ -118,7 +121,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
 }
 
 /// Scroll an amount y from the current scroll position.
-pub (crate) fn scroll_by(data: &mut ElementData, y: f32) {
+pub(crate) fn scroll_by(data: &mut ElementData, y: f32) {
     scroll_to(data, data.scroll().scroll_y() + y);
 }
 
@@ -139,7 +142,9 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
     while let Some(child) = queue.pop_front().clone() {
         let child = child.borrow();
         let element_data = child.element_data();
-        if let Some(child_id) = element_data.id.as_ref() && child_id.as_str() == id {
+        if let Some(child_id) = element_data.id.as_ref()
+            && child_id.as_str() == id
+        {
             let box_model_selected = match options.to {
                 ScrollToBox::BorderBox => element_data.layout.computed_box.border_rectangle(),
                 ScrollToBox::MarginBox => element_data.layout.computed_box.margin_rectangle(),

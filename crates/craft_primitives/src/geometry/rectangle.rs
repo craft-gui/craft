@@ -128,7 +128,12 @@ impl Rectangle {
     }
 
     pub fn expand(&self, radius: f32) -> Self {
-        Rectangle::new(self.x - radius, self.y - radius, self.width + radius, self.height + radius)
+        Rectangle::new(
+            self.x - radius,
+            self.y - radius,
+            self.width + radius,
+            self.height + radius,
+        )
     }
 }
 

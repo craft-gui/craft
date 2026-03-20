@@ -49,7 +49,10 @@ pub trait Element: Clone + AsElement {
         self.as_element_rc().borrow().get_last_child()
     }
 
-    fn remove_child(&self, child: Rc<RefCell<dyn ElementInternals>>) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
+    fn remove_child(
+        &self,
+        child: Rc<RefCell<dyn ElementInternals>>,
+    ) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
         self.as_element_rc().borrow_mut().remove_child(child)
     }
 
@@ -82,9 +85,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn id(self, id: &str) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .set_id(id);
+        self.as_element_rc().borrow_mut().set_id(id);
         self
     }
 
@@ -127,9 +128,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn on_scroll(self, on_scroll: ScrollHandler) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .on_scroll(on_scroll);
+        self.as_element_rc().borrow_mut().on_scroll(on_scroll);
         self
     }
 
@@ -147,37 +146,27 @@ pub trait Element: Clone + AsElement {
         self
     }
     fn scroll_to(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to(y);
+        self.as_element_rc().borrow_mut().scroll_to(y);
         self
     }
 
     fn scroll_to_top(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_top();
+        self.as_element_rc().borrow_mut().scroll_to_top();
         self
     }
 
     fn scroll_to_bottom(self) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_to_bottom();
+        self.as_element_rc().borrow_mut().scroll_to_bottom();
         self
     }
 
     fn scroll_by(self, y: f32) -> Self {
-        self.as_element_rc()
-            .borrow_mut()
-            .scroll_by(y);
+        self.as_element_rc().borrow_mut().scroll_by(y);
         self
     }
 
     fn get_scroll_state(&self) -> ScrollState {
-        self.as_element_rc()
-            .borrow_mut()
-            .get_scroll_state()
+        self.as_element_rc().borrow_mut().get_scroll_state()
     }
 
     fn display(self, display: Display) -> Self {

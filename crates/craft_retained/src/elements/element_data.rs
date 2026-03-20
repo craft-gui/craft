@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+
 use smol_str::SmolStr;
 
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::scrollable::{apply_scroll_layout, ScrollState};
+use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout::Layout;

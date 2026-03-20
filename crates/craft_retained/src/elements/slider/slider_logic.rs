@@ -1,8 +1,8 @@
 use kurbo::Point;
 
-use crate::elements::{ElementData, SliderInner};
-use crate::elements::ElementInternals;
+use crate::elements::{ElementData};
 use crate::elements::slider::slider_element::SliderDirection;
+use crate::elements::{ElementInternals, SliderInner};
 
 impl SliderInner {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {

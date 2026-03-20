@@ -2,6 +2,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 use craft_primitives::geometry::borders::CssRoundedRect;
@@ -10,11 +11,13 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point, Vec2};
 use peniko::Color;
 use ui_events::pointer::PointerId;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
+
 use crate::CraftError;
+use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
-use crate::elements::{AsElement, ElementData, ElementIdMap, ScrollOptions, WindowInternal};
+use crate::elements::{AsElement};
 use crate::elements::scrollable::{draw_scrollbar, ScrollState};
+use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};

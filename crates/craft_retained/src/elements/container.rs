@@ -72,7 +72,7 @@ impl ElementInternals for ContainerInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
-    
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,

@@ -2,9 +2,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use craft_retained::elements::{Dropdown, Element, Image, Slider, Text, TextInput, Window};
 use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent, Overflow, Unit};
-use craft_retained::{pct, px, rgba, Color, CraftOptions, ResourceIdentifier};
+use craft_retained::{craft_main, pct, px, rgba, Color, CraftOptions, ResourceIdentifier};
+use util::setup_logging;
 
 fn main() {
+    setup_logging();
+
     let border_color = rgba(0, 0, 0, 255);
     Window::new("Counter")
         .flex_direction(FlexDirection::Column)
@@ -49,5 +52,5 @@ fn main() {
                 .push(Text::new("Item 10").selectable(true))
         });
 
-    craft_retained::craft_main(CraftOptions::basic("Dropdown example"));
+    craft_main(CraftOptions::basic("Counter"));
 }
