@@ -85,12 +85,12 @@ pub struct App {
     pub(crate) resource_manager: Arc<ResourceManager>,
 
     pub(crate) app_sender: Sender<InternalMessage>,
-    #[allow(dead_code)]
     pub(crate) runtime: CraftRuntimeHandle,
     pub(crate) modifiers: Modifiers,
     pub redraw_flags: RedrawFlags,
 
     pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementInternals>>>,
+    #[allow(dead_code)]
     pub(crate) craft_options: CraftOptions,
 
     /// True if the winit app is active.
