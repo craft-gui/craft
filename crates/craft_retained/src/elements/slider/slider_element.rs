@@ -378,12 +378,9 @@ impl ElementInternals for SliderInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        // @HARDCODED
-        let focused = true;
-
         match message {
             CraftMessage::KeyboardInputEvent(key) => {
-                if key.state != KeyState::Down || !focused {
+                if key.state != KeyState::Down || !self.is_focused() {
                     return;
                 }
 
@@ -405,6 +402,7 @@ impl ElementInternals for SliderInner {
                 }
             }
             CraftMessage::PointerButtonUp(pointer_button_update) => {
+                self.focus();
                 self.dragging = false;
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.release_pointer_capture(PointerId::new(1).unwrap());
