@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
@@ -30,8 +30,6 @@ use crate::text::text_context::TextContext;
 use crate::window_manager::WindowManager;
 
 thread_local! {
-    /// The most recently recorded window id. This is set every time a windows event occurs.
-    pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };

@@ -21,7 +21,7 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowId;
 
 use crate::CraftOptions;
-use crate::app::{App, CURRENT_WINDOW_ID, WINDOW_MANAGER, dequeue_window_event};
+use crate::app::{App, WINDOW_MANAGER, dequeue_window_event};
 use crate::events::internal::InternalMessage;
 #[cfg(target_arch = "wasm32")]
 use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
@@ -65,8 +65,6 @@ impl ApplicationHandler for CraftWinitState {
         let window = if let Some(window) = window { window } else { return };
 
         let craft_state = &mut self.craft_state;
-
-        CURRENT_WINDOW_ID.set(Some(window_id));
 
         /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
