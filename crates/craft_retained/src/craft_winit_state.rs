@@ -1,24 +1,30 @@
+//! Integration with the winit event loop.
+
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
 use craft_logging::info;
+
 use craft_primitives::geometry::Size;
+
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work};
+
 use ui_events::pointer::PointerEvent;
+
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
+
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowId;
-#[cfg(target_arch = "wasm32")]
-use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
 
 use crate::CraftOptions;
-use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER, dequeue_window_event};
-use crate::document::Document;
+use crate::app::{App, WINDOW_MANAGER, dequeue_window_event};
 use crate::events::internal::InternalMessage;
+#[cfg(target_arch = "wasm32")]
+use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
 
@@ -43,12 +49,6 @@ pub(crate) struct CraftWinitState {
     craft_state: CraftState,
 }
 
-impl CraftWinitState {
-    pub(crate) fn new(craft_state: CraftState) -> Self {
-        Self { craft_state }
-    }
-}
-
 impl ApplicationHandler for CraftWinitState {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         self.craft_state.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
@@ -58,10 +58,6 @@ impl ApplicationHandler for CraftWinitState {
         self.craft_state.craft_app.on_resume(event_loop);
     }
 
-    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
-        self.craft_state.craft_app.on_suspended(event_loop);
-    }
-
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
         let window: Option<crate::elements::Window> =
             WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
@@ -69,14 +65,6 @@ impl ApplicationHandler for CraftWinitState {
         let window = if let Some(window) = window { window } else { return };
 
         let craft_state = &mut self.craft_state;
-
-        CURRENT_WINDOW_ID.set(Some(window_id));
-        // Create a new document if there is none for the current window.
-        DOCUMENTS.with_borrow_mut(|docs| {
-            if docs.get_document_by_window_id(window_id).is_none() {
-                docs.add_document(window_id, Document::new());
-            }
-        });
 
         /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
@@ -241,6 +229,16 @@ impl ApplicationHandler for CraftWinitState {
         }
 
         event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+    }
+
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        self.craft_state.craft_app.on_suspended(event_loop);
+    }
+}
+
+impl CraftWinitState {
+    pub(crate) fn new(craft_state: CraftState) -> Self {
+        Self { craft_state }
     }
 }
 

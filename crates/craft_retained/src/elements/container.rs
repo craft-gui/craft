@@ -161,7 +161,10 @@ impl ElementInternals for ContainerInner {
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
+        let me_window = self.element_data.window.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
+        child.borrow_mut().element_data_mut().window = me_window;
+        child.borrow_mut().propagate_window_down();
         self.element_data.children.push(child.clone());
 
         // Add the children's taffy node.
