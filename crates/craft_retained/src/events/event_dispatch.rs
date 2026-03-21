@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use craft_primitives::geometry::Point;
 use craft_renderer::RenderList;
 
-use crate::app::dequeue_event;
+use crate::app::{dequeue_event, FOCUS};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
 use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
@@ -164,13 +164,32 @@ impl EventDispatcher {
             println!("target: {}", node);
         }*/
 
-        // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn ElementInternals>> =
-            find_target(&root, mouse_position, message, render_list, target_scratch);
-        let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(target);
+        let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        self.maybe_dispatch_pointer_leave(text_context, &targets);
-        self.maybe_dispatch_pointer_enter(text_context, &targets);
+        if message.is_pointer_event() {
+            // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
+            let target: Rc<RefCell<dyn ElementInternals>> =
+                find_target(&root, mouse_position, message, render_list, target_scratch);
+            targets = freeze_target_list(target);
+        } else if message.is_keyboard_event() {
+            FOCUS.with(|f| {
+                let focus_ref = f.borrow();
+                if let Some(focus_ref) = focus_ref.clone() && let Some(focus) = focus_ref.upgrade() {
+                    targets.clear();
+                    targets.push_back(focus)
+                }
+            });
+        }
+
+        if targets.is_empty() {
+            targets.push_back(root.clone());
+        }
+
+
+        if message.is_pointer_event() {
+            self.maybe_dispatch_pointer_leave(text_context, &targets);
+            self.maybe_dispatch_pointer_enter(text_context, &targets);
+        }
 
         // Handle capturing
         dispatch_capturing_event(message, &mut targets);
@@ -196,7 +215,9 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        maybe_handle_implicit_pointer_capture_release(message);
+        if message.is_pointer_event() {
+            maybe_handle_implicit_pointer_capture_release(message);
+        }
 
         // Drain the event dispatch queue and invoke user callbacks.
         while let Some((event, message)) = dequeue_event() {

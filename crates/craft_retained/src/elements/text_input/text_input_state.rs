@@ -388,15 +388,15 @@ impl TextInputState {
 
     pub fn maybe_scroll_to_cursor(&mut self, element_data: &mut ElementData) {
         let height = element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle_size()
             .height;
-        let x = self.calculate_scroll_to_cursor(height, element_data.scroll_state.scroll_y());
+        let x = self.calculate_scroll_to_cursor(height, element_data.layout.scroll_state.scroll_y());
         if x < 0.0 {
             return;
         }
-        element_data.scroll_state.set_scroll_y(x);
+        element_data.layout.scroll_state.set_scroll_y(x);
     }
 
     /// Insert at cursor, or replace selection.

@@ -78,6 +78,14 @@ impl CraftMessage {
         )
     }
 
+    pub(super) fn is_keyboard_event(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::KeyboardInputEvent(_)
+                | CraftMessage::ImeEvent(_)
+        )
+    }
+
     pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
         matches!(
             self,

@@ -157,6 +157,17 @@ impl Dropdown {
 
         Self { inner }
     }
+
+    pub fn selected_item(self, index: usize) -> Self {
+        let binding = self.inner.clone();
+        let mut inner = binding.borrow_mut();
+        inner.set_selected_element(index);
+        self
+    }
+
+    pub fn get_selected_item(self) -> usize {
+        self.inner.borrow().selected_element_index.unwrap()
+    }
 }
 
 impl Element for Dropdown {}
@@ -277,7 +288,7 @@ impl ElementInternals for DropdownInner {
         let rect = element_data.layout.computed_box_transformed.border_rectangle();
         let floating_window_rect = self.floating_window.layout.computed_box_transformed.border_rectangle();
 
-        if floating_window_rect.contains(&point) {
+        if !self.is_floating_window_hidden && floating_window_rect.contains(&point) {
             return true;
         }
 
@@ -314,7 +325,7 @@ impl ElementInternals for DropdownInner {
         }
 
         if !self.is_floating_window_hidden {
-            //renderer.start_overlay();
+            renderer.start_overlay();
 
             let current_style = self.floating_window.style.as_ref();
             self.floating_window.layout.draw_borders(renderer, current_style, scale_factor);
@@ -340,7 +351,7 @@ impl ElementInternals for DropdownInner {
             renderer.pop_layer();
 
             draw_scrollbar(&self.floating_window.style, &self.floating_window.layout, renderer, scale_factor);
-           //renderer.end_overlay();
+           renderer.end_overlay();
         }
     }
 
@@ -351,37 +362,98 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        if self.is_floating_window_hidden {
-            self.release_pointer_capture(PointerId::new(1).unwrap());
+        let pb = match message {
+            CraftMessage::PointerButtonUp(pb) => pb,
+            _ => return
+        };
+        let is_pointer_up = true;
+
+
+        // TODO Should pb.state.position be in logical coordinates?
+        let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
+        let is_pointer_in_select_box = self.element_data.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+        let is_pointer_in_window = self.floating_window.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+        let is_pointer_in_scrollbar = self.floating_window.layout.computed_scroll_track.contains(&pointer_position);
+
+        // Toggle the visibility of the floating window by the clicking of the dropdown select box.
+        if is_pointer_in_select_box && is_pointer_up {
+            self.is_floating_window_hidden = !self.is_floating_window_hidden;
+
+            if self.is_floating_window_hidden {
+                self.unfocus();
+                self.release_pointer_capture(PointerId::new(1).unwrap());
+            } else {
+                self.focus();
+            }
+
+            println!("HERE 1");
+            return;
         }
 
-        let pb = match message {
-            CraftMessage::PointerButtonUp(pb) => Some(pb),
-            _ => None
-        };
 
-        if let Some(pb) = pb {
-            // TODO Should pb.state.position be in logical coordinates?
-            let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
-
-            if self.element_data.layout.computed_box_transformed.border_rectangle().contains(&pointer_position) {
-                self.is_floating_window_hidden = !self.is_floating_window_hidden;
-            }
-
-            if !self.floating_window.layout.computed_box_transformed.border_rectangle().contains(&pointer_position) || self.is_floating_window_hidden {
-                return;
-            }
-
+        if is_pointer_in_window && !is_pointer_in_scrollbar && is_pointer_up {
             for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
                 let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
 
                 if contains {
-                    self.is_floating_window_hidden = !self.is_floating_window_hidden.clone();
+                    self.is_floating_window_hidden = true;
                     self.set_selected_element(child_index);
-                    break;
+                    self.unfocus();
+                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                    println!("HERE 2");
+                    return;
                 }
             }
         }
+
+        if !is_pointer_in_window && is_pointer_up && self.is_focused() {
+            self.unfocus();
+            self.release_pointer_capture(PointerId::new(1).unwrap());
+            println!("HERE 3");
+            return;
+        } else if !is_pointer_in_window && is_pointer_up {
+            self.is_floating_window_hidden = true;
+            self.unfocus();
+            self.release_pointer_capture(PointerId::new(1).unwrap());
+            println!("HERE 4");
+            return;
+        }
+
+        return;
+
+        // ---
+        if is_pointer_in_select_box {
+            if self.is_floating_window_hidden {
+                self.focus();
+                self.set_pointer_capture(PointerId::new(1).unwrap());
+            } else {
+                self.unfocus();
+                self.release_pointer_capture(PointerId::new(1).unwrap());
+            }
+
+            self.is_floating_window_hidden = !self.is_floating_window_hidden;
+        } else {
+
+            if !self.is_floating_window_hidden && self.is_focused() {
+                self.is_floating_window_hidden = true;
+                return;
+            }
+
+        }
+
+        if is_pointer_in_window && !self.has_pointer_capture(PointerId::new(1).unwrap()) {
+            for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
+                let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+
+                if contains {
+                    self.is_floating_window_hidden = true;
+                    self.set_selected_element(child_index);
+                    self.unfocus();
+                    return;
+                }
+            }
+        }
+        // ---
 
         let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&*floating_window.style, &mut floating_window.layout, message, event);
@@ -397,6 +469,9 @@ impl ElementInternals for DropdownInner {
         }
         // ---
 
+
+        println!("Pointer Capture? {}", self.has_pointer_capture(PointerId::new(1).unwrap()));
+        println!("Focused? {}", self.is_focused())
 
     }
 

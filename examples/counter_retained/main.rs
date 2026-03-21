@@ -50,7 +50,12 @@ fn main() {
                 .push(Text::new("Item 8").selectable(true))
                 .push(Text::new("Item 9").selectable(true))
                 .push(Text::new("Item 10").selectable(true))
-        });
+                .selected_item(6)
+        })
+        .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
+        .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
+        .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
+    ;
 
     craft_main(CraftOptions::basic("Counter"));
 }

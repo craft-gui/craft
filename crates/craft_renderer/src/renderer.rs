@@ -105,8 +105,26 @@ impl SortedCommands {
     }
 }
 
+#[derive(Debug)]
+pub struct TargetItem {
+    pub custom_id: u64,
+    pub rectangle: Rectangle,
+    pub overlay_depth: u64
+}
+
+impl TargetItem {
+    pub fn new(custom_id: u64, rectangle: Rectangle, overlay_depth: u64) -> Self {
+        Self {
+            custom_id,
+            rectangle,
+            overlay_depth
+        }
+    }
+}
+
 pub struct RenderList {
-    pub targets: Vec<(u64, Rectangle)>,
+    current_overlay_depth: u64,
+    pub targets: Vec<TargetItem>,
     pub commands: Vec<RenderCommand>,
     /// Stores a sorted list of render command handles. This gets set in `Renderer::sort_render_list`.
     pub overlay: SortedCommands,
@@ -122,6 +140,7 @@ impl Default for RenderList {
 impl RenderList {
     pub fn new() -> Self {
         Self {
+            current_overlay_depth: 0,
             targets: Vec::new(),
             commands: Vec::new(),
             overlay: SortedCommands { children: vec![] },
@@ -152,7 +171,7 @@ impl RenderList {
         {
             return;
         }
-        self.targets.push((id, bounding_box));
+        self.targets.push(TargetItem::new(id, bounding_box, self.current_overlay_depth));
     }
 
     #[inline(always)]
@@ -225,10 +244,13 @@ impl RenderList {
 
     pub fn start_overlay(&mut self) {
         self.commands.push(RenderCommand::StartOverlay);
+        self.current_overlay_depth += 1;
     }
 
     pub fn end_overlay(&mut self) {
         self.commands.push(RenderCommand::EndOverlay);
+        self.current_overlay_depth -= 1;
+        assert!(self.current_overlay_depth >= 0)
     }
 
     #[inline(always)]

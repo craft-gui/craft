@@ -39,11 +39,12 @@ pub(super) fn find_target(
         return target;
     }
 
+    render_list.targets.sort_by_key(|r| r.overlay_depth);
     ELEMENTS.with_borrow_mut(|elements| {
-        target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
+        target_scratch.extend(render_list.targets.iter().rev().filter_map(|target_item| {
             // When an element is removed from the dom, we do not remove it from targets.
             // So we must handle it here.
-            elements.get(*id).and_then(|target| target.upgrade())
+            elements.get(target_item.custom_id).and_then(|target| target.upgrade())
         }));
     });
 
@@ -57,6 +58,7 @@ pub(super) fn find_target(
         // The first element to pass the hit test should be the target.
         if should_pass_hit_test && target.is_none() {
             target = Some(Rc::clone(&node));
+            break;
         }
     }
 
