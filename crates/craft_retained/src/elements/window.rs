@@ -7,27 +7,29 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::TreeUpdate;
+use {accesskit::{Action, Role, TreeUpdate}, accesskit_winit::Adapter};
+
 use craft_logging::info;
+
 use craft_primitives::geometry::{Rectangle, Size};
+
 use craft_renderer::renderer::{Renderer, Screenshot};
 use craft_renderer::{RenderList, RendererType};
+
 use craft_resource_manager::ResourceManager;
+
 use kurbo::{Affine, Point};
+
 use peniko::Color;
+
 use taffy::{AvailableSpace, NodeId};
+
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use {accesskit::{Action, Role}, accesskit_winit::Adapter};
+
 #[cfg(target_arch = "wasm32")]
 use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
-
-#[cfg(not(target_arch = "wasm32"))]
-type RendererBox = Box<dyn Renderer>;
-#[cfg(target_arch = "wasm32")]
-type RendererBox = Box<dyn Renderer>;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
@@ -38,31 +40,31 @@ use crate::elements::element_data::ElementData;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
+use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
 
+pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
+
+#[cfg(not(target_arch = "wasm32"))]
+type RendererBox = Box<dyn Renderer>;
+#[cfg(target_arch = "wasm32")]
+type RendererBox = Box<dyn Renderer>;
+
 #[derive(Clone)]
 pub struct Window {
     pub inner: Rc<RefCell<WindowInternal>>,
 }
 
-pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
-
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 pub struct WindowInternal {
-    element_data: ElementData,
     /// The physical window size from winit.
     pub(crate) window_size: Size<f32>,
-    /// The window's scale factor from winit.
-    scale_factor: f64,
-    /// Zoom scale factor.
-    zoom_scale_factor: f64,
-    mouse_positon: Option<Point>,
     pub(crate) renderer: Option<RendererBox>,
     pub(crate) render_list: Rc<RefCell<RenderList>>,
 
@@ -72,21 +74,209 @@ pub struct WindowInternal {
     // Will be empty when paused.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     pub(crate) accesskit_adapter: Option<Adapter>,
+    pub(crate) pointer_capture: Rc<RefCell<PointerCapture>>,
 
     advanced_window_fn: Option<WindowConstructor>,
-
     title: Option<String>,
-
     /// The type of renderer to use.
     ///
     /// The renderer is chosen based on the features enabled at compile time.
     /// See [`RendererType`] for details.
     renderer_type: RendererType,
+    /// The window's scale factor from winit.
+    scale_factor: f64,
+    /// Zoom scale factor.
+    zoom_scale_factor: f64,
+    mouse_positon: Option<Point>,
+    element_data: ElementData,
 }
 
 impl Default for Window {
     fn default() -> Self {
         Self::new("Craft")
+    }
+}
+
+impl Element for Window {}
+
+impl AsElement for Window {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.inner.clone()
+    }
+}
+
+impl crate::elements::ElementData for WindowInternal {
+    fn element_data(&self) -> &ElementData {
+        &self.element_data
+    }
+
+    fn element_data_mut(&mut self) -> &mut ElementData {
+        &mut self.element_data
+    }
+}
+
+impl ElementInternals for WindowInternal {
+    fn pointer_capture(&self) -> Rc<RefCell<PointerCapture>> {
+        self.pointer_capture.clone()
+    }
+
+    fn apply_layout(
+        &mut self,
+        taffy_tree: &mut TaffyTree,
+        position: Point,
+        z_index: &mut u32,
+        transform: Affine,
+        pointer: Option<Point>,
+        text_context: &mut TextContext,
+        clip_bounds: Option<Rectangle>,
+        scale_factor: f64,
+    ) {
+        let node = self.element_data.layout_item.taffy_node_id.unwrap();
+        let layout = taffy_tree.layout(node);
+        let has_new_layout = taffy_tree.get_has_new_layout(node);
+
+        let dirty = has_new_layout
+            || transform != self.element_data.layout_item.get_transform()
+            || position != self.element_data.layout_item.position;
+        self.element_data.layout_item.has_new_layout = has_new_layout;
+
+        if dirty {
+            self.resolve_box(position, transform, layout, z_index);
+            self.apply_borders(scale_factor);
+            // For scroll changes from taffy;
+            self.element_data.apply_scroll(layout);
+            self.apply_clip(clip_bounds);
+            self.element_data.scroll_state.mark_old();
+        }
+
+        // For manual scroll updates.
+        if !dirty && self.element_data.scroll_state.is_new() {
+            self.element_data.apply_scroll(layout);
+            self.element_data.scroll_state.mark_old();
+        }
+
+        if has_new_layout {
+            taffy_tree.mark_seen(node);
+        }
+
+        let scroll_y = self.element_data.scroll().scroll_y() as f64;
+        let child_transform = Affine::translate((0.0, -scroll_y));
+
+        self.apply_layout_children(
+            taffy_tree,
+            z_index,
+            transform * child_transform,
+            pointer,
+            text_context,
+            scale_factor,
+            false,
+        )
+    }
+
+    fn draw(
+        &mut self,
+        renderer: &mut RenderList,
+        text_context: &mut TextContext,
+        pointer: Option<Point>,
+        scale_factor: f64,
+    ) {
+        if !self.is_visible() {
+            return;
+        }
+        self.add_hit_testable(renderer, true, scale_factor);
+
+        // We draw the borders before we start any layers, so that we don't clip the borders.
+        self.draw_borders(renderer, scale_factor);
+
+        /*if self.element_data.layout_item.has_new_layout {
+            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
+        }*/
+
+        self.maybe_start_layer(renderer, scale_factor);
+        self.draw_children(renderer, text_context, pointer, scale_factor);
+        self.maybe_end_layer(renderer);
+
+        self.draw_scrollbar(renderer, scale_factor);
+    }
+
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
+        let current_node_id = accesskit::NodeId(self.element_data.internal_id);
+
+        let mut current_node = accesskit::Node::new(Role::Window);
+        if !self.element_data.on_pointer_button_up.is_empty() {
+            current_node.set_role(Role::Button);
+            current_node.add_action(Action::Click);
+        }
+
+        let padding_box = self
+            .element_data
+            .layout_item
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
+
+        current_node.set_bounds(accesskit::Rect {
+            x0: padding_box.left() as f64,
+            y0: padding_box.top() as f64,
+            x1: padding_box.right() as f64,
+            y1: padding_box.bottom() as f64,
+        });
+
+        let current_index = tree.nodes.len(); // The current node is the last one added.
+
+        if let Some(parent_index) = parent_index {
+            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+            parent_node.1.push_child(current_node_id);
+        }
+
+        tree.nodes.push((current_node_id, current_node));
+
+        for child in self.element_data.children.iter_mut() {
+            child
+                .borrow_mut()
+                .compute_accessibility_tree(tree, Some(current_index), scale_factor);
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        message: &CraftMessage,
+        _text_context: &mut TextContext,
+        event: &mut Event,
+        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
+    ) {
+        scrollable::on_scroll_events(self, message, event);
+    }
+
+    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
+        resolve_clip_for_scrollable(self, clip_bounds);
+    }
+
+    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
+        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
+        let me_window = self.element_data.window.clone();
+        child.borrow_mut().element_data_mut().parent = Some(me);
+        child.borrow_mut().element_data_mut().window = me_window;
+        child.borrow_mut().propagate_window_down();
+        self.element_data.children.push(child.clone());
+
+        // Add the children's taffy node.
+        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            if let Some(child_id) = child_id {
+                taffy_tree.add_child(parent_id, child_id);
+            }
+        });
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -146,16 +336,28 @@ impl Window {
         self.inner.borrow().window_size()
     }
 
+    pub fn zoom_scale_factor(&self) -> f64 {
+        self.inner.borrow().zoom_scale_factor()
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    pub fn on_request_redraw(&self, craft_app: &mut App) -> Option<TreeUpdate> {
+        self.inner.borrow_mut().on_request_redraw(craft_app)
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
+    pub fn on_request_redraw(&self, craft_app: &mut App) {
+        self.inner.borrow_mut().on_request_redraw(craft_app)
+    }
+
     pub(crate) fn zoom_in(&self) {
         self.inner.borrow_mut().zoom_in()
     }
 
     pub(crate) fn zoom_out(&self) {
         self.inner.borrow_mut().zoom_out()
-    }
-
-    pub fn zoom_scale_factor(&self) -> f64 {
-        self.inner.borrow().zoom_scale_factor()
     }
 
     pub(crate) fn mouse_position(&self) -> Option<Point> {
@@ -174,21 +376,9 @@ impl Window {
         self.inner.borrow_mut().on_redraw(text_context, resource_manager)
     }
 
-    /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub fn on_request_redraw(&self, craft_app: &mut App) -> Option<TreeUpdate> {
-        self.inner.borrow_mut().on_request_redraw(craft_app)
-    }
-
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     pub(crate) fn compute_accessibility_tree_window(&self) -> TreeUpdate {
         self.inner.borrow_mut().compute_accessibility_tree_window()
-    }
-
-    /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
-    pub fn on_request_redraw(&self, craft_app: &mut App) {
-        self.inner.borrow_mut().on_request_redraw(craft_app)
     }
 
     pub(crate) fn create(&self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
@@ -220,10 +410,14 @@ impl WindowInternal {
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
                 title: title.map(|title| title.to_string()),
                 renderer_type,
+                pointer_capture: Default::default(),
             })
         });
 
         inner.borrow_mut().element_data.create_layout_node(None);
+
+        let me = Rc::downgrade(&inner);
+        inner.borrow_mut().element_data.window = Some(me);
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.add_window(Window {
@@ -261,6 +455,39 @@ impl WindowInternal {
         )
     }
 
+    pub fn update_zoom(&mut self) {
+        let scale_factor = self.effective_scale_factor();
+        self.set_scale_factor(scale_factor);
+        self.mark_dirty();
+        self.request_redraw();
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    pub fn on_request_redraw(&mut self, craft_app: &mut App) -> Option<TreeUpdate> {
+        self.on_redraw(
+            craft_app.text_context.as_mut().unwrap(),
+            craft_app.resource_manager.clone(),
+        );
+
+        let tree_update = self.compute_accessibility_tree_window();
+        if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
+            accesskit_adapter.update_if_active(|| tree_update);
+            None
+        } else {
+            Some(tree_update)
+        }
+    }
+
+    /// Updates the reactive tree, layouts the elements, and draws the view.
+    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
+    pub fn on_request_redraw(&mut self, craft_app: &mut App) {
+        self.on_redraw(
+            craft_app.text_context.as_mut().unwrap(),
+            craft_app.resource_manager.clone(),
+        );
+    }
+
     pub(crate) fn zoom_in(&mut self) {
         self.zoom_scale_factor += 0.01;
         self.update_zoom();
@@ -269,13 +496,6 @@ impl WindowInternal {
     pub(crate) fn zoom_out(&mut self) {
         self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
         self.update_zoom();
-    }
-
-    pub fn update_zoom(&mut self) {
-        let scale_factor = self.effective_scale_factor();
-        self.set_scale_factor(scale_factor);
-        self.mark_dirty();
-        self.request_redraw();
     }
 
     pub(crate) fn zoom_scale_factor(&self) -> f64 {
@@ -326,6 +546,106 @@ impl WindowInternal {
         self.scale_factor = scale_factor;
         self.set_scale_factor(self.effective_scale_factor());
         self.on_resize(self.window_size);
+    }
+
+    pub(crate) fn create(&mut self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
+        let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
+            (*window_fn)(event_loop)
+        } else {
+            let window_attributes = WindowAttributes::default()
+                .with_title(self.title.as_ref().unwrap())
+                .with_visible(false);
+            #[cfg(target_arch = "wasm32")]
+            let window_attributes = {
+                let canvas = web_sys::window()
+                    .unwrap()
+                    .document()
+                    .unwrap()
+                    .get_element_by_id("canvas")
+                    .unwrap()
+                    .dyn_into::<web_sys::HtmlCanvasElement>()
+                    .unwrap();
+
+                window_attributes.with_canvas(Some(canvas))
+            };
+
+            event_loop
+                .create_window(window_attributes)
+                .expect("Failed to create window")
+        });
+        self.set_winit_window(Some(winit_window.clone()));
+        self.on_scale_factor_changed(winit_window.scale_factor());
+
+        let renderer_type = self.renderer_type;
+
+        cfg_if::cfg_if! {
+            if #[cfg(not(target_arch = "wasm32"))] {
+                    let renderer = craft_app.runtime.borrow_tokio_runtime().block_on(async {
+                        let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
+                    renderer
+                });
+                self.renderer = Some(renderer);
+                info!("Created renderer")
+            } else {
+                let window_copy_2 = winit_window.clone();
+                craft_app.runtime.spawn(async move {
+                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
+                    WASM_QUEUE.with_borrow_mut(|wasm_queue| {
+                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2.clone(), renderer));
+                    });
+                    info!("Created renderer")
+                });
+            }
+        }
+
+        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+        {
+            let action_handler = CraftAccessHandler {};
+            let deactivation_handler = CraftDeactivationHandler::new();
+
+            let tree_update = self.on_request_redraw(craft_app);
+
+            let craft_activation_handler = CraftActivationHandler::new(tree_update);
+            self.accesskit_adapter = Some(Adapter::with_direct_handlers(
+                event_loop,
+                &winit_window,
+                craft_activation_handler,
+                action_handler,
+                deactivation_handler,
+            ));
+        }
+
+        winit_window.set_visible(true);
+    }
+
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+    pub(crate) fn compute_accessibility_tree_window(&mut self) -> TreeUpdate {
+        let window_accesskit_id = self.element_data.internal_id;
+        let tree = accesskit::Tree {
+            root: accesskit::NodeId(window_accesskit_id),
+            toolkit_name: Some("Craft".to_string()),
+            toolkit_version: None,
+        };
+
+        let focus_id = FOCUS.with_borrow_mut(|focus| {
+            if let Some(focus) = focus
+                && let Some(focus) = focus.upgrade()
+            {
+                return focus.borrow().element_data().internal_id;
+            }
+            window_accesskit_id
+        });
+
+        let mut tree_update = TreeUpdate {
+            nodes: vec![],
+            tree: Some(tree),
+            focus: accesskit::NodeId(focus_id),
+        };
+
+        let scale_factor = self.winit_window.as_mut().unwrap().scale_factor();
+        self.compute_accessibility_tree(&mut tree_update, None, scale_factor);
+
+        tree_update
     }
 
     fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
@@ -407,132 +727,6 @@ impl WindowInternal {
         self.renderer.as_mut().unwrap().submit(resource_manager.clone());
     }
 
-    pub(crate) fn create(&mut self, craft_app: &mut App, event_loop: &ActiveEventLoop) {
-        let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
-            (*window_fn)(event_loop)
-        } else {
-            let window_attributes = WindowAttributes::default()
-                .with_title(self.title.as_ref().unwrap())
-                .with_visible(false);
-            #[cfg(target_arch = "wasm32")]
-            let window_attributes = {
-                let canvas = web_sys::window()
-                    .unwrap()
-                    .document()
-                    .unwrap()
-                    .get_element_by_id("canvas")
-                    .unwrap()
-                    .dyn_into::<web_sys::HtmlCanvasElement>()
-                    .unwrap();
-
-                window_attributes.with_canvas(Some(canvas))
-            };
-
-            event_loop
-                .create_window(window_attributes)
-                .expect("Failed to create window")
-        });
-        self.set_winit_window(Some(winit_window.clone()));
-        self.on_scale_factor_changed(winit_window.scale_factor());
-
-        let renderer_type = self.renderer_type;
-
-        cfg_if::cfg_if! {
-            if #[cfg(not(target_arch = "wasm32"))] {
-                    let renderer = craft_app.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
-                    renderer
-                });
-                self.renderer = Some(renderer);
-                info!("Created renderer")
-            } else {
-                let window_copy_2 = winit_window.clone();
-                craft_app.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
-                    WASM_QUEUE.with_borrow_mut(|wasm_queue| {
-                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2.clone(), renderer));
-                    });
-                    info!("Created renderer")
-                });
-            }
-        }
-
-        #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-        {
-            let action_handler = CraftAccessHandler {};
-            let deactivation_handler = CraftDeactivationHandler::new();
-
-            let tree_update = self.on_request_redraw(craft_app);
-
-            let craft_activation_handler = CraftActivationHandler::new(tree_update);
-            self.accesskit_adapter = Some(Adapter::with_direct_handlers(
-                event_loop,
-                &winit_window,
-                craft_activation_handler,
-                action_handler,
-                deactivation_handler,
-            ));
-        }
-
-        winit_window.set_visible(true);
-    }
-
-    /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub fn on_request_redraw(&mut self, craft_app: &mut App) -> Option<TreeUpdate> {
-        self.on_redraw(
-            craft_app.text_context.as_mut().unwrap(),
-            craft_app.resource_manager.clone(),
-        );
-
-        let tree_update = self.compute_accessibility_tree_window();
-        if let Some(accesskit_adapter) = &mut self.accesskit_adapter {
-            accesskit_adapter.update_if_active(|| tree_update);
-            None
-        } else {
-            Some(tree_update)
-        }
-    }
-
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub(crate) fn compute_accessibility_tree_window(&mut self) -> TreeUpdate {
-        let window_accesskit_id = self.element_data.internal_id;
-        let tree = accesskit::Tree {
-            root: accesskit::NodeId(window_accesskit_id),
-            toolkit_name: Some("Craft".to_string()),
-            toolkit_version: None,
-        };
-
-        let focus_id = FOCUS.with_borrow_mut(|focus| {
-            if let Some(focus) = focus
-                && let Some(focus) = focus.upgrade()
-            {
-                return focus.borrow().element_data().internal_id;
-            }
-            window_accesskit_id
-        });
-
-        let mut tree_update = TreeUpdate {
-            nodes: vec![],
-            tree: Some(tree),
-            focus: accesskit::NodeId(focus_id),
-        };
-
-        let scale_factor = self.winit_window.as_mut().unwrap().scale_factor();
-        self.compute_accessibility_tree(&mut tree_update, None, scale_factor);
-
-        tree_update
-    }
-
-    /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
-    pub fn on_request_redraw(&mut self, craft_app: &mut App) {
-        self.on_redraw(
-            craft_app.text_context.as_mut().unwrap(),
-            craft_app.resource_manager.clone(),
-        );
-    }
-
     fn screenshot(&self) -> Screenshot {
         self.renderer.as_ref().unwrap().screenshot()
     }
@@ -541,186 +735,5 @@ impl WindowInternal {
         if let Some(winit_window) = &self.winit_window {
             queue_window_event(winit_window.id(), WindowEvent::CloseRequested);
         }
-    }
-}
-
-impl Element for Window {}
-
-impl AsElement for Window {
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-}
-
-impl crate::elements::ElementData for WindowInternal {
-    fn element_data(&self) -> &ElementData {
-        &self.element_data
-    }
-
-    fn element_data_mut(&mut self) -> &mut ElementData {
-        &mut self.element_data
-    }
-}
-
-impl ElementInternals for WindowInternal {
-    fn apply_layout(
-        &mut self,
-        taffy_tree: &mut TaffyTree,
-        position: Point,
-        z_index: &mut u32,
-        transform: Affine,
-        pointer: Option<Point>,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
-        scale_factor: f64,
-    ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
-
-        let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
-
-        if dirty {
-            self.resolve_box(position, transform, layout, z_index);
-            self.apply_borders(scale_factor);
-            // For scroll changes from taffy;
-            self.element_data.apply_scroll(layout);
-            self.apply_clip(clip_bounds);
-            self.element_data.scroll_state.mark_old();
-        }
-
-        // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new() {
-            self.element_data.apply_scroll(layout);
-            self.element_data.scroll_state.mark_old();
-        }
-
-        if has_new_layout {
-            taffy_tree.mark_seen(node);
-        }
-
-        let scroll_y = self.element_data.scroll().scroll_y() as f64;
-        let child_transform = Affine::translate((0.0, -scroll_y));
-
-        self.apply_layout_children(
-            taffy_tree,
-            z_index,
-            transform * child_transform,
-            pointer,
-            text_context,
-            scale_factor,
-            false,
-        )
-    }
-
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
-        if !self.is_visible() {
-            return;
-        }
-        self.add_hit_testable(renderer, true, scale_factor);
-
-        // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, scale_factor);
-
-        /*if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
-        }*/
-
-        self.maybe_start_layer(renderer, scale_factor);
-        self.draw_children(renderer, text_context, pointer, scale_factor);
-        self.maybe_end_layer(renderer);
-
-        self.draw_scrollbar(renderer, scale_factor);
-    }
-
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        scale_factor: f64,
-    ) {
-        let current_node_id = accesskit::NodeId(self.element_data.internal_id);
-
-        let mut current_node = accesskit::Node::new(Role::Window);
-        if !self.element_data.on_pointer_button_up.is_empty() {
-            current_node.set_role(Role::Button);
-            current_node.add_action(Action::Click);
-        }
-
-        let padding_box = self
-            .element_data
-            .layout_item
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        let current_index = tree.nodes.len(); // The current node is the last one added.
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
-
-        for child in self.element_data.children.iter_mut() {
-            child
-                .borrow_mut()
-                .compute_accessibility_tree(tree, Some(current_index), scale_factor);
-        }
-    }
-
-    fn on_event(
-        &mut self,
-        message: &CraftMessage,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
-    ) {
-        scrollable::on_scroll_events(self, message, event);
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
-    }
-
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child.clone());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
-            if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id);
-            }
-        });
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }

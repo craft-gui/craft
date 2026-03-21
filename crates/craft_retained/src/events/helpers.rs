@@ -7,7 +7,7 @@ use kurbo::Point;
 
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
-use crate::events::pointer_capture::find_pointer_capture_target;
+use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
 
@@ -33,8 +33,9 @@ pub(super) fn find_target(
     message: &CraftMessage,
     render_list: &mut RenderList,
     target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
+    pointer_capture: &PointerCapture,
 ) -> Rc<RefCell<dyn ElementInternals>> {
-    let mut target = find_pointer_capture_target(message);
+    let mut target = pointer_capture.find_pointer_capture_target(message);
     if let Some(target) = target {
         return target;
     }

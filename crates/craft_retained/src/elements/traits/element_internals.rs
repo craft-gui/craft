@@ -5,18 +5,23 @@ use std::sync::Arc;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
-use craft_primitives::geometry::borders::CssRoundedRect;
-use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
-use craft_renderer::RenderList;
+
 use kurbo::{Affine, Point, Vec2};
-use peniko::Color;
+
 use ui_events::pointer::PointerId;
 
+use craft_primitives::geometry::borders::CssRoundedRect;
+use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
+
+use craft_renderer::RenderList;
+
+use crate::Color;
+
 use crate::CraftError;
-use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::document::Document;
+use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::ScrollState;
 use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
+use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
@@ -513,8 +518,9 @@ pub trait ElementInternals: ElementData + Any {
         children.remove(position);
 
         // Remove the parent reference.
-
         child.borrow_mut().element_data_mut().parent = None;
+        child.borrow_mut().element_data_mut().window = None;
+        child.borrow_mut().propagate_window_down();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let child_id = child.borrow().element_data().layout_item.taffy_node_id;
@@ -530,25 +536,18 @@ pub trait ElementInternals: ElementData + Any {
         // TODO: Move to document
         fn remove_element_from_document(
             node: Rc<RefCell<dyn ElementInternals>>,
-            document: &mut Document,
+            pointer_capture: &mut PointerCapture,
             elements: &mut ElementIdMap,
         ) {
             elements.remove_id(node.borrow().element_data().internal_id);
-            document
-                .pointer_captures
-                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me));
-            document
-                .pending_pointer_captures
-                .retain(|_, v| !Weak::ptr_eq(v, &node.borrow().element_data().me));
+            pointer_capture.remove_element(&node);
             for child in node.borrow().children() {
-                remove_element_from_document(child.clone(), document, elements);
+                remove_element_from_document(child.clone(), pointer_capture, elements);
             }
         }
 
-        DOCUMENTS.with_borrow_mut(|documents| {
-            ELEMENTS.with_borrow_mut(|elements| {
-                remove_element_from_document(child.clone(), documents.get_current_document(), elements);
-            });
+        ELEMENTS.with_borrow_mut(|elements| {
+            remove_element_from_document(child.clone(), &mut self.pointer_capture().borrow_mut(), elements);
         });
 
         child.borrow_mut().unfocus();
@@ -679,58 +678,68 @@ pub trait ElementInternals: ElementData + Any {
         }
     }
 
+    fn pointer_capture(&self) -> Rc<RefCell<PointerCapture>> {
+        let element_data = self.element_data();
+        let window = element_data.window.clone().unwrap().upgrade().unwrap();
+        window.borrow().pointer_capture.clone()
+    }
+
+    fn propagate_window_down(&mut self) {
+        let window = self.element_data().window.clone();
+        for child in &self.element_data().children {
+            let mut child_borrow = child.borrow_mut();
+            child_borrow.element_data_mut().window = window.clone();
+            child_borrow.propagate_window_down();
+        }
+    }
+
     fn set_pointer_capture(&self, pointer_id: PointerId) {
         // 9.2 Setting pointer capture
         // https://w3c.github.io/pointerevents/#setting-pointer-capture
 
-        DOCUMENTS.with_borrow_mut(|docs| {
-            let current_doc = docs.get_current_document();
-
-            // 1. If the pointerId provided as the method's argument does not match any of the active pointers, then throw a "NotFoundError" DOMException.
-            // TODO (POINTER CAPTURE)
-            // 2. Let the pointer be the active pointer specified by the given pointerId.
-            // 3. If the element is not connected [DOM], throw an "InvalidStateError" DOMException.
-            // TODO (POINTER CAPTURE)
-            // 4. If this method is invoked while the element's node document [DOM] has a locked element ([PointerLock] pointerLockElement), throw an "InvalidStateError" DOMException.
-            // TODO (POINTER CAPTURE)
-            // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
-            // TODO (POINTER CAPTURE)
-            // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-            current_doc
-                .pending_pointer_captures
-                .insert(pointer_id, self.element_data().me.clone());
-        });
+        // 1. If the pointerId provided as the method's argument does not match any of the active pointers, then throw a "NotFoundError" DOMException.
+        // TODO (POINTER CAPTURE)
+        // 2. Let the pointer be the active pointer specified by the given pointerId.
+        // 3. If the element is not connected [DOM], throw an "InvalidStateError" DOMException.
+        // TODO (POINTER CAPTURE)
+        // 4. If this method is invoked while the element's node document [DOM] has a locked element ([PointerLock] pointerLockElement), throw an "InvalidStateError" DOMException.
+        // TODO (POINTER CAPTURE)
+        // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
+        // TODO (POINTER CAPTURE)
+        // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
+        self.pointer_capture()
+            .borrow_mut()
+            .pending_pointer_captures
+            .insert(pointer_id, self.element_data().me.clone());
     }
 
     fn release_pointer_capture(&self, pointer_id: PointerId) {
         // 9.3 Releasing pointer capture
         // https://w3c.github.io/pointerevents/#releasing-pointer-capture
         let has_pointer_capture = self.has_pointer_capture(pointer_id);
-        DOCUMENTS.with_borrow_mut(|docs| {
-            let current_doc = docs.get_current_document();
-
-            // 1. If the pointerId provided as the method's argument does not match any of the active pointers and these steps are not being invoked as a result of the implicit release of pointer capture, then throw a "NotFoundError" DOMException.
-            // TODO (POINTER CAPTURE)
-            // 2. If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.
-            if !has_pointer_capture {
-                return;
-            }
-            // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
-            let _ = current_doc.pending_pointer_captures.remove(&pointer_id);
-        });
+        // 1. If the pointerId provided as the method's argument does not match any of the active pointers and these steps are not being invoked as a result of the implicit release of pointer capture, then throw a "NotFoundError" DOMException.
+        // TODO (POINTER CAPTURE)
+        // 2. If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.
+        if !has_pointer_capture {
+            return;
+        }
+        // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
+        let _ = self
+            .pointer_capture()
+            .borrow_mut()
+            .pending_pointer_captures
+            .remove(&pointer_id);
     }
 
     fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
-        DOCUMENTS.with_borrow_mut(|docs| {
-            let current_doc = docs.get_current_document();
-            current_doc
-                .pending_pointer_captures
-                .get(&pointer_id)
-                .cloned()
-                .map(|w| w.as_ptr())
-                == Some(self.element_data().me.clone().as_ptr())
-        })
+        self.pointer_capture()
+            .borrow()
+            .pending_pointer_captures
+            .get(&pointer_id)
+            .cloned()
+            .map(|w| w.as_ptr())
+            == Some(self.element_data().me.clone().as_ptr())
     }
 
     fn as_any(&self) -> &dyn Any;

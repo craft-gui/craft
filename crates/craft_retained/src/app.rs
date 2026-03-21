@@ -22,7 +22,6 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
 use crate::CraftOptions;
-use crate::document::DocumentManager;
 use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{CraftMessage, Event, EventDispatcher};
@@ -33,8 +32,6 @@ use crate::window_manager::WindowManager;
 thread_local! {
     /// The most recently recorded window id. This is set every time a windows event occurs.
     pub static CURRENT_WINDOW_ID : Cell<Option<WindowId>> = const { Cell::new(None) };
-    /// Records document-level state (focus, pointer captures, etc.) for internal use.
-    pub static DOCUMENTS: RefCell<DocumentManager> = RefCell::new(DocumentManager::new());
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
     pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
@@ -242,7 +239,7 @@ impl App {
         let event = CraftMessage::PointerScroll(pointer_scroll_update);
         let message = event;
 
-        self.dispatch_event(window, &message, false);
+        self.dispatch_event(window, &message);
         self.request_redraw(RedrawFlags::new(true));
     }
 
@@ -257,7 +254,7 @@ impl App {
         let message = event;
         window.set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
-        self.dispatch_event(window.clone(), &message, true);
+        self.dispatch_event(window.clone(), &message);
 
         self.request_redraw(RedrawFlags::new(true));
     }
@@ -267,7 +264,7 @@ impl App {
 
         let message = CraftMessage::PointerMovedEvent(mouse_moved);
 
-        self.dispatch_event(window.clone(), &message, true);
+        self.dispatch_event(window.clone(), &message);
 
         self.request_redraw(RedrawFlags::new(true));
     }
@@ -276,12 +273,12 @@ impl App {
         let event = CraftMessage::ImeEvent(ime);
         let message = event;
 
-        self.dispatch_event(window.clone(), &message, false);
+        self.dispatch_event(window.clone(), &message);
 
         self.request_redraw(RedrawFlags::new(true));
     }
 
-    fn dispatch_event(&mut self, window: Window, message: &CraftMessage, _is_style: bool) {
+    fn dispatch_event(&mut self, window: Window, message: &CraftMessage) {
         let mouse_pos = window.mouse_position();
         let render_list = window.inner.borrow().render_list.clone();
         self.event_dispatcher.dispatch_event(
@@ -315,7 +312,7 @@ impl App {
         let keyboard_event = CraftMessage::KeyboardInputEvent(keyboard_input.clone());
         let message = keyboard_event;
 
-        self.dispatch_event(window.clone(), &message, false);
+        self.dispatch_event(window.clone(), &message);
 
         self.request_redraw(RedrawFlags::new(true));
     }

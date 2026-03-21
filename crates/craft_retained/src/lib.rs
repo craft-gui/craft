@@ -49,7 +49,6 @@ use crate::events::internal::InternalMessage;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub mod accessibility;
 pub mod craft_winit_state;
-pub mod document;
 pub mod elements;
 pub mod events;
 pub mod layout;
