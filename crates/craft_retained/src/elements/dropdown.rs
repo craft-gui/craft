@@ -99,7 +99,6 @@ pub struct DropdownInner {
     is_floating_window_hidden: bool,
     selected_element: Option<Rc<RefCell<dyn ElementInternals>>>,
     selected_element_index: Option<usize>,
-    selected_bg_color: Option<Color>,
     hovered_bg_color: Option<Color>,
 }
 
@@ -118,33 +117,35 @@ impl Dropdown {
                 is_floating_window_hidden: true,
                 selected_element: None,
                 selected_element_index: None,
-                selected_bg_color: Some(Color::from_rgba8(109, 113, 228, 100)),
-                hovered_bg_color: Some(Color::from_rgba8(100, 100, 100, 100)),
+                hovered_bg_color: Some(Color::from_rgba8(213, 213, 215, 255)),
             })
         });
 
         inner.borrow_mut().element_data.create_layout_node(None);
         inner.borrow_mut().element_data.style.set_display(Display::Flex);
-        inner.borrow_mut().element_data.style.set_justify_content(Some(JustifyContent::Center));
+        //inner.borrow_mut().element_data.style.set_justify_content(Some(JustifyContent::Center));
         inner.borrow_mut().element_data.style.set_align_items(Some(AlignItems::Center));
+        inner.borrow_mut().element_data.style.set_box_shadows(vec![
+            BoxShadow::new(true, 0.0, 4.0, 8.0, 1.0, rgba(0, 0, 0, 255)),
+        ]);
+        inner.borrow_mut().element_data.style.set_padding(TrblRectangle::new_all(px(6.0)));
 
+        inner.borrow_mut().floating_window.style.set_background_color(Color::WHITE);
         inner.borrow_mut().floating_window.style.set_position(Position::Absolute);
         inner.borrow_mut().floating_window.style.set_display(Display::Flex);
         inner.borrow_mut().floating_window.style.set_flex_direction(FlexDirection::Column);
-
         inner.borrow_mut().floating_window.style.set_box_shadows(vec![
-            BoxShadow::new(false, 0.0, 4.0, 16.0, 0.0, rgba(0, 0, 0, 140)), // 0.55
-            BoxShadow::new(false, 0.0, 20.0, 60.0, 0.0, rgba(0, 0, 0, 90)),  // 0.35
+            BoxShadow::new(false, 0.0, 4.0, 8.0, 1.0, rgba(0, 0, 0, 255)),
         ]);
-
         let border_color = rgba(0, 0, 0, 64);
-        inner.borrow_mut().floating_window.style.set_padding(TrblRectangle::new_all(px(2.0)));
+        inner.borrow_mut().floating_window.style.set_padding(TrblRectangle::new_all(px(6.0)));
         inner.borrow_mut().floating_window.style.set_width(Unit::Percentage(100.0));
         inner.borrow_mut().floating_window.style.set_overflow([Overflow::Visible, Overflow::Scroll]);
         inner.borrow_mut().floating_window.style.set_border_color(TrblRectangle::new_all(border_color));
         inner.borrow_mut().floating_window.style.set_height(px(100.0));
         inner.borrow_mut().floating_window.style.set_max_height(px(100.0));
         inner.borrow_mut().floating_window.style.set_border_width(TrblRectangle::new_all(px(1)));
+        inner.borrow_mut().floating_window.style.set_border_radius([(5.0, 5.0); 4]);
 
         inner.borrow_mut().floating_window.create_taffy_node();
 
@@ -341,11 +342,8 @@ impl ElementInternals for DropdownInner {
                 child_rect.x = self.floating_window.layout.computed_box_transformed.position.x as f32;
                 child_rect.width = self.floating_window.layout.computed_box_transformed.size.width as f32;
 
-
-
-                if let Some(selected_index) = self.selected_element_index && index == selected_index {
-                    renderer.draw_rect(child_rect, self.selected_bg_color.unwrap());
-                } else if child.borrow_mut().element_data().is_hovered {
+                let is_selected = self.selected_element_index == Some(index);
+                if is_selected || child.borrow_mut().element_data().is_hovered {
                     renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
                 }
 
