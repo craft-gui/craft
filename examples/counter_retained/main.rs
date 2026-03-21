@@ -55,6 +55,7 @@ fn main() {
         .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
         .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
         .push(Text::new("Sample text, this is sample text, hello!!!!!!!!!!!!!!!!!"))
+        .push(Slider::new(20.0))
     ;
 
     craft_main(CraftOptions::basic("Counter"));

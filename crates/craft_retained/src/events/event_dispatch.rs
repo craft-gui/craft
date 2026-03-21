@@ -176,7 +176,7 @@ impl EventDispatcher {
                 let focus_ref = f.borrow();
                 if let Some(focus_ref) = focus_ref.clone() && let Some(focus) = focus_ref.upgrade() {
                     targets.clear();
-                    targets.push_back(focus)
+                    targets.push_back(focus);
                 }
             });
         }

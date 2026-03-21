@@ -286,9 +286,9 @@ impl ElementInternals for DropdownInner {
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
         let rect = element_data.layout.computed_box_transformed.border_rectangle();
-        let floating_window_rect = self.floating_window.layout.computed_box_transformed.border_rectangle();
+        //let floating_window_rect = self.floating_window.layout.computed_box_transformed.border_rectangle();
 
-        if !self.is_floating_window_hidden && floating_window_rect.contains(&point) {
+        if !self.is_floating_window_hidden {
             return true;
         }
 
@@ -314,7 +314,6 @@ impl ElementInternals for DropdownInner {
         if !self.is_visible() {
             return;
         }
-        self.add_hit_testable(renderer, true, scale_factor);
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
@@ -324,8 +323,13 @@ impl ElementInternals for DropdownInner {
             binding.draw(renderer, text_context, pointer, scale_factor);
         }
 
+        if self.is_floating_window_hidden {
+            self.add_hit_testable(renderer, true, scale_factor);
+        }
+
         if !self.is_floating_window_hidden {
             renderer.start_overlay();
+            self.add_hit_testable(renderer, true, scale_factor);
 
             let current_style = self.floating_window.style.as_ref();
             self.floating_window.layout.draw_borders(renderer, current_style, scale_factor);
@@ -362,116 +366,69 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        let pb = match message {
-            CraftMessage::PointerButtonUp(pb) => pb,
-            _ => return
-        };
-        let is_pointer_up = true;
-
-
-        // TODO Should pb.state.position be in logical coordinates?
-        let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
-        let is_pointer_in_select_box = self.element_data.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
-        let is_pointer_in_window = self.floating_window.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
-        let is_pointer_in_scrollbar = self.floating_window.layout.computed_scroll_track.contains(&pointer_position);
-
-        // Toggle the visibility of the floating window by the clicking of the dropdown select box.
-        if is_pointer_in_select_box && is_pointer_up {
-            self.is_floating_window_hidden = !self.is_floating_window_hidden;
-
-            if self.is_floating_window_hidden {
-                self.unfocus();
-                self.release_pointer_capture(PointerId::new(1).unwrap());
-            } else {
-                self.focus();
-            }
-
-            println!("HERE 1");
-            return;
+        if let CraftMessage::PointerButtonDown(pb) = message {
+            self.focus();
         }
 
+        if let CraftMessage::PointerButtonUp(pb) = message {
 
-        if is_pointer_in_window && !is_pointer_in_scrollbar && is_pointer_up {
-            for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
-                let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+            // TODO Should pb.state.position be in logical coordinates?
+            let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
+            let is_pointer_in_select_box = self.element_data.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+            let is_pointer_in_window = self.floating_window.layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+            let is_pointer_in_scrollbar = self.floating_window.layout.computed_scroll_track.contains(&pointer_position);
 
-                if contains {
-                    self.is_floating_window_hidden = true;
-                    self.set_selected_element(child_index);
-                    self.unfocus();
-                    self.release_pointer_capture(PointerId::new(1).unwrap());
-                    println!("HERE 2");
-                    return;
-                }
-            }
-        }
-
-        if !is_pointer_in_window && is_pointer_up && self.is_focused() {
-            self.unfocus();
-            self.release_pointer_capture(PointerId::new(1).unwrap());
-            println!("HERE 3");
-            return;
-        } else if !is_pointer_in_window && is_pointer_up {
-            self.is_floating_window_hidden = true;
-            self.unfocus();
-            self.release_pointer_capture(PointerId::new(1).unwrap());
-            println!("HERE 4");
-            return;
-        }
-
-        return;
-
-        // ---
-        if is_pointer_in_select_box {
-            if self.is_floating_window_hidden {
-                self.focus();
-                self.set_pointer_capture(PointerId::new(1).unwrap());
-            } else {
-                self.unfocus();
-                self.release_pointer_capture(PointerId::new(1).unwrap());
-            }
-
-            self.is_floating_window_hidden = !self.is_floating_window_hidden;
-        } else {
-
-            if !self.is_floating_window_hidden && self.is_focused() {
+            if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
                 self.is_floating_window_hidden = true;
-                return;
             }
 
-        }
+            // Toggle the visibility of the floating window by the clicking of the dropdown select box.
+            if is_pointer_in_select_box {
+                self.is_floating_window_hidden = !self.is_floating_window_hidden;
 
-        if is_pointer_in_window && !self.has_pointer_capture(PointerId::new(1).unwrap()) {
-            for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
-                let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+                if self.is_floating_window_hidden {
+                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                }
 
-                if contains {
+               //println!("HERE 1");
+                //return;
+            }
+
+
+            if is_pointer_in_window && !is_pointer_in_scrollbar {
+                let mut contained_one = false;
+                for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
+                    let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
+
+                    if contains {
+                        contained_one = true;
+                        self.set_selected_element(child_index);
+                        self.release_pointer_capture(PointerId::new(1).unwrap());
+                        //println!("HERE 2");
+                        break;
+                    }
+                }
+
+                if contained_one {
                     self.is_floating_window_hidden = true;
-                    self.set_selected_element(child_index);
-                    self.unfocus();
-                    return;
                 }
             }
         }
-        // ---
+
 
         let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&*floating_window.style, &mut floating_window.layout, message, event);
-
         if result.request_apply_layout {
             request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
         }
-
         if result.set_pointer_capture {
             self.set_pointer_capture(PointerId::new(1).unwrap())
         } else if result.release_pointer_capture {
             self.release_pointer_capture(PointerId::new(1).unwrap());
         }
-        // ---
 
-
-        println!("Pointer Capture? {}", self.has_pointer_capture(PointerId::new(1).unwrap()));
-        println!("Focused? {}", self.is_focused())
+        //println!("Pointer Capture? {}", self.has_pointer_capture(PointerId::new(1).unwrap()));
+        //println!("Focused? {}", self.is_focused())
 
     }
 

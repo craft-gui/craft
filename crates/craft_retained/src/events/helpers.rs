@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use craft_renderer::RenderList;
 use kurbo::Point;
-
+use craft_renderer::renderer::TargetItem;
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::find_pointer_capture_target;
@@ -38,9 +38,9 @@ pub(super) fn find_target(
     if let Some(target) = target {
         return target;
     }
-
-    render_list.targets.sort_by_key(|r| r.overlay_depth);
+    
     ELEMENTS.with_borrow_mut(|elements| {
+        TargetItem::sort_items_by_overlay_depth(&mut render_list.targets);
         target_scratch.extend(render_list.targets.iter().rev().filter_map(|target_item| {
             // When an element is removed from the dom, we do not remove it from targets.
             // So we must handle it here.
@@ -49,8 +49,6 @@ pub(super) fn find_target(
     });
 
     // Otherwise do hit-testing:
-
-    //println!("targets: {}", target_scratch.len());
 
     for node in target_scratch.drain(..) {
         let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());

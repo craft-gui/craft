@@ -120,6 +120,13 @@ impl TargetItem {
             overlay_depth
         }
     }
+
+    // Sorts the items by the overlay depth and in ascending order.
+    pub fn sort_items_by_overlay_depth(targets: &mut Vec<TargetItem>) {
+        targets.sort_by(|t1, t2| {
+            t1.overlay_depth.cmp(&t2.overlay_depth)
+        });
+    }
 }
 
 pub struct RenderList {
@@ -250,7 +257,6 @@ impl RenderList {
     pub fn end_overlay(&mut self) {
         self.commands.push(RenderCommand::EndOverlay);
         self.current_overlay_depth -= 1;
-        assert!(self.current_overlay_depth >= 0)
     }
 
     #[inline(always)]
