@@ -16,7 +16,6 @@ use ui_events::pointer::PointerId;
 
 use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData as ElementDataStruct;
-use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
@@ -108,7 +107,6 @@ impl ElementInternals for DropdownInner {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
@@ -134,7 +132,6 @@ impl ElementInternals for DropdownInner {
                 self.element_data().layout.computed_box.position,
                 z_index,
                 transform,
-                pointer,
                 text_context,
                 self.element_data().layout.clip_bounds,
                 scale_factor,
@@ -174,7 +171,6 @@ impl ElementInternals for DropdownInner {
                 floating_window_position,
                 z_index,
                 transform * child_transform,
-                pointer,
                 text_context,
                 self.floating_window.layout.clip_bounds,
                 scale_factor,

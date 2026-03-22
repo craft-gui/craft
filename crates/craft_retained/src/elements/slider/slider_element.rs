@@ -331,7 +331,6 @@ impl ElementInternals for SliderInner {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        _pointer: Option<Point>,
         _text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,

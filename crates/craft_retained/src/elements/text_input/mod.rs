@@ -159,7 +159,6 @@ impl ElementInternals for TextInputInner {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        _pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,

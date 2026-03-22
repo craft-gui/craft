@@ -139,7 +139,6 @@ impl ElementInternals for WindowInternal {
         position: Point,
         z_index: &mut u32,
         transform: Affine,
-        pointer: Option<Point>,
         text_context: &mut TextContext,
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
@@ -179,7 +178,6 @@ impl ElementInternals for WindowInternal {
             taffy_tree,
             z_index,
             transform * child_transform,
-            pointer,
             text_context,
             scale_factor,
             false,
@@ -191,18 +189,10 @@ impl ElementInternals for WindowInternal {
             return;
         }
         self.add_hit_testable(_renderer, true, _scale_factor);
-
-        // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(_renderer, _scale_factor);
-
-        /*if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
-        }*/
-
         self.maybe_start_layer(_renderer, _scale_factor);
         self.draw_children(_renderer, _text_context, _scale_factor);
         self.maybe_end_layer(_renderer);
-
         self.draw_scrollbar(_renderer, _scale_factor);
     }
 
@@ -720,7 +710,6 @@ impl WindowInternal {
                     Point::new(0.0, 0.0),
                     &mut layout_order,
                     Affine::IDENTITY,
-                    None,
                     text_context,
                     None,
                     sf,
