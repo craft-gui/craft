@@ -10,7 +10,7 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 
 use crate::elements::element_data::ElementData;
-use crate::elements::internal_helpers::push_child_to_element;
+use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
@@ -69,57 +69,20 @@ impl ElementInternals for ContainerInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout.taffy_node_id.unwrap();
-        let layout = taffy_tree.get_layout(node);
-        let has_new_layout = taffy_tree.has_new_layout(node);
-
-        let dirty = has_new_layout
-            || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
-        self.element_data.layout.has_new_layout = has_new_layout;
-
-        if dirty {
-            self.resolve_box(position, transform, layout, z_index);
-            self.apply_borders(scale_factor);
-            // For scroll changes from taffy;
-            self.element_data.apply_scroll(layout);
-            self.apply_clip(clip_bounds);
-            self.element_data.layout.scroll_state.mark_old();
-        }
-
-        // For manual scroll updates.
-        if !dirty && self.element_data.layout.scroll_state.is_new() {
-            self.element_data.apply_scroll(layout);
-            self.element_data.layout.scroll_state.mark_old();
-        }
-
-        if has_new_layout {
-            taffy_tree.mark_seen(node);
-        }
-
-        let scroll_y = self.element_data.scroll().scroll_y() as f64;
-        let child_transform = Affine::translate((0.0, -scroll_y));
-
-        self.apply_layout_children(
+        apply_generic_container_layout(
+            self,
             taffy_tree,
+            position,
             z_index,
-            transform * child_transform,
+            transform,
             text_context,
+            clip_bounds,
             scale_factor,
-            false,
-        )
+        );
     }
 
     fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
-        if !self.is_visible() {
-            return;
-        }
-        self.add_hit_testable(renderer, true, scale_factor);
-        self.draw_borders(renderer, scale_factor);
-        self.maybe_start_layer(renderer, scale_factor);
-        self.draw_children(renderer, text_context, scale_factor);
-        self.maybe_end_layer(renderer);
-        self.draw_scrollbar(renderer, scale_factor);
+        draw_generic_container(self, renderer, text_context, scale_factor);
     }
 
     fn on_event(
