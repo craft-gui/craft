@@ -123,7 +123,7 @@ impl TargetItem {
 
     // Sorts the items by the overlay depth and in ascending order.
     pub fn sort_items_by_overlay_depth(targets: &mut [TargetItem]) {
-        targets.sort_by(|t1, t2| t1.overlay_depth.cmp(&t2.overlay_depth));
+        targets.sort_by_key(|t1| t1.overlay_depth);
     }
 }
 
