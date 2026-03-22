@@ -19,7 +19,7 @@ use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, JustifyContent, Overflow, Position, Style, Unit};
@@ -274,17 +274,17 @@ impl ElementInternals for DropdownInner {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        if let CraftMessage::PointerButtonDown(_pb) = message {
+        if let EventKind::PointerButtonDown(_pb) = message {
             self.focus();
         }
 
         // Refactor this!
-        if let CraftMessage::PointerMovedEvent(pb) = message {
+        if let EventKind::PointerMovedEvent(pb) = message {
             let pointer_position = Point::new(pb.current.position.x, pb.current.position.y);
             let is_pointer_in_window = self
                 .floating_window
@@ -321,7 +321,7 @@ impl ElementInternals for DropdownInner {
             }
         }
 
-        if let CraftMessage::PointerButtonUp(pb) = message {
+        if let EventKind::PointerButtonUp(pb) = message {
             // TODO Should pb.state.position be in logical coordinates?
             let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
             let is_pointer_in_select_box = self
@@ -373,7 +373,7 @@ impl ElementInternals for DropdownInner {
                         self.release_pointer_capture(PointerId::new(1).unwrap());
 
                         let new_event = Event::new(event.target.clone());
-                        queue_event(new_event, CraftMessage::DropdownItemSelected(child_index));
+                        queue_event(new_event, EventKind::DropdownItemSelected(child_index));
 
                         break;
                     }

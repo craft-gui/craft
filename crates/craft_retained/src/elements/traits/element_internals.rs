@@ -18,7 +18,7 @@ use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CraftMessage, DropdownItemSelectedHandler, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
@@ -205,7 +205,7 @@ pub trait ElementInternals: ElementData + Any {
     /// Handles default events.
     fn on_event(
         &mut self,
-        _message: &CraftMessage,
+        _message: &EventKind,
         _text_context: &mut TextContext,
         _event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,

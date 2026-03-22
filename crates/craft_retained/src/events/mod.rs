@@ -43,7 +43,7 @@ pub enum EventDispatchType {
 }
 
 #[derive(Clone)]
-pub enum CraftMessage {
+pub enum EventKind {
     GotPointerCapture(),
     LostPointerCapture(),
     PointerEnter(),
@@ -88,31 +88,28 @@ pub enum FocusAction {
     Unset,
 }
 
-impl CraftMessage {
+impl EventKind {
     pub(super) fn is_pointer_event(&self) -> bool {
         matches!(
             self,
-            CraftMessage::PointerMovedEvent(_)
-                | CraftMessage::PointerButtonUp(_)
-                | CraftMessage::PointerButtonDown(_)
-                | CraftMessage::GotPointerCapture()
-                | CraftMessage::LostPointerCapture()
-                | CraftMessage::PointerScroll(_)
+            EventKind::PointerMovedEvent(_)
+                | EventKind::PointerButtonUp(_)
+                | EventKind::PointerButtonDown(_)
+                | EventKind::GotPointerCapture()
+                | EventKind::LostPointerCapture()
+                | EventKind::PointerScroll(_)
         )
     }
 
     pub(super) fn is_keyboard_event(&self) -> bool {
-        matches!(self, CraftMessage::KeyboardInputEvent(_) | CraftMessage::ImeEvent(_))
+        matches!(self, EventKind::KeyboardInputEvent(_) | EventKind::ImeEvent(_))
     }
 
     pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
-        matches!(
-            self,
-            CraftMessage::GotPointerCapture() | CraftMessage::LostPointerCapture()
-        )
+        matches!(self, EventKind::GotPointerCapture() | EventKind::LostPointerCapture())
     }
 
-    pub fn new_element_message<T>(data: T) -> CraftMessage
+    pub fn new_element_message<T>(data: T) -> EventKind
     where
         T: Any + Send + Sync + Clone,
     {

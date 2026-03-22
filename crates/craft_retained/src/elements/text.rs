@@ -10,7 +10,7 @@ use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
 use crate::elements::element_data::ElementData;
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
 use crate::style::Style;
 use crate::text::text_context::TextContext;
@@ -324,7 +324,7 @@ impl ElementInternals for TextInner {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
@@ -341,7 +341,7 @@ impl ElementInternals for TextInner {
 
             let state: &mut TextState = &mut self.state;
             match message {
-                CraftMessage::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
+                EventKind::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
                     state.update_text_selection(self.element_data.style.get_selection_color());
                     state.pointer_down = true;
                     state.cursor_reset();
@@ -368,14 +368,14 @@ impl ElementInternals for TextInner {
                     }
                     event.prevent_defaults();
                 }
-                CraftMessage::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
+                EventKind::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
                     state.update_text_selection(self.element_data.style.get_selection_color());
                     state.pointer_down = false;
                     state.cursor_reset();
                     self.release_pointer_capture(PointerId::new(1).unwrap());
                     event.prevent_defaults();
                 }
-                CraftMessage::PointerMovedEvent(pointer_moved) => {
+                EventKind::PointerMovedEvent(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
                     state.cursor_pos = pointer_moved.current.logical_point()

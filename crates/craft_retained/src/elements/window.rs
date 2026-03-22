@@ -23,10 +23,10 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 
 use taffy::{AvailableSpace, NodeId};
-use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::PointerScrollEvent;
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
+use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
+use ui_events::pointer::PointerScrollEvent;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
@@ -44,7 +44,7 @@ use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scr
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
@@ -251,7 +251,7 @@ impl ElementInternals for WindowInternal {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
@@ -536,10 +536,10 @@ impl WindowInternal {
         if keyboard_input.modifiers.ctrl() {
             if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
                 self.zoom_in();
-                return true
+                return true;
             } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
                 self.zoom_out();
-                return true
+                return true;
             }
         }
         false

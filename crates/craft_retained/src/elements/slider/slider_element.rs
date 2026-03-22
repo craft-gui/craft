@@ -13,7 +13,7 @@ use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::palette;
 use crate::style::Unit;
@@ -373,13 +373,13 @@ impl ElementInternals for SliderInner {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         match message {
-            CraftMessage::KeyboardInputEvent(key) => {
+            EventKind::KeyboardInputEvent(key) => {
                 if key.state != KeyState::Down || !self.is_focused() {
                     return;
                 }
@@ -398,10 +398,10 @@ impl ElementInternals for SliderInner {
                     self.value = new_value;
 
                     let new_event = Event::new(event.target.clone());
-                    queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                    queue_event(new_event, EventKind::SliderValueChanged(self.value));
                 }
             }
-            CraftMessage::PointerButtonUp(pointer_button_update) => {
+            EventKind::PointerButtonUp(pointer_button_update) => {
                 self.focus();
                 self.dragging = false;
                 // FIXME: Turn pointer capture on with the correct device id.
@@ -414,9 +414,9 @@ impl ElementInternals for SliderInner {
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
-                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
-            CraftMessage::PointerButtonDown(pointer_button_update) => {
+            EventKind::PointerButtonDown(pointer_button_update) => {
                 self.dragging = true;
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.set_pointer_capture(PointerId::new(1).unwrap());
@@ -428,9 +428,9 @@ impl ElementInternals for SliderInner {
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
-                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
-            CraftMessage::PointerMovedEvent(pointer_update) => {
+            EventKind::PointerMovedEvent(pointer_update) => {
                 if !self.dragging {
                     return;
                 }
@@ -442,7 +442,7 @@ impl ElementInternals for SliderInner {
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
-                queue_event(new_event, CraftMessage::SliderValueChanged(self.value));
+                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             _ => {}
         }

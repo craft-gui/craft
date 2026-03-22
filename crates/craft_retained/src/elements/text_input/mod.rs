@@ -21,7 +21,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
 use crate::style::{Display, Style, Unit};
@@ -307,7 +307,7 @@ impl ElementInternals for TextInputInner {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
@@ -324,7 +324,7 @@ impl ElementInternals for TextInputInner {
 
         let focused = self.is_focused();
 
-        if let CraftMessage::ElementMessage(msg) = message
+        if let EventKind::ElementMessage(msg) = message
             && let Some(msg) = msg.as_any().downcast_ref::<TextInputMessage>()
         {
             match msg {
@@ -351,33 +351,31 @@ impl ElementInternals for TextInputInner {
         }
 
         match message {
-            CraftMessage::KeyboardInputEvent(keyboard_event) if !self.state.editor().is_composing() => {
+            EventKind::KeyboardInputEvent(keyboard_event) if !self.state.editor().is_composing() => {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
                 self.state
                     .key_press(text_context, keyboard_event, &mut self.element_data);
             }
-            CraftMessage::PointerButtonDown(pointer_button)
-                if pointer_button.button == Some(PointerButton::Primary) =>
-            {
+            EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
                 self.state.pointer_down(text_context);
             }
-            CraftMessage::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+            EventKind::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.state.pointer_up();
             }
-            CraftMessage::PointerMovedEvent(pointer_moved) => {
+            EventKind::PointerMovedEvent(pointer_moved) => {
                 self.state.move_pointer(text_context, pointer_moved, scroll_y);
             }
-            CraftMessage::ImeEvent(Ime::Disabled) => {
+            EventKind::ImeEvent(Ime::Disabled) => {
                 self.state.disable_ime(text_context);
             }
-            CraftMessage::ImeEvent(Ime::Commit(text)) => {
+            EventKind::ImeEvent(Ime::Commit(text)) => {
                 self.state.insert_or_replace_selection(text_context, text);
                 //generate_text_changed_event(&mut self.state.editor);
             }
-            CraftMessage::ImeEvent(Ime::Preedit(text, cursor)) => {
+            EventKind::ImeEvent(Ime::Preedit(text, cursor)) => {
                 self.state.ime_pre_edit(text_context, text, cursor);
             }
             _ => {}

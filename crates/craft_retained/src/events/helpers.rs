@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 use craft_renderer::RenderList;
 use craft_renderer::renderer::TargetItem;
@@ -30,7 +30,7 @@ pub(super) fn freeze_target_list(
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn ElementInternals>>,
     mouse_position: Option<Point>,
-    message: &CraftMessage,
+    message: &EventKind,
     render_list: &mut RenderList,
     target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     pointer_capture: &PointerCapture,
@@ -67,87 +67,87 @@ pub(super) fn find_target(
 pub(super) fn call_user_event_handlers(
     event: &mut Event,
     current_target: &Rc<RefCell<dyn ElementInternals>>,
-    message: &CraftMessage,
+    message: &EventKind,
 ) {
     match message {
-        CraftMessage::PointerEnter() => {
+        EventKind::PointerEnter() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_enter {
                 (*handler)(event);
             }
         }
-        CraftMessage::PointerLeave() => {
+        EventKind::PointerLeave() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_leave {
                 (*handler)(event);
             }
         }
-        CraftMessage::PointerButtonUp(e) => {
+        EventKind::PointerButtonUp(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_button_up {
                 (*handler)(event, e);
             }
         }
-        CraftMessage::PointerButtonDown(e) => {
+        EventKind::PointerButtonDown(e) => {
             let len = current_target.borrow().element_data().on_pointer_button_down.len();
             for i in 0..len {
                 let handler = current_target.borrow().element_data().on_pointer_button_down[i].clone();
                 (*handler)(event, e);
             }
         }
-        CraftMessage::KeyboardInputEvent(e) => {
+        EventKind::KeyboardInputEvent(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_keyboard_input {
                 (*handler)(event, e);
             }
         }
-        CraftMessage::PointerMovedEvent(e) => {
+        EventKind::PointerMovedEvent(e) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_moved {
                 (*handler)(event, e);
             }
         }
-        CraftMessage::PointerScroll(_) => {}
-        CraftMessage::ImeEvent(_) => {}
-        CraftMessage::TextInputChanged(_) => {}
-        CraftMessage::LinkClicked(_) => {}
-        CraftMessage::DropdownToggled(_) => {}
-        CraftMessage::DropdownItemSelected(item) => {
+        EventKind::PointerScroll(_) => {}
+        EventKind::ImeEvent(_) => {}
+        EventKind::TextInputChanged(_) => {}
+        EventKind::LinkClicked(_) => {}
+        EventKind::DropdownToggled(_) => {}
+        EventKind::DropdownItemSelected(item) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_dropdown_item_selected {
                 (*handler)(event, *item);
             }
         }
-        CraftMessage::SwitchToggled(_) => {}
-        CraftMessage::SliderValueChanged(slider_value) => {
+        EventKind::SwitchToggled(_) => {}
+        EventKind::SliderValueChanged(slider_value) => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_slider_value_changed {
                 (*handler)(event, *slider_value);
             }
         }
-        CraftMessage::ElementMessage(_) => {}
-        CraftMessage::GotPointerCapture() => {
+        EventKind::ElementMessage(_) => {}
+        EventKind::GotPointerCapture() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_got_pointer_capture {
                 (*handler)(event);
             }
         }
-        CraftMessage::LostPointerCapture() => {
+        EventKind::LostPointerCapture() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_lost_pointer_capture {
                 (*handler)(event);
             }
         }
-        CraftMessage::Scroll() => {
+        EventKind::Scroll() => {
             let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_scroll {
@@ -162,7 +162,7 @@ pub(super) fn call_default_element_event_handler(
     current_target: &Rc<RefCell<dyn ElementInternals>>,
     target: &Rc<RefCell<dyn ElementInternals>>,
     text_context: &mut Option<TextContext>,
-    message: &CraftMessage,
+    message: &EventKind,
 ) {
     current_target
         .borrow_mut()

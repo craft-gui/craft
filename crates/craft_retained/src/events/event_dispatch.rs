@@ -8,11 +8,11 @@ use craft_renderer::RenderList;
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 
 pub(super) fn dispatch_capturing_event(
-    _message: &CraftMessage,
+    _message: &EventKind,
     _targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
 ) {
 }
@@ -20,7 +20,7 @@ pub(super) fn dispatch_capturing_event(
 /// Dispatches 1 event to many elements.
 /// The first dispatch happens at the top-most visual element.
 pub(super) fn dispatch_bubbling_event(
-    message: &CraftMessage,
+    message: &EventKind,
     targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
 ) -> Event {
     let target = targets[0].clone();
@@ -56,7 +56,7 @@ impl EventDispatcher {
     /// NOTE: This calls the user callbacks + the default event handler (if prevent_default() is not called).
     pub(super) fn dispatch_once(
         &self,
-        message: &CraftMessage,
+        message: &EventKind,
         text_context: &mut Option<TextContext>,
         target: &Rc<RefCell<dyn ElementInternals>>,
     ) {
@@ -103,7 +103,7 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                self.dispatch_once(&CraftMessage::PointerLeave(), text_context, &prev_target.clone());
+                self.dispatch_once(&EventKind::PointerLeave(), text_context, &prev_target.clone());
             }
         }
     }
@@ -138,7 +138,7 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                self.dispatch_once(&CraftMessage::PointerEnter(), text_context, &target.clone());
+                self.dispatch_once(&EventKind::PointerEnter(), text_context, &target.clone());
             }
         }
     }
@@ -148,7 +148,7 @@ impl EventDispatcher {
     #[allow(clippy::too_many_arguments)]
     pub fn dispatch_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut Option<TextContext>,

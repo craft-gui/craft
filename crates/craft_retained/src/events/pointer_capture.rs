@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use ui_events::pointer::PointerId;
 
 use crate::elements::ElementInternals;
-use crate::events::CraftMessage;
+use crate::events::EventKind;
 use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
@@ -27,16 +27,13 @@ impl PointerCapture {
     }
 
     /// Returns the currently pointer captured element or None.
-    pub(super) fn find_pointer_capture_target(
-        &self,
-        message: &CraftMessage,
-    ) -> Option<Rc<RefCell<dyn ElementInternals>>> {
+    pub(super) fn find_pointer_capture_target(&self, message: &EventKind) -> Option<Rc<RefCell<dyn ElementInternals>>> {
         // 9.4 Implicit pointer capture
         // https://w3c.github.io/pointerevents/#implicit-pointer-capture
         //
         let pointer_capture_element_id: Option<Weak<RefCell<dyn ElementInternals>>> = {
             let key = &PointerId::new(1).unwrap();
-            if matches!(message, CraftMessage::GotPointerCapture()) {
+            if matches!(message, EventKind::GotPointerCapture()) {
                 // Check pending (step 2):
                 // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
                 self.pending_pointer_captures.get(key).cloned()
@@ -64,7 +61,7 @@ impl PointerCapture {
         if let Some(pointer_capture_val) = pointer_capture_val.clone()
             && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
         {
-            let msg = CraftMessage::LostPointerCapture();
+            let msg = EventKind::LostPointerCapture();
             let target = self.find_pointer_capture_target(&msg);
 
             if let Some(target) = target {
@@ -85,7 +82,7 @@ impl PointerCapture {
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
             && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
         {
-            let msg = CraftMessage::GotPointerCapture();
+            let msg = EventKind::GotPointerCapture();
             let target = self.find_pointer_capture_target(&msg);
 
             if let Some(target) = target {
@@ -111,10 +108,10 @@ impl PointerCapture {
         }
     }
 
-    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &CraftMessage) {
+    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind) {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
-        let is_pointer_up_event = matches!(message, CraftMessage::PointerButtonUp(_));
+        let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));
         if is_pointer_up_event
         /* || is_pointer_canceled */
         {

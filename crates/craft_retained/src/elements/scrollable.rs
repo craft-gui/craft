@@ -8,7 +8,7 @@ use ui_events::pointer::{PointerId, PointerType};
 use crate::app::{queue_event, request_apply_layout};
 use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
 use craft_primitives::geometry::borders::CssRoundedRect;
@@ -117,7 +117,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
     data.layout.scroll_state.set_scroll_y(f32::max(0.0, y));
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
     request_apply_layout(data.layout.taffy_node_id.unwrap());
-    queue_event(new_event, CraftMessage::Scroll());
+    queue_event(new_event, EventKind::Scroll());
 }
 
 /// Scroll an amount y from the current scroll position.
@@ -239,7 +239,7 @@ pub struct HandleScrollLogicResult {
     pub set_pointer_capture: bool,
 }
 
-pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
+pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &EventKind, event: &mut Event) {
     let element_data = element.element_data_mut();
     let result = handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event);
 
@@ -260,7 +260,7 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
 pub(crate) fn handle_scroll_logic_advance(
     style: &Style,
     layout: &mut Layout,
-    message: &CraftMessage,
+    message: &EventKind,
     event: &mut Event,
 ) -> HandleScrollLogicResult {
     let mut result = HandleScrollLogicResult {
@@ -272,7 +272,7 @@ pub(crate) fn handle_scroll_logic_advance(
     if layout.is_scrollable_layout() && style.get_overflow()[1] == Overflow::Scroll {
         let state = &mut layout.scroll_state;
         match message {
-            CraftMessage::PointerScroll(mouse_wheel) => {
+            EventKind::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
                     ScrollDelta::LineDelta(_x, y) => y * style.get_font_size().max(12.0) * style.get_line_height(),
                     ScrollDelta::PixelDelta(physical) => physical.y as f32,
@@ -290,7 +290,7 @@ pub(crate) fn handle_scroll_logic_advance(
                 event.prevent_propagate();
                 event.prevent_defaults();
             }
-            CraftMessage::PointerButtonDown(pointer_button)
+            EventKind::PointerButtonDown(pointer_button)
                 if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) =>
             {
                 // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
@@ -342,14 +342,14 @@ pub(crate) fn handle_scroll_logic_advance(
                     event.prevent_defaults();
                 }
             }
-            CraftMessage::PointerButtonUp(_pointer_button) if state.scroll_click.is_some() => {
+            EventKind::PointerButtonUp(_pointer_button) if state.scroll_click.is_some() => {
                 state.scroll_click = None;
                 event.prevent_propagate();
                 event.prevent_defaults();
 
                 result.release_pointer_capture = true;
             }
-            CraftMessage::PointerMovedEvent(pointer_motion) => {
+            EventKind::PointerMovedEvent(pointer_motion) => {
                 if let Some(click) = state.scroll_click {
                     // Todo: Translate scroll wheel pixel to scroll position for diff.
                     let delta = (pointer_motion.current.position.y - click.y) as f32;

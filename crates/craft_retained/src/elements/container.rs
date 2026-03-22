@@ -12,7 +12,7 @@ use crate::app::TAFFY_TREE;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
-use crate::events::{CraftMessage, Event};
+use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 
@@ -153,7 +153,7 @@ impl ElementInternals for ContainerInner {
 
     fn on_event(
         &mut self,
-        message: &CraftMessage,
+        message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
