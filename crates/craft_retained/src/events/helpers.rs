@@ -71,14 +71,14 @@ pub(super) fn call_user_event_handlers(
 ) {
     match message {
         CraftMessage::PointerEnter() => {
-            let mut element_data = current_target.borrow().element_data().clone();
+            let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_enter {
                 (*handler)(event);
             }
         }
         CraftMessage::PointerLeave() => {
-            let mut element_data = current_target.borrow().element_data().clone();
+            let element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_leave {
                 (*handler)(event);

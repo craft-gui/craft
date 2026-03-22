@@ -398,7 +398,7 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        if let CraftMessage::PointerButtonDown(pb) = message {
+        if let CraftMessage::PointerButtonDown(_pb) = message {
             self.focus();
         }
 
@@ -460,7 +460,7 @@ impl ElementInternals for DropdownInner {
 
                         let new_event = Event::new(event.target.clone());
                         queue_event(new_event, CraftMessage::DropdownItemSelected(child_index));
-                        
+
                         break;
                     }
                 }

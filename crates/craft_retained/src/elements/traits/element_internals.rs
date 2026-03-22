@@ -6,17 +6,15 @@ use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 
-use kurbo::{Affine, Point, Vec2};
+use kurbo::{Affine, Point};
 
 use ui_events::pointer::PointerId;
 
-use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
 
 use craft_renderer::RenderList;
 
 use crate::Color;
-
 use crate::CraftError;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{draw_scrollbar, ScrollState};
@@ -24,7 +22,7 @@ use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, DropdownItemSelectedHandler, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
-use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
+use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 use crate::text::text_context::TextContext;
 

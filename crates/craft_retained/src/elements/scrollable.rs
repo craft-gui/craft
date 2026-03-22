@@ -241,7 +241,7 @@ pub struct HandleScrollLogicResult {
 }
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
-    let mut element_data  = element.element_data_mut();
+    let element_data  = element.element_data_mut();
     let result = handle_scroll_logic_advance(&*element_data.style, &mut element_data.layout, message, event);
 
     if result.request_apply_layout {
