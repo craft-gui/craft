@@ -20,7 +20,6 @@ use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
-use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, CraftError};
@@ -234,26 +233,7 @@ pub trait ElementInternals: ElementData + Any {
         );
     }
 
-    /// A bit of a hack to reset the layout item of an element recursively.
-    fn reset_layout(&mut self) {
-        self.element_data_mut().layout = Layout::default();
-
-        for child in self.element_data_mut().children.iter_mut() {
-            child.borrow_mut().reset_layout();
-        }
-    }
-
     fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
-        /*let ed = self.element_data().borrow();
-        let has_events =
-            !ed.on_pointer_button_up.is_empty() ||
-            !ed.on_pointer_moved.is_empty() ||
-            !ed.on_keyboard_input.is_empty() ||
-            !ed.on_pointer_button_down.is_empty() ||
-            !ed.on_got_pointer_capture.is_empty() ||
-            !ed.on_pointer_enter.is_empty() ||
-            !ed.on_pointer_leave.is_empty() ||
-            !ed.on_lost_pointer_capture;*/
         if hit_testable {
             let id = self.element_data().internal_id;
             renderer.push_hit_testable(
