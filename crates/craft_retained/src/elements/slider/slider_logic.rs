@@ -1,7 +1,8 @@
 use kurbo::Point;
 
+use crate::elements::{ElementData};
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementInternals, SliderInner};
+use crate::elements::SliderInner;
 
 impl SliderInner {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {
@@ -17,7 +18,7 @@ impl SliderInner {
     }
 
     pub(super) fn compute_slider_value(&self, pointer_position: &Point) -> f64 {
-        let content_rectangle = self.computed_box().content_rectangle();
+        let content_rectangle = self.element_data().layout.computed_box_transformed.content_rectangle();
         let start = if self.get_direction() == SliderDirection::Horizontal {
             content_rectangle.left() as f64
         } else {
@@ -48,7 +49,7 @@ impl SliderInner {
     }
 
     pub(super) fn thumb_position(&self, thumb_value: f64) -> Point {
-        let content_rectangle = self.computed_box().content_rectangle();
+        let content_rectangle = self.element_data().layout.computed_box_transformed.content_rectangle();
 
         let mut normalized_value = thumb_value / self.get_max();
         normalized_value = normalized_value.clamp(0.0, 1.0);

@@ -3,15 +3,13 @@ use std::rc::{Rc, Weak};
 
 use smol_str::SmolStr;
 
-use taffy::Layout;
-
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
-use crate::layout::layout_item::LayoutItem;
+use crate::layout::layout::Layout;
 use crate::style::{Overflow, Style};
 
 /// Stores common data to most elements.
@@ -30,7 +28,7 @@ pub struct ElementData {
     pub style: Box<Style>,
 
     /// Stores the layout data for an element.
-    pub layout_item: LayoutItem,
+    pub layout: Layout,
 
     /// The children of the element.
     pub children: Vec<Rc<RefCell<dyn ElementInternals>>>,
@@ -41,11 +39,8 @@ pub struct ElementData {
     /// A unique id for this element. Within a craft app the id will be unique even across windows.
     pub(crate) internal_id: u64,
 
-    /// Scrollbar state for elements that may have a scrollbar.
-    pub(super) scroll_state: ScrollState,
-    pub(super) is_scrollable: bool,
-
     // Events:
+    pub on_dropdown_item_selected: Vec<DropdownItemSelectedHandler>,
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
     pub on_pointer_leave: Vec<PointerLeaveHandler>,
@@ -59,18 +54,17 @@ pub struct ElementData {
 }
 
 impl ElementData {
-    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, scrollable: bool) -> Self {
+    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
         let default = Self {
             me,
             parent: None,
             window: None,
             style: Style::new(),
-            layout_item: Default::default(),
+            layout: Layout::new(is_scrollable),
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
-            scroll_state: ScrollState::default(),
-            is_scrollable: scrollable,
+            on_dropdown_item_selected: Vec::new(),
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),
             on_pointer_leave: Vec::new(),
@@ -99,23 +93,23 @@ impl ElementData {
             } else {
                 taffy_tree.new_leaf(style)
             };
-            self.layout_item.taffy_node_id = Some(node_id);
+            self.layout.taffy_node_id = Some(node_id);
         });
     }
 
     /// Computes the scrollbar's tack and thumb layout.
-    pub(crate) fn apply_scroll(&mut self, layout: &Layout) {
-        apply_scroll_layout(self, layout);
+    pub(crate) fn apply_scroll(&mut self, taffy_layout: &taffy::Layout) {
+       apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {
-        self.scroll_state
+        self.layout.scroll_state
     }
 }
 
 impl ElementData {
     pub fn is_scrollable(&self) -> bool {
-        self.style.get_overflow()[1] == Overflow::Scroll && self.is_scrollable
+        self.style.get_overflow()[1] == Overflow::Scroll && self.layout.is_scrollable_layout()
     }
 
     pub fn current_style(&self) -> &Style {

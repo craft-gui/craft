@@ -9,8 +9,10 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 
 use crate::app::TAFFY_TREE;
+use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element};
 use crate::elements::element_data::ElementData;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{scrollable};
+use crate::elements::traits::DeepClone;
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -23,6 +25,7 @@ pub struct Container {
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
+#[derive(Clone)]
 pub struct ContainerInner {
     element_data: ElementData,
 }
@@ -66,6 +69,10 @@ impl crate::elements::ElementData for ContainerInner {
 }
 
 impl ElementInternals for ContainerInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -77,14 +84,14 @@ impl ElementInternals for ContainerInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let node = self.element_data.layout.taffy_node_id.unwrap();
+        let layout = taffy_tree.get_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
@@ -92,13 +99,14 @@ impl ElementInternals for ContainerInner {
             // For scroll changes from taffy;
             self.element_data.apply_scroll(layout);
             self.apply_clip(clip_bounds);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new() {
+        if !dirty && self.element_data.layout.scroll_state.is_new()
+        {
             self.element_data.apply_scroll(layout);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
         }
 
         if has_new_layout {
@@ -152,7 +160,7 @@ impl ElementInternals for ContainerInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::on_scroll_events(self, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -169,8 +177,8 @@ impl ElementInternals for ContainerInner {
 
         // Add the children's taffy node.
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
             }

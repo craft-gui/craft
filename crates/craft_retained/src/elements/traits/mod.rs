@@ -1,8 +1,10 @@
 mod as_element;
 mod element;
+mod deep_clone;
 mod element_data;
 mod element_internals;
 
+pub use deep_clone::DeepClone;
 pub use as_element::AsElement;
 pub use element::Element;
 pub use element_data::ElementData;

@@ -28,6 +28,7 @@ mod mouse_wheel;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut Event, usize)>;
 pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
@@ -97,6 +98,14 @@ impl CraftMessage {
                 | CraftMessage::GotPointerCapture()
                 | CraftMessage::LostPointerCapture()
                 | CraftMessage::PointerScroll(_)
+        )
+    }
+
+    pub(super) fn is_keyboard_event(&self) -> bool {
+        matches!(
+            self,
+            CraftMessage::KeyboardInputEvent(_)
+                | CraftMessage::ImeEvent(_)
         )
     }
 

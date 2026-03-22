@@ -38,6 +38,7 @@ use winit::dpi;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
+use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::layout::TaffyTree;
 
@@ -196,6 +197,10 @@ impl crate::elements::ElementData for TextInner {
 }
 
 impl ElementInternals for TextInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -207,14 +212,14 @@ impl ElementInternals for TextInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let result = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let node = self.element_data.layout.taffy_node_id.unwrap();
+        let result = taffy_tree.get_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
         if dirty {
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
@@ -270,7 +275,7 @@ impl ElementInternals for TextInner {
     ) {
         let padding_box = self
             .element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);

@@ -14,11 +14,13 @@ use kurbo::{Affine, Point};
 use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
+use crate::elements::traits::DeepClone;
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
 
 /// Displays an image.
+#[derive(Clone)]
 pub struct Image {
     is_image_dirty: bool,
     resource_identifier: ResourceIdentifier,
@@ -57,7 +59,7 @@ impl Image {
             let context = LayoutContext::Image(ImageContext::new(resource_identifier));
             let node = self
                 .element_data
-                .layout_item
+                .layout
                 .taffy_node_id
                 .expect("Failed to get Image node");
             taffy_tree.set_node_context(node, Some(context));
@@ -82,6 +84,10 @@ impl crate::elements::ElementData for Image {
 }
 
 impl ElementInternals for Image {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -93,7 +99,7 @@ impl ElementInternals for Image {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let layout = taffy_tree.layout(self.element_data.layout_item.taffy_node_id.unwrap());
+        let layout = taffy_tree.get_layout(self.element_data.layout.taffy_node_id.unwrap());
         self.resolve_box(position, transform, layout, z_index);
 
         self.apply_borders(scale_factor);

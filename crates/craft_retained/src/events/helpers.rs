@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use craft_renderer::RenderList;
 use kurbo::Point;
-
+use craft_renderer::renderer::TargetItem;
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
@@ -39,18 +39,17 @@ pub(super) fn find_target(
     if let Some(target) = target {
         return target;
     }
-
+    
     ELEMENTS.with_borrow_mut(|elements| {
-        target_scratch.extend(render_list.targets.iter().rev().filter_map(|(id, _)| {
+        TargetItem::sort_items_by_overlay_depth(&mut render_list.targets);
+        target_scratch.extend(render_list.targets.iter().rev().filter_map(|target_item| {
             // When an element is removed from the dom, we do not remove it from targets.
             // So we must handle it here.
-            elements.get(*id).and_then(|target| target.upgrade())
+            elements.get(target_item.custom_id).and_then(|target| target.upgrade())
         }));
     });
 
     // Otherwise do hit-testing:
-
-    //println!("targets: {}", target_scratch.len());
 
     for node in target_scratch.drain(..) {
         let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
@@ -58,6 +57,7 @@ pub(super) fn find_target(
         // The first element to pass the hit test should be the target.
         if should_pass_hit_test && target.is_none() {
             target = Some(Rc::clone(&node));
+            break;
         }
     }
 
@@ -117,7 +117,13 @@ pub(super) fn call_user_event_handlers(
         CraftMessage::TextInputChanged(_) => {}
         CraftMessage::LinkClicked(_) => {}
         CraftMessage::DropdownToggled(_) => {}
-        CraftMessage::DropdownItemSelected(_) => {}
+        CraftMessage::DropdownItemSelected(item) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_dropdown_item_selected {
+                (*handler)(event, *item);
+            }
+        }
         CraftMessage::SwitchToggled(_) => {}
         CraftMessage::SliderValueChanged(slider_value) => {
             let element_data = current_target.borrow().element_data().clone();

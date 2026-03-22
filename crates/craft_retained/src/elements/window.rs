@@ -91,6 +91,12 @@ pub struct WindowInternal {
     element_data: ElementData,
 }
 
+impl Clone for WindowInternal {
+    fn clone(&self) -> Self {
+        todo!()
+    }
+}
+
 impl Default for Window {
     fn default() -> Self {
         Self::new("Craft")
@@ -131,14 +137,14 @@ impl ElementInternals for WindowInternal {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let node = self.element_data.layout.taffy_node_id.unwrap();
+        let layout = taffy_tree.get_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
@@ -146,13 +152,13 @@ impl ElementInternals for WindowInternal {
             // For scroll changes from taffy;
             self.element_data.apply_scroll(layout);
             self.apply_clip(clip_bounds);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new() {
+        if !dirty && self.element_data.layout.scroll_state.is_new() {
             self.element_data.apply_scroll(layout);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
         }
 
         if has_new_layout {
@@ -211,7 +217,7 @@ impl ElementInternals for WindowInternal {
 
         let padding_box = self
             .element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);
@@ -246,7 +252,7 @@ impl ElementInternals for WindowInternal {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        scrollable::on_scroll_events(self, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -263,8 +269,8 @@ impl ElementInternals for WindowInternal {
 
         // Add the children's taffy node.
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout_item.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout.taffy_node_id;
             if let Some(child_id) = child_id {
                 taffy_tree.add_child(parent_id, child_id);
             }
@@ -277,6 +283,10 @@ impl ElementInternals for WindowInternal {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        todo!()
     }
 }
 
@@ -508,7 +518,7 @@ impl WindowInternal {
 
     pub(crate) fn on_resize(&mut self, new_size: Size<f32>) {
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            taffy_tree.mark_dirty(self.element_data.layout_item.taffy_node_id.unwrap());
+            taffy_tree.mark_dirty(self.element_data.layout.taffy_node_id.unwrap());
         });
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
@@ -651,7 +661,7 @@ impl WindowInternal {
     fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
         let root_node = self
             .element_data
-            .layout_item
+            .layout
             .taffy_node_id
             .expect("A root element must have a layout node.");
 

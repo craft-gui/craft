@@ -19,6 +19,7 @@ use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
+use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -83,7 +84,7 @@ impl TextInput {
         }));
         inner.borrow_mut().element_data.create_layout_node(context);
 
-        let taffy_id = inner.borrow().element_data.layout_item.taffy_node_id;
+        let taffy_id = inner.borrow().element_data.layout.taffy_node_id;
         inner.borrow_mut().state.taffy_id = taffy_id;
         inner.borrow_mut().state.editor.taffy_id = taffy_id;
 
@@ -148,6 +149,10 @@ impl crate::elements::ElementData for TextInputInner {
 }
 
 impl ElementInternals for TextInputInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -159,22 +164,22 @@ impl ElementInternals for TextInputInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let node = self.element_data.layout.taffy_node_id.unwrap();
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
-            let result = taffy_tree.layout(node);
+            let result = taffy_tree.get_layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
             self.apply_borders(scale_factor);
 
             self.element_data.apply_scroll(result);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
 
             let text_position = self.computed_box().content_rectangle();
             self.state.set_origin(&text_position.position());
@@ -186,10 +191,11 @@ impl ElementInternals for TextInputInner {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.scroll_state.is_new() {
-            let result = taffy_tree.layout(node);
+        if !dirty && self.element_data.layout.scroll_state.is_new()
+        {
+            let result = taffy_tree.get_layout(node);
             self.element_data.apply_scroll(result);
-            self.element_data.scroll_state.mark_old();
+            self.element_data.layout.scroll_state.mark_old();
         }
 
         if has_new_layout {
@@ -228,13 +234,13 @@ impl ElementInternals for TextInputInner {
         let is_scrollable = self.element_data.is_scrollable();
 
         let element_data = &self.element_data;
-        let padding_rectangle = element_data.layout_item.computed_box_transformed.padding_rectangle();
+        let padding_rectangle = element_data.layout.computed_box_transformed.padding_rectangle();
         renderer.push_layer(padding_rectangle.scale(scale_factor));
 
         let text_scroll = if is_scrollable {
             Some(TextScroll::new(
                 self.element_data.scroll().scroll_y(),
-                self.element_data.layout_item.computed_scroll_track.height,
+                self.element_data.layout.computed_scroll_track.height,
             ))
         } else {
             None
@@ -272,7 +278,7 @@ impl ElementInternals for TextInputInner {
         let mut current_node = accesskit::Node::new(accesskit::Role::TextInput);
         let padding_box = self
             .element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);
@@ -309,7 +315,7 @@ impl ElementInternals for TextInputInner {
     ) {
         self.state.is_active = true;
 
-        scrollable::on_scroll_events(self, message, event);
+        scrollable::handle_scroll_logic(self, message, event);
 
         if !event.propagate {
             return;

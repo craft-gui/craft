@@ -5,10 +5,10 @@ use std::rc::{Rc, Weak};
 use craft_primitives::geometry::Point;
 use craft_renderer::RenderList;
 
-use crate::app::dequeue_event;
+use crate::app::{dequeue_event, FOCUS};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
-use crate::events::{CraftMessage, Event, FocusAction};
+use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
 
 pub(super) fn dispatch_capturing_event(
@@ -27,7 +27,7 @@ pub(super) fn dispatch_bubbling_event(
     let mut base_event = Event::new(target.clone());
 
     // Call the callback handlers.
-    for current_target in targets.iter() {
+    for current_target in targets.iter_mut() {
         call_user_event_handlers(&mut base_event, current_target, message);
         if !base_event.propagate {
             break;
@@ -164,27 +164,38 @@ impl EventDispatcher {
             .map(|w| w.borrow().pointer_capture.clone())
             .unwrap();
 
-        let mut _focus = FocusAction::None;
-        /*let span = span!(Level::INFO, "dispatch event");
-        let _enter = span.enter();*/
+        let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        /*for (node, _) in &render_list.targets {
-            println!("target: {}", node);
-        }*/
+        if message.is_pointer_event() {
+            // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
+            let target: Rc<RefCell<dyn ElementInternals>> = find_target(
+                &root,
+                mouse_position,
+                message,
+                render_list,
+                target_scratch,
+                &pointer_capture.borrow(),
+            );
+            targets = freeze_target_list(target);
+        } else if message.is_keyboard_event() {
+            FOCUS.with(|f| {
+                let focus_ref = f.borrow();
+                if let Some(focus_ref) = focus_ref.clone() && let Some(focus) = focus_ref.upgrade() {
+                    targets.clear();
+                    targets.push_back(focus);
+                }
+            });
+        }
 
-        // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-        let target: Rc<RefCell<dyn ElementInternals>> = find_target(
-            &root,
-            mouse_position,
-            message,
-            render_list,
-            target_scratch,
-            &pointer_capture.borrow(),
-        );
-        let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(target);
+        if targets.is_empty() {
+            targets.push_back(root.clone());
+        }
 
-        self.maybe_dispatch_pointer_leave(text_context, &targets);
-        self.maybe_dispatch_pointer_enter(text_context, &targets);
+
+        if message.is_pointer_event() {
+            self.maybe_dispatch_pointer_leave(text_context, &targets);
+            self.maybe_dispatch_pointer_enter(text_context, &targets);
+        }
 
         // Handle capturing
         dispatch_capturing_event(message, &mut targets);
@@ -210,9 +221,11 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        pointer_capture
-            .borrow_mut()
-            .maybe_handle_implicit_pointer_capture_release(message);
+        if message.is_pointer_event() {
+            pointer_capture
+                .borrow_mut()
+                .maybe_handle_implicit_pointer_capture_release(message);
+        }
 
         // Drain the event dispatch queue and invoke user callbacks.
         while let Some((event, message)) = dequeue_event() {

@@ -1,3 +1,4 @@
+use crate::elements::scrollable::ScrollState;
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
 use craft_renderer::renderer::BoxShadowCmd;
@@ -37,7 +38,7 @@ impl CssComputedBorder {
 }
 
 #[derive(Clone, Default)]
-pub struct LayoutItem {
+pub struct Layout {
     /// The taffy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
     pub taffy_node_id: Option<NodeId>,
@@ -64,9 +65,36 @@ pub struct LayoutItem {
     pub has_new_layout: bool,
     transform: Affine,
     pub position: Point,
+
+    /// Scrollbar state for elements that may have a scrollbar.
+    pub scroll_state: ScrollState,
+    is_scrollable: bool,
+
+    pub scrollbar_thumb_margin: TrblRectangle<f32>,
+    pub scrollbar_thumb_radius: [(f32, f32); 4],
 }
 
-impl LayoutItem {
+impl Layout {
+    pub(crate) fn new(is_scrollable: bool) -> Self {
+        Self {
+            is_scrollable,
+            ..Default::default()
+        }
+    }
+
+    pub fn taffy_node_id(&self) -> NodeId {
+        self.taffy_node_id.unwrap()
+    }
+
+    pub fn taffy_node_id_mut(&mut self) -> &mut NodeId {
+        self.taffy_node_id.as_mut().unwrap()
+    }
+
+    /// This only returns if an element is a scrollable, not if Overflow[1] == true.
+    pub(crate) fn is_scrollable_layout(&self) -> bool {
+        self.is_scrollable
+    }
+
     pub(crate) fn get_transform(&self) -> Affine {
         self.transform
     }
@@ -339,6 +367,24 @@ impl LayoutItem {
                 });
             }
         }
+    }
+
+    pub fn resolve_clip_for_scrollable(&mut self, clip_bounds: Option<Rectangle>) {
+        if self.is_scrollable_layout() {
+            let scroll_clip_bounds = self.computed_box_transformed.padding_rectangle();
+            if let Some(clip_bounds) = clip_bounds {
+                self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
+            } else {
+                self.clip_bounds = Some(scroll_clip_bounds);
+            }
+        } else {
+            self.clip_bounds = clip_bounds;
+        }
+    }
+
+    pub fn reset_border_cache(&mut self) {
+        self.cache_border_spec = None;
+        self.cache_box_shadows = None;
     }
 }
 

@@ -23,12 +23,31 @@ impl TaffyTree {
         }
     }
 
+    pub fn clone_node(&mut self, src: NodeId) -> NodeId {
+        let style = self.inner.style(src).unwrap();
+        let context = self.inner.get_node_context(src);
+
+        match context {
+            None => {
+                self.inner.new_leaf(style.clone()).unwrap()
+            }
+            Some(ctx) => {
+                self.inner.new_leaf_with_context(style.clone(), ctx.clone()).unwrap()
+            }
+        }
+    }
+
     pub fn new_leaf(&mut self, layout: Style) -> NodeId {
         self.inner.new_leaf(layout).unwrap()
     }
 
     pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
         self.inner.add_child(parent, child).unwrap();
+        self.request_layout();
+    }
+
+    pub fn add_child_at_index(&mut self, parent: NodeId, child: NodeId, index: usize) {
+        self.inner.insert_child_at_index(parent, index, child).unwrap();
         self.request_layout();
     }
 
@@ -107,12 +126,12 @@ impl TaffyTree {
 
     /// Return this node layout relative to its parent
     #[inline]
-    pub fn layout(&self, node: NodeId) -> &Layout {
+    pub fn get_layout(&self, node: NodeId) -> &Layout {
         self.inner.layout(node).unwrap()
     }
 
     #[inline(always)]
-    pub fn get_has_new_layout(&self, node_id: NodeId) -> bool {
+    pub fn has_new_layout(&self, node_id: NodeId) -> bool {
         self.inner.get_has_new_layout(node_id)
     }
 

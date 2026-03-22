@@ -6,30 +6,30 @@ use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 
-use kurbo::{Affine, Point, Vec2};
+use kurbo::{Affine, Point};
 
 use ui_events::pointer::PointerId;
 
-use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
 
 use craft_renderer::RenderList;
 
 use crate::Color;
-
 use crate::CraftError;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::elements::scrollable::ScrollState;
+use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{CraftMessage, DropdownItemSelectedHandler, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
-use crate::layout::layout_item::{CssComputedBorder, LayoutItem, draw_borders_generic};
+use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 use crate::text::text_context::TextContext;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData + Any {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>>;
+
     fn position_in_parent(&self) -> Option<usize> {
         let parent = self.parent();
 
@@ -63,12 +63,12 @@ pub trait ElementInternals: ElementData + Any {
         for child in &self.element_data().children {
             child.borrow_mut().apply_layout(
                 taffy_tree,
-                self.element_data().layout_item.computed_box.position,
+                self.element_data().layout.computed_box.position,
                 z_index,
                 transform,
                 pointer,
                 text_context,
-                self.element_data().layout_item.clip_bounds,
+                self.element_data().layout.clip_bounds,
                 scale_factor,
             );
         }
@@ -97,7 +97,7 @@ pub trait ElementInternals: ElementData + Any {
     fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree) {
         let element_data = self.element_data_mut();
         if element_data.style.is_dirty {
-            let node_id = element_data.layout_item.taffy_node_id.unwrap();
+            let node_id = element_data.layout.taffy_node_id.unwrap();
             let style: taffy::Style = element_data.style.to_taffy_style();
             taffy_tree.set_style(node_id, style);
             element_data.style.is_dirty = false;
@@ -175,7 +175,7 @@ pub trait ElementInternals: ElementData + Any {
 
         let padding_box = self
             .element_data()
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);
@@ -222,7 +222,7 @@ pub trait ElementInternals: ElementData + Any {
         layout_order: &mut u32,
     ) {
         let position = self.element_data().style.get_position();
-        self.element_data_mut().layout_item.resolve_box(
+        self.element_data_mut().layout.resolve_box(
             relative_position,
             scroll_transform,
             result,
@@ -233,7 +233,7 @@ pub trait ElementInternals: ElementData + Any {
 
     /// Computes this element's clip box.
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        self.element_data_mut().layout_item.resolve_clip(clip_bounds);
+        self.element_data_mut().layout.resolve_clip(clip_bounds);
     }
 
     fn apply_borders(&mut self, scale_factor: f64) {
@@ -243,21 +243,17 @@ pub trait ElementInternals: ElementData + Any {
         let border_color = &current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
 
-        self.element_data_mut().layout_item.apply_borders(
-            has_border,
-            border_radius,
-            scale_factor,
-            border_color,
-            box_shadows,
-        );
+        self.element_data_mut()
+            .layout
+            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
     }
 
     /// A bit of a hack to reset the layout item of an element recursively.
-    fn reset_layout_item(&mut self) {
-        self.element_data_mut().layout_item = LayoutItem::default();
+    fn reset_layout(&mut self) {
+        self.element_data_mut().layout = Layout::default();
 
         for child in self.element_data_mut().children.iter_mut() {
-            child.borrow_mut().reset_layout_item();
+            child.borrow_mut().reset_layout();
         }
     }
 
@@ -277,7 +273,7 @@ pub trait ElementInternals: ElementData + Any {
             renderer.push_hit_testable(
                 id,
                 self.element_data()
-                    .layout_item
+                    .layout
                     .computed_box_transformed
                     .padding_rectangle()
                     .scale(scale_factor),
@@ -289,14 +285,14 @@ pub trait ElementInternals: ElementData + Any {
         let current_style = self.element_data().current_style();
 
         self.element_data()
-            .layout_item
+            .layout
             .draw_borders(renderer, current_style, scale_factor);
     }
 
     fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
         let element_data = self.element_data();
         let padding_rectangle = element_data
-            .layout_item
+            .layout
             .computed_box_transformed
             .padding_rectangle()
             .scale(scale_factor);
@@ -313,40 +309,8 @@ pub trait ElementInternals: ElementData + Any {
     }
 
     fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
-        if !self.element_data().is_scrollable() {
-            return;
-        }
-
-        let border_color = self.element_data().current_style().get_border_color();
-        let scrollbar_color = self.element_data().current_style().get_scrollbar_color();
-        let scrollbar_thumb_radius = self
-            .element_data()
-            .current_style()
-            .get_scrollbar_thumb_radius()
-            .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
-        // let scrollbar_thumb_radius = self.element_data().current_style().
-        let track_rect = self
-            .element_data_mut()
-            .layout_item
-            .computed_scroll_track
-            .scale(scale_factor);
-        let thumb_rect = self
-            .element_data_mut()
-            .layout_item
-            .computed_scroll_thumb
-            .scale(scale_factor);
-
-        let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
-        let mut computed_border_spec = CssComputedBorder::new(border_spec);
-        computed_border_spec.scale(scale_factor);
-
-        renderer.draw_rect(track_rect, scrollbar_color.track_color);
-        draw_borders_generic(
-            renderer,
-            &computed_border_spec,
-            border_color.to_array(),
-            scrollbar_color.thumb_color,
-        );
+        let element_data = self.element_data();
+        draw_scrollbar(&element_data.style, &element_data.layout, renderer, scale_factor);
     }
 
     fn should_start_new_layer(&self) -> bool {
@@ -357,7 +321,7 @@ pub trait ElementInternals: ElementData + Any {
 
     /// Returns the element's [`ElementBox`] without any transforms applied.
     fn computed_box(&self) -> ElementBox {
-        self.element_data().layout_item.computed_box
+        self.element_data().layout.computed_box
     }
 
     /// Gets
@@ -370,7 +334,7 @@ pub trait ElementInternals: ElementData + Any {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
-        let id = self.element_data().layout_item.taffy_node_id;
+        let id = self.element_data().layout.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
                 taffy_tree.mark_dirty(id);
@@ -380,7 +344,7 @@ pub trait ElementInternals: ElementData + Any {
 
     /// Updates taffy's style to reflect craft's style struct.
     fn update_taffy_style(&mut self) {
-        let id = self.element_data().layout_item.taffy_node_id;
+        let id = self.element_data().layout.taffy_node_id;
         if let Some(id) = id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
                 taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
@@ -459,9 +423,9 @@ pub trait ElementInternals: ElementData + Any {
 
         // Swap the children's taffy nodes.
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data().layout_item.taffy_node_id;
-            let child_1_id = child_1.borrow().element_data().layout_item.taffy_node_id;
-            let child_2_id = child_2.borrow().element_data().layout_item.taffy_node_id;
+            let parent_id = self.element_data().layout.taffy_node_id;
+            let child_1_id = child_1.borrow().element_data().layout.taffy_node_id;
+            let child_2_id = child_2.borrow().element_data().layout.taffy_node_id;
 
             if let Some(parent_id) = parent_id
                 && let Some(child_1_id) = child_1_id
@@ -523,13 +487,13 @@ pub trait ElementInternals: ElementData + Any {
         child.borrow_mut().propagate_window_down();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let child_id = child.borrow().element_data().layout_item.taffy_node_id;
+            let child_id = child.borrow().element_data().layout.taffy_node_id;
 
             if let Some(child_id) = child_id {
                 taffy_tree.remove_subtree(child_id);
             }
 
-            let parent_id = self.element_data().layout_item.taffy_node_id;
+            let parent_id = self.element_data().layout.taffy_node_id;
             taffy_tree.mark_dirty(parent_id.unwrap());
         });
 
@@ -568,6 +532,16 @@ pub trait ElementInternals: ElementData + Any {
 
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
+    }
+
+    fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.element_data_mut()
+            .on_dropdown_item_selected
+            .push(on_dropdown_item_selected);
+        self
     }
 
     fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self
@@ -643,12 +617,12 @@ pub trait ElementInternals: ElementData + Any {
     }
 
     fn get_scroll_state(&self) -> ScrollState {
-        self.element_data().scroll_state
+        self.element_data().layout.scroll_state
     }
 
     /// Returns the element's [`ElementBox`].
     fn get_computed_box_transformed(&self) -> ElementBox {
-        self.element_data().layout_item.computed_box_transformed
+        self.element_data().layout.computed_box_transformed
     }
 
     /// Returns a shared reference to the element's [`Style`].
@@ -666,9 +640,9 @@ pub trait ElementInternals: ElementData + Any {
     /// Visual order and visibility shall not be accounted for.
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
-        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout.computed_box_transformed.border_rectangle();
 
-        if let Some(clip) = element_data.layout_item.clip_bounds {
+        if let Some(clip) = element_data.layout.clip_bounds {
             match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,
@@ -1006,15 +980,5 @@ pub trait ElementInternals: ElementData + Any {
 }
 
 pub fn resolve_clip_for_scrollable(element: &mut dyn ElementInternals, clip_bounds: Option<Rectangle>) {
-    let element_data = element.element_data_mut();
-    if element_data.is_scrollable() {
-        let scroll_clip_bounds = element_data.layout_item.computed_box_transformed.padding_rectangle();
-        if let Some(clip_bounds) = clip_bounds {
-            element_data.layout_item.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
-        } else {
-            element_data.layout_item.clip_bounds = Some(scroll_clip_bounds);
-        }
-    } else {
-        element_data.layout_item.clip_bounds = clip_bounds;
-    }
+    element.element_data_mut().layout.resolve_clip_for_scrollable(clip_bounds);
 }

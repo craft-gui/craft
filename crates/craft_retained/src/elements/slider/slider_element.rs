@@ -11,6 +11,7 @@ use ui_events::pointer::PointerId;
 
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
+use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
@@ -30,6 +31,7 @@ pub struct Slider {
     pub inner: Rc<RefCell<SliderInner>>,
 }
 
+#[derive(Clone)]
 pub struct SliderInner {
     element_data: ElementData,
 
@@ -319,6 +321,10 @@ impl crate::elements::ElementData for SliderInner {
 }
 
 impl ElementInternals for SliderInner {
+    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.deep_clone_internal()
+    }
+
     fn apply_layout(
         &mut self,
         taffy_tree: &mut TaffyTree,
@@ -330,14 +336,14 @@ impl ElementInternals for SliderInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout_item.taffy_node_id.unwrap();
-        let layout = taffy_tree.layout(node);
-        let has_new_layout = taffy_tree.get_has_new_layout(node);
+        let node = self.element_data.layout.taffy_node_id.unwrap();
+        let layout = taffy_tree.get_layout(node);
+        let has_new_layout = taffy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
-            || transform != self.element_data.layout_item.get_transform()
-            || position != self.element_data.layout_item.position;
-        self.element_data.layout_item.has_new_layout = has_new_layout;
+            || transform != self.element_data.layout.get_transform()
+            || position != self.element_data.layout.position;
+        self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
@@ -372,12 +378,9 @@ impl ElementInternals for SliderInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        // @HARDCODED
-        let focused = true;
-
         match message {
             CraftMessage::KeyboardInputEvent(key) => {
-                if key.state != KeyState::Down || !focused {
+                if key.state != KeyState::Down || !self.is_focused() {
                     return;
                 }
 
@@ -399,6 +402,7 @@ impl ElementInternals for SliderInner {
                 }
             }
             CraftMessage::PointerButtonUp(pointer_button_update) => {
+                self.focus();
                 self.dragging = false;
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.release_pointer_capture(PointerId::new(1).unwrap());
@@ -448,7 +452,7 @@ impl ElementInternals for SliderInner {
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
-        let rect = element_data.layout_item.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout.computed_box_transformed.border_rectangle();
 
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
@@ -463,7 +467,7 @@ impl ElementInternals for SliderInner {
             return true;
         }
 
-        if let Some(clip) = element_data.layout_item.clip_bounds {
+        if let Some(clip) = element_data.layout.clip_bounds {
             match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,
