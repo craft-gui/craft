@@ -5,24 +5,22 @@ use std::sync::Arc;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
-use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
 use craft_renderer::RenderList;
-use kurbo::{Affine, Point, Vec2};
+use kurbo::{Affine, Point};
 use peniko::Color;
 use ui_events::pointer::PointerId;
 
-use crate::CraftError;
 use crate::app::{DOCUMENTS, ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::document::Document;
-use crate::elements::{AsElement};
 use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
-use crate::events::{CraftMessage, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{CraftMessage, DropdownItemSelectedHandler, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::layout::layout::Layout;
 use crate::layout::TaffyTree;
-use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 use crate::text::text_context::TextContext;
+use crate::CraftError;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData + Any {
@@ -536,6 +534,16 @@ pub trait ElementInternals: ElementData + Any {
 
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
+    }
+
+    fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) -> &mut Self
+    where
+        Self: Sized,
+    {
+        self.element_data_mut()
+            .on_dropdown_item_selected
+            .push(on_dropdown_item_selected);
+        self
     }
 
     fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self

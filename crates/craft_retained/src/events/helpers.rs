@@ -70,7 +70,6 @@ pub(super) fn call_user_event_handlers(
 ) {
     match message {
         CraftMessage::PointerEnter() => {
-            current_target.borrow_mut().element_data_mut().is_hovered = true;
             let mut element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_enter {
@@ -78,7 +77,6 @@ pub(super) fn call_user_event_handlers(
             }
         }
         CraftMessage::PointerLeave() => {
-            current_target.borrow_mut().element_data_mut().is_hovered = false;
             let mut element_data = current_target.borrow().element_data().clone();
 
             for handler in &element_data.on_pointer_leave {
@@ -118,7 +116,13 @@ pub(super) fn call_user_event_handlers(
         CraftMessage::TextInputChanged(_) => {}
         CraftMessage::LinkClicked(_) => {}
         CraftMessage::DropdownToggled(_) => {}
-        CraftMessage::DropdownItemSelected(_) => {}
+        CraftMessage::DropdownItemSelected(item) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_dropdown_item_selected {
+                (*handler)(event, *item);
+            }
+        }
         CraftMessage::SwitchToggled(_) => {}
         CraftMessage::SliderValueChanged(slider_value) => {
             let element_data = current_target.borrow().element_data().clone();

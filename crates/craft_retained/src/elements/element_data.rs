@@ -7,7 +7,7 @@ use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout::Layout;
 use crate::style::{Overflow, Style};
@@ -37,6 +37,7 @@ pub struct ElementData {
     pub(crate) internal_id: u64,
 
     // Events:
+    pub on_dropdown_item_selected: Vec<DropdownItemSelectedHandler>,
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
     pub on_pointer_enter: Vec<PointerEnterHandler>,
     pub on_pointer_leave: Vec<PointerLeaveHandler>,
@@ -47,7 +48,6 @@ pub struct ElementData {
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
     pub on_scroll: Vec<ScrollHandler>,
-    pub is_hovered: bool
 }
 
 impl ElementData {
@@ -60,6 +60,7 @@ impl ElementData {
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
+            on_dropdown_item_selected: Vec::new(),
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),
             on_pointer_leave: Vec::new(),
@@ -70,7 +71,6 @@ impl ElementData {
             on_pointer_moved: Vec::new(),
             on_keyboard_input: Vec::new(),
             on_scroll: Vec::new(),
-            is_hovered: false,
         };
 
         ELEMENTS.with_borrow_mut(|elements| {

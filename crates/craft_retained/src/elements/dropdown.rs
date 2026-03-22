@@ -2,7 +2,7 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use crate::app::{request_apply_layout, TAFFY_TREE};
+use crate::app::{queue_event, request_apply_layout, TAFFY_TREE};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
@@ -449,19 +449,23 @@ impl ElementInternals for DropdownInner {
 
 
             if is_pointer_in_window && !is_pointer_in_scrollbar {
-                let mut contained_one = false;
+                let mut should_hide_window = false;
                 for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
                     let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
 
                     if contains {
-                        contained_one = true;
+                        should_hide_window = true;
                         self.set_selected_element(child_index);
                         self.release_pointer_capture(PointerId::new(1).unwrap());
+
+                        let new_event = Event::new(event.target.clone());
+                        queue_event(new_event, CraftMessage::DropdownItemSelected(child_index));
+                        
                         break;
                     }
                 }
 
-                if contained_one {
+                if should_hide_window {
                     self.is_floating_window_hidden = true;
                 }
             }

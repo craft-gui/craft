@@ -25,6 +25,7 @@ use crate::utils::cloneable_any::CloneableAny;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut Event, usize)>;
 pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
