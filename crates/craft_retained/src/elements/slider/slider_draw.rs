@@ -1,7 +1,6 @@
-use craft_primitives::geometry::Rectangle;
 use craft_primitives::geometry::borders::CssRoundedRect;
+use craft_primitives::geometry::{Rectangle, Vec2};
 use craft_renderer::RenderList;
-use kurbo::Vec2;
 
 use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementInternals, SliderInner};

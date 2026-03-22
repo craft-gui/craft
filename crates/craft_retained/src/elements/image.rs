@@ -9,7 +9,8 @@ use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 use craft_resource_manager::ResourceIdentifier;
 use craft_resource_manager::resource_type::ResourceType;
-use kurbo::{Affine, Point};
+
+use craft_primitives::geometry::{Affine, Point};
 
 use crate::app::{ELEMENTS, PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::ElementInternals;

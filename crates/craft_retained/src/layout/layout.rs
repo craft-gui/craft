@@ -1,41 +1,15 @@
-use crate::elements::scrollable::ScrollState;
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
-use craft_primitives::geometry::{Border, ElementBox, Margin, Padding, Point, Rectangle, Size, TrblRectangle};
+use craft_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
+
 use craft_renderer::renderer::BoxShadowCmd;
 use craft_renderer::{Brush, RenderList};
-use kurbo::{Affine, BezPath, Shape, Vec2};
+
 use peniko::Color;
+
 use taffy::NodeId;
 
+use crate::elements::scrollable::ScrollState;
 use crate::style::{BoxShadow, Position, Style};
-
-impl CssComputedBorder {
-    pub(crate) fn scale(&mut self, scale_factor: f64) {
-        let scale_factor = Affine::scale(scale_factor);
-
-        self.background.apply_affine(scale_factor);
-
-        for side in self.sides.iter_mut().flatten() {
-            side.apply_affine(scale_factor);
-        }
-    }
-}
-
-impl CssComputedBorder {
-    pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
-        let top = css_rect.get_side(TOP);
-        let right = css_rect.get_side(RIGHT);
-        let bottom = css_rect.get_side(BOTTOM);
-        let left = css_rect.get_side(LEFT);
-        let background = css_rect.to_path(0.1f64);
-
-        Self {
-            css_rect,
-            sides: [top, right, bottom, left],
-            background,
-        }
-    }
-}
 
 #[derive(Clone, Default)]
 pub struct Layout {
@@ -72,6 +46,81 @@ pub struct Layout {
 
     pub scrollbar_thumb_margin: TrblRectangle<f32>,
     pub scrollbar_thumb_radius: [(f32, f32); 4],
+}
+
+#[derive(Clone)]
+enum BezPathOrRect {
+    Rect(Rectangle),
+    BezPath(BezPath),
+}
+
+#[derive(Clone)]
+struct ComputedBoxShadow {
+    pub inset: bool,
+    pub shape: BezPathOrRect,
+    pub offset: Vec2,
+    pub blur_radius: f64,
+    pub color: Color,
+}
+
+#[derive(Clone)]
+pub(crate) struct ComputedBoxShadows {
+    outline: BezPathOrRect,
+    inline: BezPathOrRect,
+    box_shadows: Vec<ComputedBoxShadow>,
+    border_box: Rectangle,
+}
+
+#[derive(Clone)]
+pub(crate) struct CssComputedBorder {
+    css_rect: CssRoundedRect,
+    sides: [Option<BezPath>; 4],
+    background: BezPath,
+}
+
+#[derive(Clone, PartialEq)]
+struct BorderSpec {
+    rect: Rectangle,
+    width: TrblRectangle<f32>,
+    radii: [(f32, f32); 4],
+    scale_factor: f64,
+    box_shadows: Vec<BoxShadow>,
+}
+
+#[derive(Clone, Default)]
+pub(crate) enum ComputedBorder {
+    CssComputed(Box<CssComputedBorder>),
+    Simple,
+    #[default]
+    None,
+}
+
+impl CssComputedBorder {
+    pub(crate) fn scale(&mut self, scale_factor: f64) {
+        let scale_factor = Affine::scale(scale_factor);
+
+        self.background.apply_affine(scale_factor);
+
+        for side in self.sides.iter_mut().flatten() {
+            side.apply_affine(scale_factor);
+        }
+    }
+}
+
+impl CssComputedBorder {
+    pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
+        let top = css_rect.get_side(TOP);
+        let right = css_rect.get_side(RIGHT);
+        let bottom = css_rect.get_side(BOTTOM);
+        let left = css_rect.get_side(LEFT);
+        let background = css_rect.to_path(0.1f64);
+
+        Self {
+            css_rect,
+            sides: [top, right, bottom, left],
+            background,
+        }
+    }
 }
 
 impl Layout {
@@ -409,12 +458,6 @@ pub(crate) fn draw_borders_generic(
     }
 }
 
-#[derive(Clone)]
-enum BezPathOrRect {
-    Rect(Rectangle),
-    BezPath(BezPath),
-}
-
 impl BezPathOrRect {
     pub fn to_path(&self) -> BezPath {
         match self {
@@ -422,47 +465,6 @@ impl BezPathOrRect {
             BezPathOrRect::BezPath(path) => path.clone(),
         }
     }
-}
-
-#[derive(Clone)]
-struct ComputedBoxShadow {
-    pub inset: bool,
-    pub shape: BezPathOrRect,
-    pub offset: Vec2,
-    pub blur_radius: f64,
-    pub color: Color,
-}
-
-#[derive(Clone)]
-pub(crate) struct ComputedBoxShadows {
-    outline: BezPathOrRect,
-    inline: BezPathOrRect,
-    box_shadows: Vec<ComputedBoxShadow>,
-    border_box: Rectangle,
-}
-
-#[derive(Clone)]
-pub(crate) struct CssComputedBorder {
-    css_rect: CssRoundedRect,
-    sides: [Option<BezPath>; 4],
-    background: BezPath,
-}
-
-#[derive(Clone, PartialEq)]
-struct BorderSpec {
-    rect: Rectangle,
-    width: TrblRectangle<f32>,
-    radii: [(f32, f32); 4],
-    scale_factor: f64,
-    box_shadows: Vec<BoxShadow>,
-}
-
-#[derive(Clone, Default)]
-pub(crate) enum ComputedBorder {
-    CssComputed(Box<CssComputedBorder>),
-    Simple,
-    #[default]
-    None,
 }
 
 #[inline(always)]

@@ -6,11 +6,9 @@ use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 
-use kurbo::{Affine, Point};
-
 use ui_events::pointer::PointerId;
 
-use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
+use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
 
 use craft_renderer::RenderList;
 

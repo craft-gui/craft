@@ -1,4 +1,4 @@
-use kurbo::Point;
+use craft_primitives::geometry::Point;
 
 use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementData, SliderInner};

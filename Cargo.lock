@@ -1034,7 +1034,6 @@ dependencies = [
  "craft_runtime",
  "craft_undo",
  "image",
- "kurbo",
  "libtest-mimic-collect",
  "open",
  "parley",

@@ -1,16 +1,45 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
 
-use craft_primitives::Color;
-use craft_primitives::geometry::{Point, Rectangle};
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use accesskit::{Action, Role};
+
+use craft_renderer::text_renderer_data::TextData;
+
+use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
+use craft_primitives::{Color, ColorBrush};
+
 use craft_renderer::renderer::RenderList;
+
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::LayoutAccessibility;
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
+use rustc_hash::FxHashMap;
+
+use smol_str::{SmolStr, ToSmolStr};
+
+use taffy::{AvailableSpace, Size};
+
+use time::{Duration, Instant};
+
+use ui_events::pointer::{PointerButton, PointerId};
+
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+
+use winit::dpi;
+
 use crate::elements::element_data::ElementData;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use crate::elements::element_id::create_unique_element_id;
+use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
+use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
 use crate::style::Style;
 use crate::text::text_context::TextContext;
@@ -18,29 +47,6 @@ use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
 
 const MAX_CACHE_SIZE: usize = 16;
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::time;
-
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Action, Role};
-use craft_primitives::ColorBrush;
-use craft_renderer::text_renderer_data::TextData;
-use kurbo::Affine;
-use rustc_hash::FxHashMap;
-use smol_str::{SmolStr, ToSmolStr};
-use taffy::{AvailableSpace, Size};
-use time::{Duration, Instant};
-use ui_events::pointer::{PointerButton, PointerId};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-use winit::dpi;
-
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use crate::elements::element_id::create_unique_element_id;
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals};
-use crate::layout::TaffyTree;
 
 #[derive(Clone)]
 pub struct Text {
@@ -58,124 +64,28 @@ pub struct TextInner {
 
 #[derive(Clone)]
 pub struct TextState {
+    pub(crate) text_render: Option<TextRender>,
+    pub(crate) last_click_time: Option<Instant>,
+    pub(crate) click_count: u32,
+    pub(crate) pointer_down: bool,
+    pub(crate) start_time: Option<Instant>,
+    pub(crate) blink_period: Duration,
     text: SmolStr,
     scale_factor: f64,
     selection: Selection,
-    pub(crate) text_render: Option<TextRender>,
     layout: Option<parley::Layout<ColorBrush>>,
     cache: FxHashMap<TextHashKey, Size<f32>>,
     current_layout_key: Option<TextHashKey>,
     last_requested_measure_key: Option<TextHashKey>,
     current_render_key: Option<TextHashKey>,
     content_widths: Option<ContentWidths>,
-
-    pub(crate) last_click_time: Option<Instant>,
-    pub(crate) click_count: u32,
-    pub(crate) pointer_down: bool,
     /// The last known cursor position.
     ///
     /// The cursor is assumed to start at (0.0, 0.0). The cursor_pos may return points
     /// outside the text input.
     cursor_pos: Point,
-    pub(crate) start_time: Option<Instant>,
-    pub(crate) blink_period: Duration,
-
     is_layout_dirty: bool,
     is_render_dirty: bool,
-}
-
-impl Text {
-    pub fn new(text: &str) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInner>>| {
-            RefCell::new(TextInner {
-                element_data: ElementData::new(me.clone(), false),
-                selectable: true,
-                state: TextState::default(),
-                me: me.clone(),
-            })
-        });
-
-        let text_context = Some(LayoutContext::Text(TaffyTextContext {
-            element: inner.borrow().me.clone(),
-        }));
-        inner.borrow_mut().element_data.create_layout_node(text_context);
-
-        inner.borrow_mut().set_text(text);
-
-        Text { inner }
-    }
-
-    pub fn get_selectable(&self) -> bool {
-        self.inner.borrow().selectable
-    }
-
-    pub fn selectable(self, selectable: bool) -> Self {
-        self.inner.borrow_mut().set_selectable(selectable);
-        self
-    }
-
-    pub fn get_text(&self) -> String {
-        self.inner.borrow().get_text().to_owned()
-    }
-
-    pub fn text(self, text: &str) -> Self {
-        self.inner.borrow_mut().set_text(text);
-        self
-    }
-
-    pub fn set_text_smol_str(self, text: SmolStr) -> Self {
-        self.inner.borrow_mut().set_text_smol_str(text);
-        self
-    }
-}
-
-impl TextInner {
-    pub fn get_selectable(&self) -> bool {
-        self.selectable
-    }
-
-    pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
-        self.selectable = selectable;
-        self
-    }
-
-    pub fn get_text(&self) -> &str {
-        &self.state.text
-    }
-
-    /// Set the text.
-    ///
-    /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
-    /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(&mut self, text: &str) -> &mut Self {
-        self.set_text_smol_str(text.to_smolstr());
-        self
-    }
-
-    /// Set the text.
-    ///
-    /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
-    /// render caches will be computed in the next layout/render pass.
-    pub fn set_text_smol_str(&mut self, text: SmolStr) {
-        self.state.text = text;
-        self.state.is_layout_dirty = true;
-        self.state.is_render_dirty = true;
-        self.mark_dirty();
-    }
-
-    pub(crate) fn measure(
-        &mut self,
-        known_dimensions: Size<Option<f32>>,
-        available_space: Size<AvailableSpace>,
-        text_context: &mut TextContext,
-    ) -> Size<f32> {
-        self.state.measure(
-            &self.element_data.style,
-            known_dimensions,
-            available_space,
-            text_context,
-        )
-    }
 }
 
 impl Element for Text {}
@@ -193,6 +103,37 @@ impl crate::elements::ElementData for TextInner {
 
     fn element_data_mut(&mut self) -> &mut ElementData {
         &mut self.element_data
+    }
+}
+
+impl TextData for TextInner {
+    fn get_text_renderer(&self) -> Option<&TextRender> {
+        self.state.text_render.as_ref()
+    }
+}
+
+impl Default for TextState {
+    fn default() -> Self {
+        Self {
+            text: SmolStr::new(""),
+            scale_factor: 1.0,
+            selection: Selection::default(),
+            text_render: None,
+            layout: None,
+            cache: Default::default(),
+            current_layout_key: None,
+            last_requested_measure_key: None,
+            current_render_key: None,
+            content_widths: None,
+            last_click_time: None,
+            click_count: 0,
+            pointer_down: false,
+            cursor_pos: Point::new(0.0, 0.0),
+            start_time: None,
+            blink_period: Default::default(),
+            is_layout_dirty: false,
+            is_render_dirty: false,
+        }
     }
 }
 
@@ -372,7 +313,7 @@ impl ElementInternals for TextInner {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
                     state.cursor_pos = pointer_moved.current.logical_point()
-                        - kurbo::Vec2::new(text_position.x as f64, text_position.y as f64);
+                        - Vec2::new(text_position.x as f64, text_position.y as f64);
                     state.cursor_pos.x /= state.scale_factor;
                     state.cursor_pos.y /= state.scale_factor;
                     // macOS seems to generate a spurious move after selecting word?
@@ -403,6 +344,100 @@ impl ElementInternals for TextInner {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+}
+
+impl Text {
+    pub fn new(text: &str) -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInner>>| {
+            RefCell::new(TextInner {
+                element_data: ElementData::new(me.clone(), false),
+                selectable: true,
+                state: TextState::default(),
+                me: me.clone(),
+            })
+        });
+
+        let text_context = Some(LayoutContext::Text(TaffyTextContext {
+            element: inner.borrow().me.clone(),
+        }));
+        inner.borrow_mut().element_data.create_layout_node(text_context);
+
+        inner.borrow_mut().set_text(text);
+
+        Text { inner }
+    }
+
+    pub fn get_selectable(&self) -> bool {
+        self.inner.borrow().selectable
+    }
+
+    pub fn selectable(self, selectable: bool) -> Self {
+        self.inner.borrow_mut().set_selectable(selectable);
+        self
+    }
+
+    pub fn get_text(&self) -> String {
+        self.inner.borrow().get_text().to_owned()
+    }
+
+    pub fn text(self, text: &str) -> Self {
+        self.inner.borrow_mut().set_text(text);
+        self
+    }
+
+    pub fn set_text_smol_str(self, text: SmolStr) -> Self {
+        self.inner.borrow_mut().set_text_smol_str(text);
+        self
+    }
+}
+
+impl TextInner {
+    pub fn get_selectable(&self) -> bool {
+        self.selectable
+    }
+
+    pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
+        self.selectable = selectable;
+        self
+    }
+
+    pub fn get_text(&self) -> &str {
+        &self.state.text
+    }
+
+    /// Set the text.
+    ///
+    /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
+    /// render caches will be computed in the next layout/render pass.
+    pub fn set_text(&mut self, text: &str) -> &mut Self {
+        self.set_text_smol_str(text.to_smolstr());
+        self
+    }
+
+    /// Set the text.
+    ///
+    /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
+    /// render caches will be computed in the next layout/render pass.
+    pub fn set_text_smol_str(&mut self, text: SmolStr) {
+        self.state.text = text;
+        self.state.is_layout_dirty = true;
+        self.state.is_render_dirty = true;
+        self.mark_dirty();
+    }
+
+    pub(crate) fn measure(
+        &mut self,
+        known_dimensions: Size<Option<f32>>,
+        available_space: Size<AvailableSpace>,
+        text_context: &mut TextContext,
+    ) -> Size<f32> {
+        self.state.measure(
+            &self.element_data.style,
+            known_dimensions,
+            available_space,
+            text_context,
+        )
     }
 }
 
@@ -556,37 +591,6 @@ impl TextState {
                     selection_color,
                 ));
             });
-        }
-    }
-}
-
-impl TextData for TextInner {
-    fn get_text_renderer(&self) -> Option<&TextRender> {
-        self.state.text_render.as_ref()
-    }
-}
-
-impl Default for TextState {
-    fn default() -> Self {
-        Self {
-            text: SmolStr::new(""),
-            scale_factor: 1.0,
-            selection: Selection::default(),
-            text_render: None,
-            layout: None,
-            cache: Default::default(),
-            current_layout_key: None,
-            last_requested_measure_key: None,
-            current_render_key: None,
-            content_widths: None,
-            last_click_time: None,
-            click_count: 0,
-            pointer_down: false,
-            cursor_pos: Point::new(0.0, 0.0),
-            start_time: None,
-            blink_period: Default::default(),
-            is_layout_dirty: false,
-            is_render_dirty: false,
         }
     }
 }

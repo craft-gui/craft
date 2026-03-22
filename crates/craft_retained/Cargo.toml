@@ -52,8 +52,8 @@ optional = true
 version = "2.10.0"
 features = ["std"]
 
-[dependencies.kurbo]
-workspace = true
+#[dependencies.kurbo]
+#workspace = true
 
 [dependencies.smallvec]
 version = "1.15.1"

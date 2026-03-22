@@ -4,10 +4,8 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::RenderList;
-
-use kurbo::{Affine, Point};
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};

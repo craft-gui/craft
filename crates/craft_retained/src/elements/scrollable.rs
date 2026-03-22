@@ -1,7 +1,9 @@
-use kurbo::{Point, Vec2};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
+
+use craft_primitives::geometry::{Point, Vec2};
+
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
 

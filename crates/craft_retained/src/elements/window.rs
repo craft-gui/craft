@@ -11,14 +11,12 @@ use {accesskit::{Action, Role, TreeUpdate}, accesskit_winit::Adapter};
 
 use craft_logging::info;
 
-use craft_primitives::geometry::{Rectangle, Size};
+use craft_primitives::geometry::{Affine, Point, Rectangle, Size};
 
 use craft_renderer::renderer::{Renderer, Screenshot};
 use craft_renderer::{RenderList, RendererType};
 
 use craft_resource_manager::ResourceManager;
-
-use kurbo::{Affine, Point};
 
 use peniko::Color;
 

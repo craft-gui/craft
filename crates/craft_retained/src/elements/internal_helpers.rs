@@ -2,9 +2,10 @@ use crate::app::TAFFY_TREE;
 use crate::elements::ElementInternals;
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
-use craft_primitives::geometry::Rectangle;
+
+use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::RenderList;
-use kurbo::{Affine, Point};
+
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 

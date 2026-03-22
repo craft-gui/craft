@@ -4,11 +4,11 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use craft_primitives::geometry::{Rectangle, TrblRectangle};
+use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 
 use craft_renderer::{Brush, RenderList};
 
-use kurbo::{Affine, Point, Vec2};
+use craft_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
@@ -198,7 +198,7 @@ impl ElementInternals for DropdownInner {
         // Draw the arrow
         let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle();
         let thickness = 2.0 * _scale_factor;
-        let mut path = kurbo::BezPath::new();
+        let mut path = BezPath::new();
         let left_x = arrow_rect.x as f64;
         let right_x = (arrow_rect.x + arrow_rect.width) as f64;
         let center_x = (arrow_rect.x + arrow_rect.width / 2.0) as f64;

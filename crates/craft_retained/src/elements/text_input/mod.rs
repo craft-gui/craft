@@ -6,12 +6,15 @@ use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
 use craft_primitives::Color;
-use craft_primitives::geometry::{Point, Rectangle, TrblRectangle};
+use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+
 use craft_renderer::renderer::{RenderList, TextScroll};
 use craft_renderer::text_renderer_data::TextData;
-use kurbo::Affine;
+
 use parley::BoundingBox;
+
 use ui_events::pointer::PointerButton;
+
 use winit::event::Ime;
 
 use crate::app::ELEMENTS;

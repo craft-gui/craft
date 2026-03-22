@@ -2,14 +2,16 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+use craft_primitives::geometry::Point;
+
+use craft_renderer::RenderList;
+use craft_renderer::renderer::TargetItem;
+
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
-use craft_renderer::RenderList;
-use craft_renderer::renderer::TargetItem;
-use kurbo::Point;
 
 pub(super) fn freeze_target_list(
     target: Rc<RefCell<dyn ElementInternals>>,

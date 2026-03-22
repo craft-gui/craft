@@ -2,10 +2,11 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::RenderList;
-use kurbo::{Affine, Point};
+
 use peniko::Color;
+
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
 

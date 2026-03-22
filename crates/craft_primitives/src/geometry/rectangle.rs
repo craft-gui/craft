@@ -1,5 +1,4 @@
 use dpi;
-use peniko::kurbo;
 
 use crate::geometry::Point;
 
