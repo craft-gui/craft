@@ -307,12 +307,10 @@ impl ElementInternals for DropdownInner {
         }
 
         if let Some(clip) = element_data.layout.clip_bounds {
-            let rect_intersection = match rect.intersection(&clip) {
+            match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,
-            };
-
-            rect_intersection
+            }
         } else {
             rect.contains(&point)
         }
@@ -374,7 +372,7 @@ impl ElementInternals for DropdownInner {
             for (index, child) in self.children().iter().enumerate() {
                 let mut child_rect = child.borrow_mut().element_data().layout.computed_box_transformed.border_rectangle();
                 child_rect.x = self.floating_window.layout.computed_box_transformed.position.x as f32;
-                child_rect.width = self.floating_window.layout.computed_box_transformed.size.width as f32;
+                child_rect.width = self.floating_window.layout.computed_box_transformed.size.width;
 
                 let is_hovered = self.currently_hovered_element == Some(index);
                 if is_hovered {
@@ -410,7 +408,7 @@ impl ElementInternals for DropdownInner {
 
             if is_pointer_in_window && !is_pointer_in_scrollbar {
                 let mut hovered_child = None;
-                for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
+                for (child_index, child) in self.children().iter().cloned().enumerate() {
                     let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
 
                     if contains {
@@ -450,7 +448,7 @@ impl ElementInternals for DropdownInner {
 
             if is_pointer_in_window && !is_pointer_in_scrollbar {
                 let mut should_hide_window = false;
-                for (child_index, child) in self.children().iter().map(|r| r.clone()).enumerate() {
+                for (child_index, child) in self.children().iter().cloned().enumerate() {
                     let contains = child.borrow().element_data().layout.computed_box_transformed.border_rectangle().contains(&pointer_position);
 
                     if contains {
@@ -473,7 +471,7 @@ impl ElementInternals for DropdownInner {
 
 
         let floating_window = &mut self.floating_window;
-        let result = handle_scroll_logic_advance(&*floating_window.style, &mut floating_window.layout, message, event);
+        let result = handle_scroll_logic_advance(&floating_window.style, &mut floating_window.layout, message, event);
         if result.request_apply_layout {
             request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
         }

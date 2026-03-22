@@ -28,13 +28,13 @@ impl<T> DeepClone for T where T: ElementInternals + Clone + 'static {
            request_apply_layout(*node_id);
            request_layout(*node_id);
 
+            let node_id_copy = *node_id;
             let mut new_children = Vec::new();
             for child in &new_data.children {
                 let new_child = child.borrow().deep_clone();
                 new_children.push(new_child.clone());
 
                 let new_child_copy = new_child.clone();
-                let node_id_copy = node_id.clone();
                 TAFFY_TREE.with_borrow_mut(move |taffy_tree| {
                     taffy_tree.add_child(node_id_copy, new_child_copy.borrow().element_data().layout.taffy_node_id.unwrap());
                 });

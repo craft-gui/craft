@@ -242,7 +242,7 @@ pub struct HandleScrollLogicResult {
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
     let element_data  = element.element_data_mut();
-    let result = handle_scroll_logic_advance(&*element_data.style, &mut element_data.layout, message, event);
+    let result = handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event);
 
     if result.request_apply_layout {
         request_apply_layout(element.element_data().layout.taffy_node_id());
@@ -288,8 +288,8 @@ pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, me
                 event.prevent_propagate();
                 event.prevent_defaults();
             }
-            CraftMessage::PointerButtonDown(pointer_button) => {
-                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
+            CraftMessage::PointerButtonDown(pointer_button)
+                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) => {
                     // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                     if pointer_button.pointer.pointer_type == PointerType::Touch {
                         let container_rectangle = layout.computed_box_transformed.padding_rectangle();
@@ -339,17 +339,15 @@ pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, me
                         event.prevent_propagate();
                         event.prevent_defaults();
                     }
-                }
             }
-            CraftMessage::PointerButtonUp(_pointer_button) => {
-                if state.scroll_click.is_some() {
+            CraftMessage::PointerButtonUp(_pointer_button)
+                if state.scroll_click.is_some() => {
                     state.scroll_click = None;
                     event.prevent_propagate();
                     event.prevent_defaults();
 
                     result.release_pointer_capture = true;
                 }
-            }
             CraftMessage::PointerMovedEvent(pointer_motion) => {
                 if let Some(click) = state.scroll_click {
                     // Todo: Translate scroll wheel pixel to scroll position for diff.

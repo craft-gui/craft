@@ -1,4 +1,5 @@
 pub mod layout_context;
+#[allow(clippy::module_inception)]
 pub mod layout;
 mod taffy_tree;
 
