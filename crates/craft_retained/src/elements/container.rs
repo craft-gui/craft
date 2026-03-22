@@ -125,24 +125,16 @@ impl ElementInternals for ContainerInner {
         )
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
-        self.add_hit_testable(_renderer, true, _scale_factor);
-
-        // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(_renderer, _scale_factor);
-
-        /*if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 5.0);
-        }*/
-
-        self.maybe_start_layer(_renderer, _scale_factor);
-        self.draw_children(_renderer, _text_context, _scale_factor);
-        self.maybe_end_layer(_renderer);
-
-        self.draw_scrollbar(_renderer, _scale_factor);
+        self.add_hit_testable(renderer, true, scale_factor);
+        self.draw_borders(renderer, scale_factor);
+        self.maybe_start_layer(renderer, scale_factor);
+        self.draw_children(renderer, text_context, scale_factor);
+        self.maybe_end_layer(renderer);
+        self.draw_scrollbar(renderer, scale_factor);
     }
 
     fn on_event(
