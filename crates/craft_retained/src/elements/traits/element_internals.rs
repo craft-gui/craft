@@ -80,15 +80,9 @@ pub trait ElementInternals: ElementData + Any {
     }
 
     /// A helper to draw all children.
-    fn draw_children(
-        &mut self,
-        renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw_children(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
         for child in self.children() {
-            child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
+            child.borrow_mut().draw(renderer, text_context, scale_factor);
         }
     }
 
@@ -147,14 +141,7 @@ pub trait ElementInternals: ElementData + Any {
     /// - `pointer`: optional pointer position for hover effects.
     /// - `window`: optional window handle.
     /// - `scale_factor`: scale factor.
-    fn draw(
-        &mut self,
-        _renderer: &mut RenderList,
-        _text_context: &mut TextContext,
-        _pointer: Option<Point>,
-        _scale_factor: f64,
-    ) {
-    }
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {}
 
     /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]

@@ -181,32 +181,26 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        text_context: &mut TextContext,
-        pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, scale_factor);
+        self.draw_borders(_renderer, _scale_factor);
 
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
-            binding.draw(renderer, text_context, pointer, scale_factor);
+            binding.draw(_renderer, _text_context, _scale_factor);
         }
 
         if self.is_floating_window_hidden {
-            self.add_hit_testable(renderer, true, scale_factor);
+            self.add_hit_testable(_renderer, true, _scale_factor);
         }
 
         // Draw the arrow
         let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle();
-        let thickness = 2.0 * scale_factor;
+        let thickness = 2.0 * _scale_factor;
         let mut path = kurbo::BezPath::new();
         let left_x = arrow_rect.x as f64;
         let right_x = (arrow_rect.x + arrow_rect.width) as f64;
@@ -223,23 +217,23 @@ impl ElementInternals for DropdownInner {
 
         path.apply_affine((Affine::IDENTITY).then_translate(Vec2::new(0.0, arrow_rect.height as f64 / 4.0)));
         let arrow_color = Color::from_rgba8(75, 75, 77, 255);
-        renderer.fill_bez_path(path, Brush::Color(arrow_color));
+        _renderer.fill_bez_path(path, Brush::Color(arrow_color));
 
         if !self.is_floating_window_hidden {
-            renderer.start_overlay();
-            self.add_hit_testable(renderer, true, scale_factor);
+            _renderer.start_overlay();
+            self.add_hit_testable(_renderer, true, _scale_factor);
 
             let current_style = self.floating_window.style.as_ref();
             self.floating_window
                 .layout
-                .draw_borders(renderer, current_style, scale_factor);
+                .draw_borders(_renderer, current_style, _scale_factor);
 
-            renderer.push_layer(
+            _renderer.push_layer(
                 self.floating_window
                     .layout
                     .computed_box_transformed
                     .padding_rectangle()
-                    .scale(scale_factor),
+                    .scale(_scale_factor),
             );
 
             for (index, child) in self.children().iter().enumerate() {
@@ -254,21 +248,21 @@ impl ElementInternals for DropdownInner {
 
                 let is_hovered = self.currently_hovered_element == Some(index);
                 if is_hovered {
-                    renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
+                    _renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
                 }
 
-                child.borrow_mut().draw(renderer, text_context, pointer, scale_factor);
+                child.borrow_mut().draw(_renderer, _text_context, _scale_factor);
             }
 
-            renderer.pop_layer();
+            _renderer.pop_layer();
 
             draw_scrollbar(
                 &self.floating_window.style,
                 &self.floating_window.layout,
-                renderer,
-                scale_factor,
+                _renderer,
+                _scale_factor,
             );
-            renderer.end_overlay();
+            _renderer.end_overlay();
         }
     }
 

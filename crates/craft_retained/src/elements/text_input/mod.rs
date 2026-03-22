@@ -212,29 +212,23 @@ impl ElementInternals for TextInputInner {
             .render_text(self.is_focused(), self.element_data.current_style());
     }
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        _text_context: &mut TextContext,
-        _pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
 
-        self.add_hit_testable(renderer, true, scale_factor);
+        self.add_hit_testable(_renderer, true, _scale_factor);
 
         let computed_box_transformed = self.computed_box();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer, scale_factor);
+        self.draw_borders(_renderer, _scale_factor);
 
         let is_scrollable = self.element_data.is_scrollable();
 
         let element_data = &self.element_data;
         let padding_rectangle = element_data.layout.computed_box_transformed.padding_rectangle();
-        renderer.push_layer(padding_rectangle.scale(scale_factor));
+        _renderer.push_layer(padding_rectangle.scale(_scale_factor));
 
         let text_scroll = if is_scrollable {
             Some(TextScroll::new(
@@ -246,17 +240,17 @@ impl ElementInternals for TextInputInner {
         };
 
         if self.state.text_render.as_ref().is_some() {
-            renderer.draw_text(
+            _renderer.draw_text(
                 self.me.clone(),
-                content_rectangle.scale(scale_factor),
+                content_rectangle.scale(_scale_factor),
                 text_scroll,
                 self.is_focused(),
             );
         }
 
-        renderer.pop_layer();
+        _renderer.pop_layer();
 
-        self.draw_scrollbar(renderer, scale_factor);
+        self.draw_scrollbar(_renderer, _scale_factor);
     }
 
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]

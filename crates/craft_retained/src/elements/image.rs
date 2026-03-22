@@ -106,25 +106,19 @@ impl ElementInternals for Image {
         self.apply_clip(clip_bounds);
     }
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        _text_context: &mut TextContext,
-        _pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(renderer, scale_factor);
+        self.draw_borders(_renderer, _scale_factor);
 
         let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
-        self.draw_borders(renderer, scale_factor);
+        self.draw_borders(_renderer, _scale_factor);
 
-        renderer.draw_image(content_rectangle.scale(scale_factor), self.resource_identifier.clone());
+        _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_identifier.clone());
     }
 
     fn as_any(&self) -> &dyn Any {

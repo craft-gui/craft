@@ -242,28 +242,22 @@ impl ElementInternals for TextInner {
         state.try_update_text_render(text_context, self.element_data.style.get_selection_color());
     }
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        _text_context: &mut TextContext,
-        _pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
-        self.add_hit_testable(renderer, true, scale_factor);
+        self.add_hit_testable(_renderer, true, _scale_factor);
 
         let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
-        self.draw_borders(renderer, scale_factor);
+        self.draw_borders(_renderer, _scale_factor);
 
         /*if self.element_data.layout_item.has_new_layout {
             renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
         }*/
 
-        renderer.draw_text(self.me.clone(), content_rectangle.scale(scale_factor), None, false);
+        _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
     }
 
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]

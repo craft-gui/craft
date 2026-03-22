@@ -353,22 +353,16 @@ impl ElementInternals for SliderInner {
         }
     }
 
-    fn draw(
-        &mut self,
-        renderer: &mut RenderList,
-        _text_context: &mut TextContext,
-        _pointer: Option<Point>,
-        scale_factor: f64,
-    ) {
+    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
 
-        self.add_hit_testable(renderer, true, scale_factor);
+        self.add_hit_testable(_renderer, true, _scale_factor);
 
-        self.draw_borders(renderer, scale_factor);
-        self.draw_track(renderer, scale_factor);
-        self.draw_thumb(renderer);
+        self.draw_borders(_renderer, _scale_factor);
+        self.draw_track(_renderer, _scale_factor);
+        self.draw_thumb(_renderer);
     }
 
     fn on_event(
