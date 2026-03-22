@@ -1,26 +1,33 @@
+//! Integration with the winit event loop.
+
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
 use craft_logging::info;
+
 use craft_primitives::geometry::Size;
+
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work};
+
 use ui_events::pointer::PointerEvent;
+
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
+
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::WindowId;
+
+use crate::CraftOptions;
+use crate::app::{App, WINDOW_MANAGER, dequeue_window_event};
+use crate::elements::Window;
+use crate::events::internal::InternalMessage;
 #[cfg(target_arch = "wasm32")]
 use {crate::wasm_queue::WASM_QUEUE, crate::wasm_queue::WasmQueue};
 
-use crate::CraftOptions;
-use crate::app::{App, CURRENT_WINDOW_ID, DOCUMENTS, WINDOW_MANAGER, dequeue_window_event};
-use crate::document::Document;
-use crate::events::internal::InternalMessage;
-
-const WAIT_TIME: time::Duration = time::Duration::from_millis(15);
+const WAIT_TIME: time::Duration = time::Duration::from_millis(10);
 
 /// Stores state related to Winit.
 ///
@@ -43,12 +50,6 @@ pub(crate) struct CraftWinitState {
     craft_state: CraftState,
 }
 
-impl CraftWinitState {
-    pub(crate) fn new(craft_state: CraftState) -> Self {
-        Self { craft_state }
-    }
-}
-
 impl ApplicationHandler for CraftWinitState {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         self.craft_state.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
@@ -58,10 +59,6 @@ impl ApplicationHandler for CraftWinitState {
         self.craft_state.craft_app.on_resume(event_loop);
     }
 
-    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
-        self.craft_state.craft_app.on_suspended(event_loop);
-    }
-
     fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
         let window: Option<crate::elements::Window> =
             WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
@@ -69,14 +66,6 @@ impl ApplicationHandler for CraftWinitState {
         let window = if let Some(window) = window { window } else { return };
 
         let craft_state = &mut self.craft_state;
-
-        CURRENT_WINDOW_ID.set(Some(window_id));
-        // Create a new document if there is none for the current window.
-        DOCUMENTS.with_borrow_mut(|docs| {
-            if docs.get_document_by_window_id(window_id).is_none() {
-                docs.add_document(window_id, Document::new());
-            }
-        });
 
         /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
         if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
@@ -134,13 +123,7 @@ impl ApplicationHandler for CraftWinitState {
 
         match event {
             WindowEvent::CloseRequested => {
-                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                    window_manager.close_window(&window);
-                    if window_manager.is_empty() {
-                        craft_state.close_requested = true;
-                        craft_state.craft_app.on_close_requested();
-                    }
-                });
+                self.on_close_requested(&window);
             }
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 craft_state.craft_app.on_scale_factor_changed(window, scale_factor);
@@ -169,55 +152,65 @@ impl ApplicationHandler for CraftWinitState {
         if event_loop.exiting() {
             return;
         }
+        self.craft_state.runtime.update_local_set();
+        self.process_non_winit_window_events(event_loop);
+        self.process_craft_messages();
+        self.process_external_work();
+        self.craft_state.craft_app.on_about_to_wait(event_loop);
+        self.maybe_exit(event_loop);
+        event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+    }
 
-        {
-            let craft_state = &mut self.craft_state;
-            craft_state.runtime.update_local_set();
-        }
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        self.craft_state.craft_app.on_suspended(event_loop);
+    }
+}
 
-        while let Some((window_id, event)) = dequeue_window_event() {
-            self.window_event(event_loop, window_id, event);
-        }
+impl CraftWinitState {
+    pub(crate) fn new(craft_state: CraftState) -> Self {
+        Self { craft_state }
+    }
 
-        let craft_state = &mut self.craft_state;
-
-        cfg_if::cfg_if! {
-            if #[cfg(not(target_arch = "wasm32"))] {
-                    craft_state.runtime.borrow_tokio_runtime().block_on(async {
-                    while let Ok(message) = craft_state.winit_receiver.try_recv() {
-                        match message {
-                            InternalMessage::ResourceEvent(resource_event) => {
-                                craft_state.craft_app.on_resource_event(resource_event);
-                            }
-                            #[cfg(target_arch = "wasm32")]
-                            InternalMessage::RendererCreated(window, renderer) => {
-                            }
-                        }
+    #[cfg(not(target_arch = "wasm32"))]
+    fn process_craft_messages(&mut self) {
+        self.craft_state.runtime.borrow_tokio_runtime().block_on(async {
+            while let Ok(message) = self.craft_state.winit_receiver.try_recv() {
+                match message {
+                    InternalMessage::ResourceEvent(resource_event) => {
+                        self.craft_state.craft_app.on_resource_event(resource_event);
                     }
-                });
-            } else {
-                WASM_QUEUE.with_borrow_mut(|wasm_queue: &mut WasmQueue| {
-                    wasm_queue.drain(|message| {
-                        match message {
-                            InternalMessage::ResourceEvent(resource_event) => {
-                                craft_state.craft_app.on_resource_event(resource_event);
-                            }
-                            #[cfg(target_arch = "wasm32")]
-                            InternalMessage::RendererCreated(winit_window, renderer) => {
-                                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                                    let window = window_manager.get_window_by_id(winit_window.id());
-                                    window.clone().unwrap().inner.borrow_mut().renderer = Some(renderer);
-                                    let sz = Size::new(winit_window.inner_size().width as f32, winit_window.inner_size().height as f32);
-                                    window.unwrap().on_resize(sz);
-                                    window_manager.redraw_all(&mut craft_state.craft_app);
-                                });
-                            }
-                        }
-                    });
-                });
+                    #[cfg(target_arch = "wasm32")]
+                    InternalMessage::RendererCreated(window, renderer) => {}
+                }
             }
-        }
+        });
+    }
 
+    #[cfg(target_arch = "wasm32")]
+    fn process_craft_messages(&mut self) {
+        WASM_QUEUE.with_borrow_mut(|wasm_queue: &mut WasmQueue| {
+            wasm_queue.drain(|message| match message {
+                InternalMessage::ResourceEvent(resource_event) => {
+                    self.craft_state.craft_app.on_resource_event(resource_event);
+                }
+                #[cfg(target_arch = "wasm32")]
+                InternalMessage::RendererCreated(winit_window, renderer) => {
+                    WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                        let window = window_manager.get_window_by_id(winit_window.id());
+                        window.clone().unwrap().inner.borrow_mut().renderer = Some(renderer);
+                        let sz = Size::new(
+                            winit_window.inner_size().width as f32,
+                            winit_window.inner_size().height as f32,
+                        );
+                        window.unwrap().on_resize(sz);
+                        window_manager.redraw_all(&mut self.craft_state.craft_app);
+                    });
+                }
+            });
+        });
+    }
+
+    fn process_external_work(&mut self) {
         // Do work sent from other threads and update all the windows.
         let mut work_done = false;
         while let Some(work) = pop_gui_thread_work() {
@@ -227,20 +220,33 @@ impl ApplicationHandler for CraftWinitState {
 
         if work_done {
             WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                window_manager.redraw_all(&mut craft_state.craft_app);
+                window_manager.redraw_all(&mut self.craft_state.craft_app);
             });
         }
+    }
 
-        craft_state.craft_app.on_about_to_wait(event_loop);
-
-        if craft_state.close_requested {
+    fn maybe_exit(&mut self, event_loop: &ActiveEventLoop) {
+        if self.craft_state.close_requested {
             info!("Exiting winit event loop");
 
             event_loop.exit();
-            return;
         }
+    }
 
-        event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+    fn process_non_winit_window_events(&mut self, event_loop: &ActiveEventLoop) {
+        while let Some((window_id, event)) = dequeue_window_event() {
+            self.window_event(event_loop, window_id, event);
+        }
+    }
+
+    fn on_close_requested(&mut self, window: &Window) {
+        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            window_manager.close_window(window);
+            if window_manager.is_empty() {
+                self.craft_state.close_requested = true;
+                self.craft_state.craft_app.on_close_requested();
+            }
+        });
     }
 }
 

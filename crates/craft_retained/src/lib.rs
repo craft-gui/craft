@@ -1,57 +1,69 @@
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-pub mod accessibility;
-pub mod craft_winit_state;
-pub mod document;
-pub mod elements;
-pub mod events;
-mod options;
-pub mod style;
-#[cfg(test)]
-mod tests;
-pub mod text;
+//! A retained GUI.
 
-mod app;
-pub use craft_primitives::geometry;
-pub mod layout;
-pub use craft_runtime::CraftRuntime;
-mod craftcallback;
-pub mod spatial;
-mod utils;
-#[cfg(target_arch = "wasm32")]
-pub mod wasm_queue;
-mod window_manager;
+pub use craft_primitives::{Color, geometry, palette};
 
+pub use craft_renderer::RendererType;
+
+pub use craft_resource_manager::ResourceIdentifier;
+
+pub use craft_runtime::{self, CraftRuntime};
+
+pub use image;
+
+#[cfg(target_os = "android")]
+pub use winit::platform::android::activity::*;
+pub use winit::window::{Cursor, CursorIcon, WindowAttributes};
+
+pub use crate::craftcallback::CraftCallback;
+pub use crate::options::CraftOptions;
+pub use crate::utils::craft_error::CraftError;
+pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
+
+#[cfg(target_os = "android")]
+use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use app::App;
-use cfg_if::cfg_if;
 use craft_logging::info;
-pub use craft_primitives::{Color, palette};
-pub use craft_renderer::RendererType;
-pub use craft_resource_manager::ResourceIdentifier;
+
 use craft_resource_manager::ResourceManager;
+
 use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
-use craft_winit_state::CraftState;
-pub use craftcallback::CraftCallback;
-use events::internal::InternalMessage;
-pub use options::CraftOptions;
-pub use utils::craft_error::CraftError;
+
 use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
-#[cfg(target_os = "android")]
-pub use winit::platform::android::activity::*;
-pub use winit::window::{Cursor, CursorIcon, WindowAttributes};
 
 use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
-pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
+
+use crate::app::App;
+use crate::craft_winit_state::CraftState;
+use crate::events::internal::InternalMessage;
+
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+pub mod accessibility;
+pub mod craft_winit_state;
+pub mod elements;
+pub mod events;
+pub mod layout;
+pub mod style;
+pub mod text;
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_queue;
+
+mod app;
+mod craftcallback;
+mod options;
+#[cfg(test)]
+mod tests;
+mod utils;
+mod window_manager;
 
 #[cfg(target_arch = "wasm32")]
 pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
@@ -62,14 +74,36 @@ pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 
 pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
 #[cfg(target_os = "android")]
-use std::cell::RefCell;
-
-pub use craft_runtime;
-pub use image;
-
-#[cfg(target_os = "android")]
 thread_local! {
     static ANDROID_APP: RefCell<Option<AndroidApp>> = const { RefCell::new(None) };
+}
+
+/// Starts the Craft application.
+///
+/// This will block the current thread until all [`Window`](elements::Window) instances have been closed.
+/// On Android, [`craft_set_android_app`] must be called prior.
+///
+/// # Example
+///
+/// ```no_run
+/// use craft_retained::{craft_main, CraftOptions};
+/// use craft_retained::elements::Window;
+///
+/// fn main() {
+///     Window::new("Craft");
+///     craft_main(CraftOptions::default());
+/// }
+/// ```
+pub fn craft_main(options: CraftOptions) {
+    craft_main_internal(Some(options));
+}
+
+/// Sets the [`AndroidApp`] for craft to use.
+#[cfg(target_os = "android")]
+pub fn craft_set_android_app(app: AndroidApp) {
+    ANDROID_APP.with_borrow_mut(|android_app| {
+        *android_app = Some(app);
+    })
 }
 
 fn craft_main_internal(options: Option<CraftOptions>) {
@@ -90,25 +124,6 @@ fn craft_main_internal(options: Option<CraftOptions>) {
     event_loop.run_app(&mut winit_craft_state).expect("run_app failed");
 }
 
-/// Starts the Craft application.
-///
-/// This will block the current thread until all [`Window`](elements::Window) instances have been closed.
-///
-/// # Example
-///
-/// ```no_run
-/// use craft_retained::{craft_main, CraftOptions};
-/// use craft_retained::elements::Window;
-///
-/// fn main() {
-///     Window::new("Craft");
-///     craft_main(CraftOptions::default());
-/// }
-/// ```
-pub fn craft_main(options: CraftOptions) {
-    craft_main_internal(Some(options));
-}
-
 fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let craft_options = craft_options.unwrap_or_default();
 
@@ -117,32 +132,29 @@ fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
     let (winit_sender, winit_receiver) = channel::<InternalMessage>(100);
 
     let winit_sender_copy = winit_sender.clone();
-    cfg_if! {
-        if #[cfg(not(target_arch = "wasm32"))] {
-            std::thread::spawn(move || {
-                let runtime = CraftRuntime::new();
-                runtime_sender.blocking_send(runtime.handle()).expect("Failed to send runtime handle");
-                info!("Created async runtime");
 
-                let future = async_main(app_receiver, winit_sender_copy);
+    let setup_runtime = move || {
+        let runtime = CraftRuntime::new();
+        runtime_sender
+            .blocking_send(runtime.handle())
+            .expect("Failed to send runtime handle");
 
-                runtime.maybe_block_on(future);
-            });
-        } else {
-            let runtime = CraftRuntime::new();
-            runtime_sender.blocking_send(runtime.handle()).expect("Failed to send runtime handle");
-            info!("Created async runtime");
+        info!("Created async runtime");
 
-            let future = crate::async_main(app_receiver, winit_sender_copy);
+        let future = async_main(app_receiver, winit_sender_copy);
+        runtime.maybe_block_on(future);
+    };
 
-            runtime.maybe_block_on(future);
-        }
-    }
+    #[cfg(not(target_arch = "wasm32"))]
+    std::thread::spawn(setup_runtime);
+
+    #[cfg(target_arch = "wasm32")]
+    setup_runtime();
 
     let runtime = runtime_receiver
         .blocking_recv()
         .expect("Failed to receive runtime handle");
-    let runtime_copy = runtime.clone();
+
     #[allow(clippy::arc_with_non_send_sync)]
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
@@ -152,12 +164,10 @@ fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         text_context: None,
         resource_manager,
         reload_fonts: false,
-
-        runtime: runtime_copy,
+        runtime: runtime.clone(),
         modifiers: Default::default(),
         redraw_flags: RedrawFlags::new(true),
         target_scratch: Vec::new(),
-
         craft_options: craft_options.clone(),
         active: false,
     });
@@ -186,11 +196,4 @@ async fn async_main(mut app_receiver: Receiver<InternalMessage>, winit_sender: S
             }
         }
     }
-}
-
-#[cfg(target_os = "android")]
-pub fn craft_set_android_app(app: AndroidApp) {
-    ANDROID_APP.with_borrow_mut(|android_app| {
-        *android_app = Some(app);
-    })
 }

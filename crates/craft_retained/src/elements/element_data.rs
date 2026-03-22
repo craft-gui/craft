@@ -4,9 +4,9 @@ use std::rc::{Rc, Weak};
 use smol_str::SmolStr;
 
 use crate::app::{ELEMENTS, TAFFY_TREE};
-use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
+use crate::elements::{ElementInternals, WindowInternal};
 use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout::Layout;
@@ -20,6 +20,9 @@ pub struct ElementData {
 
     /// The Element's parent.
     pub(crate) parent: Option<Weak<RefCell<dyn ElementInternals>>>,
+
+    /// A pointer to the owning window.
+    pub(crate) window: Option<Weak<RefCell<WindowInternal>>>,
 
     /// The style of the element.
     pub style: Box<Style>,
@@ -55,6 +58,7 @@ impl ElementData {
         let default = Self {
             me,
             parent: None,
+            window: None,
             style: Style::new(),
             layout: Layout::new(is_scrollable),
             children: Default::default(),

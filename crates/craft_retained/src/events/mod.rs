@@ -1,27 +1,30 @@
-mod mouse_wheel;
-
-mod event_dispatch;
-mod helpers;
-pub mod internal;
-mod pointer_capture;
-//#[cfg(test)]
-//mod tests;
-
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-pub(crate) use event_dispatch::EventDispatcher;
-pub use mouse_wheel::MouseWheel;
 pub use ui_events;
+
+pub use winit::event::{ElementState, Ime, Modifiers, MouseButton};
+
+pub use crate::events::mouse_wheel::MouseWheel;
+
+pub(crate) use event_dispatch::EventDispatcher;
+
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
-pub use winit::event::{ElementState, Ime, Modifiers, MouseButton};
 
 use crate::PinnedFutureAny;
 use crate::elements::ElementInternals;
 use crate::utils::cloneable_any::CloneableAny;
+
+pub mod internal;
+
+pub(crate) mod pointer_capture;
+
+mod event_dispatch;
+mod helpers;
+mod mouse_wheel;
 
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
@@ -29,11 +32,10 @@ pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut Event, usize)>;
 pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
-
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
-
 pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
 pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
+pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
 pub enum EventDispatchType {
@@ -64,6 +66,26 @@ pub enum CraftMessage {
     SwitchToggled(bool),
     SliderValueChanged(f64),
     ElementMessage(Arc<UserMessage>),
+}
+
+/// The result of an update.
+pub struct Event {
+    pub target: Rc<RefCell<dyn ElementInternals>>,
+    /// Propagate craft_events to the next element. True by default.
+    pub propagate: bool,
+    /// A future that will produce a message when complete. The message will be sent to the origin component.
+    pub future: Option<PinnedFutureAny>,
+    /// Prevent default event handlers from running when an craft_event is not explicitly handled.
+    /// False by default.
+    pub prevent_defaults: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum FocusAction {
+    #[default]
+    None,
+    Set(u64),
+    Unset,
 }
 
 impl CraftMessage {
@@ -101,27 +123,6 @@ impl CraftMessage {
         Self::ElementMessage(Arc::new(data))
     }
 }
-pub type UserMessage = dyn CloneableAny;
-
-/// The result of an update.
-pub struct Event {
-    pub target: Rc<RefCell<dyn ElementInternals>>,
-    /// Propagate craft_events to the next element. True by default.
-    pub propagate: bool,
-    /// A future that will produce a message when complete. The message will be sent to the origin component.
-    pub future: Option<PinnedFutureAny>,
-    /// Prevent default event handlers from running when an craft_event is not explicitly handled.
-    /// False by default.
-    pub prevent_defaults: bool,
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub enum FocusAction {
-    #[default]
-    None,
-    Set(u64),
-    Unset,
-}
 
 impl Event {
     #[cfg(not(target_arch = "wasm32"))]
@@ -143,9 +144,7 @@ impl Event {
     pub fn async_no_result() -> Box<dyn Any + 'static> {
         Box::new(())
     }
-}
 
-impl Event {
     pub fn new(target: Rc<RefCell<dyn ElementInternals>>) -> Self {
         Event {
             target,
@@ -154,9 +153,7 @@ impl Event {
             prevent_defaults: false,
         }
     }
-}
 
-impl Event {
     pub fn pinned_future(&mut self, future: PinnedFutureAny) {
         self.future = Some(future);
     }

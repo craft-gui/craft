@@ -8,7 +8,6 @@ use craft_renderer::RenderList;
 use crate::app::{dequeue_event, FOCUS};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
-use crate::events::pointer_capture::maybe_handle_implicit_pointer_capture_release;
 use crate::events::{CraftMessage, Event, FocusAction};
 use crate::text::text_context::TextContext;
 
@@ -156,20 +155,27 @@ impl EventDispatcher {
         render_list: &mut RenderList,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
-        let mut _focus = FocusAction::None;
-        /*let span = span!(Level::INFO, "dispatch event");
-        let _enter = span.enter();*/
-
-        /*for (node, _) in &render_list.targets {
-            println!("target: {}", node);
-        }*/
+        let pointer_capture = root
+            .borrow()
+            .element_data()
+            .window
+            .as_ref()
+            .and_then(|w| w.upgrade())
+            .map(|w| w.borrow().pointer_capture.clone())
+            .unwrap();
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
         if message.is_pointer_event() {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
-            let target: Rc<RefCell<dyn ElementInternals>> =
-                find_target(&root, mouse_position, message, render_list, target_scratch);
+            let target: Rc<RefCell<dyn ElementInternals>> = find_target(
+                &root,
+                mouse_position,
+                message,
+                render_list,
+                target_scratch,
+                &pointer_capture.borrow(),
+            );
             targets = freeze_target_list(target);
         } else if message.is_keyboard_event() {
             FOCUS.with(|f| {
@@ -216,7 +222,9 @@ impl EventDispatcher {
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
         if message.is_pointer_event() {
-            maybe_handle_implicit_pointer_capture_release(message);
+            pointer_capture
+                .borrow_mut()
+                .maybe_handle_implicit_pointer_capture_release(message);
         }
 
         // Drain the event dispatch queue and invoke user callbacks.
