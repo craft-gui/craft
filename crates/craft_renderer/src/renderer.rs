@@ -109,7 +109,7 @@ impl SortedCommands {
 pub struct TargetItem {
     pub custom_id: u64,
     pub rectangle: Rectangle,
-    pub overlay_depth: u64
+    pub overlay_depth: u64,
 }
 
 impl TargetItem {
@@ -117,15 +117,13 @@ impl TargetItem {
         Self {
             custom_id,
             rectangle,
-            overlay_depth
+            overlay_depth,
         }
     }
 
     // Sorts the items by the overlay depth and in ascending order.
     pub fn sort_items_by_overlay_depth(targets: &mut [TargetItem]) {
-        targets.sort_by(|t1, t2| {
-            t1.overlay_depth.cmp(&t2.overlay_depth)
-        });
+        targets.sort_by(|t1, t2| t1.overlay_depth.cmp(&t2.overlay_depth));
     }
 }
 
@@ -178,7 +176,8 @@ impl RenderList {
         {
             return;
         }
-        self.targets.push(TargetItem::new(id, bounding_box, self.current_overlay_depth));
+        self.targets
+            .push(TargetItem::new(id, bounding_box, self.current_overlay_depth));
     }
 
     #[inline(always)]

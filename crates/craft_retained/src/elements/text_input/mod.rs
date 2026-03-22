@@ -191,8 +191,7 @@ impl ElementInternals for TextInputInner {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.layout.scroll_state.is_new()
-        {
+        if !dirty && self.element_data.layout.scroll_state.is_new() {
             let result = taffy_tree.get_layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();

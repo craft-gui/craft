@@ -8,8 +8,8 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
 use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
-use crate::layout::layout_context::LayoutContext;
 use crate::layout::layout::Layout;
+use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
 
 /// Stores common data to most elements.
@@ -99,7 +99,7 @@ impl ElementData {
 
     /// Computes the scrollbar's tack and thumb layout.
     pub(crate) fn apply_scroll(&mut self, taffy_layout: &taffy::Layout) {
-       apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
+        apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {

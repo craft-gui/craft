@@ -2,14 +2,14 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-use craft_renderer::RenderList;
-use kurbo::Point;
-use craft_renderer::renderer::TargetItem;
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, Event};
 use crate::text::text_context::TextContext;
+use craft_renderer::RenderList;
+use craft_renderer::renderer::TargetItem;
+use kurbo::Point;
 
 pub(super) fn freeze_target_list(
     target: Rc<RefCell<dyn ElementInternals>>,
@@ -39,7 +39,7 @@ pub(super) fn find_target(
     if let Some(target) = target {
         return target;
     }
-    
+
     ELEMENTS.with_borrow_mut(|elements| {
         TargetItem::sort_items_by_overlay_depth(&mut render_list.targets);
         target_scratch.extend(render_list.targets.iter().rev().filter_map(|target_item| {

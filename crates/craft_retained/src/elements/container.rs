@@ -9,10 +9,9 @@ use craft_renderer::RenderList;
 use kurbo::{Affine, Point};
 
 use crate::app::TAFFY_TREE;
-use crate::elements::{resolve_clip_for_scrollable, ElementInternals, AsElement, Element};
 use crate::elements::element_data::ElementData;
-use crate::elements::{scrollable};
 use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CraftMessage, Event};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
@@ -103,8 +102,7 @@ impl ElementInternals for ContainerInner {
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.layout.scroll_state.is_new()
-        {
+        if !dirty && self.element_data.layout.scroll_state.is_new() {
             self.element_data.apply_scroll(layout);
             self.element_data.layout.scroll_state.mark_old();
         }

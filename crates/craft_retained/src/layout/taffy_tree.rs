@@ -28,12 +28,8 @@ impl TaffyTree {
         let context = self.inner.get_node_context(src);
 
         match context {
-            None => {
-                self.inner.new_leaf(style.clone()).unwrap()
-            }
-            Some(ctx) => {
-                self.inner.new_leaf_with_context(style.clone(), ctx.clone()).unwrap()
-            }
+            None => self.inner.new_leaf(style.clone()).unwrap(),
+            Some(ctx) => self.inner.new_leaf_with_context(style.clone(), ctx.clone()).unwrap(),
         }
     }
 

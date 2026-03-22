@@ -1,19 +1,19 @@
+use kurbo::{Point, Vec2};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use kurbo::{Point, Vec2};
 use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
 
-use craft_primitives::geometry::{Rectangle, Size};
-use craft_primitives::geometry::borders::CssRoundedRect;
-use craft_renderer::RenderList;
 use crate::app::{queue_event, request_apply_layout};
 use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
 use crate::events::{CraftMessage, Event};
-use crate::layout::layout::{draw_borders_generic, CssComputedBorder, Layout};
+use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
+use craft_primitives::geometry::borders::CssRoundedRect;
+use craft_primitives::geometry::{Rectangle, Size};
+use craft_renderer::RenderList;
 
 /**
 
@@ -149,7 +149,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
                 ScrollToBox::BorderBox => element_data.layout.computed_box.border_rectangle(),
                 ScrollToBox::MarginBox => element_data.layout.computed_box.margin_rectangle(),
                 ScrollToBox::PaddingBox => element_data.layout.computed_box.padding_rectangle(),
-                ScrollToBox::ContentBox => element_data.layout.computed_box.content_rectangle()
+                ScrollToBox::ContentBox => element_data.layout.computed_box.content_rectangle(),
             };
             let distance_from_parent = box_model_selected.y - top_py;
             child_y = Some(distance_from_parent);
@@ -192,8 +192,7 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
 
     // Content Size = overflowed content size + padding
     // Scroll Height = Content Size
-    let scroll_height =
-        (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
+    let scroll_height = (content_height + box_transformed.padding.bottom + box_transformed.padding.top).max(1.0);
     let scroll_track_width = layout.scrollbar_size.width;
 
     // The scroll track height is the height of the padding box.
@@ -241,7 +240,7 @@ pub struct HandleScrollLogicResult {
 }
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &CraftMessage, event: &mut Event) {
-    let element_data  = element.element_data_mut();
+    let element_data = element.element_data_mut();
     let result = handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event);
 
     if result.request_apply_layout {
@@ -258,7 +257,12 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, message: &CraftMessage, event: &mut Event) -> HandleScrollLogicResult {
+pub(crate) fn handle_scroll_logic_advance(
+    style: &Style,
+    layout: &mut Layout,
+    message: &CraftMessage,
+    event: &mut Event,
+) -> HandleScrollLogicResult {
     let mut result = HandleScrollLogicResult {
         request_apply_layout: false,
         release_pointer_capture: false,
@@ -270,9 +274,7 @@ pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, me
         match message {
             CraftMessage::PointerScroll(mouse_wheel) => {
                 let delta = match mouse_wheel.delta {
-                    ScrollDelta::LineDelta(_x, y) => {
-                        y * style.get_font_size().max(12.0) * style.get_line_height()
-                    }
+                    ScrollDelta::LineDelta(_x, y) => y * style.get_font_size().max(12.0) * style.get_line_height(),
                     ScrollDelta::PixelDelta(physical) => physical.y as f32,
                     ScrollDelta::PageDelta(_x, y) => y,
                 };
@@ -289,65 +291,64 @@ pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, me
                 event.prevent_defaults();
             }
             CraftMessage::PointerButtonDown(pointer_button)
-                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) => {
-                    // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
-                    if pointer_button.pointer.pointer_type == PointerType::Touch {
-                        let container_rectangle = layout.computed_box_transformed.padding_rectangle();
+                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) =>
+            {
+                // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
+                if pointer_button.pointer.pointer_type == PointerType::Touch {
+                    let container_rectangle = layout.computed_box_transformed.padding_rectangle();
 
-                        let in_scroll_bar = layout
-                            .computed_scroll_thumb
-                            .contains(&pointer_button.state.logical_point());
-
-                        if container_rectangle.contains(&pointer_button.state.logical_point()) && !in_scroll_bar {
-                            state.scroll_click = Some(Point::new(
-                                pointer_button.state.logical_point().x,
-                                pointer_button.state.logical_point().y,
-                            ));
-                            event.prevent_propagate();
-                            event.prevent_defaults();
-                        }
-                    } else if layout
+                    let in_scroll_bar = layout
                         .computed_scroll_thumb
-                        .contains(&pointer_button.state.logical_point())
-                    {
+                        .contains(&pointer_button.state.logical_point());
+
+                    if container_rectangle.contains(&pointer_button.state.logical_point()) && !in_scroll_bar {
                         state.scroll_click = Some(Point::new(
                             pointer_button.state.logical_point().x,
                             pointer_button.state.logical_point().y,
                         ));
-
-                        // FIXME: Turn pointer capture on with the correct device id.
-                        //element.set_pointer_capture(PointerId::new(1).unwrap());
-
-                        event.prevent_propagate();
-                        event.prevent_defaults();
-
-                        result.set_pointer_capture = true;
-                    } else if layout
-                        .computed_scroll_track
-                        .contains(&pointer_button.state.logical_point())
-                    {
-                        let offset_y =
-                            pointer_button.state.position.y as f32 - layout.computed_scroll_track.y;
-
-                        let percent = offset_y / layout.computed_scroll_track.height;
-                        let scroll_y = percent * layout.max_scroll_y;
-
-                        state.set_scroll_y(scroll_y.clamp(0.0, layout.max_scroll_y));
-
-                        result.request_apply_layout = true;
-
                         event.prevent_propagate();
                         event.prevent_defaults();
                     }
-            }
-            CraftMessage::PointerButtonUp(_pointer_button)
-                if state.scroll_click.is_some() => {
-                    state.scroll_click = None;
+                } else if layout
+                    .computed_scroll_thumb
+                    .contains(&pointer_button.state.logical_point())
+                {
+                    state.scroll_click = Some(Point::new(
+                        pointer_button.state.logical_point().x,
+                        pointer_button.state.logical_point().y,
+                    ));
+
+                    // FIXME: Turn pointer capture on with the correct device id.
+                    //element.set_pointer_capture(PointerId::new(1).unwrap());
+
                     event.prevent_propagate();
                     event.prevent_defaults();
 
-                    result.release_pointer_capture = true;
+                    result.set_pointer_capture = true;
+                } else if layout
+                    .computed_scroll_track
+                    .contains(&pointer_button.state.logical_point())
+                {
+                    let offset_y = pointer_button.state.position.y as f32 - layout.computed_scroll_track.y;
+
+                    let percent = offset_y / layout.computed_scroll_track.height;
+                    let scroll_y = percent * layout.max_scroll_y;
+
+                    state.set_scroll_y(scroll_y.clamp(0.0, layout.max_scroll_y));
+
+                    result.request_apply_layout = true;
+
+                    event.prevent_propagate();
+                    event.prevent_defaults();
                 }
+            }
+            CraftMessage::PointerButtonUp(_pointer_button) if state.scroll_click.is_some() => {
+                state.scroll_click = None;
+                event.prevent_propagate();
+                event.prevent_defaults();
+
+                result.release_pointer_capture = true;
+            }
             CraftMessage::PointerMovedEvent(pointer_motion) => {
                 if let Some(click) = state.scroll_click {
                     // Todo: Translate scroll wheel pixel to scroll position for diff.
@@ -355,8 +356,7 @@ pub(crate) fn handle_scroll_logic_advance(style: &Style, layout: &mut Layout, me
 
                     let max_scroll_y = layout.max_scroll_y;
 
-                    let click_y_offset = layout.computed_scroll_track.height
-                        - layout.computed_scroll_thumb.height;
+                    let click_y_offset = layout.computed_scroll_track.height - layout.computed_scroll_thumb.height;
                     if click_y_offset <= 0.0 {
                         return result;
                     }
@@ -394,12 +394,8 @@ pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut RenderList,
         .get_scrollbar_thumb_radius()
         .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
     // let scrollbar_thumb_radius = self.element_data().current_style().
-    let track_rect = layout
-        .computed_scroll_track
-        .scale(scale_factor);
-    let thumb_rect = layout
-        .computed_scroll_thumb
-        .scale(scale_factor);
+    let track_rect = layout.computed_scroll_track.scale(scale_factor);
+    let thumb_rect = layout.computed_scroll_thumb.scale(scale_factor);
 
     let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
     let mut computed_border_spec = CssComputedBorder::new(border_spec);

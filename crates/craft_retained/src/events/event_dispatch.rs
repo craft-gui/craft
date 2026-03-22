@@ -5,7 +5,7 @@ use std::rc::{Rc, Weak};
 use craft_primitives::geometry::Point;
 use craft_renderer::RenderList;
 
-use crate::app::{dequeue_event, FOCUS};
+use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
 use crate::events::{CraftMessage, Event};
@@ -180,7 +180,9 @@ impl EventDispatcher {
         } else if message.is_keyboard_event() {
             FOCUS.with(|f| {
                 let focus_ref = f.borrow();
-                if let Some(focus_ref) = focus_ref.clone() && let Some(focus) = focus_ref.upgrade() {
+                if let Some(focus_ref) = focus_ref.clone()
+                    && let Some(focus) = focus_ref.upgrade()
+                {
                     targets.clear();
                     targets.push_back(focus);
                 }
@@ -190,7 +192,6 @@ impl EventDispatcher {
         if targets.is_empty() {
             targets.push_back(root.clone());
         }
-
 
         if message.is_pointer_event() {
             self.maybe_dispatch_pointer_leave(text_context, &targets);

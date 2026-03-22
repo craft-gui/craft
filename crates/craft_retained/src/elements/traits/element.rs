@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_primitives::geometry::ElementBox;
 use craft_primitives::Color;
+use craft_primitives::geometry::ElementBox;
 
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;

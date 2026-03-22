@@ -1,14 +1,17 @@
+use crate::app::{TAFFY_TREE, request_apply_layout, request_layout};
 use crate::elements::ElementInternals;
+use crate::elements::element_id::create_unique_element_id;
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::app::{request_apply_layout, request_layout, TAFFY_TREE};
-use crate::elements::element_id::create_unique_element_id;
 
 pub trait DeepClone {
     fn deep_clone_internal(&self) -> Rc<RefCell<dyn ElementInternals>>;
 }
 
-impl<T> DeepClone for T where T: ElementInternals + Clone + 'static {
+impl<T> DeepClone for T
+where
+    T: ElementInternals + Clone + 'static,
+{
     fn deep_clone_internal(&self) -> Rc<RefCell<dyn ElementInternals>> {
         let new_element = Rc::new(RefCell::new(self.clone()));
         let new_element: Rc<RefCell<dyn ElementInternals>> = new_element;
@@ -21,12 +24,10 @@ impl<T> DeepClone for T where T: ElementInternals + Clone + 'static {
             new_data.parent = None;
 
             // Clone the layout node
-           let node_id = new_data.layout.taffy_node_id_mut();
-           TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-               *node_id = taffy_tree.clone_node(*node_id)
-           });
-           request_apply_layout(*node_id);
-           request_layout(*node_id);
+            let node_id = new_data.layout.taffy_node_id_mut();
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| *node_id = taffy_tree.clone_node(*node_id));
+            request_apply_layout(*node_id);
+            request_layout(*node_id);
 
             let node_id_copy = *node_id;
             let mut new_children = Vec::new();
@@ -36,7 +37,10 @@ impl<T> DeepClone for T where T: ElementInternals + Clone + 'static {
 
                 let new_child_copy = new_child.clone();
                 TAFFY_TREE.with_borrow_mut(move |taffy_tree| {
-                    taffy_tree.add_child(node_id_copy, new_child_copy.borrow().element_data().layout.taffy_node_id.unwrap());
+                    taffy_tree.add_child(
+                        node_id_copy,
+                        new_child_copy.borrow().element_data().layout.taffy_node_id.unwrap(),
+                    );
                 });
             }
             new_data.children = new_children;

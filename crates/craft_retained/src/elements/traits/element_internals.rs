@@ -14,10 +14,8 @@ use craft_primitives::geometry::{ElementBox, Rectangle, TrblRectangle};
 
 use craft_renderer::RenderList;
 
-use crate::Color;
-use crate::CraftError;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::elements::scrollable::{draw_scrollbar, ScrollState};
+use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CraftMessage, DropdownItemSelectedHandler, Event, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
@@ -25,6 +23,7 @@ use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
 use crate::text::text_context::TextContext;
+use crate::{Color, CraftError};
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: ElementData + Any {
@@ -222,13 +221,9 @@ pub trait ElementInternals: ElementData + Any {
         layout_order: &mut u32,
     ) {
         let position = self.element_data().style.get_position();
-        self.element_data_mut().layout.resolve_box(
-            relative_position,
-            scroll_transform,
-            result,
-            layout_order,
-            position,
-        );
+        self.element_data_mut()
+            .layout
+            .resolve_box(relative_position, scroll_transform, result, layout_order, position);
     }
 
     /// Computes this element's clip box.
@@ -243,9 +238,13 @@ pub trait ElementInternals: ElementData + Any {
         let border_color = &current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
 
-        self.element_data_mut()
-            .layout
-            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
+        self.element_data_mut().layout.apply_borders(
+            has_border,
+            border_radius,
+            scale_factor,
+            border_color,
+            box_shadows,
+        );
     }
 
     /// A bit of a hack to reset the layout item of an element recursively.
@@ -980,5 +979,8 @@ pub trait ElementInternals: ElementData + Any {
 }
 
 pub fn resolve_clip_for_scrollable(element: &mut dyn ElementInternals, clip_bounds: Option<Rectangle>) {
-    element.element_data_mut().layout.resolve_clip_for_scrollable(clip_bounds);
+    element
+        .element_data_mut()
+        .layout
+        .resolve_clip_for_scrollable(clip_bounds);
 }

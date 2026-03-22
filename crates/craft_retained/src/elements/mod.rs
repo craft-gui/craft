@@ -3,6 +3,7 @@ mod element_data;
 mod text;
 mod traits;
 
+mod dropdown;
 mod element_id;
 mod element_id_map;
 mod image;
@@ -10,7 +11,6 @@ pub(crate) mod scrollable;
 mod slider;
 mod text_input;
 mod window;
-mod dropdown;
 
 pub use container::{Container, ContainerInner};
 pub use dropdown::{Dropdown, DropdownInner};
