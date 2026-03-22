@@ -9,8 +9,8 @@ use craft_renderer::RenderList;
 
 use kurbo::{Affine, Point};
 
-use crate::app::TAFFY_TREE;
 use crate::elements::element_data::ElementData;
+use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
@@ -33,20 +33,6 @@ pub struct ContainerInner {
 impl Default for Container {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl Container {
-    pub fn new() -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {
-            RefCell::new(ContainerInner {
-                element_data: ElementData::new(me.clone(), true),
-            })
-        });
-
-        inner.borrow_mut().element_data.create_layout_node(None);
-
-        Self { inner }
     }
 }
 
@@ -153,21 +139,7 @@ impl ElementInternals for ContainerInner {
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
-        let me_window = self.element_data.window.clone();
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        child.borrow_mut().element_data_mut().window = me_window;
-        child.borrow_mut().propagate_window_down();
-        self.element_data.children.push(child.clone());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout.taffy_node_id;
-            if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id);
-            }
-        });
+        push_child_to_element(self, child);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -176,5 +148,17 @@ impl ElementInternals for ContainerInner {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+}
+
+impl Container {
+    pub fn new() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {
+            RefCell::new(ContainerInner {
+                element_data: ElementData::new(me.clone(), true),
+            })
+        });
+        inner.borrow_mut().element_data.create_layout_node(None);
+        Self { inner }
     }
 }

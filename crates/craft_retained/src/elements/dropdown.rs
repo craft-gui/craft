@@ -16,6 +16,7 @@ use ui_events::pointer::PointerId;
 
 use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData as ElementDataStruct;
+use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
@@ -397,8 +398,11 @@ impl ElementInternals for DropdownInner {
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
+        let me_window = self.element_data.window.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
         self.element_data.children.push(child.clone());
+        child.borrow_mut().element_data_mut().window = me_window;
+        child.borrow_mut().propagate_window_down();
 
         // Add the children to the floating window layout.
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

@@ -23,10 +23,12 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 
 use taffy::{AvailableSpace, NodeId};
+
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerScrollEvent;
+
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
@@ -40,6 +42,7 @@ use crate::accessibility::{access_handler::CraftAccessHandler, activation_handle
 use crate::app::FOCUS;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::element_data::ElementData;
+use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
@@ -258,21 +261,7 @@ impl ElementInternals for WindowInternal {
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
-        let me_window = self.element_data.window.clone();
-        child.borrow_mut().element_data_mut().parent = Some(me);
-        child.borrow_mut().element_data_mut().window = me_window;
-        child.borrow_mut().propagate_window_down();
-        self.element_data.children.push(child.clone());
-
-        // Add the children's taffy node.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout.taffy_node_id;
-            if let Some(child_id) = child_id {
-                taffy_tree.add_child(parent_id, child_id);
-            }
-        });
+        push_child_to_element(self, child);
     }
 
     fn as_any(&self) -> &dyn Any {
