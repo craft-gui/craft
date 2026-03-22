@@ -35,7 +35,6 @@ use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
-use crate::app::RedrawFlags;
 use crate::craft_winit_state::CraftWinitState;
 use crate::events::EventDispatcher;
 use crate::utils::cloneable_any::CloneableAny;
@@ -165,8 +164,6 @@ fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         resource_manager,
         reload_fonts: false,
         runtime: runtime.clone(),
-        modifiers: Default::default(),
-        redraw_flags: RedrawFlags::new(true),
         target_scratch: Vec::new(),
         craft_options: craft_options.clone(),
         active: false,

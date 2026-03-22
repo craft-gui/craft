@@ -23,7 +23,10 @@ use kurbo::{Affine, Point};
 use peniko::Color;
 
 use taffy::{AvailableSpace, NodeId};
-
+use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
+use ui_events::pointer::PointerScrollEvent;
+use ui_events::ScrollDelta;
+use ui_events::ScrollDelta::PixelDelta;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
@@ -89,6 +92,7 @@ pub struct WindowInternal {
     zoom_scale_factor: f64,
     mouse_positon: Option<Point>,
     element_data: ElementData,
+    pub(crate) modifiers: Modifiers,
 }
 
 impl Clone for WindowInternal {
@@ -362,11 +366,11 @@ impl Window {
         self.inner.borrow_mut().on_request_redraw(craft_app)
     }
 
-    pub(crate) fn zoom_in(&self) {
+    pub fn zoom_in(&self) {
         self.inner.borrow_mut().zoom_in()
     }
 
-    pub(crate) fn zoom_out(&self) {
+    pub fn zoom_out(&self) {
         self.inner.borrow_mut().zoom_out()
     }
 
@@ -421,6 +425,7 @@ impl WindowInternal {
                 title: title.map(|title| title.to_string()),
                 renderer_type,
                 pointer_capture: Default::default(),
+                modifiers: Default::default(),
             })
         });
 
@@ -506,6 +511,45 @@ impl WindowInternal {
     pub(crate) fn zoom_out(&mut self) {
         self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
         self.update_zoom();
+    }
+
+    pub(crate) fn maybe_zoom(&mut self, pointer_scroll_update: &PointerScrollEvent) -> bool {
+        if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse
+        {
+            let y: f32 = match pointer_scroll_update.delta {
+                ScrollDelta::PageDelta(_, y) => y,
+                ScrollDelta::LineDelta(_, y) => y,
+                PixelDelta(physical) => physical.y as f32,
+            };
+            if y < 0.0 {
+                self.zoom_out();
+            } else {
+                self.zoom_in();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn maybe_zoom_keyboard(&mut self, keyboard_input: &KeyboardEvent) -> bool {
+        if keyboard_input.modifiers.ctrl() {
+            if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
+                self.zoom_in();
+                return true
+            } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
+                self.zoom_out();
+                return true
+            }
+        }
+        false
+    }
+
+    pub(crate) fn update_modifiers(&mut self, keyboard_input: &KeyboardEvent) {
+        self.modifiers = keyboard_input.modifiers;
+        if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
+            self.modifiers.set(Modifiers::CONTROL, false);
+        }
     }
 
     pub(crate) fn zoom_scale_factor(&self) -> f64 {
