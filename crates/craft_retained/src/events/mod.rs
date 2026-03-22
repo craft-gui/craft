@@ -80,14 +80,6 @@ pub struct Event {
     pub prevent_defaults: bool,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub enum FocusAction {
-    #[default]
-    None,
-    Set(u64),
-    Unset,
-}
-
 impl EventKind {
     pub(super) fn is_pointer_event(&self) -> bool {
         matches!(
