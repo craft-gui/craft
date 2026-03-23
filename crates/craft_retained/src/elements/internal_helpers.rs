@@ -80,6 +80,36 @@ pub fn apply_generic_container_layout(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn apply_generic_leaf_layout(
+    element: &mut dyn ElementInternals,
+    taffy_tree: &mut TaffyTree,
+    position: Point,
+    z_index: &mut u32,
+    transform: Affine,
+    clip_bounds: Option<Rectangle>,
+    scale_factor: f64,
+) {
+    let node = element.element_data_mut().layout.taffy_node_id.unwrap();
+    let layout = taffy_tree.get_layout(node);
+    let has_new_layout = taffy_tree.has_new_layout(node);
+
+    let dirty = has_new_layout
+        || transform != element.element_data_mut().layout.get_transform()
+        || position != element.element_data_mut().layout.position;
+    element.element_data_mut().layout.has_new_layout = has_new_layout;
+    if dirty {
+        element.resolve_box(position, transform, layout, z_index);
+        element.apply_borders(scale_factor);
+        element.apply_clip(clip_bounds);
+        element.element_data_mut().layout.scroll_state.mark_old();
+    }
+
+    if has_new_layout {
+        taffy_tree.mark_seen(node);
+    }
+}
+
 pub fn draw_generic_container(
     element: &mut dyn ElementInternals,
     renderer: &mut RenderList,

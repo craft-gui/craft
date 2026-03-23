@@ -1,7 +1,7 @@
 pub use crate::elements::container::{Container, ContainerInner};
 pub use crate::elements::dropdown::{Dropdown, DropdownInner};
 pub use crate::elements::element_id_map::ElementIdMap;
-pub use crate::elements::image::Image;
+pub use crate::elements::image::{Image, ImageInner};
 pub use crate::elements::scrollable::{ScrollOptions, ScrollToBox};
 pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
 pub use crate::elements::text::{Text, TextInner};

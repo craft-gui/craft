@@ -54,7 +54,7 @@ impl ImageContext {
     pub fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
-        _available_space: Size<taffy::AvailableSpace>,
+        _available_space: Size<AvailableSpace>,
         resource_manager: Arc<ResourceManager>,
         _style: &taffy::Style,
     ) -> Size<f32> {

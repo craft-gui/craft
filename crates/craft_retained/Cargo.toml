@@ -14,6 +14,7 @@ clipboard = ["dep:clipboard-rs"]
 vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
 vello_hybrid_renderer = ["craft_renderer/vello_hybrid_renderer"]
 vello_renderer = ["craft_renderer/vello_renderer"]
+http_client = ["craft_resource_manager/http_client"]
 
 system_fonts = ["parley/system"]
 

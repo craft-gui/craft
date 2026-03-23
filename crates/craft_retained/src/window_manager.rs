@@ -3,8 +3,8 @@ use std::rc::Rc;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
-use crate::app::App;
-use crate::elements::Window;
+use crate::app::{App, TAFFY_TREE};
+use crate::elements::{ElementData, Window};
 
 pub(crate) struct WindowManager {
     windows: Vec<Window>,
@@ -41,6 +41,30 @@ impl WindowManager {
         // Create windows that were created during the program run.
         for window_element in &self.windows {
             if let Some(winit_window) = window_element.winit_window() {
+                winit_window.request_redraw();
+            }
+        }
+    }
+
+    /// Dirties all taffy nodes and redraws each window.
+    pub(crate) fn dirty_and_redraw_all_windows(&mut self, craft_app: &mut App) {
+        if !craft_app.active {
+            return;
+        }
+
+        // Create windows that were created during the program run.
+        for window_element in &self.windows {
+            if let Some(winit_window) = window_element.winit_window() {
+                let id = window_element
+                    .inner
+                    .borrow_mut()
+                    .element_data()
+                    .layout
+                    .taffy_node_id
+                    .unwrap();
+                TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                    taffy_tree.mark_node_and_leaves_dirty(id);
+                });
                 winit_window.request_redraw();
             }
         }

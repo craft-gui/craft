@@ -184,6 +184,10 @@ impl App {
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                     self.resource_manager.insert(resource_identifier, Arc::new(resource));
                 }
+                // TODO: Only mark dirty affected nodes.
+                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                    window_manager.dirty_and_redraw_all_windows(self);
+                });
             }
             ResourceEvent::UnLoaded(_) => {}
         }
