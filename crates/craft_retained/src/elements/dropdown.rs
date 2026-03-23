@@ -178,26 +178,22 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
 
         // We draw the borders before we start any layers, so that we don't clip the borders.
-        self.draw_borders(_renderer, _scale_factor);
-
-        if let Some(selected_element) = &self.selected_element {
-            let mut binding = selected_element.borrow_mut();
-            binding.draw(_renderer, _text_context, _scale_factor);
-        }
-
+        self.draw_borders(renderer, scale_factor);
         if self.is_floating_window_hidden {
-            self.add_hit_testable(_renderer, true, _scale_factor);
+            self.add_hit_testable(renderer, true, scale_factor);
         }
+
+        self.draw_selected_element(renderer, text_context, scale_factor);
 
         // Draw the arrow
         let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle();
-        let thickness = 2.0 * _scale_factor;
+        let thickness = 2.0 * scale_factor;
         let mut path = BezPath::new();
         let left_x = arrow_rect.x as f64;
         let right_x = (arrow_rect.x + arrow_rect.width) as f64;
@@ -211,55 +207,40 @@ impl ElementInternals for DropdownInner {
         path.line_to(Point::new(center_x, bottom_y - thickness));
         path.line_to(Point::new(left_x + thickness, top_y));
         path.close_path();
-
         path.apply_affine((Affine::IDENTITY).then_translate(Vec2::new(0.0, arrow_rect.height as f64 / 4.0)));
         let arrow_color = Color::from_rgba8(75, 75, 77, 255);
-        _renderer.fill_bez_path(path, Brush::Color(arrow_color));
+        renderer.fill_bez_path(path, Brush::Color(arrow_color));
 
         if !self.is_floating_window_hidden {
-            _renderer.start_overlay();
-            self.add_hit_testable(_renderer, true, _scale_factor);
+            renderer.start_overlay();
+            // If the dropdown menu is open, then we must add a hit testable after we start
+            // an overlay, so that it is properly sorted in the event target selection phase.
+            self.add_hit_testable(renderer, true, scale_factor);
 
             let current_style = self.floating_window.style.as_ref();
             self.floating_window
                 .layout
-                .draw_borders(_renderer, current_style, _scale_factor);
+                .draw_borders(renderer, current_style, scale_factor);
 
-            _renderer.push_layer(
+            renderer.push_layer(
                 self.floating_window
                     .layout
                     .computed_box_transformed
                     .padding_rectangle()
-                    .scale(_scale_factor),
+                    .scale(scale_factor),
             );
 
-            for (index, child) in self.children().iter().enumerate() {
-                let mut child_rect = child
-                    .borrow_mut()
-                    .element_data()
-                    .layout
-                    .computed_box_transformed
-                    .border_rectangle();
-                child_rect.x = self.floating_window.layout.computed_box_transformed.position.x as f32;
-                child_rect.width = self.floating_window.layout.computed_box_transformed.size.width;
+            self.draw_children(renderer, text_context, scale_factor);
 
-                let is_hovered = self.currently_hovered_element == Some(index);
-                if is_hovered {
-                    _renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
-                }
-
-                child.borrow_mut().draw(_renderer, _text_context, _scale_factor);
-            }
-
-            _renderer.pop_layer();
+            renderer.pop_layer();
 
             draw_scrollbar(
                 &self.floating_window.style,
                 &self.floating_window.layout,
-                _renderer,
-                _scale_factor,
+                renderer,
+                scale_factor,
             );
-            _renderer.end_overlay();
+            renderer.end_overlay();
         }
     }
 
@@ -270,47 +251,16 @@ impl ElementInternals for DropdownInner {
         event: &mut Event,
         _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
+        // Take focus if clicked.
         if let EventKind::PointerButtonDown(_pb) = message {
             self.focus();
         }
 
-        // Refactor this!
-        if let EventKind::PointerMovedEvent(pb) = message {
-            let pointer_position = Point::new(pb.current.position.x, pb.current.position.y);
-            let is_pointer_in_window = self
-                .floating_window
-                .layout
-                .computed_box_transformed
-                .border_rectangle()
-                .contains(&pointer_position);
-            let is_pointer_in_scrollbar = self
-                .floating_window
-                .layout
-                .computed_scroll_track
-                .contains(&pointer_position);
+        let list_layout = &self.floating_window.layout;
+        let list_box = list_layout.computed_box_transformed.border_rectangle();
+        let list_scroll_box = list_layout.computed_scroll_track;
 
-            if is_pointer_in_window && !is_pointer_in_scrollbar {
-                let mut hovered_child = None;
-                for (child_index, child) in self.children().iter().cloned().enumerate() {
-                    let contains = child
-                        .borrow()
-                        .element_data()
-                        .layout
-                        .computed_box_transformed
-                        .border_rectangle()
-                        .contains(&pointer_position);
-
-                    if contains {
-                        hovered_child = Some(child_index);
-                        break;
-                    }
-                }
-
-                if let Some(hovered_child) = hovered_child {
-                    self.currently_hovered_element = Some(hovered_child);
-                }
-            }
-        }
+        self.update_most_recently_hovered_child(message, list_box, list_scroll_box);
 
         if let EventKind::PointerButtonUp(pb) = message {
             // TODO Should pb.state.position be in logical coordinates?
@@ -333,49 +283,13 @@ impl ElementInternals for DropdownInner {
                 .computed_scroll_track
                 .contains(&pointer_position);
 
-            if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
-                self.is_floating_window_hidden = true;
-            }
-
-            // Toggle the visibility of the floating window by the clicking of the dropdown select box.
-            if is_pointer_in_select_box {
-                self.is_floating_window_hidden = !self.is_floating_window_hidden;
-                self.currently_hovered_element = self.selected_element_index;
-
-                if self.is_floating_window_hidden {
-                    self.release_pointer_capture(PointerId::new(1).unwrap());
-                }
-            }
-
-            if is_pointer_in_window && !is_pointer_in_scrollbar {
-                let mut should_hide_window = false;
-                for (child_index, child) in self.children().iter().cloned().enumerate() {
-                    let contains = child
-                        .borrow()
-                        .element_data()
-                        .layout
-                        .computed_box_transformed
-                        .border_rectangle()
-                        .contains(&pointer_position);
-
-                    if contains {
-                        should_hide_window = true;
-                        self.set_selected_element(child_index);
-                        self.release_pointer_capture(PointerId::new(1).unwrap());
-
-                        let new_event = Event::new(event.target.clone());
-                        queue_event(new_event, EventKind::DropdownItemSelected(child_index));
-
-                        break;
-                    }
-                }
-
-                if should_hide_window {
-                    self.is_floating_window_hidden = true;
-                }
-            }
+            self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
+            self.handle_click_in_select_box(is_pointer_in_select_box);
+            self.handle_child_click(event, &pointer_position, is_pointer_in_window, is_pointer_in_scrollbar);
         }
 
+        // Handle updating the scroll state.
+        // TODO: The dropdown scroll logic needs refactoring.
         let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&floating_window.style, &mut floating_window.layout, message, event);
         if result.request_apply_layout {
@@ -406,6 +320,28 @@ impl ElementInternals for DropdownInner {
             let child_id = child.borrow().element_data().layout.taffy_node_id();
             taffy_tree.add_child(parent_id, child_id);
         });
+    }
+
+    fn draw_children(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+        for (index, child) in self.children().iter().enumerate() {
+            let floating_window_box = &self.floating_window.layout.computed_box_transformed;
+            let mut child_rect = child
+                .borrow_mut()
+                .element_data()
+                .layout
+                .computed_box_transformed
+                .border_rectangle();
+
+            child_rect.x = floating_window_box.position.x as f32;
+            child_rect.width = floating_window_box.size.width;
+
+            let is_hovered = self.currently_hovered_element == Some(index);
+            if is_hovered {
+                renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
+            }
+
+            child.borrow_mut().draw(renderer, text_context, scale_factor);
+        }
     }
 
     fn in_bounds(&self, point: Point) -> bool {
@@ -635,6 +571,13 @@ impl Dropdown {
 }
 
 impl DropdownInner {
+    fn draw_selected_element(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+        if let Some(selected_element) = &self.selected_element {
+            let mut binding = selected_element.borrow_mut();
+            binding.draw(renderer, text_context, scale_factor);
+        }
+    }
+
     fn set_selected_element(&mut self, child_index: usize) {
         // Remove the old selected element from the layout tree.
         if let Some(old_selected_element) = &self.selected_element {
@@ -664,5 +607,82 @@ impl DropdownInner {
             let parent_id = self.element_data.layout.taffy_node_id.unwrap();
             taffy_tree.add_child_at_index(parent_id, selected_element_id, 1);
         });
+    }
+
+    fn update_most_recently_hovered_child(&mut self, message: &EventKind, list_box: Rectangle, list_scroll_box: Rectangle) {
+        if let EventKind::PointerMovedEvent(pb) = message {
+            let pointer_position = Point::new(pb.current.position.x, pb.current.position.y);
+            let is_pointer_in_list = list_box.contains(&pointer_position);
+            let is_pointer_in_scrollbar = list_scroll_box.contains(&pointer_position);
+
+            if is_pointer_in_list && !is_pointer_in_scrollbar {
+                let hovered_child = self.children().iter().enumerate().find_map(|(index, child)| {
+                    let contains = child
+                        .borrow()
+                        .element_data()
+                        .layout
+                        .computed_box_transformed
+                        .border_rectangle()
+                        .contains(&pointer_position);
+
+                    if contains {
+                        return Some(index);
+                    }
+
+                    None
+                });
+
+                if let Some(hovered_child) = hovered_child {
+                    self.currently_hovered_element = Some(hovered_child);
+                }
+            }
+        }
+    }
+
+    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool) {
+        if is_pointer_in_select_box {
+            self.is_floating_window_hidden = !self.is_floating_window_hidden;
+            self.currently_hovered_element = self.selected_element_index;
+
+            if self.is_floating_window_hidden {
+                self.release_pointer_capture(PointerId::new(1).unwrap());
+            }
+        }
+    }
+
+    fn handle_click_outside_menu(&mut self, is_pointer_in_select_box: bool, is_pointer_in_window: bool) {
+        if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
+            self.is_floating_window_hidden = true;
+        }
+    }
+
+    fn handle_child_click(&mut self, event: &mut Event, pointer_position: &Point, is_pointer_in_window: bool, is_pointer_in_scrollbar: bool) {
+        if is_pointer_in_window && !is_pointer_in_scrollbar {
+            let mut should_hide_window = false;
+            for (child_index, child) in self.children().iter().cloned().enumerate() {
+                let contains = child
+                    .borrow()
+                    .element_data()
+                    .layout
+                    .computed_box_transformed
+                    .border_rectangle()
+                    .contains(pointer_position);
+
+                if contains {
+                    should_hide_window = true;
+                    self.set_selected_element(child_index);
+                    self.release_pointer_capture(PointerId::new(1).unwrap());
+
+                    let new_event = Event::new(event.target.clone());
+                    queue_event(new_event, EventKind::DropdownItemSelected(child_index));
+
+                    break;
+                }
+            }
+
+            if should_hide_window {
+                self.is_floating_window_hidden = true;
+            }
+        }
     }
 }
