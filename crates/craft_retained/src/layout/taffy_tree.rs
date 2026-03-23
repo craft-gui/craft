@@ -52,6 +52,24 @@ impl TaffyTree {
         self.request_layout();
     }
 
+    pub fn mark_node_and_leaves_dirty(&mut self, node: NodeId) {
+        self.inner.mark_dirty(node).ok();
+        self.mark_leaves_dirty(node);
+        self.request_layout();
+    }
+
+    fn mark_leaves_dirty(&mut self, parent: NodeId) {
+        let children = self.inner.children(parent).unwrap_or_default();
+
+        if children.is_empty() {
+            self.inner.mark_dirty(parent).ok();
+        } else {
+            for child in children {
+                self.mark_leaves_dirty(child);
+            }
+        }
+    }
+
     pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
         self.inner.children(parent).unwrap()
     }
