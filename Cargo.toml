@@ -17,6 +17,7 @@ members = [
     "crates/craft_resource_manager",
     "crates/craft_runtime",
     "crates/craft_undo",
+    "website",
 ]
 
 [workspace.package]

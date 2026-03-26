@@ -3909,6 +3909,8 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "rustls-platform-verifier",
+ "serde",
+ "serde_json",
  "sync_wrapper",
  "tokio",
  "tokio-native-tls",
@@ -5468,6 +5470,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "804f18a4ac2676ffb4e8b5b5fa9ae38af06df08162314f96a68d2a363e21a8ca"
 dependencies = [
  "rustls-pki-types",
+]
+
+[[package]]
+name = "website"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "craft_retained",
+ "open",
+ "reqwest 0.13.2",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-web",
+ "util",
+ "web-sys",
 ]
 
 [[package]]
