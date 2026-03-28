@@ -14,7 +14,7 @@ use craft_renderer::RenderList;
 
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
-use crate::elements::{ElementData, ElementIdMap, ScrollOptions, WindowInternal};
+use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
@@ -23,7 +23,10 @@ use crate::text::text_context::TextContext;
 use crate::{Color, CraftError};
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
-pub trait ElementInternals: ElementData + Any {
+///
+/// Drop is required to clean up any taffy nodes allocated by the element.
+#[allow(drop_bounds)]
+pub trait ElementInternals: ElementData + Any + Drop {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>>;
 
     fn position_in_parent(&self) -> Option<usize> {
@@ -444,14 +447,14 @@ pub trait ElementInternals: ElementData + Any {
 
         // Remove the parent reference.
         child.borrow_mut().element_data_mut().parent = None;
-        child.borrow_mut().element_data_mut().window = None;
+        //child.borrow_mut().element_data_mut().window = None;
         child.borrow_mut().propagate_window_down();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let child_id = child.borrow().element_data().layout.taffy_node_id;
 
             if let Some(child_id) = child_id {
-                taffy_tree.remove_subtree(child_id);
+                taffy_tree.unparent_node(child_id);
             }
 
             let parent_id = self.element_data().layout.taffy_node_id;
@@ -459,21 +462,14 @@ pub trait ElementInternals: ElementData + Any {
         });
 
         // TODO: Move to document
-        fn remove_element_from_document(
-            node: Rc<RefCell<dyn ElementInternals>>,
-            pointer_capture: &mut PointerCapture,
-            elements: &mut ElementIdMap,
-        ) {
-            elements.remove_id(node.borrow().element_data().internal_id);
+        fn remove_element_from_document(node: Rc<RefCell<dyn ElementInternals>>, pointer_capture: &mut PointerCapture) {
             pointer_capture.remove_element(&node);
             for child in node.borrow().children() {
-                remove_element_from_document(child.clone(), pointer_capture, elements);
+                remove_element_from_document(child.clone(), pointer_capture);
             }
         }
 
-        ELEMENTS.with_borrow_mut(|elements| {
-            remove_element_from_document(child.clone(), &mut self.pointer_capture().borrow_mut(), elements);
-        });
+        remove_element_from_document(child.clone(), &mut self.pointer_capture().borrow_mut());
 
         child.borrow_mut().unfocus();
 
@@ -937,6 +933,32 @@ pub trait ElementInternals: ElementData + Any {
             .unwrap()
             .winit_window
             .clone()
+    }
+
+    /// Recursively prints the IDs of this element and all of its descendants.
+    fn print_tree_ids(&self, depth: usize) {
+        let indent = "  ".repeat(depth);
+
+        // Access the ID from element_data.
+        // If it's None, we can print "Unnamed Element" or the internal_id.
+        let id_label = self.element_data().internal_id.to_string();
+
+        println!("{}└─ {}: {}", indent, id_label, self.element_data().window.is_some());
+
+        for child in self.children() {
+            child.borrow().print_tree_ids(depth + 1);
+        }
+    }
+
+    fn drop(&mut self) {
+        if let Some(taffy_node) = self.element_data().layout.taffy_node_id {
+            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+                taffy_tree.remove_node(taffy_node);
+            });
+        }
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.remove_id(self.element_data().internal_id);
+        });
     }
 }
 

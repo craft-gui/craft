@@ -89,6 +89,12 @@ pub struct TextState {
 
 impl Element for Text {}
 
+impl Drop for TextInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Text {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()

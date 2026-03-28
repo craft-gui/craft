@@ -105,7 +105,7 @@ impl TaffyTree {
         self.is_layout_dirty = false;
     }
 
-    /// Remove the entire layout subtree.
+    /// Remove a specific `node` and its ancestors from the tree and drop it
     pub fn remove_subtree(&mut self, node: NodeId) {
         // Can we avoid this allocation?
         let children = self.inner.children(node).unwrap();
@@ -113,8 +113,23 @@ impl TaffyTree {
         for child in children {
             self.remove_subtree(child);
         }
+        self.remove_node(node);
+        self.request_layout();
+    }
 
-        self.inner.remove(node).map(|_| ()).unwrap();
+    /// Removes the `node`.
+    ///
+    /// The `node` is not removed from the tree entirely, it is simply no longer attached to its previous parent.
+    pub fn unparent_node(&mut self, node: NodeId) {
+        if let Some(parent) = self.inner.parent(node) {
+            self.inner.remove_child(parent, node).unwrap();
+            self.request_layout();
+        }
+    }
+
+    /// Remove a specific node from the tree and drop it
+    pub fn remove_node(&mut self, node: NodeId) {
+        self.inner.remove(node).unwrap();
         self.request_layout();
     }
 
@@ -158,7 +173,7 @@ impl TaffyTree {
     #[inline(always)]
     pub fn request_layout(&mut self) {
         self.is_layout_dirty = true;
-        self.is_apply_layout_dirty = Vec::new();
+        self.is_apply_layout_dirty.clear();
     }
 
     #[inline(always)]

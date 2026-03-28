@@ -305,6 +305,12 @@ impl SliderInner {
 
 impl Element for Slider {}
 
+impl Drop for SliderInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Slider {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
