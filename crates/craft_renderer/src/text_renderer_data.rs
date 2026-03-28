@@ -3,6 +3,21 @@ use craft_primitives::geometry::Rectangle;
 use peniko::Color;
 use peniko::kurbo::{Affine, Line};
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct TextScroll {
+    pub scroll_y: f32,
+    pub scroll_height: f32,
+}
+
+impl TextScroll {
+    pub fn new(scroll_y: f32, scroll_height: f32) -> Self {
+        Self {
+            scroll_y,
+            scroll_height,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TextRender {
     pub lines: Vec<TextRenderLine>,

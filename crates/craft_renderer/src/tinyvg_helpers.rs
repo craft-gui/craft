@@ -4,7 +4,7 @@ use peniko::{Color, Gradient, kurbo};
 use tinyvg_rs::color_table::ColorTable;
 use tinyvg_rs::commands::{Path, PathCommand, Point, Style};
 
-use crate::renderer::Brush;
+use crate::Brush;
 
 #[allow(clippy::wrong_self_convention)]
 /// Convert the TinyVG point to a kurbo color.
