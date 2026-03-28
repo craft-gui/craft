@@ -1,4 +1,6 @@
+#[cfg(any(feature = "vello_cpu_renderer", feature = "vello_hybrid_renderer", feature = "vello_hybrid_renderer_webgl"))]
 use vello_common::paint::PaintType;
+
 use crate::Brush;
 
 #[cfg(any(feature = "vello_cpu_renderer", feature = "vello_hybrid_renderer", feature = "vello_hybrid_renderer_webgl"))]
