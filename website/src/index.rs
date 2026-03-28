@@ -1,13 +1,15 @@
-use std::sync::Arc;
-
 use craft_retained::elements::{Container, Element, Text};
 use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
 use craft_retained::{Color, ResourceIdentifier, WinitWindow, palette, pct, px, rgb};
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use crate::theme::{MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
+use crate::link::Link;
+use crate::router::{NavigateFn, Router};
+use crate::theme::{WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
 use crate::web_link::WebLink;
 
-fn hero_intro() -> Container {
+fn hero_intro(navigate_fn: NavigateFn) -> Container {
     let bg_wrapper = Container::new().width(pct(100)).background_color(rgb(45, 48, 53));
 
     let inner_wrapper = wrapper()
@@ -60,6 +62,7 @@ fn hero_intro() -> Container {
         .color(palette::css::WHITE);
 
     let craft_button = Text::new("Learn Craft")
+        .id("xxx")
         .display(Display::Flex)
         .align_items(Some(AlignItems::Center))
         .justify_content(Some(JustifyContent::Center))
@@ -75,13 +78,7 @@ fn hero_intro() -> Container {
         .wrap(FlexWrap::Wrap)
         .gap(px(17), px(17))
         .margin(px(40), px(0), px(0), px(0))
-        //.push(
-        //    Link::component()
-        //        .props(Props::new(LinkProps {
-        //            href: "/docs".to_string(),
-        //        }))
-        //        .push(craft_button)
-        //)
+        .push(Link("/docs", move || navigate_fn("/docs")).push(craft_button))
         .push(WebLink("https://github.com/craft-gui/craft").push(github_button));
 
     let inner_wrapper = inner_wrapper.push(buttons);
@@ -93,9 +90,14 @@ fn hero_features() -> Container {
     fn hero_item(title: &str, text: &str, icon: ResourceIdentifier) -> Container {
         let sub_title_color = Color::from_rgb8(70, 70, 70);
 
-        //let icon_title = Container::new()
-        //    .push(TinyVg::new(icon))
-        //    .push(Text::new(title).font_weight(Weight::MEDIUM).font_size(24.0).margin(0, 0, 0, 10));
+        let icon_title = Container::new()
+            //    .push(TinyVg::new(icon))
+            .push(
+                Text::new(title)
+                    .font_weight(FontWeight::MEDIUM)
+                    .font_size(24.0)
+                    .margin(px(0), px(0), px(0), px(10)),
+            );
 
         Container::new()
             .gap(px(10), px(10))
@@ -105,7 +107,7 @@ fn hero_features() -> Container {
             .flex_basis(pct(50))
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
-            //.push(icon_title)
+            .push(icon_title)
             .push(Text::new(text).font_size(18.0).color(sub_title_color))
     }
 
@@ -158,7 +160,7 @@ fn hero_features() -> Container {
         )
 }
 
-pub(crate) fn index_page() -> Container {
+pub(crate) fn index_page(navigate_fn: NavigateFn) -> Container {
     Container::new()
         .width(pct(100))
         .overflow(Overflow::Visible, Overflow::Scroll)
@@ -169,7 +171,7 @@ pub(crate) fn index_page() -> Container {
                 .margin(Unit::Px(0.0), Unit::Auto, Unit::Px(0.0), Unit::Auto)
                 .flex_direction(FlexDirection::Column)
                 .flex_grow(1.0)
-                .push(hero_intro())
+                .push(hero_intro(navigate_fn))
                 .push(hero_features()),
         )
 }

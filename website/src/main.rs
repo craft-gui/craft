@@ -1,17 +1,17 @@
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Window};
+use craft_retained::elements::{Container, Element, ElementInternals, Window};
 use craft_retained::{CraftOptions, craft_main, pct};
 
-use crate::page_wrapper::PageWrapper;
+use crate::router::Router;
 
+mod docs;
+mod index;
+mod link;
 mod navbar;
-mod page_wrapper;
 mod router;
 mod theme;
-mod index;
 mod web_link;
 
 pub(crate) struct WebsiteGlobalState {
@@ -86,18 +86,15 @@ fn main() {
 
     util::setup_logging();
 
-    let mut page_wrapper = PageWrapper::new();
+    global_state.borrow_mut().load_route();
 
-    let page = match global_state.borrow().route.as_str() {
-        "/" => {
-            index::index_page()
-        }
-        _ => {
-            index::index_page()
-        }
-    };
+    let page_wrapper = Router::new(global_state.clone());
 
-    page_wrapper.set_content(page);
+    /*    let root = page_wrapper.borrow().root.clone();
+
+        root.inner.borrow().print_tree_ids(4);
+    */
+    page_wrapper.borrow().navigate();
 
     craft_main(options);
 }
