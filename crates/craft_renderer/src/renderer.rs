@@ -3,39 +3,16 @@ use std::cell::RefCell;
 use std::rc::Weak;
 use std::sync::Arc;
 
-use craft_primitives::Color;
-use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
-use peniko::kurbo::{BezPath, Shape, Vec2};
+use peniko::kurbo::{BezPath, Shape};
 use peniko::{BrushRef, Gradient};
 
+use craft_primitives::geometry::Rectangle;
+use craft_primitives::Color;
+use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+
+use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd};
 use crate::text_renderer_data::TextData;
-
-#[derive(Clone)]
-pub enum RenderCommand {
-    DrawRect(Rectangle, Color),
-    DrawRectOutline(Rectangle, Color, f64),
-    DrawImage(Rectangle, ResourceIdentifier),
-    DrawTinyVg(Rectangle, ResourceIdentifier, Option<Color>),
-    DrawText(Weak<RefCell<dyn TextData>>, Rectangle, Option<TextScroll>, bool),
-    PushLayer(Rectangle),
-    PopLayer,
-    FillBezPath(BezPath, Brush),
-    StartOverlay,
-    EndOverlay,
-    BoxShadowCmd(BoxShadowCmd),
-}
-
-#[derive(Clone)]
-pub struct BoxShadowCmd {
-    pub inset: bool,
-    pub offset: Vec2,
-    pub outline: BezPath,
-    pub path: BezPath,
-    pub blur_radius: f64,
-    pub color: Color,
-    pub border_box: Rectangle,
-}
+use crate::RenderCommand;
 
 #[derive(Clone, Debug)]
 pub enum Brush {
@@ -160,13 +137,15 @@ impl RenderList {
     }
 
     #[inline(always)]
-    pub fn draw_rect(&mut self, rectangle: Rectangle, fill_color: Color) {
+    pub fn draw_rect(&mut self, rect: Rectangle, color: Color) {
         if let Some(cull) = &self.cull
-            && !cull.intersects(&rectangle)
+            && !cull.intersects(&rect)
         {
             return;
         }
-        self.commands.push(RenderCommand::DrawRect(rectangle, fill_color));
+        self.commands.push(
+            RenderCommand::DrawRect(DrawRectCmd { rect, color })
+        );
     }
 
     #[inline(always)]
@@ -181,14 +160,15 @@ impl RenderList {
     }
 
     #[inline(always)]
-    pub fn draw_rect_outline(&mut self, rectangle: Rectangle, outline_color: Color, thickness: f64) {
+    pub fn draw_rect_outline(&mut self, rect: Rectangle, outline_color: Color, thickness: f64) {
         if let Some(cull) = &self.cull
-            && !cull.intersects(&rectangle)
+            && !cull.intersects(&rect)
         {
             return;
         }
-        self.commands
-            .push(RenderCommand::DrawRectOutline(rectangle, outline_color, thickness));
+        self.commands.push(
+            RenderCommand::DrawRectOutline(DrawRectOutlineCmd { rect, outline_color, thickness })
+        );
     }
 
     #[inline(always)]
@@ -198,49 +178,65 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(RenderCommand::FillBezPath(path, brush));
+        self.commands.push(
+            RenderCommand::FillBezPath(FillBezPathCmd { path, brush })
+        );
     }
 
     #[inline(always)]
     pub fn draw_text(
         &mut self,
-        component: Weak<RefCell<dyn TextData>>,
-        rectangle: Rectangle,
+        data: Weak<RefCell<dyn TextData>>,
+        rect: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
         if let Some(cull) = &self.cull
-            && !cull.intersects(&rectangle)
+            && !cull.intersects(&rect)
         {
             return;
         }
-        self.commands
-            .push(RenderCommand::DrawText(component, rectangle, text_scroll, show_cursor));
+        self.commands.push(
+                RenderCommand::DrawText(DrawTextCmd{ rect, data, text_scroll, show_cursor})
+        );
     }
 
     #[inline(always)]
-    pub fn draw_image(&mut self, rectangle: Rectangle, resource_identifier: ResourceIdentifier) {
-        self.commands
-            .push(RenderCommand::DrawImage(rectangle, resource_identifier));
+    pub fn draw_image(&mut self, rect: Rectangle, resource_id: ResourceIdentifier) {
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&rect)
+        {
+            return;
+        }
+        self.commands.push(
+            RenderCommand::DrawImage(DrawImageCmd { rect, resource_id })
+        );
     }
 
     #[inline(always)]
     pub fn draw_tiny_vg(
         &mut self,
-        rectangle: Rectangle,
-        resource_identifier: ResourceIdentifier,
+        rect: Rectangle,
+        resource_id: ResourceIdentifier,
         override_color: Option<Color>,
     ) {
-        self.commands.push(RenderCommand::DrawTinyVg(
-            rectangle,
-            resource_identifier,
-            override_color,
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&rect)
+        {
+            return;
+        }
+        self.commands.push(
+            RenderCommand::DrawTinyVg(DrawTinyVgCmd {
+                rect,
+                resource_id,
+                override_color,
+            }
         ));
     }
 
     #[inline(always)]
     pub fn push_layer(&mut self, rect: Rectangle) {
-        self.commands.push(RenderCommand::PushLayer(rect));
+        self.commands.push(RenderCommand::PushLayer(PushLayerCmd{ rect }));
     }
 
     #[inline(always)]
@@ -298,19 +294,19 @@ pub trait Renderer: Any {
 
         fn bounding_rect(render_command: &RenderCommand) -> Rectangle {
             match render_command {
-                RenderCommand::DrawRect(rect, _)
-                | RenderCommand::DrawRectOutline(rect, _, _)
-                | RenderCommand::DrawImage(rect, _)
-                | RenderCommand::DrawTinyVg(rect, _, _)
-                | RenderCommand::DrawText(_, rect, _, _) => *rect,
-                RenderCommand::FillBezPath(path, _) => Rectangle::from_kurbo(path.bounding_box()),
-                RenderCommand::BoxShadowCmd(box_shadow) => {
-                    let bounding_box = box_shadow.path.bounding_box();
+                RenderCommand::DrawRect(cmd) => cmd.rect,
+                RenderCommand::DrawRectOutline(cmd) => cmd.rect,
+                RenderCommand::DrawImage(cmd) => cmd.rect,
+                RenderCommand::DrawTinyVg(cmd) => cmd.rect,
+                RenderCommand::DrawText(cmd) => cmd.rect,
+                RenderCommand::FillBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
+                RenderCommand::BoxShadowCmd(cmd) => {
+                    let bounding_box = cmd.path.bounding_box();
                     Rectangle::new(
-                        (bounding_box.x0 + box_shadow.offset.x) as f32,
-                        (bounding_box.y0 + box_shadow.offset.y) as f32,
-                        (bounding_box.x1 + box_shadow.offset.x) as f32,
-                        (bounding_box.y1 + box_shadow.offset.y) as f32,
+                        (bounding_box.x0 + cmd.offset.x) as f32,
+                        (bounding_box.y0 + cmd.offset.y) as f32,
+                        (bounding_box.x1 + cmd.offset.x) as f32,
+                        (bounding_box.y1 + cmd.offset.y) as f32,
                     )
                 }
                 _ => unreachable!("Cannot compute the bounding rect of this render command."),

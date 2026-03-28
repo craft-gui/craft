@@ -1,7 +1,7 @@
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
 
-use craft_renderer::renderer::BoxShadowCmd;
+use craft_renderer::render_command::BoxShadowCmd;
 use craft_renderer::{Brush, RenderList};
 
 use peniko::Color;

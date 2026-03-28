@@ -11,11 +11,14 @@ pub mod vello_cpu;
 
 pub mod blank_renderer;
 mod image_adapter;
+pub mod render_command;
 mod renderer_type;
 pub mod text_renderer_data;
 pub(crate) mod tinyvg_helpers;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
 
-pub use renderer::{Brush, RenderCommand, RenderList};
+
+pub use render_command::RenderCommand;
+pub use renderer::{Brush, RenderList};
 pub use renderer_type::RendererType;

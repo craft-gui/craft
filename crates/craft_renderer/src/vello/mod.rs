@@ -7,16 +7,21 @@ use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
+
 use peniko::{BrushRef, ImageAlphaType};
+
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::{AaConfig, Error, Glyph, RendererOptions, Scene, kurbo, peniko};
+
 use wgpu::util::TextureBlitter;
 use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
+
 use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
-use crate::renderer::{RenderCommand, RenderList, Renderer, SortedCommands, TextScroll};
+use crate::RenderCommand;
+use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
 use crate::text_renderer_data::TextRenderLine;
 use crate::vello::tinyvg::draw_tiny_vg;
 
@@ -25,6 +30,25 @@ pub struct RenderSurface {
     pub surface_config: SurfaceConfiguration,
     pub surface_texture: wgpu::Texture,
     pub surface_view: wgpu::TextureView,
+}
+
+pub struct VelloRenderer {
+    pub device: Device,
+    #[allow(dead_code)]
+    pub adapter: Adapter,
+    pub queue: Queue,
+    #[allow(dead_code)]
+    pub instance: Instance,
+    pub render_surface: RenderSurface,
+    pub texture_blitter: TextureBlitter,
+    pub renderer: vello::Renderer,
+
+    // A vello Scene which is a data structure which allows one to build up a
+    // description a scene to be drawn (with paths, fills, images, text, etc)
+    // which is then passed to a renderer for rendering
+    scene: Scene,
+    pub surface_clear_color: Color,
+    pub render_into_texture: bool,
 }
 
 impl RenderSurface {
@@ -130,25 +154,6 @@ impl RenderSurface {
             surface_view,
         }
     }
-}
-
-pub struct VelloRenderer {
-    pub device: Device,
-    #[allow(dead_code)]
-    pub adapter: Adapter,
-    pub queue: Queue,
-    #[allow(dead_code)]
-    pub instance: Instance,
-    pub render_surface: RenderSurface,
-    pub texture_blitter: TextureBlitter,
-    pub renderer: vello::Renderer,
-
-    // A vello Scene which is a data structure which allows one to build up a
-    // description a scene to be drawn (with paths, fills, images, text, etc)
-    // which is then passed to a renderer for rendering
-    scene: Scene,
-    pub surface_clear_color: Color,
-    pub render_into_texture: bool,
 }
 
 fn create_vello_renderer(device: &Device) -> vello::Renderer {
@@ -277,20 +282,20 @@ impl Renderer for VelloRenderer {
             let scene = &mut self.scene;
 
             match command {
-                RenderCommand::DrawRect(rectangle, fill_color) => {
-                    vello_draw_rect(scene, *rectangle, *fill_color);
+                RenderCommand::DrawRect(cmd) => {
+                    vello_draw_rect(scene, cmd.rect, cmd.color);
                 }
-                RenderCommand::DrawRectOutline(rectangle, outline_color, thickness) => {
+                RenderCommand::DrawRectOutline(cmd) => {
                     self.scene.stroke(
-                        &Stroke::new(*thickness),
+                        &Stroke::new(cmd.thickness),
                         Affine::IDENTITY,
-                        outline_color,
+                        cmd.outline_color,
                         None,
-                        &rectangle.to_kurbo(),
+                        &cmd.rect.to_kurbo(),
                     );
                 }
-                RenderCommand::DrawImage(rectangle, resource_identifier) => {
-                    let resource = resource_manager.get(resource_identifier);
+                RenderCommand::DrawImage(cmd) => {
+                    let resource = resource_manager.get(&cmd.resource_id);
                     if let Some(resource) = resource
                         && let Resource::Image(resource) = resource.as_ref()
                     {
@@ -309,21 +314,21 @@ impl Renderer for VelloRenderer {
 
                         let mut transform = Affine::IDENTITY;
                         transform =
-                            transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+                            transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         transform = transform.pre_scale_non_uniform(
-                            rectangle.width as f64 / image.width() as f64,
-                            rectangle.height as f64 / image.height() as f64,
+                            cmd.rect.width as f64 / image.width() as f64,
+                            cmd.rect.height as f64 / image.height() as f64,
                         );
                         scene.draw_image(&vello_image, transform);
                     }
                 }
-                RenderCommand::DrawText(text_render, rect, text_scroll, show_cursor) => {
+                RenderCommand::DrawText(cmd) => {
                     let text_transform =
-                        Affine::default().with_translation(kurbo::Vec2::new(rect.x as f64, rect.y as f64));
-                    let scroll = text_scroll.unwrap_or(TextScroll::default()).scroll_y;
+                        Affine::default().with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                    let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
-                    let c = text_render.upgrade();
+                    let c = cmd.data.upgrade();
                     if c.is_none() {
                         return;
                     }
@@ -346,7 +351,7 @@ impl Renderer for VelloRenderer {
                             for item in &line.items {
                                 if let Some(first_glyph) = item.glyphs.first() {
                                     // Cull the glyphs vertically that are outside the window
-                                    let gy = first_glyph.y + rect.y - scroll;
+                                    let gy = first_glyph.y + cmd.rect.y - scroll;
                                     if gy < window.y {
                                         skip_line = true;
                                         break;
@@ -364,8 +369,8 @@ impl Renderer for VelloRenderer {
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for (background, color) in &line.backgrounds {
                             let background_rect = Rectangle {
-                                x: background.x + rect.x,
-                                y: -scroll + background.y + rect.y,
+                                x: background.x + cmd.rect.x,
+                                y: -scroll + background.y + cmd.rect.y,
                                 width: background.width,
                                 height: background.height,
                             };
@@ -374,8 +379,8 @@ impl Renderer for VelloRenderer {
 
                         for (selection, selection_color) in &line.selections {
                             let selection_rect = Rectangle {
-                                x: selection.x + rect.x,
-                                y: -scroll + selection.y + rect.y,
+                                x: selection.x + cmd.rect.x,
+                                y: -scroll + selection.y + cmd.rect.y,
                                 width: selection.width,
                                 height: selection.height,
                             };
@@ -417,39 +422,39 @@ impl Renderer for VelloRenderer {
                         }
                     });
 
-                    if *show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                    if cmd.show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
                         let cursor_rect = Rectangle {
-                            x: cursor.x + rect.x,
-                            y: -scroll + cursor.y + rect.y,
+                            x: cursor.x + cmd.rect.x,
+                            y: -scroll + cursor.y + cmd.rect.y,
                             width: cursor.width,
                             height: cursor.height,
                         };
                         vello_draw_rect(scene, cursor_rect, *cursor_color);
                     }
                 }
-                RenderCommand::DrawTinyVg(rectangle, resource_identifier, override_color) => {
+                RenderCommand::DrawTinyVg(cmd) => {
                     draw_tiny_vg(
                         scene,
-                        *rectangle,
+                        cmd.rect,
                         resource_manager.clone(),
-                        resource_identifier.clone(),
-                        override_color,
+                        cmd.resource_id.clone(),
+                        &cmd.override_color,
                     );
                 }
-                RenderCommand::PushLayer(rect) => {
+                RenderCommand::PushLayer(cmd) => {
                     let clip = Rect::new(
-                        rect.x as f64,
-                        rect.y as f64,
-                        (rect.x + rect.width) as f64,
-                        (rect.y + rect.height) as f64,
+                        cmd.rect.x as f64,
+                        cmd.rect.y as f64,
+                        (cmd.rect.x + cmd.rect.width) as f64,
+                        (cmd.rect.y + cmd.rect.height) as f64,
                     );
                     scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();
                 }
-                RenderCommand::FillBezPath(path, brush) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, brush, None, &path);
+                RenderCommand::FillBezPath(cmd) => {
+                    scene.fill(Fill::NonZero, Affine::IDENTITY, &cmd.brush, None, &cmd.path);
                 }
                 _ => {}
             }
