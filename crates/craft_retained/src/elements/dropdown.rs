@@ -80,6 +80,12 @@ impl Default for Dropdown {
 
 impl Element for Dropdown {}
 
+impl Drop for DropdownInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Dropdown {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
@@ -582,7 +588,7 @@ impl DropdownInner {
         // Remove the old selected element from the layout tree.
         if let Some(old_selected_element) = &self.selected_element {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.remove_subtree(old_selected_element.borrow().element_data().layout.taffy_node_id());
+                taffy_tree.unparent_node(old_selected_element.borrow().element_data().layout.taffy_node_id());
             });
         }
 
@@ -609,7 +615,12 @@ impl DropdownInner {
         });
     }
 
-    fn update_most_recently_hovered_child(&mut self, message: &EventKind, list_box: Rectangle, list_scroll_box: Rectangle) {
+    fn update_most_recently_hovered_child(
+        &mut self,
+        message: &EventKind,
+        list_box: Rectangle,
+        list_scroll_box: Rectangle,
+    ) {
         if let EventKind::PointerMovedEvent(pb) = message {
             let pointer_position = Point::new(pb.current.position.x, pb.current.position.y);
             let is_pointer_in_list = list_box.contains(&pointer_position);
@@ -656,7 +667,13 @@ impl DropdownInner {
         }
     }
 
-    fn handle_child_click(&mut self, event: &mut Event, pointer_position: &Point, is_pointer_in_window: bool, is_pointer_in_scrollbar: bool) {
+    fn handle_child_click(
+        &mut self,
+        event: &mut Event,
+        pointer_position: &Point,
+        is_pointer_in_window: bool,
+        is_pointer_in_scrollbar: bool,
+    ) {
         if is_pointer_in_window && !is_pointer_in_scrollbar {
             let mut should_hide_window = false;
             for (child_index, child) in self.children().iter().cloned().enumerate() {

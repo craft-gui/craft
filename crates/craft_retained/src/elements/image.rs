@@ -47,6 +47,12 @@ impl crate::elements::ElementData for ImageInner {
 
 impl Element for Image {}
 
+impl Drop for ImageInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Image {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()

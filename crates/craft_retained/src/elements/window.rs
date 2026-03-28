@@ -110,6 +110,12 @@ impl Default for Window {
 
 impl Element for Window {}
 
+impl Drop for WindowInternal {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Window {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()

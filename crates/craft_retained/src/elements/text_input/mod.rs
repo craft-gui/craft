@@ -135,6 +135,12 @@ impl TextInput {
 
 impl Element for TextInput {}
 
+impl Drop for TextInputInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for TextInput {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()

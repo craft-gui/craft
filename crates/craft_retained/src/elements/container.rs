@@ -36,6 +36,12 @@ impl Default for Container {
 
 impl Element for Container {}
 
+impl Drop for ContainerInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Container {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
