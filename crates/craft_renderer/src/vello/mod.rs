@@ -21,9 +21,11 @@ use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
 use crate::RenderCommand;
-use crate::renderer::{RenderList, Renderer, SortedCommands, TextScroll};
-use crate::text_renderer_data::TextRenderLine;
+use crate::renderer::{Renderer};
+use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello::tinyvg::draw_tiny_vg;
+use crate::render_list::RenderList;
+use crate::sort_commands::SortedCommands;
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,

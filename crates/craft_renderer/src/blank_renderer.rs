@@ -5,7 +5,8 @@ use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::ResourceManager;
 
-use crate::renderer::{RenderList, Renderer};
+use crate::render_list::RenderList;
+use crate::renderer::Renderer;
 
 pub struct BlankRenderer;
 

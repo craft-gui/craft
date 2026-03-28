@@ -8,11 +8,10 @@ use std::time;
 use accesskit::{Action, Role};
 
 use craft_renderer::text_renderer_data::TextData;
+use craft_renderer::RenderList;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
 use craft_primitives::{Color, ColorBrush};
-
-use craft_renderer::renderer::RenderList;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::LayoutAccessibility;

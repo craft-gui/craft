@@ -6,11 +6,11 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
+use craft_resource_manager::ResourceManager;
 
 use peniko::kurbo::{Affine, Shape};
-use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
+use peniko::{kurbo, BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix};
 
 use softbuffer::Buffer;
 
@@ -22,12 +22,16 @@ use vello_cpu::{Pixmap, RenderContext};
 
 use winit::window::Window;
 
+use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::image_adapter::ImageAdapter;
-use crate::renderer::{RenderList, Renderer, Screenshot, SortedCommands, TextScroll};
-use crate::text_renderer_data::TextRenderLine;
-use crate::vello_cpu::tinyvg::draw_tiny_vg;
-use crate::{Brush, RenderCommand};
 use crate::render_command::BoxShadowCmd;
+use crate::render_list::RenderList;
+use crate::renderer::{Renderer};
+use crate::text_renderer_data::{TextRenderLine, TextScroll};
+use crate::vello_cpu::tinyvg::draw_tiny_vg;
+use crate::RenderCommand;
+use crate::sort_commands::SortedCommands;
+use crate::screenshot::Screenshot;
 
 pub(crate) struct VelloCpuRenderer {
     render_context: RenderContext,
@@ -429,15 +433,4 @@ impl VelloCpuRenderer {
             self.render_context.pop_layer();
         }
     }
-}
-
-fn brush_to_paint(brush: &Brush) -> PaintType {
-    match brush {
-        Brush::Color(color) => PaintType::Solid(*color),
-        Brush::Gradient(gradient) => PaintType::Gradient(gradient.clone()),
-    }
-}
-
-const fn rgba_to_encoded_u32(r: u32, g: u32, b: u32, a: u32) -> u32 {
-    b | (g << 8) | (r << 16) | (a << 24)
 }

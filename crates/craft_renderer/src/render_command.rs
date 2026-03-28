@@ -8,8 +8,7 @@ use craft_primitives::geometry::{BezPath, Rectangle, Vec2};
 use craft_resource_manager::ResourceIdentifier;
 
 use crate::Brush;
-use crate::renderer::{TextScroll};
-use crate::text_renderer_data::TextData;
+use crate::text_renderer_data::{TextData, TextScroll};
 
 #[derive(Clone)]
 pub enum RenderCommand {

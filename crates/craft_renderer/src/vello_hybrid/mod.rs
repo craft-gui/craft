@@ -25,10 +25,12 @@ use winit::window::Window;
 
 use crate::{Brush, RenderCommand};
 use crate::render_command::BoxShadowCmd;
-use crate::renderer::{RenderList, Renderer as CraftRenderer, SortedCommands, TextScroll};
-use crate::text_renderer_data::TextRenderLine;
+use crate::render_list::RenderList;
+use crate::renderer::{Renderer as CraftRenderer};
+use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{RenderContext, RenderSurface};
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
+use crate::sort_commands::SortedCommands;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window

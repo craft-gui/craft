@@ -8,8 +8,8 @@ use std::rc::{Rc, Weak};
 use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 
-use craft_renderer::renderer::{RenderList, TextScroll};
-use craft_renderer::text_renderer_data::TextData;
+use craft_renderer::text_renderer_data::{TextData, TextScroll};
+use craft_renderer::RenderList;
 
 use parley::BoundingBox;
 

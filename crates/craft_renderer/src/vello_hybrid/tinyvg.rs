@@ -11,7 +11,7 @@ use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg_rs::common::Unit;
 use vello_hybrid::Scene;
 
-use crate::renderer::Brush;
+use crate::Brush;
 use crate::tinyvg_helpers;
 use crate::vello_hybrid::brush_to_paint;
 

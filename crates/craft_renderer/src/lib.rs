@@ -1,4 +1,4 @@
-pub mod color;
+pub mod brush;
 
 #[allow(clippy::module_inception)]
 pub mod renderer;
@@ -17,8 +17,15 @@ pub mod text_renderer_data;
 pub(crate) mod tinyvg_helpers;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
-
+pub(crate) mod helpers;
+mod render_list;
+mod sort_commands;
+mod screenshot;
+mod target_item;
 
 pub use render_command::RenderCommand;
-pub use renderer::{Brush, RenderList};
+pub use render_list::RenderList;
+pub use brush::Brush;
+pub use screenshot::Screenshot;
+pub use target_item::TargetItem;
 pub use renderer_type::RendererType;
