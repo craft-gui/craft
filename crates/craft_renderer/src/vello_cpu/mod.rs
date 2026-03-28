@@ -24,7 +24,7 @@ use winit::window::Window;
 
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::image_adapter::ImageAdapter;
-use crate::render_command::BoxShadowCmd;
+use crate::render_command::{BoxShadowCmd, PushLayerCmd};
 use crate::render_list::RenderList;
 use crate::renderer::{Renderer};
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
@@ -320,15 +320,13 @@ impl Renderer for VelloCpuRenderer {
                     }
                 }
                 RenderCommand::PushLayer(cmd) => {
-                    let clip_path = Some(
-                        peniko::kurbo::Rect::from_origin_size(
-                            peniko::kurbo::Point::new(cmd.rect.x as f64, cmd.rect.y as f64),
-                            peniko::kurbo::Size::new(cmd.rect.width as f64, cmd.rect.height as f64),
-                        )
-                        .into_path(0.1),
-                    );
+                    let clip_path = match cmd {
+                        PushLayerCmd::BezPath(path) => path,
+                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1)
+                    };
+
                     self.render_context
-                        .push_layer(clip_path.as_ref(), None, None, None, None);
+                        .push_layer(Some(clip_path), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     self.render_context.pop_layer();

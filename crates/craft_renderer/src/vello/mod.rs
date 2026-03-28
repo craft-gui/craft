@@ -20,6 +20,7 @@ use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, Surfa
 use winit::window::Window;
 
 use crate::image_adapter::ImageAdapter;
+use crate::render_command::PushLayerCmd;
 use crate::RenderCommand;
 use crate::renderer::{Renderer};
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
@@ -444,13 +445,14 @@ impl Renderer for VelloRenderer {
                     );
                 }
                 RenderCommand::PushLayer(cmd) => {
-                    let clip = Rect::new(
-                        cmd.rect.x as f64,
-                        cmd.rect.y as f64,
-                        (cmd.rect.x + cmd.rect.width) as f64,
-                        (cmd.rect.y + cmd.rect.height) as f64,
-                    );
-                    scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &clip);
+                    match cmd {
+                        PushLayerCmd::BezPath(p) => {
+                            scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, p);
+                        }
+                        PushLayerCmd::Rect(r) => {
+                            scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &r.to_kurbo());
+                        }
+                    };
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();

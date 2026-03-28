@@ -60,8 +60,9 @@ pub struct DrawTextCmd {
 }
 
 #[derive(Clone)]
-pub struct PushLayerCmd {
-    pub rect: Rectangle
+pub enum PushLayerCmd {
+    BezPath(BezPath),
+    Rect(Rectangle)
 }
 
 #[derive(Clone)]

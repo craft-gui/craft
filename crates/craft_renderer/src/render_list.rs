@@ -145,7 +145,11 @@ impl RenderList {
 
     #[inline(always)]
     pub fn push_layer(&mut self, rect: Rectangle) {
-        self.commands.push(RenderCommand::PushLayer(PushLayerCmd{ rect }));
+        self.commands.push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect)));
+    }
+
+    pub fn push_layer_with_bez_path(&mut self, path: BezPath) {
+        self.commands.push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path)));
     }
 
     #[inline(always)]

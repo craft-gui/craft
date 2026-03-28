@@ -24,7 +24,7 @@ use wgpu::TextureFormat;
 use winit::window::Window;
 
 use crate::{Brush, RenderCommand};
-use crate::render_command::BoxShadowCmd;
+use crate::render_command::{BoxShadowCmd, PushLayerCmd};
 use crate::render_list::RenderList;
 use crate::renderer::{Renderer as CraftRenderer};
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
@@ -445,14 +445,12 @@ impl CraftRenderer for VelloHybridRenderer {
                     );
                 }
                 RenderCommand::PushLayer(cmd) => {
-                    let clip_path = Some(
-                        kurbo::Rect::from_origin_size(
-                            kurbo::Point::new(cmd.rect.x as f64, cmd.rect.y as f64),
-                            kurbo::Size::new(cmd.rect.width as f64, cmd.rect.height as f64),
-                        )
-                        .into_path(0.1),
-                    );
-                    scene.push_layer(clip_path.as_ref(), None, None, None, None);
+                    let clip_path = match cmd {
+                        PushLayerCmd::BezPath(path) => path,
+                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1)
+                    };
+
+                    scene.push_layer(Some(clip_path), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     scene.pop_layer();
