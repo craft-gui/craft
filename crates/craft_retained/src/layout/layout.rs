@@ -30,6 +30,7 @@ pub struct Layout {
 
     pub layout_order: u32,
     pub clip_bounds: Option<Rectangle>,
+    pub parent_clip: Option<Rectangle>,
 
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
@@ -419,13 +420,13 @@ impl Layout {
     }
 
     pub fn resolve_clip_for_scrollable(&mut self, clip_bounds: Option<Rectangle>) {
+        if clip_bounds.is_none() {
+            self.clip_bounds = None;
+            return;
+        }
         if self.is_scrollable_layout() {
             let scroll_clip_bounds = self.computed_box_transformed.padding_rectangle();
-            if let Some(clip_bounds) = clip_bounds {
-                self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds);
-            } else {
-                self.clip_bounds = Some(scroll_clip_bounds);
-            }
+            self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds.unwrap());
         } else {
             self.clip_bounds = clip_bounds;
         }

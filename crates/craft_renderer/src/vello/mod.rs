@@ -19,14 +19,14 @@ use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, Surfa
 
 use winit::window::Window;
 
+use crate::RenderCommand;
 use crate::image_adapter::ImageAdapter;
 use crate::render_command::PushLayerCmd;
-use crate::RenderCommand;
-use crate::renderer::{Renderer};
+use crate::render_list::RenderList;
+use crate::renderer::Renderer;
+use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello::tinyvg::draw_tiny_vg;
-use crate::render_list::RenderList;
-use crate::sort_commands::SortedCommands;
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,
@@ -316,8 +316,7 @@ impl Renderer for VelloRenderer {
                         let vello_image = vello::peniko::ImageBrush::new(vello_image);
 
                         let mut transform = Affine::IDENTITY;
-                        transform =
-                            transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
@@ -425,7 +424,9 @@ impl Renderer for VelloRenderer {
                         }
                     });
 
-                    if cmd.show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                    if cmd.show_cursor
+                        && let Some((cursor, cursor_color)) = &text_render.cursor
+                    {
                         let cursor_rect = Rectangle {
                             x: cursor.x + cmd.rect.x,
                             y: -scroll + cursor.y + cmd.rect.y,
@@ -450,7 +451,13 @@ impl Renderer for VelloRenderer {
                             scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, p);
                         }
                         PushLayerCmd::Rect(r) => {
-                            scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &r.to_kurbo());
+                            scene.push_layer(
+                                Fill::NonZero,
+                                BlendMode::default(),
+                                1.0,
+                                Affine::IDENTITY,
+                                &r.to_kurbo(),
+                            );
                         }
                     };
                 }

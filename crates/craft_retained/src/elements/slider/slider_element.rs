@@ -348,7 +348,8 @@ impl ElementInternals for SliderInner {
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
@@ -356,6 +357,7 @@ impl ElementInternals for SliderInner {
 
             self.apply_borders(scale_factor);
             self.apply_clip(clip_bounds);
+            self.element_data.layout.parent_clip = clip_bounds;
         }
     }
 

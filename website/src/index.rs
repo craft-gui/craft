@@ -45,6 +45,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         );
 
     let github_button = Text::new("GitHub")
+        .selectable(false)
         .display(Display::Flex)
         .align_items(Some(AlignItems::Center))
         .justify_content(Some(JustifyContent::Center))
@@ -62,7 +63,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         .color(palette::css::WHITE);
 
     let craft_button = Text::new("Learn Craft")
-        .id("xxx")
+        .selectable(false)
         .display(Display::Flex)
         .align_items(Some(AlignItems::Center))
         .justify_content(Some(JustifyContent::Center))

@@ -8,8 +8,8 @@ use std::rc::{Rc, Weak};
 use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 
-use craft_renderer::text_renderer_data::{TextData, TextScroll};
 use craft_renderer::RenderList;
+use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
@@ -177,13 +177,15 @@ impl ElementInternals for TextInputInner {
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             let result = taffy_tree.get_layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
+            self.element_data.layout.parent_clip = clip_bounds;
             self.apply_borders(scale_factor);
 
             self.element_data.apply_scroll(result);

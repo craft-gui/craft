@@ -56,7 +56,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         transform: Affine,
         text_context: &mut TextContext,
         scale_factor: f64,
-        _dirty: bool,
+        clip_bounds: Option<Rectangle>,
     ) {
         for child in &self.element_data().children {
             child.borrow_mut().apply_layout(
@@ -65,7 +65,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 z_index,
                 transform,
                 text_context,
-                self.element_data().layout.clip_bounds,
+                clip_bounds,
                 scale_factor,
             );
         }
@@ -605,7 +605,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 None => false,
             }
         } else {
-            rect.contains(&point)
+            false
         }
     }
 

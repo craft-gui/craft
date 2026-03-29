@@ -11,9 +11,8 @@ use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Segment, Style};
 use tinyvg_rs::common::Unit;
 use vello_hybrid::Scene;
 
-use crate::Brush;
-use crate::tinyvg_helpers;
 use crate::vello_hybrid::brush_to_paint;
+use crate::{Brush, tinyvg_helpers};
 
 fn stroke_path(scene: &mut Scene, bez_path: &BezPath, affine: &Affine, line_width: f64, brush: &Brush) {
     scene.set_stroke(Stroke::new(line_width));

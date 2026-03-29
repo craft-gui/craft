@@ -23,14 +23,14 @@ use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
 use wgpu::TextureFormat;
 use winit::window::Window;
 
-use crate::{Brush, RenderCommand};
 use crate::render_command::{BoxShadowCmd, PushLayerCmd};
 use crate::render_list::RenderList;
-use crate::renderer::{Renderer as CraftRenderer};
+use crate::renderer::Renderer as CraftRenderer;
+use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{RenderContext, RenderSurface};
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
-use crate::sort_commands::SortedCommands;
+use crate::{Brush, RenderCommand};
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -302,16 +302,14 @@ impl CraftRenderer for VelloHybridRenderer {
                                 &mut encoder,
                                 &pixmap,
                             );
-                            self.images
-                                .insert(cmd.resource_id.clone(), (image_id, expiration_time));
+                            self.images.insert(cmd.resource_id.clone(), (image_id, expiration_time));
 
                             image_id
                         };
                         seen_images.insert(image_id);
 
                         let mut transform = Affine::IDENTITY;
-                        transform =
-                            transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
@@ -425,7 +423,9 @@ impl CraftRenderer for VelloHybridRenderer {
                         }
                     });
 
-                    if cmd.show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                    if cmd.show_cursor
+                        && let Some((cursor, cursor_color)) = &text_render.cursor
+                    {
                         let cursor_rect = Rectangle {
                             x: cursor.x + cmd.rect.x,
                             y: -scroll + cursor.y + cmd.rect.y,
@@ -447,7 +447,7 @@ impl CraftRenderer for VelloHybridRenderer {
                 RenderCommand::PushLayer(cmd) => {
                     let clip_path = match cmd {
                         PushLayerCmd::BezPath(path) => path,
-                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1)
+                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1),
                     };
 
                     scene.push_layer(Some(clip_path), None, None, None, None);

@@ -1,8 +1,8 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use craft_primitives::geometry::Rectangle;
 use craft_primitives::Color;
+use craft_primitives::geometry::Rectangle;
 
 use craft_resource_manager::ResourceManager;
 

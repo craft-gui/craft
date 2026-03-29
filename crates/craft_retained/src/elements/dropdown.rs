@@ -122,12 +122,14 @@ impl ElementInternals for DropdownInner {
         self.element_data.layout.has_new_layout = taffy_tree.has_new_layout(node);
         let dirty = self.element_data.layout.has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
 
         if dirty {
             self.resolve_box(position, transform, layout, z_index);
             self.apply_borders(scale_factor);
             self.apply_clip(clip_bounds);
+            self.element_data.layout.parent_clip = clip_bounds;
             self.element_data.layout.scroll_state.mark_old();
         }
         taffy_tree.mark_seen(node);

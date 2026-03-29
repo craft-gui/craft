@@ -6,12 +6,10 @@ use peniko::Color;
 use craft_primitives::geometry::{BezPath, Rectangle, Shape};
 use craft_resource_manager::ResourceIdentifier;
 
-use crate::Brush;
 use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd};
-use crate::{RenderCommand};
-use crate::{TargetItem};
 use crate::sort_commands::SortedCommands;
-use crate::text_renderer_data::{TextScroll, TextData};
+use crate::text_renderer_data::{TextData, TextScroll};
+use crate::{Brush, RenderCommand, TargetItem};
 
 pub struct RenderList {
     current_overlay_depth: u64,
@@ -52,9 +50,7 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::DrawRect(DrawRectCmd { rect, color })
-        );
+        self.commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, color }));
     }
 
     #[inline(always)]
@@ -75,9 +71,11 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::DrawRectOutline(DrawRectOutlineCmd { rect, outline_color, thickness })
-        );
+        self.commands.push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
+            rect,
+            outline_color,
+            thickness,
+        }));
     }
 
     #[inline(always)]
@@ -87,9 +85,8 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::FillBezPath(FillBezPathCmd { path, brush })
-        );
+        self.commands
+            .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush }));
     }
 
     #[inline(always)]
@@ -105,9 +102,12 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::DrawText(DrawTextCmd{ rect, data, text_scroll, show_cursor})
-        );
+        self.commands.push(RenderCommand::DrawText(DrawTextCmd {
+            rect,
+            data,
+            text_scroll,
+            show_cursor,
+        }));
     }
 
     #[inline(always)]
@@ -117,30 +117,22 @@ impl RenderList {
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::DrawImage(DrawImageCmd { rect, resource_id })
-        );
+        self.commands
+            .push(RenderCommand::DrawImage(DrawImageCmd { rect, resource_id }));
     }
 
     #[inline(always)]
-    pub fn draw_tiny_vg(
-        &mut self,
-        rect: Rectangle,
-        resource_id: ResourceIdentifier,
-        override_color: Option<Color>,
-    ) {
+    pub fn draw_tiny_vg(&mut self, rect: Rectangle, resource_id: ResourceIdentifier, override_color: Option<Color>) {
         if let Some(cull) = &self.cull
             && !cull.intersects(&rect)
         {
             return;
         }
-        self.commands.push(
-            RenderCommand::DrawTinyVg(DrawTinyVgCmd {
-                rect,
-                resource_id,
-                override_color,
-            }
-            ));
+        self.commands.push(RenderCommand::DrawTinyVg(DrawTinyVgCmd {
+            rect,
+            resource_id,
+            override_color,
+        }));
     }
 
     #[inline(always)]
@@ -149,7 +141,8 @@ impl RenderList {
     }
 
     pub fn push_layer_with_bez_path(&mut self, path: BezPath) {
-        self.commands.push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path)));
+        self.commands
+            .push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path)));
     }
 
     #[inline(always)]

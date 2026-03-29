@@ -47,6 +47,7 @@ use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
+use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
@@ -214,7 +215,12 @@ impl ElementInternals for WindowInternal {
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
+        let overflow = self.style().get_overflow();
+        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
+            resolve_clip_for_scrollable(self, clip_bounds);
+        } else {
+            self.element_data.layout.resolve_clip(clip_bounds);
+        }
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -678,7 +684,12 @@ impl WindowInternal {
                     &mut layout_order,
                     Affine::IDENTITY,
                     text_context,
-                    None,
+                    Some(Rectangle::new(
+                        0.0,
+                        0.0,
+                        self.window_size.width,
+                        self.window_size.height,
+                    )),
                     sf,
                 );
                 taffy_tree.apply_layout(root_node);
