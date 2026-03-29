@@ -1,4 +1,4 @@
-use craft_retained::elements::{Container, Element, Text};
+use craft_retained::elements::{Container, Element, Text, TinyVg};
 use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
 use craft_retained::{Color, ResourceIdentifier, WinitWindow, palette, pct, px, rgb};
 use std::cell::RefCell;
@@ -91,14 +91,12 @@ fn hero_features() -> Container {
     fn hero_item(title: &str, text: &str, icon: ResourceIdentifier) -> Container {
         let sub_title_color = Color::from_rgb8(70, 70, 70);
 
-        let icon_title = Container::new()
-            //    .push(TinyVg::new(icon))
-            .push(
-                Text::new(title)
-                    .font_weight(FontWeight::MEDIUM)
-                    .font_size(24.0)
-                    .margin(px(0), px(0), px(0), px(10)),
-            );
+        let icon_title = Container::new().push(TinyVg::new(icon)).push(
+            Text::new(title)
+                .font_weight(FontWeight::MEDIUM)
+                .font_size(24.0)
+                .margin(px(0), px(0), px(0), px(10)),
+        );
 
         Container::new()
             .gap(px(10), px(10))

@@ -6,6 +6,7 @@ pub use crate::elements::scrollable::{ScrollOptions, ScrollToBox};
 pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
 pub use crate::elements::text::{Text, TextInner};
 pub use crate::elements::text_input::{TextInput, TextInputInner};
+pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
 pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
 pub use crate::elements::window::{Window, WindowInternal};
 
@@ -21,5 +22,6 @@ mod image;
 mod slider;
 mod text;
 mod text_input;
+mod tinyvg;
 mod traits;
 mod window;
