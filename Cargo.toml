@@ -61,7 +61,7 @@ default-features = false
 features = ["sync", "time"]
 
 [workspace.dependencies.image]
-version = "0.25.9"
+version = "0.25.10"
 default-features = false
 features = []
 
@@ -76,7 +76,7 @@ default-features = false
 features = ["std"]
 
 [workspace.dependencies.cfg-if]
-version = "1.0.1"
+version = "1.0.4"
 
 [workspace.dependencies.winit]
 version = "0.30.13"

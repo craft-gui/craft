@@ -639,6 +639,7 @@ impl WindowInternal {
         let mut tree_update = TreeUpdate {
             nodes: vec![],
             tree: Some(tree),
+            tree_id: accesskit::TreeId::ROOT,
             focus: accesskit::NodeId(focus_id),
         };
 

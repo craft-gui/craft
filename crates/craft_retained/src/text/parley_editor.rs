@@ -1333,6 +1333,7 @@ impl PlainEditor {
             next_node_id,
             x_offset,
             y_offset,
+            |_, _| {},
         );
         if self.show_cursor {
             if let Some(selection) = self.selection.to_access_selection(&self.layout, &self.layout_access) {

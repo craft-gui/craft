@@ -251,6 +251,7 @@ impl ElementInternals for TextInner {
                 || accesskit::NodeId(create_unique_element_id()),
                 padding_box.x as f64,
                 padding_box.y as f64,
+                |_, _| {},
             );
         }
 
