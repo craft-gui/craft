@@ -7,6 +7,7 @@ use craft_retained::{CraftOptions, craft_main, pct};
 use crate::router::Router;
 
 mod docs;
+mod examples;
 mod index;
 mod link;
 mod navbar;

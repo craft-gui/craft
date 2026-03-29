@@ -1,8 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use craft_primitives::Color;
 use craft_primitives::geometry::ElementBox;
+use smol_str::SmolStr;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
@@ -87,6 +87,10 @@ pub trait Element: Clone + AsElement {
     fn id(self, id: &str) -> Self {
         self.as_element_rc().borrow_mut().set_id(id);
         self
+    }
+
+    fn get_id(&self) -> Option<SmolStr> {
+        self.as_element_rc().borrow_mut().get_id()
     }
 
     fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {

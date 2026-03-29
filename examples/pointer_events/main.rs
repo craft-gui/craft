@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use craft_retained::Color;
 use craft_retained::elements::{Container, Element, Text, Window};
 use craft_retained::events::Event;
 use craft_retained::events::ui_events::pointer::PointerId;
 use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
+use craft_retained::{Color, pct};
 
 fn title(txt: &str) -> Text {
     Text::new(txt)
@@ -147,21 +147,26 @@ fn pointer_enter_leave_example() -> Container {
         .push(event_log)
 }
 
-#[allow(unused)]
-#[cfg(not(target_os = "android"))]
-fn main() {
-    let pointer_capture_container = Container::new();
-    let pointer_capture_event_log = Text::new("");
-    let pointer_capture_draggable_container = Text::new("Draggable");
-
-    Window::new("Pointer Events")
+pub fn pointer_events() -> Container {
+    Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow(Overflow::Visible, Overflow::Scroll)
         .max_height(Unit::Percentage(100.0))
+        .width(pct(100))
+        .height(pct(100))
         .gap(Unit::Px(50.0), Unit::Px(50.0))
         .push(pointer_capture_example())
-        .push(pointer_enter_leave_example());
+        .push(pointer_enter_leave_example())
+}
+
+#[allow(unused)]
+#[cfg(not(target_os = "android"))]
+fn main() {
+    Window::new("Pointer Events")
+        .width(pct(100))
+        .height(pct(100))
+        .push(pointer_events());
 
     use craft_retained::CraftOptions;
     //util::setup_logging();

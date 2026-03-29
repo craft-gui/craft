@@ -527,6 +527,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .push(on_lost_pointer_capture);
     }
 
+    fn get_id(&self) -> Option<smol_str::SmolStr> {
+        self.element_data().id.clone()
+    }
+
     fn set_id(&mut self, id: &str) {
         self.element_data_mut().id = Some(id.into());
     }

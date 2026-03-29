@@ -6,6 +6,7 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::docs::docs;
+use crate::examples::examples;
 use crate::index::index_page;
 use crate::navbar::navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
@@ -17,6 +18,7 @@ pub struct Router {
     global_state: Rc<RefCell<WebsiteGlobalState>>,
     index: Container,
     docs: Container,
+    examples: Container,
 }
 
 pub type NavigateFn = Rc<dyn Fn(&str) + 'static>;
@@ -46,6 +48,7 @@ impl Router {
                 root: window.clone(),
                 index: index_page(navigate_logic.clone()),
                 docs: docs(navigate_logic.clone()),
+                examples: examples(global_state.clone(), navigate_logic.clone()),
                 global_state: global_state.clone(),
             })
         })
@@ -61,9 +64,15 @@ impl Router {
     }
 
     pub fn navigate(&self) {
-        let page = match self.global_state.borrow().route.as_str() {
-            "/" => self.index.clone(),
-            "/docs" => self.docs.clone(),
+        let global_state = self.global_state.borrow();
+        let full_route = global_state.route.as_str();
+
+        let base_route = full_route.split('/').find(|s| !s.is_empty()).unwrap_or("");
+
+        let page = match base_route {
+            "" => self.index.clone(),
+            "docs" => self.docs.clone(),
+            "examples" => self.examples.clone(),
             _ => self.index.clone(),
         };
 
