@@ -27,7 +27,7 @@ use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scr
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
-use crate::style::{Display, Style, Unit};
+use crate::style::{Display, Overflow, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
@@ -391,7 +391,12 @@ impl ElementInternals for TextInputInner {
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
+        let overflow = self.style().get_overflow();
+        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
+            resolve_clip_for_scrollable(self, clip_bounds);
+        } else {
+            self.element_data.layout.resolve_clip(clip_bounds);
+        }
     }
 
     fn get_default_style() -> Box<Style>
