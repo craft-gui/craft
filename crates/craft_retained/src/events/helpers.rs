@@ -4,8 +4,7 @@ use std::rc::Rc;
 
 use craft_primitives::geometry::Point;
 
-use craft_renderer::RenderList;
-use craft_renderer::TargetItem;
+use craft_renderer::{RenderList, TargetItem};
 
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;

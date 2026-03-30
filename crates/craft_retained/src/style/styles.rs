@@ -491,7 +491,7 @@ impl Style {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_text_style(&'_ self) -> parley::TextStyle<'_, ColorBrush> {
+    pub fn to_text_style(&'_ self) -> parley::TextStyle<'_, '_, ColorBrush> {
         let font_size = self.get_font_size();
         let line_height = self.get_line_height();
         let font_weight = parley::FontWeight::new(self.get_font_weight().0 as f32);
@@ -508,12 +508,12 @@ impl Style {
         let font_stack_cow_list = if let Some(font_family) = self.get_font_family().name() {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
-                parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
-                parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
+                parley::FontFamilyName::named(font_family).into_owned(),
+                parley::FontFamilyName::Generic(GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
+            Cow::Owned(vec![parley::FontFamilyName::Generic(GenericFamily::SystemUi)])
         };
 
         let underline = self.get_underline();
@@ -530,15 +530,15 @@ impl Style {
             });
         }
 
-        let font_stack = parley::FontStack::List(font_stack_cow_list);
+        let font_family = parley::FontFamily::List(font_stack_cow_list);
         parley::TextStyle {
-            font_stack,
+            font_family,
             font_size,
             font_width: Default::default(),
             font_style,
             font_weight,
-            font_variations: parley::FontSettings::List(Cow::Borrowed(&[])),
-            font_features: parley::FontSettings::List(Cow::Borrowed(&[])),
+            font_variations: parley::FontVariations::List(Cow::Borrowed(&[])),
+            font_features: parley::FontFeatures::List(Cow::Borrowed(&[])),
             locale: Default::default(),
             brush,
             has_underline,
@@ -558,7 +558,7 @@ impl Style {
         }
     }
 
-    pub fn add_styles_to_style_set(&self, style_set: &mut parley::StyleSet<ColorBrush>) {
+    pub fn add_styles_to_style_set<'a>(&'a self, style_set: &'a mut parley::StyleSet<ColorBrush>) {
         let font_size = self.get_font_size();
         let line_height = self.get_line_height();
         let font_weight = parley::FontWeight::new(self.get_font_weight().0 as f32);
@@ -590,15 +590,15 @@ impl Style {
         let font_stack_cow_list = if let Some(font_family) = font_family.name() {
             // Use the user-provided font and fallback to system UI fonts as needed.
             Cow::Owned(vec![
-                parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
-                parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
+                parley::FontFamilyName::named(font_family).into_owned(),
+                parley::FontFamilyName::Generic(GenericFamily::SystemUi),
             ])
         } else {
             // Just default to system UI fonts.
-            Cow::Owned(vec![parley::FontFamily::Generic(parley::GenericFamily::SystemUi)])
+            Cow::Owned(vec![parley::FontFamilyName::Generic(parley::GenericFamily::SystemUi)])
         };
 
-        style_set.insert(parley::StyleProperty::from(parley::FontStack::List(
+        style_set.insert(parley::StyleProperty::from(parley::FontFamily::List(
             font_stack_cow_list,
         )));
         style_set.insert(parley::StyleProperty::FontSize(font_size));

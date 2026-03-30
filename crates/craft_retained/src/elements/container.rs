@@ -13,6 +13,7 @@ use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
+use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -35,6 +36,12 @@ impl Default for Container {
 }
 
 impl Element for Container {}
+
+impl Drop for ContainerInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
 
 impl AsElement for Container {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
@@ -94,7 +101,12 @@ impl ElementInternals for ContainerInner {
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
+        let overflow = self.style().get_overflow();
+        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
+            resolve_clip_for_scrollable(self, clip_bounds);
+        } else {
+            self.element_data.layout.resolve_clip(clip_bounds);
+        }
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {

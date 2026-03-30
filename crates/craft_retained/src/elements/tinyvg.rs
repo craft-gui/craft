@@ -1,4 +1,4 @@
-//! Displays an image.
+//! Displays an TinyVg.
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -19,23 +19,24 @@ use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::layout::TaffyTree;
-use crate::layout::layout_context::{ImageContext, LayoutContext};
+use crate::layout::layout_context::{LayoutContext, TinyVgContext};
+use crate::rgba;
 use crate::text::text_context::TextContext;
 
-/// Displays an image.
+/// Displays an TinyVg.
 #[derive(Clone)]
-pub struct Image {
-    pub inner: Rc<RefCell<ImageInner>>,
+pub struct TinyVg {
+    pub inner: Rc<RefCell<TinyVgInner>>,
 }
 
 #[derive(Clone)]
-pub struct ImageInner {
-    is_image_dirty: bool,
+pub struct TinyVgInner {
+    is_TinyVg_dirty: bool,
     resource_identifier: ResourceIdentifier,
     element_data: ElementData,
 }
 
-impl crate::elements::ElementData for ImageInner {
+impl crate::elements::ElementData for TinyVgInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -45,21 +46,21 @@ impl crate::elements::ElementData for ImageInner {
     }
 }
 
-impl Element for Image {}
+impl Element for TinyVg {}
 
-impl Drop for ImageInner {
+impl Drop for TinyVgInner {
     fn drop(&mut self) {
         ElementInternals::drop(self)
     }
 }
 
-impl AsElement for Image {
+impl AsElement for TinyVg {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl ElementInternals for ImageInner {
+impl ElementInternals for TinyVgInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
@@ -97,7 +98,15 @@ impl ElementInternals for ImageInner {
         let content_rectangle = computed_box_transformed.content_rectangle();
         self.draw_borders(_renderer, _scale_factor);
 
-        _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_identifier.clone());
+        let mut color = None;
+        if self.style().get_color() != rgba(0, 0, 0, 0) {
+            color = Some(self.style().get_color());
+        }
+        _renderer.draw_tiny_vg(
+            content_rectangle.scale(_scale_factor),
+            self.resource_identifier.clone(),
+            color,
+        );
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -109,52 +118,52 @@ impl ElementInternals for ImageInner {
     }
 }
 
-impl Image {
+impl TinyVg {
     pub fn new(resource_identifier: ResourceIdentifier) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ImageInner>>| {
-            RefCell::new(ImageInner {
-                is_image_dirty: false,
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
+            RefCell::new(TinyVgInner {
+                is_TinyVg_dirty: false,
                 resource_identifier: resource_identifier.clone(),
                 element_data: ElementData::new(me.clone(), false),
             })
         });
-        let layout_context = Some(LayoutContext::Image(ImageContext::new(resource_identifier.clone())));
+        let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_identifier.clone())));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_identifier, ResourceType::Image));
+            pending_resources.push_back((resource_identifier, ResourceType::TinyVg));
         });
 
         Self { inner }
     }
 
-    pub fn image(self, resource_identifier: ResourceIdentifier) -> Self {
-        self.inner.borrow_mut().image(resource_identifier);
+    pub fn TinyVg(self, resource_identifier: ResourceIdentifier) -> Self {
+        self.inner.borrow_mut().TinyVg(resource_identifier);
         self
     }
 
-    pub fn get_image(&self) -> ResourceIdentifier {
-        self.inner.borrow().get_image().clone()
+    pub fn get_TinyVg(&self) -> ResourceIdentifier {
+        self.inner.borrow().get_TinyVg().clone()
     }
 }
 
-impl ImageInner {
-    pub fn image(&mut self, resource_identifier: ResourceIdentifier) {
-        self.is_image_dirty = true;
+impl TinyVgInner {
+    pub fn TinyVg(&mut self, resource_identifier: ResourceIdentifier) {
+        self.is_TinyVg_dirty = true;
         self.resource_identifier = resource_identifier.clone();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let context = LayoutContext::Image(ImageContext::new(resource_identifier));
+            let context = LayoutContext::TinyVg(TinyVgContext::new(resource_identifier));
             let node = self
                 .element_data
                 .layout
                 .taffy_node_id
-                .expect("Failed to get Image node");
+                .expect("Failed to get TinyVg node");
             taffy_tree.set_node_context(node, Some(context));
         });
     }
 
-    pub fn get_image(&self) -> &ResourceIdentifier {
+    pub fn get_TinyVg(&self) -> &ResourceIdentifier {
         &self.resource_identifier
     }
 }

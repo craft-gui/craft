@@ -46,7 +46,8 @@ pub fn apply_generic_container_layout(
 
     let dirty = has_new_layout
         || transform != element.element_data_mut().layout.get_transform()
-        || position != element.element_data_mut().layout.position;
+        || position != element.element_data_mut().layout.position
+        || clip_bounds != element.element_data().layout.parent_clip;
     element.element_data_mut().layout.has_new_layout = has_new_layout;
     if dirty {
         element.resolve_box(position, transform, layout, z_index);
@@ -54,6 +55,7 @@ pub fn apply_generic_container_layout(
         // For scroll changes from taffy;
         element.element_data_mut().apply_scroll(layout);
         element.apply_clip(clip_bounds);
+        element.element_data_mut().layout.parent_clip = clip_bounds;
         element.element_data_mut().layout.scroll_state.mark_old();
     }
 
@@ -76,7 +78,7 @@ pub fn apply_generic_container_layout(
         transform * child_transform,
         text_context,
         scale_factor,
-        false,
+        element.element_data().layout.clip_bounds,
     )
 }
 
@@ -96,12 +98,14 @@ pub fn apply_generic_leaf_layout(
 
     let dirty = has_new_layout
         || transform != element.element_data_mut().layout.get_transform()
-        || position != element.element_data_mut().layout.position;
+        || position != element.element_data_mut().layout.position
+        || clip_bounds != element.element_data().layout.parent_clip;
     element.element_data_mut().layout.has_new_layout = has_new_layout;
     if dirty {
         element.resolve_box(position, transform, layout, z_index);
         element.apply_borders(scale_factor);
         element.apply_clip(clip_bounds);
+        element.element_data_mut().layout.parent_clip = clip_bounds;
         element.element_data_mut().layout.scroll_state.mark_old();
     }
 

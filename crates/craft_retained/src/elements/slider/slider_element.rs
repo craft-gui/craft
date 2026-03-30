@@ -305,6 +305,12 @@ impl SliderInner {
 
 impl Element for Slider {}
 
+impl Drop for SliderInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Slider {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
@@ -342,7 +348,8 @@ impl ElementInternals for SliderInner {
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
@@ -350,6 +357,7 @@ impl ElementInternals for SliderInner {
 
             self.apply_borders(scale_factor);
             self.apply_clip(clip_bounds);
+            self.element_data.layout.parent_clip = clip_bounds;
         }
     }
 

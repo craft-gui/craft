@@ -8,8 +8,8 @@ use std::rc::{Rc, Weak};
 use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 
-use craft_renderer::text_renderer_data::{TextData, TextScroll};
 use craft_renderer::RenderList;
+use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
@@ -27,7 +27,7 @@ use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scr
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
-use crate::style::{Display, Style, Unit};
+use crate::style::{Display, Overflow, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
@@ -135,6 +135,12 @@ impl TextInput {
 
 impl Element for TextInput {}
 
+impl Drop for TextInputInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for TextInput {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
@@ -171,13 +177,15 @@ impl ElementInternals for TextInputInner {
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
             let result = taffy_tree.get_layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
+            self.element_data.layout.parent_clip = clip_bounds;
             self.apply_borders(scale_factor);
 
             self.element_data.apply_scroll(result);
@@ -383,7 +391,12 @@ impl ElementInternals for TextInputInner {
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
+        let overflow = self.style().get_overflow();
+        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
+            resolve_clip_for_scrollable(self, clip_bounds);
+        } else {
+            self.element_data.layout.resolve_clip(clip_bounds);
+        }
     }
 
     fn get_default_style() -> Box<Style>

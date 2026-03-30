@@ -34,27 +34,27 @@ pub struct SetTransformCmd {
 #[derive(Clone)]
 pub struct DrawRectCmd {
     pub rect: Rectangle,
-    pub color: Color
+    pub color: Color,
 }
 
 #[derive(Clone)]
 pub struct DrawRectOutlineCmd {
     pub rect: Rectangle,
     pub outline_color: Color,
-    pub thickness: f64
+    pub thickness: f64,
 }
 
 #[derive(Clone)]
 pub struct DrawImageCmd {
     pub rect: Rectangle,
-    pub resource_id: ResourceIdentifier
+    pub resource_id: ResourceIdentifier,
 }
 
 #[derive(Clone)]
 pub struct DrawTinyVgCmd {
     pub rect: Rectangle,
     pub resource_id: ResourceIdentifier,
-    pub override_color: Option<Color>
+    pub override_color: Option<Color>,
 }
 
 #[derive(Clone)]
@@ -62,19 +62,19 @@ pub struct DrawTextCmd {
     pub rect: Rectangle,
     pub data: Weak<RefCell<dyn TextData>>,
     pub text_scroll: Option<TextScroll>,
-    pub show_cursor: bool
+    pub show_cursor: bool,
 }
 
 #[derive(Clone)]
 pub enum PushLayerCmd {
     BezPath(BezPath),
-    Rect(Rectangle)
+    Rect(Rectangle),
 }
 
 #[derive(Clone)]
 pub struct FillBezPathCmd {
     pub path: BezPath,
-    pub brush: Brush
+    pub brush: Brush,
 }
 
 #[derive(Clone)]

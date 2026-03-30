@@ -20,14 +20,14 @@ use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, Surfa
 
 use winit::window::Window;
 
+use crate::RenderCommand;
 use crate::image_adapter::ImageAdapter;
 use crate::render_command::PushLayerCmd;
-use crate::RenderCommand;
-use crate::renderer::{Renderer};
+use crate::render_list::RenderList;
+use crate::renderer::Renderer;
+use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello::tinyvg::draw_tiny_vg;
-use crate::render_list::RenderList;
-use crate::sort_commands::SortedCommands;
 
 pub struct RenderSurface {
     pub surface: Surface<'static>,
@@ -243,19 +243,18 @@ impl VelloRenderer {
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             render_into_texture,
-            transform: Affine::IDENTITY,
         }
     }
 }
 
-fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color, transform: &Affine) {
+fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
     let rect = Rect::new(
         rectangle.x as f64,
         rectangle.y as f64,
         (rectangle.x + rectangle.width) as f64,
         (rectangle.y + rectangle.height) as f64,
     );
-    scene.fill(Fill::NonZero, *transform, fill_color, None, &rect);
+    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
 }
 
 impl Renderer for VelloRenderer {
@@ -289,16 +288,13 @@ impl Renderer for VelloRenderer {
             let scene = &mut self.scene;
 
             match command {
-                RenderCommand::SetTransform(cmd) => {
-                    self.transform = cmd.transform;
-                }
                 RenderCommand::DrawRect(cmd) => {
-                    vello_draw_rect(scene, cmd.rect, cmd.color, &self.transform);
+                    vello_draw_rect(scene, cmd.rect, cmd.color);
                 }
                 RenderCommand::DrawRectOutline(cmd) => {
                     self.scene.stroke(
                         &Stroke::new(cmd.thickness),
-                        self.transform,
+                        Affine::IDENTITY,
                         cmd.outline_color,
                         None,
                         &cmd.rect.to_kurbo(),
@@ -431,7 +427,9 @@ impl Renderer for VelloRenderer {
                         }
                     });
 
-                    if cmd.show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                    if cmd.show_cursor
+                        && let Some((cursor, cursor_color)) = &text_render.cursor
+                    {
                         let cursor_rect = Rectangle {
                             x: cursor.x + cmd.rect.x,
                             y: -scroll + cursor.y + cmd.rect.y,
@@ -457,7 +455,13 @@ impl Renderer for VelloRenderer {
                             scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, p);
                         }
                         PushLayerCmd::Rect(r) => {
-                            scene.push_layer(Fill::NonZero, BlendMode::default(), 1.0, Affine::IDENTITY, &r.to_kurbo());
+                            scene.push_layer(
+                                Fill::NonZero,
+                                BlendMode::default(),
+                                1.0,
+                                Affine::IDENTITY,
+                                &r.to_kurbo(),
+                            );
                         }
                     };
                 }

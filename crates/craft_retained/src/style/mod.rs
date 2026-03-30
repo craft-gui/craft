@@ -2,12 +2,12 @@ mod box_shadow;
 mod styles;
 mod taffy_conversions;
 
+pub use box_shadow::BoxShadow;
+use craft_primitives::{Color, ColorBrush};
+use parley::GenericFamily;
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
-
-pub use box_shadow::BoxShadow;
-use craft_primitives::{Color, ColorBrush};
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -237,16 +237,16 @@ where
 }
 
 impl TextStyleProperty {
-    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'static, ColorBrush>> {
+    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'_, ColorBrush>> {
         match self {
             TextStyleProperty::FontFamily(font_family) => {
                 let font_stack_cow_list = Cow::Owned(vec![
-                    parley::FontFamily::Named(Cow::Owned(font_family.to_string())),
-                    parley::FontFamily::Generic(parley::GenericFamily::SystemUi),
+                    parley::FontFamilyName::named(font_family),
+                    parley::FontFamilyName::Generic(GenericFamily::SystemUi),
                 ]);
-                let font_stack = parley::FontStack::List(font_stack_cow_list);
+                let font_stack = parley::FontFamily::List(font_stack_cow_list);
 
-                Some(parley::StyleProperty::FontStack(font_stack))
+                Some(parley::StyleProperty::FontFamily(font_stack))
             }
 
             TextStyleProperty::FontSize(font_size) => Some(parley::StyleProperty::FontSize(*font_size)),

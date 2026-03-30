@@ -6,11 +6,11 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::resource::Resource;
 use craft_resource_manager::ResourceManager;
+use craft_resource_manager::resource::Resource;
 
 use peniko::kurbo::{Affine, Shape};
-use peniko::{kurbo, BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix};
+use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
 
 use softbuffer::Buffer;
 
@@ -22,16 +22,16 @@ use vello_cpu::{Pixmap, RenderContext};
 
 use winit::window::Window;
 
+use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::image_adapter::ImageAdapter;
 use crate::render_command::{BoxShadowCmd, PushLayerCmd};
 use crate::render_list::RenderList;
-use crate::renderer::{Renderer};
+use crate::renderer::Renderer;
+use crate::screenshot::Screenshot;
+use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_cpu::tinyvg::draw_tiny_vg;
-use crate::RenderCommand;
-use crate::sort_commands::SortedCommands;
-use crate::screenshot::Screenshot;
 
 pub(crate) struct VelloCpuRenderer {
     render_context: RenderContext,
@@ -190,8 +190,7 @@ impl Renderer for VelloCpuRenderer {
                         };
 
                         let mut transform = Affine::IDENTITY;
-                        transform =
-                            transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
@@ -217,8 +216,8 @@ impl Renderer for VelloCpuRenderer {
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
-                    let text_transform =
-                        kurbo::Affine::default().with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                    let text_transform = kurbo::Affine::default()
+                        .with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
@@ -312,7 +311,9 @@ impl Renderer for VelloCpuRenderer {
                         }
                     });
 
-                    if cmd.show_cursor && let Some((cursor, cursor_color)) = &text_render.cursor {
+                    if cmd.show_cursor
+                        && let Some((cursor, cursor_color)) = &text_render.cursor
+                    {
                         let cursor_rect = Rectangle {
                             x: cursor.x + cmd.rect.x,
                             y: -scroll + cursor.y + cmd.rect.y,
@@ -325,11 +326,10 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::PushLayer(cmd) => {
                     let clip_path = match cmd {
                         PushLayerCmd::BezPath(path) => path,
-                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1)
+                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1),
                     };
 
-                    self.render_context
-                        .push_layer(Some(clip_path), None, None, None, None);
+                    self.render_context.push_layer(Some(clip_path), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     self.render_context.pop_layer();

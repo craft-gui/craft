@@ -7,8 +7,8 @@ use std::time;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 
-use craft_renderer::text_renderer_data::TextData;
 use craft_renderer::RenderList;
+use craft_renderer::text_renderer_data::TextData;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
 use craft_primitives::{Color, ColorBrush};
@@ -89,6 +89,12 @@ pub struct TextState {
 
 impl Element for Text {}
 
+impl Drop for TextInner {
+    fn drop(&mut self) {
+        ElementInternals::drop(self)
+    }
+}
+
 impl AsElement for Text {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
@@ -157,12 +163,13 @@ impl ElementInternals for TextInner {
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position;
+            || position != self.element_data.layout.position
+            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
         if dirty {
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
-
+            self.element_data.layout.parent_clip = clip_bounds;
             self.apply_borders(scale_factor);
         }
 
@@ -244,6 +251,7 @@ impl ElementInternals for TextInner {
                 || accesskit::NodeId(create_unique_element_id()),
                 padding_box.x as f64,
                 padding_box.y as f64,
+                |_, _| {},
             );
         }
 

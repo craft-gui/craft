@@ -1,5 +1,5 @@
-use craft_primitives::geometry::{Rectangle, Shape};
 use crate::{RenderCommand, RenderList};
+use craft_primitives::geometry::{Rectangle, Shape};
 
 #[derive(Debug)]
 pub enum SortedItem {

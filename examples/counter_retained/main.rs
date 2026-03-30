@@ -31,12 +31,11 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }
 
-pub(crate) fn main() {
-    setup_logging();
+pub fn counter() -> Container {
     let count = Rc::new(RefCell::new(0));
     let count_text = Text::new(&format!("Count: {}", count.borrow()));
 
-    Window::new("Counter")
+    Container::new()
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
@@ -61,7 +60,13 @@ pub(crate) fn main() {
                     count.clone(),
                     count_text.clone(),
                 ))
-        });
+        })
+}
+
+pub(crate) fn main() {
+    setup_logging();
+
+    Window::new("Counter").width(pct(100)).height(pct(100)).push(counter());
 
     craft_main(CraftOptions::basic("Counter"));
 }

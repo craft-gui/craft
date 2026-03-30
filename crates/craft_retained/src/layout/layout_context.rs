@@ -196,6 +196,12 @@ pub fn measure_content(
 }
 
 impl TinyVgContext {
+    pub fn new(resource_identifier: ResourceIdentifier) -> Self {
+        Self {
+            resource_identifier,
+        }
+    }
+
     pub fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,

@@ -39,13 +39,13 @@ smol_str = "0.3.4"
 workspace = true
 
 [dependencies.accesskit_winit]
-version = "0.29.2"
+version = "0.32.2"
 default-features = false
 features = ["tokio", "rwh_06", "accesskit_unix"]
 optional = true
 
 [dependencies.accesskit]
-version = "0.21.1"
+version = "0.24.0"
 default-features = false
 optional = true
 
@@ -109,17 +109,17 @@ workspace = true
 features = ["android-native-activity"]
 
 [dependencies.ui-events]
-git = "https://github.com/AustinMReppert/ui-events"
-rev = "7bc839dff9548883b0e0aaea85e48ab5f74caf05"
+git = "https://github.com/endoli/ui-events"
+rev = "d2dc8ba005a21870c5e4a7221cadf08fbf5f9ae7"
 features = ["kurbo"]
 
 [dependencies.ui-events-winit]
-git = "https://github.com/AustinMReppert/ui-events"
-rev = "7bc839dff9548883b0e0aaea85e48ab5f74caf05"
+git = "https://github.com/endoli/ui-events"
+rev = "d2dc8ba005a21870c5e4a7221cadf08fbf5f9ae7"
 features = []
 
 [dependencies.parley]
-version = "0.7.0"
+version = "0.8.0"
 default-features = false
 features = ["std"]
 
