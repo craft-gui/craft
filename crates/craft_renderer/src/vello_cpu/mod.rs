@@ -160,6 +160,9 @@ impl Renderer for VelloCpuRenderer {
 
         SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
+                RenderCommand::SetTransform(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
+                }
                 RenderCommand::DrawRect(cmd) => {
                     self.render_context.set_paint(PaintType::Solid(cmd.color));
                     self.render_context.fill_rect(&cmd.rect.to_kurbo());

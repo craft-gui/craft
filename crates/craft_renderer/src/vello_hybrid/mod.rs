@@ -248,6 +248,9 @@ impl CraftRenderer for VelloHybridRenderer {
             let scene = &mut self.scene;
 
             match command {
+                RenderCommand::SetTransform(cmd) => {
+                    self.scene.set_transform(cmd.transform);
+                }
                 RenderCommand::DrawRect(cmd) => {
                     vello_draw_rect(scene, cmd.rect, cmd.color);
                 }

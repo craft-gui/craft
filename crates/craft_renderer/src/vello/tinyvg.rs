@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::sync::Arc;
 
 use craft_primitives::geometry::Rectangle;
@@ -36,6 +37,7 @@ pub(crate) fn draw_tiny_vg(
     resource_manager: Arc<ResourceManager>,
     resource_identifier: ResourceIdentifier,
     override_color: &Option<Color>,
+    transform: &Affine
 ) {
     let resource = resource_manager.get(&resource_identifier);
     if let Some(resource) = resource
@@ -63,6 +65,8 @@ pub(crate) fn draw_tiny_vg(
             rectangle.width as f64 / svg_width as f64,
             rectangle.height as f64 / svg_height as f64,
         );
+        
+        affine = transform.mul(affine);
 
         for command in &tiny_vg.draw_commands {
             match command {

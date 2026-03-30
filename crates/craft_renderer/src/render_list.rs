@@ -3,7 +3,7 @@ use std::rc::Weak;
 
 use peniko::Color;
 
-use craft_primitives::geometry::{BezPath, Rectangle, Shape};
+use craft_primitives::geometry::{Affine, BezPath, Rectangle, Shape};
 use craft_resource_manager::ResourceIdentifier;
 
 use crate::Brush;

@@ -1,6 +1,7 @@
 mod tinyvg;
 
 use std::any::Any;
+use std::ops::Mul;
 use std::sync::Arc;
 
 use craft_primitives::Color;
@@ -8,7 +9,7 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
 
-use peniko::{BrushRef, ImageAlphaType};
+use peniko::{BrushRef, ImageAlphaType, ImageBrushRef};
 
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -52,6 +53,8 @@ pub struct VelloRenderer {
     scene: Scene,
     pub surface_clear_color: Color,
     pub render_into_texture: bool,
+
+    transform: Affine
 }
 
 impl RenderSurface {
@@ -240,18 +243,19 @@ impl VelloRenderer {
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             render_into_texture,
+            transform: Affine::IDENTITY,
         }
     }
 }
 
-fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
+fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color, transform: &Affine) {
     let rect = Rect::new(
         rectangle.x as f64,
         rectangle.y as f64,
         (rectangle.x + rectangle.width) as f64,
         (rectangle.y + rectangle.height) as f64,
     );
-    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
+    scene.fill(Fill::NonZero, *transform, fill_color, None, &rect);
 }
 
 impl Renderer for VelloRenderer {
@@ -285,13 +289,16 @@ impl Renderer for VelloRenderer {
             let scene = &mut self.scene;
 
             match command {
+                RenderCommand::SetTransform(cmd) => {
+                    self.transform = cmd.transform;
+                }
                 RenderCommand::DrawRect(cmd) => {
-                    vello_draw_rect(scene, cmd.rect, cmd.color);
+                    vello_draw_rect(scene, cmd.rect, cmd.color, &self.transform);
                 }
                 RenderCommand::DrawRectOutline(cmd) => {
                     self.scene.stroke(
                         &Stroke::new(cmd.thickness),
-                        Affine::IDENTITY,
+                        self.transform,
                         cmd.outline_color,
                         None,
                         &cmd.rect.to_kurbo(),
@@ -312,24 +319,23 @@ impl Renderer for VelloRenderer {
                             width: image.width(),
                             height: image.height(),
                         };
-
-                        let vello_image = vello::peniko::ImageBrush::new(vello_image);
-
-                        let mut transform = Affine::IDENTITY;
-                        transform =
-                            transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
-                        transform = transform.pre_scale_non_uniform(
-                            cmd.rect.width as f64 / image.width() as f64,
-                            cmd.rect.height as f64 / image.height() as f64,
+                        let brush_ref: ImageBrushRef = (&vello_image).into();
+                        let rect = Rect::new(
+                            cmd.rect.x as f64,
+                            cmd.rect.y as f64,
+                            cmd.rect.width as f64,
+                            cmd.rect.height as f64,
                         );
-                        scene.draw_image(&vello_image, transform);
+
+                        scene.fill(Fill::NonZero, self.transform, brush_ref, None, &rect);
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
                     let text_transform =
                         Affine::default().with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
-                    let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+                    let mut text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+                    text_transform = self.transform.mul(text_transform);
 
                     let c = cmd.data.upgrade();
                     if c.is_none() {
@@ -377,7 +383,7 @@ impl Renderer for VelloRenderer {
                                 width: background.width,
                                 height: background.height,
                             };
-                            vello_draw_rect(scene, background_rect, *color);
+                            vello_draw_rect(scene, background_rect, *color, &self.transform);
                         }
 
                         for (selection, selection_color) in &line.selections {
@@ -387,7 +393,7 @@ impl Renderer for VelloRenderer {
                                 width: selection.width,
                                 height: selection.height,
                             };
-                            vello_draw_rect(scene, selection_rect, *selection_color);
+                            vello_draw_rect(scene, selection_rect, *selection_color, &self.transform);
                         }
                     });
 
@@ -432,7 +438,7 @@ impl Renderer for VelloRenderer {
                             width: cursor.width,
                             height: cursor.height,
                         };
-                        vello_draw_rect(scene, cursor_rect, *cursor_color);
+                        vello_draw_rect(scene, cursor_rect, *cursor_color, &self.transform);
                     }
                 }
                 RenderCommand::DrawTinyVg(cmd) => {
@@ -442,6 +448,7 @@ impl Renderer for VelloRenderer {
                         resource_manager.clone(),
                         cmd.resource_id.clone(),
                         &cmd.override_color,
+                        &self.transform
                     );
                 }
                 RenderCommand::PushLayer(cmd) => {
@@ -458,7 +465,7 @@ impl Renderer for VelloRenderer {
                     scene.pop_layer();
                 }
                 RenderCommand::FillBezPath(cmd) => {
-                    scene.fill(Fill::NonZero, Affine::IDENTITY, &cmd.brush, None, &cmd.path);
+                    scene.fill(Fill::NonZero, self.transform, &cmd.brush, None, &cmd.path);
                 }
                 _ => {}
             }
