@@ -9,18 +9,18 @@ pub use tokio::*;
 
 thread_local! {
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) static LOCAL_SET: tokio::task::LocalSet = tokio::task::LocalSet::new();
+    pub(crate) static LOCAL_SET: task::LocalSet = task::LocalSet::new();
 }
 
 pub struct CraftRuntime {
     #[cfg(not(target_arch = "wasm32"))]
-    tokio_runtime: tokio::runtime::Runtime,
+    tokio_runtime: runtime::LocalRuntime,
 }
 
 #[derive(Clone)]
 pub struct CraftRuntimeHandle {
     #[cfg(not(target_arch = "wasm32"))]
-    tokio_runtime: tokio::runtime::Handle,
+    tokio_runtime: runtime::Handle,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -31,7 +31,7 @@ impl Default for CraftRuntime {
                 Self { }
             } else {
                 Self {
-                    tokio_runtime: tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to create tokio runtime."),
+                    tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
                 }
             }
         }
@@ -52,7 +52,7 @@ impl CraftRuntime {
                 Self { }
             } else {
                 Self {
-                    tokio_runtime: tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to create tokio runtime."),
+                    tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
                 }
             }
         }
@@ -85,48 +85,23 @@ impl CraftRuntime {
     where
         F: Future<Output = ()> + 'static + Send,
     {
-        tokio::spawn(future);
-    }
-
-    #[allow(dead_code)]
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) fn runtime_spawn<F>(&self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        wasm_bindgen_futures::spawn_local(future)
+        spawn(future);
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn runtime_spawn<F>(&self, future: F)
     where
-        F: Future<Output = ()> + 'static + Send,
-    {
-        self.tokio_runtime.spawn(future);
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn borrow_tokio_runtime(&mut self) -> &mut tokio::runtime::Runtime {
-        &mut self.tokio_runtime
-    }
-
-    /// Match the underlying runtime's type.
-    #[allow(dead_code)]
-    #[cfg(target_arch = "wasm32")]
-    pub fn native_spawn<F>(future: F)
-    where
         F: Future<Output = ()> + 'static,
     {
+        #[cfg(not(target_arch = "wasm32"))]
+        self.tokio_runtime.spawn_local(future);
+        #[cfg(target_arch = "wasm32")]
         wasm_bindgen_futures::spawn_local(future)
     }
 
-    #[allow(dead_code)]
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn native_spawn<F>(future: F)
-    where
-        F: Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(future);
+    pub fn borrow_tokio_runtime(&mut self) -> &mut runtime::LocalRuntime {
+        &mut self.tokio_runtime
     }
 
     /// Block on or spawn a future on if blocking is not supported by the runtime.
@@ -192,45 +167,9 @@ impl CraftRuntimeHandle {
         self.tokio_runtime.spawn(future);
     }
 
-    #[allow(dead_code)]
-    #[cfg(target_arch = "wasm32")]
-    pub(crate) fn runtime_spawn<F>(&self, future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        wasm_bindgen_futures::spawn_local(future)
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn runtime_spawn<F>(&self, future: F)
-    where
-        F: Future<Output = ()> + 'static + Send,
-    {
-        self.tokio_runtime.spawn(future);
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn borrow_tokio_runtime(&mut self) -> &mut tokio::runtime::Handle {
+    pub fn borrow_tokio_runtime(&mut self) -> &mut runtime::Handle {
         &mut self.tokio_runtime
-    }
-
-    /// Match the underlying runtime's type.
-    #[allow(dead_code)]
-    #[cfg(target_arch = "wasm32")]
-    pub fn native_spawn<F>(future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        wasm_bindgen_futures::spawn_local(future)
-    }
-
-    #[allow(dead_code)]
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn native_spawn<F>(future: F)
-    where
-        F: Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(future);
     }
 
     /// Block on or spawn a future on if blocking is not supported by the runtime.
