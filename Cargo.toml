@@ -56,7 +56,7 @@ default-features = false
 features = []
 
 [workspace.dependencies.tokio]
-version = "1.50.0"
+version = "1.51.0"
 default-features = false
 features = ["sync", "time"]
 
