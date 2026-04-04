@@ -3,7 +3,7 @@ use std::rc::Weak;
 
 use peniko::Color;
 
-use craft_primitives::geometry::{BezPath, Rectangle, Vec2};
+use craft_primitives::geometry::{Affine, BezPath, Rectangle, Vec2};
 
 use craft_resource_manager::ResourceIdentifier;
 
@@ -12,6 +12,7 @@ use crate::text_renderer_data::{TextData, TextScroll};
 
 #[derive(Clone)]
 pub enum RenderCommand {
+    SetTransform(SetTransformCmd),
     DrawRect(DrawRectCmd),
     DrawRectOutline(DrawRectOutlineCmd),
     DrawImage(DrawImageCmd),
@@ -23,6 +24,11 @@ pub enum RenderCommand {
     StartOverlay,
     EndOverlay,
     BoxShadowCmd(BoxShadowCmd),
+}
+
+#[derive(Clone)]
+pub struct SetTransformCmd {
+    pub transform: Affine,
 }
 
 #[derive(Clone)]

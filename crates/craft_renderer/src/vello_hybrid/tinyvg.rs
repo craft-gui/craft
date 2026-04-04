@@ -14,15 +14,13 @@ use vello_hybrid::Scene;
 use crate::vello_hybrid::brush_to_paint;
 use crate::{Brush, tinyvg_helpers};
 
-fn stroke_path(scene: &mut Scene, bez_path: &BezPath, affine: &Affine, line_width: f64, brush: &Brush) {
+fn stroke_path(scene: &mut Scene, bez_path: &BezPath, line_width: f64, brush: &Brush) {
     scene.set_stroke(Stroke::new(line_width));
-    scene.set_transform(*affine);
     scene.set_paint(brush_to_paint(brush));
     scene.stroke_path(bez_path);
 }
 
-fn fill_path(scene: &mut Scene, bez_path: &BezPath, affine: &Affine, brush: &Brush) {
-    scene.set_transform(*affine);
+fn fill_path(scene: &mut Scene, bez_path: &BezPath, brush: &Brush) {
     scene.set_paint(brush_to_paint(brush));
     scene.set_fill_rule(Fill::EvenOdd);
     scene.fill_path(bez_path);
@@ -34,15 +32,14 @@ pub(crate) fn draw_path(
     fill_style: &Style,
     line_width: Option<&Unit>,
     color_table: &ColorTable,
-    affine: &Affine,
     override_color: &Option<Color>,
 ) {
     let (bezier_path, brush) = tinyvg_helpers::assemble_path(path, fill_style, color_table, override_color);
 
     if let Some(line_width) = line_width {
-        stroke_path(scene, &bezier_path, affine, line_width.0, &brush);
+        stroke_path(scene, &bezier_path, line_width.0, &brush);
     } else {
-        fill_path(scene, &bezier_path, affine, &brush);
+        fill_path(scene, &bezier_path, &brush);
     }
 }
 
@@ -65,7 +62,9 @@ pub(crate) fn draw_tiny_vg(
         }
         let tiny_vg = resource.tinyvg.as_ref().unwrap();
 
-        let mut affine = Affine::IDENTITY;
+        let scene_state = scene.save_current_state();
+
+        let vg_transform = Affine::IDENTITY;
         let mut svg_width = tiny_vg.header.width as f32;
         let mut svg_height = tiny_vg.header.height as f32;
 
@@ -77,11 +76,13 @@ pub(crate) fn draw_tiny_vg(
             svg_height = rectangle.height;
         }
 
-        affine = affine.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-        affine = affine.pre_scale_non_uniform(
+        let vg_transform = vg_transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+        let vg_transform = vg_transform.pre_scale_non_uniform(
             rectangle.width as f64 / svg_width as f64,
             rectangle.height as f64 / svg_height as f64,
         );
+
+        scene.set_transform(scene_state.transform * vg_transform);
 
         for command in &tiny_vg.draw_commands {
             match command {
@@ -104,7 +105,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                 }
@@ -113,7 +113,7 @@ pub(crate) fn draw_tiny_vg(
                     for rectangle in &data.rectangles {
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
-                        fill_path(scene, &rectangle.into_path(0.1), &affine, &brush);
+                        fill_path(scene, &rectangle.into_path(0.1), &brush);
                     }
                 }
                 DrawCommand::FillPath(data) => {
@@ -123,7 +123,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                 }
@@ -135,7 +134,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(line.start),
                             tinyvg_helpers::to_kurbo_point(line.end),
                         );
-                        stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
+                        stroke_path(scene, &line.into_path(0.1), data.line_width.0, &brush);
                     }
                 }
                 DrawCommand::DrawLineLoop(data) => {
@@ -147,7 +146,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(start),
                             tinyvg_helpers::to_kurbo_point(*point),
                         );
-                        stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
+                        stroke_path(scene, &line.into_path(0.1), data.line_width.0, &brush);
                         start = *point;
                     }
                 }
@@ -160,7 +159,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(start),
                             tinyvg_helpers::to_kurbo_point(*point),
                         );
-                        stroke_path(scene, &line.into_path(0.1), &affine, data.line_width.0, &brush);
+                        stroke_path(scene, &line.into_path(0.1), data.line_width.0, &brush);
                         start = *point;
                     }
                 }
@@ -171,7 +170,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                 }
@@ -194,7 +192,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                     draw_path(
@@ -203,7 +200,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                 }
@@ -214,8 +210,8 @@ pub(crate) fn draw_tiny_vg(
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
                         let rec_bez_path = rectangle.into_path(0.1);
-                        fill_path(scene, &rec_bez_path, &affine, &fill_brush);
-                        stroke_path(scene, &rec_bez_path, &affine, data.line_width.0, &line_brush);
+                        fill_path(scene, &rec_bez_path, &fill_brush);
+                        stroke_path(scene, &rec_bez_path, data.line_width.0, &line_brush);
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
@@ -225,7 +221,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                     draw_path(
@@ -234,7 +229,6 @@ pub(crate) fn draw_tiny_vg(
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
                         override_color,
                     );
                 }
@@ -245,6 +239,6 @@ pub(crate) fn draw_tiny_vg(
             }
         }
 
-        scene.reset_transform();
+        scene.restore_state(scene_state);
     }
 }

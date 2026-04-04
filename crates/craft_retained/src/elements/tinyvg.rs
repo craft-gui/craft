@@ -3,7 +3,7 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-
+use peniko::Color;
 use craft_primitives::geometry::Rectangle;
 
 use craft_renderer::RenderList;
@@ -129,6 +129,7 @@ impl TinyVg {
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_identifier.clone())));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
+        inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             pending_resources.push_back((resource_identifier, ResourceType::TinyVg));
