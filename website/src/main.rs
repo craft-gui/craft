@@ -66,6 +66,8 @@ impl WebsiteGlobalState {
             let route = std::env::args().nth(1).unwrap_or_else(|| "/".to_string());
             self.set_route(route.as_str());
         }
+        #[cfg(target_arch = "wasm32")]
+        self.set_route(&self.get_route());
     }
 }
 
