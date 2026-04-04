@@ -106,6 +106,12 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
                 }
             }
 
+            RenderCommand::SetTransform(_) => {
+                unsafe {
+                    (*current).children.push(SortedItem::Other(index as u32));
+                }
+            }
+
             _ => {
                 let bounding_rect = bounding_rect(command);
                 if !should_cull(&bounding_rect, window_height) {

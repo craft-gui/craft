@@ -144,9 +144,9 @@ impl Renderer for VelloCpuRenderer {
         &'a mut self,
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
-        window: Rectangle,
-        //get_text_renderer: Box<dyn Fn(u64) -> Option<&'a TextRender> + 'a>,
+        window: Rectangle
     ) {
+
         vello_draw_rect(
             &mut self.render_context,
             Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
@@ -189,13 +189,14 @@ impl Renderer for VelloCpuRenderer {
                             height: image.height(),
                         };
 
-                        let mut transform = Affine::IDENTITY;
-                        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
-                        transform = transform.pre_scale_non_uniform(
+                        let scene_state = self.render_context.save_current_state();
+                        let mut image_transform = Affine::IDENTITY;
+                        image_transform = image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        image_transform = image_transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
                         );
-                        self.render_context.set_transform(transform);
+                        self.render_context.set_transform(scene_state.transform * image_transform);
 
                         let is = vello_common::paint::ImageSource::from_peniko_image_data(&id);
 
@@ -212,7 +213,7 @@ impl Renderer for VelloCpuRenderer {
                             image.width() as f64,
                             image.height() as f64,
                         ));
-                        self.render_context.reset_transform();
+                        self.render_context.restore_state(scene_state);
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
@@ -281,10 +282,11 @@ impl Renderer for VelloCpuRenderer {
                         }
                     });
 
+                    let scene_state = self.render_context.save_current_state();
+                    self.render_context.set_transform(scene_state.transform * text_transform);
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
                             if let Some(underline) = &item.underline {
-                                self.render_context.set_transform(text_transform);
                                 self.render_context.set_stroke(Stroke::new(underline.width.into()));
                                 self.render_context.set_paint(PaintType::from(underline.brush.color));
                                 self.render_context.stroke_path(&underline.line.to_path(0.1));
@@ -296,13 +298,11 @@ impl Renderer for VelloCpuRenderer {
                                     .map(|b| b.color)
                                     .unwrap_or_else(|| item.brush.color),
                             ));
-                            self.render_context.reset_transform();
 
                             let glyph_run_builder = self
                                 .render_context
                                 .glyph_run(&item.font)
-                                .font_size(item.font_size)
-                                .glyph_transform(text_transform);
+                                .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -310,6 +310,7 @@ impl Renderer for VelloCpuRenderer {
                             }));
                         }
                     });
+                    self.render_context.restore_state(scene_state);
 
                     if cmd.show_cursor
                         && let Some((cursor, cursor_color)) = &text_render.cursor
@@ -390,6 +391,7 @@ impl VelloCpuRenderer {
     }
 
     pub fn draw_box_shadow(&mut self, box_shadow: &BoxShadowCmd) {
+        let scene_state = self.render_context.save_current_state();
         let radius = box_shadow.blur_radius / 2.0;
         let filter = Some(Filter::from_function(FilterFunction::Blur {
             radius: box_shadow.blur_radius as f32,
@@ -416,12 +418,12 @@ impl VelloCpuRenderer {
                 filter,
             );
 
-            self.render_context.set_transform(Affine::translate(box_shadow.offset));
+            self.render_context.set_transform(scene_state.transform * Affine::translate(box_shadow.offset));
 
             self.render_context.set_paint(box_shadow.color);
             self.render_context.fill_path(&box_shadow.path);
 
-            self.render_context.set_transform(Affine::IDENTITY);
+            self.render_context.set_transform(scene_state.transform);
 
             self.render_context
                 .set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
@@ -432,6 +434,9 @@ impl VelloCpuRenderer {
                 .set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
 
             self.render_context.pop_layer();
+
+
+            self.render_context.restore_state(scene_state);
         }
     }
 }

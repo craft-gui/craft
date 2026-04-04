@@ -1,4 +1,3 @@
-use std::ops::Mul;
 use std::sync::Arc;
 
 use craft_primitives::geometry::Rectangle;
@@ -48,7 +47,7 @@ pub(crate) fn draw_tiny_vg(
         }
         let tiny_vg = resource.tinyvg.as_ref().unwrap();
 
-        let mut affine = Affine::IDENTITY;
+        let mut vg_transform = Affine::IDENTITY;
         let mut svg_width = tiny_vg.header.width as f32;
         let mut svg_height = tiny_vg.header.height as f32;
 
@@ -60,13 +59,13 @@ pub(crate) fn draw_tiny_vg(
             svg_height = rectangle.height;
         }
 
-        affine = affine.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
-        affine = affine.pre_scale_non_uniform(
+        vg_transform = vg_transform.with_translation(kurbo::Vec2::new(rectangle.x as f64, rectangle.y as f64));
+        vg_transform = vg_transform.pre_scale_non_uniform(
             rectangle.width as f64 / svg_width as f64,
             rectangle.height as f64 / svg_height as f64,
         );
-        
-        affine = transform.mul(affine);
+
+        vg_transform = *transform * vg_transform;
 
         for command in &tiny_vg.draw_commands {
             match command {
@@ -89,7 +88,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                 }
@@ -98,7 +97,7 @@ pub(crate) fn draw_tiny_vg(
                     for rectangle in &data.rectangles {
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
-                        scene.fill(Fill::EvenOdd, affine, &brush, None, &rectangle);
+                        scene.fill(Fill::EvenOdd, vg_transform, &brush, None, &rectangle);
                     }
                 }
                 DrawCommand::FillPath(data) => {
@@ -108,7 +107,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                 }
@@ -120,7 +119,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(line.start),
                             tinyvg_helpers::to_kurbo_point(line.end),
                         );
-                        scene.stroke(&Stroke::new(data.line_width.0), affine, &brush, None, &line);
+                        scene.stroke(&Stroke::new(data.line_width.0), vg_transform, &brush, None, &line);
                     }
                 }
                 DrawCommand::DrawLineLoop(data) => {
@@ -132,7 +131,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(start),
                             tinyvg_helpers::to_kurbo_point(*point),
                         );
-                        scene.stroke(&Stroke::new(data.line_width.0), affine, &brush, None, &line);
+                        scene.stroke(&Stroke::new(data.line_width.0), vg_transform, &brush, None, &line);
                         start = *point;
                     }
                 }
@@ -145,7 +144,7 @@ pub(crate) fn draw_tiny_vg(
                             tinyvg_helpers::to_kurbo_point(start),
                             tinyvg_helpers::to_kurbo_point(*point),
                         );
-                        scene.stroke(&Stroke::new(data.line_width.0), affine, &brush, None, &line);
+                        scene.stroke(&Stroke::new(data.line_width.0), vg_transform, &brush, None, &line);
                         start = *point;
                     }
                 }
@@ -156,7 +155,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                 }
@@ -179,7 +178,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                     draw_path(
@@ -188,7 +187,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                 }
@@ -198,8 +197,8 @@ pub(crate) fn draw_tiny_vg(
                     for rectangle in &data.rectangles {
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
-                        scene.fill(Fill::EvenOdd, affine, &fill_brush, None, &rectangle);
-                        scene.stroke(&Stroke::new(data.line_width.0), affine, &line_brush, None, &rectangle);
+                        scene.fill(Fill::EvenOdd, vg_transform, &fill_brush, None, &rectangle);
+                        scene.stroke(&Stroke::new(data.line_width.0), vg_transform, &line_brush, None, &rectangle);
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
@@ -209,7 +208,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                     draw_path(
@@ -218,7 +217,7 @@ pub(crate) fn draw_tiny_vg(
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        &affine,
+                        &vg_transform,
                         override_color,
                     );
                 }

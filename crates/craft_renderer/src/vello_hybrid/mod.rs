@@ -131,6 +131,8 @@ fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
 }
 
 fn draw_box_shadow(scene: &mut Scene, box_shadow: &BoxShadowCmd) {
+    let scene_state = scene.save_current_state();
+
     let radius = box_shadow.blur_radius / 2.0;
     let filter = Some(Filter::from_function(FilterFunction::Blur {
         radius: box_shadow.blur_radius as f32,
@@ -156,12 +158,12 @@ fn draw_box_shadow(scene: &mut Scene, box_shadow: &BoxShadowCmd) {
             filter,
         );
 
-        scene.set_transform(Affine::translate(box_shadow.offset));
+        scene.set_transform(scene_state.transform * Affine::translate(box_shadow.offset));
 
         scene.set_paint(box_shadow.color);
         scene.fill_path(&box_shadow.path);
 
-        scene.set_transform(Affine::IDENTITY);
+        scene.set_transform(scene_state.transform);
 
         scene.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
         scene.set_paint(Color::WHITE);
@@ -171,6 +173,8 @@ fn draw_box_shadow(scene: &mut Scene, box_shadow: &BoxShadowCmd) {
 
         scene.pop_layer();
     }
+
+    scene.restore_state(scene_state);
 }
 
 impl CraftRenderer for VelloHybridRenderer {
@@ -225,6 +229,8 @@ impl CraftRenderer for VelloHybridRenderer {
         // Get the window size
         let width = surface.config.width;
         let height = surface.config.height;
+
+        self.scene.set_transform(Affine::IDENTITY);
 
         vello_draw_rect(
             &mut self.scene,
@@ -311,13 +317,14 @@ impl CraftRenderer for VelloHybridRenderer {
                         };
                         seen_images.insert(image_id);
 
+                        let scene_state = scene.save_current_state();
                         let mut transform = Affine::IDENTITY;
                         transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         transform = transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
                         );
-                        scene.set_transform(transform);
+                        scene.set_transform(scene_state.transform * transform);
 
                         scene.set_paint(PaintType::Image(vello_common::paint::Image {
                             image: ImageSource::OpaqueId {
@@ -328,7 +335,8 @@ impl CraftRenderer for VelloHybridRenderer {
                         }));
 
                         scene.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.width() as f64, image.height() as f64));
-                        scene.reset_transform();
+
+                        scene.restore_state(scene_state);
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
@@ -397,10 +405,12 @@ impl CraftRenderer for VelloHybridRenderer {
                         }
                     });
 
+                    let scene_state = scene.save_current_state();
+                    scene.set_transform(scene_state.transform * text_transform);
+
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
                             if let Some(underline) = &item.underline {
-                                scene.set_transform(text_transform);
                                 scene.set_stroke(Stroke::new(underline.width.into()));
                                 scene.set_paint(PaintType::from(underline.brush.color));
                                 scene.stroke_path(&underline.line.to_path(0.1));
@@ -412,12 +422,10 @@ impl CraftRenderer for VelloHybridRenderer {
                                     .map(|b| b.color)
                                     .unwrap_or_else(|| item.brush.color),
                             ));
-                            scene.reset_transform();
 
                             let glyph_run_builder = scene
                                 .glyph_run(&item.font)
-                                .font_size(item.font_size)
-                                .glyph_transform(text_transform);
+                                .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -425,6 +433,8 @@ impl CraftRenderer for VelloHybridRenderer {
                             }));
                         }
                     });
+
+                    scene.restore_state(scene_state);
 
                     if cmd.show_cursor
                         && let Some((cursor, cursor_color)) = &text_render.cursor

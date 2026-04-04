@@ -6,7 +6,7 @@ use peniko::Color;
 use craft_primitives::geometry::{Affine, BezPath, Rectangle, Shape};
 use craft_resource_manager::ResourceIdentifier;
 
-use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd};
+use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd};
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextData, TextScroll};
 use crate::{Brush, RenderCommand, TargetItem};
@@ -41,6 +41,11 @@ impl RenderList {
         self.targets.clear();
         self.commands.clear();
         self.overlay.children.clear();
+    }
+
+    #[inline(always)]
+    pub fn set_transform(&mut self, transform: Affine) {
+        self.commands.push(RenderCommand::SetTransform(SetTransformCmd { transform }));
     }
 
     #[inline(always)]

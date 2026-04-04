@@ -1,7 +1,6 @@
 mod tinyvg;
 
 use std::any::Any;
-use std::ops::Mul;
 use std::sync::Arc;
 
 use craft_primitives::Color;
@@ -9,7 +8,7 @@ use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
 
-use peniko::{BrushRef, ImageAlphaType, ImageBrushRef};
+use peniko::{BrushRef, ImageAlphaType};
 
 use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
@@ -243,18 +242,19 @@ impl VelloRenderer {
             scene: Scene::new(),
             surface_clear_color: Color::WHITE,
             render_into_texture,
+            transform: Default::default(),
         }
     }
 }
 
-fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
+fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color, transform: &Affine) {
     let rect = Rect::new(
         rectangle.x as f64,
         rectangle.y as f64,
         (rectangle.x + rectangle.width) as f64,
         (rectangle.y + rectangle.height) as f64,
     );
-    scene.fill(Fill::NonZero, Affine::IDENTITY, fill_color, None, &rect);
+    scene.fill(Fill::NonZero, *transform, fill_color, None, &rect);
 }
 
 impl Renderer for VelloRenderer {
@@ -284,12 +284,17 @@ impl Renderer for VelloRenderer {
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
+        self.transform = Affine::IDENTITY;
+
         SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             let scene = &mut self.scene;
 
             match command {
+                RenderCommand::SetTransform(cmd) => {
+                    self.transform = cmd.transform;
+                }
                 RenderCommand::DrawRect(cmd) => {
-                    vello_draw_rect(scene, cmd.rect, cmd.color);
+                    vello_draw_rect(scene, cmd.rect, cmd.color, &self.transform);
                 }
                 RenderCommand::DrawRectOutline(cmd) => {
                     self.scene.stroke(
@@ -315,15 +320,16 @@ impl Renderer for VelloRenderer {
                             width: image.width(),
                             height: image.height(),
                         };
-                        let brush_ref: ImageBrushRef = (&vello_image).into();
-                        let rect = Rect::new(
-                            cmd.rect.x as f64,
-                            cmd.rect.y as f64,
-                            cmd.rect.width as f64,
-                            cmd.rect.height as f64,
-                        );
+                        let vello_image = vello::peniko::ImageBrush::new(vello_image);
 
-                        scene.fill(Fill::NonZero, self.transform, brush_ref, None, &rect);
+                        let mut image_transform = Affine::IDENTITY;
+                        image_transform = image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        image_transform = image_transform.pre_scale_non_uniform(
+                            cmd.rect.width as f64 / image.width() as f64,
+                            cmd.rect.height as f64 / image.height() as f64,
+                        );
+                        image_transform = self.transform * image_transform;
+                        scene.draw_image(&vello_image, image_transform);
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
@@ -331,7 +337,7 @@ impl Renderer for VelloRenderer {
                         Affine::default().with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let mut text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-                    text_transform = self.transform.mul(text_transform);
+                    text_transform = self.transform * text_transform;
 
                     let c = cmd.data.upgrade();
                     if c.is_none() {
