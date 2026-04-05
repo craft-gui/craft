@@ -110,6 +110,8 @@ jobs:
 
   build-ios:
     runs-on: macos-latest
+    env:
+      IPHONEOS_DEPLOYMENT_TARGET: "13.0"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
