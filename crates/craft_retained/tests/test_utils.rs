@@ -42,7 +42,7 @@ pub fn check_snapshot(image: RgbImage, image_name: &str) {
     if let Ok(snapshot) = snapshot {
         if snapshot != image {
             image.save(current_dir().join(image_name)).unwrap();
-            panic!("Snapshot is different; run 'cargo xtask-test report' for report")
+            panic!("Snapshot is different; run 'cargo xtask report' for report")
         }
     } else {
         println!("writing test to {}", current_dir().join(image_name).display());
