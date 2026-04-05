@@ -3,7 +3,7 @@ use std::rc::Weak;
 use std::sync::Arc;
 
 use craft_resource_manager::resource::Resource;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceId, ResourceManager};
 use taffy::{AvailableSpace, Size};
 
 use crate::elements::{TextInner, TextInputInner};
@@ -41,13 +41,13 @@ impl TaffyTextContext {}
 
 #[derive(Clone)]
 pub struct ImageContext {
-    pub(crate) resource_identifier: ResourceIdentifier,
+    pub(crate) resource_id: ResourceId,
 }
 
 impl ImageContext {
-    pub(crate) fn new(resource_identifier: ResourceIdentifier) -> Self {
+    pub(crate) fn new(resource_id: ResourceId) -> Self {
         Self {
-            resource_identifier,
+            resource_id,
         }
     }
 
@@ -60,7 +60,7 @@ impl ImageContext {
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
-        if let Some(resource) = resource_manager.get(&self.resource_identifier)
+        if let Some(resource) = resource_manager.get(&self.resource_id)
             && let Resource::Image(image_data) = resource.as_ref()
         {
             original_image_width = image_data.width as f32;
@@ -146,7 +146,7 @@ impl TextHashKey {
 
 #[derive(Clone)]
 pub struct TinyVgContext {
-    pub(crate) resource_identifier: ResourceIdentifier,
+    pub(crate) resource_id: ResourceId,
 }
 
 pub fn measure_content(
@@ -196,9 +196,9 @@ pub fn measure_content(
 }
 
 impl TinyVgContext {
-    pub fn new(resource_identifier: ResourceIdentifier) -> Self {
+    pub fn new(resource_id: ResourceId) -> Self {
         Self {
-            resource_identifier,
+            resource_id,
         }
     }
 
@@ -212,7 +212,7 @@ impl TinyVgContext {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
 
-        if let Some(resource) = resource_manager.get(&self.resource_identifier)
+        if let Some(resource) = resource_manager.get(&self.resource_id)
             && let Resource::TinyVg(resource) = resource.as_ref()
             && let Some(tinyvg) = &resource.tinyvg
         {

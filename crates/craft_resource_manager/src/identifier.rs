@@ -3,18 +3,18 @@ use std::path::PathBuf;
 use std::{fmt, fs};
 
 #[cfg(feature = "http_client")]
-use crate::ResourceIdentifier::Url;
-use crate::ResourceIdentifier::{Bytes, File};
+use crate::ResourceId::Url;
+use crate::ResourceId::{Bytes, File};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub enum ResourceIdentifier {
+pub enum ResourceId {
     #[cfg(feature = "http_client")]
     Url(String),
     File(PathBuf),
     Bytes(&'static [u8]),
 }
 
-impl Display for ResourceIdentifier {
+impl Display for ResourceId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "http_client")]
@@ -25,8 +25,8 @@ impl Display for ResourceIdentifier {
     }
 }
 
-impl ResourceIdentifier {
-    pub async fn fetch_data_from_resource_identifier(&self) -> Option<Vec<u8>> {
+impl ResourceId {
+    pub async fn fetch_data_from_resource_id(&self) -> Option<Vec<u8>> {
         match self {
             #[cfg(feature = "http_client")]
             Url(url) => {

@@ -1,6 +1,6 @@
 use craft_retained::elements::{Container, Element, Text, TinyVg};
 use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
-use craft_retained::{Color, ResourceIdentifier, WinitWindow, palette, pct, px, rgb};
+use craft_retained::{Color, ResourceId, WinitWindow, palette, pct, px, rgb};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -88,7 +88,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
 }
 
 fn hero_features() -> Container {
-    fn hero_item(title: &str, text: &str, icon: ResourceIdentifier) -> Container {
+    fn hero_item(title: &str, text: &str, icon: ResourceId) -> Container {
         let sub_title_color = Color::from_rgb8(70, 70, 70);
 
         let icon_title = Container::new().push(TinyVg::new(icon)).push(
@@ -124,35 +124,35 @@ fn hero_features() -> Container {
                     hero_item(
                         "Reactive",
                         "When your data changes, we automatically re-run your view function.",
-                        ResourceIdentifier::Bytes(include_bytes!("../assets/electric_bolt_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::Bytes(include_bytes!("../assets/electric_bolt_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Components",
                         "Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates.",
-                        ResourceIdentifier::Bytes(include_bytes!("../assets/view_comfy_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::Bytes(include_bytes!("../assets/view_comfy_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Pure Rust without macros",
                         "No macros.",
-                        ResourceIdentifier::Bytes(include_bytes!("../assets/code_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::Bytes(include_bytes!("../assets/code_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Web-like styling",
                         "We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.",
-                        ResourceIdentifier::Bytes(include_bytes!("../assets/brush_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::Bytes(include_bytes!("../assets/brush_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Cross Platform",
                         "Currently we support Windows, macOS, Linux, Web, and Android.",
-                        ResourceIdentifier::Bytes(include_bytes!("../assets/devices_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::Bytes(include_bytes!("../assets/devices_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
 

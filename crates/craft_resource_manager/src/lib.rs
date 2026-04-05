@@ -18,7 +18,7 @@ use ::image::ImageReader;
 use craft_logging::info;
 use craft_runtime::{CraftRuntimeHandle, Sender};
 
-pub use crate::identifier::ResourceIdentifier;
+pub use crate::identifier::ResourceId;
 use crate::image::ImageResource;
 use crate::lock_free_map::LockFreeMap;
 use crate::resource::Resource;
@@ -30,7 +30,7 @@ use crate::tinyvg_resource::TinyVgResource;
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
 pub struct ResourceManager {
-    resources: LockFreeMap<ResourceIdentifier, Resource>,
+    resources: LockFreeMap<ResourceId, Resource>,
     pub(crate) runtime: CraftRuntimeHandle,
 }
 
@@ -47,18 +47,18 @@ impl ResourceManager {
     pub fn async_download_resource_and_send_message_on_finish<Message: From<ResourceEvent> + 'static>(
         &self,
         app_sender: Sender<Message>,
-        resource_identifier: ResourceIdentifier,
+        resource_id: ResourceId,
         resource_type: ResourceType,
     ) {
-        let resource_identifier_copy = resource_identifier.clone();
+        let resource_id_copy = resource_id.clone();
         let resource_type_copy = resource_type;
 
         match &resource_type_copy {
             ResourceType::Image => {
-                let resource_identifier = resource_identifier.clone();
+                let resource_id = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let image = resource_identifier.fetch_data_from_resource_identifier().await;
+                    let image = resource_id.fetch_data_from_resource_id().await;
 
                     if let Some(image_resource) = &image {
                         let bytes = image_resource;
@@ -68,7 +68,7 @@ impl ResourceManager {
                             .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
                         let generic_resource = ResourceData::new(
-                            resource_identifier.clone(),
+                            resource_id.clone(),
                             Some(bytes.to_vec()),
                             None,
                             ResourceType::Image,
@@ -77,7 +77,7 @@ impl ResourceManager {
 
                         let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
                         app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Image, resource).into())
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Image, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }
@@ -85,19 +85,19 @@ impl ResourceManager {
                 self.runtime.spawn(f);
             }
             ResourceType::Font => {
-                let resource = resource_identifier.clone();
+                let resource = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let mut bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                    let mut bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(font_bytes) = bytes.take() {
                         let generic_resource =
-                            ResourceData::new(resource_identifier.clone(), Some(font_bytes), None, ResourceType::Font);
+                            ResourceData::new(resource_id.clone(), Some(font_bytes), None, ResourceType::Font);
                         info!("Font downloaded");
                         let resource = Resource::Font(generic_resource);
 
                         app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Font, resource).into())
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Font, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }
@@ -105,14 +105,14 @@ impl ResourceManager {
                 self.runtime.spawn(f);
             }
             ResourceType::TinyVg => {
-                let resource = resource_identifier.clone();
+                let resource = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                    let bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(bytes) = bytes {
                         let generic_resource = ResourceData::new(
-                            resource_identifier.clone(),
+                            resource_id.clone(),
                             Some(bytes.to_vec()),
                             None,
                             ResourceType::TinyVg,
@@ -121,7 +121,7 @@ impl ResourceManager {
                         info!("TinyVG downloaded");
                         app_sender_copy
                             .send(
-                                ResourceEvent::Loaded(resource_identifier_copy, ResourceType::TinyVg, resource).into(),
+                                ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into(),
                             )
                             .await
                             .expect("Failed to send added resource event");
@@ -136,18 +136,18 @@ impl ResourceManager {
     pub fn async_download_resource_and_send_message_on_finish<Message: From<ResourceEvent> + Send + 'static>(
         &self,
         app_sender: Sender<Message>,
-        resource_identifier: ResourceIdentifier,
+        resource_id: ResourceId,
         resource_type: ResourceType,
     ) {
-        let resource_identifier_copy = resource_identifier.clone();
+        let resource_id_copy = resource_id.clone();
         let resource_type_copy = resource_type;
 
         match &resource_type_copy {
             ResourceType::Image => {
-                let resource_identifier = resource_identifier.clone();
+                let resource_id = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let image = resource_identifier.fetch_data_from_resource_identifier().await;
+                    let image = resource_id.fetch_data_from_resource_id().await;
 
                     if let Some(image_resource) = &image {
                         let bytes = image_resource;
@@ -157,7 +157,7 @@ impl ResourceManager {
                             .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
                         let generic_resource = ResourceData::new(
-                            resource_identifier.clone(),
+                            resource_id.clone(),
                             Some(bytes.to_vec()),
                             None,
                             ResourceType::Image,
@@ -166,7 +166,7 @@ impl ResourceManager {
 
                         let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
                         app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Image, resource).into())
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Image, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }
@@ -174,19 +174,19 @@ impl ResourceManager {
                 self.runtime.spawn(f);
             }
             ResourceType::Font => {
-                let resource = resource_identifier.clone();
+                let resource = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let mut bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                    let mut bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(font_bytes) = bytes.take() {
                         let generic_resource =
-                            ResourceData::new(resource_identifier.clone(), Some(font_bytes), None, ResourceType::Font);
+                            ResourceData::new(resource_id.clone(), Some(font_bytes), None, ResourceType::Font);
                         info!("Font downloaded");
                         let resource = Resource::Font(generic_resource);
 
                         app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_identifier_copy, ResourceType::Font, resource).into())
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Font, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }
@@ -194,14 +194,14 @@ impl ResourceManager {
                 self.runtime.spawn(f);
             }
             ResourceType::TinyVg => {
-                let resource = resource_identifier.clone();
+                let resource = resource_id.clone();
                 let app_sender_copy = app_sender.clone();
                 let f = async move {
-                    let bytes = resource.clone().fetch_data_from_resource_identifier().await;
+                    let bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(bytes) = bytes {
                         let generic_resource = ResourceData::new(
-                            resource_identifier.clone(),
+                            resource_id.clone(),
                             Some(bytes.to_vec()),
                             None,
                             ResourceType::TinyVg,
@@ -210,7 +210,7 @@ impl ResourceManager {
                         info!("TinyVG downloaded");
                         app_sender_copy
                             .send(
-                                ResourceEvent::Loaded(resource_identifier_copy, ResourceType::TinyVg, resource).into(),
+                                ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into(),
                             )
                             .await
                             .expect("Failed to send added resource event");
@@ -221,15 +221,15 @@ impl ResourceManager {
         }
     }
 
-    pub fn contains(&self, resource_identifier: &ResourceIdentifier) -> bool {
-        self.resources.contains(resource_identifier)
+    pub fn contains(&self, resource_id: &ResourceId) -> bool {
+        self.resources.contains(resource_id)
     }
 
-    pub fn get(&self, resource_identifier: &ResourceIdentifier) -> Option<Arc<Resource>> {
-        self.resources.get(resource_identifier)
+    pub fn get(&self, resource_id: &ResourceId) -> Option<Arc<Resource>> {
+        self.resources.get(resource_id)
     }
 
-    pub fn insert(&self, resource_identifier: ResourceIdentifier, resource: Arc<Resource>) {
-        self.resources.insert(resource_identifier, resource);
+    pub fn insert(&self, resource_id: ResourceId, resource: Arc<Resource>) {
+        self.resources.insert(resource_id, resource);
     }
 }

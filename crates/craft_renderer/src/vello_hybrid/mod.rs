@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceId, ResourceManager};
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 use peniko::{BlendMode, Compose, Fill, Mix};
@@ -63,7 +63,7 @@ pub struct VelloHybridRenderer {
     scene: Scene,
     surface_clear_color: Color,
 
-    images: HashMap<ResourceIdentifier, (ImageId, Option<DateTime<Utc>>)>,
+    images: HashMap<ResourceId, (ImageId, Option<DateTime<Utc>>)>,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
@@ -479,7 +479,7 @@ impl CraftRenderer for VelloHybridRenderer {
             }
         });
 
-        let mut to_remove: Vec<ResourceIdentifier> = Vec::new();
+        let mut to_remove: Vec<ResourceId> = Vec::new();
 
         for expired_image_id in &expired_images {
             // Note: Expired images will have an entry in the images hashmap, but with a new ImageId.

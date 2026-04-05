@@ -13,7 +13,7 @@ use craft_primitives::geometry::{Point, Size};
 
 use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceId, ResourceManager};
 
 use craft_runtime::{CraftRuntimeHandle, Sender};
 
@@ -36,8 +36,8 @@ use crate::window_manager::WindowManager;
 
 thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceIdentifier, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementInternals>>>> = RefCell::new(None);
     pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
@@ -169,9 +169,9 @@ impl App {
 
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
         match resource_event {
-            ResourceEvent::Loaded(resource_identifier, resource_type, resource) => {
+            ResourceEvent::Loaded(resource_id, resource_type, resource) => {
                 IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
-                    in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_identifier);
+                    in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_id);
                 });
                 if let Some(_text_context) = self.text_context.as_mut()
                     && resource_type == ResourceType::Font
@@ -179,10 +179,10 @@ impl App {
                 {
                     // Todo: Load the font into the text context.
                     self.resource_manager
-                        .insert(resource_identifier.clone(), Arc::new(resource));
+                        .insert(resource_id.clone(), Arc::new(resource));
                     self.reload_fonts = true;
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
-                    self.resource_manager.insert(resource_identifier, Arc::new(resource));
+                    self.resource_manager.insert(resource_id, Arc::new(resource));
                 }
                 // TODO: Only mark dirty affected nodes.
                 WINDOW_MANAGER.with_borrow_mut(|window_manager| {

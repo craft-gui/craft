@@ -4,7 +4,7 @@ pub use craft_primitives::{Color, geometry, palette};
 
 pub use craft_renderer::RendererType;
 
-pub use craft_resource_manager::ResourceIdentifier;
+pub use craft_resource_manager::ResourceId;
 
 pub use craft_runtime::{self, CraftRuntime};
 

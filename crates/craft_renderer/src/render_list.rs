@@ -4,7 +4,7 @@ use std::rc::Weak;
 use peniko::Color;
 
 use craft_primitives::geometry::{Affine, BezPath, Rectangle, Shape};
-use craft_resource_manager::ResourceIdentifier;
+use craft_resource_manager::ResourceId;
 
 use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd};
 use crate::sort_commands::SortedCommands;
@@ -116,7 +116,7 @@ impl RenderList {
     }
 
     #[inline(always)]
-    pub fn draw_image(&mut self, rect: Rectangle, resource_id: ResourceIdentifier) {
+    pub fn draw_image(&mut self, rect: Rectangle, resource_id: ResourceId) {
         if let Some(cull) = &self.cull
             && !cull.intersects(&rect)
         {
@@ -127,7 +127,7 @@ impl RenderList {
     }
 
     #[inline(always)]
-    pub fn draw_tiny_vg(&mut self, rect: Rectangle, resource_id: ResourceIdentifier, override_color: Option<Color>) {
+    pub fn draw_tiny_vg(&mut self, rect: Rectangle, resource_id: ResourceId, override_color: Option<Color>) {
         if let Some(cull) = &self.cull
             && !cull.intersects(&rect)
         {

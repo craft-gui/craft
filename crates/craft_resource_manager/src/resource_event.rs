@@ -1,10 +1,10 @@
-use crate::ResourceIdentifier;
+use crate::ResourceId;
 use crate::resource::Resource;
 use crate::resource_type::ResourceType;
 
 #[derive(Debug)]
 pub enum ResourceEvent {
-    Loaded(ResourceIdentifier, ResourceType, Resource),
+    Loaded(ResourceId, ResourceType, Resource),
     #[allow(dead_code)]
-    UnLoaded(ResourceIdentifier),
+    UnLoaded(ResourceId),
 }

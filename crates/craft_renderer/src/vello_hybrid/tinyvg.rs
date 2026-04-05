@@ -3,7 +3,7 @@ use std::sync::Arc;
 use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
-use craft_resource_manager::{ResourceIdentifier, ResourceManager};
+use craft_resource_manager::{ResourceId, ResourceManager};
 use peniko::kurbo::{Affine, BezPath, Line, Shape, Stroke};
 use peniko::{Fill, kurbo};
 use tinyvg_rs::color_table::ColorTable;
@@ -47,10 +47,10 @@ pub(crate) fn draw_tiny_vg(
     scene: &mut Scene,
     rectangle: Rectangle,
     resource_manager: &Arc<ResourceManager>,
-    resource_identifier: ResourceIdentifier,
+    resource_id: ResourceId,
     override_color: &Option<Color>,
 ) {
-    let resource = resource_manager.get(&resource_identifier);
+    let resource = resource_manager.get(&resource_id);
     if resource.is_none() {
         return;
     }

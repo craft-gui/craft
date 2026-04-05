@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
 
-use crate::identifier::ResourceIdentifier;
+use crate::identifier::ResourceId;
 use crate::resource_type::ResourceType;
 
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct ResourceData {
-    pub(crate) resource_identifier: ResourceIdentifier,
+    pub(crate) resource_id: ResourceId,
     pub(crate) data: Option<Vec<u8>>,
     pub(crate) resource_type: ResourceType,
     pub(crate) expiration_time: Option<DateTime<Utc>>,
@@ -14,13 +14,13 @@ pub struct ResourceData {
 
 impl ResourceData {
     pub(crate) fn new(
-        resource_identifier: ResourceIdentifier,
+        resource_id: ResourceId,
         data: Option<Vec<u8>>,
         expiration_time: Option<DateTime<Utc>>,
         resource_type: ResourceType,
     ) -> Self {
         ResourceData {
-            resource_identifier,
+            resource_id,
             expiration_time,
             data,
             resource_type,

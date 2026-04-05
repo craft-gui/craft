@@ -8,7 +8,7 @@ use craft_primitives::geometry::Rectangle;
 
 use craft_renderer::RenderList;
 
-use craft_resource_manager::ResourceIdentifier;
+use craft_resource_manager::ResourceId;
 use craft_resource_manager::resource_type::ResourceType;
 
 use craft_primitives::geometry::{Affine, Point};
@@ -32,7 +32,7 @@ pub struct TinyVg {
 #[derive(Clone)]
 pub struct TinyVgInner {
     is_TinyVg_dirty: bool,
-    resource_identifier: ResourceIdentifier,
+    resource_id: ResourceId,
     element_data: ElementData,
 }
 
@@ -104,7 +104,7 @@ impl ElementInternals for TinyVgInner {
         }
         _renderer.draw_tiny_vg(
             content_rectangle.scale(_scale_factor),
-            self.resource_identifier.clone(),
+            self.resource_id.clone(),
             color,
         );
     }
@@ -119,42 +119,42 @@ impl ElementInternals for TinyVgInner {
 }
 
 impl TinyVg {
-    pub fn new(resource_identifier: ResourceIdentifier) -> Self {
+    pub fn new(resource_id: ResourceId) -> Self {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
             RefCell::new(TinyVgInner {
                 is_TinyVg_dirty: false,
-                resource_identifier: resource_identifier.clone(),
+                resource_id: resource_id.clone(),
                 element_data: ElementData::new(me.clone(), false),
             })
         });
-        let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_identifier.clone())));
+        let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_id.clone())));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
         inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_identifier, ResourceType::TinyVg));
+            pending_resources.push_back((resource_id, ResourceType::TinyVg));
         });
 
         Self { inner }
     }
 
-    pub fn TinyVg(self, resource_identifier: ResourceIdentifier) -> Self {
-        self.inner.borrow_mut().TinyVg(resource_identifier);
+    pub fn TinyVg(self, resource_id: ResourceId) -> Self {
+        self.inner.borrow_mut().TinyVg(resource_id);
         self
     }
 
-    pub fn get_TinyVg(&self) -> ResourceIdentifier {
-        self.inner.borrow().get_TinyVg().clone()
+    pub fn get_TinyVg(&self) -> ResourceId {
+        self.inner.borrow().get_resource_id().clone()
     }
 }
 
 impl TinyVgInner {
-    pub fn TinyVg(&mut self, resource_identifier: ResourceIdentifier) {
+    pub fn TinyVg(&mut self, resource_id: ResourceId) {
         self.is_TinyVg_dirty = true;
-        self.resource_identifier = resource_identifier.clone();
+        self.resource_id = resource_id.clone();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let context = LayoutContext::TinyVg(TinyVgContext::new(resource_identifier));
+            let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
             let node = self
                 .element_data
                 .layout
@@ -164,7 +164,7 @@ impl TinyVgInner {
         });
     }
 
-    pub fn get_TinyVg(&self) -> &ResourceIdentifier {
-        &self.resource_identifier
+    pub fn get_resource_id(&self) -> &ResourceId {
+        &self.resource_id
     }
 }
