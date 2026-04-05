@@ -1,11 +1,9 @@
 use craft_retained::elements::{Container, Element, Text, TinyVg};
 use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
-use craft_retained::{Color, ResourceId, WinitWindow, palette, pct, px, rgb};
-use std::cell::RefCell;
-use std::rc::Rc;
+use craft_retained::{Color, ResourceId, palette, pct, px, rgb};
 
 use crate::link::Link;
-use crate::router::{NavigateFn, Router};
+use crate::router::NavigateFn;
 use crate::theme::{WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
 use crate::web_link::WebLink;
 
@@ -79,7 +77,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         .wrap(FlexWrap::Wrap)
         .gap(px(17), px(17))
         .margin(px(40), px(0), px(0), px(0))
-        .push(Link("/docs", move || navigate_fn("/docs")).push(craft_button))
+        .push(Link(move || navigate_fn("/docs")).push(craft_button))
         .push(WebLink("https://github.com/craft-gui/craft").push(github_button));
 
     let inner_wrapper = inner_wrapper.push(buttons);

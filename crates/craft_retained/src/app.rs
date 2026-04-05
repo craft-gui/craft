@@ -178,8 +178,7 @@ impl App {
                     && resource.data().is_some()
                 {
                     // Todo: Load the font into the text context.
-                    self.resource_manager
-                        .insert(resource_id.clone(), Arc::new(resource));
+                    self.resource_manager.insert(resource_id.clone(), Arc::new(resource));
                     self.reload_fonts = true;
                 } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
                     self.resource_manager.insert(resource_id, Arc::new(resource));

@@ -63,7 +63,7 @@ pub fn counter() -> Container {
         })
 }
 
-pub(crate) fn main() {
+pub fn main() {
     setup_logging();
 
     Window::new("Counter").width(pct(100)).height(pct(100)).push(counter());

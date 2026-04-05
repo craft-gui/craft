@@ -144,9 +144,8 @@ impl Renderer for VelloCpuRenderer {
         &'a mut self,
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,
-        window: Rectangle
+        window: Rectangle,
     ) {
-
         vello_draw_rect(
             &mut self.render_context,
             Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
@@ -191,12 +190,14 @@ impl Renderer for VelloCpuRenderer {
 
                         let scene_state = self.render_context.save_current_state();
                         let mut image_transform = Affine::IDENTITY;
-                        image_transform = image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        image_transform =
+                            image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         image_transform = image_transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
                         );
-                        self.render_context.set_transform(scene_state.transform * image_transform);
+                        self.render_context
+                            .set_transform(scene_state.transform * image_transform);
 
                         let is = vello_common::paint::ImageSource::from_peniko_image_data(&id);
 
@@ -283,7 +284,8 @@ impl Renderer for VelloCpuRenderer {
                     });
 
                     let scene_state = self.render_context.save_current_state();
-                    self.render_context.set_transform(scene_state.transform * text_transform);
+                    self.render_context
+                        .set_transform(scene_state.transform * text_transform);
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
                             if let Some(underline) = &item.underline {
@@ -299,10 +301,7 @@ impl Renderer for VelloCpuRenderer {
                                     .unwrap_or_else(|| item.brush.color),
                             ));
 
-                            let glyph_run_builder = self
-                                .render_context
-                                .glyph_run(&item.font)
-                                .font_size(item.font_size);
+                            let glyph_run_builder = self.render_context.glyph_run(&item.font).font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -418,7 +417,8 @@ impl VelloCpuRenderer {
                 filter,
             );
 
-            self.render_context.set_transform(scene_state.transform * Affine::translate(box_shadow.offset));
+            self.render_context
+                .set_transform(scene_state.transform * Affine::translate(box_shadow.offset));
 
             self.render_context.set_paint(box_shadow.color);
             self.render_context.fill_path(&box_shadow.path);
@@ -434,7 +434,6 @@ impl VelloCpuRenderer {
                 .set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
 
             self.render_context.pop_layer();
-
 
             self.render_context.restore_state(scene_state);
         }

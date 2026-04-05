@@ -10,7 +10,7 @@ pub const NAVBAR_HEIGHT: f32 = 60.0;
 fn create_link(navigate_fn: NavigateFn, label: &str, route: &str) -> Container {
     let route_owned = route.to_string();
     let nav = navigate_fn.clone();
-    Link(route, move || {
+    Link(move || {
         nav(&route_owned);
     })
     .push(

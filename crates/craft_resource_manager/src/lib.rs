@@ -67,12 +67,8 @@ impl ResourceManager {
                             .with_guessed_format()
                             .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
-                        let generic_resource = ResourceData::new(
-                            resource_id.clone(),
-                            Some(bytes.to_vec()),
-                            None,
-                            ResourceType::Image,
-                        );
+                        let generic_resource =
+                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
                         info!("Image downloaded");
 
                         let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
@@ -111,18 +107,12 @@ impl ResourceManager {
                     let bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(bytes) = bytes {
-                        let generic_resource = ResourceData::new(
-                            resource_id.clone(),
-                            Some(bytes.to_vec()),
-                            None,
-                            ResourceType::TinyVg,
-                        );
+                        let generic_resource =
+                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::TinyVg);
                         let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
                         info!("TinyVG downloaded");
                         app_sender_copy
-                            .send(
-                                ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into(),
-                            )
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }
@@ -156,12 +146,8 @@ impl ResourceManager {
                             .with_guessed_format()
                             .expect("Failed to guess format");
                         let size = reader.into_dimensions().unwrap_or_default();
-                        let generic_resource = ResourceData::new(
-                            resource_id.clone(),
-                            Some(bytes.to_vec()),
-                            None,
-                            ResourceType::Image,
-                        );
+                        let generic_resource =
+                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
                         info!("Image downloaded");
 
                         let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
@@ -200,18 +186,12 @@ impl ResourceManager {
                     let bytes = resource.clone().fetch_data_from_resource_id().await;
 
                     if let Some(bytes) = bytes {
-                        let generic_resource = ResourceData::new(
-                            resource_id.clone(),
-                            Some(bytes.to_vec()),
-                            None,
-                            ResourceType::TinyVg,
-                        );
+                        let generic_resource =
+                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::TinyVg);
                         let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
                         info!("TinyVG downloaded");
                         app_sender_copy
-                            .send(
-                                ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into(),
-                            )
+                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into())
                             .await
                             .expect("Failed to send added resource event");
                     }

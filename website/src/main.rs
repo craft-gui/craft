@@ -1,8 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, ElementInternals, Window};
-use craft_retained::{CraftOptions, craft_main, pct};
+use craft_retained::{CraftOptions, craft_main};
 
 use crate::router::Router;
 
@@ -80,24 +79,11 @@ impl Default for WebsiteGlobalState {
 }
 
 fn main() {
-    let options = CraftOptions {
-        ..Default::default()
-    };
-
-    #[allow(unused_mut)]
-    let mut global_state = Rc::new(RefCell::new(WebsiteGlobalState::default()));
-
     util::setup_logging();
 
+    let global_state = Rc::new(RefCell::new(WebsiteGlobalState::default()));
     global_state.borrow_mut().load_route();
-
-    let page_wrapper = Router::new(global_state.clone());
-
-    /*    let root = page_wrapper.borrow().root.clone();
-
-        root.inner.borrow().print_tree_ids(4);
-    */
+    let page_wrapper = Router::new(global_state);
     page_wrapper.borrow().navigate();
-
-    craft_main(options);
+    craft_main(CraftOptions::default());
 }

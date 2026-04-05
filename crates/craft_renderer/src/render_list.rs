@@ -45,7 +45,8 @@ impl RenderList {
 
     #[inline(always)]
     pub fn set_transform(&mut self, transform: Affine) {
-        self.commands.push(RenderCommand::SetTransform(SetTransformCmd { transform }));
+        self.commands
+            .push(RenderCommand::SetTransform(SetTransformCmd { transform }));
     }
 
     #[inline(always)]

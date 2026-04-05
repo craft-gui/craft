@@ -12,28 +12,28 @@ Morbi tincidunt porta scelerisque. Etiam sodales, leo eget molestie imperdiet, l
 
 Nunc tellus magna, varius eu ornare et, sodales hendrerit quam. Praesent nec magna finibus, elementum orci nec, facilisis nisi. Duis ligula mi, dapibus eget nibh a, posuere viverra ante. Aliquam efficitur mauris id quam faucibus, eget posuere turpis imperdiet. Nam vulputate sed urna vitae tincidunt. Nulla ligula urna, iaculis id urna sit amet, porta iaculis ligula. Maecenas volutpat odio at pretium commodo. Nullam faucibus efficitur neque, vitae elementum sem sollicitudin eu. Nullam rutrum nulla eu erat dignissim varius. ";
 
-fn main() {
-    let root = Window::new("Text");
-    root.push(
-        Container::new()
-            .display(Display::Flex)
-            .flex_direction(FlexDirection::Column)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
-            .width(Unit::Percentage(100.0))
-            .height(Unit::Percentage(100.0))
-            .gap(Unit::Px(20.0), Unit::Px(20.0))
-            .font_size(72.0)
-            .color(rgb(50, 50, 50))
-            .push(
-                TextInput::new(LOREM_IPSUM)
-                    .overflow(Overflow::Visible, Overflow::Scroll)
-                    .width(Unit::Px(600.0))
-                    .height(Unit::Px(600.0))
-                    .display(Display::Block),
-            ),
-    );
+pub fn text() -> Container {
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .width(Unit::Percentage(100.0))
+        .height(Unit::Percentage(100.0))
+        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .font_size(72.0)
+        .color(rgb(50, 50, 50))
+        .push(
+            TextInput::new(LOREM_IPSUM)
+                .overflow(Overflow::Visible, Overflow::Scroll)
+                .width(Unit::Px(600.0))
+                .height(Unit::Px(600.0))
+                .display(Display::Block),
+        )
+}
 
+pub fn main() {
+    Window::new("Text").push(text());
     use craft_retained::CraftOptions;
     util::setup_logging();
     craft_retained::craft_main(CraftOptions::basic("text"));

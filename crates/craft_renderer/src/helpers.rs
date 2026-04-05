@@ -5,6 +5,11 @@
 ))]
 use vello_common::paint::PaintType;
 
+#[cfg(any(
+    feature = "vello_cpu_renderer",
+    feature = "vello_hybrid_renderer",
+    feature = "vello_hybrid_renderer_webgl"
+))]
 use crate::Brush;
 
 #[cfg(any(
@@ -19,6 +24,7 @@ pub(crate) fn brush_to_paint(brush: &Brush) -> PaintType {
     }
 }
 
+#[cfg(feature = "vello_cpu_renderer")]
 pub const fn rgba_to_encoded_u32(r: u32, g: u32, b: u32, a: u32) -> u32 {
     b | (g << 8) | (r << 16) | (a << 24)
 }

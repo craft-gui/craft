@@ -23,6 +23,8 @@ use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
 use wgpu::TextureFormat;
 use winit::window::Window;
 
+use crate::RenderCommand;
+use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, PushLayerCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer as CraftRenderer;
@@ -30,7 +32,6 @@ use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{RenderContext, RenderSurface};
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
-use crate::{Brush, RenderCommand};
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -423,9 +424,7 @@ impl CraftRenderer for VelloHybridRenderer {
                                     .unwrap_or_else(|| item.brush.color),
                             ));
 
-                            let glyph_run_builder = scene
-                                .glyph_run(&item.font)
-                                .font_size(item.font_size);
+                            let glyph_run_builder = scene.glyph_run(&item.font).font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -572,20 +571,5 @@ impl CraftRenderer for VelloHybridRenderer {
         surface_texture.present();
 
         self.scene.reset();
-    }
-}
-
-fn brush_to_paint(brush: &Brush) -> PaintType {
-    match brush {
-        Brush::Color(color) => PaintType::from(*color),
-        Brush::Gradient(gradient) => {
-            // Paint::Gradient does not exist yet, so we need to come back and fix this later.
-            let color = gradient
-                .stops
-                .first()
-                .map(|c| c.color.to_alpha_color())
-                .unwrap_or(Color::BLACK);
-            PaintType::from(color)
-        }
     }
 }

@@ -53,7 +53,7 @@ pub struct VelloRenderer {
     pub surface_clear_color: Color,
     pub render_into_texture: bool,
 
-    transform: Affine
+    transform: Affine,
 }
 
 impl RenderSurface {
@@ -323,7 +323,8 @@ impl Renderer for VelloRenderer {
                         let vello_image = vello::peniko::ImageBrush::new(vello_image);
 
                         let mut image_transform = Affine::IDENTITY;
-                        image_transform = image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        image_transform =
+                            image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                         image_transform = image_transform.pre_scale_non_uniform(
                             cmd.rect.width as f64 / image.width() as f64,
                             cmd.rect.height as f64 / image.height() as f64,
@@ -452,7 +453,7 @@ impl Renderer for VelloRenderer {
                         resource_manager.clone(),
                         cmd.resource_id.clone(),
                         &cmd.override_color,
-                        &self.transform
+                        &self.transform,
                     );
                 }
                 RenderCommand::PushLayer(cmd) => {

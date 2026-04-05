@@ -1,10 +1,10 @@
 //! Displays an TinyVg.
 
+use craft_primitives::geometry::Rectangle;
+use peniko::Color;
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use peniko::Color;
-use craft_primitives::geometry::Rectangle;
 
 use craft_renderer::RenderList;
 
@@ -31,7 +31,7 @@ pub struct TinyVg {
 
 #[derive(Clone)]
 pub struct TinyVgInner {
-    is_TinyVg_dirty: bool,
+    is_tiny_vg_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
 }
@@ -102,11 +102,7 @@ impl ElementInternals for TinyVgInner {
         if self.style().get_color() != rgba(0, 0, 0, 0) {
             color = Some(self.style().get_color());
         }
-        _renderer.draw_tiny_vg(
-            content_rectangle.scale(_scale_factor),
-            self.resource_id.clone(),
-            color,
-        );
+        _renderer.draw_tiny_vg(content_rectangle.scale(_scale_factor), self.resource_id.clone(), color);
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -122,7 +118,7 @@ impl TinyVg {
     pub fn new(resource_id: ResourceId) -> Self {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
             RefCell::new(TinyVgInner {
-                is_TinyVg_dirty: false,
+                is_tiny_vg_dirty: false,
                 resource_id: resource_id.clone(),
                 element_data: ElementData::new(me.clone(), false),
             })
@@ -138,19 +134,19 @@ impl TinyVg {
         Self { inner }
     }
 
-    pub fn TinyVg(self, resource_id: ResourceId) -> Self {
-        self.inner.borrow_mut().TinyVg(resource_id);
+    pub fn set_resource_id(self, resource_id: ResourceId) -> Self {
+        self.inner.borrow_mut().set_resource_id(resource_id);
         self
     }
 
-    pub fn get_TinyVg(&self) -> ResourceId {
+    pub fn get_resource_id(&self) -> ResourceId {
         self.inner.borrow().get_resource_id().clone()
     }
 }
 
 impl TinyVgInner {
-    pub fn TinyVg(&mut self, resource_id: ResourceId) {
-        self.is_TinyVg_dirty = true;
+    pub fn set_resource_id(&mut self, resource_id: ResourceId) {
+        self.is_tiny_vg_dirty = true;
         self.resource_id = resource_id.clone();
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

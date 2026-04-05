@@ -3,14 +3,13 @@ use craft_retained::pct;
 use craft_retained::style::{Display, FlexDirection};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
+use crate::WebsiteGlobalState;
 use crate::docs::docs;
 use crate::examples::examples;
 use crate::index::index_page;
 use crate::navbar::navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
-use crate::{WebsiteGlobalState, docs, index};
 
 #[derive(Clone)]
 pub struct Router {

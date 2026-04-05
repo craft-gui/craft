@@ -1,38 +1,39 @@
+#[allow(dead_code)]
 #[path = "../../examples/counter_retained/main.rs"]
 pub mod counter_retained;
 
+#[allow(dead_code)]
 #[path = "../../examples/text/main.rs"]
 mod text;
 
+#[allow(dead_code)]
 #[path = "../../examples/pointer_events/main.rs"]
 mod pointer_events;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Dropdown, Element, Text};
+use craft_retained::elements::{Container, Element, Text};
 use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::Display::Flex;
 use craft_retained::style::{FlexDirection, FontWeight, Overflow, Unit};
 use craft_retained::{palette, pct, px};
 
-use util::ExampleProps;
-
 use crate::WebsiteGlobalState;
 use crate::examples::counter_retained::counter;
 use crate::examples::pointer_events::pointer_events;
-use crate::navbar::NAVBAR_HEIGHT;
+use crate::examples::text::text;
 use crate::router::NavigateFn;
-use crate::theme::{ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, MOBILE_MEDIA_QUERY_WIDTH, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
+use crate::theme::{ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
 
 const COUNTER_EXAMPLE_LINK: &str = "/examples/counter";
 const POINTER_EVENTS_EXAMPLE_LINK: &str = "/examples/pointer-events";
+const TEXT_EXAMPLE_LINK: &str = "/examples/text";
 
 fn create_examples_link(
     label: &str,
     example_link: &str,
     example_to_show: &str,
-    context: Rc<RefCell<WebsiteGlobalState>>,
     navigate_fn: NavigateFn,
     example_container: Container,
     examples: Vec<Container>,
@@ -40,11 +41,10 @@ fn create_examples_link(
     let example_link_captured = example_link.to_string();
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
-        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
-            let context = context.clone();
+        .on_pointer_button_up(Rc::new(move |_event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
-                //navigate_fn(example_link_captured.as_str());
-                update_active_example(example_link_captured.as_str(), example_container.clone(), &examples)
+                update_active_example(example_link_captured.as_str(), example_container.clone(), &examples);
+                navigate_fn(example_link_captured.as_str());
             }
         }))
         .id(example_link)
@@ -57,7 +57,6 @@ fn create_examples_link(
 
 fn examples_sidebar(
     example_to_show: &str,
-    context: Rc<RefCell<WebsiteGlobalState>>,
     navigate_fn: NavigateFn,
     example_container: Container,
     examples: Vec<Container>,
@@ -67,7 +66,6 @@ fn examples_sidebar(
             "Counter",
             COUNTER_EXAMPLE_LINK,
             example_to_show,
-            context.clone(),
             navigate_fn.clone(),
             example_container.clone(),
             examples.clone(),
@@ -76,7 +74,14 @@ fn examples_sidebar(
             "Pointer Events",
             POINTER_EVENTS_EXAMPLE_LINK,
             example_to_show,
-            context.clone(),
+            navigate_fn.clone(),
+            example_container.clone(),
+            examples.clone(),
+        ),
+        create_examples_link(
+            "Text",
+            TEXT_EXAMPLE_LINK,
+            example_to_show,
             navigate_fn.clone(),
             example_container.clone(),
             examples.clone(),
@@ -104,7 +109,7 @@ fn examples_sidebar(
             .width(px(200))
             .max_width(px(300));
 
-        for (index, link) in links.drain(..).enumerate() {
+        for link in links.drain(..) {
             let is_selected = link.get_id().map(|id| id == example_to_show).unwrap_or(false);
             if is_selected {
                 //dropdown = dropdown.selected_item(index);
@@ -137,15 +142,21 @@ pub fn examples(context: Rc<RefCell<WebsiteGlobalState>>, navigate_fn: NavigateF
     let examples = vec![
         counter().id(COUNTER_EXAMPLE_LINK),
         pointer_events().id(POINTER_EVENTS_EXAMPLE_LINK),
+        text().id(TEXT_EXAMPLE_LINK),
     ];
 
     let container_height = 600.0; //(context.window().window_height() - NAVBAR_HEIGHT - vertical_padding * 2.0).max(0.0);
+
+    let current_index = examples
+        .iter()
+        .position(|ex| ex.get_id().as_deref() == Some(route.as_str()))
+        .unwrap_or(0);
 
     let example_container = Container::new()
         .width(pct(100))
         .height(px(container_height))
         .background_color(palette::css::WHITE)
-        .push(examples[0].clone());
+        .push(examples[current_index].clone());
 
     let vertical_padding = 50.0;
     let wrapper = wrapper()
@@ -157,7 +168,6 @@ pub fn examples(context: Rc<RefCell<WebsiteGlobalState>>, navigate_fn: NavigateF
         )
         .push(examples_sidebar(
             &route,
-            context.clone(),
             navigate_fn.clone(),
             example_container.clone(),
             examples.clone(),
@@ -169,8 +179,6 @@ pub fn examples(context: Rc<RefCell<WebsiteGlobalState>>, navigate_fn: NavigateF
     }*/
 
     let wrapper = wrapper.push(example_container.clone());
-
-    update_active_example(&route, example_container.clone(), &examples);
 
     Container::new()
         .overflow(Overflow::Visible, Overflow::Scroll)

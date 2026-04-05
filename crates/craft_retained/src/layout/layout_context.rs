@@ -46,9 +46,7 @@ pub struct ImageContext {
 
 impl ImageContext {
     pub(crate) fn new(resource_id: ResourceId) -> Self {
-        Self {
-            resource_id,
-        }
+        Self { resource_id }
     }
 
     pub fn measure(
@@ -197,9 +195,7 @@ pub fn measure_content(
 
 impl TinyVgContext {
     pub fn new(resource_id: ResourceId) -> Self {
-        Self {
-            resource_id,
-        }
+        Self { resource_id }
     }
 
     pub fn measure(

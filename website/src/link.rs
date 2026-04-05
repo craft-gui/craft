@@ -4,7 +4,7 @@ use craft_retained::elements::{Container, Element};
 use craft_retained::events::ui_events::pointer::PointerButton;
 
 #[allow(non_snake_case)]
-pub fn Link<F>(href: &str, on_click: F) -> Container
+pub fn Link<F>(on_click: F) -> Container
 where
     F: Fn() + 'static,
 {

@@ -99,14 +99,7 @@ pub(crate) fn draw_tiny_vg(
                     let path = Path {
                         segments: vec![segment],
                     };
-                    draw_path(
-                        scene,
-                        &path,
-                        &data.style,
-                        None,
-                        &tiny_vg.color_table,
-                        override_color,
-                    );
+                    draw_path(scene, &path, &data.style, None, &tiny_vg.color_table, override_color);
                 }
                 DrawCommand::FillRectangles(data) => {
                     let brush = tinyvg_helpers::get_brush(&data.style, &tiny_vg.color_table, override_color);

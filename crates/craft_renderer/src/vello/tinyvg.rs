@@ -36,7 +36,7 @@ pub(crate) fn draw_tiny_vg(
     resource_manager: Arc<ResourceManager>,
     resource_id: ResourceId,
     override_color: &Option<Color>,
-    transform: &Affine
+    transform: &Affine,
 ) {
     let resource = resource_manager.get(&resource_id);
     if let Some(resource) = resource
@@ -198,7 +198,13 @@ pub(crate) fn draw_tiny_vg(
                         let rectangle =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.height.0, rectangle.height.0);
                         scene.fill(Fill::EvenOdd, vg_transform, &fill_brush, None, &rectangle);
-                        scene.stroke(&Stroke::new(data.line_width.0), vg_transform, &line_brush, None, &rectangle);
+                        scene.stroke(
+                            &Stroke::new(data.line_width.0),
+                            vg_transform,
+                            &line_brush,
+                            None,
+                            &rectangle,
+                        );
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
