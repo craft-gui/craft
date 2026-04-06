@@ -1,8 +1,6 @@
 use craft_primitives::Color;
 use craft_primitives::geometry::ElementBox;
 use smol_str::SmolStr;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
@@ -12,7 +10,7 @@ use winit::event::{DeviceId, ElementState, MouseButton};
 use crate::CraftError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
-use crate::elements::{AsElement, ElementInternals};
+use crate::elements::{AsElement, DynElement};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Underline, Unit};
 
@@ -20,52 +18,59 @@ use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, Fle
 /// Setters in this trait return Self and have no prefix.
 /// Getters in this trait return specific data and have a get prefix.
 pub trait Element: Clone + AsElement {
-    fn get_children(&self) -> Vec<Rc<RefCell<dyn ElementInternals>>> {
-        self.as_element_rc().borrow().children().to_vec()
+    fn get_children(&self) -> Vec<DynElement> {
+        self.as_element_rc()
+            .borrow()
+            .children()
+            .iter()
+            .cloned()
+            .map(DynElement::new)
+            .collect()
     }
 
-    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
-        self.as_element_rc().borrow().get_previous_sibling()
+    fn get_previous_sibling(&self) -> Result<DynElement, CraftError> {
+        self.as_element_rc()
+            .borrow()
+            .get_previous_sibling()
+            .map(DynElement::new)
     }
 
-    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
-        self.as_element_rc().borrow().get_next_sibling()
+    fn get_next_sibling(&self) -> Result<DynElement, CraftError> {
+        self.as_element_rc().borrow().get_next_sibling().map(DynElement::new)
     }
 
-    fn get_parent(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
+    fn get_parent(&self) -> Result<DynElement, CraftError> {
         let parent = self.as_element_rc().borrow().parent();
         if let Some(parent) = parent {
-            parent.upgrade().ok_or(CraftError::ElementNotFound)
+            parent.upgrade().ok_or(CraftError::ElementNotFound).map(DynElement::new)
         } else {
             Err(CraftError::ElementNotFound)
         }
     }
 
-    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
-        self.as_element_rc().borrow().get_first_child()
+    fn get_first_child(&self) -> Result<DynElement, CraftError> {
+        self.as_element_rc().borrow().get_first_child().map(DynElement::new)
     }
 
-    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
-        self.as_element_rc().borrow().get_last_child()
+    fn get_last_child(&self) -> Result<DynElement, CraftError> {
+        self.as_element_rc().borrow().get_last_child().map(DynElement::new)
     }
 
-    fn remove_child(
-        &self,
-        child: Rc<RefCell<dyn ElementInternals>>,
-    ) -> Result<Rc<RefCell<dyn ElementInternals>>, CraftError> {
-        self.as_element_rc().borrow_mut().remove_child(child)
+    fn remove_child(&self, child: DynElement) -> Result<DynElement, CraftError> {
+        self.as_element_rc()
+            .borrow_mut()
+            .remove_child(child.inner)
+            .map(DynElement::new)
     }
 
     fn remove_all_children(&self) {
         self.as_element_rc().borrow_mut().remove_all_children()
     }
 
-    fn swap_child(
-        &self,
-        child_1: Rc<RefCell<dyn ElementInternals>>,
-        child_2: Rc<RefCell<dyn ElementInternals>>,
-    ) -> Result<(), CraftError> {
-        self.as_element_rc().borrow_mut().swap_child(child_1, child_2)
+    fn swap_child(&self, child_1: DynElement, child_2: DynElement) -> Result<(), CraftError> {
+        self.as_element_rc()
+            .borrow_mut()
+            .swap_child(child_1.inner, child_2.inner)
     }
 
     fn push(self, child: impl AsElement) -> Self {
@@ -421,5 +426,11 @@ pub trait Element: Clone + AsElement {
         queue_window_event(window_id, mouse_move);
         queue_window_event(window_id, mouse_down);
         queue_window_event(window_id, mouse_up);
+    }
+
+    fn as_dyn_element(&self) -> DynElement {
+        DynElement {
+            inner: self.as_element_rc(),
+        }
     }
 }

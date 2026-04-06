@@ -170,7 +170,7 @@ impl State {
         for (index, data) in self.store.data.iter().enumerate().step_by(10) {
             let container = self.rows[index].clone();
             let text = container.get_children()[1].clone();
-            if let Some(text) = text.borrow_mut().as_any_mut().downcast_mut::<TextInner>() {
+            if let Some(text) = text.inner.borrow_mut().as_any_mut().downcast_mut::<TextInner>() {
                 text.set_text(&data.label);
             }
         }

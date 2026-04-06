@@ -1,5 +1,6 @@
 pub use crate::elements::container::{Container, ContainerInner};
 pub use crate::elements::dropdown::{Dropdown, DropdownInner};
+pub use crate::elements::dyn_element::DynElement;
 pub use crate::elements::element_id_map::ElementIdMap;
 pub use crate::elements::image::{Image, ImageInner};
 pub use crate::elements::scrollable::{ScrollOptions, ScrollToBox};
@@ -15,6 +16,7 @@ pub(crate) mod scrollable;
 
 mod container;
 mod dropdown;
+mod dyn_element;
 mod element_data;
 mod element_id;
 mod element_id_map;
