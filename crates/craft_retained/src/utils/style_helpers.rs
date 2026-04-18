@@ -1,11 +1,11 @@
 use crate::Color;
 use crate::style::Unit;
 
-pub fn rgb(r: u8, g: u8, b: u8) -> Color {
+pub const fn rgb(r: u8, g: u8, b: u8) -> Color {
     Color::from_rgb8(r, g, b)
 }
 
-pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
+pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
     Color::from_rgba8(r, g, b, a)
 }
 
