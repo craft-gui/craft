@@ -11,7 +11,7 @@ use crate::CraftError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
@@ -97,7 +97,7 @@ pub trait Element: Clone + AsElement {
     fn get_id(&self) -> Option<SmolStr> {
         self.as_element_rc().borrow_mut().get_id()
     }
-
+    
     fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
         self.as_element_rc()
             .borrow_mut()
@@ -133,6 +133,11 @@ pub trait Element: Clone + AsElement {
 
     fn on_keyboard_input(self, on_keyboard_input: KeyboardInputHandler) -> Self {
         self.as_element_rc().borrow_mut().on_keyboard_input(on_keyboard_input);
+        self
+    }
+    
+    fn on_slider_value_changed(self, on_slider_value_changed: SliderValueChangedHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_slider_value_changed(on_slider_value_changed);
         self
     }
 

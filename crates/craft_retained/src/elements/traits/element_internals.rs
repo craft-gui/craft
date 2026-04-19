@@ -491,24 +491,16 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
     }
 
-    fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) {
         self.element_data_mut()
             .on_dropdown_item_selected
             .push(on_dropdown_item_selected);
-        self
     }
 
-    fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) -> &mut Self
-    where
-        Self: Sized,
-    {
+    fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) {
         self.element_data_mut()
             .on_slider_value_changed
             .push(on_slider_value_changed);
-        self
     }
 
     fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) {

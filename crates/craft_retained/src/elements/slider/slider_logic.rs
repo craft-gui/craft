@@ -21,12 +21,12 @@ impl SliderInner {
         let start = if self.get_direction() == SliderDirection::Horizontal {
             content_rectangle.left() as f64
         } else {
-            content_rectangle.top() as f64
+            content_rectangle.bottom() as f64
         };
         let end = if self.get_direction() == SliderDirection::Horizontal {
             content_rectangle.right() as f64
         } else {
-            content_rectangle.bottom() as f64
+            content_rectangle.top() as f64
         };
 
         let pointer_position_component = if self.get_direction() == SliderDirection::Horizontal {
@@ -74,7 +74,7 @@ impl SliderInner {
             content_rectangle.top() + content_rectangle.height / 2.0 - thumb_offset
         } else {
             f32::clamp(
-                content_rectangle.top() + value as f32 - thumb_offset,
+                content_rectangle.bottom() - value as f32 - thumb_offset,
                 content_rectangle.top(),
                 content_rectangle.bottom() - self.get_thumb_size() as f32,
             )

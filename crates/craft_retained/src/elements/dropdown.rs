@@ -22,7 +22,7 @@ use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
-use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, JustifyContent, Overflow, Position, Style, Unit};
+use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
 
@@ -463,7 +463,7 @@ impl Dropdown {
 
         inner.borrow_mut().element_data.create_layout_node(None);
         inner.borrow_mut().element_data.style.set_display(Display::Flex);
-   
+
         inner
             .borrow_mut()
             .element_data

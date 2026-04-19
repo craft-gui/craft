@@ -19,25 +19,17 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
 impl SliderInner {
     pub(super) fn draw_track(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         if let Some(track_color) = self.get_track_color() {
-            let mut element_rect = self.get_computed_box_transformed();
-            let thumb_pos = self.thumb_position(self.get_value());
+            let mut track_box = self.get_computed_box_transformed();
+
+            let computed_element_rect = self.get_computed_box_transformed().border_rectangle();
+            let normalized_value = (self.get_value() / self.get_max()) as f32;
 
             if self.get_direction() == SliderDirection::Horizontal {
-                element_rect.size.width = (thumb_pos.x - self.get_computed_box_transformed().position.x) as f32;
-
-                // HACK: When the value track is visible add some extra width to make sure there are no gaps in the value track color.
-                // The background track may show through on the left edge if the thumb is round.
-                if element_rect.size.width > 0.0001 {
-                    element_rect.size.width += self.get_thumb_size() as f32 / 2.0;
-                }
+                track_box.size.width = normalized_value * computed_element_rect.width;
             } else {
-                element_rect.size.height = (thumb_pos.y - self.get_computed_box_transformed().position.y) as f32;
+                track_box.size.height = normalized_value * computed_element_rect.height;
 
-                // HACK: When the value track is visible add some extra height to make sure there are no gaps in the value track color.
-                // The background track may show through on the top edge if the thumb is round.
-                if element_rect.size.height > 0.0001 {
-                    element_rect.size.height += self.get_thumb_size() as f32 / 2.0;
-                }
+                track_box.position.y = computed_element_rect.bottom() as f64 - track_box.size.height as f64;
             }
 
             // Use the specified border radius or default to the slider's border radius.
@@ -48,7 +40,7 @@ impl SliderInner {
             };
 
             let css_rounded_rect = CssRoundedRect::new(
-                element_rect.border_rectangle().to_kurbo(),
+                track_box.border_rectangle().to_kurbo(),
                 [0.0, 0.0, 0.0, 0.0],
                 thumb_radii,
             );
