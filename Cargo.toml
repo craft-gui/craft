@@ -11,6 +11,7 @@ members = [
     "examples/pointer_events",
     "examples/text",
     "examples/jsframeworkbench",
+    "examples/gallery",
     "crates/syntect_dumper",
     "crates/craft_renderer",
     "crates/craft_primitives",

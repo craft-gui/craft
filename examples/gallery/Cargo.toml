@@ -1,0 +1,31 @@
+[package]
+name = "gallery"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "gallery"
+path = "main.rs"
+
+[dependencies]
+util = { path = "../util" }
+
+[dependencies.craft_retained]
+path = "../../crates/craft_retained"
+default-features = false
+features = [
+    "accesskit",
+    "system_fonts",
+    "http_client",
+    "jpeg",
+    "png",
+    "clipboard"
+]
+
+[target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+features = ["vello_hybrid_renderer"]
+
+[target.'cfg(target_os = "android")'.dependencies.craft_renderer]
+path = "../../crates/craft_renderer"
+features = ["vello_hybrid_renderer"]
