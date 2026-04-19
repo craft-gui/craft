@@ -1,10 +1,8 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use craft_retained::elements::{Container, Dropdown, Element, Image, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use craft_retained::events::ui_events::pointer::PointerButton;
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Underline};
-use craft_retained::{Color, CraftOptions, craft_main, pct, px, rgb, rgba, auto, ResourceId};
+use craft_retained::{craft_main, pct, px, rgb, rgba, Color, CraftOptions, ResourceId};
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -138,7 +136,7 @@ pub fn multiple_windows() -> Container {
         .border_width(border_width, border_width, border_width, border_width)
         ;
 
-    open_new_window_btn.clone().on_pointer_button_down(Rc::new(|e, pb| {
+    open_new_window_btn.clone().on_pointer_button_down(Rc::new(|_e, _pb| {
         Window::new("A new window!")
             .push(
                 Text::new("Hi!")
@@ -223,7 +221,7 @@ pub fn scrollable() -> Container {
                 .color(Color::WHITE)
                 .font_size(14.0)
                 .padding(px(3.0), px(5.0), px(3.0), px(5.0))
-                .on_pointer_button_down(Rc::new(move |e, pb| {
+                .on_pointer_button_down(Rc::new(move |_e, _pb| {
                     scrollable_container.clone().scroll_to_top();
                 }))
         )
