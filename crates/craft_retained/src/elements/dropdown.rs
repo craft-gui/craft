@@ -24,7 +24,7 @@ use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, JustifyContent, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
-use crate::{px, rgba};
+use crate::{auto, px, rgba};
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
@@ -463,11 +463,7 @@ impl Dropdown {
 
         inner.borrow_mut().element_data.create_layout_node(None);
         inner.borrow_mut().element_data.style.set_display(Display::Flex);
-        inner
-            .borrow_mut()
-            .element_data
-            .style
-            .set_justify_content(Some(JustifyContent::SpaceBetween));
+   
         inner
             .borrow_mut()
             .element_data
@@ -551,7 +547,7 @@ impl Dropdown {
             .borrow_mut()
             .arrow
             .style
-            .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), px(0.0)));
+            .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), auto()));
         inner.borrow_mut().arrow.create_taffy_node();
 
         // Set the floating window's parent and the arrow to the Dropdown element.
