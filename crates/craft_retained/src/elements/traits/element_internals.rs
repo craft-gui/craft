@@ -18,7 +18,7 @@ use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
-use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, Underline, Unit};
+use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, CraftError};
 
@@ -806,6 +806,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_font_style(&mut self, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
+        self.update_taffy_style();
+    }
+
+    fn set_text_align(&mut self, text_align: TextAlign) {
+        self.style_mut().set_text_align(text_align);
         self.update_taffy_style();
     }
 

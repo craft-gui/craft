@@ -155,6 +155,18 @@ pub struct Underline {
     pub offset: Option<f32>,
 }
 
+#[derive(Copy, Clone, Default, PartialEq, Eq, Debug, Hash)]
+pub enum TextAlign {
+    #[default]
+    Start,
+    End,
+    Left,
+    Center,
+    Right,
+    Justify,
+}
+
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FontStyle {
     Normal,

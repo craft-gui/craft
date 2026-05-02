@@ -13,6 +13,7 @@ pub use image;
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, Window as WinitWindow, WindowAttributes};
+pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 
 pub use crate::craftcallback::CraftCallback;
 pub use crate::options::CraftOptions;

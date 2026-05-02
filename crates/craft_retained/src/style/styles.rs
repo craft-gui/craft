@@ -3,7 +3,6 @@ use std::fmt::Debug;
 
 use craft_primitives::geometry::TrblRectangle;
 use craft_primitives::{Color, ColorBrush};
-
 use crate::style::box_shadow::BoxShadow;
 use crate::style::*;
 
@@ -41,6 +40,7 @@ pub struct Style {
     font_size: StyleProperty<f32>,
     font_weight: StyleProperty<FontWeight>,
     font_style: StyleProperty<FontStyle>,
+    text_align: StyleProperty<TextAlign>,
     underline: StyleProperty<Option<Underline>>,
 
     overflow: StyleProperty<[Overflow; 2]>,
@@ -100,6 +100,7 @@ impl Style {
             font_size: StyleProperty::new(16.0),
             font_weight: StyleProperty::new(FontWeight::default()),
             font_style: StyleProperty::new(FontStyle::default()),
+            text_align: StyleProperty::new(TextAlign::default()),
             underline: StyleProperty::new(None),
             overflow: StyleProperty::new([Overflow::default(); 2]),
             border_color: StyleProperty::new(TrblRectangle::new_all(Color::BLACK)),
@@ -368,6 +369,16 @@ impl Style {
         self.font_style.set(val);
     }
 
+    pub fn get_text_align(&self) -> TextAlign {
+        self.text_align.get()
+    }
+
+    pub fn set_text_align(&mut self, val: TextAlign) {
+        self.is_dirty = true;
+        self.text_align.set(val);
+    }
+
+
     pub fn get_underline(&self) -> Option<Underline> {
         self.underline.get()
     }
@@ -501,6 +512,7 @@ impl Style {
             // FIXME: Allow an angle when setting the obliqueness.
             FontStyle::Oblique => parley::FontStyle::Oblique(None),
         };
+
         let brush = ColorBrush {
             color: self.get_color(),
         };

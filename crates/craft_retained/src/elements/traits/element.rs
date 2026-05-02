@@ -12,7 +12,7 @@ use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
 use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
-use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Underline, Unit};
+use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
@@ -315,6 +315,11 @@ pub trait Element: Clone + AsElement {
 
     fn font_style(self, font_style: FontStyle) -> Self {
         self.as_element_rc().borrow_mut().set_font_style(font_style);
+        self
+    }
+
+    fn text_align(self, text_align: TextAlign) -> Self {
+        self.as_element_rc().borrow_mut().set_text_align(text_align);
         self
     }
 

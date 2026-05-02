@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use craft_retained::elements::{Container, Dropdown, Element, Image, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Underline};
+use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
 use craft_retained::{craft_main, pct, px, rgb, rgba, Color, CraftOptions, ResourceId};
 use util::setup_logging;
 
@@ -60,6 +60,10 @@ pub fn text() -> Container {
             offset: None,
         }));
 
+    let left_aligned_text = Text::new("Left").text_align(TextAlign::Left);
+    let centered_text = Text::new("Center").text_align(TextAlign::Center);
+    let right_aligned_text = Text::new("Right").text_align(TextAlign::Right);
+
     container
         .display(Display::Block)
         .push(title("Text"))
@@ -68,6 +72,9 @@ pub fn text() -> Container {
         .push(italic_text)
         .push(bold_and_italic_text)
         .push(underlined_text)
+        .push(left_aligned_text)
+        .push(centered_text)
+        .push(right_aligned_text)
 }
 
 pub fn tinyvg() -> Container {

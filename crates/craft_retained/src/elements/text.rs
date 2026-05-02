@@ -40,7 +40,7 @@ use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
-use crate::style::Style;
+use crate::style::{Style, TextAlign};
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
 use crate::text::text_render_data::TextRender;
@@ -71,6 +71,7 @@ pub struct TextState {
     pub(crate) blink_period: Duration,
     text: SmolStr,
     scale_factor: f64,
+    text_align: TextAlign,
     selection: Selection,
     layout: Option<parley::Layout<ColorBrush>>,
     cache: FxHashMap<TextHashKey, Size<f32>>,
@@ -122,6 +123,7 @@ impl Default for TextState {
         Self {
             text: SmolStr::new(""),
             scale_factor: 1.0,
+            text_align: Default::default(),
             selection: Selection::default(),
             text_render: None,
             layout: None,
@@ -469,6 +471,8 @@ impl TextState {
             self.layout = Some(layout);
         }
 
+        self.text_align = style.get_text_align();
+
         let key = TextHashKey::new(known_dimensions, available_space);
 
         self.last_requested_measure_key = Some(key);
@@ -488,7 +492,9 @@ impl TextState {
             AvailableSpace::MaxContent => Some(content_widths.max),
             AvailableSpace::Definite(width) => {
                 let scaled_width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
-                Some(scaled_width.clamp(content_widths.min, content_widths.max))
+
+                // Constrain the width to max(width, content_min).
+                Some(scaled_width.max(content_widths.min))
             }
         });
 
@@ -501,9 +507,20 @@ impl TextState {
             }
         });
 
+        let alignment = match self.text_align {
+            TextAlign::Start => Alignment::Start,
+            TextAlign::End => Alignment::End,
+            TextAlign::Left => Alignment::Left,
+            TextAlign::Center => Alignment::Center,
+            TextAlign::Right => Alignment::Right,
+            TextAlign::Justify => Alignment::Justify
+        };
+
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(width_constraint);
-        layout.align(width_constraint, Alignment::Start, AlignmentOptions::default());
+        layout.align(width_constraint, alignment, AlignmentOptions {
+            align_when_overflowing: true
+        });
 
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));
