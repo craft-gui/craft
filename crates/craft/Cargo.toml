@@ -1,0 +1,11 @@
+[package]
+name = "craft"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+
+[dependencies.craft_retained]
+path = "../craft_retained"
+default-features = false
+version = "0.1.1"

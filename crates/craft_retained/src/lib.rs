@@ -15,6 +15,7 @@ pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, Window as WinitWindow, WindowAttributes};
 pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 
+pub use crate::app::queue_window_event;
 pub use crate::craftcallback::CraftCallback;
 pub use crate::options::CraftOptions;
 pub use crate::utils::craft_error::CraftError;
@@ -56,6 +57,9 @@ pub mod style;
 pub mod text;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
+pub mod winit {
+    pub use winit::*;
+}
 
 mod app;
 mod craftcallback;

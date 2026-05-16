@@ -3,9 +3,11 @@ resolver = "2"
 
 members = [
     "crates/craft_retained",
+    "crates/craft",
     "crates/craft_logger",
     "xtask",
     "examples/util",
+    "examples/counter",
     "examples/counter_retained",
     "examples/multiwindow",
     "examples/pointer_events",

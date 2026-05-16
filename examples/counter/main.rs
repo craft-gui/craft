@@ -1,0 +1,69 @@
+use std::rc::Rc;
+
+use craft::Signal;
+use craft::elements::{Conditional, Container, Element, Text, Window};
+
+use craft_retained::events::ui_events::pointer::PointerButton;
+use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
+use craft_retained::{Color, CraftOptions, craft_main, pct, px, rgb, rgba};
+
+use util::setup_logging;
+
+fn create_button(label: &str, base_color: Color, delta: i64, state: Signal<i64>) -> Container {
+    let border_color = rgb(0, 0, 0);
+    Container::new()
+        .box_shadows(vec![
+            BoxShadow::new(false, 0.0, 5.0, 5.0, 0.0, rgba(0, 0, 0, 200)),
+            BoxShadow::new(false, 0.0, 25.0, 35.0, 0.0, rgba(0, 0, 0, 150)),
+            BoxShadow::new(true, 0.0, 4.0, 4.0, 0.0, rgba(255, 255, 255, 120)),
+        ])
+        .border_width(px(0), px(0), px(0), px(0))
+        .border_color(border_color, border_color, border_color, border_color)
+        .border_radius((8.0, 8.0), (8.0, 8.0), (8.0, 8.0), (8.0, 8.0))
+        .padding(px(15), px(30), px(15), px(30))
+        .justify_content(Some(JustifyContent::Center))
+        .background_color(base_color)
+        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
+            if pointer_button_event.button == Some(PointerButton::Primary) {
+                state.set(state.get() + delta);
+                event.prevent_propagate();
+            }
+        }))
+        .push(Text::new(label).font_size(24.0).color(Color::WHITE))
+}
+
+pub fn counter() -> Container {
+    let count = Signal::new(0);
+    let is_even_signal = count.map(|val| val % 2 == 0);
+    let count_text = Text::new(&format!("Count: {}", count.get()));
+
+    let count_label = count.map(|v| format!("Count: {}", v));
+    count_text.text(count_label);
+
+    let is_even = Conditional::new(is_even_signal).push(Text::new("Even"));
+
+    let container = Container::new();
+    container
+        .flex_direction(FlexDirection::Column)
+        .justify_content(Some(JustifyContent::Center))
+        .align_items(Some(AlignItems::Center))
+        .width(pct(100))
+        .height(pct(100))
+        .gap(px(20), px(20))
+        .push(count_text)
+        .push({
+            Container::new()
+                .gap(px(20), px(20))
+                .push(create_button("-", rgb(244, 63, 94), -1, count.clone()))
+                .push(create_button("+", rgb(16, 185, 129), 1, count.clone()))
+                .push(is_even)
+        })
+}
+
+pub fn main() {
+    setup_logging();
+
+    Window::new("Counter").width(pct(100)).height(pct(100)).push(counter());
+
+    craft_main(CraftOptions::basic("Counter"));
+}

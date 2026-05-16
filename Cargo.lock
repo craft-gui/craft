@@ -951,12 +951,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "counter"
+version = "0.1.0"
+dependencies = [
+ "craft",
+ "craft_renderer",
+ "craft_retained",
+ "util",
+]
+
+[[package]]
 name = "counter_retained"
 version = "0.1.0"
 dependencies = [
  "craft_renderer",
  "craft_retained",
  "util",
+]
+
+[[package]]
+name = "craft"
+version = "0.1.0"
+dependencies = [
+ "craft_retained",
 ]
 
 [[package]]
