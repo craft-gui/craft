@@ -354,6 +354,15 @@ impl ElementInternals for TextInner {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+
+    fn set_color(&mut self, color: Color) {
+        // TODO: Fix this. Clearing cache is not needed here.
+        self.state.is_layout_dirty = true;
+        self.state.is_render_dirty = true;
+        self.mark_dirty();
+        self.style_mut().set_color(color);
+        self.update_taffy_style();
+    }
 }
 
 impl Text {
