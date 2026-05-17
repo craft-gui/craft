@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use craft_retained::elements::{Container, Dropdown, Element, Image, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
-use craft_retained::{craft_main, pct, px, rgb, rgba, Color, CraftOptions, ResourceId};
+use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -28,13 +28,11 @@ pub fn text_input() -> Container {
 pub fn dropdown() -> Container {
     let container = Container::new();
 
-
     let dropdown = Dropdown::new()
         .width(px(100.0))
         .push(Text::new("Cat"))
         .push(Text::new("Dog"))
-        .selected_item(0)
-        ;
+        .selected_item(0);
 
     container
         .min_width(px(200.0))
@@ -53,12 +51,11 @@ pub fn text() -> Container {
         .font_weight(FontWeight::BOLD)
         .font_style(FontStyle::Italic);
 
-    let underlined_text = Text::new("Underlined Text")
-        .underline(Some(Underline {
-            thickness: Some(2.0),
-            color: Color::from_rgb8(0, 255, 0),
-            offset: None,
-        }));
+    let underlined_text = Text::new("Underlined Text").underline(Some(Underline {
+        thickness: Some(2.0),
+        color: Color::from_rgb8(0, 255, 0),
+        offset: None,
+    }));
 
     let left_aligned_text = Text::new("Left").text_align(TextAlign::Left);
     let centered_text = Text::new("Center").text_align(TextAlign::Center);
@@ -80,31 +77,21 @@ pub fn text() -> Container {
 pub fn tinyvg() -> Container {
     let container = Container::new();
 
-
-    let tinyvg = TinyVg::new(ResourceId::Bytes(include_bytes!("tiger.tvg")))
+    let tinyvg = TinyVg::new(ResourceId::StaticBytes(include_bytes!("tiger.tvg")))
         .width(px(250.0))
-        .height(px(250.0))
-        ;
+        .height(px(250.0));
 
-    container
-        .display(Display::Block)
-        .push(title("TinyVG"))
-        .push(tinyvg)
+    container.display(Display::Block).push(title("TinyVG")).push(tinyvg)
 }
 
 pub fn images() -> Container {
     let container = Container::new();
 
-
     let image = Image::new(ResourceId::Url("https://picsum.photos/300/200".to_string()))
         .width(px(300.0))
-        .height(px(200.0))
-        ;
+        .height(px(200.0));
 
-    container
-        .display(Display::Block)
-        .push(title("Image"))
-        .push(image)
+    container.display(Display::Block).push(title("Image")).push(image)
 }
 
 pub fn box_shadows() -> Container {
@@ -140,16 +127,10 @@ pub fn multiple_windows() -> Container {
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
         .border_radius(border_radius, border_radius, border_radius, border_radius)
         .border_color(border_color, border_color, border_color, border_color)
-        .border_width(border_width, border_width, border_width, border_width)
-        ;
+        .border_width(border_width, border_width, border_width, border_width);
 
     open_new_window_btn.clone().on_pointer_button_down(Rc::new(|_e, _pb| {
-        Window::new("A new window!")
-            .push(
-                Text::new("Hi!")
-                    .font_size(32.0)
-                    .font_weight(FontWeight::BOLD)
-            );
+        Window::new("A new window!").push(Text::new("Hi!").font_size(32.0).font_weight(FontWeight::BOLD));
     }));
     container
         .display(Display::Block)
@@ -160,12 +141,7 @@ pub fn multiple_windows() -> Container {
 pub fn sliders() -> Container {
     let container = Container::new();
 
-
-    let slider_1 = Slider::new(20.0)
-        .value(70.0)
-        .width(px(100.0))
-        .height(px(10.0))
-        ;
+    let slider_1 = Slider::new(20.0).value(70.0).width(px(100.0)).height(px(10.0));
 
     let br = (0.0, 0.0);
     let slider_2 = Slider::new(14.0)
@@ -174,15 +150,13 @@ pub fn sliders() -> Container {
         .height(px(10.0))
         .track_color(Color::from_rgb8(120, 150, 0))
         .border_radius(br, br, br, br)
-        .thumb_border_radius(br, br, br, br)
-        ;
+        .thumb_border_radius(br, br, br, br);
 
     let slider_3 = Slider::new(20.0)
         .value(70.0)
         .width(px(10.0))
         .height(px(100.0))
-        .direction(SliderDirection::Vertical)
-        ;
+        .direction(SliderDirection::Vertical);
 
     container
         .display(Display::Flex)
@@ -201,7 +175,8 @@ pub fn scrollable() -> Container {
     let border_color = Color::BLACK;
     let border_width = px(1.0);
 
-    let scrollable_container = Container::new().display(Display::Block)
+    let scrollable_container = Container::new()
+        .display(Display::Block)
         .overflow(Overflow::Clip, Overflow::Scroll) // Enable vertical scrolling.
         .width(px(200.0))
         .max_height(px(150.0))
@@ -209,13 +184,9 @@ pub fn scrollable() -> Container {
         .border_radius(border_radius, border_radius, border_radius, border_radius)
         .border_color(border_color, border_color, border_color, border_color)
         .border_width(border_width, border_width, border_width, border_width)
-
         .push(Text::new("The Start"))
-        .push(Text::new("The Middle")
-            .margin(px(50.0), px(0.0), px(250.0), px(0.0)))
-        .push(Text::new("The End")
-            .padding(px(0.0), px(0.0), px(10.0), px(0.0))
-        );
+        .push(Text::new("The Middle").margin(px(50.0), px(0.0), px(250.0), px(0.0)))
+        .push(Text::new("The End").padding(px(0.0), px(0.0), px(10.0), px(0.0)));
 
     container
         .display(Display::Block)
@@ -230,7 +201,7 @@ pub fn scrollable() -> Container {
                 .padding(px(3.0), px(5.0), px(3.0), px(5.0))
                 .on_pointer_button_down(Rc::new(move |_e, _pb| {
                     scrollable_container.clone().scroll_to_top();
-                }))
+                })),
         )
 }
 
@@ -261,8 +232,7 @@ pub fn main() {
         .push(box_shadows())
         .push(multiple_windows())
         .push(sliders())
-        .push(scrollable())
-    ;
+        .push(scrollable());
 
     window.push(wrapper);
 

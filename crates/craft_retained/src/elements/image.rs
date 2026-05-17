@@ -128,6 +128,20 @@ impl Image {
         Self { inner }
     }
 
+    pub fn dummy() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ImageInner>>| {
+            RefCell::new(ImageInner {
+                is_image_dirty: false,
+                resource_id: ResourceId::DUMMY,
+                element_data: ElementData::new(me.clone(), false),
+            })
+        });
+        let layout_context = Some(LayoutContext::Image(ImageContext::new(ResourceId::DUMMY)));
+        inner.borrow_mut().element_data.create_layout_node(layout_context);
+
+        Self { inner }
+    }
+
     pub fn image(self, resource_id: ResourceId) -> Self {
         self.inner.borrow_mut().image(resource_id);
         self
@@ -142,6 +156,10 @@ impl ImageInner {
     pub fn image(&mut self, resource_id: ResourceId) {
         self.is_image_dirty = true;
         self.resource_id = resource_id.clone();
+
+        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
+            pending_resources.push_back((resource_id.clone(), ResourceType::Image));
+        });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let context = LayoutContext::Image(ImageContext::new(resource_id));

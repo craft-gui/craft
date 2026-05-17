@@ -2,9 +2,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use craft_retained::Color;
-use craft_retained::elements::{AsElement, Element, ElementInternals, SliderDirection};
+use craft_retained::elements::{AsElement, ElementInternals, SliderDirection};
 
 use crate::signals::Bindable;
+use crate::elements::Element;
 
 #[derive(Clone)]
 pub struct Slider {

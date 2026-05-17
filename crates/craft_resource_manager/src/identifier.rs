@@ -4,14 +4,15 @@ use std::{fmt, fs};
 
 #[cfg(feature = "http_client")]
 use crate::ResourceId::Url;
-use crate::ResourceId::{Bytes, File};
+use crate::ResourceId::{OwnedBytes, StaticBytes, File};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ResourceId {
     #[cfg(feature = "http_client")]
     Url(String),
     File(PathBuf),
-    Bytes(&'static [u8]),
+    OwnedBytes(Vec<u8>),
+    StaticBytes(&'static [u8]),
 }
 
 impl Display for ResourceId {
@@ -20,12 +21,17 @@ impl Display for ResourceId {
             #[cfg(feature = "http_client")]
             Url(url) => write!(f, "URL: {url}"),
             File(file_path) => write!(f, "File: {:?}", file_path.as_os_str().to_str()),
-            Bytes(bytes) => write!(f, "Bytes: {:?}", bytes.as_ptr()),
+            OwnedBytes(bytes) => write!(f, "Owned Bytes: {:?}", bytes.as_ptr()),
+            StaticBytes(bytes) => write!(f, "Static Bytes: {:?}", bytes.as_ptr()),
         }
     }
 }
 
+static DUMMY_BYTES: [u8; 0] = [0u8; 0];
+
 impl ResourceId {
+    pub const DUMMY: ResourceId = ResourceId::StaticBytes(&DUMMY_BYTES);
+
     pub async fn fetch_data_from_resource_id(&self) -> Option<Vec<u8>> {
         match self {
             #[cfg(feature = "http_client")]
@@ -53,7 +59,8 @@ impl ResourceId {
                 //tracing::warn!("Failed to find the local file: {:?}", path.as_os_str().to_str());
                 None
             }
-            Bytes(bytes) => Some(bytes.to_vec()),
+            StaticBytes(bytes) => Some(bytes.to_vec()),
+            OwnedBytes(bytes) => Some(bytes.clone()),
         }
     }
 }
