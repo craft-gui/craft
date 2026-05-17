@@ -8,21 +8,21 @@ use crate::signals::Bindable;
 use crate::elements::Element;
 
 #[derive(Clone)]
-pub struct Image {
-    pub inner: craft_retained::elements::Image,
+pub struct TinyVg {
+    pub inner: craft_retained::elements::TinyVg,
 }
 
-impl AsElement for Image {
+impl AsElement for TinyVg {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.inner.clone()
     }
 }
 
-impl Element for Image {}
+impl Element for TinyVg {}
 
-impl Image {
+impl TinyVg {
     pub fn new(resource_id: impl Bindable<ResourceId>) -> Self {
-        let inner = craft_retained::elements::Image::dummy();
+        let inner = craft_retained::elements::TinyVg::dummy();
         let inner_clone = inner.clone();
         resource_id.bind(move |resource_id| {
             inner_clone.clone().resource_id(resource_id);

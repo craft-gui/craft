@@ -142,18 +142,18 @@ impl Image {
         Self { inner }
     }
 
-    pub fn image(self, resource_id: ResourceId) -> Self {
-        self.inner.borrow_mut().image(resource_id);
+    pub fn resource_id(self, resource_id: ResourceId) -> Self {
+        self.inner.borrow_mut().set_image(resource_id);
         self
     }
 
-    pub fn get_image(&self) -> ResourceId {
-        self.inner.borrow().get_image().clone()
+    pub fn get_resource_id(&self) -> ResourceId {
+        self.inner.borrow().get_resource_id().clone()
     }
 }
 
 impl ImageInner {
-    pub fn image(&mut self, resource_id: ResourceId) {
+    pub fn set_image(&mut self, resource_id: ResourceId) {
         self.is_image_dirty = true;
         self.resource_id = resource_id.clone();
 
@@ -172,7 +172,7 @@ impl ImageInner {
         });
     }
 
-    pub fn get_image(&self) -> &ResourceId {
+    pub fn get_resource_id(&self) -> &ResourceId {
         &self.resource_id
     }
 }

@@ -134,7 +134,22 @@ impl TinyVg {
         Self { inner }
     }
 
-    pub fn set_resource_id(self, resource_id: ResourceId) -> Self {
+    pub fn dummy() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
+            RefCell::new(TinyVgInner {
+                is_tiny_vg_dirty: false,
+                resource_id: ResourceId::DUMMY,
+                element_data: ElementData::new(me.clone(), false),
+            })
+        });
+        let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(ResourceId::DUMMY)));
+        inner.borrow_mut().element_data.create_layout_node(layout_context);
+        inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
+
+        Self { inner }
+    }
+
+    pub fn resource_id(self, resource_id: ResourceId) -> Self {
         self.inner.borrow_mut().set_resource_id(resource_id);
         self
     }
@@ -148,6 +163,10 @@ impl TinyVgInner {
     pub fn set_resource_id(&mut self, resource_id: ResourceId) {
         self.is_tiny_vg_dirty = true;
         self.resource_id = resource_id.clone();
+
+        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
+            pending_resources.push_back((resource_id.clone(), ResourceType::TinyVg));
+        });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
