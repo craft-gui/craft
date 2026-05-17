@@ -13,7 +13,7 @@ use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
-use ui_events::pointer::{PointerButton};
+use ui_events::pointer::{PointerButton, PointerId};
 
 use winit::event::Ime;
 
@@ -364,6 +364,7 @@ impl ElementInternals for TextInputInner {
             }
             EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
+                self.set_pointer_capture(PointerId::new(1).unwrap());
                 self.state.pointer_down(text_context);
             }
             EventKind::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
