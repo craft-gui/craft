@@ -13,7 +13,7 @@ use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
-use ui_events::pointer::PointerButton;
+use ui_events::pointer::{PointerButton};
 
 use winit::event::Ime;
 
