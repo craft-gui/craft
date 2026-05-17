@@ -2,8 +2,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use craft_retained::elements::{AsElement, ElementInternals};
-use craft_retained::{RendererType, WinitWindow};
 use craft_retained::winit::event_loop::ActiveEventLoop;
+use craft_retained::{RendererType, WinitWindow};
+
 use crate::elements::element::Element;
 
 #[derive(Clone)]
@@ -20,7 +21,7 @@ impl AsElement for Window {
 }
 
 impl Window {
-    pub fn new(title: &str) -> Self{
+    pub fn new(title: &str) -> Self {
         Self {
             inner: craft_retained::elements::Window::new(title),
         }
