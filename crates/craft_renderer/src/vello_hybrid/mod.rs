@@ -10,17 +10,17 @@ use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceId, ResourceManager};
+use glifo::Glyph;
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 use peniko::{BlendMode, Compose, Fill, Mix};
 use vello_common::color::PremulRgba8;
 use vello_common::filter_effects::{Filter, FilterFunction};
-use vello_common::glyph::Glyph;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
-use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Scene};
-use wgpu::TextureFormat;
+use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Resources, Scene, TextureBindings};
+use wgpu::{CurrentSurfaceTexture, TextureFormat};
 use winit::window::Window;
 
 use crate::RenderCommand;
@@ -65,6 +65,12 @@ pub struct VelloHybridRenderer {
     surface_clear_color: Color,
 
     images: HashMap<ResourceId, (ImageId, Option<DateTime<Utc>>)>,
+
+    resources: Resources,
+
+    window: Arc<Window>,
+
+    texture_bindings: TextureBindings,
 }
 
 fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
@@ -93,6 +99,9 @@ impl VelloHybridRenderer {
             scene: Scene::new(width as u16, height as u16),
             surface_clear_color: Color::WHITE,
             images: HashMap::new(),
+            resources: Resources::new(),
+            window: window.clone(),
+            texture_bindings: TextureBindings::new(),
         };
 
         let surface = vello_renderer
@@ -307,6 +316,7 @@ impl CraftRenderer for VelloHybridRenderer {
                             let pixmap = Pixmap::from_parts(premul_data, image.width() as u16, image.height() as u16);
 
                             let image_id = renderer.upload_image(
+                                &mut self.resources,
                                 &device_handle.device,
                                 &device_handle.queue,
                                 &mut encoder,
@@ -330,7 +340,7 @@ impl CraftRenderer for VelloHybridRenderer {
                         scene.set_paint(PaintType::Image(vello_common::paint::Image {
                             image: ImageSource::OpaqueId {
                                 id: image_id,
-                                may_have_opacities: true,
+                                may_have_transparency: true,
                             },
                             sampler: Default::default(),
                         }));
@@ -424,7 +434,9 @@ impl CraftRenderer for VelloHybridRenderer {
                                     .unwrap_or_else(|| item.brush.color),
                             ));
 
-                            let glyph_run_builder = scene.glyph_run(&item.font).font_size(item.font_size);
+                            let glyph_run_builder = scene
+                                .glyph_run(&mut self.resources, &item.font)
+                                .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -484,6 +496,7 @@ impl CraftRenderer for VelloHybridRenderer {
             // Note: Expired images will have an entry in the images hashmap, but with a new ImageId.
             // Meaning, that we need to delete the detached/abandoned expired image id here.
             renderer.destroy_image(
+                &mut self.resources,
                 &device_handle.device,
                 &device_handle.queue,
                 &mut encoder,
@@ -498,7 +511,13 @@ impl CraftRenderer for VelloHybridRenderer {
 
             // Delete the culled image, only if it hasn't already been deleted when we looped over the expired images.
             if !seen && !expired {
-                renderer.destroy_image(&device_handle.device, &device_handle.queue, &mut encoder, *image_id);
+                renderer.destroy_image(
+                    &mut self.resources,
+                    &device_handle.device,
+                    &device_handle.queue,
+                    &mut encoder,
+                    *image_id,
+                );
                 images_were_uploaded = true;
             }
 
@@ -533,10 +552,22 @@ impl CraftRenderer for VelloHybridRenderer {
         let device_handle = &self.context.devices[surface.dev_id];
 
         // Get the surface's texture
-        let surface_texture = surface
-            .surface
-            .get_current_texture()
-            .expect("failed to get surface texture");
+        let surface_texture = match surface.surface.get_current_texture() {
+            CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
+            CurrentSurfaceTexture::Outdated | CurrentSurfaceTexture::Suboptimal(_) => {
+                self.context.configure_surface(surface);
+                self.window.request_redraw();
+                return;
+            }
+            CurrentSurfaceTexture::Occluded | CurrentSurfaceTexture::Timeout => {
+                self.window.request_redraw();
+                return;
+            }
+            CurrentSurfaceTexture::Lost => panic!("Surface was lost"),
+            CurrentSurfaceTexture::Validation => {
+                panic!("Validation error getting surface")
+            }
+        };
 
         let render_size = RenderSize {
             width: surface.config.width,
@@ -557,11 +588,13 @@ impl CraftRenderer for VelloHybridRenderer {
             .unwrap()
             .render(
                 &self.scene,
+                &mut self.resources,
                 &device_handle.device,
                 &device_handle.queue,
                 &mut encoder,
                 &render_size,
                 &texture_view,
+                &self.texture_bindings,
             )
             .unwrap();
 

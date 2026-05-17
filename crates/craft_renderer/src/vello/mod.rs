@@ -14,9 +14,9 @@ use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::{AaConfig, Error, Glyph, RendererOptions, Scene, kurbo, peniko};
 
+use wgpu::hal::SurfaceError;
 use wgpu::util::TextureBlitter;
-use wgpu::{Adapter, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceError, SurfaceTexture, Texture, TextureFormat, TextureView};
-
+use wgpu::{Adapter, CurrentSurfaceTexture, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTexture, Texture, TextureFormat, TextureView};
 use winit::window::Window;
 
 use crate::RenderCommand;
@@ -33,6 +33,7 @@ pub struct RenderSurface {
     pub surface_config: SurfaceConfiguration,
     pub surface_texture: wgpu::Texture,
     pub surface_view: wgpu::TextureView,
+    window: Arc<Window>,
 }
 
 pub struct VelloRenderer {
@@ -79,26 +80,21 @@ impl RenderSurface {
 
     /// Returns the current swapchain `SurfaceTexture`.
     /// Unlike the cached textures that we store, this always fetches a fresh, up-to-date frame.
-    pub fn get_swapchain_surface_texture(
-        &mut self,
-        device: &Device,
-        surface_width: u32,
-        surface_height: u32,
-    ) -> SurfaceTexture {
+    pub fn get_swapchain_surface_texture(&mut self, device: &Device) -> Option<SurfaceTexture> {
         match self.surface.get_current_texture() {
-            Ok(texture) => texture,
-            Err(err) => {
-                match err {
-                    SurfaceError::Timeout | SurfaceError::Outdated | SurfaceError::Lost => {
-                        self.resize(device, surface_width, surface_height);
-                    }
-                    SurfaceError::OutOfMemory | SurfaceError::Other => {
-                        panic!("Failed to acquire surface texture: {err:?}");
-                    }
-                }
-                self.surface
-                    .get_current_texture()
-                    .expect("Failed to get surface texture after resize")
+            CurrentSurfaceTexture::Success(surface_texture) => Some(surface_texture),
+            CurrentSurfaceTexture::Outdated | CurrentSurfaceTexture::Suboptimal(_) => {
+                self.surface.configure(&device, &self.surface_config);
+                self.window.request_redraw();
+                return None;
+            }
+            CurrentSurfaceTexture::Occluded | CurrentSurfaceTexture::Timeout => {
+                self.window.request_redraw();
+                return None;
+            }
+            CurrentSurfaceTexture::Lost => panic!("Surface was lost"),
+            CurrentSurfaceTexture::Validation => {
+                panic!("Validation error getting surface")
             }
         }
     }
@@ -128,6 +124,7 @@ impl RenderSurface {
         surface: Surface<'static>,
         surface_width: u32,
         surface_height: u32,
+        window: Arc<Window>,
     ) -> RenderSurface {
         let capabilities = surface.get_capabilities(adapter);
         let format = capabilities
@@ -157,6 +154,7 @@ impl RenderSurface {
             surface_config,
             surface_texture,
             surface_view,
+            window,
         }
     }
 }
@@ -191,11 +189,12 @@ fn new_instance() -> Instance {
     let backends = wgpu::Backends::from_env().unwrap_or_default();
     let flags = wgpu::InstanceFlags::from_build_config().with_env();
     let backend_options = wgpu::BackendOptions::from_env_or_default();
-    Instance::new(&wgpu::InstanceDescriptor {
+    Instance::new(wgpu::InstanceDescriptor {
         backends,
         flags,
         memory_budget_thresholds: Default::default(),
         backend_options,
+        display: None,
     })
 }
 
@@ -227,9 +226,18 @@ impl VelloRenderer {
         let window_size = window.inner_size();
 
         let instance = new_instance();
-        let surface = instance.create_surface(window).expect("Failed to create a surface.");
+        let surface = instance
+            .create_surface(window.clone())
+            .expect("Failed to create a surface.");
         let (device, queue, adapter) = new_device(&instance, &surface).await;
-        let render_surface = RenderSurface::new(&device, &adapter, surface, window_size.width, window_size.height);
+        let render_surface = RenderSurface::new(
+            &device,
+            &adapter,
+            surface,
+            window_size.width,
+            window_size.height,
+            window.clone(),
+        );
 
         VelloRenderer {
             texture_blitter: TextureBlitter::new(&device, render_surface.surface_config.format),
@@ -507,9 +515,11 @@ impl Renderer for VelloRenderer {
             .expect("failed to render to texture");
 
         if !self.render_into_texture {
-            let swapchain_surface_texture =
-                self.render_surface
-                    .get_swapchain_surface_texture(&self.device, width, height);
+            let swapchain_surface_texture = self.render_surface.get_swapchain_surface_texture(&self.device);
+            if swapchain_surface_texture.is_none() {
+                return;
+            }
+            let swapchain_surface_texture = swapchain_surface_texture.unwrap();
             let swapchain_surface_texture_view = swapchain_surface_texture
                 .texture
                 .create_view(&wgpu::TextureViewDescriptor::default());

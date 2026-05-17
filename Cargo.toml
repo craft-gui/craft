@@ -43,13 +43,13 @@ tracing = { version = "0.1.41" }
 tracing-subscriber = {version = "0.3.19"}
 
 [workspace.dependencies.peniko]
-version = "0.6.0"
+version = "0.6.1"
 default-features = false
 features = ["std"]
 
 
 [workspace.dependencies.kurbo]
-version = "0.13.0"
+version = "0.13.1"
 default-features = false
 features = ["std"]
 
@@ -59,7 +59,7 @@ default-features = false
 features = []
 
 [workspace.dependencies.tokio]
-version = "1.51.0"
+version = "1.52.3"
 default-features = false
 features = ["sync", "time"]
 

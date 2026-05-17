@@ -14,11 +14,11 @@ use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
 
 use softbuffer::Buffer;
 
+use glifo::Glyph;
 use vello_common::filter_effects::{Filter, FilterFunction};
-use vello_common::glyph::Glyph;
 use vello_common::kurbo::Stroke;
 use vello_common::paint::PaintType;
-use vello_cpu::{Pixmap, RenderContext};
+use vello_cpu::{Pixmap, RenderContext, Resources};
 
 use winit::window::Window;
 
@@ -40,6 +40,7 @@ pub(crate) struct VelloCpuRenderer {
     clear_color: Color,
     window_width: u16,
     window_height: u16,
+    resources: Resources,
 }
 
 pub struct Surface {
@@ -104,6 +105,7 @@ impl VelloCpuRenderer {
             clear_color: Color::WHITE,
             window_width: width,
             window_height: height,
+            resources: Resources::new(),
         }
     }
 }
@@ -301,7 +303,10 @@ impl Renderer for VelloCpuRenderer {
                                     .unwrap_or_else(|| item.brush.color),
                             ));
 
-                            let glyph_run_builder = self.render_context.glyph_run(&item.font).font_size(item.font_size);
+                            let glyph_run_builder = self
+                                .render_context
+                                .glyph_run(&mut self.resources, &item.font)
+                                .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
                                 x: glyph.x,
@@ -356,7 +361,8 @@ impl Renderer for VelloCpuRenderer {
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
         self.render_context.flush();
-        self.render_context.render_to_pixmap(&mut self.pixmap);
+        self.render_context
+            .render_to_pixmap(&mut self.resources, &mut self.pixmap);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
         self.render_context.reset();
