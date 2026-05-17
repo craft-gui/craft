@@ -14,7 +14,6 @@ use vello::kurbo::{Affine, Rect, Stroke};
 use vello::peniko::{BlendMode, Blob, Fill};
 use vello::{AaConfig, Error, Glyph, RendererOptions, Scene, kurbo, peniko};
 
-use wgpu::hal::SurfaceError;
 use wgpu::util::TextureBlitter;
 use wgpu::{Adapter, CurrentSurfaceTexture, Device, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTexture, Texture, TextureFormat, TextureView};
 use winit::window::Window;

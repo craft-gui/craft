@@ -122,35 +122,35 @@ fn hero_features() -> Container {
                     hero_item(
                         "Reactive",
                         "When your data changes, we automatically re-run your view function.",
-                        ResourceId::Bytes(include_bytes!("../assets/electric_bolt_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::StaticBytes(include_bytes!("../assets/electric_bolt_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Components",
                         "Components are reusable blocks that manage their own state and define both how they are rendered and how they respond to updates.",
-                        ResourceId::Bytes(include_bytes!("../assets/view_comfy_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::StaticBytes(include_bytes!("../assets/view_comfy_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Pure Rust without macros",
                         "No macros.",
-                        ResourceId::Bytes(include_bytes!("../assets/code_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::StaticBytes(include_bytes!("../assets/code_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Web-like styling",
                         "We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.",
-                        ResourceId::Bytes(include_bytes!("../assets/brush_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::StaticBytes(include_bytes!("../assets/brush_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
                 .push(
                     hero_item(
                         "Cross Platform",
                         "Currently we support Windows, macOS, Linux, Web, and Android.",
-                        ResourceId::Bytes(include_bytes!("../assets/devices_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
+                        ResourceId::StaticBytes(include_bytes!("../assets/devices_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )
 
