@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{AsElement, ElementInternals, WindowInternal};
+use craft_retained::elements::{AsElement, ElementInternals};
 use craft_retained::{RendererType, WinitWindow};
 use craft_retained::winit::event_loop::ActiveEventLoop;
 use crate::elements::element::Element;
