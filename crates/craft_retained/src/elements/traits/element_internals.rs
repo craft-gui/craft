@@ -694,15 +694,53 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_taffy_style();
     }
 
+    fn set_margin_all(&mut self, value: Unit) {
+        self.set_margin(value, value, value, value);
+    }
+
+    fn set_margin_horizontal(&mut self, value: Unit) {
+        let margin = self.style().get_margin();
+        self.set_margin(margin.top, value, margin.bottom, value);
+    }
+
+    fn set_margin_vertical(&mut self, value: Unit) {
+        let margin = self.style().get_margin();
+        self.set_margin(value, margin.right, value, margin.left);
+    }
+
     fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_padding(TrblRectangle::new(top, right, bottom, left));
         self.update_taffy_style();
     }
 
-    fn set_gap(&mut self, row_gap: Unit, column_gap: Unit) {
-        self.style_mut().set_gap([row_gap, column_gap]);
+    fn set_padding_all(&mut self, value: Unit) {
+        self.set_padding(value, value, value, value);
+    }
+
+    fn set_padding_horizontal(&mut self, value: Unit) {
+        let padding = self.style().get_padding();
+        self.set_padding(padding.top, value, padding.bottom, value);
+    }
+
+    fn set_padding_vertical(&mut self, value: Unit) {
+        let padding = self.style().get_padding();
+        self.set_padding(value, padding.right, value, padding.left);
+    }
+
+    fn set_gap(&mut self, column_gap: Unit, row_gap: Unit) {
+        self.style_mut().set_gap([column_gap, row_gap]);
         self.update_taffy_style();
+    }
+
+    fn set_row_gap(&mut self, value: Unit) {
+        let column_gap = self.style().get_gap()[0];
+        self.set_gap(column_gap, value);
+    }
+
+    fn set_column_gap(&mut self, value: Unit) {
+        let row_gap = self.style().get_gap()[1];
+        self.set_gap(value, row_gap);
     }
 
     fn set_inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
@@ -824,9 +862,33 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_taffy_style();
     }
 
+    fn set_overflow_x(&mut self, overflow: Overflow) {
+        let overflow_y = self.style().get_overflow()[1];
+        self.set_overflow(overflow, overflow_y);
+    }
+
+    fn set_overflow_y(&mut self, overflow: Overflow) {
+        let overflow_x = self.style().get_overflow()[0];
+        self.set_overflow(overflow_x, overflow);
+    }
+
     fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
         self.style_mut()
             .set_border_color(TrblRectangle::new(top, right, bottom, left));
+    }
+
+    fn set_border_color_all(&mut self, value: Color) {
+        self.set_border_color(value, value, value, value);
+    }
+
+    fn set_border_color_vertical(&mut self, value: Color) {
+        let border_color = self.style().get_border_color();
+        self.set_border_color(value, border_color.right, value, border_color.left);
+    }
+
+    fn set_border_color_horizontal(&mut self, value: Color) {
+        let border_color = self.style().get_border_color();
+        self.set_border_color(border_color.top, value, border_color.bottom, value);
     }
 
     fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
@@ -835,16 +897,37 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_taffy_style();
     }
 
-    fn border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> &mut Self
-    where
-        Self: Sized,
-    {
-        self.set_border_radius(top, right, bottom, left);
-        self
+    fn set_border_width_all(&mut self, value: Unit) {
+        self.set_border_width(value, value, value, value);
+    }
+
+    fn set_border_width_vertical(&mut self, value: Unit) {
+        let border_width = self.style().get_border_width();
+        self.set_border_width(value, border_width.right, value, border_width.left);
+    }
+
+    fn set_border_width_horizontal(&mut self, value: Unit) {
+        let border_width = self.style().get_border_width();
+        self.set_border_width(border_width.top, value, border_width.bottom, value);
     }
 
     fn set_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_border_radius([top, right, bottom, left]);
+        self.update_taffy_style();
+    }
+
+    fn set_border_radius_all(&mut self, value: (f32, f32)) {
+        self.set_border_radius(value, value, value, value);
+    }
+
+    fn set_border_radius_vertical(&mut self, value: (f32, f32)) {
+        let border_radius = self.style().get_border_radius();
+        self.set_border_radius(value, border_radius[1], value, border_radius[3]);
+    }
+
+    fn set_border_radius_horizontal(&mut self, value: (f32, f32)) {
+        let border_radius = self.style().get_border_radius();
+        self.set_border_radius(border_radius[0], value, border_radius[2], value);
     }
 
     fn set_scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) {

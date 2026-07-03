@@ -161,7 +161,7 @@ pub fn sliders() -> Container {
     container
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .gap(px(15.0), px(15.0))
+        .row_gap(px(15.0))
         .push(title("Sliders"))
         .push(slider_1)
         .push(slider_2)
@@ -171,19 +171,15 @@ pub fn sliders() -> Container {
 pub fn scrollable() -> Container {
     let container = Container::new();
 
-    let border_radius = (1.0, 1.0);
-    let border_color = Color::BLACK;
-    let border_width = px(1.0);
-
     let scrollable_container = Container::new()
         .display(Display::Block)
-        .overflow(Overflow::Clip, Overflow::Scroll) // Enable vertical scrolling.
+        .overflow_y(Overflow::Scroll) // Enable vertical scrolling.
         .width(px(200.0))
         .max_height(px(150.0))
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
-        .border_radius(border_radius, border_radius, border_radius, border_radius)
-        .border_color(border_color, border_color, border_color, border_color)
-        .border_width(border_width, border_width, border_width, border_width)
+        .border_radius_all((1.0, 1.0))
+        .border_color_all(Color::BLACK)
+        .border_width_all(px(1.0))
         .push(Text::new("The Start"))
         .push(Text::new("The Middle").margin(px(50.0), px(0.0), px(250.0), px(0.0)))
         .push(Text::new("The End").padding(px(0.0), px(0.0), px(10.0), px(0.0)));
@@ -219,7 +215,7 @@ pub fn main() {
     let wrapper = Container::new()
         .display(Display::Flex)
         .wrap(FlexWrap::Wrap)
-        .padding(px(10.0), px(10.0), px(10.0), px(10.0))
+        .padding_all(px(10.0))
         .gap(px(40.0), px(50.0))
         .width(pct(100))
         .height(pct(100))

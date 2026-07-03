@@ -178,7 +178,7 @@ impl SliderInner {
 
         me.borrow_mut().set_background_color(palette::css::LIGHT_GRAY);
         let border_radius = 25.0;
-        me.borrow_mut().border_radius(
+        me.borrow_mut().set_border_radius(
             (border_radius, border_radius),
             (border_radius, border_radius),
             (border_radius, border_radius),

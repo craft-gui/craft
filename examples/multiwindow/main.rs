@@ -32,12 +32,11 @@ fn create_button(
     state: Rc<RefCell<Counter>>,
     count_text: Text,
 ) -> Container {
-    let border_color = rgb(0, 0, 0);
     let label = Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false);
     Container::new()
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
-        .border_color(border_color, border_color, border_color, border_color)
-        .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
+        .border_color_all(rgb(0, 0, 0))
+        .border_radius_all((10.0, 10.0))
         .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
         .display(Display::Flex)
         .justify_content(Some(JustifyContent::Center))
@@ -61,7 +60,7 @@ pub fn counter() -> Window {
     let button = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .column_gap(Unit::Px(20.0))
         .push(create_button(
             "-",
             rgb(244, 67, 54),
@@ -84,7 +83,7 @@ pub fn counter() -> Window {
         .align_items(Some(AlignItems::Center))
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .row_gap(Unit::Px(20.0))
         .push(count_text)
         .font_size(72.0)
         .color(rgb(50, 50, 50))

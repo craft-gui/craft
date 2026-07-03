@@ -244,6 +244,36 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn margin_all(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_margin_all(v);
+        });
+
+        self
+    }
+
+    fn margin_vertical(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_margin_vertical(v);
+        });
+
+        self
+    }
+
+    fn margin_horizontal(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_margin_horizontal(v);
+        });
+
+        self
+    }
+
     fn padding(
         self,
         top: impl Bindable<Unit> + Clone,
@@ -282,7 +312,37 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn gap(self, row_gap: impl Bindable<Unit> + Clone, column_gap: impl Bindable<Unit> + Clone) -> Self {
+    fn padding_all(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_padding_all(v);
+        });
+
+        self
+    }
+
+    fn padding_vertical(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_padding_vertical(v);
+        });
+
+        self
+    }
+
+    fn padding_horizontal(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_padding_horizontal(v);
+        });
+
+        self
+    }
+
+    fn gap(self, column_gap: impl Bindable<Unit> + Clone, row_gap: impl Bindable<Unit> + Clone) -> Self {
         let element = self.as_element_rc();
 
         let c0 = column_gap.clone();
@@ -292,8 +352,28 @@ pub trait Element: Clone + AsElement {
             let c = c0.clone();
 
             c.bind(move |c| {
-                element.borrow_mut().set_gap(r, c);
+                element.borrow_mut().set_gap(c, r);
             });
+        });
+
+        self
+    }
+
+    fn row_gap(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_row_gap(v);
+        });
+
+        self
+    }
+
+    fn column_gap(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+
+        value.bind(move |v| {
+            element.borrow_mut().set_column_gap(v);
         });
 
         self
@@ -517,6 +597,22 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn overflow_x(self, value: impl Bindable<Overflow> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |x| {
+            element.borrow_mut().set_overflow_x(x);
+        });
+        self
+    }
+
+    fn overflow_y(self, value: impl Bindable<Overflow> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |y| {
+            element.borrow_mut().set_overflow_y(y);
+        });
+        self
+    }
+
     fn border_color(
         self,
         top: impl Bindable<Color> + Clone,
@@ -552,6 +648,30 @@ pub trait Element: Clone + AsElement {
             });
         });
 
+        self
+    }
+
+    fn border_color_all(self, color: impl Bindable<Color> + Clone) -> Self {
+        let element = self.as_element_rc();
+        color.bind(move |c| {
+            element.borrow_mut().set_border_color_all(c);
+        });
+        self
+    }
+
+    fn border_color_vertical(self, color: impl Bindable<Color> + Clone) -> Self {
+        let element = self.as_element_rc();
+        color.bind(move |c| {
+            element.borrow_mut().set_border_color_vertical(c);
+        });
+        self
+    }
+
+    fn border_color_horizontal(self, color: impl Bindable<Color> + Clone) -> Self {
+        let element = self.as_element_rc();
+        color.bind(move |c| {
+            element.borrow_mut().set_border_color_horizontal(c);
+        });
         self
     }
 
@@ -593,6 +713,31 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn border_width_all(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_width_all(v);
+        });
+        self
+    }
+
+    fn border_width_vertical(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_width_vertical(v);
+        });
+        self
+    }
+
+    fn border_width_horizontal(self, value: impl Bindable<Unit> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_width_horizontal(v);
+        });
+        self
+    }
+
+
     fn border_radius(
         self,
         top: impl Bindable<(f32, f32)> + Clone,
@@ -628,6 +773,30 @@ pub trait Element: Clone + AsElement {
             });
         });
 
+        self
+    }
+
+    fn border_radius_all(self, value: impl Bindable<(f32, f32)> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_radius_all(v);
+        });
+        self
+    }
+
+    fn border_radius_vertical(self, value: impl Bindable<(f32, f32)> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_radius_vertical(v);
+        });
+        self
+    }
+
+    fn border_radius_horizontal(self, value: impl Bindable<(f32, f32)> + Clone) -> Self {
+        let element = self.as_element_rc();
+        value.bind(move |v| {
+            element.borrow_mut().set_border_radius_horizontal(v);
+        });
         self
     }
 

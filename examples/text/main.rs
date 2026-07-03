@@ -20,12 +20,12 @@ pub fn text() -> Container {
         .align_items(Some(AlignItems::Center))
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .row_gap(Unit::Px(20.0))
         .font_size(72.0)
         .color(rgb(50, 50, 50))
         .push(
             TextInput::new(LOREM_IPSUM)
-                .overflow(Overflow::Visible, Overflow::Scroll)
+                .overflow_y(Overflow::Scroll)
                 .width(Unit::Px(600.0))
                 .height(Unit::Px(600.0))
                 .display(Display::Block),

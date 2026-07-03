@@ -138,12 +138,7 @@ impl State {
             .flex_direction(FlexDirection::Row)
             .width(Unit::Auto)
             .padding(Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0))
-            .border_color(
-                Color::from_rgb8(230, 230, 230),
-                Color::from_rgb8(230, 230, 230),
-                Color::from_rgb8(230, 230, 230),
-                Color::from_rgb8(230, 230, 230),
-            )
+            .border_color_all(Color::from_rgb8(230, 230, 230), )
             .push(Text::new(&data.id.to_string()).width(Unit::Px(60.0)).margin(
                 Unit::Px(0.0),
                 Unit::Px(12.0),
@@ -291,7 +286,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .height(Unit::Percentage(100.0))
         .flex_direction(FlexDirection::Column)
         .align_items(Some(AlignItems::Start))
-        .padding(Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0), Unit::Px(15.0));
+        .padding_all(Unit::Px(15.0));
 
     let text = Text::new(r#"Craft-"keyed""#).font_size(32.0).color(Color::BLACK);
 
@@ -307,7 +302,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .background_color(rgb(238, 238, 238))
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
-        .border_radius((6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0))
+        .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(60.0), Unit::Px(10.0), Unit::Px(60.0))
         .push(text_container)
         .width(Unit::Percentage(100.0))
@@ -366,10 +361,9 @@ fn build_button<F>(label: &str, callback: F) -> Container
 where
     F: Fn(&mut Event, &PointerButtonEvent) + 'static,
 {
-    let border_color = Color::from_rgb8(111, 111, 111);
     Container::new()
         .background_color(Color::from_rgb8(211, 211, 211))
-        .border_color(border_color, border_color, border_color, border_color)
+        .border_color_all(Color::from_rgb8(111, 111, 111))
         .flex_direction(FlexDirection::Row)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
@@ -378,7 +372,7 @@ where
         .height(Unit::Px(35.0))
         .background_color(Color::from_rgb8(51, 122, 183))
         .color(WHITE)
-        .border_radius((4.0, 4.0), (4.0, 4.0), (4.0, 4.0), (4.0, 4.0))
+        .border_radius_all((4.0, 4.0))
         .push(Text::new(label).selectable(false).color(Color::WHITE))
         .on_pointer_button_up(Rc::new(callback))
 }
