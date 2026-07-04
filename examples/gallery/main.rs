@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Dropdown, Element, Image, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use craft_retained::elements::{Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
 use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
+
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -205,6 +207,53 @@ pub fn scrollable() -> Container {
         )
 }
 
+pub fn radio_buttons() -> Container {
+    let active_color = Rc::new(RefCell::new("red".to_string()));
+
+    let green = Image::new(ResourceId::Url(
+        "https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string(),
+    ))
+        .border_width(px(1), px(1), px(1), px(1))
+        .border_color(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+    Container::new()
+        .width(pct(100.0))
+        .height(pct(100.0))
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .align_items(Some(AlignItems::Center))
+        .justify_content(Some(JustifyContent::Center))
+        .push(
+            RadioGroup::new("Pick a color")
+                .display(Display::Flex)
+                .flex_direction(FlexDirection::Column)
+                .justify_content(Some(JustifyContent::Center))
+                .push(Radio::new("red", "red", active_color.clone()).push(Text::new("red")))
+                .push(
+                    Radio::new("green", "green", active_color.clone())
+                        .push(green.clone())
+                        .hide_radio(),
+                )
+                .push(Radio::new("blue", "blue", active_color.clone()).push(Text::new("blue")))
+                .on_radio_value_changed(Rc::new(move |_event, new_value| {
+                    if new_value.borrow().as_str() == "green" {
+                        green.clone().border_color(
+                            rgb(0, 100, 255),
+                            rgb(0, 100, 255),
+                            rgb(255, 0, 0),
+                            rgb(0, 100, 255),
+                        );
+                    } else {
+                        green.clone().border_color(
+                            rgba(0, 0, 0, 0),
+                            rgba(0, 0, 0, 0),
+                            rgba(0, 0, 0, 0),
+                            rgba(0, 0, 0, 0),
+                        );
+                    }
+                })),
+        )
+}
+
 pub fn main() {
     setup_logging();
 
@@ -232,7 +281,8 @@ pub fn main() {
         .push(box_shadows())
         .push(multiple_windows())
         .push(sliders())
-        .push(scrollable());
+        .push(scrollable())
+        .push(radio_buttons());
 
     window.push(wrapper);
 

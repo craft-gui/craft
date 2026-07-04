@@ -119,7 +119,7 @@ rev = "d2dc8ba005a21870c5e4a7221cadf08fbf5f9ae7"
 features = []
 
 [dependencies.parley]
-version = "0.8.0"
+version = "0.11.0"
 default-features = false
 features = ["std"]
 

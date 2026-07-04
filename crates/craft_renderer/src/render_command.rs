@@ -3,7 +3,7 @@ use std::rc::Weak;
 
 use peniko::Color;
 
-use craft_primitives::geometry::{Affine, BezPath, Rectangle, Vec2};
+use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Vec2};
 
 use craft_resource_manager::ResourceId;
 
@@ -13,6 +13,8 @@ use crate::text_renderer_data::{TextData, TextScroll};
 #[derive(Clone)]
 pub enum RenderCommand {
     SetTransform(SetTransformCmd),
+    DrawCircle(DrawCircleCmd),
+    DrawCircleOutline(DrawCircleOutlineCmd),
     DrawRect(DrawRectCmd),
     DrawRectOutline(DrawRectOutlineCmd),
     DrawImage(DrawImageCmd),
@@ -26,18 +28,31 @@ pub enum RenderCommand {
     BoxShadowCmd(BoxShadowCmd),
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct SetTransformCmd {
     pub transform: Affine,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
+pub struct DrawCircleCmd {
+    pub circle: Circle,
+    pub color: Color,
+}
+
+#[derive(Copy, Clone)]
+pub struct DrawCircleOutlineCmd {
+    pub circle: Circle,
+    pub outline_color: Color,
+    pub thickness: f32,
+}
+
+#[derive(Copy, Clone)]
 pub struct DrawRectCmd {
     pub rect: Rectangle,
     pub color: Color,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct DrawRectOutlineCmd {
     pub rect: Rectangle,
     pub outline_color: Color,

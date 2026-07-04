@@ -349,7 +349,7 @@ impl Layout {
         }
     }
 
-    pub fn resolve_clip(&mut self, clip_bounds: Option<Rectangle>) {
+    pub fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
         self.clip_bounds = clip_bounds;
     }
 

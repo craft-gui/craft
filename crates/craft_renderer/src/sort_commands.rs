@@ -49,6 +49,8 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
 
     fn bounding_rect(render_command: &RenderCommand) -> Rectangle {
         match render_command {
+            RenderCommand::DrawCircle(cmd) => cmd.circle.bounding_box(),
+            RenderCommand::DrawCircleOutline(cmd) => cmd.circle.expand(cmd.thickness).bounding_box(),
             RenderCommand::DrawRect(cmd) => cmd.rect,
             RenderCommand::DrawRectOutline(cmd) => cmd.rect,
             RenderCommand::DrawImage(cmd) => cmd.rect,

@@ -3,10 +3,10 @@ use std::rc::Weak;
 
 use peniko::Color;
 
-use craft_primitives::geometry::{Affine, BezPath, Rectangle, Shape};
+use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Shape};
 use craft_resource_manager::ResourceId;
 
-use crate::render_command::{BoxShadowCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd};
+use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd};
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextData, TextScroll};
 use crate::{Brush, RenderCommand, TargetItem};
@@ -47,6 +47,32 @@ impl RenderList {
     pub fn set_transform(&mut self, transform: Affine) {
         self.commands
             .push(RenderCommand::SetTransform(SetTransformCmd { transform }));
+    }
+
+    pub fn draw_circle(&mut self, circle: Circle, color: Color) {
+        if let Some(cull) = &self.cull
+            && !circle.intersects_rect(&cull)
+        {
+            return;
+        }
+
+        self.commands
+            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, color }));
+    }
+
+    pub fn draw_circle_outline(&mut self, circle: Circle, outline_color: Color, thickness: f32) {
+        if let Some(cull) = &self.cull
+            && !circle.intersects_rect(&cull)
+        {
+            return;
+        }
+
+        self.commands
+            .push(RenderCommand::DrawCircleOutline(DrawCircleOutlineCmd {
+                circle,
+                outline_color,
+                thickness,
+            }));
     }
 
     #[inline(always)]

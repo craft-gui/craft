@@ -7,7 +7,7 @@ use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
-use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
@@ -25,7 +25,7 @@ pub struct ElementData {
     pub(crate) window: Option<Weak<RefCell<WindowInternal>>>,
 
     /// The style of the element.
-    pub style: Box<Style>,
+    pub style: Style,
 
     /// Stores the layout data for an element.
     pub layout: Layout,
@@ -51,6 +51,7 @@ pub struct ElementData {
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
     pub on_scroll: Vec<ScrollHandler>,
+    pub on_radio_value_changed: Vec<RadioValueChangedHandler>,
 }
 
 impl ElementData {
@@ -75,6 +76,7 @@ impl ElementData {
             on_pointer_moved: Vec::new(),
             on_keyboard_input: Vec::new(),
             on_scroll: Vec::new(),
+            on_radio_value_changed: Vec::new(),
         };
 
         ELEMENTS.with_borrow_mut(|elements| {
@@ -95,6 +97,22 @@ impl ElementData {
             };
             self.layout.taffy_node_id = Some(node_id);
         });
+    }
+
+    pub fn apply_borders(&mut self, scale_factor: f64) {
+        let current_style = self.current_style();
+        let has_border = current_style.has_border();
+        let border_radius = current_style.get_border_radius();
+        let border_color = &current_style.get_border_color();
+        let box_shadows = current_style.get_box_shadows();
+
+        self.layout.apply_borders(
+            has_border,
+            border_radius,
+            scale_factor,
+            border_color,
+            box_shadows,
+        );
     }
 
     /// Computes the scrollbar's tack and thumb layout.

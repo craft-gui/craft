@@ -6,21 +6,30 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+
 use craft_primitives::Color;
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Circle, Rectangle, TOLERANCE};
+
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceId, ResourceManager};
-use glifo::Glyph;
+
+use glifo::{Glyph};
+
 use kurbo::{Affine, Stroke};
+
 use peniko::kurbo::Shape;
 use peniko::{BlendMode, Compose, Fill, Mix};
+
 use vello_common::color::PremulRgba8;
 use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
+
 use vello_hybrid::{RenderSize, RenderTargetConfig, Renderer, Resources, Scene, TextureBindings};
+
 use wgpu::{CurrentSurfaceTexture, TextureFormat};
+
 use winit::window::Window;
 
 use crate::RenderCommand;
@@ -133,6 +142,11 @@ impl VelloHybridRenderer {
 
         vello_renderer
     }
+}
+
+fn vello_draw_circle(scene: &mut Scene, circle: Circle, fill_color: Color) {
+    scene.set_paint(PaintType::from(fill_color));
+    scene.fill_path(&circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn vello_draw_rect(scene: &mut Scene, rectangle: Rectangle, fill_color: Color) {
@@ -266,6 +280,12 @@ impl CraftRenderer for VelloHybridRenderer {
             match command {
                 RenderCommand::SetTransform(cmd) => {
                     self.scene.set_transform(cmd.transform);
+                }
+                RenderCommand::DrawCircle(cmd) => vello_draw_circle(scene, cmd.circle, cmd.color),
+                RenderCommand::DrawCircleOutline(cmd) => {
+                    self.scene.set_stroke(Stroke::new(cmd.thickness as f64));
+                    self.scene.set_paint(PaintType::from(cmd.outline_color));
+                    self.scene.stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
                 }
                 RenderCommand::DrawRect(cmd) => {
                     vello_draw_rect(scene, cmd.rect, cmd.color);

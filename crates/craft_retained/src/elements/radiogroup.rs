@@ -3,53 +3,58 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use accesskit::{Role, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::RenderList;
 
+
 use crate::elements::element_data::ElementData;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use crate::elements::internal_helpers::add_generic_accesskit_data;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable, ElementData as ElementDataTrait};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
-pub struct Container {
-    pub inner: Rc<RefCell<ContainerInner>>,
+pub struct RadioGroup {
+    pub inner: Rc<RefCell<RadioGroupInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct ContainerInner {
+pub struct RadioGroupInner {
     element_data: ElementData,
+    label: String,
 }
 
-impl Default for Container {
+impl Default for RadioGroup {
     fn default() -> Self {
-        Self::new()
+        Self::new("Radio Group")
     }
 }
 
-impl Element for Container {}
+impl Element for RadioGroup {}
 
-impl Drop for ContainerInner {
+impl Drop for RadioGroupInner {
     fn drop(&mut self) {
         ElementInternals::drop(self)
     }
 }
 
-impl AsElement for Container {
+impl AsElement for RadioGroup {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::ElementData for ContainerInner {
+impl crate::elements::ElementData for RadioGroupInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -59,7 +64,7 @@ impl crate::elements::ElementData for ContainerInner {
     }
 }
 
-impl ElementInternals for ContainerInner {
+impl ElementInternals for RadioGroupInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
@@ -84,6 +89,16 @@ impl ElementInternals for ContainerInner {
             clip_bounds,
             scale_factor,
         );
+    }
+
+    #[cfg(feature = "accesskit")]
+    fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
+        let current_node_id = accesskit::NodeId(self.element_data().internal_id);
+
+        let mut current_node = accesskit::Node::new(Role::RadioGroup);
+        current_node.set_label(self.label.clone());
+
+        add_generic_accesskit_data(&mut self.element_data, current_node, current_node_id, tree, parent_index, scale_factor);
     }
 
     fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
@@ -122,11 +137,12 @@ impl ElementInternals for ContainerInner {
     }
 }
 
-impl Container {
-    pub fn new() -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {
-            RefCell::new(ContainerInner {
+impl RadioGroup {
+    pub fn new(label: &str) -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<RadioGroupInner>>| {
+            RefCell::new(RadioGroupInner {
                 element_data: ElementData::new(me.clone(), true),
+                label: label.to_string(),
             })
         });
         inner.borrow_mut().element_data.create_layout_node(None);

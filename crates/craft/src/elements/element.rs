@@ -1,6 +1,6 @@
 use craft_retained::elements::{AsElement, DynElement, ScrollOptions, ScrollState};
 use craft_retained::events::ui_events::pointer::PointerId;
-use craft_retained::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use craft_retained::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use craft_retained::geometry::ElementBox;
 use craft_retained::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 use craft_retained::winit::dpi::PhysicalPosition;
@@ -82,6 +82,11 @@ pub trait Element: Clone + AsElement {
 
     fn on_pointer_leave(self, on_pointer_leave: PointerLeaveHandler) -> Self {
         self.as_element_rc().borrow_mut().on_pointer_leave(on_pointer_leave);
+        self
+    }
+
+    fn on_radio_value_changed(self, on_radio_value_changed: RadioValueChangedHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_radio_value_changed(on_radio_value_changed);
         self
     }
 

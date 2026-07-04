@@ -16,7 +16,7 @@ use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -156,34 +156,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             current_node.add_action(Action::Click);
         }
 
-        let padding_box = self
-            .element_data()
-            .layout
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        let current_index = tree.nodes.len(); // The current node is the last one added.
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
-
-        for child in self.element_data_mut().children.iter_mut() {
-            child
-                .borrow_mut()
-                .compute_accessibility_tree(tree, Some(current_index), scale_factor);
-        }
+        crate::elements::internal_helpers::add_generic_accesskit_data(self.element_data_mut(), current_node, current_node_id, tree, parent_index, scale_factor);
     }
 
     /// Handles default events.
@@ -212,23 +185,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Computes this element's clip box.
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        self.element_data_mut().layout.resolve_clip(clip_bounds);
+        self.element_data_mut().layout.apply_clip(clip_bounds);
     }
 
     fn apply_borders(&mut self, scale_factor: f64) {
-        let current_style = self.element_data().current_style();
-        let has_border = current_style.has_border();
-        let border_radius = current_style.get_border_radius();
-        let border_color = &current_style.get_border_color();
-        let box_shadows = current_style.get_box_shadows();
-
-        self.element_data_mut().layout.apply_borders(
-            has_border,
-            border_radius,
-            scale_factor,
-            border_color,
-            box_shadows,
-        );
+        self.element_data_mut().apply_borders(scale_factor);
     }
 
     fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
@@ -289,7 +250,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// Gets
-    fn get_default_style() -> Box<Style>
+    fn get_default_style() -> Style
     where
         Self: Sized,
     {
@@ -487,6 +448,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
         panic!("Pushing children is not supported.")
     }
 
+    /// Called after a node is added to the taffy tree.
+    fn on_post_add_layout_tree(&mut self, _taffy_tree: &mut TaffyTree) {
+        
+    }
+
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
     }
@@ -505,6 +471,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) {
         self.element_data_mut().on_pointer_leave.push(on_pointer_leave);
+    }
+
+    fn on_radio_value_changed(&mut self, on_radio_value_changed: RadioValueChangedHandler) {
+        self.element_data_mut().on_radio_value_changed.push(on_radio_value_changed);
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {

@@ -383,7 +383,7 @@ impl ElementInternals for DropdownInner {
 impl Shape {
     pub fn new(is_scrollable: bool) -> Self {
         let layout = Layout::new(is_scrollable);
-        let style = Style::new();
+        let style = Box::new(Style::new());
 
         Self { layout, style }
     }

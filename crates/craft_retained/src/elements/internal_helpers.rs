@@ -9,6 +9,11 @@ use craft_renderer::RenderList;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use accesskit::{Node, NodeId, TreeUpdate};
+
+use crate::elements::element_data::ElementData;
+
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
     let element_data = parent.element_data_mut();
@@ -26,7 +31,8 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
         if let Some(child_id) = child_id {
             taffy_tree.add_child(parent_id, child_id);
         }
-    });
+        child.borrow_mut().on_post_add_layout_tree(taffy_tree);
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -83,6 +89,46 @@ pub fn apply_generic_container_layout(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub fn apply_generic_container_layout_non_dom(
+    element: &mut ElementData,
+    taffy_tree: &mut TaffyTree,
+    position: Point,
+    z_index: &mut u32,
+    transform: Affine,
+    clip_bounds: Option<Rectangle>,
+    scale_factor: f64,
+) {
+    let node = element.layout.taffy_node_id.unwrap();
+    let layout = taffy_tree.get_layout(node);
+    let has_new_layout = taffy_tree.has_new_layout(node);
+
+    let dirty = has_new_layout
+        || transform != element.layout.get_transform()
+        || position != element.layout.position
+        || clip_bounds != element.layout.parent_clip;
+    element.layout.has_new_layout = has_new_layout;
+    if dirty {
+        element.layout.resolve_box(position, transform, layout, z_index, element.style.get_position());
+        element.apply_borders(scale_factor);
+        // For scroll changes from taffy;
+        element.apply_scroll(layout);
+        element.layout.apply_clip(clip_bounds);
+        element.layout.parent_clip = clip_bounds;
+        element.layout.scroll_state.mark_old();
+    }
+
+    // For manual scroll updates.
+    if !dirty && element.layout.scroll_state.is_new() {
+        element.apply_scroll(layout);
+        element.layout.scroll_state.mark_old();
+    }
+
+    if has_new_layout {
+        taffy_tree.mark_seen(node);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn apply_generic_leaf_layout(
     element: &mut dyn ElementInternals,
     taffy_tree: &mut TaffyTree,
@@ -111,6 +157,37 @@ pub fn apply_generic_leaf_layout(
 
     if has_new_layout {
         taffy_tree.mark_seen(node);
+    }
+}
+
+#[cfg(feature = "accesskit")]
+pub fn add_generic_accesskit_data(element: &mut ElementData, mut current_node: Node, current_node_id: NodeId, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
+    let padding_box = element
+        .layout
+        .computed_box_transformed
+        .padding_rectangle()
+        .scale(scale_factor);
+
+    current_node.set_bounds(accesskit::Rect {
+        x0: padding_box.left() as f64,
+        y0: padding_box.top() as f64,
+        x1: padding_box.right() as f64,
+        y1: padding_box.bottom() as f64,
+    });
+
+    let current_index = tree.nodes.len(); // The current node is the last one added.
+
+    if let Some(parent_index) = parent_index {
+        let parent_node = tree.nodes.get_mut(parent_index).unwrap();
+        parent_node.1.push_child(current_node_id);
+    }
+
+    tree.nodes.push((current_node_id, current_node));
+
+    for child in element.children.iter_mut() {
+        child
+            .borrow_mut()
+            .compute_accessibility_tree(tree, Some(current_index), scale_factor);
     }
 }
 

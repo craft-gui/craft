@@ -155,6 +155,13 @@ pub(super) fn call_user_event_handlers(
                 (*handler)(event);
             }
         }
+        EventKind::RadioValueChanged(rv) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_radio_value_changed {
+                (*handler)(event, rv.clone());
+            }
+        }
     }
 }
 

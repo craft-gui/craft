@@ -15,7 +15,7 @@ use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 
 use crate::PinnedFutureAny;
-use crate::elements::ElementInternals;
+use crate::elements::{ElementInternals};
 use crate::utils::cloneable_any::CloneableAny;
 
 pub mod internal;
@@ -35,6 +35,7 @@ pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
 pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
+pub type RadioValueChangedHandler = Rc<dyn Fn(&mut Event, Rc<RefCell<String>>)>;
 pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
@@ -66,6 +67,7 @@ pub enum EventKind {
     SwitchToggled(bool),
     SliderValueChanged(f64),
     ElementMessage(Arc<UserMessage>),
+    RadioValueChanged(Rc<RefCell<String>>),
 }
 
 /// The result of an update.

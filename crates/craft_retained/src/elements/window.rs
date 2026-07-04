@@ -219,7 +219,7 @@ impl ElementInternals for WindowInternal {
         if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
             resolve_clip_for_scrollable(self, clip_bounds);
         } else {
-            self.element_data.layout.resolve_clip(clip_bounds);
+            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 

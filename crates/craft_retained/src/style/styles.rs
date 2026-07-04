@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use craft_primitives::geometry::TrblRectangle;
-use craft_primitives::{Color, ColorBrush};
 use crate::style::box_shadow::BoxShadow;
 use crate::style::*;
+use craft_primitives::geometry::TrblRectangle;
+use craft_primitives::{Color, ColorBrush};
 
 #[derive(Clone, Debug)]
 pub struct Style {
@@ -70,8 +70,8 @@ const SCROLLBAR_THUMB_MARGIN: TrblRectangle<f32> = if cfg!(any(target_os = "andr
 };
 
 impl Style {
-    pub(crate) fn new() -> Box<Self> {
-        Box::new(Style {
+    pub(crate) fn new() -> Self {
+        Style {
             is_dirty: true,
             box_sizing: StyleProperty::new(BoxSizing::BorderBox),
             position: StyleProperty::new(Position::Relative),
@@ -121,7 +121,7 @@ impl Style {
             selection_color: StyleProperty::new(Color::from_rgb8(0, 120, 215)),
             cursor_color: StyleProperty::new(None),
             box_shadows: StyleProperty::new(Vec::new()),
-        })
+        }
     }
 }
 
@@ -377,7 +377,6 @@ impl Style {
         self.is_dirty = true;
         self.text_align.set(val);
     }
-
 
     pub fn get_underline(&self) -> Option<Underline> {
         self.underline.get()

@@ -78,7 +78,7 @@ impl TextInput {
                 me: me.clone(),
             })
         });
-        *inner.borrow_mut().element_data.style = *default_style;
+        inner.borrow_mut().element_data.style = default_style;
 
         inner.borrow_mut().set_text(text);
 
@@ -396,11 +396,11 @@ impl ElementInternals for TextInputInner {
         if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
             resolve_clip_for_scrollable(self, clip_bounds);
         } else {
-            self.element_data.layout.resolve_clip(clip_bounds);
+            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 
-    fn get_default_style() -> Box<Style>
+    fn get_default_style() -> Style
     where
         Self: Sized,
     {

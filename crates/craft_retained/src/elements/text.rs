@@ -527,7 +527,7 @@ impl TextState {
 
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(width_constraint);
-        layout.align(width_constraint, alignment, AlignmentOptions {
+        layout.align(alignment, AlignmentOptions {
             align_when_overflowing: true
         });
 

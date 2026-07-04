@@ -11,7 +11,7 @@ use crate::CraftError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
-use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
@@ -86,6 +86,11 @@ pub trait Element: Clone + AsElement {
 
     fn on_pointer_leave(self, on_pointer_leave: PointerLeaveHandler) -> Self {
         self.as_element_rc().borrow_mut().on_pointer_leave(on_pointer_leave);
+        self
+    }
+
+    fn on_radio_value_changed(self, on_radio_value_changed: RadioValueChangedHandler) -> Self {
+        self.as_element_rc().borrow_mut().on_radio_value_changed(on_radio_value_changed);
         self
     }
 
