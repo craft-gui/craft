@@ -375,14 +375,15 @@ impl Text {
                 me: me.clone(),
             })
         });
+        let mut inner_mut = inner.borrow_mut();
 
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
-            element: inner.borrow().me.clone(),
+            element: inner_mut.me.clone(),
         }));
-        inner.borrow_mut().element_data.create_layout_node(text_context);
+        inner_mut.element_data.create_layout_node(text_context);
+        inner_mut.set_text(text);
 
-        inner.borrow_mut().set_text(text);
-
+        drop(inner_mut);
         Text { inner }
     }
 
