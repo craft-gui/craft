@@ -26,6 +26,9 @@ members = [
 [workspace.package]
 edition = "2024"
 
+[profile.dev]
+opt-level = 1
+
 [profile.release]
 # For fast build/run and profiling
 debug = true
