@@ -78,7 +78,6 @@ pub fn create_for<T: Clone + 'static, K: std::hash::Hash + Eq + Copy + 'static>(
     list_signal.subscribe(runner);
 }
 
-
 impl<T: Clone + 'static> Signal<T> {
     pub fn map<U: Clone + 'static, F: Fn(T) -> U + 'static>(&self, f: F) -> Signal<U> {
         let derived = Signal::new(f(self.get()));
@@ -92,7 +91,6 @@ impl<T: Clone + 'static> Signal<T> {
         derived
     }
 }
-
 
 pub trait Bindable<T>: 'static {
     fn bind(self, f: impl Fn(T) + 'static);

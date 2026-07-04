@@ -36,7 +36,7 @@ impl Circle {
             radius: dpi::PhysicalUnit::from_logical::<f32, f32>(self.radius, scale_factor).0,
         }
     }
-    
+
     /// Creates a new `Circle` with the given position and size.
     ///
     /// # Arguments
@@ -49,11 +49,7 @@ impl Circle {
     ///
     /// A `Circle` instance with the specified position and size.
     pub fn new(x: f32, y: f32, radius: f32) -> Self {
-        Circle {
-            x,
-            y,
-            radius,
-        }
+        Circle { x, y, radius }
     }
 
     /// Returns the position of the top-left corner of the circle.
@@ -76,11 +72,17 @@ impl Circle {
 
     #[inline(always)]
     pub fn intersects(&self, other: &Circle) -> bool {
-        (other.x - self.x) * (other.x - self.x) + (other.y - self.y) * (other.y - self.y) < (self.radius + other.radius) * (self.radius + other.radius)
+        (other.x - self.x) * (other.x - self.x) + (other.y - self.y) * (other.y - self.y)
+            < (self.radius + other.radius) * (self.radius + other.radius)
     }
 
     pub fn bounding_box(&self) -> Rectangle {
-        Rectangle::new(self.x - self.radius, self.y - self.radius, self.radius * 2.0, self.radius * 2.0)
+        Rectangle::new(
+            self.x - self.radius,
+            self.y - self.radius,
+            self.radius * 2.0,
+            self.radius * 2.0,
+        )
     }
 
     #[inline(always)]
@@ -89,10 +91,6 @@ impl Circle {
     }
 
     pub fn expand(&self, radius: f32) -> Self {
-        Circle::new(
-            self.x,
-            self.y,
-            self.radius + radius,
-        )
+        Circle::new(self.x, self.y, self.radius + radius)
     }
 }

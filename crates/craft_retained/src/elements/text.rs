@@ -522,14 +522,17 @@ impl TextState {
             TextAlign::Left => Alignment::Left,
             TextAlign::Center => Alignment::Center,
             TextAlign::Right => Alignment::Right,
-            TextAlign::Justify => Alignment::Justify
+            TextAlign::Justify => Alignment::Justify,
         };
 
         let layout = self.layout.as_mut().unwrap();
         layout.break_all_lines(width_constraint);
-        layout.align(alignment, AlignmentOptions {
-            align_when_overflowing: true
-        });
+        layout.align(
+            alignment,
+            AlignmentOptions {
+                align_when_overflowing: true,
+            },
+        );
 
         let width = layout.width();
         let height = layout.height().min(height_constraint.unwrap_or(f32::MAX));

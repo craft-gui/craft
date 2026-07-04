@@ -25,7 +25,7 @@ impl Default for Container {
 }
 
 impl Container {
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         Self {
             inner: craft_retained::elements::Container::new(),
         }

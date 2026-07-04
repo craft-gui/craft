@@ -108,7 +108,9 @@ pub fn apply_generic_container_layout_non_dom(
         || clip_bounds != element.layout.parent_clip;
     element.layout.has_new_layout = has_new_layout;
     if dirty {
-        element.layout.resolve_box(position, transform, layout, z_index, element.style.get_position());
+        element
+            .layout
+            .resolve_box(position, transform, layout, z_index, element.style.get_position());
         element.apply_borders(scale_factor);
         // For scroll changes from taffy;
         element.apply_scroll(layout);
@@ -161,7 +163,14 @@ pub fn apply_generic_leaf_layout(
 }
 
 #[cfg(feature = "accesskit")]
-pub fn add_generic_accesskit_data(element: &mut ElementData, mut current_node: Node, current_node_id: NodeId, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
+pub fn add_generic_accesskit_data(
+    element: &mut ElementData,
+    mut current_node: Node,
+    current_node_id: NodeId,
+    tree: &mut TreeUpdate,
+    parent_index: Option<usize>,
+    scale_factor: f64,
+) {
     let padding_box = element
         .layout
         .computed_box_transformed

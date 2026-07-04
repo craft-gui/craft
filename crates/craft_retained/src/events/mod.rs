@@ -15,7 +15,7 @@ use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 
 use crate::PinnedFutureAny;
-use crate::elements::{ElementInternals};
+use crate::elements::ElementInternals;
 use crate::utils::cloneable_any::CloneableAny;
 
 pub mod internal;

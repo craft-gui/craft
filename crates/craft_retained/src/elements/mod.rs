@@ -3,14 +3,14 @@ pub use crate::elements::dropdown::{Dropdown, DropdownInner};
 pub use crate::elements::dyn_element::DynElement;
 pub use crate::elements::element_id_map::ElementIdMap;
 pub use crate::elements::image::{Image, ImageInner};
-pub use crate::elements::scrollable::{ScrollOptions, ScrollState, ScrollToBox};
 pub use crate::elements::radio::{Radio, RadioInner};
 pub use crate::elements::radiogroup::{RadioGroup, RadioGroupInner};
+pub use crate::elements::scrollable::{ScrollOptions, ScrollState, ScrollToBox};
 pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
 pub use crate::elements::text::{Text, TextInner};
 pub use crate::elements::text_input::{TextInput, TextInputInner};
 pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
-pub use crate::elements::traits::{resolve_clip_for_scrollable, AsElement, Element, ElementData, ElementInternals};
+pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
 pub use crate::elements::window::{Window, WindowInternal};
 
 pub(crate) mod internal_helpers;

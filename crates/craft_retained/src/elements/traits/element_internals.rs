@@ -156,7 +156,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
             current_node.add_action(Action::Click);
         }
 
-        crate::elements::internal_helpers::add_generic_accesskit_data(self.element_data_mut(), current_node, current_node_id, tree, parent_index, scale_factor);
+        crate::elements::internal_helpers::add_generic_accesskit_data(
+            self.element_data_mut(),
+            current_node,
+            current_node_id,
+            tree,
+            parent_index,
+            scale_factor,
+        );
     }
 
     /// Handles default events.
@@ -449,9 +456,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// Called after a node is added to the taffy tree.
-    fn on_post_add_layout_tree(&mut self, _taffy_tree: &mut TaffyTree) {
-        
-    }
+    fn on_post_add_layout_tree(&mut self, _taffy_tree: &mut TaffyTree) {}
 
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
@@ -474,7 +479,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn on_radio_value_changed(&mut self, on_radio_value_changed: RadioValueChangedHandler) {
-        self.element_data_mut().on_radio_value_changed.push(on_radio_value_changed);
+        self.element_data_mut()
+            .on_radio_value_changed
+            .push(on_radio_value_changed);
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {

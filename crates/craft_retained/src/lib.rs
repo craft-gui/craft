@@ -10,10 +10,10 @@ pub use craft_runtime::{self, CraftRuntime};
 
 pub use image;
 
+pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, Window as WinitWindow, WindowAttributes};
-pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 
 pub use crate::app::queue_window_event;
 pub use crate::craftcallback::CraftCallback;

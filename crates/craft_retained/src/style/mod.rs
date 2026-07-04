@@ -166,7 +166,6 @@ pub enum TextAlign {
     Justify,
 }
 
-
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FontStyle {
     Normal,

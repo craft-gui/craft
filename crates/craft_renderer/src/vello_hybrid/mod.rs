@@ -13,7 +13,7 @@ use craft_primitives::geometry::{Circle, Rectangle, TOLERANCE};
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
-use glifo::{Glyph};
+use glifo::Glyph;
 
 use kurbo::{Affine, Stroke};
 

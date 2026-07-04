@@ -86,7 +86,9 @@ pub trait Element: Clone + AsElement {
     }
 
     fn on_radio_value_changed(self, on_radio_value_changed: RadioValueChangedHandler) -> Self {
-        self.as_element_rc().borrow_mut().on_radio_value_changed(on_radio_value_changed);
+        self.as_element_rc()
+            .borrow_mut()
+            .on_radio_value_changed(on_radio_value_changed);
         self
     }
 
@@ -741,7 +743,6 @@ pub trait Element: Clone + AsElement {
         });
         self
     }
-
 
     fn border_radius(
         self,

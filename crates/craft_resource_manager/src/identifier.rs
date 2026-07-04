@@ -4,7 +4,7 @@ use std::{fmt, fs};
 
 #[cfg(feature = "http_client")]
 use crate::ResourceId::Url;
-use crate::ResourceId::{OwnedBytes, StaticBytes, File};
+use crate::ResourceId::{File, OwnedBytes, StaticBytes};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ResourceId {

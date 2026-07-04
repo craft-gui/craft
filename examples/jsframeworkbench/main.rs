@@ -138,7 +138,7 @@ impl State {
             .flex_direction(FlexDirection::Row)
             .width(Unit::Auto)
             .padding(Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0))
-            .border_color_all(Color::from_rgb8(230, 230, 230), )
+            .border_color_all(Color::from_rgb8(230, 230, 230))
             .push(Text::new(&data.id.to_string()).width(Unit::Px(60.0)).margin(
                 Unit::Px(0.0),
                 Unit::Px(12.0),

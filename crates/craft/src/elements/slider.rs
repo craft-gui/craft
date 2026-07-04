@@ -4,8 +4,8 @@ use std::rc::Rc;
 use craft_retained::Color;
 use craft_retained::elements::{AsElement, ElementInternals, SliderDirection};
 
-use crate::signals::Bindable;
 use crate::elements::Element;
+use crate::signals::Bindable;
 
 #[derive(Clone)]
 pub struct Slider {

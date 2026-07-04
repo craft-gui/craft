@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use craft_retained::ResourceId;
 use craft_retained::elements::{AsElement, ElementInternals};
-use craft_retained::{ResourceId};
 
-use crate::signals::Bindable;
 use crate::elements::Element;
+use crate::signals::Bindable;
 
 #[derive(Clone)]
 pub struct Image {

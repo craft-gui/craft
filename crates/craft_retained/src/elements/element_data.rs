@@ -106,13 +106,8 @@ impl ElementData {
         let border_color = &current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
 
-        self.layout.apply_borders(
-            has_border,
-            border_radius,
-            scale_factor,
-            border_color,
-            box_shadows,
-        );
+        self.layout
+            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
     }
 
     /// Computes the scrollbar's tack and thumb layout.

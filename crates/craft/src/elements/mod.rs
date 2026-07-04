@@ -1,11 +1,11 @@
 mod conditional;
 mod container;
 mod element;
+mod image;
 mod slider;
 mod text;
 mod tinyvg;
 mod window;
-mod image;
 
 pub use conditional::Conditional;
 pub use container::Container;
