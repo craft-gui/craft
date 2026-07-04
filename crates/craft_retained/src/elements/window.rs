@@ -578,15 +578,16 @@ impl WindowInternal {
 
         let renderer_type = self.renderer_type;
 
-        cfg_if::cfg_if! {
-            if #[cfg(not(target_arch = "wasm32"))] {
+        cfg_select! {
+            not(target_arch = "wasm32") => {
                     let renderer = craft_app.runtime.borrow_tokio_runtime().block_on(async {
                         let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
                     renderer
                 });
                 self.renderer = Some(renderer);
                 info!("Created renderer")
-            } else {
+            },
+            _ => {
                 let window_copy_2 = winit_window.clone();
                 craft_app.runtime.spawn(async move {
                     let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;

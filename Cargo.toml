@@ -38,9 +38,9 @@ debug = true
 #debug = false
 
 [workspace.dependencies]
-reqwest = { version = "0.13.1", default-features = false }
-tracing = { version = "0.1.41" }
-tracing-subscriber = {version = "0.3.19"}
+reqwest = { version = "0.13.4", default-features = false }
+tracing = { version = "0.1.44" }
+tracing-subscriber = {version = "0.3.23"}
 
 [workspace.dependencies.peniko]
 version = "0.6.1"
@@ -74,12 +74,9 @@ default-features = false
 features = []
 
 [workspace.dependencies.chrono]
-version = "0.4.41"
+version = "0.4.45"
 default-features = false
 features = ["std"]
-
-[workspace.dependencies.cfg-if]
-version = "1.0.4"
 
 [workspace.dependencies.winit]
 version = "0.30.13"

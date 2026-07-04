@@ -31,14 +31,17 @@ pub enum RendererType {
 #[allow(clippy::derivable_impls)]
 impl Default for RendererType {
     fn default() -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "vello_hybrid_renderer")] {
+        cfg_select! {
+            feature = "vello_hybrid_renderer" => {
                 RendererType::VelloHybrid
-            } else if #[cfg(feature = "vello_renderer")]{
+            },
+            feature = "vello_renderer" => {
                 RendererType::Vello
-            } else if #[cfg(feature = "vello_cpu_renderer")]{
+            },
+            feature = "vello_cpu_renderer" => {
                 RendererType::VelloCPU
-            } else {
+            },
+            _ => {
                 RendererType::Blank
             }
         }

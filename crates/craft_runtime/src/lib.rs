@@ -2,7 +2,6 @@ mod run_later;
 
 use std::future::Future;
 
-use cfg_if::cfg_if;
 pub use run_later::{pop_gui_thread_work, run_later_on_gui_thread};
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
 pub use tokio::*;
@@ -26,10 +25,11 @@ pub struct CraftRuntimeHandle {
 #[allow(clippy::derivable_impls)]
 impl Default for CraftRuntime {
     fn default() -> Self {
-        cfg_if! {
-            if #[cfg(target_arch = "wasm32")] {
+        cfg_select! {
+            target_arch = "wasm32" => {
                 Self { }
-            } else {
+            },
+            _ => {
                 Self {
                     tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
                 }
@@ -47,10 +47,11 @@ impl Default for CraftRuntime {
 /// For more advanced cases get the underlying runtime and downcast.
 impl CraftRuntime {
     pub fn new() -> Self {
-        cfg_if::cfg_if! {
-            if #[cfg(target_arch = "wasm32")] {
+        cfg_select! {
+            target_arch = "wasm32" => {
                 Self { }
-            } else {
+            },
+            _ => {
                 Self {
                     tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
                 }
@@ -59,10 +60,11 @@ impl CraftRuntime {
     }
 
     pub fn handle(&self) -> CraftRuntimeHandle {
-        cfg_if::cfg_if! {
-            if #[cfg(target_arch = "wasm32")] {
+        cfg_select! {
+            target_arch = "wasm32" => {
                 CraftRuntimeHandle { }
-            } else {
+            },
+            _ => {
                 CraftRuntimeHandle {
                     tokio_runtime: self.tokio_runtime.handle().clone(),
                 }

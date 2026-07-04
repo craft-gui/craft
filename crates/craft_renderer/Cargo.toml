@@ -69,9 +69,6 @@ version = "0.1.1"
 [dependencies.winit]
 workspace = true
 
-[dependencies.cfg-if]
-workspace = true
-
 [dependencies.tinyvg-rs]
 workspace = true
 
