@@ -7,7 +7,7 @@ use tinyvg_rs::commands::{Path, PathCommand, Point, Style};
 use crate::Brush;
 
 #[allow(clippy::wrong_self_convention)]
-/// Convert the TinyVG point to a kurbo color.
+/// Convert the TinyVG point to a kurbo point.
 pub(crate) fn to_kurbo_point(point: Point) -> kurbo::Point {
     kurbo::Point::new(point.x.0, point.y.0)
 }
@@ -76,11 +76,8 @@ pub(crate) fn assemble_path(
                         sweep: arc_circle.sweep,
                     };
 
-                    let arc = kurbo::Arc::from_svg_arc(&arc);
-                    if let Some(arc) = arc {
-                        for el in arc.append_iter(0.1) {
-                            bezier_path.push(el);
-                        }
+                    if let Some(arc) = kurbo::Arc::from_svg_arc(&arc) {
+                        bezier_path.extend(arc.append_iter(0.1));
                     }
 
                     current = current.move_to(&arc_circle.target);
@@ -98,12 +95,10 @@ pub(crate) fn assemble_path(
                         sweep: arc_ellipse.sweep,
                     };
 
-                    let arc = kurbo::Arc::from_svg_arc(&arc);
-                    if let Some(arc) = arc {
-                        for el in arc.append_iter(0.1) {
-                            bezier_path.push(el);
-                        }
+                    if let Some(arc) = kurbo::Arc::from_svg_arc(&arc) {
+                        bezier_path.extend(arc.append_iter(0.1));
                     }
+
                     current = current.move_to(&arc_ellipse.target);
                 }
                 PathCommand::ClosePath => {
