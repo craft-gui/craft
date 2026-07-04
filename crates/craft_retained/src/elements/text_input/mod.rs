@@ -78,23 +78,24 @@ impl TextInput {
                 me: me.clone(),
             })
         });
-        inner.borrow_mut().element_data.style = default_style;
+        let mut inner_mut = inner.borrow_mut();
+        inner_mut.element_data.style = default_style;
 
-        inner.borrow_mut().set_text(text);
+        inner_mut.set_text(text);
 
         let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
-            element: inner.borrow().me.clone(),
+            element: inner_mut.me.clone(),
         }));
-        inner.borrow_mut().element_data.create_layout_node(context);
+        inner_mut.element_data.create_layout_node(context);
 
-        let taffy_id = inner.borrow().element_data.layout.taffy_node_id;
-        inner.borrow_mut().state.taffy_id = taffy_id;
-        inner.borrow_mut().state.editor.taffy_id = taffy_id;
+        let taffy_id = inner_mut.element_data.layout.taffy_node_id;
+        inner_mut.state.taffy_id = taffy_id;
+        inner_mut.state.editor.taffy_id = taffy_id;
 
         ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(inner.borrow().deref());
+            elements.insert(inner_mut.deref());
         });
-
+        drop(inner_mut);
         Self { inner }
     }
 
