@@ -24,6 +24,7 @@ pub enum RenderCommand {
     PopLayer,
     FillBezPath(FillBezPathCmd),
     StartOverlay,
+    StrokeBezPath(StrokeBezPathCmd),
     EndOverlay,
     BoxShadowCmd(BoxShadowCmd),
 }
@@ -88,6 +89,12 @@ pub enum PushLayerCmd {
 
 #[derive(Clone)]
 pub struct FillBezPathCmd {
+    pub path: BezPath,
+    pub brush: Brush,
+}
+
+#[derive(Clone)]
+pub struct StrokeBezPathCmd {
     pub path: BezPath,
     pub brush: Brush,
 }

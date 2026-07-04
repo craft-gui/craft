@@ -6,7 +6,7 @@ use peniko::Color;
 use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Shape};
 use craft_resource_manager::ResourceId;
 
-use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd};
+use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd, StrokeBezPathCmd};
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextData, TextScroll};
 use crate::{Brush, RenderCommand, TargetItem};
@@ -119,6 +119,17 @@ impl RenderList {
         }
         self.commands
             .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush }));
+    }
+
+    #[inline(always)]
+    pub fn stroke_bez_path(&mut self, path: BezPath, brush: Brush) {
+        if let Some(cull) = &self.cull
+            && !cull.intersects(&Rectangle::from_kurbo(path.bounding_box()))
+        {
+            return;
+        }
+        self.commands
+            .push(RenderCommand::StrokeBezPath(StrokeBezPathCmd { path, brush }));
     }
 
     #[inline(always)]

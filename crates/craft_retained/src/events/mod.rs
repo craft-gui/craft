@@ -36,6 +36,7 @@ pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
 pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
 pub type RadioValueChangedHandler = Rc<dyn Fn(&mut Event, Rc<RefCell<String>>)>;
+pub type CheckboxToggledHandler = Rc<dyn Fn(&mut Event, CheckboxToggled)>;
 pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
@@ -68,6 +69,13 @@ pub enum EventKind {
     SliderValueChanged(f64),
     ElementMessage(Arc<UserMessage>),
     RadioValueChanged(Rc<RefCell<String>>),
+    CheckboxToggled(CheckboxToggled),
+}
+
+#[derive(Clone)]
+pub struct CheckboxToggled {
+    pub label: String,
+    pub status: bool,
 }
 
 /// The result of an update.

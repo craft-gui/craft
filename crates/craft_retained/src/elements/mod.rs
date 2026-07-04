@@ -1,3 +1,5 @@
+pub use crate::elements::checkbox::{Checkbox, CheckboxInner};
+pub use crate::elements::checkboxgroup::{CheckboxGroup, CheckboxGroupInner};
 pub use crate::elements::container::{Container, ContainerInner};
 pub use crate::elements::dropdown::{Dropdown, DropdownInner};
 pub use crate::elements::dyn_element::DynElement;
@@ -16,6 +18,8 @@ pub use crate::elements::window::{Window, WindowInternal};
 pub(crate) mod internal_helpers;
 pub(crate) mod scrollable;
 
+mod checkbox;
+mod checkboxgroup;
 mod container;
 mod dropdown;
 mod dyn_element;

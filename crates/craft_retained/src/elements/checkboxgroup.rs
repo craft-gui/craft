@@ -20,40 +20,40 @@ use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
-pub struct RadioGroup {
-    pub inner: Rc<RefCell<RadioGroupInner>>,
+pub struct CheckboxGroup {
+    pub inner: Rc<RefCell<CheckboxGroupInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct RadioGroupInner {
+pub struct CheckboxGroupInner {
     element_data: ElementData,
     label: String,
 }
 
-impl Default for RadioGroup {
+impl Default for CheckboxGroup {
     fn default() -> Self {
         Self::new("Radio Group")
     }
 }
 
-impl Element for RadioGroup {}
+impl Element for CheckboxGroup {}
 
-impl Drop for RadioGroupInner {
+impl Drop for CheckboxGroupInner {
     fn drop(&mut self) {
         ElementInternals::drop(self)
     }
 }
 
-impl AsElement for RadioGroup {
+impl AsElement for CheckboxGroup {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::ElementData for RadioGroupInner {
+impl crate::elements::ElementData for CheckboxGroupInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -63,7 +63,7 @@ impl crate::elements::ElementData for RadioGroupInner {
     }
 }
 
-impl ElementInternals for RadioGroupInner {
+impl ElementInternals for CheckboxGroupInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
@@ -98,7 +98,7 @@ impl ElementInternals for RadioGroupInner {
     fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
         let current_node_id = accesskit::NodeId(self.element_data().internal_id);
 
-        let mut current_node = accesskit::Node::new(Role::RadioGroup);
+        let mut current_node = accesskit::Node::new(Role::Group);
         current_node.set_label(self.label.clone());
 
         add_generic_accesskit_data(
@@ -143,10 +143,10 @@ impl ElementInternals for RadioGroupInner {
     }
 }
 
-impl RadioGroup {
+impl CheckboxGroup {
     pub fn new(label: &str) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<RadioGroupInner>>| {
-            RefCell::new(RadioGroupInner {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<CheckboxGroupInner>>| {
+            RefCell::new(CheckboxGroupInner {
                 element_data: ElementData::new(me.clone(), true),
                 label: label.to_string(),
             })

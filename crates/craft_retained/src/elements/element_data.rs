@@ -7,7 +7,7 @@ use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
-use crate::events::{DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
@@ -52,6 +52,7 @@ pub struct ElementData {
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
     pub on_scroll: Vec<ScrollHandler>,
     pub on_radio_value_changed: Vec<RadioValueChangedHandler>,
+    pub on_checkbox_toggled: Vec<CheckboxToggledHandler>,
 }
 
 impl ElementData {
@@ -77,6 +78,7 @@ impl ElementData {
             on_keyboard_input: Vec::new(),
             on_scroll: Vec::new(),
             on_radio_value_changed: Vec::new(),
+            on_checkbox_toggled: Vec::new(),
         };
 
         ELEMENTS.with_borrow_mut(|elements| {

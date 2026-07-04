@@ -503,7 +503,10 @@ impl CraftRenderer for VelloHybridRenderer {
                     scene.set_paint(brush_to_paint(&cmd.brush));
                     scene.fill_path(&cmd.path);
                 }
-
+                RenderCommand::StrokeBezPath(cmd) => {
+                    scene.set_paint(brush_to_paint(&cmd.brush));
+                    scene.stroke_path(&cmd.path);
+                }
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
                 RenderCommand::BoxShadowCmd(cmd) => draw_box_shadow(scene, cmd),

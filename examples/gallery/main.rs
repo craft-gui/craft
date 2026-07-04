@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use craft_retained::elements::{Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
 use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
 
@@ -240,6 +240,24 @@ pub fn radio_buttons() -> Container {
         )
 }
 
+pub fn checkbox() -> Container {
+    Container::new().push(
+        CheckboxGroup::new("Select your favorite foods")
+            .on_checkbox_toggled(Rc::new(move |_event, checkbox_toggled| {
+                println!(
+                    "checkbox toggled: {} - {}",
+                    checkbox_toggled.label, checkbox_toggled.status
+                );
+            }))
+            .flex_direction(FlexDirection::Column)
+            .gap(px(15.0), px(15.0))
+            .push(Checkbox::new("coffee", true).push(Text::new("Coffee")))
+            .push(Checkbox::new("tea", false).push(Text::new("Tea")))
+            .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉")))
+            .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー"))),
+    )
+}
+
 pub fn main() {
     setup_logging();
 
@@ -268,7 +286,8 @@ pub fn main() {
         .push(multiple_windows())
         .push(sliders())
         .push(scrollable())
-        .push(radio_buttons());
+        .push(radio_buttons())
+        .push(checkbox());
 
     window.push(wrapper);
 

@@ -1,4 +1,4 @@
-//! A toggleable circle.
+//! A toggleable checkbox.
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -6,60 +6,56 @@ use std::rc::{Rc, Weak};
 
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
-use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
-use craft_renderer::RenderList;
+use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+use craft_renderer::{Brush, RenderList};
+use peniko::kurbo;
 
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementData as ElementDataTrait, ElementInternals, resolve_clip_for_scrollable, scrollable};
-use crate::events::{Event, EventKind};
+use crate::events::{CheckboxToggled, Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::{Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
 
 #[derive(Clone)]
-pub struct Radio {
-    pub inner: Rc<RefCell<RadioInner>>,
+pub struct Checkbox {
+    pub inner: Rc<RefCell<CheckboxInner>>,
 }
 
-/// Stores one or more elements.
-///
-/// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct RadioInner {
+pub struct CheckboxInner {
     element_data: ElementData,
-    circle_layout: ElementData,
-    circle: Circle,
-    value: String,
+    box_layout: ElementData,
+    box_rect: Rectangle,
     label: String,
-    hide_radio: bool,
-    active_value: Rc<RefCell<String>>,
+    checked: bool,
 }
 
-impl Default for Radio {
+impl Default for Checkbox {
     fn default() -> Self {
-        Self::new("", "radio item", Rc::new(RefCell::new("".to_string())))
+        Self::new("checkbox item", false)
     }
 }
 
-impl Element for Radio {}
+impl Element for Checkbox {}
 
-impl Drop for RadioInner {
+impl Drop for CheckboxInner {
     fn drop(&mut self) {
         ElementInternals::drop(self)
     }
 }
 
-impl AsElement for Radio {
+impl AsElement for Checkbox {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
 }
 
-impl crate::elements::ElementData for RadioInner {
+impl crate::elements::ElementData for CheckboxInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -69,7 +65,7 @@ impl crate::elements::ElementData for RadioInner {
     }
 }
 
-impl ElementInternals for RadioInner {
+impl ElementInternals for CheckboxInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
@@ -99,7 +95,7 @@ impl ElementInternals for RadioInner {
         let child_transform = Affine::translate((0.0, -scroll_y));
 
         apply_generic_container_layout_non_dom(
-            &mut self.circle_layout,
+            &mut self.box_layout,
             taffy_tree,
             p,
             z_index,
@@ -107,8 +103,7 @@ impl ElementInternals for RadioInner {
             clip_bounds,
             scale_factor,
         );
-        self.circle.x = self.circle_layout.layout.computed_box_transformed.content_rectangle().x + self.circle.radius;
-        self.circle.y = self.circle_layout.layout.computed_box_transformed.content_rectangle().y + self.circle.radius;
+        self.box_rect = self.box_layout.layout.computed_box_transformed.content_rectangle();
     }
 
     fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
@@ -119,13 +114,24 @@ impl ElementInternals for RadioInner {
         self.draw_borders(renderer, scale_factor);
         self.maybe_start_layer(renderer, scale_factor);
 
-        if !self.hide_radio {
-            if self.is_selected() {
-                renderer.draw_circle_outline(self.circle.scale(scale_factor), rgb(0, 100, 255), scale_factor as f32);
-                renderer.draw_circle(self.circle.expand(-4.0).scale(scale_factor), rgb(0, 100, 255));
-            } else {
-                renderer.draw_circle_outline(self.circle.scale(scale_factor), rgb(150, 150, 150), scale_factor as f32);
-            }
+        let color = rgb(0, 100, 255);
+        let border_color = if self.checked { color } else { rgb(150, 150, 150) };
+        renderer.draw_rect_outline(self.box_rect.scale(scale_factor), border_color, 2.0 * scale_factor);
+
+        let s = self.box_rect;
+        let blue = rgb(0, 100, 255);
+        let grey = rgb(150, 150, 150);
+        if self.checked {
+            renderer.draw_rect(s.scale(scale_factor), blue);
+
+            let mut path = kurbo::BezPath::new();
+            path.move_to(((s.x + s.width * 0.25) as f64, (s.y + s.height * 0.5) as f64));
+            path.line_to(((s.x + s.width * 0.45) as f64, (s.y + s.height * 0.7) as f64));
+            path.line_to(((s.x + s.width * 0.75) as f64, (s.y + s.height * 0.3) as f64));
+
+            renderer.stroke_bez_path(path, Brush::Color(rgb(255, 255, 255)));
+        } else {
+            renderer.draw_rect_outline(s.scale(scale_factor), grey, 1.5 * scale_factor);
         }
 
         self.draw_children(renderer, text_context, scale_factor);
@@ -136,15 +142,10 @@ impl ElementInternals for RadioInner {
     #[cfg(feature = "accesskit")]
     fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
         let current_node_id = accesskit::NodeId(self.element_data().internal_id);
-
-        let mut current_node = accesskit::Node::new(Role::RadioButton);
+        let mut current_node = accesskit::Node::new(Role::CheckBox);
         current_node.set_label(self.label.clone());
         current_node.add_action(Action::Click);
-        current_node.set_toggled(if self.is_selected() {
-            Toggled::True
-        } else {
-            Toggled::False
-        });
+        current_node.set_toggled(if self.checked { Toggled::True } else { Toggled::False });
 
         crate::elements::internal_helpers::add_generic_accesskit_data(
             &mut self.element_data,
@@ -165,9 +166,15 @@ impl ElementInternals for RadioInner {
     ) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
-            self.active_value.replace(self.value.clone());
+            self.checked = !self.checked;
             let new_event = Event::new(event.target.clone());
-            queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
+            queue_event(
+                new_event,
+                EventKind::CheckboxToggled(CheckboxToggled {
+                    label: self.label.clone(),
+                    status: self.checked,
+                }),
+            );
         }
     }
 
@@ -193,62 +200,37 @@ impl ElementInternals for RadioInner {
     }
 }
 
-impl RadioInner {
-    fn is_selected(&self) -> bool {
-        self.active_value.borrow().as_str() == self.value
-    }
-}
-
-impl Radio {
-    pub fn new(value: &str, label: &str, active_value: Rc<RefCell<String>>) -> Self {
-        let radius = 7.0;
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<RadioInner>>| {
-            RefCell::new(RadioInner {
+impl Checkbox {
+    pub fn new(label: &str, checked: bool) -> Self {
+        let size = 16.0;
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<CheckboxInner>>| {
+            RefCell::new(CheckboxInner {
                 element_data: ElementData::new(me.clone(), true),
-                circle_layout: ElementData::new(me.clone(), false),
-                circle: Circle::new(0.0, 0.0, radius),
-                value: value.to_string(),
+                box_layout: ElementData::new(me.clone(), false),
+                box_rect: Rectangle::new(0.0, 0.0, size, size),
                 label: label.to_string(),
-                hide_radio: false,
-                active_value,
+                checked,
             })
         });
+
         let mut inner_mut = inner.borrow_mut();
         inner_mut.element_data.create_layout_node(None);
-
-        inner_mut.circle_layout.style.set_min_width(Unit::Px(radius * 2.0));
-        inner_mut.circle_layout.style.set_min_height(Unit::Px(radius * 2.0));
+        inner_mut.box_layout.style.set_min_width(Unit::Px(size));
+        inner_mut.box_layout.style.set_min_height(Unit::Px(size));
         inner_mut
-            .circle_layout
+            .box_layout
             .style
             .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
-        inner_mut.circle_layout.create_layout_node(None);
+        inner_mut.box_layout.create_layout_node(None);
+
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let node_id = inner_mut.circle_layout.layout.taffy_node_id();
-            taffy_tree.add_child(inner_mut.element_data.layout.taffy_node_id(), node_id);
+            taffy_tree.add_child(
+                inner_mut.element_data.layout.taffy_node_id(),
+                inner_mut.box_layout.layout.taffy_node_id(),
+            );
         });
 
         drop(inner_mut);
         Self { inner }
-    }
-
-    /// Hide the default circle radio button.
-    pub fn set_hide_radio(&mut self, value: bool) {
-        // TODO: Hide in taffy.
-        self.inner.borrow_mut().hide_radio = value;
-    }
-
-    /// Hide the default circle radio button.
-    pub fn hide_radio(mut self) -> Self {
-        self.set_hide_radio(true);
-        self
-    }
-
-    pub fn get_label(&self) -> String {
-        self.inner.borrow().label.clone()
-    }
-
-    pub fn get_value(&self) -> String {
-        self.inner.borrow().value.clone()
     }
 }

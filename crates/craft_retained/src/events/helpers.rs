@@ -162,6 +162,13 @@ pub(super) fn call_user_event_handlers(
                 (*handler)(event, rv.clone());
             }
         }
+        EventKind::CheckboxToggled(rv) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_checkbox_toggled {
+                (*handler)(event, rv.clone());
+            }
+        }
     }
 }
 

@@ -57,6 +57,7 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
             RenderCommand::DrawTinyVg(cmd) => cmd.rect,
             RenderCommand::DrawText(cmd) => cmd.rect,
             RenderCommand::FillBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
+            RenderCommand::StrokeBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
             RenderCommand::BoxShadowCmd(cmd) => {
                 let bounding_box = cmd.path.bounding_box();
                 Rectangle::new(
