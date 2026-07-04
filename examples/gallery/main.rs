@@ -209,8 +209,8 @@ pub fn radio_buttons() -> Container {
     let green = Image::new(ResourceId::Url(
         "https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string(),
     ))
-        .border_width(px(1), px(1), px(1), px(1))
-        .border_color(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+    .border_width_all(px(1))
+    .border_color_all(rgba(0, 0, 0, 0));
     Container::new()
         .width(pct(100.0))
         .height(pct(100.0))
@@ -232,19 +232,9 @@ pub fn radio_buttons() -> Container {
                 .push(Radio::new("blue", "blue", active_color.clone()).push(Text::new("blue")))
                 .on_radio_value_changed(Rc::new(move |_event, new_value| {
                     if new_value.borrow().as_str() == "green" {
-                        green.clone().border_color(
-                            rgb(0, 100, 255),
-                            rgb(0, 100, 255),
-                            rgb(255, 0, 0),
-                            rgb(0, 100, 255),
-                        );
+                        green.clone().border_color_all(rgb(0, 100, 255));
                     } else {
-                        green.clone().border_color(
-                            rgba(0, 0, 0, 0),
-                            rgba(0, 0, 0, 0),
-                            rgba(0, 0, 0, 0),
-                            rgba(0, 0, 0, 0),
-                        );
+                        green.clone().border_color_all(rgba(0, 0, 0, 0));
                     }
                 })),
         )
