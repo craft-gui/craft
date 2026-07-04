@@ -4,11 +4,14 @@ use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceId, ResourceManager};
-use peniko::kurbo::{Affine, BezPath, Shape, Stroke};
+
+use peniko::kurbo::{Affine, BezPath, Stroke};
 use peniko::{Fill, kurbo};
+
 use tinyvg_rs::color_table::ColorTable;
 use tinyvg_rs::commands::{DrawCommand, Path, Style};
 use tinyvg_rs::common::Unit;
+
 use vello_hybrid::Scene;
 
 use crate::vello_hybrid::brush_to_paint;
@@ -104,12 +107,8 @@ pub(crate) fn draw_tiny_vg(
                     scene.set_fill_rule(Fill::EvenOdd);
 
                     for rectangle in &data.rectangles {
-                        let rect = kurbo::Rect::new(
-                            rectangle.x.0,
-                            rectangle.y.0,
-                            rectangle.width.0,
-                            rectangle.height.0
-                        );
+                        let rect =
+                            kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
                         scene.fill_rect(&rect);
                     }
                 }
@@ -192,12 +191,8 @@ pub(crate) fn draw_tiny_vg(
                     let line_brush = tinyvg_helpers::get_brush(&data.line_style, &tiny_vg.color_table, override_color);
 
                     for rectangle in &data.rectangles {
-                        let rect = kurbo::Rect::new(
-                            rectangle.x.0,
-                            rectangle.y.0,
-                            rectangle.width.0,
-                            rectangle.height.0
-                        );
+                        let rect =
+                            kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
                         scene.set_paint(brush_to_paint(&fill_brush));
                         scene.set_fill_rule(Fill::EvenOdd);
                         scene.fill_rect(&rect);
