@@ -84,26 +84,26 @@ impl Style {
 
         let align_items = match style.get_align_items() {
             None => None,
-            Some(AlignItems::Start) => Some(taffy::AlignItems::Start),
-            Some(AlignItems::End) => Some(taffy::AlignItems::End),
-            Some(AlignItems::FlexStart) => Some(taffy::AlignItems::FlexStart),
-            Some(AlignItems::FlexEnd) => Some(taffy::AlignItems::FlexEnd),
-            Some(AlignItems::Center) => Some(taffy::AlignItems::Center),
-            Some(AlignItems::Baseline) => Some(taffy::AlignItems::Baseline),
-            Some(AlignItems::Stretch) => Some(taffy::AlignItems::Stretch),
+            Some(AlignItems::Start) => Some(taffy::AlignItems::START),
+            Some(AlignItems::End) => Some(taffy::AlignItems::END),
+            Some(AlignItems::FlexStart) => Some(taffy::AlignItems::FLEX_START),
+            Some(AlignItems::FlexEnd) => Some(taffy::AlignItems::FLEX_END),
+            Some(AlignItems::Center) => Some(taffy::AlignItems::CENTER),
+            Some(AlignItems::Baseline) => Some(taffy::AlignItems::BASELINE),
+            Some(AlignItems::Stretch) => Some(taffy::AlignItems::STRETCH),
         };
 
         let justify_content = match style.get_justify_content() {
             None => None,
-            Some(JustifyContent::Start) => Some(taffy::JustifyContent::Start),
-            Some(JustifyContent::End) => Some(taffy::JustifyContent::End),
-            Some(JustifyContent::FlexStart) => Some(taffy::JustifyContent::FlexStart),
-            Some(JustifyContent::FlexEnd) => Some(taffy::JustifyContent::FlexEnd),
-            Some(JustifyContent::Center) => Some(taffy::JustifyContent::Center),
-            Some(JustifyContent::Stretch) => Some(taffy::JustifyContent::Stretch),
-            Some(JustifyContent::SpaceBetween) => Some(taffy::JustifyContent::SpaceBetween),
-            Some(JustifyContent::SpaceEvenly) => Some(taffy::JustifyContent::SpaceEvenly),
-            Some(JustifyContent::SpaceAround) => Some(taffy::JustifyContent::SpaceAround),
+            Some(JustifyContent::Start) => Some(taffy::JustifyContent::START),
+            Some(JustifyContent::End) => Some(taffy::JustifyContent::END),
+            Some(JustifyContent::FlexStart) => Some(taffy::JustifyContent::FLEX_START),
+            Some(JustifyContent::FlexEnd) => Some(taffy::JustifyContent::FLEX_END),
+            Some(JustifyContent::Center) => Some(taffy::JustifyContent::CENTER),
+            Some(JustifyContent::Stretch) => Some(taffy::JustifyContent::STRETCH),
+            Some(JustifyContent::SpaceBetween) => Some(taffy::JustifyContent::SPACE_BETWEEN),
+            Some(JustifyContent::SpaceEvenly) => Some(taffy::JustifyContent::SPACE_EVENLY),
+            Some(JustifyContent::SpaceAround) => Some(taffy::JustifyContent::SPACE_AROUND),
         };
 
         let flex_direction = match style.get_flex_direction() {
