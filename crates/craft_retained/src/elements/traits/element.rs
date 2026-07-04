@@ -208,13 +208,53 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn margin_all(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_margin_all(value);
+        self
+    }
+
+    fn margin_vertical(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_margin_vertical(value);
+        self
+    }
+
+    fn margin_horizontal(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_margin_horizontal(value);
+        self
+    }
+
     fn padding(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.as_element_rc().borrow_mut().set_padding(top, right, bottom, left);
         self
     }
 
+    fn padding_all(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_padding_all(value);
+        self
+    }
+
+    fn padding_vertical(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_padding_vertical(value);
+        self
+    }
+
+    fn padding_horizontal(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_padding_horizontal(value);
+        self
+    }
+
     fn gap(self, row_gap: Unit, column_gap: Unit) -> Self {
         self.as_element_rc().borrow_mut().set_gap(row_gap, column_gap);
+        self
+    }
+
+    fn row_gap(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_row_gap(value);
+        self
+    }
+
+    fn column_gap(self, value: Unit) -> Self {
+        self.as_element_rc().borrow_mut().set_column_gap(value);
         self
     }
 
@@ -338,10 +378,41 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn overflow_x(self, overflow_x: Overflow) -> Self {
+        self.as_element_rc().borrow_mut().set_overflow_x(overflow_x);
+        self
+    }
+    
+    fn overflow_y(self, overflow_y: Overflow) -> Self {
+        self.as_element_rc().borrow_mut().set_overflow_y(overflow_y);
+        self
+    }
+
     fn border_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
         self.as_element_rc()
             .borrow_mut()
             .set_border_color(top, right, bottom, left);
+        self
+    }
+
+    fn border_color_all(self, value: Color) -> Self  {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_color_all(value);
+        self
+    }
+
+    fn border_color_vertical(self, value: Color) -> Self  {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_color_vertical(value);
+        self
+    }
+
+    fn border_color_horizontal(self, value: Color) -> Self  {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_color_horizontal(value);
         self
     }
 
@@ -352,10 +423,52 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn border_width_all(self, value: Unit) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_width_all(value);
+        self
+    }
+
+    fn border_width_vertical(self, value: Unit) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_width_vertical(value);
+        self
+    }
+
+    fn border_width_horizontal(self, value: Unit) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_width_horizontal(value);
+        self
+    }
+
     fn border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
         self.as_element_rc()
             .borrow_mut()
             .set_border_radius(top, right, bottom, left);
+        self
+    }
+
+    fn border_radius_all(self, value: (f32, f32)) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_radius_all(value);
+        self
+    }
+
+    fn border_radius_vertical(self, value: (f32, f32)) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_radius_vertical(value);
+        self
+    }
+
+    fn border_radius_horizontal(self, value: (f32, f32)) -> Self {
+        self.as_element_rc()
+            .borrow_mut()
+            .set_border_radius_horizontal(value);
         self
     }
 
@@ -371,7 +484,7 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn set_scrollbar_thumb_radius(
+    fn scrollbar_thumb_radius(
         self,
         top: (f32, f32),
         right: (f32, f32),

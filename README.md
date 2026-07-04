@@ -17,11 +17,10 @@ use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
 use craft_retained::{Color, CraftOptions, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
-    let border_color = rgb(0, 0, 0);
     Container::new()
         .border_width(px(1), px(2), px(3), px(4))
-        .border_color(border_color, border_color, border_color, border_color)
-        .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
+        .border_color_all(rgb(0, 0, 0))
+        .border_radius_all((10.0, 10.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)

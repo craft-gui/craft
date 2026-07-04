@@ -15,9 +15,9 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
             BoxShadow::new(false, 0.0, 25.0, 35.0, 0.0, rgba(0, 0, 0, 150)),
             BoxShadow::new(true, 0.0, 4.0, 4.0, 0.0, rgba(255, 255, 255, 120)),
         ])
-        .border_width(px(0), px(0), px(0), px(0))
-        .border_color(border_color, border_color, border_color, border_color)
-        .border_radius((8.0, 8.0), (8.0, 8.0), (8.0, 8.0), (8.0, 8.0))
+        .border_width_all(px(0))
+        .border_color_all(border_color)
+        .border_radius_all((8.0, 8.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
@@ -41,11 +41,11 @@ pub fn counter() -> Container {
         .align_items(Some(AlignItems::Center))
         .width(pct(100))
         .height(pct(100))
-        .gap(px(20), px(20))
+        .row_gap(px(20))
         .push(count_text.clone())
         .push({
             Container::new()
-                .gap(px(20), px(20))
+                .column_gap(px(20))
                 .push(create_button(
                     "-",
                     rgb(244, 63, 94),

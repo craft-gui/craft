@@ -13,7 +13,6 @@ fn title(txt: &str) -> Text {
 }
 
 fn event_log() -> (Container, Rc<dyn Fn(String)>) {
-    let border_color = Color::from_rgb8(99, 99, 99);
     let event_log = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
@@ -22,9 +21,9 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
         .height(Unit::Px(200.0))
         .max_width(Unit::Px(300.0))
         .max_height(Unit::Px(200.0))
-        .border_width(Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0))
+        .border_width_all(Unit::Px(1.0))
         .margin(Unit::Px(25.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0))
-        .border_color(border_color, border_color, border_color, border_color);
+        .border_color_all(Color::from_rgb8(99, 99, 99));
 
     let event_log_copy = event_log.clone();
     let push_text = Rc::new(move |string: String| {
@@ -34,8 +33,8 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
     let event_log_copy = event_log.clone();
     let clear_log = Text::new("Clear")
         .background_color(Color::from_rgb8(210, 210, 215))
-        .border_width(Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0), Unit::Px(1.0))
-        .border_radius((6.0, 6.0), (6.0, 6.0), (6.0, 6.0), (6.0, 6.0))
+        .border_width_all(Unit::Px(1.0))
+        .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
         .on_pointer_button_down(Rc::new(move |_e, _pb_event| {
@@ -48,7 +47,7 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
     let container = Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .gap(Unit::Px(20.0), Unit::Px(20.0))
+        .row_gap(Unit::Px(20.0))
         .push(event_log)
         .push(clear_log);
 
@@ -96,12 +95,7 @@ fn pointer_capture_example() -> Container {
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .padding(
-            Unit::Px(container_padding),
-            Unit::Px(container_padding),
-            Unit::Px(container_padding),
-            Unit::Px(container_padding),
-        )
+        .padding_all(Unit::Px(container_padding))
         .push(title("Pointer Capture"))
         .push(draggable_text)
         .push(event_log)
@@ -141,7 +135,7 @@ fn pointer_enter_leave_example() -> Container {
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .padding(Unit::Px(20.0), Unit::Px(20.0), Unit::Px(20.0), Unit::Px(20.0))
+        .padding_all(Unit::Px(20.0))
         .push(title("Pointer Enter + Leave"))
         .push(parent)
         .push(event_log)
@@ -151,11 +145,11 @@ pub fn pointer_events() -> Container {
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .overflow(Overflow::Visible, Overflow::Scroll)
+        .overflow_y(Overflow::Scroll)
         .max_height(Unit::Percentage(100.0))
         .width(pct(100))
         .height(pct(100))
-        .gap(Unit::Px(50.0), Unit::Px(50.0))
+        .row_gap(Unit::Px(50.0))
         .push(pointer_capture_example())
         .push(pointer_enter_leave_example())
 }
