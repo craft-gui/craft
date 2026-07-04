@@ -2,7 +2,6 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -704,32 +703,15 @@ impl WindowInternal {
 
     fn draw_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
         let render_list = self.render_list.clone();
-        render_list.borrow_mut().deref_mut().clear();
-        self.draw(
-            render_list.borrow_mut().deref_mut(),
-            text_context,
-            self.effective_scale_factor(),
-        );
-
+        let mut render_list = render_list.borrow_mut();
+        render_list.clear();
+        self.draw(&mut render_list, text_context, self.effective_scale_factor());
+        let renderer = self.renderer.as_mut().unwrap();
         self.winit_window.clone().unwrap().pre_present_notify();
-        self.renderer
-            .as_mut()
-            .unwrap()
-            .sort_and_cull_render_list(render_list.borrow_mut().deref_mut());
-
-        let window = Rectangle {
-            x: 0.0,
-            y: 0.0,
-            width: self.renderer.as_mut().unwrap().surface_width(),
-            height: self.renderer.as_mut().unwrap().surface_height(),
-        };
-        self.renderer.as_mut().unwrap().prepare_render_list(
-            self.render_list.borrow_mut().deref_mut(),
-            resource_manager.clone(),
-            window,
-        );
-
-        self.renderer.as_mut().unwrap().submit(resource_manager.clone());
+        renderer.sort_and_cull_render_list(&mut render_list);
+        let window = Rectangle::new(0.0, 0.0, renderer.surface_width(), renderer.surface_height());
+        renderer.prepare_render_list(&mut render_list, resource_manager.clone(), window);
+        renderer.submit(resource_manager.clone());
     }
 
     fn screenshot(&self) -> Screenshot {
