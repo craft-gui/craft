@@ -2,12 +2,12 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
-
+use std::time::Instant;
 use craft_logging::info;
 
 use craft_primitives::geometry::Size;
 
-use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work};
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work, Job, push_gui_thread_work};
 
 use ui_events::pointer::PointerEvent;
 
@@ -213,9 +213,23 @@ impl CraftWinitState {
     fn process_external_work(&mut self) {
         // Do work sent from other threads and update all the windows.
         let mut work_done = false;
-        while let Some(work) = pop_gui_thread_work() {
-            work();
-            work_done = true;
+
+        let mut timer_jobs: Vec<Job> = vec![];
+        while let Some(mut work) = pop_gui_thread_work() {
+            if work.interval.is_none() || work.last_run.elapsed() >= work.interval.unwrap() {
+                (work.callback)();
+                work.last_run = Instant::now();
+
+                work_done = true;
+            }
+
+            if work.interval.is_some() {
+                timer_jobs.push(work);
+            }
+        }
+
+        for timer_job in timer_jobs {
+            push_gui_thread_work(timer_job);
         }
 
         if work_done {

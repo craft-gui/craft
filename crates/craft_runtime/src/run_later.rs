@@ -3,8 +3,25 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
-type Job = Box<dyn FnOnce() + Send + 'static>;
+pub struct Job {
+    pub callback: JobCallback,
+    pub interval: Option<Duration>,
+    pub last_run: Instant
+}
+
+impl Job {
+    pub fn new(callback: JobCallback, interval: Option<Duration>) -> Job {
+        Job {
+            callback,
+            interval,
+            last_run: Instant::now(),
+        }
+    }
+}
+
+type JobCallback = Box<dyn FnMut() + Send + 'static>;
 
 pub struct GuiThreadJobQueue {
     #[cfg(target_arch = "wasm32")]
@@ -46,10 +63,7 @@ pub fn pop_gui_thread_work() -> Option<Job> {
     }
 }
 
-/// Runs a FnOnce at a later time on the GUI thread.
-/// This is useful if you need to do work on another thread, but guarantee that GUI changes are done on the GUI thread.
-/// This should only run for a very short time, because it will block the GUI from doing other work.
-pub fn run_later_on_gui_thread(work: Job) {
+pub fn push_gui_thread_work(work: Job) {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let queue = GUI_THREAD_JOB_QUEUE
@@ -64,6 +78,13 @@ pub fn run_later_on_gui_thread(work: Job) {
             queue.push(work);
         });
     }
+}
+
+/// Runs a FnOnce at a later time on the GUI thread.
+/// This is useful if you need to do work on another thread, but guarantee that GUI changes are done on the GUI thread.
+/// This should only run for a very short time, because it will block the GUI from doing other work.
+pub fn run_later_on_gui_thread(work: Job) {
+    push_gui_thread_work(work);
 }
 
 impl GuiThreadJobQueue {
