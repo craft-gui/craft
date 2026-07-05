@@ -83,13 +83,13 @@ impl RenderSurface {
         match self.surface.get_current_texture() {
             CurrentSurfaceTexture::Success(surface_texture) => Some(surface_texture),
             CurrentSurfaceTexture::Outdated | CurrentSurfaceTexture::Suboptimal(_) => {
-                self.surface.configure(&device, &self.surface_config);
+                self.surface.configure(device, &self.surface_config);
                 self.window.request_redraw();
-                return None;
+                None
             }
             CurrentSurfaceTexture::Occluded | CurrentSurfaceTexture::Timeout => {
                 self.window.request_redraw();
-                return None;
+                None
             }
             CurrentSurfaceTexture::Lost => panic!("Surface was lost"),
             CurrentSurfaceTexture::Validation => {

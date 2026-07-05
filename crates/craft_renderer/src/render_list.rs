@@ -51,7 +51,7 @@ impl RenderList {
 
     pub fn draw_circle(&mut self, circle: Circle, color: Color) {
         if let Some(cull) = &self.cull
-            && !circle.intersects_rect(&cull)
+            && !circle.intersects_rect(cull)
         {
             return;
         }
@@ -62,7 +62,7 @@ impl RenderList {
 
     pub fn draw_circle_outline(&mut self, circle: Circle, outline_color: Color, thickness: f32) {
         if let Some(cull) = &self.cull
-            && !circle.intersects_rect(&cull)
+            && !circle.intersects_rect(cull)
         {
             return;
         }

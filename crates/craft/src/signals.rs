@@ -1,8 +1,6 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element};
 type Subscriber = Rc<dyn Fn()>;
 
 struct SignalInner<T> {
@@ -44,7 +42,7 @@ impl<T: Clone + 'static> Signal<T> {
     }
 }
 
-pub fn create_for<T: Clone + 'static, K: std::hash::Hash + Eq + Copy + 'static>(
+/*pub fn create_for<T: Clone + 'static, K: std::hash::Hash + Eq + Copy + 'static>(
     container: Container,
     list_signal: Signal<Vec<T>>,
     key_fn: impl Fn(&T) -> K + 'static,
@@ -70,13 +68,13 @@ pub fn create_for<T: Clone + 'static, K: std::hash::Hash + Eq + Copy + 'static>(
             c.clone().push(child);
         }
 
-        let current_keys: Vec<K> = current_data.iter().map(|i| key_fn(i)).collect();
+        let current_keys: Vec<K> = current_data.iter().map(&key_fn).collect();
         cache.retain(|k, _| current_keys.contains(k));
     });
 
     runner();
     list_signal.subscribe(runner);
-}
+}*/
 
 impl<T: Clone + 'static> Signal<T> {
     pub fn map<U: Clone + 'static, F: Fn(T) -> U + 'static>(&self, f: F) -> Signal<U> {
