@@ -32,7 +32,8 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: fastlinux
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -48,7 +49,8 @@ jobs:
         run: cargo build --package counter_retained
 
   build-macos:
-    runs-on: macos-latest
+    runs-on:
+      labels: fastmac
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -62,7 +64,8 @@ jobs:
         run: cargo build --package counter_retained
 
   build-windows:
-    runs-on: windows-latest
+    runs-on:
+      labels: fastwindows
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -74,7 +77,8 @@ jobs:
         run: cargo build --bin counter_retained
 
   build-android:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: fastlinux
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -109,7 +113,8 @@ jobs:
         run: cargo apk build --package counter_retained --lib
 
   build-ios:
-    runs-on: macos-latest
+    runs-on:
+      labels: fastmac
     env:
       IPHONEOS_DEPLOYMENT_TARGET: "13.0"
     steps:
@@ -124,7 +129,8 @@ jobs:
         run: cargo build --target aarch64-apple-ios --bin counter_retained
 
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: fastlinux
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -140,7 +146,8 @@ jobs:
         run: cargo test --package craft_retained --no-fail-fast --verbose
 
   integration-tests:
-    runs-on: windows-latest
+    runs-on:
+      labels: fastwindows
     env:
       CRAFT_RETAINED_TEST: generate-all
 
