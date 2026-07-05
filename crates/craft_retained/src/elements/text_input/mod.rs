@@ -238,7 +238,7 @@ impl ElementInternals for TextInputInner {
 
         self.add_hit_testable(_renderer, true, _scale_factor);
 
-        let computed_box_transformed = self.computed_box();
+        let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         self.draw_borders(_renderer, _scale_factor);
