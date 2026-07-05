@@ -251,10 +251,10 @@ pub fn checkbox() -> Container {
             }))
             .flex_direction(FlexDirection::Column)
             .gap(px(15.0), px(15.0))
-            .push(Checkbox::new("coffee", true).push(Text::new("Coffee")))
-            .push(Checkbox::new("tea", false).push(Text::new("Tea")))
-            .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉")))
-            .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー"))),
+            .push(Checkbox::new("coffee", true).push(Text::new("Coffee").selectable(false)))
+            .push(Checkbox::new("tea", false).push(Text::new("Tea").selectable(false)))
+            .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉").selectable(false)))
+            .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー").selectable(false))),
     )
 }
 
