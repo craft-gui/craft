@@ -5,6 +5,7 @@ pub use crate::elements::dropdown::{Dropdown, DropdownInner};
 pub use crate::elements::dyn_element::DynElement;
 pub use crate::elements::element_id_map::ElementIdMap;
 pub use crate::elements::image::{Image, ImageInner};
+#[cfg(feature = "markdown")]
 pub use crate::elements::markdown::{render_markdown};
 pub use crate::elements::radio::{Radio, RadioInner};
 pub use crate::elements::radiogroup::{RadioGroup, RadioGroupInner};
@@ -36,4 +37,5 @@ mod text_input;
 mod tinyvg;
 mod traits;
 mod window;
+#[cfg(feature = "markdown")]
 mod markdown;
