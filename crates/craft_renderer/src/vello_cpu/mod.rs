@@ -5,7 +5,7 @@ use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::resource::Resource;
 
@@ -306,6 +306,7 @@ impl Renderer for VelloCpuRenderer {
                             let glyph_run_builder = self
                                 .render_context
                                 .glyph_run(&mut self.resources, &item.font)
+                                .atlas_cache(true)
                                 .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
@@ -355,14 +356,28 @@ impl Renderer for VelloCpuRenderer {
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
                 RenderCommand::BoxShadowCmd(cmd) => self.draw_box_shadow(cmd),
+                RenderCommand::DrawCircleOutline(cmd) => {
+                    self.render_context.set_stroke(Stroke::new(cmd.thickness as f64));
+                    self.render_context.set_paint(PaintType::Solid(cmd.outline_color));
+                    self.render_context
+                        .stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
+                }
+                RenderCommand::DrawCircle(cmd) => {
+                    self.render_context.set_paint(PaintType::from(cmd.color));
+                    self.render_context.fill_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
+                }
+                RenderCommand::StrokeBezPath(cmd) => {
+                    self.render_context
+                        .set_paint(PaintType::from(brush_to_paint(&cmd.brush)));
+                    self.render_context.stroke_path(&cmd.path);
+                }
             }
         });
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
         self.render_context.flush();
-        self.render_context
-            .render_to_pixmap(&mut self.resources, &mut self.pixmap);
+        self.render_context.render(&mut self.pixmap, &mut self.resources);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
         buffer.present().expect("Failed to present buffer");
         self.render_context.reset();
