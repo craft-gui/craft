@@ -5,7 +5,7 @@ use accesskit::{Role, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::RenderList;
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
 use crate::elements::element_data::ElementData;
@@ -50,6 +50,14 @@ impl Drop for CheckboxGroupInner {
 impl AsElement for CheckboxGroup {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
     }
 }
 

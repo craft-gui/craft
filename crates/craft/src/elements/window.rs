@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use craft_retained::elements::{AsElement, ElementInternals};
@@ -17,6 +17,14 @@ impl Element for Window {}
 impl AsElement for Window {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
     }
 }
 

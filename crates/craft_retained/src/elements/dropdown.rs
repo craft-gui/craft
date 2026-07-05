@@ -1,7 +1,7 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
@@ -89,6 +89,14 @@ impl Drop for DropdownInner {
 impl AsElement for Dropdown {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
     }
 }
 

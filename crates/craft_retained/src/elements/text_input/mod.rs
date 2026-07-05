@@ -1,7 +1,7 @@
 mod text_input_state;
 
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 
@@ -145,6 +145,14 @@ impl Drop for TextInputInner {
 impl AsElement for TextInput {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
     }
 }
 

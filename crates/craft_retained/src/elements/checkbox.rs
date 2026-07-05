@@ -1,7 +1,7 @@
 //! A toggleable checkbox.
 
 use std::any::Any;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
 #[cfg(feature = "accesskit")]
@@ -52,6 +52,14 @@ impl Drop for CheckboxInner {
 impl AsElement for Checkbox {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
     }
 }
 
