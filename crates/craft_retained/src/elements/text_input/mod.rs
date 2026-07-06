@@ -17,7 +17,7 @@ use ui_events::pointer::{PointerButton, PointerId};
 
 use winit::event::Ime;
 
-use crate::app::ELEMENTS;
+use crate::app::{ELEMENTS};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
@@ -41,15 +41,15 @@ pub struct TextInput {
 // A stateful element that shows text.
 #[derive(Clone)]
 pub struct TextInputInner {
-    element_data: ElementData,
+    pub(crate) element_data: ElementData,
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
-    use_text_value_on_update: bool,
+    pub(crate) use_text_value_on_update: bool,
     pub text: Option<String>,
     pub ranged_styles: Option<RangedStyles>,
     pub disabled: bool,
     pub(crate) state: TextInputState,
-    me: Weak<RefCell<Self>>,
+    pub(crate) me: Weak<RefCell<Self>>,
 }
 
 #[allow(dead_code)]
@@ -63,40 +63,9 @@ pub enum TextInputMessage {
 
 impl TextInput {
     pub fn new(text: &str) -> Self {
-        let default_style = TextInputInner::get_default_style();
-
-        let text_input_state = TextInputState::default();
-
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInputInner>>| {
-            RefCell::new(TextInputInner {
-                text: Some(text.to_string()),
-                element_data: ElementData::new(me.clone(), true),
-                use_text_value_on_update: true,
-                ranged_styles: Some(RangedStyles::new(vec![])),
-                disabled: false,
-                state: text_input_state,
-                me: me.clone(),
-            })
-        });
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.element_data.style = default_style;
-
-        inner_mut.set_text(text);
-
-        let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
-            element: inner_mut.me.clone(),
-        }));
-        inner_mut.element_data.create_layout_node(context);
-
-        let taffy_id = inner_mut.element_data.layout.taffy_node_id;
-        inner_mut.state.taffy_id = taffy_id;
-        inner_mut.state.editor.taffy_id = taffy_id;
-
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(inner_mut.deref());
-        });
-        drop(inner_mut);
-        Self { inner }
+        Self {
+            inner: TextInputInner::new(text)
+        }
     }
 
     /// Whether the text input will update the editor every update with the user provided text.
@@ -200,7 +169,7 @@ impl ElementInternals for TextInputInner {
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();
 
-            let text_position = self.computed_box().content_rectangle();
+            let text_position = self.get_computed_box_transformed().content_rectangle();
             self.state.set_origin(&text_position.position());
             if self.is_focused() {
                 self.state.maybe_scroll_to_cursor(&mut self.element_data);
@@ -358,7 +327,6 @@ impl ElementInternals for TextInputInner {
                     }
                     self.state.cut(text_context);
                     self.mark_dirty();
-                    //generate_text_changed_event(&mut self.state.editor);
                 }
             }
         }
@@ -368,8 +336,7 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
-                self.state
-                    .key_press(text_context, keyboard_event, &mut self.element_data);
+                self.state.key_press(text_context, keyboard_event, &mut self.element_data);
             }
             EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
@@ -387,7 +354,6 @@ impl ElementInternals for TextInputInner {
             }
             EventKind::ImeEvent(Ime::Commit(text)) => {
                 self.state.insert_or_replace_selection(text_context, text);
-                //generate_text_changed_event(&mut self.state.editor);
             }
             EventKind::ImeEvent(Ime::Preedit(text, cursor)) => {
                 self.state.ime_pre_edit(text_context, text, cursor);
@@ -444,6 +410,44 @@ impl ElementInternals for TextInputInner {
 }
 
 impl TextInputInner {
+
+    pub fn new(text: &str) -> Rc<RefCell<Self>> {
+        let default_style = TextInputInner::get_default_style();
+
+        let text_input_state = TextInputState::default();
+
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInputInner>>| {
+            RefCell::new(TextInputInner {
+                text: Some(text.to_string()),
+                element_data: ElementData::new(me.clone(), true),
+                use_text_value_on_update: true,
+                ranged_styles: Some(RangedStyles::new(vec![])),
+                disabled: false,
+                state: text_input_state,
+                me: me.clone(),
+            })
+        });
+        let mut inner_mut = inner.borrow_mut();
+        inner_mut.element_data.style = default_style;
+
+        inner_mut.set_text(text);
+
+        let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
+            element: inner_mut.me.clone(),
+        }));
+        inner_mut.element_data.create_layout_node(context);
+
+        let taffy_id = inner_mut.element_data.layout.taffy_node_id;
+        inner_mut.state.taffy_id = taffy_id;
+        inner_mut.state.editor.taffy_id = taffy_id;
+
+        ELEMENTS.with_borrow_mut(|elements| {
+            elements.insert(inner_mut.deref());
+        });
+        drop(inner_mut);
+        inner
+    }
+
     /// Whether the text input will update the editor every update with the user provided text.
     /// NOTE: The editor will always use the user provided text on initialization.
     pub fn use_text_value_on_update(&mut self, use_initial_text_value: bool) {

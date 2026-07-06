@@ -26,18 +26,21 @@ mod event_dispatch;
 mod helpers;
 mod mouse_wheel;
 
-pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
-pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
+
+pub type CheckboxToggledHandler = Rc<dyn Fn(&mut Event, CheckboxToggled)>;
 pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut Event, usize)>;
-pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
+pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
 pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
-pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
-pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
+pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
 pub type RadioValueChangedHandler = Rc<dyn Fn(&mut Event, Rc<RefCell<String>>)>;
-pub type CheckboxToggledHandler = Rc<dyn Fn(&mut Event, CheckboxToggled)>;
+pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
+pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
+pub type TextInputChangedHandler = Rc<dyn Fn(&mut Event, &TextInputChanged)>;
 pub type UserMessage = dyn CloneableAny;
+
 
 #[derive(Clone)]
 pub enum EventDispatchType {
@@ -57,7 +60,7 @@ pub enum EventKind {
     PointerScroll(PointerScrollEvent),
     Scroll(),
     ImeEvent(Ime),
-    TextInputChanged(String),
+    TextInputChanged(TextInputChanged),
     LinkClicked(String),
     /// Generated when a dropdown is opened or closed. The boolean is the status of is_open after the event has occurred.
     DropdownToggled(bool),
@@ -76,6 +79,11 @@ pub enum EventKind {
 pub struct CheckboxToggled {
     pub label: String,
     pub status: bool,
+}
+
+#[derive(Clone)]
+pub struct TextInputChanged {
+    pub value: String,
 }
 
 /// The result of an update.

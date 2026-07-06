@@ -5,7 +5,7 @@ use craft_resource_manager::ResourceId;
 
 use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 
-use crate::elements::{AsElement, Container, DynElement, Element, Image, Text, TextInput};
+use crate::elements::{AsElement, CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
 use crate::{Color, px, rgb, pct};
@@ -262,18 +262,16 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     }
                     TagEnd::BlockQuote(_) => {}
                     TagEnd::CodeBlock => {
-                        /* if let Some(code_block_kind) = renderer.code_block_kind.take() {
+                        #[cfg(feature = "code_highlighting")]
+                        if let Some(code_block_kind) = renderer.code_block_kind.take() {
                             let language = match code_block_kind {
                                 pulldown_cmark::CodeBlockKind::Fenced(lang) => lang.to_string(),
                                 pulldown_cmark::CodeBlockKind::Indented => "plaintext".to_string(),
                             };
-                            let code_editor = CodeEditor::component().props(Props::new(CodeEditorProps {
-                                text: renderer.styled_text.text.clone(),
-                                extension: language,
-                            }));
-                            renderer.push(code_editor);
+                            let code_editor = CodeEditor::new(&renderer.styled_text.text, &language, "base16-ocean.dark");
+                            renderer.push(code_editor.as_dyn_element());
                             renderer.styled_text = StyledText::new();
-                        }*/
+                        }
                     }
                     TagEnd::HtmlBlock => {}
                     TagEnd::List(_ordered) => {

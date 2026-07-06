@@ -22,13 +22,14 @@ pub(super) fn dispatch_capturing_event(
 pub(super) fn dispatch_bubbling_event(
     message: &EventKind,
     targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
+    text_context: &mut TextContext,
 ) -> Event {
     let target = targets[0].clone();
     let mut base_event = Event::new(target.clone());
 
     // Call the callback handlers.
     for current_target in targets.iter_mut() {
-        call_user_event_handlers(&mut base_event, current_target, message);
+        call_user_event_handlers(&mut base_event, current_target, message, text_context);
         if !base_event.propagate {
             break;
         }
@@ -57,13 +58,13 @@ impl EventDispatcher {
     pub(super) fn dispatch_once(
         &self,
         message: &EventKind,
-        text_context: &mut Option<TextContext>,
+        text_context: &mut TextContext,
         target: &Rc<RefCell<dyn ElementInternals>>,
     ) {
         let mut base_event = Event::new(target.clone());
 
         // Call the callback handlers.
-        call_user_event_handlers(&mut base_event, target, message);
+        call_user_event_handlers(&mut base_event, target, message, text_context);
 
         if !base_event.prevent_defaults {
             // Call the default on_event element functions.
@@ -78,7 +79,7 @@ impl EventDispatcher {
     /// Note: This event does not bubble.
     pub(super) fn maybe_dispatch_pointer_leave(
         &self,
-        text_context: &mut Option<TextContext>,
+        text_context: &mut TextContext,
         targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         for prev_target in self.previous_targets.iter() {
@@ -115,7 +116,7 @@ impl EventDispatcher {
     /// Note: This event does not bubble.
     pub(super) fn maybe_dispatch_pointer_enter(
         &self,
-        text_context: &mut Option<TextContext>,
+        text_context: &mut TextContext,
         targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         for target in targets.iter().rev() {
@@ -151,7 +152,7 @@ impl EventDispatcher {
         message: &EventKind,
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
-        text_context: &mut Option<TextContext>,
+        text_context: &mut TextContext,
         render_list: &mut RenderList,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
@@ -202,7 +203,7 @@ impl EventDispatcher {
         dispatch_capturing_event(message, &mut targets);
 
         // Handle bubbling
-        let mut base_event = dispatch_bubbling_event(message, &mut targets);
+        let mut base_event = dispatch_bubbling_event(message, &mut targets, text_context);
         let target = targets[0].clone();
 
         // NOTE: Only certain events will trigger default behavior.
@@ -225,7 +226,7 @@ impl EventDispatcher {
         if message.is_pointer_event() {
             pointer_capture
                 .borrow_mut()
-                .maybe_handle_implicit_pointer_capture_release(message);
+                .maybe_handle_implicit_pointer_capture_release(message, text_context);
         }
 
         // Drain the event dispatch queue and invoke user callbacks.
@@ -235,7 +236,7 @@ impl EventDispatcher {
             dispatch_capturing_event(&message, &mut targets);
 
             // Handle bubbling
-            let _ = dispatch_bubbling_event(&message, &mut targets);
+            let _ = dispatch_bubbling_event(&message, &mut targets, text_context);
         }
 
         self.previous_targets = targets.iter().map(Rc::downgrade).collect();

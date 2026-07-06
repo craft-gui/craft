@@ -16,7 +16,7 @@ use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -486,6 +486,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn on_checkbox_toggled(&mut self, on_backbox_toggled: CheckboxToggledHandler) {
         self.element_data_mut().on_checkbox_toggled.push(on_backbox_toggled);
+    }
+
+    fn on_text_input_changed(&mut self, on_text_input_changed: TextInputChangedHandler) {
+        self.element_data_mut().on_text_input_changed.push(on_text_input_changed);
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {

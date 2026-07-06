@@ -16,10 +16,11 @@ use ui_events::pointer::PointerUpdate;
 use web_time::{Duration, Instant};
 use winit::dpi;
 
-use crate::app::{TAFFY_TREE, request_apply_layout};
+use crate::app::{TAFFY_TREE, request_apply_layout, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::elements::{ElementInternals, TextInputInner};
+use crate::events::{Event, EventKind, TextInputChanged};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
@@ -411,6 +412,13 @@ impl TextInputState {
         self.pointer_down
     }
 
+    fn generate_text_changed_event(&self, element_data: &ElementData) {
+        let new_event = Event::new(element_data.me.upgrade().unwrap());
+        queue_event(new_event, EventKind::TextInputChanged(TextInputChanged {
+            value: self.editor.raw_text().to_string(),
+        }));
+    }
+
     pub fn key_press(
         &mut self,
         text_context: &mut TextContext,
@@ -443,6 +451,7 @@ impl TextInputState {
             Key::Character(c) if action_mod && c.to_lowercase() == "y" => {
                 driver.redo();
                 self.clear_cache();
+                self.generate_text_changed_event(element_data);
             }
             Key::Character(c) if action_mod && c.to_lowercase() == "z" => {
                 if shift {
@@ -451,6 +460,7 @@ impl TextInputState {
                     driver.undo();
                 }
                 self.clear_cache();
+                self.generate_text_changed_event(element_data);
             }
             Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                 match c.to_lowercase().as_str() {
@@ -458,12 +468,12 @@ impl TextInputState {
                     "x" => {
                         cut(&mut driver);
                         self.clear_cache();
-                        //generate_text_changed_event(&mut self.editor);
+                        self.generate_text_changed_event(element_data);
                     }
                     "v" => {
                         paste(&mut driver);
                         self.clear_cache();
-                        //generate_text_changed_event(&mut self.editor);
+                        self.generate_text_changed_event(element_data);
                     }
                     _ => (),
                 }
@@ -602,7 +612,7 @@ impl TextInputState {
                     driver.delete(true);
                 }
                 self.clear_cache();
-                //generate_text_changed_event(&mut self.state.editor);
+                self.generate_text_changed_event(element_data);
             }
             Key::Named(NamedKey::Backspace) => {
                 if IS_MAC && action_mod {
@@ -620,17 +630,17 @@ impl TextInputState {
                 }
 
                 self.clear_cache();
-                //generate_text_changed_event(&mut self.state.editor);
+                self.generate_text_changed_event(element_data);
             }
             Key::Named(NamedKey::Enter) => {
                 driver.insert_or_replace_selection("\n", true);
                 self.clear_cache();
-                //generate_text_changed_event(&mut self.state.editor);
+                self.generate_text_changed_event(element_data);
             }
             Key::Character(character) => {
                 driver.insert_or_replace_selection(character, true);
                 self.clear_cache();
-                //generate_text_changed_event(&mut self.state.editor);
+                self.generate_text_changed_event(element_data);
             }
             _ => (),
         }

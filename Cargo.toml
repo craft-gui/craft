@@ -45,6 +45,10 @@ reqwest = { version = "0.13.4", default-features = false }
 tracing = { version = "0.1.44" }
 tracing-subscriber = {version = "0.3.23"}
 
+[workspace.dependencies.syntect]
+default-features = false
+version = "5.3.0"
+
 [workspace.dependencies.peniko]
 version = "0.6.1"
 default-features = false

@@ -7,6 +7,7 @@ use ui_events::pointer::PointerId;
 use crate::elements::ElementInternals;
 use crate::events::EventKind;
 use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
+use crate::text::text_context::TextContext;
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
 #[derive(Default, Clone)]
@@ -46,7 +47,7 @@ impl PointerCapture {
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-    pub(super) fn process_pending_pointer_capture(&mut self) {
+    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext) {
         // 4.1.3.2 Process pending pointer capture
         let key = &PointerId::new(1).unwrap();
         let (pointer_capture_val, pending_pointer_capture_val) = {
@@ -73,7 +74,7 @@ impl PointerCapture {
                 }
 
                 dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets);
+                dispatch_bubbling_event(&msg, &mut targets, text_context);
             }
         }
 
@@ -94,7 +95,7 @@ impl PointerCapture {
                 }
 
                 dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets);
+                dispatch_bubbling_event(&msg, &mut targets, text_context);
             }
         }
 
@@ -108,7 +109,7 @@ impl PointerCapture {
         }
     }
 
-    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind) {
+    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext) {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
         let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));
@@ -120,9 +121,9 @@ impl PointerCapture {
             let key = &PointerId::new(1).unwrap();
             let _ = self.pending_pointer_captures.remove(key);
 
-            self.process_pending_pointer_capture();
+            self.process_pending_pointer_capture(text_context);
         } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-            self.process_pending_pointer_capture();
+            self.process_pending_pointer_capture(text_context);
         }
     }
 }

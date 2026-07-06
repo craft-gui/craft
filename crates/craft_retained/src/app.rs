@@ -204,7 +204,7 @@ impl App {
             message,
             mouse_pos,
             window.inner.clone(),
-            &mut self.text_context,
+            self.text_context.as_mut().unwrap(),
             render_list.borrow_mut().deref_mut(),
             &mut self.target_scratch,
         );

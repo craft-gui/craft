@@ -69,6 +69,7 @@ pub(super) fn call_user_event_handlers(
     event: &mut Event,
     current_target: &Rc<RefCell<dyn ElementInternals>>,
     message: &EventKind,
+    text_context: &mut TextContext,
 ) {
     match message {
         EventKind::PointerEnter() => {
@@ -115,7 +116,6 @@ pub(super) fn call_user_event_handlers(
         }
         EventKind::PointerScroll(_) => {}
         EventKind::ImeEvent(_) => {}
-        EventKind::TextInputChanged(_) => {}
         EventKind::LinkClicked(_) => {}
         EventKind::DropdownToggled(_) => {}
         EventKind::DropdownItemSelected(item) => {
@@ -169,6 +169,16 @@ pub(super) fn call_user_event_handlers(
                 (*handler)(event, rv.clone());
             }
         }
+        EventKind::TextInputChanged(rv) => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_text_input_changed {
+                (*handler)(event, rv);
+            }
+            if !event.prevent_defaults {
+                current_target.borrow_mut().on_event(message, text_context, event, Some(event.target.clone()));
+            }
+        }
     }
 }
 
@@ -176,10 +186,10 @@ pub(super) fn call_default_element_event_handler(
     event: &mut Event,
     current_target: &Rc<RefCell<dyn ElementInternals>>,
     target: &Rc<RefCell<dyn ElementInternals>>,
-    text_context: &mut Option<TextContext>,
+    text_context: &mut TextContext,
     message: &EventKind,
 ) {
     current_target
         .borrow_mut()
-        .on_event(message, text_context.as_mut().unwrap(), event, Some(target.clone()));
+        .on_event(message, text_context, event, Some(target.clone()));
 }

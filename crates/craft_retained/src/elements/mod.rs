@@ -1,5 +1,7 @@
 pub use crate::elements::checkbox::{Checkbox, CheckboxInner};
 pub use crate::elements::checkboxgroup::{CheckboxGroup, CheckboxGroupInner};
+#[cfg(feature = "code_highlighting")]
+pub use crate::elements::codeeditor::{CodeEditor};
 pub use crate::elements::container::{Container, ContainerInner};
 pub use crate::elements::dropdown::{Dropdown, DropdownInner};
 pub use crate::elements::dyn_element::DynElement;
@@ -39,3 +41,5 @@ mod traits;
 mod window;
 #[cfg(feature = "markdown")]
 mod markdown;
+#[cfg(feature = "code_highlighting")]
+mod codeeditor;

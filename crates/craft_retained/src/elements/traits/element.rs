@@ -11,7 +11,7 @@ use crate::CraftError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
-use crate::events::{CheckboxToggledHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
+use crate::events::{CheckboxToggledHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
@@ -82,6 +82,11 @@ pub trait Element: Clone + AsElement {
 
     fn on_checkbox_toggled(self, on_checkbox_toggled: CheckboxToggledHandler) -> Self {
         self.borrow_mut().on_checkbox_toggled(on_checkbox_toggled);
+        self
+    }
+
+    fn on_textinput_changed(self, on_text_input_changed: TextInputChangedHandler) -> Self {
+        self.borrow_mut().on_text_input_changed(on_text_input_changed);
         self
     }
 
