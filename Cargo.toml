@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "crates/craft_retained",
     "crates/craft",
+    "crates/craft_calendar",
     "crates/craft_logger",
     "xtask",
     "examples/util",
@@ -20,7 +21,7 @@ members = [
     "crates/craft_resource_manager",
     "crates/craft_runtime",
     "crates/craft_undo",
-    "website",
+    "website", "crates/craft_calendar",
 ]
 
 [workspace.package]
