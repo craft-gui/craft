@@ -431,7 +431,7 @@ impl Shape {
             let border_color = &current_style.get_border_color();
             let box_shadows = current_style.get_box_shadows();
             self.layout
-                .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows);
+                .apply_borders(has_border, border_radius, scale_factor, *border_color, box_shadows.to_vec());
             // Refactor END
 
             // For scroll changes from taffy;

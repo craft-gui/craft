@@ -235,10 +235,9 @@ where
         self.is_dirty = true;
     }
 
-    // TODO: Return a ref.
     #[inline(always)]
-    pub fn get(&self) -> T {
-        self.property.clone()
+    pub fn get(&self) -> &T {
+        &self.property
     }
 
     #[inline(always)]

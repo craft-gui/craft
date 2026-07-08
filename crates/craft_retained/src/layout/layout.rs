@@ -204,7 +204,7 @@ impl Layout {
         has_border: bool,
         border_radius: [(f32, f32); 4],
         scale_factor: f64,
-        border_color: &TrblRectangle<Color>,
+        border_color: TrblRectangle<Color>,
         box_shadows: Vec<BoxShadow>,
     ) {
         let element_rect = self.computed_box_transformed;
@@ -213,7 +213,7 @@ impl Layout {
             width: element_rect.border,
             radii: border_radius,
             scale_factor,
-            box_shadows,
+            box_shadows: box_shadows.to_vec(),
         };
 
         if Some(&border_spec) == self.cache_border_spec.as_ref() {

@@ -127,7 +127,7 @@ impl Style {
 
 impl Style {
     pub fn get_box_sizing(&self) -> BoxSizing {
-        self.box_sizing.get()
+        *self.box_sizing.get()
     }
 
     pub fn set_box_sizing(&mut self, val: BoxSizing) {
@@ -136,7 +136,7 @@ impl Style {
     }
 
     pub fn get_position(&self) -> Position {
-        self.position.get()
+        *self.position.get()
     }
 
     pub fn set_position(&mut self, val: Position) {
@@ -145,7 +145,7 @@ impl Style {
     }
 
     pub fn get_margin(&self) -> TrblRectangle<Unit> {
-        self.margin.get()
+        *self.margin.get()
     }
 
     pub fn set_margin(&mut self, val: TrblRectangle<Unit>) {
@@ -154,7 +154,7 @@ impl Style {
     }
 
     pub fn get_padding(&self) -> TrblRectangle<Unit> {
-        self.padding.get()
+        *self.padding.get()
     }
 
     pub fn set_padding(&mut self, val: TrblRectangle<Unit>) {
@@ -163,7 +163,7 @@ impl Style {
     }
 
     pub fn get_gap(&self) -> [Unit; 2] {
-        self.gap.get()
+        *self.gap.get()
     }
 
     pub fn set_gap(&mut self, val: [Unit; 2]) {
@@ -172,7 +172,7 @@ impl Style {
     }
 
     pub fn get_inset(&self) -> TrblRectangle<Unit> {
-        self.inset.get()
+        *self.inset.get()
     }
 
     pub fn set_inset(&mut self, val: TrblRectangle<Unit>) {
@@ -181,7 +181,7 @@ impl Style {
     }
 
     pub fn get_width(&self) -> Unit {
-        self.width.get()
+        *self.width.get()
     }
 
     pub fn set_width(&mut self, val: Unit) {
@@ -190,7 +190,7 @@ impl Style {
     }
 
     pub fn get_min_width(&self) -> Unit {
-        self.min_width.get()
+        *self.min_width.get()
     }
 
     pub fn set_min_width(&mut self, val: Unit) {
@@ -199,7 +199,7 @@ impl Style {
     }
 
     pub fn get_max_width(&self) -> Unit {
-        self.max_width.get()
+        *self.max_width.get()
     }
 
     pub fn set_max_width(&mut self, val: Unit) {
@@ -208,7 +208,7 @@ impl Style {
     }
 
     pub fn get_height(&self) -> Unit {
-        self.height.get()
+        *self.height.get()
     }
 
     pub fn set_height(&mut self, val: Unit) {
@@ -217,7 +217,7 @@ impl Style {
     }
 
     pub fn get_min_height(&self) -> Unit {
-        self.min_height.get()
+        *self.min_height.get()
     }
 
     pub fn set_min_height(&mut self, val: Unit) {
@@ -226,7 +226,7 @@ impl Style {
     }
 
     pub fn get_max_height(&self) -> Unit {
-        self.max_height.get()
+        *self.max_height.get()
     }
 
     pub fn set_max_height(&mut self, val: Unit) {
@@ -235,7 +235,7 @@ impl Style {
     }
 
     pub fn get_display(&self) -> Display {
-        self.display.get()
+        *self.display.get()
     }
 
     pub fn set_display(&mut self, val: Display) {
@@ -244,7 +244,7 @@ impl Style {
     }
 
     pub fn get_wrap(&self) -> FlexWrap {
-        self.wrap.get()
+        *self.wrap.get()
     }
 
     pub fn set_wrap(&mut self, val: FlexWrap) {
@@ -253,7 +253,7 @@ impl Style {
     }
 
     pub fn get_align_items(&self) -> Option<AlignItems> {
-        self.align_items.get()
+        *self.align_items.get()
     }
 
     pub fn set_align_items(&mut self, val: Option<AlignItems>) {
@@ -262,7 +262,7 @@ impl Style {
     }
 
     pub fn get_justify_content(&self) -> Option<JustifyContent> {
-        self.justify_content.get()
+        *self.justify_content.get()
     }
 
     pub fn set_justify_content(&mut self, val: Option<JustifyContent>) {
@@ -271,7 +271,7 @@ impl Style {
     }
 
     pub fn get_flex_direction(&self) -> FlexDirection {
-        self.flex_direction.get()
+        *self.flex_direction.get()
     }
 
     pub fn set_flex_direction(&mut self, val: FlexDirection) {
@@ -280,7 +280,7 @@ impl Style {
     }
 
     pub fn get_flex_grow(&self) -> f32 {
-        self.flex_grow.get()
+        *self.flex_grow.get()
     }
 
     pub fn set_flex_grow(&mut self, val: f32) {
@@ -289,7 +289,7 @@ impl Style {
     }
 
     pub fn get_flex_shrink(&self) -> f32 {
-        self.flex_shrink.get()
+        *self.flex_shrink.get()
     }
 
     pub fn set_flex_shrink(&mut self, val: f32) {
@@ -298,7 +298,7 @@ impl Style {
     }
 
     pub fn get_flex_basis(&self) -> Unit {
-        self.flex_basis.get()
+        *self.flex_basis.get()
     }
 
     pub fn set_flex_basis(&mut self, val: Unit) {
@@ -307,7 +307,7 @@ impl Style {
     }
 
     pub fn get_font_family(&self) -> FontFamily {
-        self.font_family.get()
+        *self.font_family.get()
     }
 
     pub fn set_font_family(&mut self, val: FontFamily) {
@@ -316,7 +316,7 @@ impl Style {
     }
 
     pub fn get_color(&self) -> Color {
-        self.color.get()
+        *self.color.get()
     }
 
     pub fn set_color(&mut self, val: Color) {
@@ -325,7 +325,7 @@ impl Style {
     }
 
     pub fn get_background_color(&self) -> Color {
-        self.background_color.get()
+        *self.background_color.get()
     }
 
     pub fn set_background_color(&mut self, val: Color) {
@@ -334,7 +334,7 @@ impl Style {
     }
 
     pub fn get_font_size(&self) -> f32 {
-        self.font_size.get()
+        *self.font_size.get()
     }
 
     pub fn set_font_size(&mut self, val: f32) {
@@ -343,7 +343,7 @@ impl Style {
     }
 
     pub fn get_line_height(&self) -> f32 {
-        self.line_height.get()
+        *self.line_height.get()
     }
 
     pub fn set_line_height(&mut self, val: f32) {
@@ -352,7 +352,7 @@ impl Style {
     }
 
     pub fn get_font_weight(&self) -> FontWeight {
-        self.font_weight.get()
+        *self.font_weight.get()
     }
 
     pub fn set_font_weight(&mut self, val: FontWeight) {
@@ -361,7 +361,7 @@ impl Style {
     }
 
     pub fn get_font_style(&self) -> FontStyle {
-        self.font_style.get()
+        *self.font_style.get()
     }
 
     pub fn set_font_style(&mut self, val: FontStyle) {
@@ -370,7 +370,7 @@ impl Style {
     }
 
     pub fn get_text_align(&self) -> TextAlign {
-        self.text_align.get()
+        *self.text_align.get()
     }
 
     pub fn set_text_align(&mut self, val: TextAlign) {
@@ -379,7 +379,7 @@ impl Style {
     }
 
     pub fn get_underline(&self) -> Option<Underline> {
-        self.underline.get()
+        *self.underline.get()
     }
 
     pub fn set_underline(&mut self, val: Option<Underline>) {
@@ -388,7 +388,7 @@ impl Style {
     }
 
     pub fn get_overflow(&self) -> [Overflow; 2] {
-        self.overflow.get()
+        *self.overflow.get()
     }
 
     pub fn set_overflow(&mut self, val: [Overflow; 2]) {
@@ -397,7 +397,7 @@ impl Style {
     }
 
     pub fn get_border_color(&self) -> TrblRectangle<Color> {
-        self.border_color.get()
+        *self.border_color.get()
     }
 
     pub fn set_border_color(&mut self, val: TrblRectangle<Color>) {
@@ -406,7 +406,7 @@ impl Style {
     }
 
     pub fn get_border_width(&self) -> TrblRectangle<Unit> {
-        self.border_width.get()
+        *self.border_width.get()
     }
 
     pub fn set_border_width(&mut self, val: TrblRectangle<Unit>) {
@@ -415,7 +415,7 @@ impl Style {
     }
 
     pub fn get_border_radius(&self) -> [(f32, f32); 4] {
-        self.border_radius.get()
+        *self.border_radius.get()
     }
 
     pub fn set_border_radius(&mut self, val: [(f32, f32); 4]) {
@@ -424,7 +424,7 @@ impl Style {
     }
 
     pub fn get_scrollbar_color(&self) -> ScrollbarColor {
-        self.scrollbar_color.get()
+        *self.scrollbar_color.get()
     }
 
     pub fn set_scrollbar_color(&mut self, val: ScrollbarColor) {
@@ -433,7 +433,7 @@ impl Style {
     }
 
     pub fn get_scrollbar_thumb_margin(&self) -> TrblRectangle<f32> {
-        self.scrollbar_thumb_margin.get()
+        *self.scrollbar_thumb_margin.get()
     }
 
     pub fn set_scrollbar_thumb_margin(&mut self, val: TrblRectangle<f32>) {
@@ -442,7 +442,7 @@ impl Style {
     }
 
     pub fn get_scrollbar_thumb_radius(&self) -> [(f32, f32); 4] {
-        self.scrollbar_thumb_radius.get()
+        *self.scrollbar_thumb_radius.get()
     }
 
     pub fn set_scrollbar_thumb_radius(&mut self, val: [(f32, f32); 4]) {
@@ -451,7 +451,7 @@ impl Style {
     }
 
     pub fn get_scrollbar_width(&self) -> f32 {
-        self.scrollbar_width.get()
+        *self.scrollbar_width.get()
     }
 
     pub fn set_scrollbar_width(&mut self, val: f32) {
@@ -460,7 +460,7 @@ impl Style {
     }
 
     pub fn get_visible(&self) -> bool {
-        self.visible.get()
+        *self.visible.get()
     }
 
     pub fn set_visible(&mut self, val: bool) {
@@ -469,7 +469,7 @@ impl Style {
     }
 
     pub fn get_selection_color(&self) -> Color {
-        self.selection_color.get()
+        *self.selection_color.get()
     }
 
     pub fn set_selection_color(&mut self, val: Color) {
@@ -478,7 +478,7 @@ impl Style {
     }
 
     pub fn get_cursor_color(&self) -> Option<Color> {
-        self.cursor_color.get()
+        *self.cursor_color.get()
     }
 
     pub fn set_cursor_color(&mut self, val: Option<Color>) {
@@ -486,7 +486,7 @@ impl Style {
         self.cursor_color.set(val);
     }
 
-    pub fn get_box_shadows(&self) -> Vec<BoxShadow> {
+    pub fn get_box_shadows(&self) -> &[BoxShadow] {
         self.box_shadows.get()
     }
 
