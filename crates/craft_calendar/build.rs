@@ -41,35 +41,31 @@ fn generate_week_data(xml: &str) -> String {
     loop {
         match reader.read_event_into(&mut buf) {
             // Match BOTH Start and Empty events
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
-                if e.name().as_ref() == b"firstDay" {
-                    let mut day = None;
-                    let mut territories = None;
-                    let mut is_variant = false; // Track if this is an alternate variant
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) if e.name().as_ref() == b"firstDay" => {
+                let mut day = None;
+                let mut territories = None;
+                let mut is_variant = false; // Track if this is an alternate variant
 
-                    for attr in e.attributes().flatten() {
-                        match attr.key.as_ref() {
-                            b"day" => {
-                                day = Some(String::from_utf8_lossy(attr.value.as_ref()).into_owned());
-                            }
-                            b"territories" => {
-                                territories = Some(String::from_utf8_lossy(attr.value.as_ref()).into_owned());
-                            }
-                            b"alt" => {
-                                is_variant = true; // Flag this node to be ignored
-                            }
-                            _ => {}
+                for attr in e.attributes().flatten() {
+                    match attr.key.as_ref() {
+                        b"day" => {
+                            day = Some(String::from_utf8_lossy(attr.value.as_ref()).into_owned());
                         }
+                        b"territories" => {
+                            territories = Some(String::from_utf8_lossy(attr.value.as_ref()).into_owned());
+                        }
+                        b"alt" => {
+                            is_variant = true; // Flag this node to be ignored
+                        }
+                        _ => {}
                     }
+                }
 
-                    // Only push to output if it is NOT a variant
-                    if !is_variant {
-                        if let (Some(day), Some(territories)) = (day, territories) {
-                            count += 1;
-                            for territory in territories.split_whitespace() {
-                                output.push_str(&format!("    (\"{}\", \"{}\"),\n", territory, day));
-                            }
-                        }
+                // Only push to output if it is NOT a variant
+                if !is_variant && let (Some(day), Some(territories)) = (day, territories) {
+                    count += 1;
+                    for territory in territories.split_whitespace() {
+                        output.push_str(&format!("    (\"{}\", \"{}\"),\n", territory, day));
                     }
                 }
             }

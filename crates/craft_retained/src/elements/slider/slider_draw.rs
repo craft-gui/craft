@@ -27,7 +27,7 @@ impl SliderInner {
             let normalized_value = if range == 0.0 {
                 0.0f32
             } else {
-                (((self.get_value() - self.get_min()) / range) as f32)
+                ((self.get_value() - self.get_min()) / range) as f32
             };
 
             if self.get_direction() == SliderDirection::Horizontal {
