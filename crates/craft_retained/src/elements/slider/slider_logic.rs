@@ -35,23 +35,30 @@ impl SliderInner {
             pointer_position.y
         };
 
+        let track_length = end - start;
+        if track_length == 0.0 {
+            return self.get_min();
+        }
+
         // [0, 1]
-        let mut normalized_value = (pointer_position_component - start) / (end - start);
-        normalized_value = normalized_value.clamp(0.0, 1.0);
-        let mut value = normalized_value * self.get_max();
+        let normalized_value = ((pointer_position_component - start) / track_length).clamp(0.0, 1.0);
+        let range = self.get_max() - self.get_min();
+        let raw = self.get_min() + normalized_value * range;
 
         // Round the value to the nearest step.
-        value = (value / self.get_step()).round() * self.get_step();
-        value = value.clamp(self.get_min(), self.get_max());
-
-        value
+        let stepped = self.get_min() + ((raw - self.get_min()) / self.get_step()).round() * self.get_step();
+        stepped.clamp(self.get_min(), self.get_max())
     }
 
     pub(super) fn thumb_position(&self, thumb_value: f64) -> Point {
         let content_rectangle = self.element_data().layout.computed_box_transformed.content_rectangle();
 
-        let mut normalized_value = thumb_value / self.get_max();
-        normalized_value = normalized_value.clamp(0.0, 1.0);
+        let range = self.get_max() - self.get_min();
+        let normalized_value = if range == 0.0 {
+            0.0
+        } else {
+            ((thumb_value - self.get_min()) / range).clamp(0.0, 1.0)
+        };
 
         let value = if self.get_direction() == SliderDirection::Horizontal {
             normalized_value * content_rectangle.width as f64

@@ -22,7 +22,13 @@ impl SliderInner {
             let mut track_box = self.get_computed_box_transformed();
 
             let computed_element_rect = self.get_computed_box_transformed().border_rectangle();
-            let normalized_value = (self.get_value() / self.get_max()) as f32;
+
+            let range = self.get_max() - self.get_min();
+            let normalized_value = if range == 0.0 {
+                0.0f32
+            } else {
+                ((self.get_value() - self.get_min()) / range) as f32
+            };
 
             if self.get_direction() == SliderDirection::Horizontal {
                 track_box.size.width = normalized_value * computed_element_rect.width;
