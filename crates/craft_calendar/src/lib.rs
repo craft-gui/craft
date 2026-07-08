@@ -74,10 +74,8 @@ pub fn system_first_day_of_week() -> &'static str {
         target_os = "openbsd"
     ))]
     {
-        if let Some(locale) = sys_locale::get_locale() {
-            if let Some(day) = lookup_locale_string(&locale) {
-                return day;
-            }
+        if let Some(locale) = sys_locale::get_locale() && let Some(day) = lookup_locale_string(&locale) {
+            return day;
         }
     }
     first_day_for_territory("001")
