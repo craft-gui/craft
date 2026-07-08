@@ -27,7 +27,7 @@ impl SliderInner {
             let normalized_value = if range == 0.0 {
                 0.0f32
             } else {
-                ((self.get_value() - self.get_min()) / range) as f32
+                (((self.get_value() - self.get_min()) / range) as f32)
             };
 
             if self.get_direction() == SliderDirection::Horizontal {
@@ -39,7 +39,7 @@ impl SliderInner {
             }
 
             // Use the specified border radius or default to the slider's border radius.
-            let thumb_radii = if let Some(br) = self.get_track_border_radius() {
+            let track_radii = if let Some(br) = self.get_track_border_radius() {
                 border_radius_to_vec_radius(br)
             } else {
                 border_radius_to_vec_radius(self.style().get_border_radius())
@@ -48,7 +48,7 @@ impl SliderInner {
             let css_rounded_rect = CssRoundedRect::new(
                 track_box.border_rectangle().to_kurbo(),
                 [0.0, 0.0, 0.0, 0.0],
-                thumb_radii,
+                track_radii,
             );
             let mut computed_border_spec = CssComputedBorder::new(css_rounded_rect);
             computed_border_spec.scale(scale_factor);
@@ -58,7 +58,7 @@ impl SliderInner {
         }
     }
 
-    pub(super) fn draw_thumb(&mut self, renderer: &mut RenderList) {
+    pub(super) fn draw_thumb(&mut self, renderer: &mut RenderList, scale_factor: f64) {
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
         let thumb_background_color = self.get_thumb_color();
@@ -79,7 +79,8 @@ impl SliderInner {
         };
 
         let css_rounded_rect = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], thumb_radii);
-        let computed_border_spec = CssComputedBorder::new(css_rounded_rect);
+        let mut computed_border_spec = CssComputedBorder::new(css_rounded_rect);
+        computed_border_spec.scale(scale_factor);
         let color_rect = [
             thumb_background_color,
             thumb_background_color,

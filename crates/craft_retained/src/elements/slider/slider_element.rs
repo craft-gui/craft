@@ -207,7 +207,7 @@ impl SliderInner {
     }
 
     pub fn set_value(&mut self, value: f64) {
-        self.value = value;
+        self.value = value.clamp(self.min, self.max);
     }
 
     pub fn get_value(&self) -> f64 {
@@ -226,6 +226,7 @@ impl SliderInner {
     /// Set the minimum slider value. Defaults to 0.
     pub fn set_min(&mut self, min: f64) {
         self.min = min;
+        self.value = self.value.clamp(self.min, self.max);
     }
 
     pub fn get_min(&self) -> f64 {
@@ -235,6 +236,7 @@ impl SliderInner {
     /// Set the max slider value. Defaults to 100.
     pub fn set_max(&mut self, max: f64) {
         self.max = max;
+        self.value = self.value.clamp(self.min, self.max);
     }
 
     pub fn get_max(&self) -> f64 {
@@ -378,7 +380,7 @@ impl ElementInternals for SliderInner {
 
         self.draw_borders(_renderer, _scale_factor);
         self.draw_track(_renderer, _scale_factor);
-        self.draw_thumb(_renderer);
+        self.draw_thumb(_renderer, _scale_factor);
     }
 
     fn on_event(
@@ -417,10 +419,7 @@ impl ElementInternals for SliderInner {
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.release_pointer_capture(PointerId::new(1).unwrap());
 
-                let value = self.compute_slider_value(&Point::new(
-                    pointer_button_update.state.position.x,
-                    pointer_button_update.state.position.y,
-                ));
+                let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
@@ -431,10 +430,7 @@ impl ElementInternals for SliderInner {
                 // FIXME: Turn pointer capture on with the correct device id.
                 self.set_pointer_capture(PointerId::new(1).unwrap());
 
-                let value = self.compute_slider_value(&Point::new(
-                    pointer_button_update.state.position.x,
-                    pointer_button_update.state.position.y,
-                ));
+                let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
@@ -445,10 +441,7 @@ impl ElementInternals for SliderInner {
                     return;
                 }
 
-                let value = self.compute_slider_value(&Point::new(
-                    pointer_update.current.position.x,
-                    pointer_update.current.position.y,
-                ));
+                let value = self.compute_slider_value(&pointer_update.current.logical_point());
                 self.value = value;
 
                 let new_event = Event::new(event.target.clone());
