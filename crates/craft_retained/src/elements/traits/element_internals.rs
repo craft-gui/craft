@@ -214,7 +214,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
-        let current_style = self.element_data().current_style();
+        let current_style = self.element_data().style();
 
         self.element_data()
             .layout
@@ -248,7 +248,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn should_start_new_layer(&self) -> bool {
         let element_data = self.element_data();
 
-        element_data.current_style().get_overflow()[1] == Overflow::Scroll
+        element_data.style().get_overflow()[1] == Overflow::Scroll
     }
 
     /// Returns the element's [`ElementBox`] without any transforms applied.

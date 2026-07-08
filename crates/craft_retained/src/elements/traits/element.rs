@@ -96,7 +96,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn get_id(&self) -> Option<SmolStr> {
-        self.borrow_mut().get_id()
+        self.borrow().get_id()
     }
 
     fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
@@ -448,8 +448,8 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn scrollbar_width(self, selection_color: Color) -> Self {
-        self.borrow_mut().set_selection_color(selection_color);
+    fn scrollbar_width(self, scrollbar_width: f32) -> Self {
+        self.borrow_mut().set_scrollbar_width(scrollbar_width);
         self
     }
 
@@ -464,7 +464,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn is_focused(&self) -> bool {
-        self.borrow_mut().is_focused()
+        self.borrow().is_focused()
     }
 
     fn unfocus(self) -> Self {

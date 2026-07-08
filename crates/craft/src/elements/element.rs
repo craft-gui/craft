@@ -845,10 +845,10 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn scrollbar_width(self, selection_color: impl Bindable<Color>) -> Self {
+    fn scrollbar_width(self, scrollbar_width: impl Bindable<f32>) -> Self {
         let element = self.as_element_rc();
-        selection_color.bind(move |v| {
-            element.borrow_mut().set_selection_color(v);
+        scrollbar_width.bind(move |v| {
+            element.borrow_mut().set_scrollbar_width(v);
         });
         self
     }

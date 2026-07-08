@@ -197,7 +197,7 @@ impl ElementInternals for TextInputInner {
         );
 
         self.state
-            .render_text(self.is_focused(), self.element_data.current_style());
+            .render_text(self.is_focused(), self.element_data.style());
     }
 
     fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {

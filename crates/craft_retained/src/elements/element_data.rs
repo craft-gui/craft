@@ -104,7 +104,7 @@ impl ElementData {
     }
 
     pub fn apply_borders(&mut self, scale_factor: f64) {
-        let current_style = self.current_style();
+        let current_style = self.style();
         let has_border = current_style.has_border();
         let border_radius = current_style.get_border_radius();
         let border_color = &current_style.get_border_color();
@@ -122,22 +122,16 @@ impl ElementData {
     pub(crate) fn scroll(&self) -> ScrollState {
         self.layout.scroll_state
     }
-}
 
-impl ElementData {
     pub fn is_scrollable(&self) -> bool {
         self.style.get_overflow()[1] == Overflow::Scroll && self.layout.is_scrollable_layout()
     }
 
-    pub fn current_style(&self) -> &Style {
+    pub fn style(&self) -> &Style {
         &self.style
     }
 
-    pub fn current_style_mut(&mut self) -> &mut Style {
+    pub fn style_mut(&mut self) -> &mut Style {
         &mut self.style
-    }
-
-    pub fn current_style_mut_no_fallback<'a>(&self) -> Option<&'a mut Style> {
-        None
     }
 }

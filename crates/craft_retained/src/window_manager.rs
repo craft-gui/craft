@@ -23,12 +23,10 @@ impl WindowManager {
 
     pub(crate) fn get_window_by_id(&self, window_id: WindowId) -> Option<Window> {
         for window in &self.windows {
-            let winit_window = window.winit_window();
-            if winit_window.is_some() && winit_window.unwrap().id() == window_id {
+            if let Some(winit_window) = window.winit_window() && winit_window.id() == window_id {
                 return Some(window.clone());
             }
         }
-
         None
     }
 
