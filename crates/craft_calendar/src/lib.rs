@@ -121,7 +121,7 @@ fn apple_first_day_of_week() -> Option<u32> {
     use std::ffi::c_void;
 
     #[link(name = "CoreFoundation", kind = "framework")]
-    extern "C" {
+    unsafe extern "C" {
         fn CFCalendarCopyCurrent() -> *mut c_void;
         fn CFCalendarGetFirstWeekday(calendar: *mut c_void) -> isize;
         fn CFRelease(cf: *mut c_void);
