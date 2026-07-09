@@ -1,43 +1,5 @@
-// Copyright 2025 the Vello Authors
-// SPDX-License-Identifier: Apache-2.0 OR MIT
-
-#![allow(
-    dead_code,
-    reason = "This is a shared module between examples; not all examples use all functionality from it"
-)]
-
 use vello_hybrid::{RenderTargetConfig, Renderer};
 use wgpu::{Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTarget, TextureFormat};
-use winit::event_loop::ActiveEventLoop;
-use winit::window::Window;
-
-/// Helper function that creates a Winit window and returns it (wrapped in an Arc for sharing)
-pub(crate) fn create_winit_window(
-    event_loop: &ActiveEventLoop,
-    width: u32,
-    height: u32,
-    initially_visible: bool,
-) -> Box<Window> {
-    let attr = <Window>::default_attributes()
-        .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
-        .with_resizable(true)
-        .with_title("Vello SVG Renderer")
-        .with_visible(initially_visible)
-        .with_active(true);
-    Box::new(event_loop.create_window(attr).unwrap())
-}
-
-/// Helper function that creates a Vello Hybrid renderer
-pub(crate) fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface<'_>) -> Renderer {
-    Renderer::new(
-        &render_cx.devices[surface.dev_id].device,
-        &RenderTargetConfig {
-            format: surface.config.format,
-            width: surface.config.width,
-            height: surface.config.height,
-        },
-    )
-}
 
 /// Simple render context that maintains wgpu state for rendering the pipeline.
 #[derive(Debug)]
@@ -57,6 +19,28 @@ pub(crate) struct DeviceHandle {
     pub(crate) device: Device,
     /// The queue of the device
     pub(crate) queue: Queue,
+}
+
+/// Combination of surface and its configuration.
+#[derive(Debug)]
+pub(crate) struct RenderSurface<'s> {
+    /// The surface
+    pub(crate) surface: Surface<'s>,
+    /// The configuration of the surface
+    pub(crate) config: SurfaceConfiguration,
+    /// The device id
+    pub(crate) dev_id: usize,
+}
+
+pub(crate) fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
+    Renderer::new(
+        &render_cx.devices[surface.dev_id].device,
+        &RenderTargetConfig {
+            format: surface.config.format,
+            width: surface.config.width,
+            height: surface.config.height,
+        },
+    )
 }
 
 impl RenderContext {
@@ -139,12 +123,6 @@ impl RenderContext {
         self.configure_surface(surface);
     }
 
-    /// Sets the present mode for the surface
-    pub(crate) fn set_present_mode(&self, surface: &mut RenderSurface<'_>, present_mode: wgpu::PresentMode) {
-        surface.config.present_mode = present_mode;
-        self.configure_surface(surface);
-    }
-
     pub(crate) fn configure_surface(&self, surface: &RenderSurface<'_>) {
         let device = &self.devices[surface.dev_id].device;
         surface.surface.configure(device, &surface.config);
@@ -201,15 +179,4 @@ impl RenderContext {
         self.devices.push(device_handle);
         Some(self.devices.len() - 1)
     }
-}
-
-/// Combination of surface and its configuration.
-#[derive(Debug)]
-pub(crate) struct RenderSurface<'s> {
-    /// The surface
-    pub(crate) surface: Surface<'s>,
-    /// The configuration of the surface
-    pub(crate) config: SurfaceConfiguration,
-    /// The device id
-    pub(crate) dev_id: usize,
 }
