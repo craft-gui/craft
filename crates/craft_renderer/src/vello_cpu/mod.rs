@@ -142,7 +142,7 @@ impl Renderer for VelloCpuRenderer {
         self
     }
 
-    fn prepare_render_list<'a>(
+    fn prepare<'a>(
         &'a mut self,
         render_list: &'a mut RenderList,
         resource_manager: Arc<ResourceManager>,

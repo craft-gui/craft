@@ -13,7 +13,7 @@ use craft_logging::info;
 use craft_primitives::geometry::{Affine, Point, Rectangle, Size};
 
 use craft_renderer::renderer::{Renderer, Screenshot};
-use craft_renderer::{RenderList, RendererType};
+use craft_renderer::RendererType;
 
 use craft_resource_manager::ResourceManager;
 
@@ -32,7 +32,7 @@ use winit::window::{Window as WinitWindow, WindowAttributes};
 
 #[cfg(target_arch = "wasm32")]
 use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
-
+use craft_renderer::blank_renderer::BlankRenderer;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::accessibility::{access_handler::CraftAccessHandler, activation_handler::CraftActivationHandler, deactivation_handler::CraftDeactivationHandler};
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -69,8 +69,7 @@ pub struct Window {
 pub struct WindowInternal {
     /// The physical window size from winit.
     pub(crate) window_size: Size<f32>,
-    pub(crate) renderer: Option<RendererBox>,
-    pub(crate) render_list: Rc<RefCell<RenderList>>,
+    pub(crate) renderer: Rc<RefCell<dyn Renderer>>,
 
     // Will be empty when paused.
     pub(crate) winit_window: Option<Arc<WinitWindow>>,
@@ -167,7 +166,7 @@ impl ElementInternals for WindowInternal {
         );
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         draw_generic_container(self, renderer, text_context, scale_factor);
     }
 
@@ -369,8 +368,7 @@ impl WindowInternal {
                 scale_factor: 1.0,
                 zoom_scale_factor: 1.0,
                 mouse_positon: None,
-                renderer: None,
-                render_list: Rc::new(RefCell::new(RenderList::new())),
+                renderer: Rc::new(RefCell::new(BlankRenderer::default())),
                 winit_window: None,
                 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
                 accesskit_adapter: None,
@@ -517,14 +515,14 @@ impl WindowInternal {
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
             taffy_tree.mark_dirty(self.element_data.layout.taffy_node_id.unwrap());
         });
-        if let Some(renderer) = self.renderer.as_mut() {
-            renderer.resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
-        }
+
         self.window_size = new_size;
         let size = self.window_size;
-        self.render_list
-            .borrow_mut()
+
+        self.renderer.borrow_mut().resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
+        self.renderer.borrow_mut()
             .set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
+
         // On macOS the window needs to be redrawn manually after resizing
         #[cfg(target_os = "macos")]
         {
@@ -538,11 +536,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn on_redraw(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
-        if self.renderer.is_none() {
-            return;
-        }
+        //if self.renderer.is_none() {
+        //    return;
+        //}
 
-        self.renderer.as_mut().unwrap().surface_set_clear_color(Color::WHITE);
+        self.renderer.borrow_mut().surface_set_clear_color(Color::WHITE);
 
         self.layout_window(text_context, resource_manager.clone());
 
@@ -588,10 +586,10 @@ impl WindowInternal {
         cfg_select! {
             not(target_arch = "wasm32") => {
                     let renderer = craft_app.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
+                        let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(winit_window.clone()).await;
                     renderer
                 });
-                self.renderer = Some(renderer);
+                self.renderer = renderer;
                 info!("Created renderer")
             },
             _ => {
@@ -710,20 +708,25 @@ impl WindowInternal {
     }
 
     fn draw_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
-        let render_list = self.render_list.clone();
-        let mut render_list = render_list.borrow_mut();
-        render_list.clear();
-        self.draw(&mut render_list, text_context, self.effective_scale_factor());
-        let renderer = self.renderer.as_mut().unwrap();
+        let renderer_clone = self.renderer.clone();
+        self.renderer.borrow_mut().clear();
+
+        self.draw(&mut *renderer_clone.borrow_mut(), text_context, self.effective_scale_factor());
+
         self.winit_window.clone().unwrap().pre_present_notify();
-        renderer.sort_and_cull_render_list(&mut render_list);
-        let window = Rectangle::new(0.0, 0.0, renderer.surface_width(), renderer.surface_height());
-        renderer.prepare_render_list(&mut render_list, resource_manager.clone(), window);
-        renderer.submit(resource_manager.clone());
+
+        {
+            let renderer = renderer_clone.clone();
+            renderer.borrow_mut().sort_and_cull_render_list();
+
+            let window = Rectangle::new(0.0, 0.0, renderer.borrow().surface_width(), renderer.borrow().surface_height());
+            renderer.borrow_mut().prepare(resource_manager.clone(), window);
+            renderer.borrow_mut().submit(resource_manager.clone());
+        }
     }
 
     fn screenshot(&self) -> Screenshot {
-        self.renderer.as_ref().unwrap().screenshot()
+        self.renderer.borrow_mut().screenshot()
     }
 
     fn close(&self) {

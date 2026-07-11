@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use winit::window::Window;
@@ -63,18 +65,18 @@ impl Display for RendererType {
 }
 
 impl RendererType {
-    pub async fn create(&self, window: Arc<Window>) -> Box<dyn Renderer> {
-        let renderer: Box<dyn Renderer> = match self {
+    pub async fn create(&self, window: Arc<Window>) -> Rc<RefCell<dyn Renderer>> {
+        let renderer: Rc<RefCell<dyn Renderer>> = match self {
             #[cfg(feature = "vello_renderer")]
-            RendererType::Vello => Box::new(VelloRenderer::new(window, false).await),
+            RendererType::Vello => Rc::new(RefCell::new(VelloRenderer::new(window, false).await)),
             #[cfg(feature = "vello_cpu_renderer")]
             RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window)),
             #[cfg(feature = "vello_hybrid_renderer")]
-            RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window).await),
+            RendererType::VelloHybrid => Rc::new(RefCell::new(VelloHybridRenderer::new(window).await)),
             RendererType::Blank => {
                 // So the linter does not complain about window being unused.
                 let _ = window;
-                Box::new(BlankRenderer)
+                Rc::new(RefCell::new(BlankRenderer::default()))
             }
         };
 

@@ -4,18 +4,18 @@ use std::rc::Rc;
 
 use craft_primitives::geometry::{Point, Vec2};
 
-use ui_events::ScrollDelta;
 use ui_events::pointer::{PointerId, PointerType};
+use ui_events::ScrollDelta;
 
 use crate::app::{queue_event, request_apply_layout};
-use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
+use crate::elements::ElementInternals;
 use crate::events::{Event, EventKind};
-use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
+use crate::layout::layout::{draw_borders_generic, CssComputedBorder, Layout};
 use crate::style::{Overflow, Style};
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{Rectangle, Size};
-use craft_renderer::RenderList;
+use craft_renderer::renderer::Renderer;
 
 /**
 
@@ -385,7 +385,7 @@ pub(crate) fn handle_scroll_logic_advance(
     result
 }
 
-pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut RenderList, scale_factor: f64) {
+pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut dyn Renderer, scale_factor: f64) {
     if !(layout.is_scrollable_layout() && style.get_overflow()[1] == Overflow::Scroll) {
         return;
     }

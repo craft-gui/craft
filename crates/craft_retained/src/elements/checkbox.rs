@@ -7,9 +7,9 @@ use std::rc::{Rc, Weak};
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
-use craft_renderer::{Brush, RenderList};
+use craft_renderer::Brush;
 use peniko::kurbo;
-
+use craft_renderer::renderer::Renderer;
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -114,7 +114,7 @@ impl ElementInternals for CheckboxInner {
         self.box_rect = self.box_layout.layout.computed_box_transformed.content_rectangle();
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         if !self.is_visible() {
             return;
         }

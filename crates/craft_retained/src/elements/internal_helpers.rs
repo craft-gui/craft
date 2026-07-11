@@ -4,15 +4,14 @@ use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle};
-use craft_renderer::RenderList;
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
+use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Node, NodeId, TreeUpdate};
-
-use crate::elements::element_data::ElementData;
+use craft_renderer::renderer::Renderer;
 
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -202,7 +201,7 @@ pub fn add_generic_accesskit_data(
 
 pub fn draw_generic_container(
     element: &mut dyn ElementInternals,
-    renderer: &mut RenderList,
+    renderer: &mut dyn Renderer,
     text_context: &mut TextContext,
     scale_factor: f64,
 ) {

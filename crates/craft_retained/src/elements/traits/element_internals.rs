@@ -9,8 +9,7 @@ use accesskit::{Action, Role};
 use ui_events::pointer::PointerId;
 
 use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
-
-use craft_renderer::RenderList;
+use craft_renderer::renderer::Renderer;
 
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
@@ -78,7 +77,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// A helper to draw all children.
-    fn draw_children(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_children(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         for child in self.children() {
             child.borrow_mut().draw(renderer, text_context, scale_factor);
         }
@@ -138,7 +137,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// - `pointer`: optional pointer position for hover effects.
     /// - `window`: optional window handle.
     /// - `scale_factor`: scale factor.
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {}
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _text_context: &mut TextContext, _scale_factor: f64) {}
 
     /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -199,7 +198,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().apply_borders(scale_factor);
     }
 
-    fn add_hit_testable(&mut self, renderer: &mut RenderList, hit_testable: bool, scale_factor: f64) {
+    fn add_hit_testable(&mut self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
         if hit_testable {
             let id = self.element_data().internal_id;
             renderer.push_hit_testable(
@@ -213,7 +212,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn draw_borders(&self, renderer: &mut RenderList, scale_factor: f64) {
+    fn draw_borders(&self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let current_style = self.element_data().style();
 
         self.element_data()
@@ -221,7 +220,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .draw_borders(renderer, current_style, scale_factor);
     }
 
-    fn maybe_start_layer(&self, renderer: &mut RenderList, scale_factor: f64) {
+    fn maybe_start_layer(&self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let element_data = self.element_data();
         let padding_rectangle = element_data
             .layout
@@ -234,13 +233,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn maybe_end_layer(&self, renderer: &mut RenderList) {
+    fn maybe_end_layer(&self, renderer: &mut dyn Renderer) {
         if self.should_start_new_layer() {
             renderer.pop_layer();
         }
     }
 
-    fn draw_scrollbar(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+    fn draw_scrollbar(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let element_data = self.element_data();
         draw_scrollbar(&element_data.style, &element_data.layout, renderer, scale_factor);
     }

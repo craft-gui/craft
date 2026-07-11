@@ -6,25 +6,25 @@ use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 
-use craft_renderer::{Brush, RenderList};
+use craft_renderer::Brush;
 
 use craft_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
-use ui_events::pointer::PointerId;
-
-use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
+use crate::app::{queue_event, request_apply_layout, TAFFY_TREE};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::{resolve_clip_for_scrollable, AsElement, Element, ElementData, ElementInternals};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
 use crate::layout::layout::Layout;
+use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
+use craft_renderer::renderer::Renderer;
+use ui_events::pointer::PointerId;
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
@@ -194,7 +194,7 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
@@ -337,7 +337,7 @@ impl ElementInternals for DropdownInner {
         });
     }
 
-    fn draw_children(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_children(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         for (index, child) in self.children().iter().enumerate() {
             let floating_window_box = &self.floating_window.layout.computed_box_transformed;
             let mut child_rect = child
@@ -582,7 +582,7 @@ impl Dropdown {
 }
 
 impl DropdownInner {
-    fn draw_selected_element(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_selected_element(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
             binding.draw(renderer, text_context, scale_factor);

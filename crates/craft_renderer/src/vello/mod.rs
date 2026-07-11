@@ -285,9 +285,9 @@ impl Renderer for VelloRenderer {
         self
     }
 
-    fn prepare_render_list<'a>(
+    fn prepare<'a>(
         &mut self,
-        render_list: &mut RenderList,
+        render_list: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {

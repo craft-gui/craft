@@ -1,6 +1,6 @@
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{Rectangle, Vec2};
-use craft_renderer::RenderList;
+use craft_renderer::renderer::Renderer;
 
 use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementInternals, SliderInner};
@@ -17,7 +17,7 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
 }
 
 impl SliderInner {
-    pub(super) fn draw_track(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+    pub(super) fn draw_track(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
         if let Some(track_color) = self.get_track_color() {
             let mut track_box = self.get_computed_box_transformed();
 
@@ -58,7 +58,7 @@ impl SliderInner {
         }
     }
 
-    pub(super) fn draw_thumb(&mut self, renderer: &mut RenderList, scale_factor: f64) {
+    pub(super) fn draw_thumb(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
         let thumb_background_color = self.get_thumb_color();

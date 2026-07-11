@@ -1,23 +1,22 @@
 //! Stores one or more elements.
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Role, TreeUpdate};
-use craft_primitives::geometry::{Affine, Point, Rectangle};
-use craft_renderer::RenderList;
-use std::any::Any;
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::{Rc, Weak};
-
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::internal_helpers::add_generic_accesskit_data;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementData as ElementDataTrait, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{resolve_clip_for_scrollable, scrollable, AsElement, Element, ElementData as ElementDataTrait, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
+use accesskit::{Role, TreeUpdate};
+use craft_primitives::geometry::{Affine, Point, Rectangle};
+use craft_renderer::renderer::Renderer;
+use std::any::Any;
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::{Rc, Weak};
 
 #[derive(Clone)]
 pub struct RadioGroup {
@@ -98,7 +97,7 @@ impl ElementInternals for RadioGroupInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         draw_generic_container(self, renderer, text_context, scale_factor);
     }
 

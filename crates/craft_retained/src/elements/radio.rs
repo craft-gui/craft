@@ -7,7 +7,7 @@ use std::rc::{Rc, Weak};
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
-use craft_renderer::RenderList;
+use craft_renderer::renderer::Renderer;
 
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
@@ -119,7 +119,7 @@ impl ElementInternals for RadioInner {
         self.circle.y = self.circle_layout.layout.computed_box_transformed.content_rectangle().y + self.circle.radius;
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         if !self.is_visible() {
             return;
         }

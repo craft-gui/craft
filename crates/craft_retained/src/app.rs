@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -198,13 +197,14 @@ impl App {
 
     fn dispatch_event(&mut self, window: Window, message: &EventKind) {
         let mouse_pos = window.mouse_position();
-        let render_list = window.inner.borrow().render_list.clone();
+        let binding = window.inner.borrow().renderer.clone();
+        let render_list = &mut *binding.borrow_mut();
         self.event_dispatcher.dispatch_event(
             message,
             mouse_pos,
             window.inner.clone(),
             self.text_context.as_mut().unwrap(),
-            render_list.borrow_mut().deref_mut(),
+            render_list,
             &mut self.target_scratch,
         );
         window.winit_window().unwrap().request_redraw();

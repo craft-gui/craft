@@ -25,7 +25,7 @@ use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
 use vello_common::{kurbo, peniko};
 
-use vello_hybrid::{RenderSize, Renderer, Resources, Scene, TextureBindings};
+use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
 use wgpu::CommandEncoder;
 use wgpu::{CurrentSurfaceTexture, TextureFormat};
@@ -33,7 +33,7 @@ use wgpu::{CurrentSurfaceTexture, TextureFormat};
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
-use crate::renderer::Renderer as CraftRenderer;
+use crate::renderer::Renderer;
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
@@ -62,7 +62,7 @@ pub struct VelloHybridRenderer {
     context: RenderContext,
 
     // An array of renderers, one per wgpu device
-    renderers: Vec<Option<Renderer>>,
+    renderers: Vec<Option<VelloRenderer>>,
 
     // State for our example where we store the winit Window and the wgpu Surface
     state: RenderState,
@@ -80,9 +80,11 @@ pub struct VelloHybridRenderer {
     window: Arc<Window>,
 
     texture_bindings: TextureBindings,
+
+    render_list: RenderList,
 }
 
-impl CraftRenderer for VelloHybridRenderer {
+impl Renderer for VelloHybridRenderer {
     fn surface_width(&self) -> f32 {
         match &self.state {
             RenderState::Active(active_render_state) => active_render_state.window_width,
@@ -113,13 +115,20 @@ impl CraftRenderer for VelloHybridRenderer {
         self.surface_clear_color = color;
     }
 
+    fn render_list(&self) -> &RenderList {
+        &self.render_list
+    }
+
+    fn render_list_mut(&mut self) -> &mut RenderList {
+        &mut self.render_list
+    }
+
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
-    fn prepare_render_list(
+    fn prepare(
         &mut self,
-        render_list: &mut RenderList,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
@@ -155,7 +164,8 @@ impl CraftRenderer for VelloHybridRenderer {
 
         let mut seen_images: HashSet<ImageId> = HashSet::new();
         let mut expired_images: HashSet<ImageId> = HashSet::new();
-        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        let render_list = &self.render_list;
+        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
 
             match command {
                 RenderCommand::SetTransform(cmd) => {
@@ -317,6 +327,7 @@ impl VelloHybridRenderer {
             resources: Resources::new(),
             window: window.clone(),
             texture_bindings: TextureBindings::new(),
+            render_list: Default::default(),
         };
 
         let surface = vello_renderer
@@ -424,7 +435,7 @@ fn draw_image(
     resource_manager: Arc<ResourceManager>,
     expired_images: &mut HashSet<ImageId>,
     seen_images: &mut HashSet<ImageId>,
-    renderer: &mut Renderer,
+    renderer: &mut VelloRenderer,
     encoder: &mut CommandEncoder,
     device_handle: &DeviceHandle,
     images_were_uploaded: &mut bool,
@@ -510,7 +521,7 @@ fn draw_image(
 fn upload_images(
     expired_images: &mut HashSet<ImageId>,
     seen_images: &mut HashSet<ImageId>,
-    renderer: &mut Renderer,
+    renderer: &mut VelloRenderer,
     mut encoder: CommandEncoder,
     device_handle: &DeviceHandle,
     images_were_uploaded: &mut bool,

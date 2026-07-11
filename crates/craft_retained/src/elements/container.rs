@@ -5,7 +5,7 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::{Affine, Point, Rectangle};
-use craft_renderer::RenderList;
+use craft_renderer::renderer::Renderer;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
@@ -94,7 +94,7 @@ impl ElementInternals for ContainerInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         draw_generic_container(self, renderer, text_context, scale_factor);
     }
 

@@ -101,7 +101,7 @@ impl ElementInternals for CodeEditorInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         draw_generic_container(self, renderer, text_context, scale_factor);
     }
 

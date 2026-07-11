@@ -6,12 +6,10 @@ use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::Rectangle;
 
-use craft_renderer::RenderList;
-
 use craft_resource_manager::ResourceId;
 
 use craft_primitives::geometry::{Affine, Point};
-
+use craft_renderer::renderer::Renderer;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -92,7 +90,7 @@ impl ElementInternals for ImageInner {
         );
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _text_context: &mut TextContext, _scale_factor: f64) {
         if !self.is_visible() {
             return;
         }
