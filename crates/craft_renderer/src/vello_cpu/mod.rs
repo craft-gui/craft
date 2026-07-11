@@ -131,7 +131,7 @@ impl Renderer for VelloCpuRenderer {
             )
             .expect("TODO: panic message");
         self.pixmap = Pixmap::new(width as u16, height as u16);
-        self.render_context = RenderContext::new(width as u16, height as u16);
+        self.render_context.reset_and_resize(width as u16, height as u16)
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
