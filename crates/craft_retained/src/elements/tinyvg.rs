@@ -9,7 +9,6 @@ use std::rc::{Rc, Weak};
 use craft_renderer::RenderList;
 
 use craft_resource_manager::ResourceId;
-use craft_resource_manager::resource_type::ResourceType;
 
 use craft_primitives::geometry::{Affine, Point};
 
@@ -136,7 +135,7 @@ impl TinyVg {
         inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, ResourceType::TinyVg));
+            pending_resources.push_back((resource_id, "tinyvg".to_string()));
         });
 
         Self { inner }
@@ -173,7 +172,7 @@ impl TinyVgInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), ResourceType::TinyVg));
+            pending_resources.push_back((resource_id.clone(), "tinyvg".to_string()));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

@@ -12,7 +12,6 @@ use craft_logging::info;
 use craft_primitives::geometry::{Point, Size};
 
 use craft_resource_manager::resource_event::ResourceEvent;
-use craft_resource_manager::resource_type::ResourceType;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
 use craft_runtime::{CraftRuntimeHandle, Sender};
@@ -36,8 +35,8 @@ use crate::window_manager::WindowManager;
 
 thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, String)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, String)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementInternals>>>> = RefCell::new(None);
     pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
@@ -174,13 +173,13 @@ impl App {
                     in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_id);
                 });
                 if let Some(_text_context) = self.text_context.as_mut()
-                    && resource_type == ResourceType::Font
-                    && resource.data().is_some()
+                    && resource_type == "font"
+                    // && resource.data().is_some()
                 {
                     // Todo: Load the font into the text context.
                     self.resource_manager.insert(resource_id.clone(), Arc::new(resource));
                     self.reload_fonts = true;
-                } else if resource_type == ResourceType::Image || resource_type == ResourceType::TinyVg {
+                } else if resource_type == "image"|| resource_type == "tinyvg" {
                     self.resource_manager.insert(resource_id, Arc::new(resource));
                 }
                 // TODO: Only mark dirty affected nodes.
@@ -216,7 +215,7 @@ impl App {
             IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
                 for (resource, resource_type) in pending_resources.drain(..) {
                     if self.resource_manager.contains(&resource)
-                        || in_progress.contains(&(resource.clone(), resource_type))
+                        || in_progress.contains(&(resource.clone(), resource_type.clone()))
                     {
                         continue;
                     }
@@ -224,7 +223,7 @@ impl App {
                         .async_download_resource_and_send_message_on_finish(
                             self.app_sender.clone(),
                             resource.clone(),
-                            resource_type,
+                            resource_type.clone(),
                         );
                     in_progress.push_back((resource, resource_type));
                 }

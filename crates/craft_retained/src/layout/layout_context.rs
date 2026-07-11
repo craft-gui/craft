@@ -2,12 +2,12 @@ use std::cell::RefCell;
 use std::rc::Weak;
 use std::sync::Arc;
 
-use craft_resource_manager::resource::Resource;
-use craft_resource_manager::{ResourceId, ResourceManager};
-use taffy::{AvailableSpace, Size};
-
 use crate::elements::{TextInner, TextInputInner};
 use crate::text::text_context::TextContext;
+use craft_resource_manager::image::ImageResource;
+use craft_resource_manager::{ResourceId, ResourceManager};
+use taffy::{AvailableSpace, Size};
+use tinyvg_rs::TinyVg;
 
 #[derive(Clone)]
 pub struct TaffyTextContext {
@@ -59,10 +59,10 @@ impl ImageContext {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
         if let Some(resource) = resource_manager.get(&self.resource_id)
-            && let Resource::Image(image_data) = resource.as_ref()
+            && let Some(image_data) = resource.data.downcast_ref::<ImageResource>().as_ref()
         {
-            original_image_width = image_data.width as f32;
-            original_image_height = image_data.height as f32;
+            original_image_width = image_data.image.width() as f32;
+            original_image_height = image_data.image.height() as f32;
         }
 
         match (known_dimensions.width, known_dimensions.height) {
@@ -209,8 +209,7 @@ impl TinyVgContext {
         let mut original_image_height: f32 = 0.0;
 
         if let Some(resource) = resource_manager.get(&self.resource_id)
-            && let Resource::TinyVg(resource) = resource.as_ref()
-            && let Some(tinyvg) = &resource.tinyvg
+            && let Some(tinyvg) = resource.data.downcast_ref::<TinyVg>()
         {
             original_image_width = tinyvg.header.width as f32;
             original_image_height = tinyvg.header.height as f32;

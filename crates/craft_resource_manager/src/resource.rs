@@ -1,32 +1,15 @@
-use std::sync::Arc;
-
-use image::EncodableLayout;
-
-use crate::image::ImageResource;
-use crate::resource_data::ResourceData;
-use crate::tinyvg_resource::TinyVgResource;
+use std::any::Any;
+use chrono::{DateTime, Utc};
 
 #[derive(Debug)]
-pub enum Resource {
-    Image(Arc<ImageResource>),
-    Font(ResourceData),
-    TinyVg(TinyVgResource),
+pub struct Resource {
+    pub resource_type: String,
+    pub data: Box<dyn Any + Send>,
+    pub expiration_time: Option<DateTime<Utc>>,
 }
 
 impl Resource {
-    pub fn data(&self) -> Option<&[u8]> {
-        match self {
-            Resource::Image(data) => data.common_data.data.as_deref(),
-            Resource::Font(common_data) => common_data.data.as_ref().map(|d| d.as_bytes()),
-            Resource::TinyVg(data) => data.common_data.data.as_deref(),
-        }
-    }
-
-    pub fn common_data(&self) -> &ResourceData {
-        match self {
-            Resource::Image(data) => &data.common_data,
-            Resource::Font(data) => data,
-            Resource::TinyVg(data) => &data.common_data,
-        }
+    pub fn expiration_time(&self) -> Option<DateTime<Utc>> {
+        self.expiration_time
     }
 }

@@ -7,10 +7,9 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 
-use craft_primitives::Color;
 use craft_primitives::geometry::{Circle, Rectangle, TOLERANCE};
+use craft_primitives::Color;
 
-use craft_resource_manager::resource::Resource;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
 use glifo::Glyph;
@@ -28,12 +27,9 @@ use vello_common::{kurbo, peniko};
 
 use vello_hybrid::{RenderSize, Renderer, Resources, Scene, TextureBindings};
 
-use wgpu::{CurrentSurfaceTexture, TextureFormat};
 use wgpu::CommandEncoder;
+use wgpu::{CurrentSurfaceTexture, TextureFormat};
 
-use winit::window::Window;
-
-use crate::RenderCommand;
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
@@ -42,6 +38,9 @@ use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
 use crate::vello_hybrid::tinyvg::draw_tiny_vg;
+use crate::RenderCommand;
+use craft_resource_manager::image::ImageResource;
+use winit::window::Window;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -436,11 +435,10 @@ fn draw_image(
     let resource = resource_manager.get(&cmd.resource_id);
 
     if let Some(resource) = resource
-        && let Resource::Image(resource) = resource.as_ref()
+        && resource.resource_type == "image" && let Some(image) = resource.data.downcast_ref::<ImageResource>()
     {
-        let expiration_time = resource.common_data.expiration_time();
-
-        let image = &resource.image;
+        //let expiration_time = resource.expiration_time();
+        let expiration_time = None;
 
         // There is an image, and it hasn't expired.
         let image_id = if let Some(stored_image) = images.get(&cmd.resource_id)
@@ -457,6 +455,7 @@ fn draw_image(
 
             // NOTE: We may be able to avoid this if we implement the AtlasWriter trait.
             let premul_data: Vec<PremulRgba8> = image
+                .image
                 .to_vec()
                 .chunks_exact(4)
                 .map(|rgba| {
@@ -470,7 +469,7 @@ fn draw_image(
                     }
                 })
                 .collect();
-            let pixmap = Pixmap::from_parts(premul_data, image.width() as u16, image.height() as u16);
+            let pixmap = Pixmap::from_parts(premul_data, image.image.width() as u16, image.image.height() as u16);
 
             let image_id = renderer.upload_image(
                 resources,
@@ -489,8 +488,8 @@ fn draw_image(
         let mut transform = Affine::IDENTITY;
         transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
         transform = transform.pre_scale_non_uniform(
-            cmd.rect.width as f64 / image.width() as f64,
-            cmd.rect.height as f64 / image.height() as f64,
+            cmd.rect.width as f64 / image.image.width() as f64,
+            cmd.rect.height as f64 / image.image.height() as f64,
         );
         scene.set_transform(scene_state.transform * transform);
 
@@ -502,7 +501,7 @@ fn draw_image(
             sampler: Default::default(),
         }));
 
-        scene.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.width() as f64, image.height() as f64));
+        scene.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.image.width() as f64, image.image.height() as f64));
 
         scene.restore_state(scene_state);
     }

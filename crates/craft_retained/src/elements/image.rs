@@ -9,7 +9,6 @@ use craft_primitives::geometry::Rectangle;
 use craft_renderer::RenderList;
 
 use craft_resource_manager::ResourceId;
-use craft_resource_manager::resource_type::ResourceType;
 
 use craft_primitives::geometry::{Affine, Point};
 
@@ -130,7 +129,7 @@ impl Image {
         inner.borrow_mut().element_data.create_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, ResourceType::Image));
+            pending_resources.push_back((resource_id, "image".to_string()));
         });
 
         Self { inner }
@@ -166,7 +165,7 @@ impl ImageInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), ResourceType::Image));
+            pending_resources.push_back((resource_id.clone(), "image".to_string()));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

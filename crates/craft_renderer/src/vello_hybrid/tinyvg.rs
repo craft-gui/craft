@@ -1,21 +1,20 @@
 use std::sync::Arc;
 
-use craft_primitives::Color;
 use craft_primitives::geometry::Rectangle;
-use craft_resource_manager::resource::Resource;
+use craft_primitives::Color;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
 use peniko::kurbo::{Affine, BezPath, Stroke};
-use peniko::{Fill, kurbo};
+use peniko::{kurbo, Fill};
 
 use tinyvg_rs::color_table::ColorTable;
 use tinyvg_rs::commands::{DrawCommand, Path, Style};
 use tinyvg_rs::common::Unit;
-
+use tinyvg_rs::TinyVg;
 use vello_hybrid::Scene;
 
 use crate::vello_hybrid::brush_to_paint;
-use crate::{Brush, tinyvg_helpers};
+use crate::{tinyvg_helpers, Brush};
 
 fn stroke_path(scene: &mut Scene, bez_path: &BezPath, line_width: f64, brush: &Brush) {
     scene.set_stroke(Stroke::new(line_width));
@@ -57,13 +56,10 @@ pub(crate) fn draw_tiny_vg(
     if resource.is_none() {
         return;
     }
-    let resource = resource.unwrap();
+    let resource = &resource.unwrap();
 
-    if let Resource::TinyVg(resource) = resource.as_ref() {
-        if resource.tinyvg.is_none() {
-            return;
-        }
-        let tiny_vg = resource.tinyvg.as_ref().unwrap();
+    if resource.resource_type == "tinyvg" {
+        let tiny_vg = &resource.data.downcast_ref::<TinyVg>().unwrap();
 
         let scene_state = scene.save_current_state();
 
