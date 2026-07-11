@@ -208,7 +208,7 @@ impl ElementInternals for DropdownInner {
         self.draw_selected_element(renderer, text_context, scale_factor);
 
         // Draw the arrow
-        let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle();
+        let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle().scale(scale_factor);
         let thickness = 2.0 * scale_factor;
         let mut path = BezPath::new();
         let left_x = arrow_rect.x as f64;
@@ -279,8 +279,7 @@ impl ElementInternals for DropdownInner {
         self.update_most_recently_hovered_child(message, list_box, list_scroll_box);
 
         if let EventKind::PointerButtonUp(pb) = message {
-            // TODO Should pb.state.position be in logical coordinates?
-            let pointer_position = Point::new(pb.state.position.x, pb.state.position.y);
+            let pointer_position = pb.state.logical_point();
             let is_pointer_in_select_box = self
                 .element_data
                 .layout
@@ -353,7 +352,7 @@ impl ElementInternals for DropdownInner {
 
             let is_hovered = self.currently_hovered_element == Some(index);
             if is_hovered {
-                renderer.draw_rect(child_rect, self.hovered_bg_color.unwrap());
+                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_color.unwrap());
             }
 
             child.borrow_mut().draw(renderer, text_context, scale_factor);
@@ -628,7 +627,7 @@ impl DropdownInner {
         list_scroll_box: Rectangle,
     ) {
         if let EventKind::PointerMovedEvent(pb) = message {
-            let pointer_position = Point::new(pb.current.position.x, pb.current.position.y);
+            let pointer_position = pb.current.logical_point();
             let is_pointer_in_list = list_box.contains(&pointer_position);
             let is_pointer_in_scrollbar = list_scroll_box.contains(&pointer_position);
 

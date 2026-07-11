@@ -394,14 +394,13 @@ pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut RenderList,
     let scrollbar_color = style.get_scrollbar_color();
     let scrollbar_thumb_radius = style
         .get_scrollbar_thumb_radius()
-        .map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64));
+        .map(|radii| Vec2::new(radii.0 as f64 * scale_factor, radii.1 as f64 * scale_factor));
     // let scrollbar_thumb_radius = self.element_data().current_style().
     let track_rect = layout.computed_scroll_track.scale(scale_factor);
     let thumb_rect = layout.computed_scroll_thumb.scale(scale_factor);
 
     let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
-    let mut computed_border_spec = CssComputedBorder::new(border_spec);
-    computed_border_spec.scale(scale_factor);
+    let computed_border_spec = CssComputedBorder::new(border_spec);
 
     renderer.draw_rect(track_rect, scrollbar_color.track_color);
     draw_borders_generic(

@@ -24,8 +24,4 @@ features = [
 
 [target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
 path = "../../crates/craft_renderer"
-features = ["vello_hybrid_renderer"]
-
-[target.'cfg(target_os = "android")'.dependencies.craft_renderer]
-path = "../../crates/craft_renderer"
-features = ["vello_hybrid_renderer"]
+features = ["vello_cpu_renderer"]

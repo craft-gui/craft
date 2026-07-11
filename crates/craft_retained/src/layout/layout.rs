@@ -323,8 +323,8 @@ impl Layout {
                 let inline = self.computed_box_transformed.padding_rectangle();
 
                 let mut cache_box_shadows = ComputedBoxShadows {
-                    outline: BezPathOrRect::Rect(outline),
-                    inline: BezPathOrRect::Rect(inline),
+                    outline: BezPathOrRect::Rect(outline.scale(scale_factor)),
+                    inline: BezPathOrRect::Rect(inline.scale(scale_factor)),
                     box_shadows: Vec::with_capacity(box_shadows.len()),
                     border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
                 };
@@ -379,7 +379,7 @@ impl Layout {
             ComputedBorder::None => {}
             ComputedBorder::Simple => {
                 let padding_rect = self.computed_box_transformed.padding_rectangle().scale(scale_factor);
-                let border_rect = self.computed_box_transformed.border_rectangle();
+                let border_rect = self.computed_box_transformed.border_rectangle().scale(scale_factor);
                 // Draw the background.
                 if background_color.components[3] != 0.0 {
                     renderer.draw_rect(padding_rect, background_color);
@@ -387,7 +387,7 @@ impl Layout {
                 let thickness = self.cache_border_spec.as_ref().unwrap().width.top;
                 let border_color = current_style.get_border_color().top;
                 if thickness != 0.0 && border_color.components[3] != 0.0 {
-                    renderer.draw_rect_outline(border_rect, border_color, thickness as f64);
+                    renderer.draw_rect_outline(border_rect, border_color, thickness as f64 * scale_factor);
                 }
             }
             ComputedBorder::CssComputed(computed_border) => {

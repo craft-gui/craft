@@ -132,10 +132,11 @@ impl ElementInternals for CheckboxInner {
         if self.checked {
             renderer.draw_rect(s.scale(scale_factor), blue);
 
+            let scale_factor = scale_factor as f32;
             let mut path = kurbo::BezPath::new();
-            path.move_to(((s.x + s.width * 0.25) as f64, (s.y + s.height * 0.5) as f64));
-            path.line_to(((s.x + s.width * 0.45) as f64, (s.y + s.height * 0.7) as f64));
-            path.line_to(((s.x + s.width * 0.75) as f64, (s.y + s.height * 0.3) as f64));
+            path.move_to((((s.x + s.width * 0.25) * scale_factor) as f64, ((s.y + s.height * 0.5) * scale_factor) as f64));
+            path.line_to((((s.x + s.width * 0.45) * scale_factor) as f64, ((s.y + s.height * 0.7) * scale_factor) as f64));
+            path.line_to((((s.x + s.width * 0.75) * scale_factor) as f64, ((s.y + s.height * 0.3) * scale_factor) as f64));
 
             renderer.stroke_bez_path(path, Brush::Color(rgb(255, 255, 255)));
         } else {
