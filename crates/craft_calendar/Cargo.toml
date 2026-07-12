@@ -6,6 +6,10 @@ edition.workspace = true
 [dependencies]
 sys-locale = "0.3.2"
 
+icu = { version = "2.2", features = ["compiled_data"] }
+
+chrono = {workspace = true, features = ["clock"]}
+
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = [
     "Win32_Globalization",
