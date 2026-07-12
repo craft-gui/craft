@@ -564,6 +564,8 @@ fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, wi
     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
+    let transformed_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
+
     let c = cmd.data.upgrade();
     if c.is_none() {
         return;
@@ -587,7 +589,7 @@ fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, wi
             for item in &line.items {
                 if let Some(first_glyph) = item.glyphs.first() {
                     // Cull the glyphs vertically that are outside the window
-                    let gy = first_glyph.y + cmd.rect.y - scroll;
+                    let gy = first_glyph.y + transformed_container.y - scroll;
                     if gy < window.y {
                         skip_line = true;
                         break;
