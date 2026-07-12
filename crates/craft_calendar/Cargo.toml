@@ -8,7 +8,10 @@ sys-locale = "0.3.2"
 
 icu = { version = "2.2", features = ["compiled_data"] }
 
-chrono = {workspace = true, features = ["clock"]}
+chrono = { workspace = true, features = ["clock"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+chrono = { workspace = true, features = ["wasmbind"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = [
@@ -17,7 +20,3 @@ windows = { version = "0.62.2", features = [
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
 web-sys = { version = "0.3.103", features = ["Window", "Navigator"] }
-
-[build-dependencies]
-quick-xml = "0.41.0"
-reqwest = { workspace = true, features = ["blocking", "rustls"] }

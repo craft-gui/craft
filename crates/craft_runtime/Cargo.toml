@@ -22,4 +22,4 @@ default-features = false
 features = ["rt-multi-thread", "sync", "time"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4.50"
+wasm-bindgen-futures = "0.4.76"

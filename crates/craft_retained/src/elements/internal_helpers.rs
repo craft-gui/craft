@@ -162,7 +162,7 @@ pub fn apply_generic_leaf_layout(
     }
 }
 
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 pub fn add_generic_accesskit_data(
     element: &mut ElementData,
     mut current_node: Node,

@@ -102,7 +102,7 @@ impl ElementInternals for RadioGroupInner {
         draw_generic_container(self, renderer, text_context, scale_factor);
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
         let current_node_id = accesskit::NodeId(self.element_data().internal_id);
 

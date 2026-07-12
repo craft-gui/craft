@@ -4,7 +4,7 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
-#[cfg(feature = "accesskit")]
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 use craft_renderer::{Brush, RenderList};
@@ -148,7 +148,7 @@ impl ElementInternals for CheckboxInner {
         self.draw_scrollbar(renderer, scale_factor);
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
         let current_node_id = accesskit::NodeId(self.element_data().internal_id);
         let mut current_node = accesskit::Node::new(Role::CheckBox);
