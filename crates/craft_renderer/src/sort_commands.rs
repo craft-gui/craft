@@ -1,5 +1,4 @@
 use crate::{RenderCommand, RenderList};
-use craft_primitives::geometry::{Rectangle, Shape};
 
 #[derive(Debug)]
 pub enum SortedItem {
@@ -67,7 +66,7 @@ pub(crate) fn sort_render_list_internal(render_list: &mut RenderList) {
                 stack.pop();
                 current = *stack.last_mut().unwrap();
             }
-            
+
             RenderCommand::PushLayer(_) | RenderCommand::PopLayer => {
                 // Normal Draw Command
                 unsafe {

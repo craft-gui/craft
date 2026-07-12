@@ -14,8 +14,4 @@ util = { path = "../util" }
 [dependencies.craft_retained]
 path = "../../crates/craft_retained"
 default-features = false
-features = ["accesskit", "system_fonts", "clipboard"]
-
-[dependencies.craft_renderer]
-path = "../../crates/craft_renderer"
-features = ["vello_renderer"]
+features = ["accesskit", "system_fonts", "clipboard", "vello_hybrid_renderer"]

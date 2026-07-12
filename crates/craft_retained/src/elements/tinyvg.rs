@@ -237,6 +237,9 @@ impl TinyVgInner {
             rectangle.height as f64 / svg_height as f64,
         );
 
+        let old_transform = renderer.get_transform();
+        renderer.set_transform(vg_transform * old_transform);
+
         for command in &tiny_vg.draw_commands {
             match command {
                 DrawCommand::FillPolygon(data) => {
@@ -248,15 +251,15 @@ impl TinyVgInner {
                         }
                         path.close_path();
                     }
-                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color, vg_transform);
-                    fill_local_path(renderer, path, brush, vg_transform);
+                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
+                    fill_local_path(renderer, path, brush);
                 }
                 DrawCommand::FillRectangles(data) => {
-                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color, vg_transform);
+                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
                     for rectangle in &data.rectangles {
                         let rect =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
-                        fill_local_path(renderer, rect.into_path(TOLERANCE), brush.clone(), vg_transform);
+                        fill_local_path(renderer, rect.into_path(TOLERANCE), brush.clone());
                     }
                 }
                 DrawCommand::FillPath(data) => {
@@ -266,12 +269,11 @@ impl TinyVgInner {
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        override_color,
-                        vg_transform,
+                        override_color
                     );
                 }
                 DrawCommand::DrawLines(data) => {
-                    let brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color, vg_transform);
+                    let brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
                     let mut path = BezPath::new();
 
                     for line in &data.lines {
@@ -279,10 +281,10 @@ impl TinyVgInner {
                         path.line_to(to_kurbo_point(line.end));
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush, vg_transform);
+                    stroke_local_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLineLoop(data) => {
-                    let brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color, vg_transform);
+                    let brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
                     let mut path = BezPath::new();
 
                     if let Some(first) = data.points.first() {
@@ -293,10 +295,10 @@ impl TinyVgInner {
                         path.close_path();
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush, vg_transform);
+                    stroke_local_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLineStrip(data) => {
-                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color, vg_transform);
+                    let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
                     let mut path = BezPath::new();
 
                     if let Some(first) = data.points.first() {
@@ -306,7 +308,7 @@ impl TinyVgInner {
                         }
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush, vg_transform);
+                    stroke_local_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLinePath(data) => {
                     draw_path(
@@ -315,8 +317,7 @@ impl TinyVgInner {
                         &data.style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        override_color,
-                        vg_transform,
+                        override_color
                     );
                 }
                 DrawCommand::OutlineFillPolygon(data) => {
@@ -329,22 +330,22 @@ impl TinyVgInner {
                         path.close_path();
                     }
 
-                    let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color, vg_transform);
-                    fill_local_path(renderer, path.clone(), fill_brush, vg_transform);
+                    let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
+                    fill_local_path(renderer, path.clone(), fill_brush);
 
-                    let line_brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color, vg_transform);
-                    stroke_local_path(renderer, &path, data.line_width.0, line_brush, vg_transform);
+                    let line_brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
+                    stroke_local_path(renderer, &path, data.line_width.0, line_brush);
                 }
                 DrawCommand::OutlineFillRectangles(data) => {
-                    let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color, vg_transform);
-                    let line_brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color, vg_transform);
+                    let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
+                    let line_brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
 
                     for rectangle in &data.rectangles {
                         let rect =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
                         let rect_path = rect.into_path(TOLERANCE);
-                        fill_local_path(renderer, rect_path.clone(), fill_brush.clone(), vg_transform);
-                        stroke_local_path(renderer, &rect_path, data.line_width.0, line_brush.clone(), vg_transform);
+                        fill_local_path(renderer, rect_path.clone(), fill_brush.clone());
+                        stroke_local_path(renderer, &rect_path, data.line_width.0, line_brush.clone());
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
@@ -354,8 +355,7 @@ impl TinyVgInner {
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        override_color,
-                        vg_transform,
+                        override_color
                     );
                     draw_path(
                         renderer,
@@ -363,13 +363,14 @@ impl TinyVgInner {
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        override_color,
-                        vg_transform,
+                        override_color
                     );
                 }
                 DrawCommand::TextHint(_data) => {}
             }
         }
+
+        renderer.set_transform(old_transform);
     }
 }
 
@@ -381,14 +382,12 @@ fn to_peniko_color(color: RgbaF32) -> Color {
     Color::from(AlphaColor::new([color.0, color.1, color.2, color.3]))
 }
 
-fn fill_local_path(renderer: &mut dyn Renderer, mut path: BezPath, brush: Brush, transform: Affine) {
-    path.apply_affine(transform);
+fn fill_local_path(renderer: &mut dyn Renderer, mut path: BezPath, brush: Brush) {
     renderer.fill_bez_path(path, brush);
 }
 
-fn stroke_local_path(renderer: &mut dyn Renderer, path: &BezPath, line_width: f64, brush: Brush, transform: Affine) {
+fn stroke_local_path(renderer: &mut dyn Renderer, path: &BezPath, line_width: f64, brush: Brush) {
     let mut outline = kurbo::stroke(path, &Stroke::new(line_width), &StrokeOpts::default(), TOLERANCE);
-    outline.apply_affine(transform);
     renderer.fill_bez_path(outline, brush);
 }
 
@@ -398,16 +397,15 @@ fn draw_path(
     fill_style: &Style,
     line_width: Option<&Unit>,
     color_table: &ColorTable,
-    override_color: &Option<Color>,
-    transform: Affine,
+    override_color: &Option<Color>
 ) {
     let bezier_path = assemble_path(path);
-    let brush = get_brush(fill_style, color_table, override_color, transform);
+    let brush = get_brush(fill_style, color_table, override_color);
 
     if let Some(line_width) = line_width {
-        stroke_local_path(renderer, &bezier_path, line_width.0, brush, transform);
+        stroke_local_path(renderer, &bezier_path, line_width.0, brush);
     } else {
-        fill_local_path(renderer, bezier_path, brush, transform);
+        fill_local_path(renderer, bezier_path, brush);
     }
 }
 
@@ -509,7 +507,7 @@ fn assemble_path(path: &Path) -> BezPath {
     bezier_path
 }
 
-fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Option<Color>, transform: Affine) -> Brush {
+fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Option<Color>) -> Brush {
     if let Some(override_color) = override_color {
         return Brush::Color(*override_color);
     }
@@ -523,8 +521,8 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             let color_0 = color_table[linear_gradient.color_index_0 as usize];
             let color_1 = color_table[linear_gradient.color_index_1 as usize];
 
-            let start = transform * to_kurbo_point(linear_gradient.point_0);
-            let end = transform * to_kurbo_point(linear_gradient.point_1);
+            let start = to_kurbo_point(linear_gradient.point_0);
+            let end = to_kurbo_point(linear_gradient.point_1);
 
             let linear =
                 Gradient::new_linear(start, end).with_stops([to_peniko_color(color_0), to_peniko_color(color_1)]);
@@ -534,8 +532,8 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             let color_0 = color_table[radial_gradient.color_index_0 as usize];
             let color_1 = color_table[radial_gradient.color_index_1 as usize];
 
-            let center = transform * to_kurbo_point(radial_gradient.point_0);
-            let edge = transform * to_kurbo_point(radial_gradient.point_1);
+            let center = to_kurbo_point(radial_gradient.point_0);
+            let edge = to_kurbo_point(radial_gradient.point_1);
             let radius = center.distance(edge);
 
             let radial = Gradient::new_radial(center, radius as f32)

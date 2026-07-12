@@ -1018,7 +1018,6 @@ dependencies = [
  "peniko",
  "softbuffer",
  "tinyvg-rs",
- "vello",
  "vello_common",
  "vello_cpu",
  "vello_hybrid",
@@ -1583,17 +1582,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e3450815272ef58cec6d564423f6e755e25379b217b0bc688e295ba24df6b1d"
 
 [[package]]
-name = "futures-intrusive"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
-dependencies = [
- "futures-core",
- "lock_api",
- "parking_lot",
-]
-
-[[package]]
 name = "futures-io"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1643,7 +1631,6 @@ dependencies = [
 name = "gallery"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
  "craft_retained",
  "util",
 ]
@@ -1793,7 +1780,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b17e70c989c36bad147b27a58d148c0741c51448aa5653436547323e524d0ab"
 dependencies = [
  "euclid",
- "svg_fmt",
 ]
 
 [[package]]
@@ -2375,7 +2361,6 @@ dependencies = [
 name = "jsframeworkbench"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
  "craft_retained",
  "rand",
  "util",
@@ -2719,7 +2704,6 @@ dependencies = [
 name = "multiwindow"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
  "craft_retained",
  "util",
 ]
@@ -3606,7 +3590,6 @@ dependencies = [
 name = "pointer_events"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
  "craft_retained",
  "util",
 ]
@@ -4582,12 +4565,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
-name = "svg_fmt"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0193cc4331cfd2f3d2011ef287590868599a2f33c3e69bc22c1a3d3acf9e02fb"
-
-[[package]]
 name = "syn"
 version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4699,7 +4676,6 @@ dependencies = [
 name = "text"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
  "craft_retained",
  "util",
 ]
@@ -5212,24 +5188,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
-name = "vello"
-version = "0.9.0"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
-dependencies = [
- "bytemuck",
- "futures-intrusive",
- "log",
- "peniko",
- "png 0.18.1",
- "skrifa 0.42.1",
- "static_assertions",
- "thiserror 2.0.18",
- "vello_encoding",
- "vello_shaders",
- "wgpu",
-]
-
-[[package]]
 name = "vello_common"
 version = "0.0.9"
 source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
@@ -5258,18 +5216,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vello_encoding"
-version = "0.9.0"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
-dependencies = [
- "bytemuck",
- "guillotiere",
- "peniko",
- "skrifa 0.42.1",
- "smallvec",
-]
-
-[[package]]
 name = "vello_hybrid"
 version = "0.0.9"
 source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
@@ -5282,18 +5228,6 @@ dependencies = [
  "vello_common",
  "vello_sparse_shaders",
  "wgpu",
-]
-
-[[package]]
-name = "vello_shaders"
-version = "0.9.0"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
-dependencies = [
- "bytemuck",
- "log",
- "naga",
- "thiserror 2.0.18",
- "vello_encoding",
 ]
 
 [[package]]

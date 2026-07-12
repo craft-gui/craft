@@ -3,9 +3,6 @@ pub mod brush;
 #[allow(clippy::module_inception)]
 pub mod renderer;
 
-#[cfg(feature = "vello_renderer")]
-pub mod vello;
-
 #[cfg(feature = "vello_cpu_renderer")]
 pub mod vello_cpu;
 
