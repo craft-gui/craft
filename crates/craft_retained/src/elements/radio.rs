@@ -3,7 +3,7 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
