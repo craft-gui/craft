@@ -1,5 +1,5 @@
 use dpi;
-
+use kurbo::Affine;
 use crate::geometry::Point;
 
 /// A structure representing a rectangle in 2D space.
@@ -124,6 +124,10 @@ impl Rectangle {
     #[inline(always)]
     pub fn intersects(&self, other: &Rectangle) -> bool {
         self.x < other.right() && self.right() > other.x && self.y < other.bottom() && self.bottom() > other.y
+    }
+    
+    pub fn apply_transform(&self, transform: Affine) -> Self {
+        Self::from_kurbo(transform.transform_rect_bbox(self.to_kurbo()))
     }
 
     pub fn expand(&self, radius: f32) -> Self {

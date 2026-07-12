@@ -39,39 +39,7 @@ impl SortedCommands {
     }
 }
 
-pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_list: &mut RenderList) {
-    fn should_cull(rectangle: &Rectangle, window_height: f32) -> bool {
-        let cull_top = (rectangle.y + rectangle.height) < 0.0;
-        let cull_bottom = rectangle.y > window_height;
-
-        cull_top || cull_bottom
-    }
-
-    fn bounding_rect(render_command: &RenderCommand) -> Rectangle {
-        match render_command {
-            RenderCommand::DrawCircle(cmd) => cmd.circle.bounding_box(),
-            RenderCommand::DrawCircleOutline(cmd) => cmd.circle.expand(cmd.thickness).bounding_box(),
-            RenderCommand::DrawRect(cmd) => cmd.rect,
-            RenderCommand::DrawRectOutline(cmd) => cmd.rect,
-            RenderCommand::DrawImage(cmd) => cmd.rect,
-            RenderCommand::DrawText(cmd) => cmd.rect,
-            RenderCommand::FillBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
-            RenderCommand::StrokeBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
-            RenderCommand::BoxShadowCmd(cmd) => {
-                let bounding_box = cmd.path.bounding_box();
-                Rectangle::new(
-                    (bounding_box.x0 + cmd.offset.x) as f32,
-                    (bounding_box.y0 + cmd.offset.y) as f32,
-                    (bounding_box.x1 + cmd.offset.x) as f32,
-                    (bounding_box.y1 + cmd.offset.y) as f32,
-                )
-            }
-            _ => unreachable!("Cannot compute the bounding rect of this render command."),
-        }
-    }
-
-    let window_height = surface_height;
-
+pub(crate) fn sort_render_list_internal(render_list: &mut RenderList) {
     let mut current: *mut SortedCommands = &mut render_list.overlay;
     let mut stack: Vec<*mut SortedCommands> = vec![current];
 
@@ -99,8 +67,7 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
                 stack.pop();
                 current = *stack.last_mut().unwrap();
             }
-
-            // FIXME: If this is a clipping layer, and it is not in bounds we should discard all commands in the clip.
+            
             RenderCommand::PushLayer(_) | RenderCommand::PopLayer => {
                 // Normal Draw Command
                 unsafe {
@@ -108,16 +75,9 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
                 }
             }
 
-            RenderCommand::SetTransform(_) => unsafe {
-                (*current).children.push(SortedItem::Other(index as u32));
-            },
-
             _ => {
-                let bounding_rect = bounding_rect(command);
-                if !should_cull(&bounding_rect, window_height) {
-                    unsafe {
-                        (*current).children.push(SortedItem::Other(index as u32));
-                    }
+                unsafe {
+                    (*current).children.push(SortedItem::Other(index as u32));
                 }
             }
         }

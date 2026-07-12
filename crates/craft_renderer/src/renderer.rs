@@ -7,11 +7,11 @@ use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Shape};
 
 use craft_resource_manager::{ResourceId, ResourceManager};
-use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, DrawTinyVgCmd, FillBezPathCmd, PushLayerCmd, SetTransformCmd, StrokeBezPathCmd};
+use crate::render_command::{BoxShadowCmd, DrawBoxShadow, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::{Brush, RenderCommand, TargetItem};
 pub use crate::screenshot::Screenshot;
-use crate::sort_commands::sort_and_cull_render_list_internal;
+use crate::sort_commands::sort_render_list_internal;
 use crate::text_renderer_data::{TextData, TextScroll};
 
 pub trait Renderer: Any {
@@ -28,9 +28,8 @@ pub trait Renderer: Any {
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
-    fn sort_and_cull_render_list(&mut self) {
-        let surface_height = self.surface_height();
-        sort_and_cull_render_list_internal(surface_height, self.render_list_mut());
+    fn sort_render_list(&mut self) {
+        sort_render_list_internal(self.render_list_mut());
     }
     fn prepare<'a>(
         &mut self,
@@ -52,30 +51,47 @@ pub trait Renderer: Any {
         self.render_list_mut().targets.clear();
         self.render_list_mut().commands.clear();
         self.render_list_mut().overlay.children.clear();
+        self.render_list_mut().transform = Affine::IDENTITY;
     }
 
     #[inline(always)]
     fn set_transform(&mut self, transform: Affine) {
-        self.render_list_mut().commands
-            .push(RenderCommand::SetTransform(SetTransformCmd { transform }));
+        self.render_list_mut().transform = transform;
+    }
+
+    #[inline(always)]
+    fn get_transform(&self) -> Affine {
+        self.render_list().transform
     }
 
     fn draw_circle(&mut self, circle: Circle, color: Color) {
+        let transform = self.get_transform();
+
         if let Some(cull) = &self.render_list().cull
-            && !circle.intersects_rect(cull)
         {
-            return;
+            let bb = circle.bounding_box().to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
 
         self.render_list_mut().commands
-            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, color }));
+            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, color, transform }));
     }
 
     fn draw_circle_outline(&mut self, circle: Circle, outline_color: Color, thickness: f32) {
+        let transform = self.get_transform();
+
         if let Some(cull) = &self.render_list().cull
-            && !circle.intersects_rect(cull)
         {
-            return;
+            let bb = circle.bounding_box().to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
 
         self.render_list_mut().commands
@@ -83,26 +99,41 @@ pub trait Renderer: Any {
                 circle,
                 outline_color,
                 thickness,
+                transform,
             }));
     }
 
     #[inline(always)]
     fn draw_rect(&mut self, rect: Rectangle, color: Color) {
+        let transform = self.get_transform();
+
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&rect)
         {
-            return;
+            let bb = rect.to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
-        self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, color }));
+
+        self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, color, transform }));
     }
 
     #[inline(always)]
     fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
-        if let Some(cull) = self.render_list().cull.clone()
-            && !cull.intersects(&bounding_box)
+        let transform = self.get_transform();
+        // TODO: Precompute transform???
+        if let Some(cull) = &self.render_list().cull
         {
-            return;
+            let bb = bounding_box.to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
         let overlay_depth = self.render_list().current_overlay_depth;
         self.render_list_mut().targets
             .push(TargetItem::new(id, bounding_box, overlay_depth));
@@ -110,38 +141,59 @@ pub trait Renderer: Any {
 
     #[inline(always)]
     fn draw_rect_outline(&mut self, rect: Rectangle, outline_color: Color, thickness: f64) {
+        let transform = self.get_transform();
+
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&rect)
         {
-            return;
+            let bb = rect.to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
         self.render_list_mut().commands.push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
             rect,
             outline_color,
             thickness,
+            transform,
         }));
     }
 
     #[inline(always)]
     fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
+        let transform = self.get_transform();
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&Rectangle::from_kurbo(path.bounding_box()))
         {
-            return;
+            let bb = path.bounding_box();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
+
         self.render_list_mut().commands
-            .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush }));
+            .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush, transform }));
     }
 
     #[inline(always)]
     fn stroke_bez_path(&mut self, path: BezPath, brush: Brush) {
+        let transform = self.get_transform();
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&Rectangle::from_kurbo(path.bounding_box()))
         {
-            return;
+            let bb = path.bounding_box();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
         self.render_list_mut().commands
-            .push(RenderCommand::StrokeBezPath(StrokeBezPathCmd { path, brush }));
+            .push(RenderCommand::StrokeBezPath(StrokeBezPathCmd { path, brush, transform }));
     }
 
     #[inline(always)]
@@ -152,38 +204,55 @@ pub trait Renderer: Any {
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
     ) {
+        let transform = self.get_transform();
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&rect)
         {
-            return;
+            let bb = rect.to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
         self.render_list_mut().commands.push(RenderCommand::DrawText(DrawTextCmd {
             rect,
             data,
             text_scroll,
             show_cursor,
+            transform,
         }));
     }
 
     #[inline(always)]
     fn draw_image(&mut self, rect: Rectangle, resource_id: ResourceId) {
+        let transform = self.get_transform();
         if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&rect)
         {
-            return;
+            let bb = rect.to_kurbo();
+            let bb_transformed = transform.transform_rect_bbox(bb);
+
+            if !bb_transformed.overlaps(cull.to_kurbo()) {
+                return;
+            }
         }
+
         self.render_list_mut().commands
-            .push(RenderCommand::DrawImage(DrawImageCmd { rect, resource_id }));
+            .push(RenderCommand::DrawImage(DrawImageCmd { rect, resource_id, transform: Default::default() }));
     }
 
     #[inline(always)]
     fn push_layer(&mut self, rect: Rectangle) {
-        self.render_list_mut().commands.push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect)));
+        let transform = self.get_transform();
+
+        self.render_list_mut().commands.push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect, transform)));
     }
 
     fn push_layer_with_bez_path(&mut self, path: BezPath) {
+        let transform = self.get_transform();
+
         self.render_list_mut().commands
-            .push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path)));
+            .push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path, transform)));
     }
 
     #[inline(always)]
@@ -204,9 +273,14 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn draw_outset_box_shadow(
         &mut self,
-        box_shadow: BoxShadowCmd,
+        box_shadow: DrawBoxShadow,
     ) {
-        self.render_list_mut().commands.push(RenderCommand::BoxShadowCmd(box_shadow));
+        let transform = self.get_transform();
+
+        self.render_list_mut().commands.push(RenderCommand::BoxShadowCmd(BoxShadowCmd {
+            box_shadow,
+            transform,
+        }));
     }
 
     fn set_cull(&mut self, cull: Option<Rectangle>) {

@@ -53,11 +53,6 @@ use crate::wasm_queue::WASM_QUEUE;
 
 pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
 
-#[cfg(not(target_arch = "wasm32"))]
-type RendererBox = Box<dyn Renderer>;
-#[cfg(target_arch = "wasm32")]
-type RendererBox = Box<dyn Renderer>;
-
 #[derive(Clone)]
 pub struct Window {
     pub inner: Rc<RefCell<WindowInternal>>,
@@ -717,7 +712,7 @@ impl WindowInternal {
 
         {
             let renderer = renderer_clone.clone();
-            renderer.borrow_mut().sort_and_cull_render_list();
+            renderer.borrow_mut().sort_render_list();
 
             let window = Rectangle::new(0.0, 0.0, renderer.borrow().surface_width(), renderer.borrow().surface_height());
             renderer.borrow_mut().prepare(resource_manager.clone(), window);

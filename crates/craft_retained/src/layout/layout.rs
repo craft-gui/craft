@@ -1,7 +1,7 @@
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
 
-use craft_renderer::render_command::BoxShadowCmd;
+use craft_renderer::render_command::DrawBoxShadow;
 use craft_renderer::Brush;
 
 use peniko::Color;
@@ -360,7 +360,7 @@ impl Layout {
                     continue;
                 }
 
-                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                renderer.draw_outset_box_shadow(DrawBoxShadow {
                     inset: false,
                     offset: shadow.offset,
                     outline: cache_box_shadows.outline.to_path(),
@@ -406,7 +406,7 @@ impl Layout {
                     continue;
                 }
 
-                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                renderer.draw_outset_box_shadow(DrawBoxShadow {
                     inset: true,
                     offset: shadow.offset,
                     outline: cache_box_shadows.inline.to_path(),

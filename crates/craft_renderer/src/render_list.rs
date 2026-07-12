@@ -1,4 +1,4 @@
-use craft_primitives::geometry::Rectangle;
+use craft_primitives::geometry::{Affine, Rectangle};
 
 use crate::sort_commands::SortedCommands;
 use crate::{RenderCommand, TargetItem};
@@ -10,6 +10,7 @@ pub struct RenderList {
     /// Stores a sorted list of render command handles. This gets set in `Renderer::sort_render_list`.
     pub overlay: SortedCommands,
     pub cull: Option<Rectangle>,
+    pub transform: Affine
 }
 
 impl Default for RenderList {
@@ -26,6 +27,7 @@ impl RenderList {
             commands: Vec::new(),
             overlay: SortedCommands { children: vec![] },
             cull: None,
+            transform: Affine::IDENTITY,
         }
     }
 }
