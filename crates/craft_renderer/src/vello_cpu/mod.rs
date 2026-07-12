@@ -306,7 +306,7 @@ impl Renderer for VelloCpuRenderer {
                             let glyph_run_builder = self
                                 .render_context
                                 .glyph_run(&mut self.resources, &item.font)
-                                .atlas_cache(true)
+                                //.atlas_cache(true)
                                 .font_size(item.font_size);
                             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                                 id: glyph.id,
