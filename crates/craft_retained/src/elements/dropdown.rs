@@ -3,7 +3,7 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 
 use craft_renderer::Brush;
@@ -25,6 +25,7 @@ use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
 use craft_renderer::renderer::Renderer;
 use ui_events::pointer::PointerId;
+use craft_resource_manager::ResourceManager;
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
@@ -194,7 +195,7 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }
@@ -205,7 +206,7 @@ impl ElementInternals for DropdownInner {
             self.add_hit_testable(renderer, true, scale_factor);
         }
 
-        self.draw_selected_element(renderer, text_context, scale_factor);
+        self.draw_selected_element(renderer, resource_manager.clone(), text_context, scale_factor);
 
         // Draw the arrow
         let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle().scale(scale_factor);
@@ -246,7 +247,7 @@ impl ElementInternals for DropdownInner {
                     .scale(scale_factor),
             );
 
-            self.draw_children(renderer, text_context, scale_factor);
+            self.draw_children(renderer, resource_manager.clone(), scale_factor, text_context);
 
             renderer.pop_layer();
 
@@ -337,7 +338,7 @@ impl ElementInternals for DropdownInner {
         });
     }
 
-    fn draw_children(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_children(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
         for (index, child) in self.children().iter().enumerate() {
             let floating_window_box = &self.floating_window.layout.computed_box_transformed;
             let mut child_rect = child
@@ -355,7 +356,7 @@ impl ElementInternals for DropdownInner {
                 renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_color.unwrap());
             }
 
-            child.borrow_mut().draw(renderer, text_context, scale_factor);
+            child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -582,10 +583,10 @@ impl Dropdown {
 }
 
 impl DropdownInner {
-    fn draw_selected_element(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_selected_element(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, scale_factor: f64) {
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
-            binding.draw(renderer, text_context, scale_factor);
+            binding.draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 

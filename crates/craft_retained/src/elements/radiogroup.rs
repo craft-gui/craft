@@ -17,6 +17,8 @@ use craft_renderer::renderer::Renderer;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
+use craft_resource_manager::ResourceManager;
 
 #[derive(Clone)]
 pub struct RadioGroup {
@@ -97,8 +99,8 @@ impl ElementInternals for RadioGroupInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
-        draw_generic_container(self, renderer, text_context, scale_factor);
+    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+        draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
     #[cfg(feature = "accesskit")]

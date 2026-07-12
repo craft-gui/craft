@@ -4,14 +4,13 @@ use std::{fmt, fs};
 
 #[cfg(feature = "http_client")]
 use crate::ResourceId::Url;
-use crate::ResourceId::{File, OwnedBytes, StaticBytes};
+use crate::ResourceId::{File, StaticBytes};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ResourceId {
     #[cfg(feature = "http_client")]
     Url(String),
     File(PathBuf),
-    OwnedBytes(Vec<u8>),
     StaticBytes(&'static [u8]),
 }
 
@@ -21,7 +20,6 @@ impl Display for ResourceId {
             #[cfg(feature = "http_client")]
             Url(url) => write!(f, "URL: {url}"),
             File(file_path) => write!(f, "File: {:?}", file_path.as_os_str().to_str()),
-            OwnedBytes(bytes) => write!(f, "Owned Bytes: {:?}", bytes.as_ptr()),
             StaticBytes(bytes) => write!(f, "Static Bytes: {:?}", bytes.as_ptr()),
         }
     }
@@ -60,7 +58,6 @@ impl ResourceId {
                 None
             }
             StaticBytes(bytes) => Some(bytes.to_vec()),
-            OwnedBytes(bytes) => Some(bytes.clone()),
         }
     }
 }

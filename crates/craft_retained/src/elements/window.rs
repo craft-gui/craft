@@ -166,8 +166,8 @@ impl ElementInternals for WindowInternal {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
-        draw_generic_container(self, renderer, text_context, scale_factor);
+    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+        draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -711,7 +711,7 @@ impl WindowInternal {
         let renderer_clone = self.renderer.clone();
         self.renderer.borrow_mut().clear();
 
-        self.draw(&mut *renderer_clone.borrow_mut(), text_context, self.effective_scale_factor());
+        self.draw(&mut *renderer_clone.borrow_mut(), resource_manager.clone(), self.effective_scale_factor(), text_context);
 
         self.winit_window.clone().unwrap().pre_present_notify();
 

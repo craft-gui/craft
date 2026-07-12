@@ -1,4 +1,3 @@
-use crate::renderer::Renderer;
 use crate::{RenderCommand, RenderList};
 use craft_primitives::geometry::{Rectangle, Shape};
 

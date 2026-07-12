@@ -3,13 +3,14 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 #[cfg(feature = "accesskit")]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 use craft_renderer::Brush;
 use peniko::kurbo;
 use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -114,25 +115,25 @@ impl ElementInternals for CheckboxInner {
         self.box_rect = self.box_layout.layout.computed_box_transformed.content_rectangle();
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }
-        self.add_hit_testable(renderer, true, scale_factor);
-        self.draw_borders(renderer, scale_factor);
-        self.maybe_start_layer(renderer, scale_factor);
+        self.add_hit_testable(renderer, true, _scale_factor);
+        self.draw_borders(renderer, _scale_factor);
+        self.maybe_start_layer(renderer, _scale_factor);
 
         let color = rgb(0, 100, 255);
         let border_color = if self.checked { color } else { rgb(150, 150, 150) };
-        renderer.draw_rect_outline(self.box_rect.scale(scale_factor), border_color, 2.0 * scale_factor);
+        renderer.draw_rect_outline(self.box_rect.scale(_scale_factor), border_color, 2.0 * _scale_factor);
 
         let s = self.box_rect;
         let blue = rgb(0, 100, 255);
         let grey = rgb(150, 150, 150);
         if self.checked {
-            renderer.draw_rect(s.scale(scale_factor), blue);
+            renderer.draw_rect(s.scale(_scale_factor), blue);
 
-            let scale_factor = scale_factor as f32;
+            let scale_factor = _scale_factor as f32;
             let mut path = kurbo::BezPath::new();
             path.move_to((((s.x + s.width * 0.25) * scale_factor) as f64, ((s.y + s.height * 0.5) * scale_factor) as f64));
             path.line_to((((s.x + s.width * 0.45) * scale_factor) as f64, ((s.y + s.height * 0.7) * scale_factor) as f64));
@@ -140,12 +141,12 @@ impl ElementInternals for CheckboxInner {
 
             renderer.stroke_bez_path(path, Brush::Color(rgb(255, 255, 255)));
         } else {
-            renderer.draw_rect_outline(s.scale(scale_factor), grey, 1.5 * scale_factor);
+            renderer.draw_rect_outline(s.scale(_scale_factor), grey, 1.5 * _scale_factor);
         }
 
-        self.draw_children(renderer, text_context, scale_factor);
+        self.draw_children(renderer, resource_manager.clone(), _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
-        self.draw_scrollbar(renderer, scale_factor);
+        self.draw_scrollbar(renderer, _scale_factor);
     }
 
     #[cfg(feature = "accesskit")]

@@ -10,7 +10,7 @@ use ui_events::pointer::PointerId;
 
 use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
 use craft_renderer::renderer::Renderer;
-
+use craft_resource_manager::ResourceManager;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
@@ -77,9 +77,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// A helper to draw all children.
-    fn draw_children(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_children(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
         for child in self.children() {
-            child.borrow_mut().draw(renderer, text_context, scale_factor);
+            child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -137,7 +137,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// - `pointer`: optional pointer position for hover effects.
     /// - `window`: optional window handle.
     /// - `scale_factor`: scale factor.
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _text_context: &mut TextContext, _scale_factor: f64) {}
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {}
 
     /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]

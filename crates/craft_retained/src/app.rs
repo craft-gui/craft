@@ -173,12 +173,11 @@ impl App {
                 });
                 if let Some(_text_context) = self.text_context.as_mut()
                     && resource_type == "font"
-                    // && resource.data().is_some()
                 {
                     // Todo: Load the font into the text context.
                     self.resource_manager.insert(resource_id.clone(), Arc::new(resource));
                     self.reload_fonts = true;
-                } else if resource_type == "image"|| resource_type == "tinyvg" {
+                } else {
                     self.resource_manager.insert(resource_id, Arc::new(resource));
                 }
                 // TODO: Only mark dirty affected nodes.

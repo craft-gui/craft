@@ -3,10 +3,11 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::geometry::{Affine, Point, Rectangle};
+use craft_renderer::renderer::Renderer;
 use craft_renderer::RenderList;
-
+use craft_resource_manager::ResourceManager;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
@@ -101,8 +102,8 @@ impl ElementInternals for CodeEditorInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
-        draw_generic_container(self, renderer, text_context, scale_factor);
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+        draw_generic_container(self, _renderer, _text_context, _scale_factor);
     }
 
     fn on_event(

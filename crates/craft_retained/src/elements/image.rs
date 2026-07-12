@@ -3,10 +3,10 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::geometry::Rectangle;
 
-use craft_resource_manager::ResourceId;
+use craft_resource_manager::{ResourceId, ResourceManager};
 
 use craft_primitives::geometry::{Affine, Point};
 use craft_renderer::renderer::Renderer;
@@ -90,7 +90,7 @@ impl ElementInternals for ImageInner {
         );
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }
@@ -163,7 +163,7 @@ impl ImageInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), "image".to_string()));
+            pending_resources.push_back((self.resource_id.clone(), "image".to_string()));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

@@ -7,11 +7,12 @@ use craft_primitives::geometry::{Affine, Point, Rectangle};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Node, NodeId, TreeUpdate};
 use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -202,6 +203,7 @@ pub fn add_generic_accesskit_data(
 pub fn draw_generic_container(
     element: &mut dyn ElementInternals,
     renderer: &mut dyn Renderer,
+    resource_manager: Arc<ResourceManager>,
     text_context: &mut TextContext,
     scale_factor: f64,
 ) {
@@ -211,7 +213,7 @@ pub fn draw_generic_container(
     element.add_hit_testable(renderer, true, scale_factor);
     element.draw_borders(renderer, scale_factor);
     element.maybe_start_layer(renderer, scale_factor);
-    element.draw_children(renderer, text_context, scale_factor);
+    element.draw_children(renderer, resource_manager.clone(), scale_factor, text_context);
     element.maybe_end_layer(renderer);
     element.draw_scrollbar(renderer, scale_factor);
 }
