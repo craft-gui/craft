@@ -12,7 +12,7 @@ use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRecta
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::elements::scrollable::{ScrollState, draw_scrollbar};
+use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
@@ -436,7 +436,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
         }
 
-        remove_element_from_document(child.clone(), &mut self.pointer_capture().borrow_mut());
+        if let Some(pointer_capture) = self.pointer_capture() {
+            remove_element_from_document(child.clone(), &mut pointer_capture.borrow_mut());
+        }
 
         child.borrow_mut().unfocus();
 
@@ -488,7 +490,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn on_text_input_changed(&mut self, on_text_input_changed: TextInputChangedHandler) {
-        self.element_data_mut().on_text_input_changed.push(on_text_input_changed);
+        self.element_data_mut()
+            .on_text_input_changed
+            .push(on_text_input_changed);
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
@@ -589,10 +593,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn pointer_capture(&self) -> Rc<RefCell<PointerCapture>> {
+    fn pointer_capture(&self) -> Option<Rc<RefCell<PointerCapture>>> {
         let element_data = self.element_data();
-        let window = element_data.window.clone().unwrap().upgrade().unwrap();
-        window.borrow().pointer_capture.clone()
+        let window = element_data.window.clone();
+        if let Some(window) = window {
+            Some(window.upgrade().unwrap().borrow().pointer_capture.clone())
+        } else {
+            None
+        }
     }
 
     fn propagate_window_down(&mut self) {
@@ -618,10 +626,12 @@ pub trait ElementInternals: ElementData + Any + Drop {
         // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
         // TODO (POINTER CAPTURE)
         // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-        self.pointer_capture()
-            .borrow_mut()
-            .pending_pointer_captures
-            .insert(pointer_id, self.element_data().me.clone());
+        if let Some(pointer_capture) = self.pointer_capture() {
+            pointer_capture
+                .borrow_mut()
+                .pending_pointer_captures
+                .insert(pointer_id, self.element_data().me.clone());
+        }
     }
 
     fn release_pointer_capture(&self, pointer_id: PointerId) {
@@ -635,22 +645,27 @@ pub trait ElementInternals: ElementData + Any + Drop {
             return;
         }
         // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
-        let _ = self
-            .pointer_capture()
-            .borrow_mut()
-            .pending_pointer_captures
-            .remove(&pointer_id);
+        if let Some(pointer_capture) = self.pointer_capture() {
+            pointer_capture
+                .borrow_mut()
+                .pending_pointer_captures
+                .remove(&pointer_id);
+        }
     }
 
     fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
-        self.pointer_capture()
-            .borrow()
-            .pending_pointer_captures
-            .get(&pointer_id)
-            .cloned()
-            .map(|w| w.as_ptr())
-            == Some(self.element_data().me.clone().as_ptr())
+        if let Some(pointer_capture) = self.pointer_capture() {
+            pointer_capture
+                .borrow()
+                .pending_pointer_captures
+                .get(&pointer_id)
+                .cloned()
+                .map(|w| w.as_ptr())
+                == Some(self.element_data().me.clone().as_ptr())
+        } else {
+            false
+        }
     }
 
     fn as_any(&self) -> &dyn Any;

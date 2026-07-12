@@ -3,8 +3,8 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-use std::sync::Arc;
-#[cfg(feature = "accesskit")]
+
+#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
 use craft_renderer::renderer::Renderer;
@@ -141,7 +141,7 @@ impl ElementInternals for RadioInner {
         self.draw_scrollbar(renderer, _scale_factor);
     }
 
-    #[cfg(feature = "accesskit")]
+    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
         let current_node_id = accesskit::NodeId(self.element_data().internal_id);
 

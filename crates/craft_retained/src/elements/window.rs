@@ -135,8 +135,8 @@ impl crate::elements::ElementData for WindowInternal {
 }
 
 impl ElementInternals for WindowInternal {
-    fn pointer_capture(&self) -> Rc<RefCell<PointerCapture>> {
-        self.pointer_capture.clone()
+    fn pointer_capture(&self) -> Option<Rc<RefCell<PointerCapture>>> {
+        Some(self.pointer_capture.clone())
     }
 
     fn apply_layout(

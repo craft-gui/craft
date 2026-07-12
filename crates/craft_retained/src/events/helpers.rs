@@ -125,6 +125,9 @@ pub(super) fn call_user_event_handlers(
             for handler in &element_data.on_dropdown_item_selected {
                 (*handler)(event, *item);
             }
+            if !event.prevent_defaults {
+                current_target.borrow_mut().on_event(message, text_context, event, Some(event.target.clone()));
+            }
         }
         EventKind::SwitchToggled(_) => {}
         EventKind::SliderValueChanged(slider_value) => {

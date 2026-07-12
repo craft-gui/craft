@@ -31,7 +31,7 @@ use craft_logging::info;
 
 use craft_resource_manager::ResourceManager;
 
-use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
+use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
 
 use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
