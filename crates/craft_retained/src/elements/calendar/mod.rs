@@ -275,7 +275,7 @@ impl CalendarInner {
     }
 
     fn select_year(&mut self, year: usize) {
-        self.focus_year = self.start_year + (year as i32);
+        self.focus_year = self.end_year - (year as i32);
         self.update_calendar();
     }
 
