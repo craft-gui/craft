@@ -86,18 +86,18 @@ pub fn format_date_day_number(date: &Date<Gregorian>) -> String {
 
 pub fn month_name(month: Month) -> Option<String> {
     let windows_month = match month.number() {
-        0 => LOCALE_SMONTHNAME1,
-        1 => LOCALE_SMONTHNAME2,
-        2 => LOCALE_SMONTHNAME3,
-        3 => LOCALE_SMONTHNAME4,
-        4 => LOCALE_SMONTHNAME5,
-        5 => LOCALE_SMONTHNAME6,
-        6 => LOCALE_SMONTHNAME7,
-        7 => LOCALE_SMONTHNAME8,
-        8 => LOCALE_SMONTHNAME9,
-        9 => LOCALE_SMONTHNAME10,
-        10 => LOCALE_SMONTHNAME11,
-        11 => LOCALE_SMONTHNAME12,
+        1 => LOCALE_SMONTHNAME1,
+        2 => LOCALE_SMONTHNAME2,
+        3 => LOCALE_SMONTHNAME3,
+        4 => LOCALE_SMONTHNAME4,
+        5 => LOCALE_SMONTHNAME5,
+        6 => LOCALE_SMONTHNAME6,
+        7 => LOCALE_SMONTHNAME7,
+        8 => LOCALE_SMONTHNAME8,
+        9 => LOCALE_SMONTHNAME9,
+        10 => LOCALE_SMONTHNAME10,
+        11 => LOCALE_SMONTHNAME11,
+        12 => LOCALE_SMONTHNAME12,
         _ => unreachable!(),
     };
 
