@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use icu::calendar::types::Weekday;
 
-fn first_day_of_week() -> Option<Weekday> {
+pub(super) fn first_day_of_week() -> Option<Weekday> {
     use std::ffi::c_void;
 
     #[link(name = "CoreFoundation", kind = "framework")]
@@ -37,7 +37,7 @@ fn first_day_of_week() -> Option<Weekday> {
 
 pub fn day_abbreviation(day: Weekday) -> Option<String> {
     #[link(name = "CoreFoundation", kind = "framework")]
-    extern "C" {
+    unsafe extern "C" {
         static kCFDateFormatterVeryShortWeekdaySymbols: *mut c_void;
 
         fn CFLocaleCopyCurrent() -> *mut c_void;
@@ -80,7 +80,6 @@ pub fn day_abbreviation(day: Weekday) -> Option<String> {
             Weekday::Thursday => 4,
             Weekday::Friday => 5,
             Weekday::Saturday => 6,
-            _ => return None,
         };
 
         let cf_string = CFArrayGetValueAtIndex(symbols_array, index);
