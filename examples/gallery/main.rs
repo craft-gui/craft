@@ -277,7 +277,7 @@ pub fn main() {
         .width(pct(100))
         .height(pct(100))
         .max_width(px(1200.0))
-        .push(Calendar::new())
+        .push(Calendar::new().start_year(1950))
         .push(text_input())
         .push(dropdown())
         .push(text())

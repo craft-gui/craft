@@ -47,6 +47,8 @@ pub struct CalendarInner {
 const ROWS: usize = 6;
 const COLUMNS: usize = 7;
 const CELL_SIZE: Unit = Unit::Px(36.0);
+const MIN_YEAR: i32 = 1900;
+const MAX_YEAR: i32 = 3000;
 
 impl Default for Calendar {
     fn default() -> Self {
@@ -177,7 +179,7 @@ impl Calendar {
                 focus_month: start_of_month.month().ordinal,
                 year_dropdown: Dropdown::new().width(px(100)),
                 month_dropdown: Dropdown::new().width(px(100)),
-                start_year: 1900,
+                start_year: MIN_YEAR,
                 end_year: start_of_month.year().extended_year() + 2,
                 locale,
             })
@@ -244,11 +246,23 @@ impl Calendar {
     }
 
     pub fn start_year(self, year: i32) -> Self {
+        if year < MIN_YEAR {
+            panic!("Dates below {MIN_YEAR} are not supported.");
+        }
+        if year > MAX_YEAR {
+            panic!("Dates above {MAX_YEAR} are not supported.");
+        }
         self.inner.borrow_mut().set_start_year(year);
         self
     }
 
     pub fn end_year(self, year: i32) -> Self {
+        if year < MIN_YEAR {
+            panic!("Dates below {MIN_YEAR} are not supported.");
+        }
+        if year > MAX_YEAR {
+            panic!("Dates above {MAX_YEAR} are not supported.");
+        }
         self.inner.borrow_mut().set_end_year(year);
         self
     }
