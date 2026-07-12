@@ -1,6 +1,6 @@
 use image::RgbaImage;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageResource {
     pub image: RgbaImage,
 }

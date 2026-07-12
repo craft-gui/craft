@@ -59,7 +59,7 @@ impl RendererType {
     pub async fn create(&self, window: Arc<Window>) -> Rc<RefCell<dyn Renderer>> {
         let renderer: Rc<RefCell<dyn Renderer>> = match self {
             #[cfg(feature = "vello_cpu_renderer")]
-            RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window)),
+            RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new(window))),
             #[cfg(feature = "vello_hybrid_renderer")]
             RendererType::VelloHybrid => Rc::new(RefCell::new(VelloHybridRenderer::new(window).await)),
             RendererType::Blank => {

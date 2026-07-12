@@ -563,7 +563,6 @@ fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, wi
         Affine::default().with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
-
     let transformed_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
 
     let c = cmd.data.upgrade();
@@ -691,7 +690,7 @@ fn push_layer(cmd: &PushLayerCmd, scene: &mut Scene) {
             let clip_path = &rect.to_kurbo().into_path(0.1);
             scene.push_layer(Some(clip_path), None, None, None, None);
         },
-    };
+   };
 }
 
 fn pop_layer(scene: &mut Scene) {

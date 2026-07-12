@@ -252,14 +252,14 @@ impl TinyVgInner {
                         path.close_path();
                     }
                     let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
-                    fill_local_path(renderer, path, brush);
+                    fill_path(renderer, path, brush);
                 }
                 DrawCommand::FillRectangles(data) => {
                     let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
                     for rectangle in &data.rectangles {
                         let rect =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
-                        fill_local_path(renderer, rect.into_path(TOLERANCE), brush.clone());
+                        fill_path(renderer, rect.into_path(TOLERANCE), brush.clone());
                     }
                 }
                 DrawCommand::FillPath(data) => {
@@ -281,7 +281,7 @@ impl TinyVgInner {
                         path.line_to(to_kurbo_point(line.end));
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush);
+                    stroke_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLineLoop(data) => {
                     let brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
@@ -295,7 +295,7 @@ impl TinyVgInner {
                         path.close_path();
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush);
+                    stroke_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLineStrip(data) => {
                     let brush = get_brush(&data.style, &tiny_vg.color_table, override_color);
@@ -308,7 +308,7 @@ impl TinyVgInner {
                         }
                     }
 
-                    stroke_local_path(renderer, &path, data.line_width.0, brush);
+                    stroke_path(renderer, &path, data.line_width.0, brush);
                 }
                 DrawCommand::DrawLinePath(data) => {
                     draw_path(
@@ -331,10 +331,10 @@ impl TinyVgInner {
                     }
 
                     let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
-                    fill_local_path(renderer, path.clone(), fill_brush);
+                    fill_path(renderer, path.clone(), fill_brush);
 
                     let line_brush = get_brush(&data.line_style, &tiny_vg.color_table, override_color);
-                    stroke_local_path(renderer, &path, data.line_width.0, line_brush);
+                    stroke_path(renderer, &path, data.line_width.0, line_brush);
                 }
                 DrawCommand::OutlineFillRectangles(data) => {
                     let fill_brush = get_brush(&data.fill_style, &tiny_vg.color_table, override_color);
@@ -344,8 +344,8 @@ impl TinyVgInner {
                         let rect =
                             kurbo::Rect::new(rectangle.x.0, rectangle.y.0, rectangle.width.0, rectangle.height.0);
                         let rect_path = rect.into_path(TOLERANCE);
-                        fill_local_path(renderer, rect_path.clone(), fill_brush.clone());
-                        stroke_local_path(renderer, &rect_path, data.line_width.0, line_brush.clone());
+                        fill_path(renderer, rect_path.clone(), fill_brush.clone());
+                        stroke_path(renderer, &rect_path, data.line_width.0, line_brush.clone());
                     }
                 }
                 DrawCommand::OutlineFillPath(data) => {
@@ -382,12 +382,12 @@ fn to_peniko_color(color: RgbaF32) -> Color {
     Color::from(AlphaColor::new([color.0, color.1, color.2, color.3]))
 }
 
-fn fill_local_path(renderer: &mut dyn Renderer, mut path: BezPath, brush: Brush) {
+fn fill_path(renderer: &mut dyn Renderer, path: BezPath, brush: Brush) {
     renderer.fill_bez_path(path, brush);
 }
 
-fn stroke_local_path(renderer: &mut dyn Renderer, path: &BezPath, line_width: f64, brush: Brush) {
-    let mut outline = kurbo::stroke(path, &Stroke::new(line_width), &StrokeOpts::default(), TOLERANCE);
+fn stroke_path(renderer: &mut dyn Renderer, path: &BezPath, line_width: f64, brush: Brush) {
+    let outline = kurbo::stroke(path, &Stroke::new(line_width), &StrokeOpts::default(), TOLERANCE);
     renderer.fill_bez_path(outline, brush);
 }
 
@@ -403,9 +403,9 @@ fn draw_path(
     let brush = get_brush(fill_style, color_table, override_color);
 
     if let Some(line_width) = line_width {
-        stroke_local_path(renderer, &bezier_path, line_width.0, brush);
+        stroke_path(renderer, &bezier_path, line_width.0, brush);
     } else {
-        fill_local_path(renderer, bezier_path, brush);
+        fill_path(renderer, bezier_path, brush);
     }
 }
 

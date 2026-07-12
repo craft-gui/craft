@@ -1,5 +1,3 @@
-pub(crate) mod tinyvg;
-
 use std::any::Any;
 use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
@@ -7,7 +5,6 @@ use std::sync::Arc;
 
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_resource_manager::ResourceManager;
-use craft_resource_manager::resource::Resource;
 
 use peniko::kurbo::{Affine, Shape};
 use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
@@ -21,17 +18,16 @@ use vello_common::paint::PaintType;
 use vello_cpu::{Pixmap, RenderContext, Resources};
 
 use winit::window::Window;
-
+use craft_resource_manager::image::ImageResource;
 use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::image_adapter::ImageAdapter;
-use crate::render_command::{BoxShadowCmd, PushLayerCmd};
+use crate::render_command::{BoxShadowCmd, DrawRectCmd, PushLayerCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::screenshot::Screenshot;
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
-use crate::vello_cpu::tinyvg::draw_tiny_vg;
 
 pub(crate) struct VelloCpuRenderer {
     render_context: RenderContext,
@@ -41,6 +37,7 @@ pub(crate) struct VelloCpuRenderer {
     window_width: u16,
     window_height: u16,
     resources: Resources,
+    render_list: RenderList,
 }
 
 pub struct Surface {
@@ -76,9 +73,51 @@ impl DerefMut for Surface {
     }
 }
 
-fn vello_draw_rect(scene: &mut RenderContext, rectangle: Rectangle, fill_color: Color) {
-    scene.set_paint(PaintType::from(fill_color));
-    scene.fill_rect(&rectangle.to_kurbo());
+fn vello_draw_rect(scene: &mut RenderContext, cmd: DrawRectCmd) {
+    scene.set_transform(cmd.transform);
+    scene.set_paint(PaintType::from(cmd.color));
+    scene.fill_rect(&cmd.rect.to_kurbo());
+}
+
+pub fn draw_box_shadow(scene: &mut RenderContext, cmd: &BoxShadowCmd) {
+    let radius = cmd.box_shadow.blur_radius / 2.0;
+    let filter = Some(Filter::from_function(FilterFunction::Blur {
+        radius: cmd.box_shadow.blur_radius as f32,
+    }));
+
+    if cmd.box_shadow.inset {
+        scene.set_transform(cmd.transform);
+        let mut clip_path = kurbo::BezPath::new();
+        let outline_rect = cmd.box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
+        clip_path.extend(&outline_rect.to_path(0.1));
+        clip_path.extend(&cmd.box_shadow.path);
+        scene.push_layer(Some(&cmd.box_shadow.outline), None, None, None, filter);
+        scene.set_fill_rule(Fill::EvenOdd);
+        scene.set_paint(cmd.box_shadow.color);
+        scene.fill_path(&clip_path);
+        scene.pop_layer();
+        scene.set_fill_rule(Fill::NonZero);
+    } else {
+        scene.push_layer(
+            None,
+            Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
+            None,
+            None,
+            filter,
+        );
+
+        scene.set_transform(cmd.transform * Affine::translate(cmd.box_shadow.offset));
+        scene.set_paint(cmd.box_shadow.color);
+        scene.fill_path(&cmd.box_shadow.path);
+        scene.set_transform(cmd.transform);
+
+        scene.set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
+        scene.set_paint(Color::WHITE);
+        scene.fill_path(&cmd.box_shadow.outline);
+        scene.set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
+
+        scene.pop_layer();
+    }
 }
 
 impl VelloCpuRenderer {
@@ -106,6 +145,7 @@ impl VelloCpuRenderer {
             window_width: width,
             window_height: height,
             resources: Resources::new(),
+            render_list: Default::default(),
         }
     }
 }
@@ -131,44 +171,53 @@ impl Renderer for VelloCpuRenderer {
             )
             .expect("TODO: panic message");
         self.pixmap = Pixmap::new(width as u16, height as u16);
-        self.render_context.reset_and_resize(width as u16, height as u16)
+        self.render_context = RenderContext::new(width as u16, height as u16);
     }
 
     fn surface_set_clear_color(&mut self, color: Color) {
         self.clear_color = color;
     }
 
+    fn render_list(&self) -> &RenderList {
+        &self.render_list
+    }
+
+    fn render_list_mut(&mut self) -> &mut RenderList {
+        &mut self.render_list
+    }
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
-    fn prepare<'a>(
-        &'a mut self,
-        render_list: &'a mut RenderList,
+    fn prepare(
+        &mut self,
         resource_manager: Arc<ResourceManager>,
         window: Rectangle,
     ) {
         vello_draw_rect(
             &mut self.render_context,
-            Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
-            Color::WHITE,
+            DrawRectCmd {
+                rect: Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
+                color: self.clear_color,
+                transform: Affine::IDENTITY
+            },
         );
 
-        let paint = PaintType::Solid(self.clear_color);
+        let paint = PaintType::Solid(Color::WHITE);
         self.render_context.set_paint(paint);
         self.render_context.set_fill_rule(Fill::NonZero);
         self.render_context.set_transform(Affine::IDENTITY);
 
-        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        let render_list = &self.render_list;
+        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
-                RenderCommand::SetTransform(cmd) => {
-                    self.render_context.set_transform(cmd.transform);
-                }
                 RenderCommand::DrawRect(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context.set_paint(PaintType::Solid(cmd.color));
                     self.render_context.fill_rect(&cmd.rect.to_kurbo());
                 }
                 RenderCommand::DrawRectOutline(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context.set_stroke(Stroke::new(cmd.thickness));
                     self.render_context.set_paint(PaintType::Solid(cmd.outline_color));
                     self.render_context.stroke_rect(&cmd.rect.to_kurbo());
@@ -177,53 +226,48 @@ impl Renderer for VelloCpuRenderer {
                     let resource = resource_manager.get(&cmd.resource_id);
 
                     if let Some(resource) = resource
-                        && let Resource::Image(resource) = resource.as_ref()
+                        && resource.resource_type == "image" && let Some(image) = resource.data.downcast_ref::<ImageResource>()
                     {
-                        let image = &resource.image;
-                        let data = Arc::new(ImageAdapter::new(resource.clone()));
+                        let arc = Arc::new(image.clone());
+                        let data = Arc::new(ImageAdapter::new(arc));
                         let blob = Blob::new(data);
-                        let id = vello_common::peniko::ImageData {
+                        let id = peniko::ImageData {
                             data: blob,
                             format: peniko::ImageFormat::Rgba8,
                             alpha_type: ImageAlphaType::Alpha,
-                            width: image.width(),
-                            height: image.height(),
+                            width: image.image.width(),
+                            height: image.image.height(),
                         };
 
-                        let scene_state = self.render_context.save_current_state();
-                        let mut image_transform = Affine::IDENTITY;
-                        image_transform =
-                            image_transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
-                        image_transform = image_transform.pre_scale_non_uniform(
-                            cmd.rect.width as f64 / image.width() as f64,
-                            cmd.rect.height as f64 / image.height() as f64,
+                        let mut transform = Affine::IDENTITY;
+                        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+                        transform = transform.pre_scale_non_uniform(
+                            cmd.rect.width as f64 / image.image.width() as f64,
+                            cmd.rect.height as f64 / image.image.height() as f64,
                         );
-                        self.render_context
-                            .set_transform(scene_state.transform * image_transform);
+                        self.render_context.set_transform(cmd.transform * transform);
 
                         let is = vello_common::paint::ImageSource::from_peniko_image_data(&id);
-
                         let id = vello_common::paint::Image {
                             image: is,
                             sampler: Default::default(),
                         };
 
-                        //let pixmap = vello_common::pixmap::Pixmap::from_parts(image.pixels(), 100, 100);
                         self.render_context.set_paint(PaintType::Image(id));
                         self.render_context.fill_rect(&kurbo::Rect::new(
                             0.0,
                             0.0,
-                            image.width() as f64,
-                            image.height() as f64,
+                            image.image.width() as f64,
+                            image.image.height() as f64,
                         ));
-                        self.render_context.restore_state(scene_state);
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
-                    let text_transform = kurbo::Affine::default()
+                    let text_transform = Affine::default()
                         .with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
                     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
                     let text_transform = text_transform.then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
+                    let transformed_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
 
                     let c = cmd.data.upgrade();
                     if c.is_none() {
@@ -248,7 +292,7 @@ impl Renderer for VelloCpuRenderer {
                             for item in &line.items {
                                 if let Some(first_glyph) = item.glyphs.first() {
                                     // Cull the glyphs vertically that are outside the window
-                                    let gy = first_glyph.y + cmd.rect.y - scroll;
+                                    let gy = first_glyph.y + transformed_container.y - scroll;
                                     if gy < window.y {
                                         skip_line = true;
                                         break;
@@ -271,7 +315,11 @@ impl Renderer for VelloCpuRenderer {
                                 width: background.width,
                                 height: background.height,
                             };
-                            vello_draw_rect(&mut self.render_context, background_rect, *color);
+                            vello_draw_rect(&mut self.render_context, DrawRectCmd {
+                                rect: background_rect,
+                                color: *color,
+                                transform: cmd.transform
+                            });
                         }
 
                         for (selection, selection_color) in &line.selections {
@@ -281,13 +329,16 @@ impl Renderer for VelloCpuRenderer {
                                 width: selection.width,
                                 height: selection.height,
                             };
-                            vello_draw_rect(&mut self.render_context, selection_rect, *selection_color);
+                            vello_draw_rect(&mut self.render_context, DrawRectCmd {
+                                rect: selection_rect,
+                                color: *selection_color,
+                                transform: cmd.transform
+                            });
                         }
                     });
 
-                    let scene_state = self.render_context.save_current_state();
-                    self.render_context
-                        .set_transform(scene_state.transform * text_transform);
+                    self.render_context.set_transform(cmd.transform * text_transform);
+
                     cull_and_process(&mut |line: &TextRenderLine| {
                         for item in &line.items {
                             if let Some(underline) = &item.underline {
@@ -315,7 +366,6 @@ impl Renderer for VelloCpuRenderer {
                             }));
                         }
                     });
-                    self.render_context.restore_state(scene_state);
 
                     if cmd.show_cursor
                         && let Some((cursor, cursor_color)) = &text_render.cursor
@@ -326,47 +376,51 @@ impl Renderer for VelloCpuRenderer {
                             width: cursor.width,
                             height: cursor.height,
                         };
-                        vello_draw_rect(&mut self.render_context, cursor_rect, *cursor_color);
+                        vello_draw_rect(&mut self.render_context, DrawRectCmd {
+                            rect: cursor_rect,
+                            color: *cursor_color,
+                            transform: cmd.transform
+                        });
                     }
                 }
                 RenderCommand::PushLayer(cmd) => {
-                    let clip_path = match cmd {
-                        PushLayerCmd::BezPath(path) => path,
-                        PushLayerCmd::Rect(rect) => &rect.to_kurbo().into_path(0.1),
+                    match cmd {
+                        PushLayerCmd::BezPath(path, transform) => {
+                            self.render_context.set_transform(*transform);
+                            self.render_context.push_layer(Some(path), None, None, None, None);
+                        },
+                        PushLayerCmd::Rect(rect, transform) => {
+                            self.render_context.set_transform(*transform);
+                            let clip_path = &rect.to_kurbo().into_path(0.1);
+                            self.render_context.push_layer(Some(clip_path), None, None, None, None);
+                        },
                     };
-
-                    self.render_context.push_layer(Some(clip_path), None, None, None, None);
                 }
                 RenderCommand::PopLayer => {
                     self.render_context.pop_layer();
                 }
                 RenderCommand::FillBezPath(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context.set_paint(brush_to_paint(&cmd.brush));
                     self.render_context.fill_path(&cmd.path);
                 }
-                RenderCommand::DrawTinyVg(cmd) => {
-                    draw_tiny_vg(
-                        &mut self.render_context,
-                        cmd.rect,
-                        &resource_manager,
-                        cmd.resource_id.clone(),
-                        &cmd.override_color,
-                    );
-                }
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
-                RenderCommand::BoxShadowCmd(cmd) => self.draw_box_shadow(cmd),
+                RenderCommand::BoxShadowCmd(cmd) => draw_box_shadow(&mut self.render_context, cmd),
                 RenderCommand::DrawCircleOutline(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context.set_stroke(Stroke::new(cmd.thickness as f64));
                     self.render_context.set_paint(PaintType::Solid(cmd.outline_color));
                     self.render_context
                         .stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
                 }
                 RenderCommand::DrawCircle(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context.set_paint(PaintType::from(cmd.color));
                     self.render_context.fill_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
                 }
                 RenderCommand::StrokeBezPath(cmd) => {
+                    self.render_context.set_transform(cmd.transform);
                     self.render_context
                         .set_paint(PaintType::from(brush_to_paint(&cmd.brush)));
                     self.render_context.stroke_path(&cmd.path);
@@ -408,55 +462,5 @@ impl VelloCpuRenderer {
         }
 
         buffer
-    }
-
-    pub fn draw_box_shadow(&mut self, box_shadow: &BoxShadowCmd) {
-        let scene_state = self.render_context.save_current_state();
-        let radius = box_shadow.blur_radius / 2.0;
-        let filter = Some(Filter::from_function(FilterFunction::Blur {
-            radius: box_shadow.blur_radius as f32,
-        }));
-
-        if box_shadow.inset {
-            let mut clip_path = kurbo::BezPath::new();
-            let outline_rect = box_shadow.border_box.expand((radius * 3.0) as f32).to_kurbo();
-            clip_path.extend(&outline_rect.to_path(0.1));
-            clip_path.extend(&box_shadow.path);
-            self.render_context
-                .push_layer(Some(&box_shadow.outline), None, None, None, filter);
-            self.render_context.set_fill_rule(Fill::EvenOdd);
-            self.render_context.set_paint(box_shadow.color);
-            self.render_context.fill_path(&clip_path);
-            self.render_context.pop_layer();
-            self.render_context.set_fill_rule(Fill::NonZero);
-        } else {
-            self.render_context.push_layer(
-                None,
-                Some(BlendMode::new(Mix::Normal, Compose::SrcOver)),
-                None,
-                None,
-                filter,
-            );
-
-            self.render_context
-                .set_transform(scene_state.transform * Affine::translate(box_shadow.offset));
-
-            self.render_context.set_paint(box_shadow.color);
-            self.render_context.fill_path(&box_shadow.path);
-
-            self.render_context.set_transform(scene_state.transform);
-
-            self.render_context
-                .set_blend_mode(BlendMode::new(Mix::Normal, Compose::DestOut));
-            self.render_context.set_paint(Color::WHITE);
-            self.render_context.fill_path(&box_shadow.outline);
-
-            self.render_context
-                .set_blend_mode(BlendMode::new(Mix::Normal, Compose::SrcOver));
-
-            self.render_context.pop_layer();
-
-            self.render_context.restore_state(scene_state);
-        }
     }
 }
