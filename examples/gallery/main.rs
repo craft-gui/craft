@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use craft_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
 use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
 
@@ -277,6 +277,7 @@ pub fn main() {
         .width(pct(100))
         .height(pct(100))
         .max_width(px(1200.0))
+        .push(Calendar::new().start_year(1950))
         .push(text_input())
         .push(dropdown())
         .push(text())
