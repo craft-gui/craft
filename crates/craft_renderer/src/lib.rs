@@ -19,7 +19,6 @@ mod screenshot;
 mod sort_commands;
 mod target_item;
 pub mod text_renderer_data;
-pub(crate) mod tinyvg_helpers;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
 

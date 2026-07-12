@@ -54,7 +54,6 @@ pub(crate) fn sort_and_cull_render_list_internal(surface_height: f32, render_lis
             RenderCommand::DrawRect(cmd) => cmd.rect,
             RenderCommand::DrawRectOutline(cmd) => cmd.rect,
             RenderCommand::DrawImage(cmd) => cmd.rect,
-            RenderCommand::DrawTinyVg(cmd) => cmd.rect,
             RenderCommand::DrawText(cmd) => cmd.rect,
             RenderCommand::FillBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),
             RenderCommand::StrokeBezPath(cmd) => Rectangle::from_kurbo(cmd.path.bounding_box()),

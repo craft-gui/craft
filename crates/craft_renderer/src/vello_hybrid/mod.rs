@@ -1,5 +1,4 @@
 mod render_context;
-mod tinyvg;
 
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
@@ -37,7 +36,6 @@ use crate::renderer::Renderer;
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
-use crate::vello_hybrid::tinyvg::draw_tiny_vg;
 use crate::RenderCommand;
 use craft_resource_manager::image::ImageResource;
 use winit::window::Window;
@@ -196,15 +194,6 @@ impl Renderer for VelloHybridRenderer {
                         &mut self.scene,
                         &mut self.resources,
                         &window
-                    );
-                }
-                RenderCommand::DrawTinyVg(cmd) => {
-                    draw_tiny_vg(
-                        &mut self.scene,
-                        cmd.rect,
-                        &resource_manager,
-                        cmd.resource_id.clone(),
-                        &cmd.override_color,
                     );
                 }
                 RenderCommand::PushLayer(cmd) => {
@@ -425,9 +414,9 @@ fn draw_circle_outline(scene: &mut Scene, cmd: &DrawCircleOutlineCmd) {
 }
 
 fn draw_rect_outline(scene: &mut Scene, cmd: &DrawRectOutlineCmd) {
-    scene.set_stroke(Stroke::new(cmd.thickness));
-    scene.set_paint(PaintType::from(cmd.outline_color));
-    scene.stroke_rect(&cmd.rect.to_kurbo());
+   scene.set_stroke(Stroke::new(cmd.thickness));
+   scene.set_paint(PaintType::from(cmd.outline_color));
+   scene.stroke_rect(&cmd.rect.to_kurbo());
 }
 
 fn draw_image(

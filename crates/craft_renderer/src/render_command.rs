@@ -18,7 +18,6 @@ pub enum RenderCommand {
     DrawRect(DrawRectCmd),
     DrawRectOutline(DrawRectOutlineCmd),
     DrawImage(DrawImageCmd),
-    DrawTinyVg(DrawTinyVgCmd),
     DrawText(DrawTextCmd),
     PushLayer(PushLayerCmd),
     PopLayer,

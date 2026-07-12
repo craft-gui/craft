@@ -177,20 +177,6 @@ pub trait Renderer: Any {
     }
 
     #[inline(always)]
-    fn draw_tiny_vg(&mut self, rect: Rectangle, resource_id: ResourceId, override_color: Option<Color>) {
-        if let Some(cull) = &self.render_list().cull
-            && !cull.intersects(&rect)
-        {
-            return;
-        }
-        self.render_list_mut().commands.push(RenderCommand::DrawTinyVg(DrawTinyVgCmd {
-            rect,
-            resource_id,
-            override_color,
-        }));
-    }
-
-    #[inline(always)]
     fn push_layer(&mut self, rect: Rectangle) {
         self.render_list_mut().commands.push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect)));
     }
