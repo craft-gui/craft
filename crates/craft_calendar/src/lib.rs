@@ -87,6 +87,7 @@ pub fn current_calendar_start(start_of_week: Weekday, year: i32, month: Month) -
 pub fn format_date_day_number(locale: &Locale, date: &Date<Gregorian>) -> String {
     let day_number = cfg_select! {
         windows => Some(windows::format_date_day_number(date)),
+        target_vendor = "apple" => Some(apple::format_date_day_number(date)),
         _ => None,
     };
 
@@ -101,6 +102,7 @@ pub fn format_date_day_number(locale: &Locale, date: &Date<Gregorian>) -> String
 pub fn month_name(locale: &Locale, month: Month, year: i32) -> String {
     let month_name = cfg_select! {
         windows => windows::month_name(month),
+        target_vendor = "apple" => apple::month_name(month),
         _ => None,
     };
 
@@ -117,6 +119,7 @@ pub fn month_name(locale: &Locale, month: Month, year: i32) -> String {
 pub fn year_name(locale: &Locale, year: i32) -> String {
     let year_name = cfg_select! {
         windows => Some(windows::year_name(year)),
+        target_vendor =  "apple" => Some(apple::year_name(year)),
         _ => None,
     };
 
