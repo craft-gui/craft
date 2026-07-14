@@ -18,6 +18,7 @@ mod target_item;
 pub mod text_renderer_data;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
+pub mod resource_mapper;
 
 pub use brush::Brush;
 pub use render_command::RenderCommand;

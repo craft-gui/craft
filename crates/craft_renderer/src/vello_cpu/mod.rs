@@ -1,33 +1,36 @@
 use std::any::Any;
+use std::collections::HashSet;
 use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use vello_cpu::Pixmap;
 
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
-use craft_resource_manager::ResourceManager;
+use craft_resource_manager::ResourceManager as CraftResourceManager;
 
 use peniko::kurbo::{Affine, Shape};
-use peniko::{BlendMode, Blob, Color, Compose, Fill, ImageAlphaType, Mix, kurbo};
+use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
 
 use softbuffer::Buffer;
 
 use glifo::Glyph;
+use peniko::color::PremulRgba8;
 use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::kurbo::Stroke;
-use vello_common::paint::PaintType;
-use vello_cpu::{Pixmap, RenderContext, Resources};
+use vello_common::paint::{ImageId, ImageSource, PaintType};
+use vello_cpu::{RenderContext, Resources};
 
-use winit::window::Window;
-use craft_resource_manager::image::ImageResource;
-use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
-use crate::image_adapter::ImageAdapter;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
+use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::screenshot::Screenshot;
 use crate::sort_commands::SortedCommands;
 use crate::text_renderer_data::{TextRenderLine, TextScroll};
+use crate::RenderCommand;
+use craft_resource_manager::image::ImageResource;
+use winit::window::Window;
 
 pub(crate) struct VelloCpuRenderer {
     render_context: RenderContext,
@@ -38,6 +41,8 @@ pub(crate) struct VelloCpuRenderer {
     window_height: u16,
     resources: Resources,
     render_list: RenderList,
+    resource_mapper: ResourceMapper,
+    resources_seen: HashSet<RendererResourceId>
 }
 
 pub struct Surface {
@@ -86,45 +91,73 @@ fn draw_rect_outline(scene: &mut RenderContext, cmd: &DrawRectOutlineCmd) {
     scene.stroke_rect(&cmd.rect.to_kurbo());
 }
 
-fn draw_image(scene: &mut RenderContext, cmd: &DrawImageCmd, resource_manager: Arc<ResourceManager>) {
+fn draw_image(scene: &mut RenderContext, cmd: &DrawImageCmd,
+              resource_mapper: &mut ResourceMapper,
+              resources: &mut Resources,
+              resource_manager: Arc<CraftResourceManager>) {
     let resource = resource_manager.get(&cmd.resource_id);
-
-    if let Some(resource) = resource
-        && resource.resource_type == "image" && let Some(image) = resource.data.downcast_ref::<ImageResource>()
-    {
-        let arc = Arc::new(image.clone());
-        let data = Arc::new(ImageAdapter::new(arc));
-        let blob = Blob::new(data);
-        let id = peniko::ImageData {
-            data: blob,
-            format: peniko::ImageFormat::Rgba8,
-            alpha_type: ImageAlphaType::Alpha,
-            width: image.image.width(),
-            height: image.image.height(),
-        };
-
-        let mut transform = Affine::IDENTITY;
-        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
-        transform = transform.pre_scale_non_uniform(
-            cmd.rect.width as f64 / image.image.width() as f64,
-            cmd.rect.height as f64 / image.image.height() as f64,
-        );
-        scene.set_transform(cmd.transform * transform);
-
-        let is = vello_common::paint::ImageSource::from_peniko_image_data(&id);
-        let id = vello_common::paint::Image {
-            image: is,
-            sampler: Default::default(),
-        };
-
-        scene.set_paint(PaintType::Image(id));
-        scene.fill_rect(&kurbo::Rect::new(
-            0.0,
-            0.0,
-            image.image.width() as f64,
-            image.image.height() as f64,
-        ));
+    if resource.is_none() {
+        return;
     }
+    let resource = resource.as_ref().unwrap();
+    if resource.resource_type != "image" || resource.clone().data.downcast_ref::<ImageResource>().is_none()
+    {
+        return;
+    };
+
+    let image = resource.data.downcast_ref::<ImageResource>().unwrap();
+
+    // TODO: Handle expired images
+    let resource_id = if let Some(resource_id) = resource_mapper.get(&cmd.resource_id) {
+        resource_id
+    } else {
+        let premul_data: Vec<PremulRgba8> = image
+            .image
+            .to_vec()
+            .chunks_exact(4)
+            .map(|rgba| {
+                let alpha = u16::from(rgba[3]);
+                let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;
+                PremulRgba8 {
+                    r: premultiply(rgba[0]),
+                    g: premultiply(rgba[1]),
+                    b: premultiply(rgba[2]),
+                    a: alpha as u8,
+                }
+            })
+            .collect();
+        let pixmap = Pixmap::from_parts(premul_data, image.image.width() as u16, image.image.height() as u16);
+        let image_id = resources.register_image(Arc::new(pixmap));
+        let renderer_resource_id = RendererResourceId(image_id.as_u32() as u64);
+
+        resource_mapper.add_mapping(cmd.resource_id.clone(), renderer_resource_id.clone());
+
+        renderer_resource_id
+    };
+
+    let mut transform = Affine::IDENTITY;
+    transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+    transform = transform.pre_scale_non_uniform(
+        cmd.rect.width as f64 / image.image.width() as f64,
+        cmd.rect.height as f64 / image.image.height() as f64,
+    );
+    scene.set_transform(cmd.transform * transform);
+
+    let vello_image = vello_common::paint::Image {
+        image: ImageSource::OpaqueId {
+            id: ImageId::new(resource_id.0 as u32),
+            may_have_transparency: true
+        },
+        sampler: Default::default(),
+    };
+
+    scene.set_paint(PaintType::Image(vello_image));
+    scene.fill_rect(&kurbo::Rect::new(
+        0.0,
+        0.0,
+        image.image.width() as f64,
+        image.image.height() as f64,
+    ));
 }
 
 fn draw_text(scene: &mut RenderContext, cmd: &DrawTextCmd, window: Rectangle, resources: &mut Resources) {
@@ -358,7 +391,21 @@ impl VelloCpuRenderer {
             window_height: height,
             resources: Resources::new(),
             render_list: Default::default(),
+            resource_mapper: ResourceMapper::new(),
+            resources_seen: HashSet::with_capacity(20),
         }
+    }
+
+    pub(crate) fn delete_unseen_resources(&mut self) {
+        self.resource_mapper.resources.retain(|_key, value| {
+            if self.resources_seen.contains(&value) {
+                true
+            } else {
+                self.resources.destroy_image(ImageId::new(value.0 as u32));
+
+                false
+            }
+        });
     }
 }
 
@@ -403,9 +450,11 @@ impl Renderer for VelloCpuRenderer {
 
     fn prepare(
         &mut self,
-        resource_manager: Arc<ResourceManager>,
+        resource_manager: Arc<CraftResourceManager>,
         window: Rectangle,
     ) {
+        self.resources_seen.clear();
+
         // Clear the bg color.
         draw_rect(
             &mut self.render_context,
@@ -431,7 +480,17 @@ impl Renderer for VelloCpuRenderer {
                     draw_rect_outline(&mut self.render_context, cmd);
                 }
                 RenderCommand::DrawImage(cmd) => {
-                    draw_image(&mut self.render_context, cmd, resource_manager.clone());
+                    draw_image(&mut self.render_context,
+                               cmd,
+                               &mut self.resource_mapper,
+                               &mut self.resources,
+                               resource_manager.clone()
+                    );
+
+                    // Track the resources used.
+                    if let Some(resource) = self.resource_mapper.get(&cmd.resource_id) {
+                        self.resources_seen.insert(resource);
+                    }
                 }
                 RenderCommand::DrawText(cmd) => {
                     draw_text(&mut self.render_context, cmd, window, &mut self.resources);
@@ -461,9 +520,11 @@ impl Renderer for VelloCpuRenderer {
                 }
             }
         });
+
+        self.delete_unseen_resources();
     }
 
-    fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
+    fn submit(&mut self, _resource_manager: Arc<CraftResourceManager>) {
         self.render_context.flush();
         self.render_context.render(&mut self.pixmap, &mut self.resources);
         let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);

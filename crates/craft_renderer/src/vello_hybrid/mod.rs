@@ -1,17 +1,15 @@
 mod render_context;
 
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
-
-use craft_primitives::geometry::{Circle, Rectangle, TOLERANCE};
+use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_primitives::Color;
 
-use craft_resource_manager::{ResourceId, ResourceManager};
+use craft_resource_manager::ResourceManager;
 
-use glifo::{DrawSink, Glyph};
+use glifo::Glyph;
 
 use kurbo::{Affine, Stroke};
 
@@ -39,6 +37,7 @@ use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, R
 use crate::RenderCommand;
 use craft_resource_manager::image::ImageResource;
 use winit::window::Window;
+use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window
@@ -71,9 +70,9 @@ pub struct VelloHybridRenderer {
     scene: Scene,
     surface_clear_color: Color,
 
-    images: HashMap<ResourceId, (ImageId, Option<DateTime<Utc>>)>,
-
     resources: Resources,
+    resource_mapper: ResourceMapper,
+    resources_seen: HashSet<RendererResourceId>,
 
     window: Arc<Window>,
 
@@ -135,6 +134,8 @@ impl Renderer for VelloHybridRenderer {
             _ => panic!("!!!"),
         };
 
+        self.resources_seen.clear();
+
         // Get the RenderSurface (surface + config)
         let surface = &render_state.surface;
 
@@ -162,10 +163,6 @@ impl Renderer for VelloHybridRenderer {
                 label: Some("Blit Textures onto a Texture Atlas Encoder"),
             });
 
-        let mut images_were_uploaded = false;
-
-        let mut seen_images: HashSet<ImageId> = HashSet::new();
-        let mut expired_images: HashSet<ImageId> = HashSet::new();
         let render_list = &self.render_list;
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
 
@@ -178,16 +175,18 @@ impl Renderer for VelloHybridRenderer {
                     draw_image(
                         cmd,
                         resource_manager.clone(),
-                        &mut expired_images,
-                        &mut seen_images,
+                        &mut self.resource_mapper,
                         renderer,
                         &mut encoder,
                         device_handle,
-                        &mut images_were_uploaded,
-                        &mut self.images,
                         &mut self.scene,
                         &mut self.resources
                     );
+
+                    // Track the resources used.
+                    if let Some(resource) = self.resource_mapper.get(&cmd.resource_id) {
+                        self.resources_seen.insert(resource);
+                    }
                 }
                 RenderCommand::DrawText(cmd) => {
                     draw_text(
@@ -215,16 +214,16 @@ impl Renderer for VelloHybridRenderer {
             }
         });
 
-        upload_images(
-            &mut expired_images,
-            &mut seen_images,
+        VelloHybridRenderer::delete_unseen_resources(
+            &mut self.resources_seen,
             renderer,
-            encoder,
+            &mut encoder,
             device_handle,
-            &mut images_were_uploaded,
-            &mut self.images,
-            &mut self.resources
+            &mut self.resources,
+            &mut self.resource_mapper
         );
+
+        device_handle.queue.submit([encoder.finish()]);
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {
@@ -313,10 +312,11 @@ impl VelloHybridRenderer {
             state: RenderState::Suspended,
             scene: Scene::new(width as u16, height as u16),
             surface_clear_color: Color::WHITE,
-            images: HashMap::new(),
             resources: Resources::new(),
+            resource_mapper: ResourceMapper::new(),
+            resources_seen: HashSet::with_capacity(20),
             window: window.clone(),
-            texture_bindings: TextureBindings::new(),
+            texture_bindings: Default::default(),
             render_list: Default::default(),
         };
 
@@ -348,6 +348,30 @@ impl VelloHybridRenderer {
         });
 
         vello_renderer
+    }
+
+    pub(crate) fn delete_unseen_resources(resources_seen: &mut HashSet<RendererResourceId>,
+                                          renderer: &mut VelloRenderer,
+                                          encoder: &mut CommandEncoder,
+                                          device_handle: &DeviceHandle,
+                                          resources: &mut Resources,
+                                          resource_mapper: &mut ResourceMapper
+    ) {
+        resource_mapper.resources.retain(|_key, value| {
+            if resources_seen.contains(&value) {
+                true
+            } else {
+                renderer.destroy_image(
+                    resources,
+                    &device_handle.device,
+                    &device_handle.queue,
+                    encoder,
+                    ImageId::new(value.0 as u32),
+                );
+
+                false
+            }
+        });
     }
 }
 
@@ -422,140 +446,83 @@ fn draw_rect_outline(scene: &mut Scene, cmd: &DrawRectOutlineCmd) {
 fn draw_image(
     cmd: &DrawImageCmd,
     resource_manager: Arc<ResourceManager>,
-    expired_images: &mut HashSet<ImageId>,
-    seen_images: &mut HashSet<ImageId>,
+    resource_mapper: &mut ResourceMapper,
     renderer: &mut VelloRenderer,
     encoder: &mut CommandEncoder,
     device_handle: &DeviceHandle,
-    images_were_uploaded: &mut bool,
-    images: &mut HashMap<ResourceId, (ImageId, Option<DateTime<Utc>>)>,
     scene: &mut Scene,
     resources: &mut Resources
 ) {
     let resource = resource_manager.get(&cmd.resource_id);
-
-    if let Some(resource) = resource
-        && resource.resource_type == "image" && let Some(image) = resource.data.downcast_ref::<ImageResource>()
-    {
-        //let expiration_time = resource.expiration_time();
-        let expiration_time = None;
-
-        // There is an image, and it hasn't expired.
-        let image_id = if let Some(stored_image) = images.get(&cmd.resource_id)
-            && stored_image.1 == expiration_time
-        {
-            stored_image.0
-        } else {
-            // There is an image, but it expired.
-            if let Some(stored_image) = images.get(&cmd.resource_id) {
-                expired_images.insert(stored_image.0);
-            }
-
-            *images_were_uploaded = true;
-
-            // NOTE: We may be able to avoid this if we implement the AtlasWriter trait.
-            let premul_data: Vec<PremulRgba8> = image
-                .image
-                .to_vec()
-                .chunks_exact(4)
-                .map(|rgba| {
-                    let alpha = u16::from(rgba[3]);
-                    let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;
-                    PremulRgba8 {
-                        r: premultiply(rgba[0]),
-                        g: premultiply(rgba[1]),
-                        b: premultiply(rgba[2]),
-                        a: alpha as u8,
-                    }
-                })
-                .collect();
-            let pixmap = Pixmap::from_parts(premul_data, image.image.width() as u16, image.image.height() as u16);
-
-            let image_id = renderer.upload_image(
-                resources,
-                &device_handle.device,
-                &device_handle.queue,
-                encoder,
-                &pixmap,
-            );
-            images.insert(cmd.resource_id.clone(), (image_id, expiration_time));
-
-            image_id
-        };
-        seen_images.insert(image_id);
-
-        let mut transform = Affine::IDENTITY;
-        transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
-        transform = transform.pre_scale_non_uniform(
-            cmd.rect.width as f64 / image.image.width() as f64,
-            cmd.rect.height as f64 / image.image.height() as f64,
-        );
-        scene.set_transform(cmd.transform * transform);
-
-        scene.set_paint(PaintType::Image(vello_common::paint::Image {
-            image: ImageSource::OpaqueId {
-                id: image_id,
-                may_have_transparency: true,
-            },
-            sampler: Default::default(),
-        }));
-
-        scene.fill_rect(&kurbo::Rect::new(0.0, 0.0, image.image.width() as f64, image.image.height() as f64));
+    if resource.is_none() {
+        return;
     }
-}
+    let resource = resource.as_ref().unwrap();
+    if resource.resource_type != "image" || resource.clone().data.downcast_ref::<ImageResource>().is_none()
+    {
+        return;
+    };
 
-fn upload_images(
-    expired_images: &mut HashSet<ImageId>,
-    seen_images: &mut HashSet<ImageId>,
-    renderer: &mut VelloRenderer,
-    mut encoder: CommandEncoder,
-    device_handle: &DeviceHandle,
-    images_were_uploaded: &mut bool,
-    images: &mut HashMap<ResourceId, (ImageId, Option<DateTime<Utc>>)>,
-    resources: &mut Resources
-) {
-    let mut to_remove: Vec<ResourceId> = Vec::new();
-    for expired_image_id in expired_images.iter() {
-        // Note: Expired images will have an entry in the images hashmap, but with a new ImageId.
-        // Meaning, that we need to delete the detached/abandoned expired image id here.
-        renderer.destroy_image(
+    let image = resource.data.downcast_ref::<ImageResource>().unwrap();
+
+    // TODO: Handle expired images
+    let resource_id = if let Some(resource_id) = resource_mapper.get(&cmd.resource_id) {
+        resource_id
+    } else {
+        let premul_data: Vec<PremulRgba8> = image
+            .image
+            .to_vec()
+            .chunks_exact(4)
+            .map(|rgba| {
+                let alpha = u16::from(rgba[3]);
+                let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;
+                PremulRgba8 {
+                    r: premultiply(rgba[0]),
+                    g: premultiply(rgba[1]),
+                    b: premultiply(rgba[2]),
+                    a: alpha as u8,
+                }
+            })
+            .collect();
+        let pixmap = Pixmap::from_parts(premul_data, image.image.width() as u16, image.image.height() as u16);
+        let image_id = renderer.upload_image(
             resources,
             &device_handle.device,
             &device_handle.queue,
-            &mut encoder,
-            *expired_image_id,
+            encoder,
+            &pixmap,
         );
-        *images_were_uploaded = true;
-    }
 
-    for (key, (image_id, _)) in images.iter() {
-        let seen = seen_images.contains(image_id);
-        let expired = expired_images.contains(image_id);
+        let renderer_resource_id = RendererResourceId(image_id.as_u32() as u64);
 
-        // Delete the culled image, only if it hasn't already been deleted when we looped over the expired images.
-        if !seen && !expired {
-            renderer.destroy_image(
-                resources,
-                &device_handle.device,
-                &device_handle.queue,
-                &mut encoder,
-                *image_id,
-            );
-            *images_were_uploaded = true;
-        }
+        resource_mapper.add_mapping(cmd.resource_id.clone(), renderer_resource_id.clone());
 
-        if !seen {
-            to_remove.push(key.clone());
-        }
-    }
-    for key in &to_remove {
-        images.remove(key);
-    }
+        renderer_resource_id
+    };
 
-    // Submit the texture write commands.
-    if *images_were_uploaded {
-        device_handle.queue.submit([encoder.finish()]);
-    }
+    let mut transform = Affine::IDENTITY;
+    transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
+    transform = transform.pre_scale_non_uniform(
+        cmd.rect.width as f64 / image.image.width() as f64,
+        cmd.rect.height as f64 / image.image.height() as f64,
+    );
+    scene.set_transform(cmd.transform * transform);
+
+    let vello_image = vello_common::paint::Image {
+        image: ImageSource::OpaqueId {
+            id: ImageId::new(resource_id.0 as u32),
+            may_have_transparency: true
+        },
+        sampler: Default::default(),
+    };
+
+    scene.set_paint(PaintType::Image(vello_image));
+    scene.fill_rect(&kurbo::Rect::new(
+        0.0,
+        0.0,
+        image.image.width() as f64,
+        image.image.height() as f64,
+    ));
 }
 
 fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, window: &Rectangle) {
