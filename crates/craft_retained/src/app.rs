@@ -25,7 +25,9 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
 use crate::CraftOptions;
-use crate::elements::{AUDIO_CONTEXT, AudioInner, ElementIdMap, ElementInternals, Window};
+#[cfg(feature = "audio")]
+use crate::elements::{AUDIO_CONTEXT, AudioInner};
+use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{Event, EventDispatcher, EventKind};
 use crate::layout::TaffyTree;
@@ -85,19 +87,22 @@ impl App {
     }
 
     pub fn on_about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        let audio_elements = AUDIO_CONTEXT.with(|audio_context| {
-            if let Some(ctx) = audio_context.get() {
-                ctx.borrow().sounds.keys().cloned().collect()
-            } else {
-                Vec::new()
+        #[cfg(feature = "audio")]
+        {
+            let audio_elements = AUDIO_CONTEXT.with(|audio_context| {
+                if let Some(ctx) = audio_context.get() {
+                    ctx.borrow().sounds.keys().cloned().collect()
+                } else {
+                    Vec::new()
+                }
+            });
+            for audio_element in &audio_elements {
+                let audio = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned().unwrap());
+                let audio = audio.upgrade().unwrap();
+                let mut audio = audio.borrow_mut();
+                let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
+                audio.update();
             }
-        });
-        for audio_element in &audio_elements {
-            let audio = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned().unwrap());
-            let audio = audio.upgrade().unwrap();
-            let mut audio = audio.borrow_mut();
-            let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
-            audio.update();
         }
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {

@@ -7,6 +7,10 @@ edition = "2024"
 name = "gallery"
 path = "main.rs"
 
+[features]
+audio = ["craft_retained/audio"]
+default = ["audio"]
+
 [dependencies]
 util = { path = "../util" }
 

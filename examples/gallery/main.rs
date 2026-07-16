@@ -1,6 +1,9 @@
 use std::cell::RefCell;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+#[cfg(feature = "audio")]
+use craft_retained::elements::Audio;
 use craft_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
 use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
@@ -258,6 +261,19 @@ pub fn checkbox() -> Container {
     )
 }
 
+#[cfg(feature = "audio")]
+pub fn audio() -> Audio {
+    let mut asset_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    asset_path.push("assets");
+    asset_path.push("1-11. Mice on Venus.mp3");
+    Audio::new(Path::new(asset_path.as_path()))
+}
+
+#[cfg(not(feature = "audio"))]
+pub fn audio() -> Container {
+    Container::new()
+}
+
 pub fn main() {
     setup_logging();
 
@@ -277,6 +293,7 @@ pub fn main() {
         .width(pct(100))
         .height(pct(100))
         .max_width(px(1200.0))
+        .push(audio())
         .push(Calendar::new().start_year(1950))
         .push(text_input())
         .push(dropdown())

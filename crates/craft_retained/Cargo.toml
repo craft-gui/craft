@@ -9,6 +9,7 @@ homepage = "https://craftgui.com/"
 repository = "https://github.com/craft-gui/craft"
 
 [features]
+audio = ["dep:maudio"]
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
 vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
@@ -167,6 +168,7 @@ version = "0.1.1"
 [dependencies.maudio]
 git = "https://github.com/someotherself/maudio.git"
 rev = "ed82f75768d7faac9e283e762296a69dc8217fca"
+optional = true
 
 [dev-dependencies]
 libtest-mimic-collect  = "0.3.3"
