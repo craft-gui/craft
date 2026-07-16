@@ -1,3 +1,4 @@
+pub use crate::elements::audio::{Audio, AudioInner};
 pub use crate::elements::calendar::{Calendar, CalendarInner};
 pub use crate::elements::checkbox::{Checkbox, CheckboxInner};
 pub use crate::elements::checkboxgroup::{CheckboxGroup, CheckboxGroupInner};
@@ -19,6 +20,8 @@ pub use crate::elements::text_input::{TextInput, TextInputInner};
 pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
 pub use crate::elements::traits::{resolve_clip_for_scrollable, AsElement, Element, ElementData, ElementInternals};
 pub use crate::elements::window::{Window, WindowInternal};
+
+pub(crate) use crate::elements::audio::AUDIO_CONTEXT;
 
 pub(crate) mod internal_helpers;
 pub(crate) mod scrollable;
@@ -45,3 +48,4 @@ mod window;
 mod markdown;
 #[cfg(feature = "code_highlighting")]
 mod codeeditor;
+mod audio;

@@ -8,9 +8,6 @@ use accesskit::{Action, Role};
 
 use ui_events::pointer::PointerId;
 
-use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
@@ -20,6 +17,9 @@ use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, CraftError};
+use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 ///
@@ -77,9 +77,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// A helper to draw all children.
-    fn draw_children(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw_children(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         for child in self.children() {
-            child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
+            child
+                .borrow_mut()
+                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -137,7 +145,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// - `pointer`: optional pointer position for hover effects.
     /// - `window`: optional window handle.
     /// - `scale_factor`: scale factor.
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {}
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
+    }
 
     /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -1042,6 +1057,21 @@ pub trait ElementInternals: ElementData + Any + Drop {
         ELEMENTS.with_borrow_mut(|elements| {
             elements.remove_id(self.element_data().internal_id);
         });
+    }
+
+    /// Use the element's window to request a redraw.
+    fn request_window_redraw(&self) {
+        let Some(winit_window_weak) = &self.element_data().window else {
+            return;
+        };
+        let Some(rc) = winit_window_weak.upgrade() else {
+            return;
+        };
+        let borrowed = rc.borrow();
+        let Some(winit_window) = &borrowed.winit_window else {
+            return;
+        };
+        winit_window.request_redraw();
     }
 }
 

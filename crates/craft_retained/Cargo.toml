@@ -164,6 +164,10 @@ path = "../craft_resource_manager"
 default-features = false
 version = "0.1.1"
 
+[dependencies.maudio]
+git = "https://github.com/someotherself/maudio.git"
+rev = "ed82f75768d7faac9e283e762296a69dc8217fca"
+
 [dev-dependencies]
 libtest-mimic-collect  = "0.3.3"
 
