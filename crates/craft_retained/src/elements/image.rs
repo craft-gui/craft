@@ -10,6 +10,7 @@ use craft_resource_manager::{ResourceId, ResourceManager};
 
 use craft_primitives::geometry::{Affine, Point};
 use craft_renderer::renderer::Renderer;
+use craft_resource_manager::resource_type::ResourceType;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -127,7 +128,7 @@ impl Image {
         inner.borrow_mut().element_data.create_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, "image".to_string()));
+            pending_resources.push_back((resource_id, ResourceType::Image));
         });
 
         Self { inner }
@@ -163,7 +164,7 @@ impl ImageInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((self.resource_id.clone(), "image".to_string()));
+            pending_resources.push_back((self.resource_id.clone(), ResourceType::Image));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {

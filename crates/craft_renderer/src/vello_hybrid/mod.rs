@@ -37,6 +37,7 @@ use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, R
 use crate::RenderCommand;
 use craft_resource_manager::image::ImageResource;
 use winit::window::Window;
+use craft_resource_manager::resource_type::ResourceType;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 
 pub struct ActiveRenderState {
@@ -458,7 +459,7 @@ fn draw_image(
         return;
     }
     let resource = resource.as_ref().unwrap();
-    if resource.resource_type != "image" || resource.clone().data.downcast_ref::<ImageResource>().is_none()
+    if resource.resource_type != ResourceType::Image || resource.clone().data.downcast_ref::<ImageResource>().is_none()
     {
         return;
     };

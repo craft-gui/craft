@@ -16,7 +16,7 @@ use tinyvg_rs::TinyVg as TinyVgData;
 use tinyvg_rs::color_table::{ColorTable, RgbaF32};
 use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
 use tinyvg_rs::common::Unit;
-
+use craft_resource_manager::resource_type::ResourceType;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -147,7 +147,7 @@ impl TinyVg {
         inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, "tinyvg".to_string()));
+            pending_resources.push_back((resource_id, ResourceType::TinyVg));
         });
 
         Self { inner }
@@ -184,7 +184,7 @@ impl TinyVgInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), "tinyvg".to_string()));
+            pending_resources.push_back((resource_id.clone(), ResourceType::TinyVg));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
@@ -214,7 +214,7 @@ impl TinyVgInner {
             return;
         }
         let resource = &resource.unwrap();
-        if resource.resource_type != "tinyvg" {
+        if resource.resource_type != ResourceType::TinyVg {
             return;
         }
 
