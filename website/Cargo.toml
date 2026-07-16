@@ -31,6 +31,7 @@ features = [
 path = "../crates/craft_retained"
 default-features = false
 features = [
+    "vello_hybrid_renderer",
     "http_client",
     "png",
     "jpeg",

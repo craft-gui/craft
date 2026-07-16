@@ -197,7 +197,7 @@ impl CraftWinitState {
                 InternalMessage::RendererCreated(winit_window, renderer) => {
                     WINDOW_MANAGER.with_borrow_mut(|window_manager| {
                         let window = window_manager.get_window_by_id(winit_window.id());
-                        window.clone().unwrap().inner.borrow_mut().renderer = Some(renderer);
+                        window.clone().unwrap().inner.borrow_mut().renderer = renderer;
                         let sz = Size::new(
                             winit_window.inner_size().width as f32,
                             winit_window.inner_size().height as f32,
