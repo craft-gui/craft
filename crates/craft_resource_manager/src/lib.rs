@@ -4,7 +4,8 @@ mod lock_free_map;
 pub mod resource;
 
 pub mod resource_event;
-mod decoders;
+pub mod decoders;
+pub mod resource_type;
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ pub use crate::identifier::ResourceId;
 use crate::lock_free_map::LockFreeMap;
 use crate::resource::Resource;
 use crate::resource_event::ResourceEvent;
+use crate::resource_type::ResourceType;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
@@ -36,7 +38,7 @@ impl<T: From<ResourceEvent> + 'static> ResourceEventHandler for T {}
 pub struct ResourceManager {
     resources: LockFreeMap<ResourceId, Resource>,
     pub(crate) runtime: CraftRuntimeHandle,
-    decoders: HashMap<String, fn(Vec<u8>) -> Box<dyn Any + Send>>
+    decoders: HashMap<ResourceType, fn(Vec<u8>) -> Box<dyn Any + Send>>
 }
 
 impl ResourceManager {
@@ -46,8 +48,8 @@ impl ResourceManager {
             runtime: craft_runtime_handle,
             decoders: HashMap::from(
                 [
-                    ("image".to_string(), image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>),
-                    ("tinyvg".to_string(), tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>)
+                    (ResourceType::Image, image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>),
+                    (ResourceType::TinyVg, tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>)
                 ]
             ),
         }
@@ -57,13 +59,13 @@ impl ResourceManager {
         &self,
         app_sender: Sender<Message>,
         resource_id: ResourceId,
-        resource_type: String,
+        resource_type: &ResourceType,
     ) {
         let resource_id_copy = resource_id.clone();
 
         let resource_id = resource_id.clone();
         let resource_type = resource_type.clone();
-        let decoder_fn =  *self.decoders.get(resource_type.as_str()).unwrap();
+        let decoder_fn =  *self.decoders.get(&resource_type).unwrap();
         let app_sender_copy = app_sender.clone();
         let f = async move {
             let bytes = resource_id.fetch_data_from_resource_id().await;

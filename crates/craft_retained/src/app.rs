@@ -23,7 +23,7 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use winit::event::{Ime, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
-
+use craft_resource_manager::resource_type::ResourceType;
 use crate::CraftOptions;
 #[cfg(feature = "audio")]
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
@@ -36,8 +36,8 @@ use crate::window_manager::WindowManager;
 
 thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, String)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, String)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
+    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
     pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementInternals>>>> = RefCell::new(None);
     pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
     pub(crate) static TAFFY_TREE: RefCell<TaffyTree> = RefCell::new(TaffyTree::new());
@@ -192,7 +192,7 @@ impl App {
                     in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_id);
                 });
                 if let Some(_text_context) = self.text_context.as_mut()
-                    && resource_type == "font"
+                    && resource_type == ResourceType::Font
                 {
                     // Todo: Load the font into the text context.
                     self.resource_manager.insert(resource_id.clone(), Arc::new(resource));
@@ -242,7 +242,7 @@ impl App {
                         .async_download_resource_and_send_message_on_finish(
                             self.app_sender.clone(),
                             resource.clone(),
-                            resource_type.clone(),
+                            &resource_type,
                         );
                     in_progress.push_back((resource, resource_type));
                 }

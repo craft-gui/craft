@@ -37,6 +37,7 @@ use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, R
 use crate::RenderCommand;
 use craft_resource_manager::image::ImageResource;
 use winit::window::Window;
+use craft_resource_manager::resource_type::ResourceType;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 
 pub struct ActiveRenderState {
@@ -458,7 +459,7 @@ fn draw_image(
         return;
     }
     let resource = resource.as_ref().unwrap();
-    if resource.resource_type != "image" || resource.clone().data.downcast_ref::<ImageResource>().is_none()
+    if resource.resource_type != ResourceType::Image || resource.clone().data.downcast_ref::<ImageResource>().is_none()
     {
         return;
     };
@@ -484,7 +485,7 @@ fn draw_image(
                 }
             })
             .collect();
-        let pixmap = Pixmap::from_parts(premul_data, image.image.width() as u16, image.image.height() as u16);
+        let pixmap = Pixmap::from_parts(premul_data, image.get_width() as u16, image.get_height() as u16);
         let image_id = renderer.upload_image(
             resources,
             &device_handle.device,
@@ -503,8 +504,8 @@ fn draw_image(
     let mut transform = Affine::IDENTITY;
     transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
     transform = transform.pre_scale_non_uniform(
-        cmd.rect.width as f64 / image.image.width() as f64,
-        cmd.rect.height as f64 / image.image.height() as f64,
+        cmd.rect.width as f64 / image.get_width() as f64,
+        cmd.rect.height as f64 / image.get_height() as f64,
     );
     scene.set_transform(cmd.transform * transform);
 
@@ -520,8 +521,8 @@ fn draw_image(
     scene.fill_rect(&kurbo::Rect::new(
         0.0,
         0.0,
-        image.image.width() as f64,
-        image.image.height() as f64,
+        image.get_width() as f64,
+        image.get_height() as f64,
     ));
 }
 
