@@ -8,7 +8,10 @@ use craft_resource_manager::ResourceManager;
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 
-pub struct BlankRenderer;
+#[derive(Default)]
+pub struct BlankRenderer {
+    render_list: RenderList
+}
 
 impl Renderer for BlankRenderer {
     fn surface_width(&self) -> f32 {
@@ -23,13 +26,20 @@ impl Renderer for BlankRenderer {
 
     fn surface_set_clear_color(&mut self, _color: Color) {}
 
+    fn render_list(&self) -> &RenderList {
+        &self.render_list
+    }
+
+    fn render_list_mut(&mut self) -> &mut RenderList {
+        &mut self.render_list
+    }
+
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
-    fn prepare_render_list<'a>(
+    fn prepare<'a>(
         &mut self,
-        _render_list: &mut RenderList,
         _resource_manager: Arc<ResourceManager>,
         _window: Rectangle,
     ) {

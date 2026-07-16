@@ -1,10 +1,11 @@
+use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
 use craft_primitives::geometry::Point;
 
-use craft_renderer::{RenderList, TargetItem};
+use craft_renderer::TargetItem;
 
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
@@ -32,7 +33,7 @@ pub(super) fn find_target(
     root: &Rc<RefCell<dyn ElementInternals>>,
     mouse_position: Option<Point>,
     message: &EventKind,
-    render_list: &mut RenderList,
+    render_list: &mut dyn Renderer,
     target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     pointer_capture: &PointerCapture,
 ) -> Rc<RefCell<dyn ElementInternals>> {
@@ -42,8 +43,8 @@ pub(super) fn find_target(
     }
 
     ELEMENTS.with_borrow_mut(|elements| {
-        TargetItem::sort_items_by_overlay_depth(&mut render_list.targets);
-        target_scratch.extend(render_list.targets.iter().rev().filter_map(|target_item| {
+        TargetItem::sort_items_by_overlay_depth(&mut render_list.render_list_mut().targets);
+        target_scratch.extend(render_list.render_list_mut().targets.iter().rev().filter_map(|target_item| {
             // When an element is removed from the dom, we do not remove it from targets.
             // So we must handle it here.
             elements.get(target_item.custom_id).and_then(|target| target.upgrade())

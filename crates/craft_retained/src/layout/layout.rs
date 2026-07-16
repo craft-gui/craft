@@ -1,13 +1,13 @@
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
 
-use craft_renderer::render_command::BoxShadowCmd;
-use craft_renderer::{Brush, RenderList};
+use craft_renderer::render_command::DrawBoxShadow;
+use craft_renderer::Brush;
 
 use peniko::Color;
 
 use taffy::NodeId;
-
+use craft_renderer::renderer::Renderer;
 use crate::elements::scrollable::ScrollState;
 use crate::style::{BoxShadow, Position, Style};
 
@@ -353,14 +353,14 @@ impl Layout {
         self.clip_bounds = clip_bounds;
     }
 
-    pub fn draw_borders(&self, renderer: &mut RenderList, current_style: &Style, scale_factor: f64) {
+    pub fn draw_borders(&self, renderer: &mut dyn Renderer, current_style: &Style, scale_factor: f64) {
         if let Some(cache_box_shadows) = &self.cache_box_shadows {
             for shadow in &cache_box_shadows.box_shadows {
                 if shadow.inset {
                     continue;
                 }
 
-                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                renderer.draw_outset_box_shadow(DrawBoxShadow {
                     inset: false,
                     offset: shadow.offset,
                     outline: cache_box_shadows.outline.to_path(),
@@ -406,7 +406,7 @@ impl Layout {
                     continue;
                 }
 
-                renderer.draw_outset_box_shadow(BoxShadowCmd {
+                renderer.draw_outset_box_shadow(DrawBoxShadow {
                     inset: true,
                     offset: shadow.offset,
                     outline: cache_box_shadows.inline.to_path(),
@@ -439,7 +439,7 @@ impl Layout {
 }
 
 pub(crate) fn draw_borders_generic(
-    renderer: &mut RenderList,
+    renderer: &mut dyn Renderer,
     computed_border: &CssComputedBorder,
     side_colors: [Color; 4],
     bg_color: Color,

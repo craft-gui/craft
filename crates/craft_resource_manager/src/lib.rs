@@ -2,36 +2,41 @@ mod identifier;
 pub mod image;
 mod lock_free_map;
 pub mod resource;
-pub mod resource_data;
-pub mod resource_type;
-pub(crate) mod tinyvg_resource;
 
 pub mod resource_event;
+mod decoders;
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::future::Future;
-use std::io::Cursor;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use ::image::ImageReader;
-use craft_logging::info;
 use craft_runtime::{CraftRuntimeHandle, Sender};
-
+use crate::decoders::{image_decoder, tinyvg_decoder};
 pub use crate::identifier::ResourceId;
-use crate::image::ImageResource;
 use crate::lock_free_map::LockFreeMap;
 use crate::resource::Resource;
-use crate::resource_data::ResourceData;
 use crate::resource_event::ResourceEvent;
-use crate::resource_type::ResourceType;
-use crate::tinyvg_resource::TinyVgResource;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub trait ResourceEventHandler: From<ResourceEvent> + Send + 'static {}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl<T: From<ResourceEvent> + Send + 'static> ResourceEventHandler for T {}
+
+#[cfg(target_arch = "wasm32")]
+pub trait ResourceEventHandler: From<ResourceEvent> + 'static {}
+
+#[cfg(target_arch = "wasm32")]
+impl<T: From<ResourceEvent> + 'static> ResourceEventHandler for T {}
 
 pub struct ResourceManager {
     resources: LockFreeMap<ResourceId, Resource>,
     pub(crate) runtime: CraftRuntimeHandle,
+    decoders: HashMap<String, fn(Vec<u8>) -> Box<dyn Any + Send>>
 }
 
 impl ResourceManager {
@@ -39,166 +44,43 @@ impl ResourceManager {
         Self {
             resources: LockFreeMap::new(),
             runtime: craft_runtime_handle,
+            decoders: HashMap::from(
+                [
+                    ("image".to_string(), image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>),
+                    ("tinyvg".to_string(), tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>)
+                ]
+            ),
         }
     }
 
-    // TODO: FIx the duplicate code in this function.
-    #[cfg(target_arch = "wasm32")]
-    pub fn async_download_resource_and_send_message_on_finish<Message: From<ResourceEvent> + 'static>(
+    pub fn async_download_resource_and_send_message_on_finish<Message: ResourceEventHandler>(
         &self,
         app_sender: Sender<Message>,
         resource_id: ResourceId,
-        resource_type: ResourceType,
+        resource_type: String,
     ) {
         let resource_id_copy = resource_id.clone();
-        let resource_type_copy = resource_type;
 
-        match &resource_type_copy {
-            ResourceType::Image => {
-                let resource_id = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let image = resource_id.fetch_data_from_resource_id().await;
+        let resource_id = resource_id.clone();
+        let resource_type = resource_type.clone();
+        let decoder_fn =  *self.decoders.get(resource_type.as_str()).unwrap();
+        let app_sender_copy = app_sender.clone();
+        let f = async move {
+            let bytes = resource_id.fetch_data_from_resource_id().await;
 
-                    if let Some(image_resource) = &image {
-                        let bytes = image_resource;
-                        let cursor = Cursor::new(&bytes);
-                        let reader = ImageReader::new(cursor)
-                            .with_guessed_format()
-                            .expect("Failed to guess format");
-                        let size = reader.into_dimensions().unwrap_or_default();
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
-                        info!("Image downloaded");
+            let resource = Resource {
+                resource_type: resource_type.clone(),
+                data: decoder_fn(bytes.unwrap()),
+                expiration_time: None,
+            };
 
-                        let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Image, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-            ResourceType::Font => {
-                let resource = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let mut bytes = resource.clone().fetch_data_from_resource_id().await;
+            app_sender_copy
+                .send(ResourceEvent::Loaded(resource_id_copy, resource_type, resource).into())
+                .await
+                .expect("Failed to send added resource event");
+        };
 
-                    if let Some(font_bytes) = bytes.take() {
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(font_bytes), None, ResourceType::Font);
-                        info!("Font downloaded");
-                        let resource = Resource::Font(generic_resource);
-
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Font, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-            ResourceType::TinyVg => {
-                let resource = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let bytes = resource.clone().fetch_data_from_resource_id().await;
-
-                    if let Some(bytes) = bytes {
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::TinyVg);
-                        let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
-                        info!("TinyVG downloaded");
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_download_resource_and_send_message_on_finish<Message: From<ResourceEvent> + Send + 'static>(
-        &self,
-        app_sender: Sender<Message>,
-        resource_id: ResourceId,
-        resource_type: ResourceType,
-    ) {
-        let resource_id_copy = resource_id.clone();
-        let resource_type_copy = resource_type;
-
-        match &resource_type_copy {
-            ResourceType::Image => {
-                let resource_id = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let image = resource_id.fetch_data_from_resource_id().await;
-
-                    if let Some(image_resource) = &image {
-                        let bytes = image_resource;
-                        let cursor = Cursor::new(&bytes);
-                        let reader = ImageReader::new(cursor)
-                            .with_guessed_format()
-                            .expect("Failed to guess format");
-                        let size = reader.into_dimensions().unwrap_or_default();
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::Image);
-                        info!("Image downloaded");
-
-                        let resource = Resource::Image(Arc::new(ImageResource::new(size.0, size.1, generic_resource)));
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Image, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-            ResourceType::Font => {
-                let resource = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let mut bytes = resource.clone().fetch_data_from_resource_id().await;
-
-                    if let Some(font_bytes) = bytes.take() {
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(font_bytes), None, ResourceType::Font);
-                        info!("Font downloaded");
-                        let resource = Resource::Font(generic_resource);
-
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::Font, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-            ResourceType::TinyVg => {
-                let resource = resource_id.clone();
-                let app_sender_copy = app_sender.clone();
-                let f = async move {
-                    let bytes = resource.clone().fetch_data_from_resource_id().await;
-
-                    if let Some(bytes) = bytes {
-                        let generic_resource =
-                            ResourceData::new(resource_id.clone(), Some(bytes.to_vec()), None, ResourceType::TinyVg);
-                        let resource = Resource::TinyVg(TinyVgResource::new(generic_resource));
-                        info!("TinyVG downloaded");
-                        app_sender_copy
-                            .send(ResourceEvent::Loaded(resource_id_copy, ResourceType::TinyVg, resource).into())
-                            .await
-                            .expect("Failed to send added resource event");
-                    }
-                };
-                self.runtime.spawn(f);
-            }
-        }
+        self.runtime.spawn(f);
     }
 
     pub fn contains(&self, resource_id: &ResourceId) -> bool {

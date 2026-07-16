@@ -3,12 +3,12 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
-use craft_renderer::RenderList;
-
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -119,26 +119,26 @@ impl ElementInternals for RadioInner {
         self.circle.y = self.circle_layout.layout.computed_box_transformed.content_rectangle().y + self.circle.radius;
     }
 
-    fn draw(&mut self, renderer: &mut RenderList, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }
-        self.add_hit_testable(renderer, true, scale_factor);
-        self.draw_borders(renderer, scale_factor);
-        self.maybe_start_layer(renderer, scale_factor);
+        self.add_hit_testable(renderer, true, _scale_factor);
+        self.draw_borders(renderer, _scale_factor);
+        self.maybe_start_layer(renderer, _scale_factor);
 
         if !self.hide_radio {
             if self.is_selected() {
-                renderer.draw_circle_outline(self.circle.scale(scale_factor), rgb(0, 100, 255), scale_factor as f32);
-                renderer.draw_circle(self.circle.expand(-4.0).scale(scale_factor), rgb(0, 100, 255));
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(0, 100, 255), _scale_factor as f32);
+                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), rgb(0, 100, 255));
             } else {
-                renderer.draw_circle_outline(self.circle.scale(scale_factor), rgb(150, 150, 150), scale_factor as f32);
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(150, 150, 150), _scale_factor as f32);
             }
         }
 
-        self.draw_children(renderer, text_context, scale_factor);
+        self.draw_children(renderer, resource_manager, _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
-        self.draw_scrollbar(renderer, scale_factor);
+        self.draw_scrollbar(renderer, _scale_factor);
     }
 
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]

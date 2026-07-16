@@ -1,8 +1,9 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
-
+use craft_renderer::blank_renderer::BlankRenderer;
 use crate::app::{App, TAFFY_TREE};
 use crate::elements::{ElementData, Window};
 
@@ -93,7 +94,7 @@ impl WindowManager {
 
             if is_target {
                 w.set_winit_window(None);
-                w.inner.borrow_mut().renderer = None;
+                w.inner.borrow_mut().renderer = Rc::new(RefCell::new(BlankRenderer::default()));
             }
 
             !is_target

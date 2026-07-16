@@ -4,11 +4,10 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 
-use craft_renderer::RenderList;
 use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
@@ -16,7 +15,8 @@ use parley::BoundingBox;
 use ui_events::pointer::{PointerButton, PointerId};
 
 use winit::event::Ime;
-
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 use crate::app::{ELEMENTS};
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
@@ -200,7 +200,7 @@ impl ElementInternals for TextInputInner {
             .render_text(self.is_focused(), self.element_data.style());
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }

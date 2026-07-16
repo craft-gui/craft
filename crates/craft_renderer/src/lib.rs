@@ -3,9 +3,6 @@ pub mod brush;
 #[allow(clippy::module_inception)]
 pub mod renderer;
 
-#[cfg(feature = "vello_renderer")]
-pub mod vello;
-
 #[cfg(feature = "vello_cpu_renderer")]
 pub mod vello_cpu;
 
@@ -19,9 +16,9 @@ mod screenshot;
 mod sort_commands;
 mod target_item;
 pub mod text_renderer_data;
-pub(crate) mod tinyvg_helpers;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
+pub mod resource_mapper;
 
 pub use brush::Brush;
 pub use render_command::RenderCommand;

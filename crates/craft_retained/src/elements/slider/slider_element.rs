@@ -1,15 +1,15 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::geometry::{Affine, Point, Rectangle};
-use craft_renderer::RenderList;
 
 use peniko::Color;
 
 use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::PointerId;
-
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
@@ -371,7 +371,7 @@ impl ElementInternals for SliderInner {
         }
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }

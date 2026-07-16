@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use craft_resource_manager::image::ImageResource;
 
 pub struct ImageAdapter {

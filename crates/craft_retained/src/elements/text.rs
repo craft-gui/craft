@@ -1,13 +1,13 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role};
 
-use craft_renderer::RenderList;
 use craft_renderer::text_renderer_data::TextData;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
@@ -31,7 +31,8 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 
 use winit::dpi;
-
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 use crate::elements::element_data::ElementData;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use crate::elements::element_id::create_unique_element_id;
@@ -198,7 +199,7 @@ impl ElementInternals for TextInner {
         state.try_update_text_render(text_context, self.element_data.style.get_selection_color());
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }

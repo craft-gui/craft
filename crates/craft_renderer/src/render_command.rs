@@ -12,13 +12,11 @@ use crate::text_renderer_data::{TextData, TextScroll};
 
 #[derive(Clone)]
 pub enum RenderCommand {
-    SetTransform(SetTransformCmd),
     DrawCircle(DrawCircleCmd),
     DrawCircleOutline(DrawCircleOutlineCmd),
     DrawRect(DrawRectCmd),
     DrawRectOutline(DrawRectOutlineCmd),
     DrawImage(DrawImageCmd),
-    DrawTinyVg(DrawTinyVgCmd),
     DrawText(DrawTextCmd),
     PushLayer(PushLayerCmd),
     PopLayer,
@@ -30,14 +28,10 @@ pub enum RenderCommand {
 }
 
 #[derive(Copy, Clone)]
-pub struct SetTransformCmd {
-    pub transform: Affine,
-}
-
-#[derive(Copy, Clone)]
 pub struct DrawCircleCmd {
     pub circle: Circle,
     pub color: Color,
+    pub transform: Affine,
 }
 
 #[derive(Copy, Clone)]
@@ -45,12 +39,14 @@ pub struct DrawCircleOutlineCmd {
     pub circle: Circle,
     pub outline_color: Color,
     pub thickness: f32,
+    pub transform: Affine,
 }
 
 #[derive(Copy, Clone)]
 pub struct DrawRectCmd {
     pub rect: Rectangle,
     pub color: Color,
+    pub transform: Affine,
 }
 
 #[derive(Copy, Clone)]
@@ -58,19 +54,14 @@ pub struct DrawRectOutlineCmd {
     pub rect: Rectangle,
     pub outline_color: Color,
     pub thickness: f64,
+    pub transform: Affine,
 }
 
 #[derive(Clone)]
 pub struct DrawImageCmd {
     pub rect: Rectangle,
     pub resource_id: ResourceId,
-}
-
-#[derive(Clone)]
-pub struct DrawTinyVgCmd {
-    pub rect: Rectangle,
-    pub resource_id: ResourceId,
-    pub override_color: Option<Color>,
+    pub transform: Affine,
 }
 
 #[derive(Clone)]
@@ -79,28 +70,31 @@ pub struct DrawTextCmd {
     pub data: Weak<RefCell<dyn TextData>>,
     pub text_scroll: Option<TextScroll>,
     pub show_cursor: bool,
+    pub transform: Affine,
 }
 
 #[derive(Clone)]
 pub enum PushLayerCmd {
-    BezPath(BezPath),
-    Rect(Rectangle),
+    BezPath(BezPath, Affine),
+    Rect(Rectangle, Affine),
 }
 
 #[derive(Clone)]
 pub struct FillBezPathCmd {
     pub path: BezPath,
     pub brush: Brush,
+    pub transform: Affine,
 }
 
 #[derive(Clone)]
 pub struct StrokeBezPathCmd {
     pub path: BezPath,
     pub brush: Brush,
+    pub transform: Affine,
 }
 
 #[derive(Clone)]
-pub struct BoxShadowCmd {
+pub struct DrawBoxShadow {
     pub inset: bool,
     pub offset: Vec2,
     pub outline: BezPath,
@@ -108,4 +102,10 @@ pub struct BoxShadowCmd {
     pub blur_radius: f64,
     pub color: Color,
     pub border_box: Rectangle,
+}
+
+#[derive(Clone)]
+pub struct BoxShadowCmd {
+    pub box_shadow: DrawBoxShadow,
+    pub transform: Affine,
 }

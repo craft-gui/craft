@@ -1,9 +1,9 @@
+use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 
 use craft_primitives::geometry::Point;
-use craft_renderer::RenderList;
 
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
@@ -153,7 +153,7 @@ impl EventDispatcher {
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut TextContext,
-        render_list: &mut RenderList,
+        render_list: &mut dyn Renderer,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         let pointer_capture = root

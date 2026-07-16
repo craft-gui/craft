@@ -1,12 +1,12 @@
+use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use winit::window::Window;
 
 use crate::blank_renderer::BlankRenderer;
 use crate::renderer::Renderer;
-#[cfg(feature = "vello_renderer")]
-use crate::vello::VelloRenderer;
 #[cfg(feature = "vello_cpu_renderer")]
 use crate::vello_cpu::VelloCpuRenderer;
 #[cfg(feature = "vello_hybrid_renderer")]
@@ -15,12 +15,10 @@ use crate::vello_hybrid::VelloHybridRenderer;
 /// An enumeration of the available renderer types for Craft.
 ///
 /// Depending on compile-time features, different renderers can be enabled.
-/// When the `vello_renderer` feature is enabled, the [`Vello`](RendererType::Vello)
+/// When the `vello_hybrid_renderer` feature is enabled, the [`VelloHybrid`](RendererType::VelloHybrid)
 /// variant is available; otherwise, the [`Blank`](RendererType::Blank) variant is used.
 #[derive(Copy, Clone, Debug)]
 pub enum RendererType {
-    #[cfg(feature = "vello_renderer")]
-    Vello,
     #[cfg(feature = "vello_cpu_renderer")]
     VelloCPU,
     #[cfg(feature = "vello_hybrid_renderer")]
@@ -35,9 +33,6 @@ impl Default for RendererType {
             feature = "vello_hybrid_renderer" => {
                 RendererType::VelloHybrid
             },
-            feature = "vello_renderer" => {
-                RendererType::Vello
-            },
             feature = "vello_cpu_renderer" => {
                 RendererType::VelloCPU
             },
@@ -51,8 +46,6 @@ impl Default for RendererType {
 impl Display for RendererType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            #[cfg(feature = "vello_renderer")]
-            RendererType::Vello => write!(f, "vello/wgpu"),
             #[cfg(feature = "vello_cpu_renderer")]
             RendererType::VelloCPU => write!(f, "vello/cpu"),
             #[cfg(feature = "vello_hybrid_renderer")]
@@ -63,18 +56,16 @@ impl Display for RendererType {
 }
 
 impl RendererType {
-    pub async fn create(&self, window: Arc<Window>) -> Box<dyn Renderer> {
-        let renderer: Box<dyn Renderer> = match self {
-            #[cfg(feature = "vello_renderer")]
-            RendererType::Vello => Box::new(VelloRenderer::new(window, false).await),
+    pub async fn create(&self, window: Arc<Window>) -> Rc<RefCell<dyn Renderer>> {
+        let renderer: Rc<RefCell<dyn Renderer>> = match self {
             #[cfg(feature = "vello_cpu_renderer")]
-            RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window)),
+            RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new(window))),
             #[cfg(feature = "vello_hybrid_renderer")]
-            RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window).await),
+            RendererType::VelloHybrid => Rc::new(RefCell::new(VelloHybridRenderer::new(window).await)),
             RendererType::Blank => {
                 // So the linter does not complain about window being unused.
                 let _ = window;
-                Box::new(BlankRenderer)
+                Rc::new(RefCell::new(BlankRenderer::default()))
             }
         };
 

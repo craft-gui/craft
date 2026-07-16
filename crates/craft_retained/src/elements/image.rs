@@ -3,16 +3,13 @@
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
-
+use std::sync::Arc;
 use craft_primitives::geometry::Rectangle;
 
-use craft_renderer::RenderList;
-
-use craft_resource_manager::ResourceId;
-use craft_resource_manager::resource_type::ResourceType;
+use craft_resource_manager::{ResourceId, ResourceManager};
 
 use craft_primitives::geometry::{Affine, Point};
-
+use craft_renderer::renderer::Renderer;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -93,7 +90,7 @@ impl ElementInternals for ImageInner {
         );
     }
 
-    fn draw(&mut self, _renderer: &mut RenderList, _text_context: &mut TextContext, _scale_factor: f64) {
+    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
         if !self.is_visible() {
             return;
         }
@@ -130,7 +127,7 @@ impl Image {
         inner.borrow_mut().element_data.create_layout_node(layout_context);
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, ResourceType::Image));
+            pending_resources.push_back((resource_id, "image".to_string()));
         });
 
         Self { inner }
@@ -166,7 +163,7 @@ impl ImageInner {
         self.resource_id = resource_id.clone();
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), ResourceType::Image));
+            pending_resources.push_back((self.resource_id.clone(), "image".to_string()));
         });
 
         TAFFY_TREE.with_borrow_mut(|taffy_tree| {
