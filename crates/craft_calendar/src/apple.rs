@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use icu::calendar::types::{Month, Weekday};
+use icu::calendar::types::{Weekday};
 use icu::calendar::{Date, Gregorian};
 
 pub(super) fn first_day_of_week() -> Option<Weekday> {

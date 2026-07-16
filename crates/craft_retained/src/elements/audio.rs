@@ -268,12 +268,15 @@ impl Audio {
 fn get_context() -> Rc<RefCell<AudioContext>> {
     AUDIO_CONTEXT.with(|cell| {
         cell.get_or_init(|| {
-            // Winit wants single threaded and miniaudio defaults to multithreaded.
-            // If we use single threaded before miniaudio starts, it should safely fallback
-            // to single threaded.
-            use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
-            unsafe {
-                CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
+            #[cfg(target_os = "windows")]
+            {
+                // Winit wants single threaded and miniaudio defaults to multithreaded.
+                // If we use single threaded before miniaudio starts, it should safely fallback
+                // to single threaded.
+                use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+                unsafe {
+                    CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
+                }
             }
             Rc::new(RefCell::new(AudioContext {
                 engine: Engine::new().expect("Failed to create engine"),
