@@ -590,7 +590,7 @@ impl WindowInternal {
             _ => {
                 let window_copy_2 = winit_window.clone();
                 craft_app.runtime.spawn(async move {
-                    let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
+                    let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(window_copy_2.clone()).await;
                     WASM_QUEUE.with_borrow_mut(|wasm_queue| {
                         wasm_queue.push(InternalMessage::RendererCreated(window_copy_2.clone(), renderer));
                     });
