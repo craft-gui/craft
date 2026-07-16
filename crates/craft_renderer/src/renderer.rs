@@ -66,15 +66,8 @@ pub trait Renderer: Any {
 
     fn draw_circle(&mut self, circle: Circle, color: Color) {
         let transform = self.get_transform();
-
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = circle.bounding_box().to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &circle.bounding_box(), self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands
@@ -83,15 +76,8 @@ pub trait Renderer: Any {
 
     fn draw_circle_outline(&mut self, circle: Circle, outline_color: Color, thickness: f32) {
         let transform = self.get_transform();
-
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = circle.bounding_box().to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &circle.bounding_box(), self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands
@@ -106,15 +92,8 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn draw_rect(&mut self, rect: Rectangle, color: Color) {
         let transform = self.get_transform();
-
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = rect.to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, color, transform }));
@@ -123,15 +102,8 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn push_hit_testable(&mut self, id: u64, bounding_box: Rectangle) {
         let transform = self.get_transform();
-        // TODO: Precompute transform???
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = bounding_box.to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &bounding_box, self.render_list().cull.as_ref()) {
+            return;
         }
 
         let overlay_depth = self.render_list().current_overlay_depth;
@@ -142,15 +114,8 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn draw_rect_outline(&mut self, rect: Rectangle, outline_color: Color, thickness: f64) {
         let transform = self.get_transform();
-
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = rect.to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands.push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
@@ -164,16 +129,9 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn fill_bez_path(&mut self, path: BezPath, brush: Brush) {
         let transform = self.get_transform();
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = path.bounding_box();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_bez_path(&transform, &path, self.render_list().cull.as_ref()) {
+            return;
         }
-
 
         self.render_list_mut().commands
             .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush, transform }));
@@ -182,14 +140,8 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn stroke_bez_path(&mut self, path: BezPath, brush: Brush) {
         let transform = self.get_transform();
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = path.bounding_box();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_bez_path(&transform, &path, self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands
@@ -205,14 +157,8 @@ pub trait Renderer: Any {
         show_cursor: bool,
     ) {
         let transform = self.get_transform();
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = rect.to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands.push(RenderCommand::DrawText(DrawTextCmd {
@@ -227,14 +173,8 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn draw_image(&mut self, rect: Rectangle, resource_id: ResourceId) {
         let transform = self.get_transform();
-        if let Some(cull) = &self.render_list().cull
-        {
-            let bb = rect.to_kurbo();
-            let bb_transformed = transform.transform_rect_bbox(bb);
-
-            if !bb_transformed.overlaps(cull.to_kurbo()) {
-                return;
-            }
+        if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
+            return;
         }
 
         self.render_list_mut().commands
@@ -287,3 +227,34 @@ pub trait Renderer: Any {
         self.render_list_mut().cull = cull;
     }
 }
+
+#[inline(always)]
+fn should_cull_rect(transform: &Affine, rect: &Rectangle, cull: Option<&Rectangle>) -> bool {
+    if let Some(cull) = cull
+    {
+        let bb = rect.to_kurbo();
+        let bb_transformed = transform.transform_rect_bbox(bb);
+
+        if !bb_transformed.overlaps(cull.to_kurbo()) {
+            return true;
+        }
+    }
+
+    false
+}
+
+#[inline(always)]
+fn should_cull_bez_path(transform: &Affine, path: &BezPath, cull: Option<&Rectangle>) -> bool {
+    if let Some(cull) = cull
+    {
+        let bb = path.bounding_box();
+        let bb_transformed = transform.transform_rect_bbox(bb);
+
+        if !bb_transformed.overlaps(cull.to_kurbo()) {
+            return true;
+        }
+    }
+
+    false
+}
+
