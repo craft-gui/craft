@@ -9,7 +9,7 @@ homepage = "https://craftgui.com/"
 repository = "https://github.com/craft-gui/craft"
 
 [features]
-audio = ["dep:maudio"]
+audio = ["dep:maudio", "dep:windows"]
 dynamic_linking = []
 clipboard = ["dep:clipboard-rs"]
 vello_cpu_renderer = ["craft_renderer/vello_cpu_renderer"]
@@ -35,6 +35,12 @@ craft_undo = {path = "../craft_undo", version = "0.1.1"}
 craft_calendar = {path = "../craft_calendar", version = "0.1.0"}
 
 smol_str = "0.3.6"
+
+[target.'cfg(windows)'.dependencies.windows]
+workspace = true
+default-features = false
+optional = true
+
 
 [dependencies.accesskit_winit]
 version = "0.33.1"
@@ -167,7 +173,7 @@ version = "0.1.1"
 
 [dependencies.maudio]
 git = "https://github.com/someotherself/maudio.git"
-rev = "ed82f75768d7faac9e283e762296a69dc8217fca"
+rev = "664c765004308289d4ec80f41911a602ee247924"
 optional = true
 
 [dev-dependencies]

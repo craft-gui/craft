@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::cell::{OnceCell, Ref, RefCell, RefMut};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::Path;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -25,14 +25,15 @@ use crate::style::{AlignItems, Display, Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, rgb};
 
+#[derive(Clone)]
 pub struct SoundData {
-    sound: Sound<'static>,
-    end_notifier: Option<EndNotifier>,
+    sound: Rc<RefCell<Sound>>,
+    end_notifier: EndNotifier,
 }
 
 pub struct AudioContext {
     pub engine: Engine,
-    pub sounds: HashMap<u64, SoundData>,
+    pub sounds: HashSet<u64>,
 }
 
 thread_local! {
@@ -62,6 +63,7 @@ pub struct AudioInner {
     _volume_icon: ResourceId,
     volume_track: Slider,
     duration: Text,
+    sound_data: Option<SoundData>,
 }
 
 impl Element for Audio {}
@@ -193,6 +195,7 @@ impl Audio {
                 _volume_icon: volume_icon.clone(),
                 duration: duration.clone(),
                 volume_track: volume_track.clone(),
+                sound_data: None,
             })
         });
         let inner2 = inner.clone();
@@ -265,9 +268,16 @@ impl Audio {
 fn get_context() -> Rc<RefCell<AudioContext>> {
     AUDIO_CONTEXT.with(|cell| {
         cell.get_or_init(|| {
+            // Winit wants single threaded and miniaudio defaults to multithreaded.
+            // If we use single threaded before miniaudio starts, it should safely fallback
+            // to single threaded.
+            use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+            unsafe {
+                CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
+            }
             Rc::new(RefCell::new(AudioContext {
                 engine: Engine::new().expect("Failed to create engine"),
-                sounds: HashMap::new(),
+                sounds: HashSet::new(),
             }))
         })
         .clone()
@@ -285,10 +295,8 @@ impl AudioInner {
     }
 
     fn is_playing(&self) -> bool {
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
-            sound_data.sound.is_playing()
+        if let Some(sound_data) = &self.sound_data {
+            sound_data.sound.borrow().is_playing()
         } else {
             false
         }
@@ -297,86 +305,77 @@ impl AudioInner {
     fn set_sound(&mut self, path: &Path) {
         let ctx = get_context();
         let mut ctx = ctx.borrow_mut();
-        let sound: Sound = ctx.engine.new_sound_from_file(path).unwrap();
-
-        // Safe transmute because Engine and the HashMap are managed inside
-        // the exact same heap allocation (Rc<RefCell<AudioContext>>).
-        // TODO: Use Ref counted smart pointer.
-        let mut sound = unsafe { std::mem::transmute::<Sound<'_>, Sound<'static>>(sound) };
-        let end_notifier = sound.set_end_callback().ok();
+        let mut sound: Sound = ctx.engine.new_sound_from_file(path).unwrap();
+        let end_notifier = sound.set_end_callback().unwrap();
         let duration = sound.length_seconds().unwrap_or_default() as f64;
         self.track.clone().max(duration);
 
         let current_time = sound.cursor_seconds().unwrap() as u32;
         let time = format_time(current_time, duration as u32);
         self.duration.clone().text(&time);
-        ctx.sounds.insert(
-            self.element_data.internal_id,
-            SoundData {
-                sound,
-                end_notifier,
-            },
-        );
+        ctx.sounds.insert(self.element_data.internal_id);
+        // Todo: Clean up old sound data
+        self.sound_data = Some(SoundData {
+            sound: Rc::new(RefCell::new(sound)),
+            end_notifier,
+        });
         drop(ctx);
         self.set_volume(self.volume_track.get_value() as f32)
     }
 
-    fn play(&mut self) {
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
+    fn play(&self) {
+        if let Some(sound_data) = &self.sound_data {
             self.play_button.clone().resource_id(self.pause_icon.clone());
-            sound_data.sound.play_sound().expect("Failed to play sound");
+            sound_data
+                .sound
+                .borrow_mut()
+                .play_sound()
+                .expect("Failed to play sound");
         }
     }
 
-    fn pause(&mut self) {
+    fn pause(&self) {
         self.play_button.clone().resource_id(self.play_icon.clone());
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
-            sound_data.sound.stop_sound().expect("Failed to pause sound");
+        if let Some(sound_data) = &self.sound_data {
+            sound_data
+                .sound
+                .borrow_mut()
+                .stop_sound()
+                .expect("Failed to pause sound");
         }
     }
 
-    fn set_cursor(&mut self, value: f32) {
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
-            sound_data.sound.seek_to_second(value).unwrap();
+    fn set_cursor(&self, value: f32) {
+        if let Some(sound_data) = &self.sound_data {
+            sound_data.sound.borrow_mut().seek_to_second(value).unwrap();
         }
     }
 
-    fn set_volume(&mut self, value: f32) {
+    fn set_volume(&self, value: f32) {
         let value = value / 100.0;
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
-            sound_data.sound.set_volume(value);
+        if let Some(sound_data) = &self.sound_data {
+            sound_data.sound.borrow_mut().set_volume(value);
         }
     }
 
     pub(crate) fn update(&self) {
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        if let Some(sound_data) = ctx.sounds.get_mut(&self.element_data.internal_id) {
-            let current_time = sound_data.sound.cursor_seconds().unwrap() as f64;
+        if let Some(sound_data) = &self.sound_data {
+            let sound = sound_data.sound.borrow_mut();
+            let current_time = sound.cursor_seconds().unwrap() as f64;
             let track = self.track.clone();
 
             let mut request_redraw = false;
             if track.get_value() != current_time {
                 track.value(current_time);
-                let total_time = sound_data.sound.length_seconds().unwrap() as u32;
+                let total_time = sound.length_seconds().unwrap() as u32;
                 let time = format_time(current_time as u32, total_time);
                 self.duration.clone().text(&time);
                 request_redraw = true;
             }
-            if let Some(end_notifier) = &mut sound_data.end_notifier {
-                end_notifier.take_with(|| {
-                    self.play_button.clone().resource_id(self.play_icon.clone());
-                    request_redraw = true;
-                })
-            }
+            sound_data.end_notifier.take_with(|| {
+                self.play_button.clone().resource_id(self.play_icon.clone());
+                request_redraw = true;
+            });
             if request_redraw {
                 self.request_window_redraw();
             }

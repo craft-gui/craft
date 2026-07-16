@@ -11,10 +11,11 @@ use craft_logging::info;
 use craft_primitives::geometry::{Point, Size};
 
 use craft_resource_manager::resource_event::ResourceEvent;
+use craft_resource_manager::resource_type::ResourceType;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
-use craft_runtime::{CraftRuntimeHandle, Sender};
 
+use craft_runtime::{CraftRuntimeHandle, Sender};
 use taffy::NodeId;
 
 use ui_events::keyboard::KeyboardEvent;
@@ -23,16 +24,16 @@ use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
 use winit::event::{Ime, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
-use craft_resource_manager::resource_type::ResourceType;
-use crate::CraftOptions;
+
 #[cfg(feature = "audio")]
-use crate::elements::{AUDIO_CONTEXT, AudioInner};
+use crate::elements::{AudioInner, AUDIO_CONTEXT};
 use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{Event, EventDispatcher, EventKind};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 use crate::window_manager::WindowManager;
+use crate::CraftOptions;
 
 thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
@@ -88,22 +89,18 @@ impl App {
 
     pub fn on_about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         #[cfg(feature = "audio")]
-        {
-            let audio_elements = AUDIO_CONTEXT.with(|audio_context| {
-                if let Some(ctx) = audio_context.get() {
-                    ctx.borrow().sounds.keys().cloned().collect()
-                } else {
-                    Vec::new()
+        AUDIO_CONTEXT.with(|audio_context| {
+            if let Some(ctx) = audio_context.get() {
+                for audio_element in &ctx.borrow().sounds {
+                    if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
+                        let audio = audio.upgrade().unwrap();
+                        let mut audio = audio.borrow_mut();
+                        let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
+                        audio.update();
+                    }
                 }
-            });
-            for audio_element in &audio_elements {
-                let audio = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned().unwrap());
-                let audio = audio.upgrade().unwrap();
-                let mut audio = audio.borrow_mut();
-                let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
-                audio.update();
             }
-        }
+        });
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.on_about_to_wait(self, event_loop);

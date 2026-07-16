@@ -28,7 +28,6 @@ use ui_events::pointer::PointerScrollEvent;
 
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
-use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 #[cfg(target_arch = "wasm32")]
@@ -555,7 +554,6 @@ impl WindowInternal {
         } else {
             let window_attributes = WindowAttributes::default()
                 .with_title(self.title.as_ref().unwrap())
-                .with_drag_and_drop(false)
                 .with_visible(false);
             #[cfg(target_arch = "wasm32")]
             let window_attributes = {
