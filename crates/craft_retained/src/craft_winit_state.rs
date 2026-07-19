@@ -211,7 +211,7 @@ impl CraftWinitState {
     }
 
     fn process_external_work(&mut self) {
-        // Do work sent from other threads and update all the windows.
+        // Do work scheduled for later and update all the windows.
         let mut work_done = false;
 
         let mut timer_jobs: Vec<Job> = vec![];

@@ -2,7 +2,7 @@ mod run_later;
 
 use std::future::Future;
 
-pub use run_later::{pop_gui_thread_work, push_gui_thread_work, run_later_on_gui_thread, Job};
+pub use run_later::{pop_gui_thread_work, push_gui_thread_work, run_later, Job};
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
 pub use tokio::*;
 
