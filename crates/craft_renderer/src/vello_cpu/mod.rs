@@ -31,6 +31,7 @@ use crate::text_renderer_data::{TextRenderLine, TextScroll};
 use crate::RenderCommand;
 use craft_resource_manager::image::ImageResource;
 use winit::window::Window;
+use craft_resource_manager::resource_type::ResourceType;
 
 pub(crate) struct VelloCpuRenderer {
     render_context: RenderContext,
@@ -100,7 +101,7 @@ fn draw_image(scene: &mut RenderContext, cmd: &DrawImageCmd,
         return;
     }
     let resource = resource.as_ref().unwrap();
-    if resource.resource_type != "image" || resource.clone().data.downcast_ref::<ImageResource>().is_none()
+    if resource.resource_type != ResourceType::Image || resource.clone().data.downcast_ref::<ImageResource>().is_none()
     {
         return;
     };

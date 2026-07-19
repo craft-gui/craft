@@ -30,6 +30,8 @@ pub struct TextRenderLine {
     pub items: Vec<TextRenderItem>,
     pub selections: Vec<(Rectangle, Color)>,
     pub backgrounds: Vec<(Rectangle, Color)>,
+    pub min_y: f32,
+    pub max_y: f32,
 }
 
 #[derive(Clone, Debug)]

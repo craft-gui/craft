@@ -12,10 +12,14 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
     };
 
     for line in layout.lines() {
+        let metrics = line.metrics();
         let mut text_render_line = TextRenderLine {
             items: Vec::new(),
             selections: Vec::new(),
             backgrounds: Vec::new(),
+            // Note: This needs to be changed when we handle vertical text.
+            min_y: metrics.block_min_coord,
+            max_y: metrics.block_max_coord,
         };
 
         for item in line.items() {
