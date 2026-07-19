@@ -18,23 +18,21 @@ use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, Text
 use wgpu::CommandEncoder;
 use wgpu::{CurrentSurfaceTexture, TextureFormat};
 
+use winit::window::Window;
+
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_primitives::Color;
 use craft_resource_manager::ResourceManager;
-
-
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use crate::vello_hybrid::render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
+use render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
 use crate::RenderCommand;
-
-use crate::vello_hybrid::image::{draw_image, upload_image};
-use winit::window::Window;
-use crate::vello_hybrid::text::draw_text;
+use image::{draw_image, upload_image};
+use text::draw_text;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window

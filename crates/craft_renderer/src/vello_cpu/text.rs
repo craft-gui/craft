@@ -1,17 +1,17 @@
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 
-use glifo::Glyph;
 use vello_common::paint::PaintType;
 use vello_common::{kurbo, peniko};
-use vello_hybrid::{Resources, Scene};
+use glifo::Glyph;
+use vello_cpu::{RenderContext, Resources};
 
 use craft_primitives::geometry::Rectangle;
 use crate::render_command::{DrawRectCmd, DrawTextCmd};
+use crate::vello_cpu::draw_rect;
 use crate::text_renderer_data::TextScroll;
-use crate::vello_hybrid::draw_rect;
 
-pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, window: &Rectangle) {
+pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources: &mut Resources, window: &Rectangle) {
     let text_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
     let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
     let text_transform = Affine::default()
