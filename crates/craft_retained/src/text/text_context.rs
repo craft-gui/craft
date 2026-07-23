@@ -1,9 +1,9 @@
-use craft_primitives::ColorBrush;
 use parley::{FontContext, TextStyle, TreeBuilder};
+use craft_primitives::brush::Brush;
 
 pub struct TextContext {
     pub font_context: FontContext,
-    pub layout_context: parley::LayoutContext<ColorBrush>,
+    pub layout_context: parley::LayoutContext<Brush>,
 }
 
 impl Default for TextContext {
@@ -23,8 +23,8 @@ impl TextContext {
     pub fn tree_builder<'a>(
         &'a mut self,
         scale: f32,
-        raw_style: &TextStyle<'_, '_, ColorBrush>,
-    ) -> TreeBuilder<'a, ColorBrush> {
+        raw_style: &TextStyle<'_, '_, Brush>,
+    ) -> TreeBuilder<'a, Brush> {
         self.layout_context
             .tree_builder(&mut self.font_context, scale, true, raw_style)
     }

@@ -3,7 +3,7 @@ use kurbo::Affine;
 use crate::geometry::{Border, Margin, Padding, Point, Rectangle, Size};
 
 /// An element's box roughly analogous to CSS's box-model.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ElementBox {
     pub margin: Margin,
     pub border: Border,
@@ -14,7 +14,7 @@ pub struct ElementBox {
 
 impl ElementBox {
     pub fn transform(&self, transform: Affine) -> Self {
-        let mut transformed_box = *self;
+        let mut transformed_box = self.clone();
         transformed_box.position = transform * self.position;
         transformed_box
     }

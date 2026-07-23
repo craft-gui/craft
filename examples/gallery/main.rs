@@ -6,8 +6,8 @@ use std::rc::Rc;
 use craft_retained::elements::Audio;
 use craft_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
-use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
-
+use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba, Gradient, ColorStop};
+use craft_retained::geometry::Point;
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -31,7 +31,13 @@ pub fn text_input() -> Container {
 }
 
 pub fn dropdown() -> Container {
-    let container = Container::new();
+    let container = Container::new().background_gradient(
+        Gradient::new_linear(Point::new(0.0, 0.0), Point::new(400.0, 800.0))
+            .color_stops(&[
+                ColorStop::new(0.0, Color::from_rgb8(120, 0, 200)),
+                ColorStop::new(1.0, Color::from_rgb8(255, 0, 0))
+            ])
+    );
 
     let dropdown = Dropdown::new()
         .width(px(100.0))
@@ -56,11 +62,11 @@ pub fn text() -> Container {
         .font_weight(FontWeight::BOLD)
         .font_style(FontStyle::Italic);
 
-    let underlined_text = Text::new("Underlined Text").underline(Some(Underline {
-        thickness: Some(2.0),
-        color: Color::from_rgb8(0, 255, 0),
-        offset: None,
-    }));
+    let underlined_text = Text::new("Underlined Text").underline(
+        Some(2.0),
+        Color::from_rgb8(0, 255, 0),
+        None,
+    );
 
     let left_aligned_text = Text::new("Left").text_align(TextAlign::Left);
     let centered_text = Text::new("Center").text_align(TextAlign::Center);

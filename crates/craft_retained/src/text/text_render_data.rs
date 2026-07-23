@@ -1,10 +1,10 @@
-use craft_primitives::ColorBrush;
 pub(crate) use craft_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
 use craft_renderer::text_renderer_data::{TextRenderItem, TextRenderItemLine};
 use parley::{Layout, PositionedLayoutItem};
 use peniko::kurbo::{Affine, Line};
+use craft_primitives::brush::Brush;
 
-pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
+pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
     let mut text_render = TextRender {
         lines: Vec::new(),
         cursor: None,
@@ -31,7 +31,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             // We draw underlines under the text, then the strikethrough on top, following:
             // https://drafts.csswg.org/css-text-decor/#painting-order
             let underline: Option<TextRenderItemLine> = if let Some(underline) = &style.underline {
-                let underline_brush = underline.brush;
+                let underline_brush = underline.brush.clone();
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match underline.offset {
                     Some(offset) => offset,
@@ -83,7 +83,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             });
 
             let strikethrough = if let Some(strikethrough) = &style.strikethrough {
-                let strikethrough_brush = strikethrough.brush;
+                let strikethrough_brush = strikethrough.brush.clone();
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match strikethrough.offset {
                     Some(offset) => offset,
@@ -113,7 +113,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             };
 
             let text_render_item = TextRenderItem {
-                brush: style.brush,
+                brush: style.brush.clone(),
                 underline,
                 strikethrough,
                 glyph_transform: glyph_xform,

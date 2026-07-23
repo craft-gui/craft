@@ -119,7 +119,7 @@ impl Slider {
     }
 
     pub fn get_thumb_color(&self) -> Color {
-        self.inner.get_thumb_color()
+        self.inner.get_thumb_brush()
     }
 
     pub fn thumb_border_radius(self, thumb_border_radius: impl Bindable<[(f32, f32); 4]>) -> Self {
@@ -146,7 +146,7 @@ impl Slider {
     }
 
     pub fn get_track_color(&self) -> Option<Color> {
-        self.inner.get_track_color()
+        self.inner.get_track_brush()
     }
 
     pub fn track_border_radius(self, track_border_radius: impl Bindable<[(f32, f32); 4]>) -> Self {

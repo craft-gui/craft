@@ -207,10 +207,10 @@ impl Layout {
         border_color: TrblRectangle<Color>,
         box_shadows: Vec<BoxShadow>,
     ) {
-        let element_rect = self.computed_box_transformed;
+        let element_rect = self.computed_box_transformed.clone();
         let border_spec = BorderSpec {
             rect: element_rect.border_rectangle(),
-            width: element_rect.border,
+            width: element_rect.border.clone(),
             radii: border_radius,
             scale_factor,
             box_shadows: box_shadows.to_vec(),
@@ -235,7 +235,7 @@ impl Layout {
             return;
         }
 
-        let borders = element_rect.border;
+        let borders = element_rect.border.clone();
         let border_spec = CssRoundedRect::new(
             element_rect.border_rectangle().to_kurbo(),
             [
@@ -273,8 +273,8 @@ impl Layout {
                     let offset = Vec2::new(box_shadow.offset_x, box_shadow.offset_y);
 
                     if box_shadow.inset {
-                        let element_rect = self.computed_box_transformed;
-                        let borders = element_rect.border;
+                        let element_rect = self.computed_box_transformed.clone();
+                        let borders = element_rect.border.clone();
                         let inset_css_rect = CssRoundedRect::new(
                             element_rect
                                 .border_rectangle()
@@ -372,7 +372,7 @@ impl Layout {
             }
         }
 
-        let background_color = current_style.get_background_color();
+        let background_color = current_style.get_background_brush();
 
         // OPTIMIZATION: Draw a normal rectangle if no border values have been modified.
         match &self.computed_border {
@@ -381,13 +381,20 @@ impl Layout {
                 let padding_rect = self.computed_box_transformed.padding_rectangle().scale(scale_factor);
                 let border_rect = self.computed_box_transformed.border_rectangle().scale(scale_factor);
                 // Draw the background.
-                if background_color.components[3] != 0.0 {
+                if let Brush::Color(bg_color) = &background_color {
+                    if bg_color.components[3] != 0.0 {
+                        renderer.draw_rect(padding_rect, Brush::Color(*bg_color));
+                    }
+                } else {
                     renderer.draw_rect(padding_rect, background_color);
                 }
+
+                // Draw a simple border
                 let thickness = self.cache_border_spec.as_ref().unwrap().width.top;
                 let border_color = current_style.get_border_color().top;
+
                 if thickness != 0.0 && border_color.components[3] != 0.0 {
-                    renderer.draw_rect_outline(border_rect, border_color, thickness as f64 * scale_factor);
+                    renderer.draw_rect_outline(border_rect, Brush::Color(border_color), thickness as f64 * scale_factor);
                 }
             }
             ComputedBorder::CssComputed(computed_border) => {
@@ -442,13 +449,16 @@ pub(crate) fn draw_borders_generic(
     renderer: &mut dyn Renderer,
     computed_border: &CssComputedBorder,
     side_colors: [Color; 4],
-    bg_color: Color,
+    bg_brush: Brush,
 ) {
-    let background_color = bg_color;
-
-    if background_color.components[3] != 0.0 {
+    if let Brush::Color(bg_color) = bg_brush {
+        if bg_color.components[3] != 0.0 {
+            let background_path = computed_border.background.clone();
+            renderer.fill_bez_path(background_path, Brush::Color(bg_color));
+        }
+    } else {
         let background_path = computed_border.background.clone();
-        renderer.fill_bez_path(background_path, Brush::Color(background_color));
+        renderer.fill_bez_path(background_path, bg_brush);
     }
 
     for (side_index, side) in computed_border.sides.iter().enumerate() {

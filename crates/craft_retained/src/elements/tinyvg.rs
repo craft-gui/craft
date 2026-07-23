@@ -5,17 +5,20 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use craft_primitives::geometry::{Affine, BezPath, Point, Rectangle, Shape, TOLERANCE};
-use craft_renderer::Brush;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::{ResourceId, ResourceManager};
 use peniko::color::AlphaColor;
 use peniko::kurbo::{self, Stroke, StrokeOpts};
-use peniko::{Color, Gradient};
+use peniko::Color;
+
 use tinyvg_rs::TinyVg as TinyVgData;
 use tinyvg_rs::color_table::{ColorTable, RgbaF32};
 use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
 use tinyvg_rs::common::Unit;
+
+use craft_primitives::geometry::{Affine, BezPath, Point, Rectangle, Shape, TOLERANCE};
+use craft_primitives::brush::Brush;
+use craft_primitives::gradient::{ColorStop, Gradient};
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::{ResourceId, ResourceManager};
 use craft_resource_manager::resource_type::ResourceType;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
@@ -110,8 +113,8 @@ impl ElementInternals for TinyVgInner {
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         let mut color = None;
-        if self.style().get_color() != rgba(0, 0, 0, 0) {
-            color = Some(self.style().get_color());
+        if let Brush::Color(c) = self.style().get_text_brush() && c != rgba(0, 0, 0, 0) {
+            color = Some(c);
         }
 
         // Go through the tiny vg commands and draw them using the renderer trait.
@@ -144,7 +147,7 @@ impl TinyVg {
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_id.clone())));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
+        inner.borrow_mut().style_mut().set_text_brush(Brush::Color(Color::TRANSPARENT));
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             pending_resources.push_back((resource_id, ResourceType::TinyVg));
@@ -163,7 +166,7 @@ impl TinyVg {
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(ResourceId::DUMMY)));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner.borrow_mut().style_mut().set_color(Color::TRANSPARENT);
+        inner.borrow_mut().style_mut().set_text_brush(Brush::Color(Color::TRANSPARENT));
 
         Self { inner }
     }
@@ -525,20 +528,23 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             let end = to_kurbo_point(linear_gradient.point_1);
 
             let linear =
-                Gradient::new_linear(start, end).with_stops([to_peniko_color(color_0), to_peniko_color(color_1)]);
+            Gradient::new_linear(start, end)
+                .color_stops(&[ColorStop::new(0.0, to_peniko_color(color_0)), ColorStop::new(1.0, to_peniko_color(color_1))]);
+
             Brush::Gradient(linear)
         }
         Style::RadialGradient(radial_gradient) => {
-            let color_0 = color_table[radial_gradient.color_index_0 as usize];
-            let color_1 = color_table[radial_gradient.color_index_1 as usize];
-
-            let center = to_kurbo_point(radial_gradient.point_0);
-            let edge = to_kurbo_point(radial_gradient.point_1);
-            let radius = center.distance(edge);
-
-            let radial = Gradient::new_radial(center, radius as f32)
-                .with_stops([to_peniko_color(color_0), to_peniko_color(color_1)]);
-            Brush::Gradient(radial)
+            todo!()
+            // let color_0 = color_table[radial_gradient.color_index_0 as usize];
+            // let color_1 = color_table[radial_gradient.color_index_1 as usize];
+            //
+            // let center = to_kurbo_point(radial_gradient.point_0);
+            // let edge = to_kurbo_point(radial_gradient.point_1);
+            // let radius = center.distance(edge);
+            //
+            // let radial = Gradient::new_radial(center, radius as f32)
+            //     .with_stops([to_peniko_color(color_0), to_peniko_color(color_1)]);
+            // Brush::Gradient(radial)
         }
     }
 }

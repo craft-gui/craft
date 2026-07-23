@@ -1,5 +1,3 @@
-pub mod brush;
-
 #[allow(clippy::module_inception)]
 pub mod renderer;
 
@@ -20,7 +18,7 @@ pub mod text_renderer_data;
 pub mod vello_hybrid;
 pub mod resource_mapper;
 
-pub use brush::Brush;
+pub use craft_primitives::brush::Brush;
 pub use render_command::RenderCommand;
 pub use render_list::RenderList;
 pub use renderer_type::RendererType;

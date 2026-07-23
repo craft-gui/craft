@@ -6,7 +6,8 @@ use ui_events::pointer::PointerId;
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent::{CursorMoved, MouseInput};
 use winit::event::{DeviceId, ElementState, MouseButton};
-
+use craft_primitives::brush::Brush;
+use craft_primitives::gradient::Gradient;
 use crate::CraftError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
@@ -319,12 +320,22 @@ pub trait Element: Clone + AsElement {
     }
 
     fn color(self, color: Color) -> Self {
-        self.borrow_mut().set_color(color);
+        self.borrow_mut().set_text_brush(Brush::Color(color));
+        self
+    }
+
+    fn text_gradient(self, gradient: Gradient) -> Self {
+        self.borrow_mut().set_text_brush(Brush::Gradient(gradient));
         self
     }
 
     fn background_color(self, background_color: Color) -> Self {
-        self.borrow_mut().set_background_color(background_color);
+        self.borrow_mut().set_background_brush(Brush::Color(background_color));
+        self
+    }
+
+    fn background_gradient(self, gradient: Gradient) -> Self {
+        self.borrow_mut().set_background_brush(Brush::Gradient(gradient));
         self
     }
 
@@ -353,8 +364,23 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn underline(self, underline: Option<Underline>) -> Self {
-        self.borrow_mut().set_underline(underline);
+    fn underline(self, thickness: Option<f32>, color: Color, offset: Option<f32>) -> Self {
+        self.borrow_mut().set_underline(Some(Underline {
+            thickness,
+            brush: Brush::Color(color),
+            offset,
+        }));
+
+        self
+    }
+
+    fn underline_gradient(self, thickness: Option<f32>, gradient: Gradient, offset: Option<f32>) -> Self {
+        self.borrow_mut().set_underline(Some(Underline {
+            thickness,
+            brush: Brush::Gradient(gradient),
+            offset,
+        }));
+
         self
     }
 

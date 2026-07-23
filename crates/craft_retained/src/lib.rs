@@ -1,6 +1,6 @@
 //! A retained GUI.
 
-pub use craft_primitives::{Color, geometry, palette};
+pub use craft_primitives::{Color, geometry, palette, Gradient, GradientKind, LinearGradientData, RadialGradientData, SweepGradientData, HueDirection, ColorStop, Extend};
 
 pub use craft_renderer::RendererType;
 

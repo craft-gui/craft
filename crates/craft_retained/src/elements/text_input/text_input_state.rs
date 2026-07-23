@@ -15,7 +15,7 @@ use ui_events::pointer::PointerUpdate;
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 use winit::dpi;
-
+use craft_primitives::brush::Brush;
 use crate::app::{TAFFY_TREE, request_apply_layout, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
@@ -688,14 +688,14 @@ impl TextInputState {
     }
 
     pub fn render_text(&mut self, focused: bool, style: &Style) {
-        let backgrounds: Vec<(Range<usize>, Color)> = self
+        let backgrounds: Vec<(Range<usize>, Brush)> = self
             .editor()
             .ranged_styles
             .styles
             .iter()
             .filter_map(|(range, style)| {
-                if let TextStyleProperty::BackgroundColor(color) = style {
-                    Some((range.clone(), *color))
+                if let TextStyleProperty::BackgroundBrush(color) = style {
+                    Some((range.clone(), color.clone()))
                 } else {
                     None
                 }
@@ -703,7 +703,7 @@ impl TextInputState {
             .collect();
 
         let layout = self.editor.try_layout().unwrap();
-        let backgrounds: Vec<(Selection, Color)> = backgrounds
+        let backgrounds: Vec<(Selection, Brush)> = backgrounds
             .iter()
             .map(|(range, color)| {
                 (
@@ -711,7 +711,7 @@ impl TextInputState {
                         Cursor::from_byte_index(layout, range.start, Affinity::Downstream),
                         Cursor::from_byte_index(layout, range.end, Affinity::Downstream),
                     ),
-                    *color,
+                    color.clone(),
                 )
             })
             .collect();
@@ -728,7 +728,7 @@ impl TextInputState {
                         rect.width() as f32,
                         rect.height() as f32,
                     ),
-                    *color,
+                    color.clone(),
                 ));
             });
         }
@@ -739,11 +739,11 @@ impl TextInputState {
         self.editor.selection_geometry_with(|rect, line| {
             text_renderer.lines[line]
                 .selections
-                .push((parley_box_to_rect(rect), style.get_selection_color()));
+                .push((parley_box_to_rect(rect), style.get_selection_brush()));
         });
 
         if focused {
-            let color = style.get_cursor_color().unwrap_or(style.get_color());
+            let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
             text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
         } else {
             text_renderer.cursor = None;

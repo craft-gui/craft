@@ -3,11 +3,12 @@ mod styles;
 mod taffy_conversions;
 
 pub use box_shadow::BoxShadow;
-use craft_primitives::{Color, ColorBrush};
+use craft_primitives::Color;
 use parley::GenericFamily;
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
+use craft_primitives::brush::Brush;
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -97,10 +98,10 @@ pub enum FlexDirection {
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug, Hash)]
 pub struct FontWeight(pub u16);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct ScrollbarColor {
-    pub thumb_color: Color,
-    pub track_color: Color,
+    pub thumb_color: Brush,
+    pub track_color: Brush,
 }
 
 impl FontWeight {
@@ -148,10 +149,10 @@ impl Default for FontWeight {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Underline {
     pub thickness: Option<f32>,
-    pub color: Color,
+    pub brush: Brush,
     pub offset: Option<f32>,
 }
 
@@ -182,7 +183,7 @@ impl Default for FontStyle {
 
 #[derive(Clone, PartialEq)]
 pub enum TextStyleProperty {
-    Color(Color),
+    Color(Brush),
     FontFamily(String),
     FontSize(f32),
     FontWeight(FontWeight),
@@ -190,9 +191,9 @@ pub enum TextStyleProperty {
     UnderlineOffset(f32),
     Underline(bool),
     UnderlineSize(f32),
-    UnderlineBrush(Color),
+    UnderlineBrush(Brush),
     Link(String),
-    BackgroundColor(Color),
+    BackgroundBrush(Brush),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
@@ -247,7 +248,7 @@ where
 }
 
 impl TextStyleProperty {
-    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'_, ColorBrush>> {
+    pub(crate) fn to_parley_style_property(&self) -> Option<parley::StyleProperty<'_, Brush>> {
         match self {
             TextStyleProperty::FontFamily(font_family) => {
                 let font_stack_cow_list = Cow::Owned(vec![
@@ -261,10 +262,8 @@ impl TextStyleProperty {
 
             TextStyleProperty::FontSize(font_size) => Some(parley::StyleProperty::FontSize(*font_size)),
 
-            TextStyleProperty::Color(color) => {
-                let brush = ColorBrush { color: *color };
-
-                Some(parley::StyleProperty::Brush(brush))
+            TextStyleProperty::Color(brush) => {
+                Some(parley::StyleProperty::Brush(brush.clone()))
             }
 
             TextStyleProperty::FontStyle(font_style) => {
@@ -286,12 +285,10 @@ impl TextStyleProperty {
 
             TextStyleProperty::UnderlineSize(size) => Some(parley::StyleProperty::UnderlineSize(Some(*size))),
 
-            TextStyleProperty::UnderlineBrush(color) => {
-                let brush = ColorBrush { color: *color };
-
-                Some(parley::StyleProperty::UnderlineBrush(Some(brush)))
+            TextStyleProperty::UnderlineBrush(brush) => {
+                Some(parley::StyleProperty::UnderlineBrush(Some(brush.clone())))
             }
-            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundColor(_) => None,
+            TextStyleProperty::Link(_) | TextStyleProperty::BackgroundBrush(_) => None,
         }
     }
 }

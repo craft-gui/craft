@@ -5,21 +5,23 @@ pub mod text;
 use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
-
+use glifo::GlyphRenderer;
 use kurbo::{Affine, Stroke};
-use peniko::kurbo::Shape;
-use peniko::{BlendMode, Compose, Fill, Mix};
-
+use peniko::kurbo::{Point, Shape};
+use peniko::{BlendMode, ColorStop, ColorStops, Compose, Fill, InterpolationAlphaSpace, LinearGradientPosition, Mix};
+use peniko::color::{DynamicColor, HueDirection};
 use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::paint::{ImageId, PaintType};
 use vello_common::{kurbo, peniko};
+use vello_common::{peniko::Gradient, peniko::GradientKind};
+use vello_common::color::ColorSpaceTag;
 use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
 use wgpu::CommandEncoder;
 use wgpu::{CurrentSurfaceTexture, TextureFormat};
 
 use winit::window::Window;
-
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_primitives::Color;
 use craft_resource_manager::ResourceManager;
@@ -145,7 +147,7 @@ impl Renderer for VelloHybridRenderer {
             &mut self.scene,
             &DrawRectCmd {
                 rect: Rectangle::new(0.0, 0.0, width as f32, height as f32),
-                color: self.surface_clear_color,
+                brush: Brush::Color(self.surface_clear_color),
                 transform: Affine::IDENTITY,
             }
         );
@@ -209,6 +211,31 @@ impl Renderer for VelloHybridRenderer {
                 RenderCommand::BoxShadowCmd(cmd) => draw_box_shadow(&mut self.scene, cmd),
             }
         });
+
+        let paint = self.scene.current_paint().clone();
+        self.scene.set_paint(
+
+            Gradient::new_linear(Point::new(20.0, 20.0), Point::new(220.0, 20.0))
+                .with_hue_direction(HueDirection::Shorter)
+                .with_extend(peniko::Extend::Pad)
+                .with_interpolation_cs(ColorSpaceTag::Srgb)
+                .with_interpolation_alpha_space(InterpolationAlphaSpace::Premultiplied)
+                .with_stops(
+                    [
+                        ColorStop {
+                            offset: 0.0,
+                            color: DynamicColor::from(Color::from_rgb8(100, 100, 200)),
+                        },
+                        ColorStop {
+                            offset: 1.0,
+                            color: DynamicColor::from(Color::from_rgb8(255, 0, 0)),
+                        },
+                    ].as_slice()
+                )
+        );
+        self.scene.fill_rect(&Rectangle::new(20.0, 20.0, 200.0, 100.0).to_kurbo());
+        self.scene.set_paint(paint);
+
 
         VelloHybridRenderer::delete_unseen_resources(
             &mut self.resources_seen,
@@ -373,13 +400,13 @@ impl VelloHybridRenderer {
 
 fn draw_circle(scene: &mut Scene, cmd: &DrawCircleCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.set_paint(brush_to_paint(&cmd.brush));
     scene.fill_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn draw_rect(scene: &mut Scene, cmd: &DrawRectCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.set_paint(brush_to_paint(&cmd.brush));
     scene.fill_rect(&cmd.rect.to_kurbo());
 }
 
@@ -428,14 +455,14 @@ fn draw_box_shadow(scene: &mut Scene, cmd: &BoxShadowCmd) {
 fn draw_circle_outline(scene: &mut Scene, cmd: &DrawCircleOutlineCmd) {
     scene.set_transform(cmd.transform);
     scene.set_stroke(Stroke::new(cmd.thickness as f64));
-    scene.set_paint(PaintType::from(cmd.outline_color));
+    scene.set_paint(brush_to_paint(&cmd.outline_brush));
     scene.stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn draw_rect_outline(scene: &mut Scene, cmd: &DrawRectOutlineCmd) {
     scene.set_transform(cmd.transform);
    scene.set_stroke(Stroke::new(cmd.thickness));
-   scene.set_paint(PaintType::from(cmd.outline_color));
+    scene.set_paint(brush_to_paint(&cmd.outline_brush));
    scene.stroke_rect(&cmd.rect.to_kurbo());
 }
 

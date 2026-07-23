@@ -493,14 +493,14 @@ pub trait Element: Clone + AsElement {
 
     fn color(self, color: impl Bindable<Color>) -> Self {
         let element = self.as_element_rc();
-        color.bind(move |v| element.borrow_mut().set_color(v));
+        color.bind(move |v| element.borrow_mut().set_text_brush(v));
         self
     }
 
     fn background_color(self, background_color: impl Bindable<Color>) -> Self {
         let element = self.as_element_rc();
         background_color.bind(move |value| {
-            element.borrow_mut().set_background_color(value);
+            element.borrow_mut().set_background_brush(value);
         });
         self
     }

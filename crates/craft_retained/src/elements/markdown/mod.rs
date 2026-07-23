@@ -330,7 +330,7 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     .styled_text
                     .style
                     .styles
-                    .push((byte_range, TextStyleProperty::BackgroundColor(rgb(0x2e, 0x2e, 0x2e))));
+                    .push((byte_range, TextStyleProperty::BackgroundBrush(rgb(0x2e, 0x2e, 0x2e))));
                 renderer
                     .styled_text
                     .style

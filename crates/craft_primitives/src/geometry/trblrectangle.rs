@@ -1,5 +1,6 @@
-#[derive(Copy, Clone, Debug, Default, PartialEq)]
-pub struct TrblRectangle<T> {
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct TrblRectangle<T> where
+    T: Clone {
     pub top: T,
     pub right: T,
     pub bottom: T,
@@ -8,7 +9,7 @@ pub struct TrblRectangle<T> {
 
 impl<T> TrblRectangle<T>
 where
-    T: Copy + PartialEq,
+    T: Clone + PartialEq,
 {
     #[inline(always)]
     pub const fn new(top: T, right: T, bottom: T, left: T) -> Self {
@@ -20,18 +21,18 @@ where
         }
     }
 
-    pub const fn new_all(value: T) -> Self {
+    pub fn new_all(value: T) -> Self {
         Self {
-            top: value,
-            right: value,
-            bottom: value,
-            left: value,
+            top: value.clone(),
+            right: value.clone(),
+            bottom: value.clone(),
+            left: value.clone(),
         }
     }
 
     #[allow(dead_code)]
-    pub const fn to_array(self) -> [T; 4] {
-        [self.top, self.right, self.bottom, self.left]
+    pub fn to_array(self) -> [T; 4]  {
+        [self.top.clone(), self.right.clone(), self.bottom.clone(), self.left.clone()]
     }
 
     pub fn are_edges_uniform(&self) -> bool {

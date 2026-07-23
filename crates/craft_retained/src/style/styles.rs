@@ -4,7 +4,8 @@ use std::fmt::Debug;
 use crate::style::box_shadow::BoxShadow;
 use crate::style::*;
 use craft_primitives::geometry::TrblRectangle;
-use craft_primitives::{Color, ColorBrush};
+use craft_primitives::Color;
+use craft_primitives::brush::Brush;
 
 #[derive(Clone, Debug)]
 pub struct Style {
@@ -33,8 +34,8 @@ pub struct Style {
     flex_basis: StyleProperty<Unit>,
     font_family: StyleProperty<FontFamily>,
 
-    background_color: StyleProperty<Color>,
-    color: StyleProperty<Color>,
+    background_brush: StyleProperty<Brush>,
+    text_brush: StyleProperty<Brush>,
 
     line_height: StyleProperty<f32>,
     font_size: StyleProperty<f32>,
@@ -49,14 +50,14 @@ pub struct Style {
     border_width: StyleProperty<TrblRectangle<Unit>>,
     border_radius: StyleProperty<[(f32, f32); 4]>,
 
-    scrollbar_color: StyleProperty<ScrollbarColor>,
+    scrollbar_brush: StyleProperty<ScrollbarColor>,
     scrollbar_thumb_margin: StyleProperty<TrblRectangle<f32>>,
     scrollbar_thumb_radius: StyleProperty<[(f32, f32); 4]>,
     scrollbar_width: StyleProperty<f32>,
 
     visible: StyleProperty<bool>,
-    selection_color: StyleProperty<Color>,
-    cursor_color: StyleProperty<Option<Color>>,
+    selection_brush: StyleProperty<Brush>,
+    cursor_brush: StyleProperty<Option<Brush>>,
 
     box_shadows: StyleProperty<Vec<BoxShadow>>,
 
@@ -64,7 +65,7 @@ pub struct Style {
     pub is_dirty: bool,
 }
 const SCROLLBAR_THUMB_MARGIN: TrblRectangle<f32> = if cfg!(any(target_os = "android", target_os = "ios")) {
-    TrblRectangle::new_all(0.0)
+    TrblRectangle::new(0.0, 0.0, 0.0, 0.0)
 } else {
     TrblRectangle::new(1.0, 2.0, 1.0, 2.0)
 };
@@ -94,8 +95,8 @@ impl Style {
             flex_shrink: StyleProperty::new(1.0),
             flex_basis: StyleProperty::new(Unit::Auto),
             font_family: StyleProperty::new(FontFamily::default()),
-            background_color: StyleProperty::new(Color::TRANSPARENT),
-            color: StyleProperty::new(Color::BLACK),
+            background_brush: StyleProperty::new(Brush::Color(Color::TRANSPARENT)),
+            text_brush: StyleProperty::new(Brush::Color(Color::BLACK)),
             line_height: StyleProperty::new(1.2),
             font_size: StyleProperty::new(16.0),
             font_weight: StyleProperty::new(FontWeight::default()),
@@ -106,9 +107,9 @@ impl Style {
             border_color: StyleProperty::new(TrblRectangle::new_all(Color::BLACK)),
             border_width: StyleProperty::new(TrblRectangle::new_all(Unit::Px(0.0))),
             border_radius: StyleProperty::new([(0.0, 0.0); 4]),
-            scrollbar_color: StyleProperty::new(ScrollbarColor {
-                thumb_color: Color::from_rgb8(150, 150, 152),
-                track_color: Color::TRANSPARENT,
+            scrollbar_brush: StyleProperty::new(ScrollbarColor {
+                thumb_color: Brush::Color(Color::from_rgb8(150, 150, 152)),
+                track_color: Brush::Color(Color::TRANSPARENT),
             }),
             scrollbar_thumb_margin: StyleProperty::new(SCROLLBAR_THUMB_MARGIN),
             scrollbar_thumb_radius: StyleProperty::new([(10.0, 10.0); 4]),
@@ -118,8 +119,8 @@ impl Style {
                 10.0
             }),
             visible: StyleProperty::new(true),
-            selection_color: StyleProperty::new(Color::from_rgb8(0, 120, 215)),
-            cursor_color: StyleProperty::new(None),
+            selection_brush: StyleProperty::new(Brush::Color(Color::from_rgb8(0, 120, 215))),
+            cursor_brush: StyleProperty::new(None),
             box_shadows: StyleProperty::new(Vec::new()),
         }
     }
@@ -145,7 +146,7 @@ impl Style {
     }
 
     pub fn get_margin(&self) -> TrblRectangle<Unit> {
-        *self.margin.get()
+        self.margin.get().clone()
     }
 
     pub fn set_margin(&mut self, val: TrblRectangle<Unit>) {
@@ -154,7 +155,7 @@ impl Style {
     }
 
     pub fn get_padding(&self) -> TrblRectangle<Unit> {
-        *self.padding.get()
+        self.padding.get().clone()
     }
 
     pub fn set_padding(&mut self, val: TrblRectangle<Unit>) {
@@ -172,7 +173,7 @@ impl Style {
     }
 
     pub fn get_inset(&self) -> TrblRectangle<Unit> {
-        *self.inset.get()
+        self.inset.get().clone()
     }
 
     pub fn set_inset(&mut self, val: TrblRectangle<Unit>) {
@@ -315,22 +316,22 @@ impl Style {
         self.font_family.set(val);
     }
 
-    pub fn get_color(&self) -> Color {
-        *self.color.get()
+    pub fn get_text_brush(&self) -> Brush {
+        self.text_brush.get().clone()
     }
 
-    pub fn set_color(&mut self, val: Color) {
+    pub fn set_text_brush(&mut self, val: Brush) {
         self.is_dirty = true;
-        self.color.set(val);
+        self.text_brush.set(val);
     }
 
-    pub fn get_background_color(&self) -> Color {
-        *self.background_color.get()
+    pub fn get_background_brush(&self) -> Brush {
+        self.background_brush.get().clone()
     }
 
-    pub fn set_background_color(&mut self, val: Color) {
+    pub fn set_background_brush(&mut self, val: Brush) {
         self.is_dirty = true;
-        self.background_color.set(val);
+        self.background_brush.set(val);
     }
 
     pub fn get_font_size(&self) -> f32 {
@@ -379,7 +380,7 @@ impl Style {
     }
 
     pub fn get_underline(&self) -> Option<Underline> {
-        *self.underline.get()
+        self.underline.get().clone()
     }
 
     pub fn set_underline(&mut self, val: Option<Underline>) {
@@ -397,7 +398,7 @@ impl Style {
     }
 
     pub fn get_border_color(&self) -> TrblRectangle<Color> {
-        *self.border_color.get()
+        self.border_color.get().clone()
     }
 
     pub fn set_border_color(&mut self, val: TrblRectangle<Color>) {
@@ -406,7 +407,7 @@ impl Style {
     }
 
     pub fn get_border_width(&self) -> TrblRectangle<Unit> {
-        *self.border_width.get()
+        self.border_width.get().clone()
     }
 
     pub fn set_border_width(&mut self, val: TrblRectangle<Unit>) {
@@ -423,17 +424,17 @@ impl Style {
         self.border_radius.set(val);
     }
 
-    pub fn get_scrollbar_color(&self) -> ScrollbarColor {
-        *self.scrollbar_color.get()
+    pub fn get_scrollbar_brush(&self) -> ScrollbarColor {
+        self.scrollbar_brush.get().clone()
     }
 
-    pub fn set_scrollbar_color(&mut self, val: ScrollbarColor) {
+    pub fn set_scrollbar_brush(&mut self, val: ScrollbarColor) {
         self.is_dirty = true;
-        self.scrollbar_color.set(val);
+        self.scrollbar_brush.set(val);
     }
 
     pub fn get_scrollbar_thumb_margin(&self) -> TrblRectangle<f32> {
-        *self.scrollbar_thumb_margin.get()
+        self.scrollbar_thumb_margin.get().clone()
     }
 
     pub fn set_scrollbar_thumb_margin(&mut self, val: TrblRectangle<f32>) {
@@ -468,22 +469,22 @@ impl Style {
         self.visible.set(val);
     }
 
-    pub fn get_selection_color(&self) -> Color {
-        *self.selection_color.get()
+    pub fn get_selection_brush(&self) -> Brush {
+        self.selection_brush.get().clone()
     }
 
-    pub fn set_selection_color(&mut self, val: Color) {
+    pub fn set_selection_brush(&mut self, val: Brush) {
         self.is_dirty = true;
-        self.selection_color.set(val);
+        self.selection_brush.set(val);
     }
 
-    pub fn get_cursor_color(&self) -> Option<Color> {
-        *self.cursor_color.get()
+    pub fn get_cursor_brush(&self) -> Option<Brush> {
+        self.cursor_brush.get().clone()
     }
 
-    pub fn set_cursor_color(&mut self, val: Option<Color>) {
+    pub fn set_cursor_brush(&mut self, val: Option<Brush>) {
         self.is_dirty = true;
-        self.cursor_color.set(val);
+        self.cursor_brush.set(val);
     }
 
     pub fn get_box_shadows(&self) -> &[BoxShadow] {
@@ -501,7 +502,7 @@ impl Style {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_text_style(&'_ self) -> parley::TextStyle<'_, '_, ColorBrush> {
+    pub fn to_text_style(&'_ self) -> parley::TextStyle<'_, '_, Brush> {
         let font_size = self.get_font_size();
         let line_height = self.get_line_height();
         let font_weight = parley::FontWeight::new(self.get_font_weight().0 as f32);
@@ -512,9 +513,7 @@ impl Style {
             FontStyle::Oblique => parley::FontStyle::Oblique(None),
         };
 
-        let brush = ColorBrush {
-            color: self.get_color(),
-        };
+        let brush = self.get_text_brush();
 
         let font_stack_cow_list = if let Some(font_family) = self.get_font_family().name() {
             // Use the user-provided font and fallback to system UI fonts as needed.
@@ -536,9 +535,7 @@ impl Style {
         if let Some(underline) = underline {
             underline_offset = underline.offset;
             underline_size = underline.thickness;
-            underline_brush = Some(ColorBrush {
-                color: underline.color,
-            });
+            underline_brush = Some(underline.brush);
         }
 
         let font_family = parley::FontFamily::List(font_stack_cow_list);
@@ -569,7 +566,7 @@ impl Style {
         }
     }
 
-    pub fn add_styles_to_style_set<'a>(&'a self, style_set: &'a mut parley::StyleSet<ColorBrush>) {
+    pub fn add_styles_to_style_set<'a>(&'a self, style_set: &'a mut parley::StyleSet<Brush>) {
         let font_size = self.get_font_size();
         let line_height = self.get_line_height();
         let font_weight = parley::FontWeight::new(self.get_font_weight().0 as f32);
@@ -579,9 +576,7 @@ impl Style {
             // FIXME: Allow an angle when setting the obliqueness.
             FontStyle::Oblique => parley::FontStyle::Oblique(None),
         };
-        let brush = ColorBrush {
-            color: self.get_color(),
-        };
+        let brush = self.get_text_brush();
 
         let underline = self.get_underline();
         let has_underline = underline.is_some();
@@ -592,9 +587,7 @@ impl Style {
         if let Some(underline) = underline {
             underline_offset = underline.offset;
             underline_size = underline.thickness;
-            underline_brush = Some(ColorBrush {
-                color: underline.color,
-            });
+            underline_brush = Some(underline.brush);
         }
 
         let font_family = self.get_font_family();

@@ -5,8 +5,9 @@ use glifo::Glyph;
 use vello_common::paint::PaintType;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::{Resources, Scene};
-
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::Rectangle;
+use crate::helpers::brush_to_paint;
 use crate::render_command::{DrawRectCmd, DrawTextCmd};
 use crate::text_renderer_data::TextScroll;
 use crate::vello_hybrid::draw_rect;
@@ -46,7 +47,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
             };
             draw_rect(scene, &DrawRectCmd {
                 rect: background_rect,
-                color: *color,
+                brush: color.clone(),
                 transform: cmd.transform
             });
         }
@@ -60,7 +61,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
             };
             draw_rect(scene, &DrawRectCmd {
                 rect: selection_rect,
-                color: *selection_color,
+                brush: selection_color.clone(),
                 transform: cmd.transform
             });
         }
@@ -71,15 +72,15 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
         for item in &line.items {
             if let Some(underline) = &item.underline {
                 scene.set_stroke(Stroke::new(underline.width.into()));
-                scene.set_paint(PaintType::from(underline.brush.color));
+                scene.set_paint(brush_to_paint(&underline.brush));
                 scene.stroke_path(&underline.line.to_path(0.1));
             }
 
-            scene.set_paint(PaintType::from(
-                text_render
+            scene.set_paint(brush_to_paint(
+                &text_render
                     .override_brush
-                    .map(|b| b.color)
-                    .unwrap_or_else(|| item.brush.color),
+                    .as_ref()
+                    .unwrap_or_else(|| &item.brush),
             ));
 
             let glyph_run_builder = scene
@@ -96,7 +97,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
 
     // Draw the cursor
     if cmd.show_cursor
-        && let Some((cursor, cursor_color)) = &text_render.cursor
+        && let Some((cursor, cursor_brush)) = &text_render.cursor
     {
         let cursor_rect = Rectangle {
             x: cursor.x + cmd.rect.x,
@@ -106,7 +107,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
         };
         draw_rect(scene, &DrawRectCmd {
             rect: cursor_rect,
-            color: *cursor_color,
+            brush: cursor_brush.clone(),
             transform: cmd.transform
         });
     }

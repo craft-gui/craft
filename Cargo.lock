@@ -1024,6 +1024,7 @@ dependencies = [
  "dpi",
  "kurbo",
  "peniko",
+ "smallvec",
 ]
 
 [[package]]
