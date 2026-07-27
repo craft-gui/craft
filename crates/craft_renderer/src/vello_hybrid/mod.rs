@@ -29,7 +29,7 @@ use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
+use render_context::{create_vello_renderer, RenderContext, RenderSurface};
 use crate::RenderCommand;
 use image::{draw_image, upload_image};
 use text::draw_text;
@@ -214,7 +214,6 @@ impl Renderer for VelloHybridRenderer {
             &mut self.resources_seen,
             renderer,
             &mut encoder,
-            device_handle,
             &mut self.resources,
             &mut self.resource_mapper
         );
@@ -349,7 +348,6 @@ impl VelloHybridRenderer {
     pub(crate) fn delete_unseen_resources(resources_seen: &mut HashSet<RendererResourceId>,
                                           renderer: &mut VelloRenderer,
                                           encoder: &mut CommandEncoder,
-                                          device_handle: &DeviceHandle,
                                           resources: &mut Resources,
                                           resource_mapper: &mut ResourceMapper
     ) {
@@ -359,8 +357,6 @@ impl VelloHybridRenderer {
             } else {
                 renderer.destroy_image(
                     resources,
-                    &device_handle.device,
-                    &device_handle.queue,
                     encoder,
                     ImageId::new(value.0 as u32),
                 );

@@ -173,7 +173,7 @@ version = "0.1.1"
 
 [dependencies.maudio]
 git = "https://github.com/someotherself/maudio.git"
-rev = "664c765004308289d4ec80f41911a602ee247924"
+rev = "7f9838516446e3a6350c14d1472fd2c2e881c5cf"
 optional = true
 
 [dev-dependencies]

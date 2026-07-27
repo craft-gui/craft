@@ -12,26 +12,26 @@ vello_hybrid_renderer_webgl = ["wgpu/webgl"]
 
 [dependencies.glifo]
 git = "https://github.com/linebender/vello.git"
-rev = "492beec0a811c44eb7064d50e95dd2cf582dcc46"
+rev = "416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 default-features = false
 features = ["std"]
 
 [dependencies.vello_cpu]
 git = "https://github.com/linebender/vello.git"
-rev = "492beec0a811c44eb7064d50e95dd2cf582dcc46"
+rev = "416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 optional = true
 features = []
 
 [dependencies.vello_hybrid]
 git = "https://github.com/linebender/vello.git"
-rev = "492beec0a811c44eb7064d50e95dd2cf582dcc46"
+rev = "416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 default-features = false
 features = ["default"]
 optional = true
 
 [dependencies.vello_common]
 git = "https://github.com/linebender/vello.git"
-rev = "492beec0a811c44eb7064d50e95dd2cf582dcc46"
+rev = "416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 optional = true
 
 [dependencies.softbuffer]

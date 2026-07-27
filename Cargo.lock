@@ -1497,15 +1497,6 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "font-types"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b38ad915f6dadd993ced50848a8291a543bd41ca62bc10740d5e64e2ab4cfd7"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
-name = "font-types"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad67eced03f5504d9cbd3a879b5958b5c54d4e5fd794361c6eb21b05fb703411"
@@ -1527,7 +1518,7 @@ dependencies = [
  "objc2-core-text",
  "objc2-foundation 0.3.2",
  "parlance",
- "read-fonts 0.40.2",
+ "read-fonts",
  "roxmltree",
  "smallvec",
  "windows 0.62.2",
@@ -1732,7 +1723,7 @@ dependencies = [
 [[package]]
 name = "glifo"
 version = "0.1.1"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
+source = "git+https://github.com/linebender/vello.git?rev=416f36755ac2cd6f23d0aa0154bacfce3d3d3964#416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 dependencies = [
  "bytemuck",
  "foldhash 0.2.0",
@@ -1740,7 +1731,7 @@ dependencies = [
  "log",
  "peniko",
  "png 0.18.1",
- "skrifa 0.42.1",
+ "skrifa",
  "smallvec",
  "vello_common",
 ]
@@ -1835,7 +1826,7 @@ checksum = "f0589ddd0d2935dd2845827ac606b4081c266225d613b268ed2910f832889cab"
 dependencies = [
  "bitflags 2.11.0",
  "bytemuck",
- "read-fonts 0.40.2",
+ "read-fonts",
  "smallvec",
 ]
 
@@ -2954,7 +2945,7 @@ dependencies = [
 [[package]]
 name = "maudio"
 version = "0.1.6"
-source = "git+https://github.com/someotherself/maudio.git?rev=664c765004308289d4ec80f41911a602ee247924#664c765004308289d4ec80f41911a602ee247924"
+source = "git+https://github.com/someotherself/maudio.git?rev=7f9838516446e3a6350c14d1472fd2c2e881c5cf#7f9838516446e3a6350c14d1472fd2c2e881c5cf"
 dependencies = [
  "maudio-sys",
 ]
@@ -3771,7 +3762,7 @@ dependencies = [
  "linebender_resource_handle",
  "parlance",
  "parley_data",
- "skrifa 0.43.2",
+ "skrifa",
 ]
 
 [[package]]
@@ -4269,22 +4260,12 @@ dependencies = [
 
 [[package]]
 name = "read-fonts"
-version = "0.39.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4ed38b89c2c77ff968c524145ad65fb010f38af5c7a224b53b81d47ac2daa81"
-dependencies = [
- "bytemuck",
- "font-types 0.11.3",
-]
-
-[[package]]
-name = "read-fonts"
 version = "0.40.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "487889119a5f19ff7c0a20637196bdc76b9f54ebec17e3588b5d75e4999f8773"
 dependencies = [
  "bytemuck",
- "font-types 0.12.1",
+ "font-types",
  "once_cell",
 ]
 
@@ -4750,22 +4731,12 @@ checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
 
 [[package]]
 name = "skrifa"
-version = "0.42.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c34617370ae968efb7161bb2beb517d9084659aae19e24b89e3db25b46e4564"
-dependencies = [
- "bytemuck",
- "read-fonts 0.39.2",
-]
-
-[[package]]
-name = "skrifa"
 version = "0.43.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cbe997d0f2480442d727488fbe2150779114cbe480ecdbadef58b33e0318ffb"
 dependencies = [
  "bytemuck",
- "read-fonts 0.40.2",
+ "read-fonts",
 ]
 
 [[package]]
@@ -5546,12 +5517,11 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 [[package]]
 name = "vello_common"
 version = "0.0.9"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
+source = "git+https://github.com/linebender/vello.git?rev=416f36755ac2cd6f23d0aa0154bacfce3d3d3964#416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 dependencies = [
  "bytemuck",
  "fearless_simd",
  "guillotiere",
- "hashbrown 0.17.1",
  "log",
  "peniko",
  "png 0.18.1",
@@ -5562,7 +5532,7 @@ dependencies = [
 [[package]]
 name = "vello_cpu"
 version = "0.0.9"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
+source = "git+https://github.com/linebender/vello.git?rev=416f36755ac2cd6f23d0aa0154bacfce3d3d3964#416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 dependencies = [
  "bytemuck",
  "glifo",
@@ -5574,7 +5544,7 @@ dependencies = [
 [[package]]
 name = "vello_hybrid"
 version = "0.0.9"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
+source = "git+https://github.com/linebender/vello.git?rev=416f36755ac2cd6f23d0aa0154bacfce3d3d3964#416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 dependencies = [
  "bytemuck",
  "glifo",
@@ -5589,7 +5559,7 @@ dependencies = [
 [[package]]
 name = "vello_sparse_shaders"
 version = "0.0.9"
-source = "git+https://github.com/linebender/vello.git?rev=492beec0a811c44eb7064d50e95dd2cf582dcc46#492beec0a811c44eb7064d50e95dd2cf582dcc46"
+source = "git+https://github.com/linebender/vello.git?rev=416f36755ac2cd6f23d0aa0154bacfce3d3d3964#416f36755ac2cd6f23d0aa0154bacfce3d3d3964"
 
 [[package]]
 name = "version_check"
