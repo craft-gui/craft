@@ -5,7 +5,7 @@
 ))]
 use crate::Brush;
 use craft_primitives::geometry::{Point, Rectangle};
-use craft_primitives::gradient::{ColorStop, Extend, GradientKind, HueDirection};
+use craft_primitives::gradient::{Extend, GradientKind, HueDirection};
 use peniko::InterpolationAlphaSpace;
 use peniko::color::ColorSpaceTag;
 #[cfg(any(
@@ -37,17 +37,32 @@ pub(crate) fn brush_to_paint(rect: Rectangle, brush: &Brush) -> PaintType {
                         end: Point::new(end_x, end_y),
                     })
                 }
-                GradientKind::Radial(radial) => peniko::GradientKind::Radial(peniko::RadialGradientPosition {
-                    start_center: radial.start_center,
-                    start_radius: radial.start_radius,
-                    end_center: radial.end_center,
-                    end_radius: radial.end_radius,
-                }),
-                GradientKind::Sweep(sweep) => peniko::GradientKind::Sweep(peniko::SweepGradientPosition {
-                    center: sweep.center,
-                    start_angle: sweep.start_angle,
-                    end_angle: sweep.end_angle,
-                }),
+                GradientKind::Radial(radial) => {
+                    let start_center_x = rect.left() as f64 + (radial.start_center.x * rect.width as f64);
+                    let start_center_y = rect.top() as f64 + (radial.start_center.y * rect.height as f64);
+
+                    let end_center_x = rect.left() as f64 + (radial.end_center.x * rect.width as f64);
+                    let end_center_y = rect.top() as f64 + (radial.end_center.y * rect.height as f64);
+
+                    let radius_scale = rect.width.max(rect.height);
+
+                    peniko::GradientKind::Radial(peniko::RadialGradientPosition {
+                        start_center: Point::new(start_center_x, start_center_y),
+                        start_radius: radial.start_radius * radius_scale,
+                        end_center: Point::new(end_center_x, end_center_y),
+                        end_radius: radial.end_radius * radius_scale,
+                    })
+                }
+                GradientKind::Sweep(sweep) => {
+                    let center_x = rect.left() as f64 + (sweep.center.x * rect.width as f64);
+                    let center_y = rect.top() as f64 + (sweep.center.y * rect.height as f64);
+
+                    peniko::GradientKind::Sweep(peniko::SweepGradientPosition {
+                        center: Point::new(center_x, center_y),
+                        start_angle: sweep.start_angle,
+                        end_angle: sweep.end_angle,
+                    })
+                }
             };
 
             let extend: peniko::Extend = match &gradient.extend {

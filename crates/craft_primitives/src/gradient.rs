@@ -11,12 +11,6 @@ pub struct Gradient {
     pub hue_direction: HueDirection,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum CoordinateSpace {
-    Relative,
-    Absolute
-}
-
 impl Gradient {
     pub fn new_linear(start: Point, end: Point) -> Self {
         Gradient {
@@ -24,6 +18,37 @@ impl Gradient {
                 LinearGradientData {
                     start,
                     end,
+                }
+            ),
+            color_stops: Default::default(),
+            extend: Default::default(),
+            hue_direction: Default::default(),
+        }
+    }
+
+    pub fn new_radial(start_center: Point, start_radius: f32, end_center: Point, end_radius: f32) -> Self {
+        Gradient {
+            kind: GradientKind::Radial(
+                RadialGradientData {
+                    start_center,
+                    start_radius,
+                    end_center,
+                    end_radius,
+                }
+            ),
+            color_stops: Default::default(),
+            extend: Default::default(),
+            hue_direction: Default::default(),
+        }
+    }
+
+    pub fn new_sweep(center: Point, start_angle: f32, end_angle: f32) -> Self {
+        Gradient {
+            kind: GradientKind::Sweep(
+                SweepGradientData {
+                    center,
+                    start_angle,
+                    end_angle,
                 }
             ),
             color_stops: Default::default(),
