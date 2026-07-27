@@ -1,16 +1,16 @@
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 
-use glifo::Glyph;
-use vello_common::paint::PaintType;
-use vello_common::{kurbo, peniko};
-use vello_hybrid::{Resources, Scene};
+use crate::helpers::brush_to_paint;
+use crate::render_command::{DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd};
+use crate::text_renderer_data::{TextRenderLine, TextScroll};
+use crate::vello_hybrid::{draw_rect, draw_rect_outline};
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::Rectangle;
-use crate::helpers::brush_to_paint;
-use crate::render_command::{DrawRectCmd, DrawTextCmd};
-use crate::text_renderer_data::TextScroll;
-use crate::vello_hybrid::draw_rect;
+use glifo::Glyph;
+use peniko::Color;
+use vello_common::{kurbo, peniko};
+use vello_hybrid::{Resources, Scene};
 
 pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Resources, window: &Rectangle) {
     let text_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
@@ -20,10 +20,14 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
         .then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
     let text_data = cmd.data.upgrade();
-    if text_data.is_none() { return; }
+    if text_data.is_none() {
+        return;
+    }
     let text_data = text_data.unwrap();
     let text_data = text_data.borrow();
     let text_render = text_data.get_text_renderer().expect("Text render not found");
+
+    let text_paint_bounds = text_bounds(&text_render.lines).unwrap_or_else(|| Rectangle::new(0.0, 0.0, 0.0, 0.0));
 
     for line in &text_render.lines {
         let scrolled_text_container_y = text_container.y - scroll;
@@ -45,11 +49,14 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
                 width: background.width,
                 height: background.height,
             };
-            draw_rect(scene, &DrawRectCmd {
-                rect: background_rect,
-                brush: color.clone(),
-                transform: cmd.transform
-            });
+            draw_rect(
+                scene,
+                &DrawRectCmd {
+                    rect: background_rect,
+                    brush: color.clone(),
+                    transform: cmd.transform,
+                },
+            );
         }
 
         for (selection, selection_color) in &line.selections {
@@ -59,33 +66,35 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
                 width: selection.width,
                 height: selection.height,
             };
-            draw_rect(scene, &DrawRectCmd {
-                rect: selection_rect,
-                brush: selection_color.clone(),
-                transform: cmd.transform
-            });
+            draw_rect(
+                scene,
+                &DrawRectCmd {
+                    rect: selection_rect,
+                    brush: selection_color.clone(),
+                    transform: cmd.transform,
+                },
+            );
         }
 
         scene.set_transform(cmd.transform * text_transform);
+        scene.reset_paint_transform();
 
         // Draw the text
         for item in &line.items {
             if let Some(underline) = &item.underline {
                 scene.set_stroke(Stroke::new(underline.width.into()));
-                scene.set_paint(brush_to_paint(&underline.brush));
+                scene.set_paint(brush_to_paint(text_paint_bounds, &underline.brush));
                 scene.stroke_path(&underline.line.to_path(0.1));
             }
 
-            scene.set_paint(brush_to_paint(
-                &text_render
-                    .override_brush
-                    .as_ref()
-                    .unwrap_or_else(|| &item.brush),
-            ));
+            let brush = text_render.override_brush.as_ref().unwrap_or(&item.brush);
+            scene.set_paint(brush_to_paint(text_paint_bounds, brush));
 
+            // Note: .glyph_run multiples the paint transform and the brush transform.
+            // That is why the text bounds for the gradient don't need to be transformed.
             let glyph_run_builder = scene
                 .glyph_run(resources, &item.font)
-                //.atlas_cache(true)
+                .atlas_cache(true)
                 .font_size(item.font_size);
             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                 id: glyph.id,
@@ -105,10 +114,35 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
             width: cursor.width,
             height: cursor.height,
         };
-        draw_rect(scene, &DrawRectCmd {
-            rect: cursor_rect,
-            brush: cursor_brush.clone(),
-            transform: cmd.transform
-        });
+        draw_rect(
+            scene,
+            &DrawRectCmd {
+                rect: cursor_rect,
+                brush: cursor_brush.clone(),
+                transform: cmd.transform,
+            },
+        );
+    }
+}
+
+fn text_bounds(lines: &[TextRenderLine]) -> Option<Rectangle> {
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+
+    for line in lines {
+        if line.items.iter().any(|item| !item.glyphs.is_empty()) {
+            min_x = min_x.min(line.min_x);
+            max_x = max_x.max(line.max_x);
+            min_y = min_y.min(line.min_y);
+            max_y = max_y.max(line.max_y);
+        }
+    }
+
+    if min_x.is_finite() && max_x.is_finite() && min_y.is_finite() && max_y.is_finite() {
+        Some(Rectangle::new(min_x, min_y, max_x - min_x, max_y - min_y))
+    } else {
+        None
     }
 }

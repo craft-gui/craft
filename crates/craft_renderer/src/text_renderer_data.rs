@@ -1,7 +1,7 @@
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::Rectangle;
 use peniko::Color;
 use peniko::kurbo::{Affine, Line};
-use craft_primitives::brush::Brush;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TextScroll {
@@ -30,6 +30,8 @@ pub struct TextRenderLine {
     pub items: Vec<TextRenderItem>,
     pub selections: Vec<(Rectangle, Brush)>,
     pub backgrounds: Vec<(Rectangle, Brush)>,
+    pub min_x: f32,
+    pub max_x: f32,
     pub min_y: f32,
     pub max_y: f32,
 }
