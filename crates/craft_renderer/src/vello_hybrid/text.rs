@@ -1,9 +1,9 @@
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 
-use crate::helpers::brush_to_paint;
+use crate::helpers::{brush_to_paint, text_bounds};
 use crate::render_command::{DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd};
-use crate::text_renderer_data::{TextRenderLine, TextScroll};
+use crate::text_renderer_data::TextScroll;
 use crate::vello_hybrid::{draw_rect, draw_rect_outline};
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::Rectangle;
@@ -122,27 +122,5 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut Scene, resources: &mut Re
                 transform: cmd.transform,
             },
         );
-    }
-}
-
-fn text_bounds(lines: &[TextRenderLine]) -> Option<Rectangle> {
-    let mut min_x = f32::INFINITY;
-    let mut max_x = f32::NEG_INFINITY;
-    let mut min_y = f32::INFINITY;
-    let mut max_y = f32::NEG_INFINITY;
-
-    for line in lines {
-        if line.items.iter().any(|item| !item.glyphs.is_empty()) {
-            min_x = min_x.min(line.min_x);
-            max_x = max_x.max(line.max_x);
-            min_y = min_y.min(line.min_y);
-            max_y = max_y.max(line.max_y);
-        }
-    }
-
-    if min_x.is_finite() && max_x.is_finite() && min_y.is_finite() && max_y.is_finite() {
-        Some(Rectangle::new(min_x, min_y, max_x - min_x, max_y - min_y))
-    } else {
-        None
     }
 }

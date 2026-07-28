@@ -4,6 +4,7 @@
     feature = "vello_hybrid_renderer_webgl"
 ))]
 use crate::Brush;
+use crate::text_renderer_data::TextRenderLine;
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_primitives::gradient::{Extend, GradientKind, HueDirection};
 use peniko::InterpolationAlphaSpace;
@@ -96,6 +97,28 @@ pub(crate) fn brush_to_paint(rect: Rectangle, brush: &Brush) -> PaintType {
                 stops: peniko::ColorStops(stops.into()),
             })
         }
+    }
+}
+
+pub(crate) fn text_bounds(lines: &[TextRenderLine]) -> Option<Rectangle> {
+    let mut min_x = f32::INFINITY;
+    let mut max_x = f32::NEG_INFINITY;
+    let mut min_y = f32::INFINITY;
+    let mut max_y = f32::NEG_INFINITY;
+
+    for line in lines {
+        if line.items.iter().any(|item| !item.glyphs.is_empty()) {
+            min_x = min_x.min(line.min_x);
+            max_x = max_x.max(line.max_x);
+            min_y = min_y.min(line.min_y);
+            max_y = max_y.max(line.max_y);
+        }
+    }
+
+    if min_x.is_finite() && max_x.is_finite() && min_y.is_finite() && max_y.is_finite() {
+        Some(Rectangle::new(min_x, min_y, max_x - min_x, max_y - min_y))
+    } else {
+        None
     }
 }
 
