@@ -3216,7 +3216,7 @@ dependencies = [
 [[package]]
 name = "maudio"
 version = "0.1.6"
-source = "git+https://github.com/someotherself/maudio.git?rev=664c765004308289d4ec80f41911a602ee247924#664c765004308289d4ec80f41911a602ee247924"
+source = "git+https://github.com/someotherself/maudio.git?rev=7f9838516446e3a6350c14d1472fd2c2e881c5cf#7f9838516446e3a6350c14d1472fd2c2e881c5cf"
 dependencies = [
  "maudio-sys",
 ]
