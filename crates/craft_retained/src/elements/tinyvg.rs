@@ -534,17 +534,16 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             Brush::Gradient(linear)
         }
         Style::RadialGradient(radial_gradient) => {
-            todo!()
-            // let color_0 = color_table[radial_gradient.color_index_0 as usize];
-            // let color_1 = color_table[radial_gradient.color_index_1 as usize];
-            //
-            // let center = to_kurbo_point(radial_gradient.point_0);
-            // let edge = to_kurbo_point(radial_gradient.point_1);
-            // let radius = center.distance(edge);
-            //
-            // let radial = Gradient::new_radial(center, radius as f32)
-            //     .with_stops([to_peniko_color(color_0), to_peniko_color(color_1)]);
-            // Brush::Gradient(radial)
+            let color_0 = color_table[radial_gradient.color_index_0 as usize];
+            let color_1 = color_table[radial_gradient.color_index_1 as usize];
+
+            let center = to_kurbo_point(radial_gradient.point_0);
+            let edge = to_kurbo_point(radial_gradient.point_1);
+            let radius = center.distance(edge);
+
+            let radial = Gradient::new_radial(center, 0.0, center, radius as f32)
+                .color_stops(&[ColorStop::new(0.0, to_peniko_color(color_0)), ColorStop::new(1.0, to_peniko_color(color_1))]);
+            Brush::Gradient(radial)
         }
     }
 }
