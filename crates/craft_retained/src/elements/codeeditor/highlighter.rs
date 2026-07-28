@@ -1,14 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+pub use syntect;
 use syntect::easy::HighlightLines;
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
-
-pub use syntect;
 use syntect::dumps::from_reader;
 use syntect::highlighting::ThemeSet;
 
+use craft_primitives::brush::Brush;
 use crate::style::TextStyleProperty::{FontStyle as PropFontStyle, UnderlineSize};
 use crate::style::{FontStyle, FontWeight, TextStyleProperty};
 use crate::text::RangedStyles;
@@ -118,7 +118,7 @@ pub fn compute_code_editor_style(
 
             ranged_styles.styles.push((
                 range,
-                TextStyleProperty::Color(syntect_color_to_color(style.foreground)),
+                TextStyleProperty::Color(Brush::Color(syntect_color_to_color(style.foreground))),
             ));
 
             local_offset += byte_len;

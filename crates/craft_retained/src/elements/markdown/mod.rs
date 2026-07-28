@@ -4,7 +4,7 @@ use std::str::FromStr;
 use craft_resource_manager::ResourceId;
 
 use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
-
+use craft_primitives::brush::Brush;
 use crate::elements::{AsElement, CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
@@ -121,7 +121,7 @@ impl<'a> MarkdownRenderer<'a> {
             self.styled_text
                 .style
                 .styles
-                .push((*link_start..end, TextStyleProperty::Color(rgb(0, 0, 238))));
+                .push((*link_start..end, TextStyleProperty::Color(Brush::Color(rgb(0, 0, 238)))));
             self.link = None;
         }
     }
@@ -330,12 +330,12 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     .styled_text
                     .style
                     .styles
-                    .push((byte_range, TextStyleProperty::BackgroundBrush(rgb(0x2e, 0x2e, 0x2e))));
+                    .push((byte_range, TextStyleProperty::BackgroundBrush(Brush::Color(rgb(0x2e, 0x2e, 0x2e)))));
                 renderer
                     .styled_text
                     .style
                     .styles
-                    .push((range.clone(), TextStyleProperty::Color(Color::WHITE)));
+                    .push((range.clone(), TextStyleProperty::Color(Brush::Color(Color::WHITE))));
                 renderer.styled_text.text.push_str(&text);
             }
             Event::SoftBreak => {

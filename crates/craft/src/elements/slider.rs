@@ -1,7 +1,7 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-use craft_retained::Color;
+use craft_retained::{Brush, Color};
 use craft_retained::elements::{AsElement, ElementInternals, SliderDirection};
 
 use crate::elements::Element;
@@ -113,12 +113,12 @@ impl Slider {
     pub fn thumb_color(self, thumb_background_color: impl Bindable<Color>) -> Self {
         let element = self.clone();
         thumb_background_color.bind(move |value| {
-            element.clone().inner.thumb_color(value);
+            element.clone().inner.thumb_color(Brush::Color(value));
         });
         self
     }
 
-    pub fn get_thumb_color(&self) -> Color {
+    pub fn get_thumb_brush(&self) -> Brush {
         self.inner.get_thumb_brush()
     }
 
@@ -140,13 +140,16 @@ impl Slider {
     pub fn track_color(self, track_background_color: impl Bindable<Color>) -> Self {
         let element = self.clone();
         track_background_color.bind(move |value| {
-            element.clone().track_color(value);
+            element.clone().inner.track_color(value);
         });
         self
     }
 
     pub fn get_track_color(&self) -> Option<Color> {
-        self.inner.get_track_brush()
+        self.inner.get_track_brush().and_then(|brush| match brush {
+            Brush::Color(color) => Some(color),
+            Brush::Gradient(_) => None,
+        })
     }
 
     pub fn track_border_radius(self, track_border_radius: impl Bindable<[(f32, f32); 4]>) -> Self {

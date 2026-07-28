@@ -5,6 +5,7 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
@@ -169,8 +170,8 @@ impl CodeEditorInner {
         let mut text = self.text_input.inner.borrow_mut();
         let code_editor = compute_code_editor_style(text.get_text(), None, None, &self.extension, &self.theme);
         text.set_ranged_styles(code_editor.ranged_styles);
-        text.set_background_brush(code_editor.background_color);
-        text.set_text_brush(code_editor.foreground_color);
+        text.set_background_brush(Brush::Color(code_editor.background_color));
+        text.set_text_brush(Brush::Color(code_editor.foreground_color));
     }
 
 }
