@@ -16,11 +16,10 @@ use core::ops::Range;
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Node, NodeId, TreeUpdate};
-use craft_primitives::ColorBrush;
 use craft_undo::UndoManager;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::layout::LayoutAccessibility;
-
+use craft_primitives::brush::Brush;
 use crate::app::{request_apply_layout, request_layout};
 use crate::text::RangedStyles;
 use crate::text::text_commands::TextCommand;
@@ -101,9 +100,9 @@ impl<'source> IntoIterator for SplitString<'source> {
 #[derive(Clone)]
 pub struct PlainEditor {
     pub(crate) taffy_id: Option<taffy::NodeId>,
-    layout: Layout<ColorBrush>,
+    layout: Layout<Brush>,
     buffer: String,
-    default_style: StyleSet<ColorBrush>,
+    default_style: StyleSet<Brush>,
     pub(crate) ranged_styles: RangedStyles,
     #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
     layout_access: LayoutAccessibility,
@@ -182,7 +181,7 @@ impl PlainEditor {
         }
     }
 
-    pub fn undo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) -> bool {
+    pub fn undo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
         let command = self.undo_manager.undo_command();
         if command.is_none() {
             return false;
@@ -233,7 +232,7 @@ impl PlainEditor {
         }
     }
 
-    pub fn redo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) -> bool {
+    pub fn redo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
         let command = self.undo_manager.redo_command();
         if command.is_none() {
             return false;
@@ -274,7 +273,7 @@ impl PlainEditor {
 pub struct PlainEditorDriver<'a> {
     pub editor: &'a mut PlainEditor,
     pub font_cx: &'a mut FontContext,
-    pub layout_cx: &'a mut LayoutContext<ColorBrush>,
+    pub layout_cx: &'a mut LayoutContext<Brush>,
 }
 
 impl PlainEditorDriver<'_> {
@@ -413,7 +412,7 @@ impl PlainEditorDriver<'_> {
     pub fn backdelete(&mut self, manage_commands: bool) {
         if self.editor.selection.is_collapsed() {
             // Upstream cluster
-            if let Some(cluster) = self.editor.selection.focus().logical_clusters(&self.editor.layout)[0] {
+            if let Some(cluster) = &self.editor.selection.focus().logical_clusters(&self.editor.layout)[0] {
                 let range = cluster.text_range();
                 let end = range.end;
                 let start = if cluster.is_hard_line_break() || cluster.is_emoji() {
@@ -878,7 +877,7 @@ impl PlainEditorDriver<'_> {
 
     /// Get the up-to-date layout for this driver.
     #[allow(dead_code)]
-    pub fn layout(&mut self) -> &Layout<ColorBrush> {
+    pub fn layout(&mut self) -> &Layout<Brush> {
         self.editor.layout(self.font_cx, self.layout_cx)
     }
 
@@ -902,7 +901,7 @@ impl PlainEditor {
     pub fn driver<'drv>(
         &'drv mut self,
         font_cx: &'drv mut FontContext,
-        layout_cx: &'drv mut LayoutContext<ColorBrush>,
+        layout_cx: &'drv mut LayoutContext<Brush>,
     ) -> PlainEditorDriver<'drv> {
         PlainEditorDriver {
             editor: self,
@@ -1106,7 +1105,7 @@ impl PlainEditor {
     }
 
     /// Modify the styles provided for this editor.
-    pub fn edit_styles(&mut self) -> &mut StyleSet<ColorBrush> {
+    pub fn edit_styles(&mut self) -> &mut StyleSet<Brush> {
         self.layout_dirty = true;
         &mut self.default_style
     }
@@ -1130,8 +1129,8 @@ impl PlainEditor {
     pub fn layout(
         &mut self,
         font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<ColorBrush>,
-    ) -> &Layout<ColorBrush> {
+        layout_cx: &mut LayoutContext<Brush>,
+    ) -> &Layout<Brush> {
         self.refresh_layout(font_cx, layout_cx);
         &self.layout
     }
@@ -1144,7 +1143,7 @@ impl PlainEditor {
     /// to ensure that the layout is up-to-date.
     ///
     /// The [`layout`](Self::layout) method should generally be preferred.
-    pub fn try_layout(&self) -> Option<&Layout<ColorBrush>> {
+    pub fn try_layout(&self) -> Option<&Layout<Brush>> {
         if self.layout_dirty { None } else { Some(&self.layout) }
     }
 
@@ -1177,7 +1176,7 @@ impl PlainEditor {
     /// This should only be used alongside [`try_layout`](Self::try_layout)
     /// or [`try_accessibility`](Self::try_accessibility), if those will be
     /// called in a scope where the contexts are not available.
-    pub fn refresh_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
+    pub fn refresh_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) {
         if self.layout_dirty {
             self.update_layout(font_cx, layout_cx);
         }
@@ -1227,7 +1226,7 @@ impl PlainEditor {
     fn replace_selection(
         &mut self,
         font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<ColorBrush>,
+        layout_cx: &mut LayoutContext<Brush>,
         s: &str,
         manage_commands: bool,
     ) {
@@ -1285,7 +1284,7 @@ impl PlainEditor {
     }
 
     /// Update the layout.
-    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
+    fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) {
         let mut builder = layout_cx.ranged_builder(font_cx, &self.buffer, self.scale as f32, self.quantize);
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());

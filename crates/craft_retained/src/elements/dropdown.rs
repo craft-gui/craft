@@ -70,7 +70,7 @@ pub struct DropdownInner {
     selected_element: Option<Rc<RefCell<dyn ElementInternals>>>,
     selected_element_index: Option<usize>,
     currently_hovered_element: Option<usize>,
-    hovered_bg_color: Option<Color>,
+    hovered_bg_brush: Option<Brush>,
 }
 
 impl Default for Dropdown {
@@ -353,7 +353,7 @@ impl ElementInternals for DropdownInner {
 
             let is_hovered = self.currently_hovered_element == Some(index);
             if is_hovered {
-                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_color.unwrap());
+                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_brush.as_ref().unwrap().clone());
             }
 
             child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
@@ -431,7 +431,7 @@ impl Shape {
             let border_color = &current_style.get_border_color();
             let box_shadows = current_style.get_box_shadows();
             self.layout
-                .apply_borders(has_border, border_radius, scale_factor, *border_color, box_shadows.to_vec());
+                .apply_borders(has_border, border_radius, scale_factor, border_color.clone(), box_shadows.to_vec());
             // Refactor END
 
             // For scroll changes from taffy;
@@ -461,7 +461,7 @@ impl Dropdown {
                 selected_element: None,
                 selected_element_index: None,
                 currently_hovered_element: None,
-                hovered_bg_color: Some(Color::from_rgba8(213, 213, 215, 255)),
+                hovered_bg_brush: Some(Brush::Color(Color::from_rgba8(213, 213, 215, 255))),
             })
         });
 
@@ -498,7 +498,7 @@ impl Dropdown {
             .borrow_mut()
             .floating_window
             .style
-            .set_background_color(Color::WHITE);
+            .set_background_brush(Brush::Color(Color::WHITE));
         inner
             .borrow_mut()
             .floating_window

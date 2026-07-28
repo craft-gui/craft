@@ -64,17 +64,17 @@ pub trait Renderer: Any {
         self.render_list().transform
     }
 
-    fn draw_circle(&mut self, circle: Circle, color: Color) {
+    fn draw_circle(&mut self, circle: Circle, brush: Brush) {
         let transform = self.get_transform();
         if should_cull_rect(&transform, &circle.bounding_box(), self.render_list().cull.as_ref()) {
             return;
         }
 
         self.render_list_mut().commands
-            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, color, transform }));
+            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, brush, transform }));
     }
 
-    fn draw_circle_outline(&mut self, circle: Circle, outline_color: Color, thickness: f32) {
+    fn draw_circle_outline(&mut self, circle: Circle, outline_brush: Brush, thickness: f32) {
         let transform = self.get_transform();
         if should_cull_rect(&transform, &circle.bounding_box(), self.render_list().cull.as_ref()) {
             return;
@@ -83,20 +83,20 @@ pub trait Renderer: Any {
         self.render_list_mut().commands
             .push(RenderCommand::DrawCircleOutline(DrawCircleOutlineCmd {
                 circle,
-                outline_color,
+                outline_brush,
                 thickness,
                 transform,
             }));
     }
 
     #[inline(always)]
-    fn draw_rect(&mut self, rect: Rectangle, color: Color) {
+    fn draw_rect(&mut self, rect: Rectangle, brush: Brush) {
         let transform = self.get_transform();
         if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
             return;
         }
 
-        self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, color, transform }));
+        self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, brush, transform }));
     }
 
     #[inline(always)]
@@ -112,7 +112,7 @@ pub trait Renderer: Any {
     }
 
     #[inline(always)]
-    fn draw_rect_outline(&mut self, rect: Rectangle, outline_color: Color, thickness: f64) {
+    fn draw_rect_outline(&mut self, rect: Rectangle, outline_brush: Brush, thickness: f64) {
         let transform = self.get_transform();
         if should_cull_rect(&transform, &rect, self.render_list().cull.as_ref()) {
             return;
@@ -120,7 +120,7 @@ pub trait Renderer: Any {
 
         self.render_list_mut().commands.push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
             rect,
-            outline_color,
+            outline_brush,
             thickness,
             transform,
         }));

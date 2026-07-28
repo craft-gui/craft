@@ -20,6 +20,7 @@ use vello_cpu::Pixmap;
 
 use winit::window::Window;
 
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
 use craft_resource_manager::ResourceManager as CraftResourceManager;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
@@ -82,14 +83,16 @@ impl DerefMut for Surface {
 
 fn draw_rect(scene: &mut RenderContext, cmd: &DrawRectCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(cmd.rect, &cmd.brush));
     scene.fill_rect(&cmd.rect.to_kurbo());
 }
 
 fn draw_rect_outline(scene: &mut RenderContext, cmd: &DrawRectOutlineCmd) {
     scene.set_transform(cmd.transform);
+    scene.reset_paint_transform();
     scene.set_stroke(Stroke::new(cmd.thickness));
-    scene.set_paint(PaintType::Solid(cmd.outline_color));
+    scene.set_paint(brush_to_paint(cmd.rect, &cmd.outline_brush));
     scene.stroke_rect(&cmd.rect.to_kurbo());
 }
 
@@ -113,26 +116,36 @@ fn pop_layer(scene: &mut RenderContext) {
 
 fn draw_filled_bez_path(scene: &mut RenderContext, cmd: &FillBezPathCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(brush_to_paint(&cmd.brush));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(
+        Rectangle::from_kurbo(cmd.path.bounding_box()),
+        &cmd.brush,
+    ));
     scene.fill_path(&cmd.path);
 }
 
 fn draw_stroked_bez_path(scene: &mut RenderContext, cmd: &StrokeBezPathCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(brush_to_paint(&cmd.brush)));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(
+        Rectangle::from_kurbo(cmd.path.bounding_box()),
+        &cmd.brush,
+    ));
     scene.stroke_path(&cmd.path);
 }
 
 fn draw_circle(scene: &mut RenderContext, cmd: &DrawCircleCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(cmd.circle.bounding_box(), &cmd.brush));
     scene.fill_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn draw_circle_outline(scene: &mut RenderContext, cmd: &DrawCircleOutlineCmd) {
     scene.set_transform(cmd.transform);
+    scene.reset_paint_transform();
     scene.set_stroke(Stroke::new(cmd.thickness as f64));
-    scene.set_paint(PaintType::Solid(cmd.outline_color));
+    scene.set_paint(brush_to_paint(cmd.circle.bounding_box(), &cmd.outline_brush));
     scene.stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
@@ -272,7 +285,7 @@ impl Renderer for VelloCpuRenderer {
             &mut self.scene,
             &DrawRectCmd {
                 rect: Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
-                color: self.clear_color,
+                brush: Brush::Color(self.clear_color),
                 transform: Affine::IDENTITY
             },
         );

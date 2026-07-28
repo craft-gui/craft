@@ -6,8 +6,7 @@ use craft_retained::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirec
 use craft_retained::winit::dpi::PhysicalPosition;
 use craft_retained::winit::event::WindowEvent::{CursorMoved, MouseInput};
 use craft_retained::winit::event::{DeviceId, ElementState, MouseButton};
-use craft_retained::{Color, CraftError, queue_window_event};
-
+use craft_retained::{Brush, Color, CraftError, queue_window_event};
 use crate::signals::Bindable;
 
 /// Exposes a fluent/builder-pattern like API for elements.
@@ -493,14 +492,14 @@ pub trait Element: Clone + AsElement {
 
     fn color(self, color: impl Bindable<Color>) -> Self {
         let element = self.as_element_rc();
-        color.bind(move |v| element.borrow_mut().set_color(v));
+        color.bind(move |v| element.borrow_mut().set_text_brush(Brush::Color(v)));
         self
     }
 
     fn background_color(self, background_color: impl Bindable<Color>) -> Self {
         let element = self.as_element_rc();
         background_color.bind(move |value| {
-            element.borrow_mut().set_background_color(value);
+            element.borrow_mut().set_background_brush(Brush::Color(value));
         });
         self
     }

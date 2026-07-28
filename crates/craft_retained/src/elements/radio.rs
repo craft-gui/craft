@@ -6,6 +6,7 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use accesskit::{Action, Role, Toggled, TreeUpdate};
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
@@ -129,10 +130,10 @@ impl ElementInternals for RadioInner {
 
         if !self.hide_radio {
             if self.is_selected() {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(0, 100, 255), _scale_factor as f32);
-                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), rgb(0, 100, 255));
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(0, 100, 255)), _scale_factor as f32);
+                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), Brush::Color(rgb(0, 100, 255)));
             } else {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(150, 150, 150), _scale_factor as f32);
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(150, 150, 150)), _scale_factor as f32);
             }
         }
 

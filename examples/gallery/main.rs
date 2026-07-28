@@ -5,9 +5,9 @@ use std::rc::Rc;
 #[cfg(feature = "audio")]
 use craft_retained::elements::Audio;
 use craft_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign, Underline};
-use craft_retained::{Color, CraftOptions, ResourceId, craft_main, pct, px, rgb, rgba};
-
+use craft_retained::geometry::Point;
+use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
+use craft_retained::{Color, ColorStop, CraftOptions, Gradient, ResourceId, craft_main, pct, px, rgb, rgba};
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -56,11 +56,7 @@ pub fn text() -> Container {
         .font_weight(FontWeight::BOLD)
         .font_style(FontStyle::Italic);
 
-    let underlined_text = Text::new("Underlined Text").underline(Some(Underline {
-        thickness: Some(2.0),
-        color: Color::from_rgb8(0, 255, 0),
-        offset: None,
-    }));
+    let underlined_text = Text::new("Underlined Text").underline(Some(2.0), Color::from_rgb8(0, 255, 0), None);
 
     let left_aligned_text = Text::new("Left").text_align(TextAlign::Left);
     let centered_text = Text::new("Center").text_align(TextAlign::Center);
@@ -97,6 +93,75 @@ pub fn images() -> Container {
         .height(px(200.0));
 
     container.display(Display::Block).push(title("Image")).push(image)
+}
+
+pub fn gradient() -> Container {
+    let container = Container::new();
+
+    let linear = Gradient::new_linear(Point::new(0.0, 0.0), Point::new(1.0, 0.0)).color_stops(&[
+        ColorStop::new(0.0, Color::from_rgb8(120, 0, 200)),
+        ColorStop::new(0.45, Color::from_rgb8(35, 127, 183)),
+        ColorStop::new(1.0, Color::from_rgb8(255, 0, 0)),
+    ]);
+
+    let radial = Gradient::new_radial(
+        Point::new(0.5, 0.5),
+        0.0,
+        Point::new(0.5, 0.5),
+        0.75,
+    ).color_stops(&[
+        ColorStop::new(0.0, Color::from_rgb8(255, 245, 157)),
+        ColorStop::new(0.55, Color::from_rgb8(255, 112, 67)),
+        ColorStop::new(1.0, Color::from_rgb8(74, 20, 140)),
+    ]);
+
+    let sweep = Gradient::new_sweep(Point::new(0.5, 0.5), 0.0, std::f32::consts::TAU).color_stops(&[
+        ColorStop::new(0.0, Color::from_rgb8(244, 67, 54)),
+        ColorStop::new(0.33, Color::from_rgb8(76, 175, 80)),
+        ColorStop::new(0.66, Color::from_rgb8(33, 150, 243)),
+        ColorStop::new(1.0, Color::from_rgb8(244, 67, 54)),
+    ]);
+
+    let linear_box = Container::new()
+        .width(px(140.0))
+        .height(px(90.0))
+        .border_radius_all((8.0, 8.0))
+        .background_gradient(linear.clone());
+
+    let radial_box = Container::new()
+        .width(px(140.0))
+        .height(px(90.0))
+        .border_radius_all((8.0, 8.0))
+        .background_gradient(radial);
+
+    let sweep_box = Container::new()
+        .width(px(140.0))
+        .height(px(90.0))
+        .border_radius_all((8.0, 8.0))
+        .background_gradient(sweep);
+
+    let gradient_text = Text::new("Gradient Text")
+        .font_weight(FontWeight::BOLD)
+        .text_gradient(linear.clone());
+
+    let underline_text = Text::new("Gradient Underline")
+        .underline_gradient(Some(3.0), linear, None);
+
+    container
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .row_gap(px(10.0))
+        .push(title("Gradients"))
+        .push(gradient_text)
+        .push(underline_text)
+        .push(
+            Container::new()
+                .display(Display::Flex)
+                .gap(px(10.0), px(10.0))
+                .push(linear_box)
+                .push(radial_box)
+                .push(sweep_box),
+        )
 }
 
 pub fn box_shadows() -> Container {
@@ -212,8 +277,8 @@ pub fn radio_buttons() -> Container {
     let green = Image::new(ResourceId::Url(
         "https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string(),
     ))
-    .border_width_all(px(1))
-    .border_color_all(rgba(0, 0, 0, 0));
+        .border_width_all(px(1))
+        .border_color_all(rgba(0, 0, 0, 0));
     Container::new()
         .width(pct(100.0))
         .height(pct(100.0))
@@ -300,6 +365,7 @@ pub fn main() {
         .push(text())
         .push(tinyvg())
         .push(images())
+        .push(gradient())
         .push(box_shadows())
         .push(multiple_windows())
         .push(sliders())

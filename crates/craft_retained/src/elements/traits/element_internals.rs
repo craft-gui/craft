@@ -7,7 +7,7 @@ use std::sync::Arc;
 use accesskit::{Action, Role};
 
 use ui_events::pointer::PointerId;
-
+use craft_primitives::brush::Brush;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{draw_scrollbar, ScrollState};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
@@ -267,7 +267,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Returns the element's [`ElementBox`] without any transforms applied.
     fn computed_box(&self) -> ElementBox {
-        self.element_data().layout.computed_box
+        self.element_data().layout.computed_box.clone()
     }
 
     /// Gets
@@ -578,7 +578,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Returns the element's [`ElementBox`].
     fn get_computed_box_transformed(&self) -> ElementBox {
-        self.element_data().layout.computed_box_transformed
+        self.element_data().layout.computed_box_transformed.clone()
     }
 
     /// Returns a shared reference to the element's [`Style`].
@@ -832,13 +832,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_taffy_style();
     }
 
-    fn set_color(&mut self, color: Color) {
-        self.style_mut().set_color(color);
+    fn set_text_brush(&mut self, brush: Brush) {
+        self.style_mut().set_text_brush(brush);
         self.update_taffy_style();
     }
 
-    fn set_background_color(&mut self, color: Color) {
-        self.style_mut().set_background_color(color);
+    fn set_background_brush(&mut self, brush: Brush) {
+        self.style_mut().set_background_brush(brush);
     }
 
     fn set_font_size(&mut self, font_size: f32) {
@@ -945,7 +945,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn set_scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) {
-        self.style_mut().set_scrollbar_color(scrollbar_color);
+        self.style_mut().set_scrollbar_brush(scrollbar_color);
     }
 
     fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
@@ -961,8 +961,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.style_mut().set_scrollbar_width(scrollbar_width);
     }
 
-    fn set_selection_color(&mut self, selection_color: Color) {
-        self.style_mut().set_selection_color(selection_color);
+    fn set_selection_brush(&mut self, selection_brush: Brush) {
+        self.style_mut().set_selection_brush(selection_brush);
     }
 
     fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {

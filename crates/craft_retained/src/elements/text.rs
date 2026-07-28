@@ -11,7 +11,6 @@ use accesskit::{Action, Role};
 use craft_renderer::text_renderer_data::TextData;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
-use craft_primitives::{Color, ColorBrush};
 
 #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
 use parley::LayoutAccessibility;
@@ -31,6 +30,7 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 
 use winit::dpi;
+use craft_primitives::brush::Brush;
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
 use crate::elements::element_data::ElementData;
@@ -74,7 +74,7 @@ pub struct TextState {
     scale_factor: f64,
     text_align: TextAlign,
     selection: Selection,
-    layout: Option<parley::Layout<ColorBrush>>,
+    layout: Option<parley::Layout<Brush>>,
     cache: FxHashMap<TextHashKey, Size<f32>>,
     current_layout_key: Option<TextHashKey>,
     last_requested_measure_key: Option<TextHashKey>,
@@ -196,7 +196,7 @@ impl ElementInternals for TextInner {
             );
         }
 
-        state.try_update_text_render(text_context, self.element_data.style.get_selection_color());
+        state.try_update_text_render(text_context, self.element_data.style.get_selection_brush());
     }
 
     fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
@@ -294,7 +294,7 @@ impl ElementInternals for TextInner {
             let state: &mut TextState = &mut self.state;
             match message {
                 EventKind::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
-                    state.update_text_selection(self.element_data.style.get_selection_color());
+                    state.update_text_selection(self.element_data.style.get_selection_brush());
                     state.pointer_down = true;
                     state.cursor_reset();
                     let now = Instant::now();
@@ -321,7 +321,7 @@ impl ElementInternals for TextInner {
                     event.prevent_defaults();
                 }
                 EventKind::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
-                    state.update_text_selection(self.element_data.style.get_selection_color());
+                    state.update_text_selection(self.element_data.style.get_selection_brush());
                     state.pointer_down = false;
                     state.cursor_reset();
                     self.release_pointer_capture(PointerId::new(1).unwrap());
@@ -334,7 +334,7 @@ impl ElementInternals for TextInner {
                         - Vec2::new(text_position.x as f64, text_position.y as f64);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
-                        state.update_text_selection(self.element_data.style.get_selection_color());
+                        state.update_text_selection(self.element_data.style.get_selection_brush());
                         state.cursor_reset();
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos);
@@ -362,12 +362,12 @@ impl ElementInternals for TextInner {
         self
     }
 
-    fn set_color(&mut self, color: Color) {
+    fn set_text_brush(&mut self, brush: Brush) {
         // TODO: Fix this. Clearing cache is not needed here.
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
         self.mark_dirty();
-        self.style_mut().set_color(color);
+        self.style_mut().set_text_brush(brush);
         self.update_taffy_style();
     }
 }
@@ -564,7 +564,7 @@ impl TextState {
         size
     }
 
-    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext, selection_color: Color) {
+    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext, selection_brush: Brush) {
         if self.current_render_key == self.current_layout_key {
             return;
         }
@@ -573,7 +573,7 @@ impl TextState {
         self.text_render = Some(text_render_data::from_editor(layout));
         self.current_render_key = self.current_layout_key;
 
-        self.update_text_selection(selection_color);
+        self.update_text_selection(selection_brush);
     }
 
     pub fn cursor_reset(&mut self) {
@@ -618,7 +618,7 @@ impl TextState {
         self.is_layout_dirty = false;
     }
 
-    fn update_text_selection(&mut self, selection_color: Color) {
+    fn update_text_selection(&mut self, selection_brush: Brush) {
         if let Some(layout) = self.layout.as_ref() {
             let text_renderer = self.text_render.as_mut().unwrap();
             for line in text_renderer.lines.iter_mut() {
@@ -632,7 +632,7 @@ impl TextState {
                         rect.width() as f32,
                         rect.height() as f32,
                     ),
-                    selection_color,
+                    selection_brush.clone(),
                 ));
             });
         }

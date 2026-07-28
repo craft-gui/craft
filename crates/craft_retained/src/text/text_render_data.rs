@@ -1,10 +1,11 @@
-use craft_primitives::ColorBrush;
-pub(crate) use craft_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
-use craft_renderer::text_renderer_data::{TextRenderItem, TextRenderItemLine};
 use parley::{Layout, PositionedLayoutItem};
 use peniko::kurbo::{Affine, Line};
 
-pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
+use craft_primitives::brush::Brush;
+pub(crate) use craft_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
+use craft_renderer::text_renderer_data::{TextRenderItem, TextRenderItemLine};
+
+pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
     let mut text_render = TextRender {
         lines: Vec::new(),
         cursor: None,
@@ -18,6 +19,8 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             selections: Vec::new(),
             backgrounds: Vec::new(),
             // Note: This needs to be changed when we handle vertical text.
+            min_x: f32::INFINITY,
+            max_x: f32::NEG_INFINITY,
             min_y: metrics.block_min_coord,
             max_y: metrics.block_max_coord,
         };
@@ -28,10 +31,13 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             };
 
             let style = glyph_run.style();
+            text_render_line.min_x = text_render_line.min_x.min(glyph_run.offset());
+            text_render_line.max_x = text_render_line.max_x.max(glyph_run.offset() + glyph_run.advance());
+
             // We draw underlines under the text, then the strikethrough on top, following:
             // https://drafts.csswg.org/css-text-decor/#painting-order
             let underline: Option<TextRenderItemLine> = if let Some(underline) = &style.underline {
-                let underline_brush = underline.brush;
+                let underline_brush = underline.brush.clone();
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match underline.offset {
                     Some(offset) => offset,
@@ -83,7 +89,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             });
 
             let strikethrough = if let Some(strikethrough) = &style.strikethrough {
-                let strikethrough_brush = strikethrough.brush;
+                let strikethrough_brush = strikethrough.brush.clone();
                 let run_metrics = glyph_run.run().metrics();
                 let offset = match strikethrough.offset {
                     Some(offset) => offset,
@@ -113,7 +119,7 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             };
 
             let text_render_item = TextRenderItem {
-                brush: style.brush,
+                brush: style.brush.clone(),
                 underline,
                 strikethrough,
                 glyph_transform: glyph_xform,
@@ -123,6 +129,10 @@ pub fn from_editor(layout: &Layout<ColorBrush>) -> TextRender {
             };
 
             text_render_line.items.push(text_render_item);
+        }
+        if text_render_line.min_x == f32::INFINITY {
+            text_render_line.min_x = 0.0;
+            text_render_line.max_x = 0.0;
         }
         text_render.lines.push(text_render_line);
     }

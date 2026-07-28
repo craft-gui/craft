@@ -182,7 +182,7 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
         return;
     }
 
-    let box_transformed = layout.computed_box_transformed;
+    let box_transformed = layout.computed_box_transformed.clone();
 
     // Client Height = padding box height.
     let client_height = box_transformed.padding_rectangle().height;
@@ -224,7 +224,7 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
         0.0
     };
 
-    let thumb_margin = layout.scrollbar_thumb_margin;
+    let thumb_margin = layout.scrollbar_thumb_margin.clone();
     let scroll_thumb_width = scroll_track_width - (thumb_margin.left + thumb_margin.right);
     let scroll_thumb_height = (scroll_thumb_height - (thumb_margin.top + thumb_margin.bottom)).max(0.0);
 
@@ -391,7 +391,7 @@ pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut dyn Rendere
     }
 
     let border_color = style.get_border_color();
-    let scrollbar_color = style.get_scrollbar_color();
+    let scrollbar_brush = style.get_scrollbar_brush();
     let scrollbar_thumb_radius = style
         .get_scrollbar_thumb_radius()
         .map(|radii| Vec2::new(radii.0 as f64 * scale_factor, radii.1 as f64 * scale_factor));
@@ -402,11 +402,11 @@ pub fn draw_scrollbar(style: &Style, layout: &Layout, renderer: &mut dyn Rendere
     let border_spec = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], scrollbar_thumb_radius);
     let computed_border_spec = CssComputedBorder::new(border_spec);
 
-    renderer.draw_rect(track_rect, scrollbar_color.track_color);
+    renderer.draw_rect(track_rect, scrollbar_brush.track_color);
     draw_borders_generic(
         renderer,
         &computed_border_spec,
         border_color.to_array(),
-        scrollbar_color.thumb_color,
+        scrollbar_brush.thumb_color,
     );
 }

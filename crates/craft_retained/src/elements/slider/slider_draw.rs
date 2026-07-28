@@ -1,5 +1,6 @@
+use peniko::Color;
 use craft_primitives::geometry::borders::CssRoundedRect;
-use craft_primitives::geometry::{Rectangle, Vec2};
+use craft_primitives::geometry::{Rectangle, TrblRectangle, Vec2};
 use craft_renderer::renderer::Renderer;
 
 use crate::elements::slider::slider_element::SliderDirection;
@@ -18,7 +19,7 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
 
 impl SliderInner {
     pub(super) fn draw_track(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
-        if let Some(track_color) = self.get_track_color() {
+        if let Some(track_color) = self.get_track_brush() {
             let mut track_box = self.get_computed_box_transformed();
 
             let computed_element_rect = self.get_computed_box_transformed().border_rectangle();
@@ -53,7 +54,7 @@ impl SliderInner {
             let mut computed_border_spec = CssComputedBorder::new(css_rounded_rect);
             computed_border_spec.scale(scale_factor);
 
-            let color_rect = [track_color, track_color, track_color, track_color];
+            let color_rect = TrblRectangle::new_all(Color::WHITE).to_array();
             draw_borders_generic(renderer, &computed_border_spec, color_rect, track_color);
         }
     }
@@ -61,7 +62,7 @@ impl SliderInner {
     pub(super) fn draw_thumb(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
-        let thumb_background_color = self.get_thumb_color();
+        let thumb_background_color = self.get_thumb_brush();
         let thumb_rect = Rectangle::new(
             thumb_pos.x as f32,
             thumb_pos.y as f32,
@@ -81,12 +82,7 @@ impl SliderInner {
         let css_rounded_rect = CssRoundedRect::new(thumb_rect.to_kurbo(), [0.0, 0.0, 0.0, 0.0], thumb_radii);
         let mut computed_border_spec = CssComputedBorder::new(css_rounded_rect);
         computed_border_spec.scale(scale_factor);
-        let color_rect = [
-            thumb_background_color,
-            thumb_background_color,
-            thumb_background_color,
-            thumb_background_color,
-        ];
+        let color_rect = TrblRectangle::new_all(Color::WHITE).to_array();
         draw_borders_generic(renderer, &computed_border_spec, color_rect, thumb_background_color);
     }
 }

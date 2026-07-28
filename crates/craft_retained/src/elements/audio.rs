@@ -14,7 +14,7 @@ use craft_resource_manager::{ResourceId, ResourceManager};
 use maudio::engine::Engine;
 use maudio::sound::Sound;
 use maudio::sound::notifier::EndNotifier;
-
+use craft_primitives::brush::Brush;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
@@ -176,9 +176,9 @@ impl Audio {
             .color(Color::WHITE)
             .width(Unit::Px(16.0))
             .height(Unit::Px(16.0));
-        let track = Slider::new(16.0).width(Unit::Px(200.0)).thumb_color(Color::WHITE);
+        let track = Slider::new(16.0).width(Unit::Px(200.0)).thumb_color(Brush::Color(Color::WHITE));
         let volume_track = Slider::new(16.0)
-            .thumb_color(Color::WHITE)
+            .thumb_color(Brush::Color(Color::WHITE))
             .min(0.0)
             .max(100.0)
             .value(100.0)
@@ -204,7 +204,7 @@ impl Audio {
         let mut inner_mut = inner.borrow_mut();
         inner_mut.set_height(Unit::Px(24.0));
         inner_mut.set_align_items(Some(AlignItems::Center));
-        inner_mut.set_background_color(rgb(72, 72, 72));
+        inner_mut.set_background_brush(Brush::Color(rgb(72, 72, 72)));
         inner_mut.set_padding_all(Unit::Px(6.0));
         inner_mut.set_column_gap(Unit::Px(12.0));
         inner_mut.element_data.create_layout_node(None);

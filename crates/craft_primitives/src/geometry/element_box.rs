@@ -14,7 +14,7 @@ pub struct ElementBox {
 
 impl ElementBox {
     pub fn transform(&self, transform: Affine) -> Self {
-        let mut transformed_box = *self;
+        let mut transformed_box = self.clone();
         transformed_box.position = transform * self.position;
         transformed_box
     }
