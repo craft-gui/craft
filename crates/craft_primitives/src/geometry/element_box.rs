@@ -3,7 +3,7 @@ use kurbo::Affine;
 use crate::geometry::{Border, Margin, Padding, Point, Rectangle, Size};
 
 /// An element's box roughly analogous to CSS's box-model.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ElementBox {
     pub margin: Margin,
     pub border: Border,
