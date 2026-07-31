@@ -99,14 +99,12 @@ pub struct Event {
 }
 
 impl EventKind {
-    pub(super) fn is_pointer_event(&self) -> bool {
+    pub(super) fn is_system_pointer_event(&self) -> bool {
         matches!(
             self,
             EventKind::PointerMovedEvent(_)
                 | EventKind::PointerButtonUp(_)
                 | EventKind::PointerButtonDown(_)
-                | EventKind::GotPointerCapture()
-                | EventKind::LostPointerCapture()
                 | EventKind::PointerScroll(_)
         )
     }

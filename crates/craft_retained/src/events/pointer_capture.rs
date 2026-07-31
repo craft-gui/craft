@@ -119,7 +119,7 @@ impl PointerCapture {
             let _ = self.pending_pointer_captures.remove(pointer_id);
 
             self.process_pending_pointer_capture(text_context, pointer_id);
-        } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
+        } else if message.is_system_pointer_event() {
             self.process_pending_pointer_capture(text_context, pointer_id);
         }
     }

@@ -167,7 +167,7 @@ impl EventDispatcher {
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        if message.is_pointer_event() && let Some(pointer_id) = &message.pointer_id() {
+        if message.is_system_pointer_event() && let Some(pointer_id) = &message.pointer_id() {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
             let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                 &root,
@@ -195,7 +195,7 @@ impl EventDispatcher {
             targets.push_back(root.clone());
         }
 
-        if message.is_pointer_event() {
+        if message.is_system_pointer_event() {
             self.maybe_dispatch_pointer_leave(text_context, &targets);
             self.maybe_dispatch_pointer_enter(text_context, &targets);
         }
@@ -224,7 +224,7 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        if message.is_pointer_event() && let Some(pointer_id) = message.pointer_id() {
+        if message.is_system_pointer_event() && let Some(pointer_id) = message.pointer_id() {
             pointer_capture
                 .borrow_mut()
                 .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
