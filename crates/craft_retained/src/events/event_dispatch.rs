@@ -185,8 +185,7 @@ impl EventDispatcher {
                 if let Some(focus_ref) = focus_ref.clone()
                     && let Some(focus) = focus_ref.upgrade()
                 {
-                    targets.clear();
-                    targets.push_back(focus);
+                    targets = freeze_target_list(focus);
                 }
             });
         }
@@ -225,9 +224,24 @@ impl EventDispatcher {
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
         if message.is_system_pointer_event() && let Some(pointer_id) = message.pointer_id() {
-            pointer_capture
+            let did_pointer_capture_change = pointer_capture
                 .borrow_mut()
                 .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
+
+            if did_pointer_capture_change {
+                let target: Rc<RefCell<dyn ElementInternals>> = find_target(
+                    &root,
+                    mouse_position,
+                    message,
+                    renderer,
+                    target_scratch,
+                    &pointer_capture.borrow(),
+                    &pointer_id
+                );
+                targets = freeze_target_list(target);
+                self.maybe_dispatch_pointer_leave(text_context, &targets);
+                self.maybe_dispatch_pointer_enter(text_context, &targets);
+            }
         }
 
         // Drain the event dispatch queue and invoke user callbacks.
@@ -240,6 +254,8 @@ impl EventDispatcher {
             let _ = dispatch_bubbling_event(&message, &mut targets, text_context);
         }
 
-        self.previous_targets = targets.iter().map(Rc::downgrade).collect();
+        if message.is_system_pointer_event() {
+            self.previous_targets = targets.iter().map(Rc::downgrade).collect();
+        }
     }
 }

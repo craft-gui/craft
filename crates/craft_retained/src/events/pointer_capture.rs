@@ -46,7 +46,9 @@ impl PointerCapture {
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext, pointer_id: &PointerId) {
+    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext, pointer_id: &PointerId) -> bool {
+        let mut did_pointer_capture_change = false;
+
         // 4.1.3.2 Process pending pointer capture
         let (pointer_capture_val, pending_pointer_capture_val) = {
             let pointer_capture_val = self.pointer_captures.get(pointer_id);
@@ -74,6 +76,8 @@ impl PointerCapture {
                 dispatch_capturing_event(&msg, &mut targets);
                 dispatch_bubbling_event(&msg, &mut targets, text_context);
             }
+
+            did_pointer_capture_change = true;
         }
 
         // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
@@ -95,6 +99,8 @@ impl PointerCapture {
                 dispatch_capturing_event(&msg, &mut targets);
                 dispatch_bubbling_event(&msg, &mut targets, text_context);
             }
+
+            did_pointer_capture_change = true;
         }
 
         // 3. Set the pointer capture target override to the pending pointer capture target override, if set.
@@ -105,12 +111,15 @@ impl PointerCapture {
         } else {
             self.pointer_captures.remove(pointer_id);
         }
+
+        did_pointer_capture_change
     }
 
-    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext, pointer_id: &PointerId) {
+    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext, pointer_id: &PointerId) -> bool {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
         let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));
+        let mut did_pointer_capture_change = false;
         if is_pointer_up_event
         /* || is_pointer_canceled */
         {
@@ -118,9 +127,11 @@ impl PointerCapture {
             // for the pointerId of the pointerup or pointercancel event that was just dispatched
             let _ = self.pending_pointer_captures.remove(pointer_id);
 
-            self.process_pending_pointer_capture(text_context, pointer_id);
+            did_pointer_capture_change = self.process_pending_pointer_capture(text_context, pointer_id);
         } else if message.is_system_pointer_event() {
-            self.process_pending_pointer_capture(text_context, pointer_id);
+            did_pointer_capture_change = self.process_pending_pointer_capture(text_context, pointer_id);
         }
+
+        did_pointer_capture_change
     }
 }
