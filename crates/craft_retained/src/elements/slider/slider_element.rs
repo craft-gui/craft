@@ -423,8 +423,7 @@ impl ElementInternals for SliderInner {
             EventKind::PointerButtonUp(pointer_button_update) => {
                 self.focus();
                 self.dragging = false;
-                // FIXME: Turn pointer capture on with the correct device id.
-                self.release_pointer_capture(PointerId::new(1).unwrap());
+                self.release_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
@@ -434,8 +433,7 @@ impl ElementInternals for SliderInner {
             }
             EventKind::PointerButtonDown(pointer_button_update) => {
                 self.dragging = true;
-                // FIXME: Turn pointer capture on with the correct device id.
-                self.set_pointer_capture(PointerId::new(1).unwrap());
+                self.set_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;

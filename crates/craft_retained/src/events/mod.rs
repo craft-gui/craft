@@ -12,7 +12,7 @@ pub use crate::events::mouse_wheel::MouseWheel;
 pub(crate) use event_dispatch::EventDispatcher;
 
 use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
+use ui_events::pointer::{PointerButtonEvent, PointerId, PointerScrollEvent, PointerUpdate};
 
 use crate::PinnedFutureAny;
 use crate::elements::ElementInternals;
@@ -109,6 +109,16 @@ impl EventKind {
                 | EventKind::LostPointerCapture()
                 | EventKind::PointerScroll(_)
         )
+    }
+
+    pub(super) fn pointer_id(&self) -> Option<PointerId> {
+        match self {
+            EventKind::PointerButtonUp(e) => e.pointer.pointer_id,
+            EventKind::PointerButtonDown(e) =>  e.pointer.pointer_id,
+            EventKind::PointerMovedEvent(e) =>  e.pointer.pointer_id,
+            EventKind::PointerScroll(e) => e.pointer.pointer_id,
+            _ => None
+        }
     }
 
     pub(super) fn is_keyboard_event(&self) -> bool {

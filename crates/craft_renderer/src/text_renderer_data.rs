@@ -1,6 +1,5 @@
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::Rectangle;
-use peniko::Color;
 use peniko::kurbo::{Affine, Line};
 
 #[derive(Debug, Clone, Copy, Default)]

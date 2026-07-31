@@ -2,7 +2,7 @@ use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
-
+use ui_events::pointer::PointerId;
 use craft_primitives::geometry::Point;
 
 use crate::app::{FOCUS, dequeue_event};
@@ -153,7 +153,7 @@ impl EventDispatcher {
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut TextContext,
-        render_list: &mut dyn Renderer,
+        renderer: &mut dyn Renderer,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         let pointer_capture = root
@@ -167,15 +167,16 @@ impl EventDispatcher {
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        if message.is_pointer_event() {
+        if message.is_pointer_event() && let Some(pointer_id) = &message.pointer_id() {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
             let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                 &root,
                 mouse_position,
                 message,
-                render_list,
+                renderer,
                 target_scratch,
                 &pointer_capture.borrow(),
+                pointer_id
             );
             targets = freeze_target_list(target);
         } else if message.is_keyboard_event() {
@@ -223,10 +224,10 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        if message.is_pointer_event() {
+        if message.is_pointer_event() && let Some(pointer_id) = message.pointer_id() {
             pointer_capture
                 .borrow_mut()
-                .maybe_handle_implicit_pointer_capture_release(message, text_context);
+                .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
         }
 
         // Drain the event dispatch queue and invoke user callbacks.

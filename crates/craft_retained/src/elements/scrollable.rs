@@ -239,6 +239,7 @@ pub struct HandleScrollLogicResult {
     pub request_apply_layout: bool,
     pub release_pointer_capture: bool,
     pub set_pointer_capture: bool,
+    pub pointer_id: Option<PointerId>
 }
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &EventKind, event: &mut Event) {
@@ -250,11 +251,11 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
     }
 
     if result.set_pointer_capture {
-        element.set_pointer_capture(PointerId::new(1).unwrap())
+        element.set_pointer_capture(result.pointer_id.unwrap())
     }
 
     if result.release_pointer_capture {
-        element.release_pointer_capture(PointerId::new(1).unwrap());
+        element.release_pointer_capture(result.pointer_id.unwrap());
     }
 }
 
@@ -269,6 +270,7 @@ pub(crate) fn handle_scroll_logic_advance(
         request_apply_layout: false,
         release_pointer_capture: false,
         set_pointer_capture: false,
+        pointer_id: message.pointer_id(),
     };
 
     if layout.is_scrollable_layout() && style.get_overflow()[1] == Overflow::Scroll {
@@ -319,9 +321,6 @@ pub(crate) fn handle_scroll_logic_advance(
                         pointer_button.state.logical_point().x,
                         pointer_button.state.logical_point().y,
                     ));
-
-                    // FIXME: Turn pointer capture on with the correct device id.
-                    //element.set_pointer_capture(PointerId::new(1).unwrap());
 
                     event.prevent_propagate();
                     event.prevent_defaults();

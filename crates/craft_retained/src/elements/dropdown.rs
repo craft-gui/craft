@@ -279,6 +279,7 @@ impl ElementInternals for DropdownInner {
 
         self.update_most_recently_hovered_child(message, list_box, list_scroll_box);
 
+        let pointer_id = message.pointer_id();
         if let EventKind::PointerButtonUp(pb) = message {
             let pointer_position = pb.state.logical_point();
             let is_pointer_in_select_box = self
@@ -300,8 +301,8 @@ impl ElementInternals for DropdownInner {
                 .contains(&pointer_position);
 
             self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
-            self.handle_click_in_select_box(is_pointer_in_select_box);
-            self.handle_child_click(event, &pointer_position, is_pointer_in_window, is_pointer_in_scrollbar);
+            self.handle_click_in_select_box(is_pointer_in_select_box, &pointer_id.unwrap());
+            self.handle_child_click(event, &pointer_position, is_pointer_in_window, is_pointer_in_scrollbar, &pointer_id.unwrap());
         }
 
         // Handle updating the scroll state.
@@ -312,9 +313,9 @@ impl ElementInternals for DropdownInner {
             request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
         }
         if result.set_pointer_capture {
-            self.set_pointer_capture(PointerId::new(1).unwrap())
+            self.set_pointer_capture(result.pointer_id.unwrap())
         } else if result.release_pointer_capture {
-            self.release_pointer_capture(PointerId::new(1).unwrap());
+            self.release_pointer_capture(result.pointer_id.unwrap());
         }
     }
 
@@ -656,13 +657,13 @@ impl DropdownInner {
         }
     }
 
-    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool) {
+    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool, pointer_id: &PointerId) {
         if is_pointer_in_select_box {
             self.is_floating_window_hidden = !self.is_floating_window_hidden;
             self.currently_hovered_element = self.selected_element_index;
 
             if self.is_floating_window_hidden {
-                self.release_pointer_capture(PointerId::new(1).unwrap());
+                self.release_pointer_capture(*pointer_id);
             }
         }
     }
@@ -679,6 +680,7 @@ impl DropdownInner {
         pointer_position: &Point,
         is_pointer_in_window: bool,
         is_pointer_in_scrollbar: bool,
+        pointer_id: &PointerId,
     ) {
         if is_pointer_in_window && !is_pointer_in_scrollbar {
             let mut should_hide_window = false;
@@ -694,7 +696,7 @@ impl DropdownInner {
                 if contains {
                     should_hide_window = true;
                     self.set_selected_element(child_index);
-                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                    self.release_pointer_capture(*pointer_id);
 
                     let new_event = Event::new(event.target.clone());
                     queue_event(new_event, EventKind::DropdownItemSelected(child_index));

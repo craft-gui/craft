@@ -2,38 +2,37 @@ pub mod image;
 mod render_context;
 pub mod text;
 
-use glifo::GlyphRenderer;
-use kurbo::{Affine, Stroke};
-use peniko::color::{DynamicColor, HueDirection};
-use peniko::kurbo::{Point, Shape};
-use peniko::{BlendMode, ColorStop, ColorStops, Compose, Fill, InterpolationAlphaSpace, LinearGradientPosition, Mix};
 use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
-use vello_common::color::ColorSpaceTag;
+
+use kurbo::{Affine, Stroke};
+use peniko::kurbo::Shape;
+use peniko::{BlendMode, Compose, Fill, Mix};
+
 use vello_common::filter_effects::{Filter, FilterFunction};
-use vello_common::paint::{ImageId, PaintType};
-use vello_common::peniko::{Gradient, GradientKind};
+use vello_common::paint::ImageId;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
+use winit::window::Window;
+
 use wgpu::{CommandEncoder, CurrentSurfaceTexture, TextureFormat};
 
-use crate::RenderCommand;
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use craft_primitives::Color;
+use crate::RenderCommand;
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
+use craft_primitives::Color;
 use craft_resource_manager::ResourceManager;
 use image::{draw_image, upload_image};
-use render_context::{DeviceHandle, RenderContext, RenderSurface, create_vello_renderer};
+use render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
 use text::draw_text;
-use winit::window::Window;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window

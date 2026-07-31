@@ -316,7 +316,7 @@ impl ElementInternals for TextInner {
                         _ => state.move_to_point(cursor_pos),
                     }
                     if click_count == 1 {
-                        self.set_pointer_capture(PointerId::new(1).unwrap());
+                        self.set_pointer_capture(message.pointer_id().unwrap());
                     }
                     event.prevent_defaults();
                 }
@@ -324,7 +324,7 @@ impl ElementInternals for TextInner {
                     state.update_text_selection(self.element_data.style.get_selection_brush());
                     state.pointer_down = false;
                     state.cursor_reset();
-                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                    self.release_pointer_capture(message.pointer_id().unwrap());
                     event.prevent_defaults();
                 }
                 EventKind::PointerMovedEvent(pointer_moved) => {

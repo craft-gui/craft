@@ -69,13 +69,13 @@ fn pointer_capture_example() -> Container {
         .width(Unit::Px(100.0))
         .color(Color::WHITE)
         .background_color(Color::from_rgba8(40, 40, 255, 100))
-        .on_pointer_button_down(Rc::new(|e, _pb_event| {
-            e.target.borrow_mut().set_pointer_capture(PointerId::new(1).unwrap());
+        .on_pointer_button_down(Rc::new(|e, pb_event| {
+            e.target.borrow_mut().set_pointer_capture(pb_event.pointer.pointer_id.unwrap());
         }))
         .on_pointer_moved(Rc::new(move |e, pointer_moved_event| {
             let mouse_y = pointer_moved_event.current.logical_position().x as f32;
             let half_size = draggable_text_clone.get_computed_box_transformed().size.width / 2.0;
-            if draggable_text_clone.has_pointer_capture(PointerId::new(1).unwrap()) {
+            if draggable_text_clone.has_pointer_capture(pointer_moved_event.pointer.pointer_id.unwrap()) {
                 draggable_text_clone.clone().position(Position::Relative).inset(
                     Unit::Px(0.0),
                     Unit::Px(0.0),

@@ -28,18 +28,17 @@ impl PointerCapture {
     }
 
     /// Returns the currently pointer captured element or None.
-    pub(super) fn find_pointer_capture_target(&self, message: &EventKind) -> Option<Rc<RefCell<dyn ElementInternals>>> {
+    pub(super) fn find_pointer_capture_target(&self, message: &EventKind, pointer_id: &PointerId) -> Option<Rc<RefCell<dyn ElementInternals>>> {
         // 9.4 Implicit pointer capture
         // https://w3c.github.io/pointerevents/#implicit-pointer-capture
         //
         let pointer_capture_element_id: Option<Weak<RefCell<dyn ElementInternals>>> = {
-            let key = &PointerId::new(1).unwrap();
             if matches!(message, EventKind::GotPointerCapture()) {
                 // Check pending (step 2):
                 // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
-                self.pending_pointer_captures.get(key).cloned()
+                self.pending_pointer_captures.get(pointer_id).cloned()
             } else {
-                self.pointer_captures.get(key).cloned()
+                self.pointer_captures.get(pointer_id).cloned()
             }
         };
 
@@ -47,12 +46,11 @@ impl PointerCapture {
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext) {
+    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext, pointer_id: &PointerId) {
         // 4.1.3.2 Process pending pointer capture
-        let key = &PointerId::new(1).unwrap();
         let (pointer_capture_val, pending_pointer_capture_val) = {
-            let pointer_capture_val = self.pointer_captures.get(key);
-            let pending_pointer_capture_val = self.pending_pointer_captures.get(key);
+            let pointer_capture_val = self.pointer_captures.get(pointer_id);
+            let pending_pointer_capture_val = self.pending_pointer_captures.get(pointer_id);
 
             (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned())
         };
@@ -63,7 +61,7 @@ impl PointerCapture {
             && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
         {
             let msg = EventKind::LostPointerCapture();
-            let target = self.find_pointer_capture_target(&msg);
+            let target = self.find_pointer_capture_target(&msg, pointer_id);
 
             if let Some(target) = target {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
@@ -84,7 +82,7 @@ impl PointerCapture {
             && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
         {
             let msg = EventKind::GotPointerCapture();
-            let target = self.find_pointer_capture_target(&msg);
+            let target = self.find_pointer_capture_target(&msg, pointer_id);
 
             if let Some(target) = target {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
@@ -103,13 +101,13 @@ impl PointerCapture {
         // Otherwise, clear the pointer capture target override.
 
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val {
-            self.pointer_captures.insert(*key, pending_pointer_capture_val);
+            self.pointer_captures.insert(*pointer_id, pending_pointer_capture_val);
         } else {
-            self.pointer_captures.remove(key);
+            self.pointer_captures.remove(pointer_id);
         }
     }
 
-    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext) {
+    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext, pointer_id: &PointerId) {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
         let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));
@@ -118,12 +116,11 @@ impl PointerCapture {
         {
             // Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the pending pointer capture target override
             // for the pointerId of the pointerup or pointercancel event that was just dispatched
-            let key = &PointerId::new(1).unwrap();
-            let _ = self.pending_pointer_captures.remove(key);
+            let _ = self.pending_pointer_captures.remove(pointer_id);
 
-            self.process_pending_pointer_capture(text_context);
+            self.process_pending_pointer_capture(text_context, pointer_id);
         } else if message.is_pointer_event() && !message.is_got_or_lost_pointer_capture() {
-            self.process_pending_pointer_capture(text_context);
+            self.process_pending_pointer_capture(text_context, pointer_id);
         }
     }
 }

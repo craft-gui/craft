@@ -214,13 +214,13 @@ impl App {
     fn dispatch_event(&mut self, window: Window, message: &EventKind) {
         let mouse_pos = window.mouse_position();
         let binding = window.inner.borrow().renderer.clone();
-        let render_list = &mut *binding.borrow_mut();
+        let renderer = &mut *binding.borrow_mut();
         self.event_dispatcher.dispatch_event(
             message,
             mouse_pos,
             window.inner.clone(),
             self.text_context.as_mut().unwrap(),
-            render_list,
+            renderer,
             &mut self.target_scratch,
         );
         window.winit_window().unwrap().request_redraw();
