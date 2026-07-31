@@ -4,6 +4,7 @@
 
 Craft is a library for creating desktops user interfaces. craft_retained provides platform independent widgets.
 
+![An image of the gallery example running. Various elements like sliders, checkboxes, text inputs, and more are displayed.](./images/gallery.png)
 
 ## Example
 

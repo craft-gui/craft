@@ -280,12 +280,9 @@ pub fn radio_buttons() -> Container {
         .border_width_all(px(1))
         .border_color_all(rgba(0, 0, 0, 0));
     Container::new()
-        .width(pct(100.0))
-        .height(pct(100.0))
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .align_items(Some(AlignItems::Center))
-        .justify_content(Some(JustifyContent::Center))
+        .push(title("Radio Button"))
         .push(
             RadioGroup::new("Pick a color")
                 .display(Display::Flex)
@@ -309,7 +306,11 @@ pub fn radio_buttons() -> Container {
 }
 
 pub fn checkbox() -> Container {
-    Container::new().push(
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .push(title("Checkbox"))
+        .push(
         CheckboxGroup::new("Select your favorite foods")
             .on_checkbox_toggled(Rc::new(move |_event, checkbox_toggled| {
                 println!(
@@ -367,11 +368,12 @@ pub fn main() {
         .push(images())
         .push(gradient())
         .push(box_shadows())
-        .push(multiple_windows())
         .push(sliders())
-        .push(scrollable())
         .push(radio_buttons())
-        .push(checkbox());
+        .push(checkbox())
+        .push(scrollable())
+        .push(multiple_windows())
+        ;
 
     window.push(wrapper);
 
