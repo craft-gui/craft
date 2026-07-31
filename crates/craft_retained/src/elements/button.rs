@@ -108,10 +108,9 @@ impl ElementInternals for ButtonInner {
 
     fn on_event(
         &mut self,
-        message: &EventKind,
+        _message: &EventKind,
         _text_context: &mut TextContext,
-        event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
+        _event: &mut Event,
     ) {
         
     }

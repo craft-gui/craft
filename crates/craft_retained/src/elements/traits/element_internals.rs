@@ -186,7 +186,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
         _message: &EventKind,
         _text_context: &mut TextContext,
         _event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
     }
 

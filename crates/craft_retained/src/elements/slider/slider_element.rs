@@ -395,7 +395,6 @@ impl ElementInternals for SliderInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         match message {
             EventKind::KeyboardInputEvent(key) => {

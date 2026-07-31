@@ -74,7 +74,7 @@ impl PointerCapture {
                 }
 
                 dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets, text_context);
+                dispatch_bubbling_event(&msg, &mut targets);
             }
 
             did_pointer_capture_change = true;
@@ -97,7 +97,7 @@ impl PointerCapture {
                 }
 
                 dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets, text_context);
+                dispatch_bubbling_event(&msg, &mut targets);
             }
 
             did_pointer_capture_change = true;

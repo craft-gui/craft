@@ -70,10 +70,10 @@ pub(super) fn find_target(
 
 pub(super) fn call_user_event_handlers(
     event: &mut Event,
-    current_target: &Rc<RefCell<dyn ElementInternals>>,
     message: &EventKind,
-    text_context: &mut TextContext,
 ) {
+    let current_target = event.current_target.clone();
+
     match message {
         EventKind::PointerEnter() => {
             let element_data = current_target.borrow().element_data().clone();
@@ -123,12 +123,8 @@ pub(super) fn call_user_event_handlers(
         EventKind::DropdownToggled(_) => {}
         EventKind::DropdownItemSelected(item) => {
             let element_data = current_target.borrow().element_data().clone();
-
             for handler in &element_data.on_dropdown_item_selected {
                 (*handler)(event, *item);
-            }
-            if !event.prevent_defaults {
-                current_target.borrow_mut().on_event(message, text_context, event, Some(event.target.clone()));
             }
         }
         EventKind::SwitchToggled(_) => {}
@@ -181,21 +177,6 @@ pub(super) fn call_user_event_handlers(
             for handler in &element_data.on_text_input_changed {
                 (*handler)(event, rv);
             }
-            if !event.prevent_defaults {
-                current_target.borrow_mut().on_event(message, text_context, event, Some(event.target.clone()));
-            }
         }
     }
-}
-
-pub(super) fn call_default_element_event_handler(
-    event: &mut Event,
-    current_target: &Rc<RefCell<dyn ElementInternals>>,
-    target: &Rc<RefCell<dyn ElementInternals>>,
-    text_context: &mut TextContext,
-    message: &EventKind,
-) {
-    current_target
-        .borrow_mut()
-        .on_event(message, text_context, event, Some(target.clone()));
 }

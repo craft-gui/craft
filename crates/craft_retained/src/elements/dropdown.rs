@@ -266,7 +266,6 @@ impl ElementInternals for DropdownInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         // Take focus if clicked.
         if let EventKind::PointerButtonDown(_pb) = message {

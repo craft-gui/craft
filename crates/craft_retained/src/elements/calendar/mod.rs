@@ -122,13 +122,14 @@ impl ElementInternals for CalendarInner {
         &mut self,
         message: &EventKind,
         _text_context: &mut TextContext,
-        _event: &mut Event,
-        target: Option<Rc<RefCell<dyn ElementInternals>>>,
+        event: &mut Event,
     ) {
         let year_id = self.year_dropdown.borrow().element_data().internal_id;
         let month_id = self.month_dropdown.borrow().element_data().internal_id;
         if let EventKind::DropdownItemSelected(index) = message {
-            let target_id = target.unwrap().borrow().element_data().internal_id;
+            println!("HERE");
+
+            let target_id = event.target.borrow().element_data().internal_id;
             if target_id == year_id {
                 self.select_year(*index);
             } else if target_id == month_id {

@@ -292,7 +292,6 @@ impl ElementInternals for TextInputInner {
         message: &EventKind,
         text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         self.state.is_active = true;
 

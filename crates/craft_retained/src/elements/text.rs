@@ -279,7 +279,6 @@ impl ElementInternals for TextInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         if !self.selectable {
             return;

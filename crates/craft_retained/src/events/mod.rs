@@ -89,6 +89,8 @@ pub struct TextInputChanged {
 /// The result of an update.
 pub struct Event {
     pub target: Rc<RefCell<dyn ElementInternals>>,
+    pub current_target: Rc<RefCell<dyn ElementInternals>>,
+
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -158,7 +160,8 @@ impl Event {
 
     pub fn new(target: Rc<RefCell<dyn ElementInternals>>) -> Self {
         Event {
-            target,
+            target: target.clone(),
+            current_target: target,
             propagate: true,
             future: None,
             prevent_defaults: false,
