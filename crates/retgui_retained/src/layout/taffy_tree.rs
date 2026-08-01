@@ -1,0 +1,213 @@
+use std::sync::Arc;
+
+use retgui_resource_manager::ResourceManager;
+use taffy::{Layout, NodeId, PrintTree, Size, Style};
+
+use crate::layout::layout_context::{LayoutContext, measure_content};
+use crate::text::text_context::TextContext;
+
+pub struct TaffyTree {
+    inner: taffy::TaffyTree<LayoutContext>,
+    /// True if at least one node is dirty.
+    is_layout_dirty: bool,
+    /// True if the layout should be re-applied.
+    is_apply_layout_dirty: Vec<NodeId>,
+}
+
+impl TaffyTree {
+    pub(crate) fn new() -> Self {
+        Self {
+            inner: taffy::TaffyTree::<LayoutContext>::new(),
+            is_layout_dirty: true,
+            is_apply_layout_dirty: Vec::new(),
+        }
+    }
+
+    pub fn clone_node(&mut self, src: NodeId) -> NodeId {
+        let style = self.inner.style(src).unwrap();
+        let context = self.inner.get_node_context(src);
+
+        match context {
+            None => self.inner.new_leaf(style.clone()).unwrap(),
+            Some(ctx) => self.inner.new_leaf_with_context(style.clone(), ctx.clone()).unwrap(),
+        }
+    }
+
+    pub fn new_leaf(&mut self, layout: Style) -> NodeId {
+        self.inner.new_leaf(layout).unwrap()
+    }
+
+    pub fn add_child(&mut self, parent: NodeId, child: NodeId) {
+        self.inner.add_child(parent, child).unwrap();
+        self.request_layout();
+    }
+
+    pub fn add_child_at_index(&mut self, parent: NodeId, child: NodeId, index: usize) {
+        self.inner.insert_child_at_index(parent, index, child).unwrap();
+        self.request_layout();
+    }
+
+    pub fn mark_dirty(&mut self, node: NodeId) {
+        self.inner.mark_dirty(node).unwrap();
+        self.request_layout();
+    }
+
+    pub fn mark_node_and_leaves_dirty(&mut self, node: NodeId) {
+        self.inner.mark_dirty(node).ok();
+        self.mark_leaves_dirty(node);
+        self.request_layout();
+    }
+
+    fn mark_leaves_dirty(&mut self, parent: NodeId) {
+        let children = self.inner.children(parent).unwrap_or_default();
+
+        if children.is_empty() {
+            self.inner.mark_dirty(parent).ok();
+        } else {
+            for child in children {
+                self.mark_leaves_dirty(child);
+            }
+        }
+    }
+
+    pub fn children(&self, parent: NodeId) -> Vec<NodeId> {
+        self.inner.children(parent).unwrap()
+    }
+
+    pub fn set_children(&mut self, parent: NodeId, children: &[NodeId]) {
+        self.inner.set_children(parent, children).unwrap();
+        self.request_layout();
+    }
+
+    pub fn compute_layout(
+        &mut self,
+        node_id: NodeId,
+        available_space: Size<taffy::AvailableSpace>,
+        text_context: &mut TextContext,
+        resource_manager: Arc<ResourceManager>,
+    ) {
+        self.inner
+            .compute_layout_with_measure(
+                node_id,
+                available_space,
+                |known_dimensions, available_space, _node_id, node_context, style| {
+                    measure_content(
+                        known_dimensions,
+                        available_space,
+                        node_context,
+                        text_context,
+                        resource_manager.clone(),
+                        style,
+                    )
+                },
+            )
+            .unwrap();
+        self.is_layout_dirty = false;
+    }
+
+    /// Remove a specific `node` and its ancestors from the tree and drop it
+    pub fn remove_subtree(&mut self, node: NodeId) {
+        // Can we avoid this allocation?
+        let children = self.inner.children(node).unwrap();
+
+        for child in children {
+            self.remove_subtree(child);
+        }
+        self.remove_node(node);
+        self.request_layout();
+    }
+
+    /// Removes the `node`.
+    ///
+    /// The `node` is not removed from the tree entirely, it is simply no longer attached to its previous parent.
+    pub fn unparent_node(&mut self, node: NodeId) {
+        if let Some(parent) = self.inner.parent(node) {
+            self.inner.remove_child(parent, node).unwrap();
+            self.request_layout();
+        }
+    }
+
+    /// Remove a specific node from the tree and drop it
+    pub fn remove_node(&mut self, node: NodeId) {
+        self.inner.remove(node).unwrap();
+        self.request_layout();
+    }
+
+    #[inline]
+    pub fn set_style(&mut self, node: NodeId, style: Style) {
+        self.inner.set_style(node, style).unwrap();
+        self.request_layout();
+    }
+
+    /// Creates and adds a new unattached leaf node to the tree, and returns the [`NodeId`] of the new node
+    ///
+    /// Creates and adds a new leaf node with a supplied context
+    pub fn new_leaf_with_context(&mut self, style: Style, context: LayoutContext) -> NodeId {
+        self.inner.new_leaf_with_context(style, context).unwrap()
+    }
+
+    /// Sets the context data associated with the node
+    #[inline]
+    pub fn set_node_context(&mut self, node: NodeId, measure: Option<LayoutContext>) {
+        self.inner.set_node_context(node, measure).unwrap();
+        self.request_layout();
+    }
+
+    /// Return this node layout relative to its parent
+    #[inline]
+    pub fn get_layout(&self, node: NodeId) -> &Layout {
+        self.inner.layout(node).unwrap()
+    }
+
+    #[inline(always)]
+    pub fn has_new_layout(&self, node_id: NodeId) -> bool {
+        self.inner.get_has_new_layout(node_id)
+    }
+
+    /// Marks the layout of this node as seen
+    #[inline]
+    pub fn mark_seen(&mut self, node: NodeId) {
+        self.inner.mark_seen(node);
+    }
+
+    #[inline(always)]
+    pub fn request_layout(&mut self) {
+        self.is_layout_dirty = true;
+        self.is_apply_layout_dirty.clear();
+    }
+
+    #[inline(always)]
+    pub fn request_apply_layout(&mut self, node: NodeId) {
+        let root = self.root_of(node);
+        if !self.is_apply_layout_dirty(&root) {
+            self.is_apply_layout_dirty.push(root);
+        }
+    }
+
+    /*#[inline(always)]
+    pub fn is_layout_dirty(&self) -> bool {
+        self.is_layout_dirty
+    }*/
+
+    #[inline(always)]
+    pub fn is_layout_dirty(&self, root: NodeId) -> bool {
+        self.inner.dirty(root).unwrap()
+    }
+
+    #[inline(always)]
+    pub fn is_apply_layout_dirty(&self, root: &NodeId) -> bool {
+        self.is_apply_layout_dirty.contains(root)
+    }
+
+    pub fn apply_layout(&mut self, root: NodeId) {
+        self.is_apply_layout_dirty.retain(|node| *node != root);
+    }
+
+    /// Get an node's root.
+    pub fn root_of(&self, mut node: NodeId) -> NodeId {
+        while let Some(parent) = self.inner.parent(node) {
+            node = parent;
+        }
+        node
+    }
+}

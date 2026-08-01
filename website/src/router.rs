@@ -1,6 +1,6 @@
-use craft_retained::elements::{Container, Element, Window};
-use craft_retained::pct;
-use craft_retained::style::{Display, FlexDirection};
+use retgui_retained::elements::{Container, Element, Window};
+use retgui_retained::pct;
+use retgui_retained::style::{Display, FlexDirection};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -35,7 +35,7 @@ impl Router {
                 }
             });
 
-            let window = Window::new("Craft Gui")
+            let window = Window::new("RetGui Gui")
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
                 .width(pct(100))
@@ -78,7 +78,7 @@ impl Router {
         self.set_content(page);
     }
 
-    /*pub fn window(&self) -> Arc<craft_retained::WinitWindow> {
+    /*pub fn window(&self) -> Arc<retgui_retained::WinitWindow> {
         self.root.inner.borrow().winit_window().expect("No widow")
     }*/
 }

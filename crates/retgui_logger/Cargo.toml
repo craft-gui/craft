@@ -1,0 +1,15 @@
+[package]
+name = "retgui_logging"
+version = "0.1.0"
+edition = "2024"
+license-file = "LICENSE"
+description = "A logging library for the RetGui project, providing structured logging and tracing capabilities."
+homepage = "https://retguigui.com/"
+repository = "https://github.com/retgui-gui/retgui"
+
+[dependencies]
+
+[dependencies.tracing]
+version = "0.1.40"
+default-features = false
+features = ["std"]

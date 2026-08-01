@@ -16,15 +16,15 @@ crate-type = ["cdylib"]
 [dependencies]
 util = { path = "../util" }
 
-[dependencies.craft_retained]
-path = "../../crates/craft_retained"
+[dependencies.retgui_retained]
+path = "../../crates/retgui_retained"
 default-features = false
 features = ["system_fonts"]
 
-[target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
-path = "../../crates/craft_renderer"
+[target.'cfg(not(target_os = "android"))'.dependencies.retgui_renderer]
+path = "../../crates/retgui_renderer"
 features = ["vello_hybrid_renderer"]
 
-[target.'cfg(target_os = "android")'.dependencies.craft_renderer]
-path = "../../crates/craft_renderer"
+[target.'cfg(target_os = "android")'.dependencies.retgui_renderer]
+path = "../../crates/retgui_renderer"
 features = ["vello_hybrid_renderer"]

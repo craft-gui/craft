@@ -1,0 +1,19 @@
+[package]
+name = "retgui_primitives"
+version = "0.1.1"
+edition.workspace = true
+
+[dependencies]
+
+[dependencies.smallvec]
+version = "1.15.1"
+default-features = false
+
+[dependencies.kurbo]
+workspace = true
+
+[dependencies.peniko]
+workspace = true
+
+[dependencies.dpi]
+workspace = true

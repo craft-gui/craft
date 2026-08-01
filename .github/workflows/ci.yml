@@ -43,7 +43,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
-      - name: Build Craft
+      - name: Build RetGui
         run: cargo build --verbose
       - name: Build Counter Example
         run: cargo build --package counter_retained
@@ -58,7 +58,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
-      - name: Build Craft
+      - name: Build RetGui
         run: cargo build --verbose
       - name: Build Counter Example
         run: cargo build --package counter_retained
@@ -141,15 +141,15 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Unit Tests
-        run: cargo test --package craft_retained --no-run
+        run: cargo test --package retgui_retained --no-run
       - name: Run Unit Tests
-        run: cargo test --package craft_retained --no-fail-fast --verbose
+        run: cargo test --package retgui_retained --no-fail-fast --verbose
 
   integration-tests:
     runs-on:
       labels: fastwindows
     env:
-      CRAFT_RETAINED_TEST: generate-all
+      RETGUI_RETAINED_TEST: generate-all
 
     steps:
       - name: Checkout Repository
@@ -175,5 +175,5 @@ jobs:
           name: kompari-report
           path: |
             report.html
-            crates/craft_retained/tests/current
-            crates/craft_retained/tests/snapshots
+            crates/retgui_retained/tests/current
+            crates/retgui_retained/tests/snapshots

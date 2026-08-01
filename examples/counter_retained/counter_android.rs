@@ -1,6 +1,6 @@
 #![cfg(target_os = "android")]
 
-use craft_retained::{AndroidApp, craft_set_android_app};
+use retgui_retained::{AndroidApp, retgui_set_android_app};
 
 use crate::counter::main;
 
@@ -9,6 +9,6 @@ mod counter;
 
 #[unsafe(no_mangle)]
 pub unsafe fn android_main(app: AndroidApp) {
-    craft_set_android_app(app);
+    retgui_set_android_app(app);
     main();
 }

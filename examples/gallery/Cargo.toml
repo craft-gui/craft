@@ -8,14 +8,14 @@ name = "gallery"
 path = "main.rs"
 
 [features]
-audio = ["craft_retained/audio"]
+audio = ["retgui_retained/audio"]
 default = ["audio"]
 
 [dependencies]
 util = { path = "../util" }
 
-[dependencies.craft_retained]
-path = "../../crates/craft_retained"
+[dependencies.retgui_retained]
+path = "../../crates/retgui_retained"
 default-features = false
 features = [
     "system_fonts",

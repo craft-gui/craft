@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
-use craft::Signal;
-use craft::elements::{Conditional, Container, Element, Text, Window};
+use retgui::Signal;
+use retgui::elements::{Conditional, Container, Element, Text, Window};
 
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, craft_main, pct, px, rgb, rgba};
+use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
+use retgui_retained::{Color, RetGuiOptions, retgui_main, pct, px, rgb, rgba};
 
 use util::setup_logging;
 
@@ -64,5 +64,5 @@ pub fn main() {
 
     Window::new("Counter").width(pct(100)).height(pct(100)).push(counter());
 
-    craft_main(CraftOptions::basic("Counter"));
+    retgui_main(RetGuiOptions::basic("Counter"));
 }

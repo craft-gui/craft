@@ -1,6 +1,6 @@
-use craft_retained::elements::{Container, Element};
-use craft_retained::style::Unit;
-use craft_retained::{Color, pct};
+use retgui_retained::elements::{Container, Element};
+use retgui_retained::style::Unit;
+use retgui_retained::{Color, pct};
 
 pub(crate) const BODY_BACKGROUND_COLOR: Color = Color::from_rgb8(255, 255, 255);
 

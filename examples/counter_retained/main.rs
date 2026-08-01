@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, Window};
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, craft_main, pct, px, rgb, rgba};
+use retgui_retained::elements::{Container, Element, Text, Window};
+use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
+use retgui_retained::{Color, RetGuiOptions, retgui_main, pct, px, rgb, rgba};
 use util::setup_logging;
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
@@ -68,5 +68,5 @@ pub fn main() {
 
     Window::new("Counter").width(pct(100)).height(pct(100)).push(counter());
 
-    craft_main(CraftOptions::basic("Counter"));
+    retgui_main(RetGuiOptions::basic("Counter"));
 }

@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, Window};
-use craft_retained::events::Event;
-use craft_retained::events::ui_events::pointer::PointerId;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
-use craft_retained::{Color, pct};
+use retgui_retained::elements::{Container, Element, Text, Window};
+use retgui_retained::events::Event;
+use retgui_retained::events::ui_events::pointer::PointerId;
+use retgui_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
+use retgui_retained::{Color, pct};
 
 fn title(txt: &str) -> Text {
     Text::new(txt)
@@ -164,7 +164,7 @@ fn main() {
         .height(pct(100))
         .push(pointer_events());
 
-    use craft_retained::CraftOptions;
+    use retgui_retained::RetGuiOptions;
     //util::setup_logging();
-    craft_retained::craft_main(CraftOptions::basic("Pointer Events"));
+    retgui_retained::retgui_main(RetGuiOptions::basic("Pointer Events"));
 }

@@ -11,7 +11,7 @@ path = "main.rs"
 [dependencies]
 util = { path = "../util" }
 
-[dependencies.craft_retained]
-path = "../../crates/craft_retained"
+[dependencies.retgui_retained]
+path = "../../crates/retgui_retained"
 default-features = false
 features = ["system_fonts", "vello_hybrid_renderer"]

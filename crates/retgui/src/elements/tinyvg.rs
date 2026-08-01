@@ -1,0 +1,52 @@
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
+
+use retgui_retained::ResourceId;
+use retgui_retained::elements::{AsElement, ElementInternals};
+
+use crate::elements::Element;
+use crate::signals::Bindable;
+
+#[derive(Clone)]
+pub struct TinyVg {
+    pub inner: retgui_retained::elements::TinyVg,
+}
+
+impl AsElement for TinyVg {
+    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
+        self.inner.inner.clone()
+    }
+
+    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
+        self.inner.borrow()
+    }
+
+    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
+        self.inner.borrow_mut()
+    }
+}
+
+impl Element for TinyVg {}
+
+impl TinyVg {
+    pub fn new(resource_id: impl Bindable<ResourceId>) -> Self {
+        let inner = retgui_retained::elements::TinyVg::dummy();
+        let inner_clone = inner.clone();
+        resource_id.bind(move |resource_id| {
+            inner_clone.clone().resource_id(resource_id);
+        });
+        Self { inner }
+    }
+
+    pub fn resource_id(self, resource_id: impl Bindable<ResourceId>) -> Self {
+        let element = self.clone();
+        resource_id.bind(move |resource_id| {
+            element.clone().inner.resource_id(resource_id);
+        });
+        self
+    }
+
+    pub fn get_resource_id(&self) -> ResourceId {
+        self.inner.get_resource_id()
+    }
+}

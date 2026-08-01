@@ -728,9 +728,9 @@ dependencies = [
 name = "counter"
 version = "0.1.0"
 dependencies = [
- "craft",
- "craft_renderer",
- "craft_retained",
+ "retgui",
+ "retgui_renderer",
+ "retgui_retained",
  "util",
 ]
 
@@ -738,8 +738,8 @@ dependencies = [
 name = "counter_retained"
 version = "0.1.0"
 dependencies = [
- "craft_renderer",
- "craft_retained",
+ "retgui_renderer",
+ "retgui_retained",
  "util",
 ]
 
@@ -753,14 +753,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft"
+name = "retgui"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
 ]
 
 [[package]]
-name = "craft_calendar"
+name = "retgui_calendar"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -771,14 +771,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft_logging"
+name = "retgui_logging"
 version = "0.1.0"
 dependencies = [
  "tracing",
 ]
 
 [[package]]
-name = "craft_primitives"
+name = "retgui_primitives"
 version = "0.1.1"
 dependencies = [
  "dpi",
@@ -788,12 +788,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft_renderer"
+name = "retgui_renderer"
 version = "0.1.1"
 dependencies = [
  "chrono",
- "craft_primitives",
- "craft_resource_manager",
+ "retgui_primitives",
+ "retgui_resource_manager",
  "glifo",
  "peniko",
  "softbuffer",
@@ -806,31 +806,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft_resource_manager"
+name = "retgui_resource_manager"
 version = "0.1.1"
 dependencies = [
  "chrono",
- "craft_logging",
- "craft_runtime",
+ "retgui_logging",
+ "retgui_runtime",
  "image",
  "reqwest",
  "tinyvg-rs",
 ]
 
 [[package]]
-name = "craft_retained"
+name = "retgui_retained"
 version = "0.1.1"
 dependencies = [
  "bitflags 2.11.0",
  "chrono",
  "clipboard-rs",
- "craft_calendar",
- "craft_logging",
- "craft_primitives",
- "craft_renderer",
- "craft_resource_manager",
- "craft_runtime",
- "craft_undo",
+ "retgui_calendar",
+ "retgui_logging",
+ "retgui_primitives",
+ "retgui_renderer",
+ "retgui_resource_manager",
+ "retgui_runtime",
+ "retgui_undo",
  "image",
  "issho",
  "libtest-mimic-collect",
@@ -855,7 +855,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft_runtime"
+name = "retgui_runtime"
 version = "0.1.1"
 dependencies = [
  "open",
@@ -864,7 +864,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "craft_undo"
+name = "retgui_undo"
 version = "0.1.1"
 
 [[package]]
@@ -1412,7 +1412,7 @@ dependencies = [
 name = "gallery"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
  "util",
 ]
 
@@ -2318,7 +2318,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "issho"
 version = "0.1.0"
-source = "git+https://github.com/craft-gui/issho.git?rev=4284448de2048417a8805fb346bd488ddae433e9#4284448de2048417a8805fb346bd488ddae433e9"
+source = "git+https://github.com/retgui-gui/issho.git?rev=4284448de2048417a8805fb346bd488ddae433e9#4284448de2048417a8805fb346bd488ddae433e9"
 dependencies = [
  "hashbrown 0.17.1",
  "log",
@@ -2459,7 +2459,7 @@ dependencies = [
 name = "jsframeworkbench"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
  "rand",
  "util",
 ]
@@ -2947,7 +2947,7 @@ dependencies = [
 name = "multiwindow"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
  "util",
 ]
 
@@ -3818,7 +3818,7 @@ dependencies = [
 name = "pointer_events"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
  "util",
 ]
 
@@ -4925,7 +4925,7 @@ dependencies = [
 name = "text"
 version = "0.1.0"
 dependencies = [
- "craft_retained",
+ "retgui_retained",
  "util",
 ]
 
@@ -5746,7 +5746,7 @@ name = "website"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "craft_retained",
+ "retgui_retained",
  "open",
  "reqwest",
  "serde",

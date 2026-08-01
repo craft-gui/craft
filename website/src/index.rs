@@ -1,6 +1,6 @@
-use craft_retained::elements::{Container, Element, Text, TinyVg};
-use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
-use craft_retained::{Color, ResourceId, palette, pct, px, rgb};
+use retgui_retained::elements::{Container, Element, Text, TinyVg};
+use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
+use retgui_retained::{Color, ResourceId, palette, pct, px, rgb};
 
 use crate::link::Link;
 use crate::router::NavigateFn;
@@ -60,7 +60,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         )
         .color(palette::css::WHITE);
 
-    let craft_button = Text::new("Learn Craft")
+    let retgui_button = Text::new("Learn RetGui")
         .selectable(false)
         .display(Display::Flex)
         .align_items(Some(AlignItems::Center))
@@ -77,8 +77,8 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         .wrap(FlexWrap::Wrap)
         .gap(px(17), px(17))
         .margin(px(40), px(0), px(0), px(0))
-        .push(Link(move || navigate_fn("/docs")).push(craft_button))
-        .push(WebLink("https://github.com/craft-gui/craft").push(github_button));
+        .push(Link(move || navigate_fn("/docs")).push(retgui_button))
+        .push(WebLink("https://github.com/retgui-gui/retgui").push(github_button));
 
     let inner_wrapper = inner_wrapper.push(buttons);
 

@@ -13,11 +13,11 @@ mod pointer_events;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text};
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::Display::Flex;
-use craft_retained::style::{FlexDirection, FontWeight, Overflow, Unit};
-use craft_retained::{palette, pct, px};
+use retgui_retained::elements::{Container, Element, Text};
+use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::style::Display::Flex;
+use retgui_retained::style::{FlexDirection, FontWeight, Overflow, Unit};
+use retgui_retained::{palette, pct, px};
 
 use crate::WebsiteGlobalState;
 use crate::examples::counter_retained::counter;

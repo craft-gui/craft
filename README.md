@@ -1,8 +1,8 @@
-# 📜 Craft
+# 📜 RetGui
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](./LICENSE)
 [![Discord](https://img.shields.io/discord/1382383100562243746?logo=discord&logoColor=%23ffffff&labelColor=%236A7EC2&color=%237389D8)](https://discord.gg/Atb8nuAub2)
 
-Craft is a library for creating desktops user interfaces. craft_retained provides platform independent widgets.
+RetGui is a library for creating desktops user interfaces. retgui_retained provides platform independent widgets.
 
 ![An image of the gallery example running. Various elements like sliders, checkboxes, text inputs, and more are displayed.](./images/gallery.png)
 
@@ -12,10 +12,10 @@ Craft is a library for creating desktops user interfaces. craft_retained provide
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, Window};
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use craft_retained::{Color, CraftOptions, pct, px, rgb};
+use retgui_retained::elements::{Container, Element, Text, Window};
+use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::style::{AlignItems, FlexDirection, JustifyContent};
+use retgui_retained::{Color, RetGuiOptions, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     Container::new()
@@ -66,6 +66,6 @@ fn main() {
                 ))
         });
 
-    craft_retained::craft_main(CraftOptions::basic("Counter"));
+    retgui_retained::retgui_main(RetGuiOptions::basic("Counter"));
 }
 ```

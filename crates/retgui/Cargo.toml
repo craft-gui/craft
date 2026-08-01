@@ -1,0 +1,11 @@
+[package]
+name = "retgui"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+
+[dependencies.retgui_retained]
+path = "../retgui_retained"
+default-features = false
+version = "0.1.1"

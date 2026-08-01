@@ -14,8 +14,8 @@ serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.133"
 web-sys = { version = "0.3.77", features = ["Window", "Location", "History"] }
 
-[target.'cfg(target_arch = "wasm32")'.dependencies.craft_retained]
-path = "../crates/craft_retained"
+[target.'cfg(target_arch = "wasm32")'.dependencies.retgui_retained]
+path = "../crates/retgui_retained"
 default-features = false
 features = [
     "vello_hybrid_renderer",
@@ -26,8 +26,8 @@ features = [
     "markdown"
 ]
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies.craft_retained]
-path = "../crates/craft_retained"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.retgui_retained]
+path = "../crates/retgui_retained"
 default-features = false
 features = [
     "vello_hybrid_renderer",

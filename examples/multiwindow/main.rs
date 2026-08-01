@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, Window};
-use craft_retained::events::ui_events::pointer::PointerButton;
-use craft_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
-use craft_retained::{Color, rgb};
+use retgui_retained::elements::{Container, Element, Text, Window};
+use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
+use retgui_retained::{Color, rgb};
 
 #[derive(Default, Clone, Copy)]
 pub struct Counter {
@@ -93,7 +93,7 @@ pub fn counter() -> Window {
 fn main() {
     let _counter1 = counter();
 
-    use craft_retained::CraftOptions;
+    use retgui_retained::RetGuiOptions;
     util::setup_logging();
-    craft_retained::craft_main(CraftOptions::basic("Counter"));
+    retgui_retained::retgui_main(RetGuiOptions::basic("Counter"));
 }

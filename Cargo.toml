@@ -2,10 +2,10 @@
 resolver = "2"
 
 members = [
-    "crates/craft_retained",
-    "crates/craft",
-    "crates/craft_calendar",
-    "crates/craft_logger",
+    "crates/retgui_retained",
+    "crates/retgui",
+    "crates/retgui_calendar",
+    "crates/retgui_logger",
     "xtask",
     "examples/util",
     "examples/counter",
@@ -16,11 +16,11 @@ members = [
     "examples/jsframeworkbench",
     "examples/gallery",
     "crates/syntect_dumper",
-    "crates/craft_renderer",
-    "crates/craft_primitives",
-    "crates/craft_resource_manager",
-    "crates/craft_runtime",
-    "crates/craft_undo",
+    "crates/retgui_renderer",
+    "crates/retgui_primitives",
+    "crates/retgui_resource_manager",
+    "crates/retgui_runtime",
+    "crates/retgui_undo",
     "website",
 ]
 

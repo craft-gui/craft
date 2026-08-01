@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element};
-use craft_retained::events::ui_events::pointer::PointerButton;
+use retgui_retained::elements::{Container, Element};
+use retgui_retained::events::ui_events::pointer::PointerButton;
 
 #[allow(non_snake_case)]
 pub fn WebLink(href: &str) -> Container {

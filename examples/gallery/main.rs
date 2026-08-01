@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 #[cfg(feature = "audio")]
-use craft_retained::elements::Audio;
-use craft_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use craft_retained::geometry::Point;
-use craft_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
-use craft_retained::{Color, ColorStop, CraftOptions, Gradient, ResourceId, craft_main, pct, px, rgb, rgba};
+use retgui_retained::elements::Audio;
+use retgui_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui_retained::geometry::Point;
+use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
+use retgui_retained::{Color, ColorStop, RetGuiOptions, Gradient, ResourceId, retgui_main, pct, px, rgb, rgba};
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -370,5 +370,5 @@ pub fn main() {
 
     window.push(wrapper);
 
-    craft_main(CraftOptions::basic("Gallery"));
+    retgui_main(RetGuiOptions::basic("Gallery"));
 }

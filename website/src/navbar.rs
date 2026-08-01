@@ -1,9 +1,9 @@
 use crate::link::Link;
 use crate::router::NavigateFn;
 use crate::theme::{NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, wrapper};
-use craft_retained::elements::{Container, Element, Text};
-use craft_retained::style::{AlignItems, Display, FontWeight, JustifyContent, Unit};
-use craft_retained::{pct, px, rgb};
+use retgui_retained::elements::{Container, Element, Text};
+use retgui_retained::style::{AlignItems, Display, FontWeight, JustifyContent, Unit};
+use retgui_retained::{pct, px, rgb};
 
 pub const NAVBAR_HEIGHT: f32 = 60.0;
 
@@ -52,7 +52,7 @@ pub fn navbar(navigate_fn: NavigateFn) -> Container {
                 .justify_content(Some(JustifyContent::Center))
                 .align_items(Some(AlignItems::Center))
                 .push(
-                    create_link(navigate_fn.clone(), "Craft", "/")
+                    create_link(navigate_fn.clone(), "RetGui", "/")
                         .font_size(32.0)
                         .font_weight(FontWeight::BOLD)
                         .margin(px(0), px(24), px(0), px(0)), /*.hovered()

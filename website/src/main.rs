@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::{CraftOptions, craft_main};
+use retgui_retained::{RetGuiOptions, retgui_main};
 
 use crate::router::Router;
 
@@ -85,5 +85,5 @@ fn main() {
     global_state.borrow_mut().load_route();
     let page_wrapper = Router::new(global_state);
     page_wrapper.borrow().navigate();
-    craft_main(CraftOptions::default());
+    retgui_main(RetGuiOptions::default());
 }

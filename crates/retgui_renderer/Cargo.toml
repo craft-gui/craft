@@ -1,0 +1,69 @@
+[package]
+name = "retgui_renderer"
+version = "0.1.1"
+edition.workspace = true
+
+[features]
+vello_cpu_renderer = ["dep:vello_cpu", "dep:softbuffer", "dep:vello_common"]
+vello_hybrid_renderer = ["dep:vello_hybrid", "dep:vello_common", "dep:wgpu", "wgpu/fragile-send-sync-non-atomic-wasm"]
+vello_hybrid_renderer_webgl = ["wgpu/webgl"]
+
+[dependencies]
+
+[dependencies.glifo]
+git = "https://github.com/linebender/vello.git"
+rev = "87ced180fe8dc0cf32d3649874d8ac422b620f6f"
+default-features = false
+features = ["std"]
+
+[dependencies.vello_cpu]
+git = "https://github.com/linebender/vello.git"
+rev = "87ced180fe8dc0cf32d3649874d8ac422b620f6f"
+optional = true
+features = []
+
+[dependencies.vello_hybrid]
+git = "https://github.com/linebender/vello.git"
+rev = "87ced180fe8dc0cf32d3649874d8ac422b620f6f"
+default-features = false
+features = ["default"]
+optional = true
+
+[dependencies.vello_common]
+git = "https://github.com/linebender/vello.git"
+rev = "87ced180fe8dc0cf32d3649874d8ac422b620f6f"
+optional = true
+
+[dependencies.softbuffer]
+version = "0.4.8"
+optional = true
+
+[dependencies.wgpu]
+version = "29.0.3"
+default-features = false
+features = ["wgsl", "vulkan", "dx12"]
+optional = true
+
+[dependencies.peniko]
+workspace = true
+
+[dependencies.retgui_primitives]
+path = "../retgui_primitives"
+default-features = false
+version = "0.1.1"
+
+
+[dependencies.retgui_resource_manager]
+path = "../retgui_resource_manager"
+default-features = false
+version = "0.1.1"
+
+[dependencies.winit]
+workspace = true
+
+[dependencies.tinyvg-rs]
+workspace = true
+
+[dependencies.chrono]
+workspace = true
+

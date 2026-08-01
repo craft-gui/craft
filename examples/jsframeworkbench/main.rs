@@ -1,12 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use craft_retained::elements::{Container, Element, Text, TextInner, Window};
-use craft_retained::events::Event;
-use craft_retained::events::ui_events::pointer::PointerButtonEvent;
-use craft_retained::palette::css::WHITE;
-use craft_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
-use craft_retained::{Color, rgb};
+use retgui_retained::elements::{Container, Element, Text, TextInner, Window};
+use retgui_retained::events::Event;
+use retgui_retained::events::ui_events::pointer::PointerButtonEvent;
+use retgui_retained::palette::css::WHITE;
+use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
+use retgui_retained::{Color, rgb};
 use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
@@ -273,8 +273,8 @@ fn main() {
         .height(Unit::Percentage(100.0))
         .push(body);
 
-    use craft_retained::CraftOptions;
-    craft_retained::craft_main(CraftOptions::basic("jsframeworkbench"));
+    use retgui_retained::RetGuiOptions;
+    retgui_retained::retgui_main(RetGuiOptions::basic("jsframeworkbench"));
 }
 
 fn build_body(state: Rc<RefCell<State>>) -> Container {
@@ -288,7 +288,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .align_items(Some(AlignItems::Start))
         .padding_all(Unit::Px(15.0));
 
-    let text = Text::new(r#"Craft-"keyed""#).font_size(32.0).color(Color::BLACK);
+    let text = Text::new(r#"RetGui-"keyed""#).font_size(32.0).color(Color::BLACK);
 
     let text_container = Container::new()
         .display(Display::Flex)

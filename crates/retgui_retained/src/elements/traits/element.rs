@@ -1,0 +1,537 @@
+use retgui_primitives::Color;
+use retgui_primitives::geometry::ElementBox;
+use smol_str::SmolStr;
+
+use crate::RetGuiError;
+use crate::app::queue_window_event;
+use crate::elements::scrollable::{ScrollOptions, ScrollState};
+use crate::elements::{AsElement, DynElement};
+use crate::events::{CheckboxToggledHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
+use retgui_primitives::brush::Brush;
+use retgui_primitives::gradient::Gradient;
+use ui_events::pointer::PointerId;
+use winit::dpi::PhysicalPosition;
+use winit::event::WindowEvent::{CursorMoved, MouseInput};
+use winit::event::{DeviceId, ElementState, MouseButton};
+
+/// Exposes a fluent/builder-pattern like API for elements.
+/// Setters in this trait return Self and have no prefix.
+/// Getters in this trait return specific data and have a get prefix.
+pub trait Element: Clone + AsElement {
+    fn get_children(&self) -> Vec<DynElement> {
+        self.borrow().children().iter().cloned().map(DynElement::new).collect()
+    }
+
+    fn get_previous_sibling(&self) -> Result<DynElement, RetGuiError> {
+        self.borrow().get_previous_sibling().map(DynElement::new)
+    }
+
+    fn get_next_sibling(&self) -> Result<DynElement, RetGuiError> {
+        self.borrow().get_next_sibling().map(DynElement::new)
+    }
+
+    fn get_parent(&self) -> Result<DynElement, RetGuiError> {
+        let parent = self.borrow().parent();
+        if let Some(parent) = parent {
+            parent.upgrade().ok_or(RetGuiError::ElementNotFound).map(DynElement::new)
+        } else {
+            Err(RetGuiError::ElementNotFound)
+        }
+    }
+
+    fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
+        self.borrow().get_first_child().map(DynElement::new)
+    }
+
+    fn get_last_child(&self) -> Result<DynElement, RetGuiError> {
+        self.borrow().get_last_child().map(DynElement::new)
+    }
+
+    fn remove_child(&self, child: DynElement) -> Result<DynElement, RetGuiError> {
+        self.borrow_mut().remove_child(child.inner).map(DynElement::new)
+    }
+
+    fn remove_all_children(&self) {
+        self.borrow_mut().remove_all_children()
+    }
+
+    fn swap_child(&self, child_1: DynElement, child_2: DynElement) -> Result<(), RetGuiError> {
+        self.borrow_mut().swap_child(child_1.inner, child_2.inner)
+    }
+
+    fn push(self, child: impl AsElement) -> Self {
+        let child_rc = child.as_element_rc();
+        self.as_element_rc().borrow_mut().push(child_rc);
+        self
+    }
+
+    fn on_pointer_enter(self, on_pointer_enter: PointerEnterHandler) -> Self {
+        self.borrow_mut().on_pointer_enter(on_pointer_enter);
+        self
+    }
+
+    fn on_pointer_leave(self, on_pointer_leave: PointerLeaveHandler) -> Self {
+        self.borrow_mut().on_pointer_leave(on_pointer_leave);
+        self
+    }
+
+    fn on_radio_value_changed(self, on_radio_value_changed: RadioValueChangedHandler) -> Self {
+        self.borrow_mut().on_radio_value_changed(on_radio_value_changed);
+        self
+    }
+
+    fn on_checkbox_toggled(self, on_checkbox_toggled: CheckboxToggledHandler) -> Self {
+        self.borrow_mut().on_checkbox_toggled(on_checkbox_toggled);
+        self
+    }
+
+    fn on_textinput_changed(self, on_text_input_changed: TextInputChangedHandler) -> Self {
+        self.borrow_mut().on_text_input_changed(on_text_input_changed);
+        self
+    }
+
+    fn id(self, id: &str) -> Self {
+        self.borrow_mut().set_id(id);
+        self
+    }
+
+    fn get_id(&self) -> Option<SmolStr> {
+        self.borrow().get_id()
+    }
+
+    fn on_pointer_button_down(self, on_pointer_button_down: PointerEventHandler) -> Self {
+        self.borrow_mut().on_pointer_button_down(on_pointer_button_down);
+        self
+    }
+
+    fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
+        self.borrow_mut().on_pointer_moved(on_pointer_moved);
+        self
+    }
+
+    fn on_pointer_button_up(self, on_pointer_button_up: PointerEventHandler) -> Self {
+        self.borrow_mut().on_pointer_button_up(on_pointer_button_up);
+        self
+    }
+
+    fn on_lost_pointer_capture(self, on_lost_pointer_capture: PointerCaptureHandler) -> Self {
+        self.borrow_mut().on_lost_pointer_capture(on_lost_pointer_capture);
+        self
+    }
+
+    fn on_got_pointer_capture(self, on_got_pointer_capture: PointerCaptureHandler) -> Self {
+        self.borrow_mut().on_got_pointer_capture(on_got_pointer_capture);
+        self
+    }
+
+    fn on_keyboard_input(self, on_keyboard_input: KeyboardInputHandler) -> Self {
+        self.borrow_mut().on_keyboard_input(on_keyboard_input);
+        self
+    }
+
+    fn on_slider_value_changed(self, on_slider_value_changed: SliderValueChangedHandler) -> Self {
+        self.borrow_mut().on_slider_value_changed(on_slider_value_changed);
+        self
+    }
+
+    fn on_scroll(self, on_scroll: ScrollHandler) -> Self {
+        self.borrow_mut().on_scroll(on_scroll);
+        self
+    }
+
+    fn scroll_to_child_by_id(self, id: &str) -> Self {
+        self.borrow_mut()
+            .scroll_to_child_by_id_with_options(id, ScrollOptions::default());
+        self
+    }
+
+    fn scroll_to_child_by_id_with_options(self, id: &str, options: ScrollOptions) -> Self {
+        self.borrow_mut().scroll_to_child_by_id_with_options(id, options);
+        self
+    }
+    fn scroll_to(self, y: f32) -> Self {
+        self.borrow_mut().scroll_to(y);
+        self
+    }
+
+    fn scroll_to_top(self) -> Self {
+        self.borrow_mut().scroll_to_top();
+        self
+    }
+
+    fn scroll_to_bottom(self) -> Self {
+        self.borrow_mut().scroll_to_bottom();
+        self
+    }
+
+    fn scroll_by(self, y: f32) -> Self {
+        self.borrow_mut().scroll_by(y);
+        self
+    }
+
+    fn get_scroll_state(&self) -> ScrollState {
+        self.borrow_mut().get_scroll_state()
+    }
+
+    fn display(self, display: Display) -> Self {
+        self.borrow_mut().set_display(display);
+        self
+    }
+
+    fn box_sizing(self, box_sizing: BoxSizing) -> Self {
+        self.borrow_mut().set_box_sizing(box_sizing);
+        self
+    }
+
+    fn position(self, position: Position) -> Self {
+        self.borrow_mut().set_position(position);
+        self
+    }
+
+    fn margin(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.borrow_mut().set_margin(top, right, bottom, left);
+        self
+    }
+
+    fn margin_all(self, value: Unit) -> Self {
+        self.borrow_mut().set_margin_all(value);
+        self
+    }
+
+    fn margin_vertical(self, value: Unit) -> Self {
+        self.borrow_mut().set_margin_vertical(value);
+        self
+    }
+
+    fn margin_horizontal(self, value: Unit) -> Self {
+        self.borrow_mut().set_margin_horizontal(value);
+        self
+    }
+
+    fn padding(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.borrow_mut().set_padding(top, right, bottom, left);
+        self
+    }
+
+    fn padding_all(self, value: Unit) -> Self {
+        self.borrow_mut().set_padding_all(value);
+        self
+    }
+
+    fn padding_vertical(self, value: Unit) -> Self {
+        self.borrow_mut().set_padding_vertical(value);
+        self
+    }
+
+    fn padding_horizontal(self, value: Unit) -> Self {
+        self.borrow_mut().set_padding_horizontal(value);
+        self
+    }
+
+    fn gap(self, row_gap: Unit, column_gap: Unit) -> Self {
+        self.borrow_mut().set_gap(row_gap, column_gap);
+        self
+    }
+
+    fn row_gap(self, value: Unit) -> Self {
+        self.borrow_mut().set_row_gap(value);
+        self
+    }
+
+    fn column_gap(self, value: Unit) -> Self {
+        self.borrow_mut().set_column_gap(value);
+        self
+    }
+
+    fn inset(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.borrow_mut().set_inset(top, right, bottom, left);
+        self
+    }
+
+    fn min_width(self, min_width: Unit) -> Self {
+        self.borrow_mut().set_min_width(min_width);
+        self
+    }
+
+    fn min_height(self, min_height: Unit) -> Self {
+        self.borrow_mut().set_min_height(min_height);
+        self
+    }
+
+    fn width(self, width: Unit) -> Self {
+        self.borrow_mut().set_width(width);
+        self
+    }
+
+    fn height(self, height: Unit) -> Self {
+        self.borrow_mut().set_height(height);
+        self
+    }
+
+    fn max_width(self, max_width: Unit) -> Self {
+        self.borrow_mut().set_max_width(max_width);
+        self
+    }
+
+    fn max_height(self, max_height: Unit) -> Self {
+        self.borrow_mut().set_max_height(max_height);
+        self
+    }
+
+    fn wrap(self, wrap: FlexWrap) -> Self {
+        self.borrow_mut().set_wrap(wrap);
+        self
+    }
+
+    fn align_items(self, align_items: Option<AlignItems>) -> Self {
+        self.borrow_mut().set_align_items(align_items);
+        self
+    }
+
+    fn justify_content(self, justify_content: Option<JustifyContent>) -> Self {
+        self.borrow_mut().set_justify_content(justify_content);
+        self
+    }
+
+    fn flex_direction(self, flex_direction: FlexDirection) -> Self {
+        self.borrow_mut().set_flex_direction(flex_direction);
+        self
+    }
+
+    fn flex_grow(self, flex_grow: f32) -> Self {
+        self.borrow_mut().set_flex_grow(flex_grow);
+        self
+    }
+
+    fn flex_shrink(self, flex_shrink: f32) -> Self {
+        self.borrow_mut().set_flex_shrink(flex_shrink);
+        self
+    }
+
+    fn flex_basis(self, flex_basis: Unit) -> Self {
+        self.borrow_mut().set_flex_basis(flex_basis);
+        self
+    }
+
+    fn font_family(self, font_family: FontFamily) -> Self {
+        self.borrow_mut().set_font_family(font_family);
+        self
+    }
+
+    fn color(self, color: Color) -> Self {
+        self.borrow_mut().set_text_brush(Brush::Color(color));
+        self
+    }
+
+    fn text_gradient(self, gradient: Gradient) -> Self {
+        self.borrow_mut().set_text_brush(Brush::Gradient(gradient));
+        self
+    }
+
+    fn background_color(self, background_color: Color) -> Self {
+        self.borrow_mut().set_background_brush(Brush::Color(background_color));
+        self
+    }
+
+    fn background_gradient(self, gradient: Gradient) -> Self {
+        self.borrow_mut().set_background_brush(Brush::Gradient(gradient));
+        self
+    }
+
+    fn font_size(self, font_size: f32) -> Self {
+        self.borrow_mut().set_font_size(font_size);
+        self
+    }
+
+    fn line_height(self, line_height: f32) -> Self {
+        self.borrow_mut().set_line_height(line_height);
+        self
+    }
+
+    fn font_weight(self, font_weight: FontWeight) -> Self {
+        self.borrow_mut().set_font_weight(font_weight);
+        self
+    }
+
+    fn font_style(self, font_style: FontStyle) -> Self {
+        self.borrow_mut().set_font_style(font_style);
+        self
+    }
+
+    fn text_align(self, text_align: TextAlign) -> Self {
+        self.borrow_mut().set_text_align(text_align);
+        self
+    }
+
+    fn underline(self, thickness: Option<f32>, color: Color, offset: Option<f32>) -> Self {
+        self.borrow_mut().set_underline(Some(Underline {
+            thickness,
+            brush: Brush::Color(color),
+            offset,
+        }));
+
+        self
+    }
+
+    fn underline_gradient(self, thickness: Option<f32>, gradient: Gradient, offset: Option<f32>) -> Self {
+        self.borrow_mut().set_underline(Some(Underline {
+            thickness,
+            brush: Brush::Gradient(gradient),
+            offset,
+        }));
+
+        self
+    }
+
+    fn overflow(self, overflow_x: Overflow, overflow_y: Overflow) -> Self {
+        self.borrow_mut().set_overflow(overflow_x, overflow_y);
+        self
+    }
+
+    fn overflow_x(self, overflow_x: Overflow) -> Self {
+        self.borrow_mut().set_overflow_x(overflow_x);
+        self
+    }
+
+    fn overflow_y(self, overflow_y: Overflow) -> Self {
+        self.borrow_mut().set_overflow_y(overflow_y);
+        self
+    }
+
+    fn border_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
+        self.borrow_mut().set_border_color(top, right, bottom, left);
+        self
+    }
+
+    fn border_color_all(self, value: Color) -> Self {
+        self.borrow_mut().set_border_color_all(value);
+        self
+    }
+
+    fn border_color_vertical(self, value: Color) -> Self {
+        self.borrow_mut().set_border_color_vertical(value);
+        self
+    }
+
+    fn border_color_horizontal(self, value: Color) -> Self {
+        self.borrow_mut().set_border_color_horizontal(value);
+        self
+    }
+
+    fn border_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.borrow_mut().set_border_width(top, right, bottom, left);
+        self
+    }
+
+    fn border_width_all(self, value: Unit) -> Self {
+        self.borrow_mut().set_border_width_all(value);
+        self
+    }
+
+    fn border_width_vertical(self, value: Unit) -> Self {
+        self.borrow_mut().set_border_width_vertical(value);
+        self
+    }
+
+    fn border_width_horizontal(self, value: Unit) -> Self {
+        self.borrow_mut().set_border_width_horizontal(value);
+        self
+    }
+
+    fn border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
+        self.borrow_mut().set_border_radius(top, right, bottom, left);
+        self
+    }
+
+    fn border_radius_all(self, value: (f32, f32)) -> Self {
+        self.borrow_mut().set_border_radius_all(value);
+        self
+    }
+
+    fn border_radius_vertical(self, value: (f32, f32)) -> Self {
+        self.borrow_mut().set_border_radius_vertical(value);
+        self
+    }
+
+    fn border_radius_horizontal(self, value: (f32, f32)) -> Self {
+        self.borrow_mut().set_border_radius_horizontal(value);
+        self
+    }
+
+    fn scrollbar_color(self, scrollbar_color: ScrollbarColor) -> Self {
+        self.borrow_mut().set_scrollbar_color(scrollbar_color);
+        self
+    }
+
+    fn scrollbar_thumb_margin(self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
+        self.borrow_mut().set_scrollbar_thumb_margin(top, right, bottom, left);
+        self
+    }
+
+    fn scrollbar_thumb_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
+        self.borrow_mut().set_scrollbar_thumb_radius(top, right, bottom, left);
+        self
+    }
+
+    fn scrollbar_width(self, scrollbar_width: f32) -> Self {
+        self.borrow_mut().set_scrollbar_width(scrollbar_width);
+        self
+    }
+
+    fn box_shadows(self, box_shadows: Vec<BoxShadow>) -> Self {
+        self.borrow_mut().set_box_shadows(box_shadows);
+        self
+    }
+
+    fn focus(self) -> Self {
+        self.borrow_mut().focus();
+        self
+    }
+
+    fn is_focused(&self) -> bool {
+        self.borrow().is_focused()
+    }
+
+    fn unfocus(self) -> Self {
+        self.borrow_mut().unfocus();
+        self
+    }
+
+    fn get_computed_box_transformed(&self) -> ElementBox {
+        self.borrow().get_computed_box_transformed()
+    }
+
+    fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
+        self.borrow().has_pointer_capture(pointer_id)
+    }
+
+    #[allow(async_fn_in_trait)]
+    async fn click(&self) {
+        let pos = self.borrow().get_computed_box_transformed().padding_rectangle();
+        let mouse_move = CursorMoved {
+            device_id: DeviceId::dummy(),
+            position: PhysicalPosition::new(pos.x as f64, pos.y as f64),
+        };
+        let mouse_down = MouseInput {
+            device_id: DeviceId::dummy(),
+            state: ElementState::Pressed,
+            button: MouseButton::Left,
+        };
+        let mouse_up = MouseInput {
+            device_id: DeviceId::dummy(),
+            state: ElementState::Released,
+            button: MouseButton::Left,
+        };
+        let window_id = self.borrow().get_winit_window().unwrap().id();
+        queue_window_event(window_id, mouse_move);
+        queue_window_event(window_id, mouse_down);
+        queue_window_event(window_id, mouse_up);
+    }
+
+    fn as_dyn_element(&self) -> DynElement {
+        DynElement {
+            inner: self.as_element_rc(),
+        }
+    }
+}
