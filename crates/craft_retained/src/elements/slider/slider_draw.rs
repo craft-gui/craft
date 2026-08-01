@@ -1,7 +1,7 @@
-use peniko::Color;
 use craft_primitives::geometry::borders::CssRoundedRect;
 use craft_primitives::geometry::{Rectangle, TrblRectangle, Vec2};
 use craft_renderer::renderer::Renderer;
+use peniko::Color;
 
 use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementInternals, SliderInner};

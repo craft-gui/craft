@@ -74,11 +74,9 @@ pub(crate) fn sort_render_list_internal(render_list: &mut RenderList) {
                 }
             }
 
-            _ => {
-                unsafe {
-                    (*current).children.push(SortedItem::Other(index as u32));
-                }
-            }
+            _ => unsafe {
+                (*current).children.push(SortedItem::Other(index as u32));
+            },
         }
     }
 }

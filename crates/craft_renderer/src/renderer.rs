@@ -6,13 +6,13 @@ use std::sync::Arc;
 use craft_primitives::Color;
 use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Shape};
 
-use craft_resource_manager::{ResourceId, ResourceManager};
 use crate::render_command::{BoxShadowCmd, DrawBoxShadow, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
-use crate::{Brush, RenderCommand, TargetItem};
 pub use crate::screenshot::Screenshot;
 use crate::sort_commands::sort_render_list_internal;
 use crate::text_renderer_data::{TextData, TextScroll};
+use crate::{Brush, RenderCommand, TargetItem};
+use craft_resource_manager::{ResourceId, ResourceManager};
 
 pub trait Renderer: Any {
     // Surface Functions
@@ -31,11 +31,7 @@ pub trait Renderer: Any {
     fn sort_render_list(&mut self) {
         sort_render_list_internal(self.render_list_mut());
     }
-    fn prepare<'a>(
-        &mut self,
-        resource_manager: Arc<ResourceManager>,
-        window: Rectangle,
-    );
+    fn prepare<'a>(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle);
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);
 
@@ -70,8 +66,13 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands
-            .push(RenderCommand::DrawCircle(DrawCircleCmd { circle, brush, transform }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::DrawCircle(DrawCircleCmd {
+                circle,
+                brush,
+                transform,
+            }));
     }
 
     fn draw_circle_outline(&mut self, circle: Circle, outline_brush: Brush, thickness: f32) {
@@ -80,7 +81,8 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands
+        self.render_list_mut()
+            .commands
             .push(RenderCommand::DrawCircleOutline(DrawCircleOutlineCmd {
                 circle,
                 outline_brush,
@@ -96,7 +98,13 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands.push(RenderCommand::DrawRect(DrawRectCmd { rect, brush, transform }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::DrawRect(DrawRectCmd {
+                rect,
+                brush,
+                transform,
+            }));
     }
 
     #[inline(always)]
@@ -107,7 +115,8 @@ pub trait Renderer: Any {
         }
 
         let overlay_depth = self.render_list().current_overlay_depth;
-        self.render_list_mut().targets
+        self.render_list_mut()
+            .targets
             .push(TargetItem::new(id, bounding_box, overlay_depth));
     }
 
@@ -118,12 +127,14 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands.push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
-            rect,
-            outline_brush,
-            thickness,
-            transform,
-        }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::DrawRectOutline(DrawRectOutlineCmd {
+                rect,
+                outline_brush,
+                thickness,
+                transform,
+            }));
     }
 
     #[inline(always)]
@@ -133,8 +144,13 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands
-            .push(RenderCommand::FillBezPath(FillBezPathCmd { path, brush, transform }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::FillBezPath(FillBezPathCmd {
+                path,
+                brush,
+                transform,
+            }));
     }
 
     #[inline(always)]
@@ -144,8 +160,13 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands
-            .push(RenderCommand::StrokeBezPath(StrokeBezPathCmd { path, brush, transform }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::StrokeBezPath(StrokeBezPathCmd {
+                path,
+                brush,
+                transform,
+            }));
     }
 
     #[inline(always)]
@@ -161,13 +182,15 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands.push(RenderCommand::DrawText(DrawTextCmd {
-            rect,
-            data,
-            text_scroll,
-            show_cursor,
-            transform,
-        }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::DrawText(DrawTextCmd {
+                rect,
+                data,
+                text_scroll,
+                show_cursor,
+                transform,
+            }));
     }
 
     #[inline(always)]
@@ -177,21 +200,29 @@ pub trait Renderer: Any {
             return;
         }
 
-        self.render_list_mut().commands
-            .push(RenderCommand::DrawImage(DrawImageCmd { rect, resource_id, transform: Default::default() }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::DrawImage(DrawImageCmd {
+                rect,
+                resource_id,
+                transform: Default::default(),
+            }));
     }
 
     #[inline(always)]
     fn push_layer(&mut self, rect: Rectangle) {
         let transform = self.get_transform();
 
-        self.render_list_mut().commands.push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect, transform)));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::PushLayer(PushLayerCmd::Rect(rect, transform)));
     }
 
     fn push_layer_with_bez_path(&mut self, path: BezPath) {
         let transform = self.get_transform();
 
-        self.render_list_mut().commands
+        self.render_list_mut()
+            .commands
             .push(RenderCommand::PushLayer(PushLayerCmd::BezPath(path, transform)));
     }
 
@@ -211,16 +242,15 @@ pub trait Renderer: Any {
     }
 
     #[inline(always)]
-    fn draw_outset_box_shadow(
-        &mut self,
-        box_shadow: DrawBoxShadow,
-    ) {
+    fn draw_outset_box_shadow(&mut self, box_shadow: DrawBoxShadow) {
         let transform = self.get_transform();
 
-        self.render_list_mut().commands.push(RenderCommand::BoxShadowCmd(BoxShadowCmd {
-            box_shadow,
-            transform,
-        }));
+        self.render_list_mut()
+            .commands
+            .push(RenderCommand::BoxShadowCmd(BoxShadowCmd {
+                box_shadow,
+                transform,
+            }));
     }
 
     fn set_cull(&mut self, cull: Option<Rectangle>) {
@@ -230,8 +260,7 @@ pub trait Renderer: Any {
 
 #[inline(always)]
 fn should_cull_rect(transform: &Affine, rect: &Rectangle, cull: Option<&Rectangle>) -> bool {
-    if let Some(cull) = cull
-    {
+    if let Some(cull) = cull {
         let bb = rect.to_kurbo();
         let bb_transformed = transform.transform_rect_bbox(bb);
 
@@ -245,8 +274,7 @@ fn should_cull_rect(transform: &Affine, rect: &Rectangle, cull: Option<&Rectangl
 
 #[inline(always)]
 fn should_cull_bez_path(transform: &Affine, path: &BezPath, cull: Option<&Rectangle>) -> bool {
-    if let Some(cull) = cull
-    {
+    if let Some(cull) = cull {
         let bb = path.bounding_box();
         let bb_transformed = transform.transform_rect_bbox(bb);
 
@@ -257,4 +285,3 @@ fn should_cull_bez_path(transform: &Affine, path: &BezPath, cull: Option<&Rectan
 
     false
 }
-

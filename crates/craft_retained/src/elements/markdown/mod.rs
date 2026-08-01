@@ -3,12 +3,12 @@ use std::str::FromStr;
 
 use craft_resource_manager::ResourceId;
 
-use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
-use craft_primitives::brush::Brush;
 use crate::elements::{AsElement, CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
-use crate::{Color, px, rgb, pct};
+use crate::{Color, pct, px, rgb};
+use craft_primitives::brush::Brush;
+use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 
 struct StyledText {
     pub text: String,
@@ -261,14 +261,16 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                         renderer.font_size = None;
                     }
                     TagEnd::BlockQuote(_) => {}
-                    TagEnd::CodeBlock => {
+                    TagEnd::CodeBlock =>
+                    {
                         #[cfg(feature = "code_highlighting")]
                         if let Some(code_block_kind) = renderer.code_block_kind.take() {
                             let language = match code_block_kind {
                                 pulldown_cmark::CodeBlockKind::Fenced(lang) => lang.to_string(),
                                 pulldown_cmark::CodeBlockKind::Indented => "plaintext".to_string(),
                             };
-                            let code_editor = CodeEditor::new(&renderer.styled_text.text, &language, "base16-ocean.dark");
+                            let code_editor =
+                                CodeEditor::new(&renderer.styled_text.text, &language, "base16-ocean.dark");
                             renderer.push(code_editor.as_dyn_element());
                             renderer.styled_text = StyledText::new();
                         }
@@ -326,11 +328,10 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     .styles
                     .push((range.clone(), TextStyleProperty::FontWeight(FontWeight::NORMAL)));
                 let byte_range = renderer.styled_text.text.len()..renderer.styled_text.text.len() + text.len();
-                renderer
-                    .styled_text
-                    .style
-                    .styles
-                    .push((byte_range, TextStyleProperty::BackgroundBrush(Brush::Color(rgb(0x2e, 0x2e, 0x2e)))));
+                renderer.styled_text.style.styles.push((
+                    byte_range,
+                    TextStyleProperty::BackgroundBrush(Brush::Color(rgb(0x2e, 0x2e, 0x2e))),
+                ));
                 renderer
                     .styled_text
                     .style

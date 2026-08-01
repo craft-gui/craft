@@ -21,13 +21,11 @@ system_fonts = ["parley/system"]
 png = ["image/png"]
 jpeg = ["image/jpeg"]
 
-accesskit = ["dep:accesskit", "dep:accesskit_winit", "parley/accesskit"]
-
 markdown = ["dep:pulldown-cmark", "code_highlighting", "link"]
 code_highlighting = ["dep:syntect"]
 link = ["dep:open"]
 
-default = ["vello_hybrid_renderer", "clipboard", "accesskit"]
+default = ["vello_hybrid_renderer", "clipboard"]
 
 [dependencies]
 craft_logging = { path = "../craft_logger", version = "0.1.0" }
@@ -42,16 +40,9 @@ default-features = false
 optional = true
 
 
-[dependencies.accesskit_winit]
-version = "0.33.1"
-default-features = false
-features = ["tokio", "rwh_06", "accesskit_unix"]
-optional = true
-
-[dependencies.accesskit]
-version = "0.24.1"
-default-features = false
-optional = true
+[dependencies.issho]
+git = "https://github.com/craft-gui/issho.git"
+rev = "4284448de2048417a8805fb346bd488ddae433e9"
 
 [dependencies.bitflags]
 version = "2.10.0"

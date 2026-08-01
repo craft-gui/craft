@@ -3,6 +3,7 @@ use std::rc::{Rc, Weak};
 
 use smol_str::SmolStr;
 
+use crate::accessibility::CraftAccessTree;
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
@@ -39,6 +40,11 @@ pub struct ElementData {
     /// A unique id for this element. Within a craft app the id will be unique even across windows.
     pub(crate) internal_id: u64,
 
+    pub(crate) access_tree: CraftAccessTree,
+    pub(crate) access_key: Option<issho::AccessKey>,
+    pub(crate) access_root: Option<issho::AccessKey>,
+    pub(crate) access_scale_factor: f64,
+
     // Events:
     pub on_dropdown_item_selected: Vec<DropdownItemSelectedHandler>,
     pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
@@ -58,6 +64,26 @@ pub struct ElementData {
 
 impl ElementData {
     pub fn new(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
+        Self::new_internal(me, is_scrollable, true)
+    }
+
+    pub(crate) fn new_pseudo(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
+        Self::new_internal(me, is_scrollable, false)
+    }
+
+    fn new_internal(
+        me: Weak<RefCell<dyn ElementInternals>>,
+        is_scrollable: bool,
+        create_accessibility_node: bool,
+    ) -> Self {
+        let access_tree = crate::accessibility::access_tree();
+        let (access_key, access_root) = if create_accessibility_node {
+            let key = access_tree.insert_node(issho::AccessNode::new(), None);
+            (Some(key), Some(key))
+        } else {
+            (None, None)
+        };
+
         let default = Self {
             me,
             parent: None,
@@ -67,6 +93,10 @@ impl ElementData {
             children: Default::default(),
             id: None,
             internal_id: create_unique_element_id(),
+            access_tree,
+            access_key,
+            access_root,
+            access_scale_factor: 1.0,
             on_dropdown_item_selected: Vec::new(),
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),
@@ -103,14 +133,82 @@ impl ElementData {
         });
     }
 
+    pub(crate) fn set_accessibility_role(&mut self, role: issho::Role) {
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_role(role);
+        }
+    }
+
+    pub(crate) fn set_accessibility_name(&mut self, name: impl Into<SmolStr>) {
+        if let Some(key) = self.access_key {
+            self.access_tree.set_name(key, name);
+        }
+    }
+
+    pub(crate) fn set_accessibility_value(&mut self, value: impl Into<String>) {
+        if let Some(key) = self.access_key {
+            self.access_tree.set_value(key, value);
+        }
+    }
+
+    pub(crate) fn set_accessibility_enabled(&mut self, enabled: bool) {
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_enabled(enabled);
+        }
+    }
+
+    pub(crate) fn set_accessibility_checked(&mut self, checked: bool) {
+        if let Some(key) = self.access_key {
+            self.access_tree.set_checked(key, checked);
+        }
+    }
+
+    pub(crate) fn set_accessibility_toggle_action(&mut self, action: impl Fn() + 'static) {
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_toggle_action(action);
+        }
+    }
+
+    /// Applies the element's resolved padding box to its retained accessibility node.
+    pub(crate) fn set_accessibility_bounds_from_layout(&mut self, scale_factor: f64) {
+        self.access_scale_factor = scale_factor;
+        let padding_box = self
+            .layout
+            .computed_box_transformed
+            .padding_rectangle()
+            .scale(scale_factor);
+
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_bounding_rect(issho::AccessRect::new(
+                padding_box.x as f64,
+                padding_box.y as f64,
+                padding_box.width as f64,
+                padding_box.height as f64,
+            ));
+        }
+    }
+
     pub fn apply_borders(&mut self, scale_factor: f64) {
         let current_style = self.style();
         let has_border = current_style.has_border();
         let border_radius = current_style.get_border_radius();
         let border_color = current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
-        self.layout
-            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows.to_vec());
+        self.layout.apply_borders(
+            has_border,
+            border_radius,
+            scale_factor,
+            border_color,
+            box_shadows.to_vec(),
+        );
     }
 
     /// Computes the scrollbar's tack and thumb layout.

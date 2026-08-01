@@ -22,6 +22,20 @@ where
             new_data.internal_id = create_unique_element_id();
             new_data.me = Rc::downgrade(&new_element);
             new_data.parent = None;
+            let (access_tree, access_key) = {
+                let tree = crate::accessibility::access_tree();
+                let source_key = new_data.access_key.expect("source accessibility node was not created");
+                let node = new_data
+                    .access_tree
+                    .get_node(source_key)
+                    .expect("source accessibility node was not created")
+                    .clone();
+                let key = tree.insert_node(node, None);
+                new_data.access_tree = tree.clone();
+                new_data.access_key = Some(key);
+                new_data.access_root = Some(key);
+                (tree, key)
+            };
 
             // Clone the layout node
             let node_id = new_data.layout.taffy_node_id_mut();
@@ -33,6 +47,17 @@ where
             let mut new_children = Vec::new();
             for child in &new_data.children {
                 let new_child = child.borrow().deep_clone();
+                new_child.borrow_mut().element_data_mut().parent = Some(Rc::downgrade(&new_element));
+                {
+                    let scale_factor = new_data.access_scale_factor;
+                    crate::accessibility::reparent_subtree(
+                        &mut *new_child.borrow_mut(),
+                        &access_tree,
+                        access_key,
+                        access_key,
+                        scale_factor,
+                    );
+                }
                 new_children.push(new_child.clone());
 
                 let new_child_copy = new_child.clone();

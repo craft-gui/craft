@@ -5,15 +5,16 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Action, Role};
-
 use craft_renderer::text_renderer_data::TextData;
 
+use craft_primitives::Color;
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use parley::LayoutAccessibility;
+use craft_renderer::renderer::Renderer;
+
+use craft_resource_manager::ResourceManager;
+
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
 use rustc_hash::FxHashMap;
@@ -30,12 +31,8 @@ use ui_events::pointer::{PointerButton, PointerId};
 use web_time as time;
 
 use winit::dpi;
-use craft_primitives::brush::Brush;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
+
 use crate::elements::element_data::ElementData;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use crate::elements::element_id::create_unique_element_id;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
@@ -197,9 +194,16 @@ impl ElementInternals for TextInner {
         }
 
         state.try_update_text_render(text_context, self.element_data.style.get_selection_brush());
+        self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -217,69 +221,7 @@ impl ElementInternals for TextInner {
         _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
     }
 
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        scale_factor: f64,
-    ) {
-        let padding_box = self
-            .element_data
-            .layout
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
-
-        let state: &mut TextState = &mut self.state;
-        if state.layout.is_none() {
-            return;
-        }
-
-        let layout = state.layout.as_mut();
-        let mut access = LayoutAccessibility::default();
-        let text = state.text.as_ref();
-
-        let current_node_id = accesskit::NodeId(self.element_data.internal_id);
-
-        let mut current_node = accesskit::Node::new(Role::Label);
-        current_node.set_value(text);
-        current_node.add_action(Action::SetTextSelection);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        if let Some(layout) = layout {
-            access.build_nodes(
-                text,
-                layout,
-                tree,
-                &mut current_node,
-                || accesskit::NodeId(create_unique_element_id()),
-                padding_box.x as f64,
-                padding_box.y as f64,
-                |_, _| {},
-            );
-        }
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
-    }
-
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         if !self.selectable {
             return;
         }
@@ -383,6 +325,7 @@ impl Text {
         });
         let mut inner_mut = inner.borrow_mut();
 
+        inner_mut.element_data.set_accessibility_role(issho::Role::Label);
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
             element: inner_mut.me.clone(),
         }));
@@ -449,6 +392,7 @@ impl TextInner {
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
         self.mark_dirty();
+        self.element_data.set_accessibility_name(self.state.text.clone());
     }
 
     pub(crate) fn measure(

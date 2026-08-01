@@ -1,6 +1,6 @@
+use craft_resource_manager::{ResourceId as CraftResourceId, ResourceId};
 use std::collections::HashMap;
 use std::collections::hash_map::Values;
-use craft_resource_manager::{ResourceId as CraftResourceId, ResourceId};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RendererResourceId(pub u64);

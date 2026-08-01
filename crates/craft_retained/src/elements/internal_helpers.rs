@@ -5,34 +5,46 @@ use crate::text::text_context::TextContext;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 use crate::elements::element_data::ElementData;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Node, NodeId, TreeUpdate};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
 
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
-    let element_data = parent.element_data_mut();
-    let me: Weak<RefCell<dyn ElementInternals>> = element_data.me.clone();
-    let me_window = element_data.window.clone();
+    let (me, me_window) = {
+        let element_data = parent.element_data();
+        (element_data.me.clone(), element_data.window.clone())
+    };
     child.borrow_mut().element_data_mut().parent = Some(me);
     child.borrow_mut().element_data_mut().window = me_window;
     child.borrow_mut().propagate_window_down();
-    element_data.children.push(child.clone());
+    parent.element_data_mut().children.push(child.clone());
 
     // Add the children's taffy node.
     TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        let parent_id = element_data.layout.taffy_node_id.unwrap();
+        let parent_id = parent.element_data().layout.taffy_node_id.unwrap();
         let child_id = child.borrow().element_data().layout.taffy_node_id;
         if let Some(child_id) = child_id {
             taffy_tree.add_child(parent_id, child_id);
         }
         child.borrow_mut().on_post_add_layout_tree(taffy_tree);
-    })
+    });
+
+    {
+        let data = parent.element_data();
+        if let Some((parent_node, root)) = data.access_key.zip(data.access_root) {
+            crate::accessibility::reparent_subtree(
+                &mut *child.borrow_mut(),
+                &data.access_tree,
+                parent_node,
+                root,
+                data.access_scale_factor,
+            );
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -74,6 +86,10 @@ pub fn apply_generic_container_layout(
     if has_new_layout {
         taffy_tree.mark_seen(node);
     }
+
+    element
+        .element_data_mut()
+        .set_accessibility_bounds_from_layout(scale_factor);
 
     let scroll_y = element.element_data_mut().scroll().scroll_y() as f64;
     let child_transform = Affine::translate((0.0, -scroll_y));
@@ -160,44 +176,10 @@ pub fn apply_generic_leaf_layout(
     if has_new_layout {
         taffy_tree.mark_seen(node);
     }
-}
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-pub fn add_generic_accesskit_data(
-    element: &mut ElementData,
-    mut current_node: Node,
-    current_node_id: NodeId,
-    tree: &mut TreeUpdate,
-    parent_index: Option<usize>,
-    scale_factor: f64,
-) {
-    let padding_box = element
-        .layout
-        .computed_box_transformed
-        .padding_rectangle()
-        .scale(scale_factor);
-
-    current_node.set_bounds(accesskit::Rect {
-        x0: padding_box.left() as f64,
-        y0: padding_box.top() as f64,
-        x1: padding_box.right() as f64,
-        y1: padding_box.bottom() as f64,
-    });
-
-    let current_index = tree.nodes.len(); // The current node is the last one added.
-
-    if let Some(parent_index) = parent_index {
-        let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-        parent_node.1.push_child(current_node_id);
-    }
-
-    tree.nodes.push((current_node_id, current_node));
-
-    for child in element.children.iter_mut() {
-        child
-            .borrow_mut()
-            .compute_accessibility_tree(tree, Some(current_index), scale_factor);
-    }
+    element
+        .element_data_mut()
+        .set_accessibility_bounds_from_layout(scale_factor);
 }
 
 pub fn draw_generic_container(

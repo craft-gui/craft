@@ -10,7 +10,7 @@ pub struct RenderList {
     /// Stores a sorted list of render command handles. This gets set in `Renderer::sort_render_list`.
     pub overlay: SortedCommands,
     pub cull: Option<Rectangle>,
-    pub transform: Affine
+    pub transform: Affine,
 }
 
 impl Default for RenderList {

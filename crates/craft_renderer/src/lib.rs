@@ -10,13 +10,13 @@ mod image_adapter;
 pub mod render_command;
 mod render_list;
 mod renderer_type;
+pub mod resource_mapper;
 mod screenshot;
 mod sort_commands;
 mod target_item;
 pub mod text_renderer_data;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
-pub mod resource_mapper;
 
 pub use craft_primitives::brush::Brush;
 pub use render_command::RenderCommand;

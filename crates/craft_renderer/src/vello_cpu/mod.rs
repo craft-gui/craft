@@ -1,5 +1,5 @@
-pub mod text;
 pub mod image;
+pub mod text;
 
 use std::any::Any;
 use std::collections::HashSet;
@@ -8,21 +8,18 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use peniko::kurbo::{Affine, Shape};
-use peniko::{kurbo, BlendMode, Color, Compose, Fill, Mix};
+use peniko::{BlendMode, Color, Compose, Fill, Mix, kurbo};
 
 use softbuffer::Buffer;
 
 use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::kurbo::Stroke;
 use vello_common::paint::{ImageId, PaintType};
-use vello_cpu::{RenderContext, Resources};
-use vello_cpu::Pixmap;
+use vello_cpu::{Pixmap, RenderContext, Resources};
 
 use winit::window::Window;
 
-use craft_primitives::brush::Brush;
-use craft_primitives::geometry::{Rectangle, TOLERANCE};
-use craft_resource_manager::ResourceManager as CraftResourceManager;
+use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
@@ -30,10 +27,11 @@ use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::screenshot::Screenshot;
 use crate::sort_commands::SortedCommands;
-use crate::RenderCommand;
+use craft_primitives::brush::Brush;
+use craft_primitives::geometry::{Rectangle, TOLERANCE};
+use craft_resource_manager::ResourceManager as CraftResourceManager;
+use image::{draw_image, upload_image};
 use text::draw_text;
-use image::{upload_image, draw_image};
-
 
 pub(crate) struct VelloCpuRenderer {
     scene: RenderContext,
@@ -45,7 +43,7 @@ pub(crate) struct VelloCpuRenderer {
     resources: Resources,
     render_list: RenderList,
     resource_mapper: ResourceMapper,
-    resources_seen: HashSet<RendererResourceId>
+    resources_seen: HashSet<RendererResourceId>,
 }
 
 pub struct Surface {
@@ -101,12 +99,12 @@ fn push_layer(scene: &mut RenderContext, cmd: &PushLayerCmd) {
         PushLayerCmd::BezPath(path, transform) => {
             scene.set_transform(*transform);
             scene.push_layer(Some(&path), None, None, None, None);
-        },
+        }
         PushLayerCmd::Rect(rect, transform) => {
             scene.set_transform(*transform);
             let clip_path = &rect.to_kurbo().into_path(0.1);
             scene.push_layer(Some(clip_path), None, None, None, None);
-        },
+        }
     };
 }
 
@@ -269,15 +267,12 @@ impl Renderer for VelloCpuRenderer {
     fn render_list_mut(&mut self) -> &mut RenderList {
         &mut self.render_list
     }
+
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
-    fn prepare(
-        &mut self,
-        resource_manager: Arc<CraftResourceManager>,
-        window: Rectangle,
-    ) {
+    fn prepare(&mut self, resource_manager: Arc<CraftResourceManager>, window: Rectangle) {
         self.resources_seen.clear();
 
         // Clear the bg color.
@@ -286,7 +281,7 @@ impl Renderer for VelloCpuRenderer {
             &DrawRectCmd {
                 rect: Rectangle::new(0.0, 0.0, self.window_width as f32, self.window_height as f32),
                 brush: Brush::Color(self.clear_color),
-                transform: Affine::IDENTITY
+                transform: Affine::IDENTITY,
             },
         );
 
@@ -333,9 +328,7 @@ impl Renderer for VelloCpuRenderer {
                 }
                 RenderCommand::StartOverlay => {}
                 RenderCommand::EndOverlay => {}
-                RenderCommand::BoxShadowCmd(cmd) => {
-                    draw_box_shadow(&mut self.scene, cmd)
-                },
+                RenderCommand::BoxShadowCmd(cmd) => draw_box_shadow(&mut self.scene, cmd),
                 RenderCommand::DrawCircleOutline(cmd) => {
                     draw_circle_outline(&mut self.scene, cmd);
                 }

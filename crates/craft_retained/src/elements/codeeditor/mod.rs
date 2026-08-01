@@ -10,11 +10,11 @@ use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
 
+use crate::elements::codeeditor::highlighter::compute_code_editor_style;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, TextInput};
-use crate::elements::codeeditor::highlighter::compute_code_editor_style;
+use crate::elements::{AsElement, Element, ElementInternals, TextInput, resolve_clip_for_scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::Overflow;
@@ -104,16 +104,17 @@ impl ElementInternals for CodeEditorInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        _event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
         if let EventKind::TextInputChanged(_) = message {
             self.highlight();
         }
@@ -162,9 +163,7 @@ impl CodeEditor {
     }
 }
 
-
 impl CodeEditorInner {
-
     fn highlight(&mut self) {
         let mut text = self.text_input.inner.borrow_mut();
         let code_editor = compute_code_editor_style(text.get_text(), None, None, &self.extension, &self.theme);
@@ -172,5 +171,4 @@ impl CodeEditorInner {
         text.set_background_brush(Brush::Color(code_editor.background_color));
         text.set_text_brush(Brush::Color(code_editor.foreground_color));
     }
-
 }

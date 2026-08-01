@@ -22,7 +22,6 @@ features = [
     "http_client",
     "png",
     "jpeg",
-    "accesskit",
     "system_fonts",
     "markdown"
 ]
@@ -35,7 +34,6 @@ features = [
     "http_client",
     "png",
     "jpeg",
-    "accesskit",
     "system_fonts",
     "markdown"
 ]

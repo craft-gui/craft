@@ -10,7 +10,7 @@ use crate::renderer::Renderer;
 
 #[derive(Default)]
 pub struct BlankRenderer {
-    render_list: RenderList
+    render_list: RenderList,
 }
 
 impl Renderer for BlankRenderer {
@@ -38,12 +38,7 @@ impl Renderer for BlankRenderer {
         self
     }
 
-    fn prepare<'a>(
-        &mut self,
-        _resource_manager: Arc<ResourceManager>,
-        _window: Rectangle,
-    ) {
-    }
+    fn prepare<'a>(&mut self, _resource_manager: Arc<ResourceManager>, _window: Rectangle) {}
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}
 }

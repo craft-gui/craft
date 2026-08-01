@@ -1,6 +1,6 @@
-use std::any::Any;
-use chrono::{DateTime, Utc};
 use crate::resource_type::ResourceType;
+use chrono::{DateTime, Utc};
+use std::any::Any;
 
 #[derive(Debug)]
 pub struct Resource {

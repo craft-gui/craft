@@ -19,19 +19,19 @@ use winit::window::Window;
 
 use wgpu::{CommandEncoder, CurrentSurfaceTexture, TextureFormat};
 
+use crate::RenderCommand;
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use crate::RenderCommand;
+use craft_primitives::Color;
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Rectangle, TOLERANCE};
-use craft_primitives::Color;
 use craft_resource_manager::ResourceManager;
 use image::{draw_image, upload_image};
-use render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
+use render_context::{DeviceHandle, RenderContext, RenderSurface, create_vello_renderer};
 use text::draw_text;
 
 pub struct ActiveRenderState {

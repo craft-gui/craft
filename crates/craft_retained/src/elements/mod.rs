@@ -19,7 +19,7 @@ pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
 pub use crate::elements::text::{Text, TextInner};
 pub use crate::elements::text_input::{TextInput, TextInputInner};
 pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
-pub use crate::elements::traits::{resolve_clip_for_scrollable, AsElement, Element, ElementData, ElementInternals};
+pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
 pub use crate::elements::window::{Window, WindowInternal};
 
 #[cfg(feature = "audio")]
@@ -28,9 +28,14 @@ pub(crate) use crate::elements::audio::AUDIO_CONTEXT;
 pub(crate) mod internal_helpers;
 pub(crate) mod scrollable;
 
+#[cfg(feature = "audio")]
+mod audio;
+pub mod button;
 mod calendar;
 mod checkbox;
 mod checkboxgroup;
+#[cfg(feature = "code_highlighting")]
+mod codeeditor;
 mod container;
 mod dropdown;
 mod dyn_element;
@@ -38,6 +43,8 @@ mod element_data;
 mod element_id;
 mod element_id_map;
 mod image;
+#[cfg(feature = "markdown")]
+mod markdown;
 mod radio;
 mod radiogroup;
 mod slider;
@@ -46,10 +53,3 @@ mod text_input;
 mod tinyvg;
 mod traits;
 mod window;
-#[cfg(feature = "markdown")]
-mod markdown;
-#[cfg(feature = "code_highlighting")]
-mod codeeditor;
-#[cfg(feature = "audio")]
-mod audio;
-pub mod button;

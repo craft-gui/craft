@@ -1,7 +1,7 @@
 //! A retained GUI.
 
 pub use craft_primitives::brush::Brush;
-pub use craft_primitives::{Color, geometry, palette, Gradient, GradientKind, LinearGradientData, RadialGradientData, SweepGradientData, HueDirection, ColorStop, Extend};
+pub use craft_primitives::{Color, ColorStop, Extend, Gradient, GradientKind, HueDirection, LinearGradientData, RadialGradientData, SweepGradientData, geometry, palette};
 
 pub use craft_renderer::RendererType;
 
@@ -32,7 +32,7 @@ use craft_logging::info;
 
 use craft_resource_manager::ResourceManager;
 
-use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
 
 use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
@@ -48,8 +48,7 @@ use crate::app::App;
 use crate::craft_winit_state::CraftState;
 use crate::events::internal::InternalMessage;
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-pub mod accessibility;
+mod accessibility;
 pub mod craft_winit_state;
 pub mod elements;
 pub mod events;
@@ -173,6 +172,8 @@ fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         target_scratch: Vec::new(),
         craft_options: craft_options.clone(),
         active: false,
+        #[cfg(feature = "audio")]
+        last_audio_ui_update: None,
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

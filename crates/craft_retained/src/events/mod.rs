@@ -26,7 +26,6 @@ mod event_dispatch;
 mod helpers;
 mod mouse_wheel;
 
-
 pub type CheckboxToggledHandler = Rc<dyn Fn(&mut Event, CheckboxToggled)>;
 pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut Event, usize)>;
 pub type KeyboardInputHandler = Rc<dyn Fn(&mut Event, &KeyboardEvent)>;
@@ -40,7 +39,6 @@ pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
 pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type TextInputChangedHandler = Rc<dyn Fn(&mut Event, &TextInputChanged)>;
 pub type UserMessage = dyn CloneableAny;
-
 
 #[derive(Clone)]
 pub enum EventDispatchType {
@@ -114,10 +112,10 @@ impl EventKind {
     pub(super) fn pointer_id(&self) -> Option<PointerId> {
         match self {
             EventKind::PointerButtonUp(e) => e.pointer.pointer_id,
-            EventKind::PointerButtonDown(e) =>  e.pointer.pointer_id,
-            EventKind::PointerMovedEvent(e) =>  e.pointer.pointer_id,
+            EventKind::PointerButtonDown(e) => e.pointer.pointer_id,
+            EventKind::PointerMovedEvent(e) => e.pointer.pointer_id,
             EventKind::PointerScroll(e) => e.pointer.pointer_id,
-            _ => None
+            _ => None,
         }
     }
 

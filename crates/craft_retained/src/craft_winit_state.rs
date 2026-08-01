@@ -1,13 +1,13 @@
 //! Integration with the winit event loop.
 
+use craft_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use std::time::Instant;
-use craft_logging::info;
 
 use craft_primitives::geometry::Size;
 
-use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work, Job, push_gui_thread_work};
+use craft_runtime::{CraftRuntimeHandle, Job, Receiver, Sender, pop_gui_thread_work, push_gui_thread_work};
 
 use ui_events::pointer::PointerEvent;
 
@@ -66,11 +66,6 @@ impl ApplicationHandler for CraftWinitState {
         let window = if let Some(window) = window { window } else { return };
 
         let craft_state = &mut self.craft_state;
-
-        /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-        if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
-            accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);
-        }*/
 
         if !matches!(
             event,
@@ -143,6 +138,9 @@ impl ApplicationHandler for CraftWinitState {
             }
             WindowEvent::Moved(_) => {
                 craft_state.craft_app.on_move(window);
+            }
+            WindowEvent::Focused(focused) => {
+                window.on_focused(focused);
             }
             _ => (),
         }

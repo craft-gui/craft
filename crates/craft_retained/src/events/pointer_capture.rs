@@ -28,7 +28,11 @@ impl PointerCapture {
     }
 
     /// Returns the currently pointer captured element or None.
-    pub(super) fn find_pointer_capture_target(&self, message: &EventKind, pointer_id: &PointerId) -> Option<Rc<RefCell<dyn ElementInternals>>> {
+    pub(super) fn find_pointer_capture_target(
+        &self,
+        message: &EventKind,
+        pointer_id: &PointerId,
+    ) -> Option<Rc<RefCell<dyn ElementInternals>>> {
         // 9.4 Implicit pointer capture
         // https://w3c.github.io/pointerevents/#implicit-pointer-capture
         //
@@ -46,7 +50,11 @@ impl PointerCapture {
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-    pub(super) fn process_pending_pointer_capture(&mut self, text_context: &mut TextContext, pointer_id: &PointerId) -> bool {
+    pub(super) fn process_pending_pointer_capture(
+        &mut self,
+        text_context: &mut TextContext,
+        pointer_id: &PointerId,
+    ) -> bool {
         let mut did_pointer_capture_change = false;
 
         // 4.1.3.2 Process pending pointer capture
@@ -115,7 +123,12 @@ impl PointerCapture {
         did_pointer_capture_change
     }
 
-    pub(super) fn maybe_handle_implicit_pointer_capture_release(&mut self, message: &EventKind, text_context: &mut TextContext, pointer_id: &PointerId) -> bool {
+    pub(super) fn maybe_handle_implicit_pointer_capture_release(
+        &mut self,
+        message: &EventKind,
+        text_context: &mut TextContext,
+        pointer_id: &PointerId,
+    ) -> bool {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
         let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));

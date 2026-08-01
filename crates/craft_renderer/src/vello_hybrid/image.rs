@@ -65,10 +65,14 @@ pub(crate) fn draw_image(
     cmd: &DrawImageCmd,
     scene: &mut Scene,
     resource_manager: Arc<ResourceManager>,
-    resource_id: RendererResourceId
+    resource_id: RendererResourceId,
 ) {
-    let Some(resource) = resource_manager.get(&cmd.resource_id) else { return };
-    let Some(image) = resource_to_image_resource(resource.as_ref()) else { return };
+    let Some(resource) = resource_manager.get(&cmd.resource_id) else {
+        return;
+    };
+    let Some(image) = resource_to_image_resource(resource.as_ref()) else {
+        return;
+    };
 
     let mut transform = Affine::IDENTITY;
     transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
@@ -82,7 +86,7 @@ pub(crate) fn draw_image(
     let vello_image = vello_common::paint::Image {
         image: ImageSource::OpaqueId {
             id: ImageId::new(resource_id.0 as u32),
-            may_have_transparency: true
+            may_have_transparency: true,
         },
         sampler: Default::default(),
     };

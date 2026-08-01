@@ -1,3 +1,4 @@
+use crate::signals::Bindable;
 use craft_retained::elements::{AsElement, DynElement, ScrollOptions, ScrollState};
 use craft_retained::events::ui_events::pointer::PointerId;
 use craft_retained::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
@@ -7,7 +8,6 @@ use craft_retained::winit::dpi::PhysicalPosition;
 use craft_retained::winit::event::WindowEvent::{CursorMoved, MouseInput};
 use craft_retained::winit::event::{DeviceId, ElementState, MouseButton};
 use craft_retained::{Brush, Color, CraftError, queue_window_event};
-use crate::signals::Bindable;
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.

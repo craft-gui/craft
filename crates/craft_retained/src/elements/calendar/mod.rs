@@ -1,15 +1,12 @@
 //! A calendar.
 
+use craft_calendar::sys_locale::get_locale_or_default;
+use craft_calendar::{DateAddOptions, DateDuration, Locale, Month, Weekday, current_calendar_start, current_month, day_abbreviation, first_day_of_week, format_date_day_number, month_name, year_name};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use craft_calendar::sys_locale::get_locale_or_default;
-use craft_calendar::{DateAddOptions, DateDuration, Locale, Month, Weekday, current_calendar_start, current_month, day_abbreviation, first_day_of_week, format_date_day_number, month_name, year_name};
 
-use craft_primitives::geometry::{Affine, Point, Rectangle};
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
@@ -19,6 +16,9 @@ use crate::layout::TaffyTree;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{px, rgb};
+use craft_primitives::geometry::{Affine, Point, Rectangle};
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
 
 #[derive(Clone)]
 pub struct Calendar {
@@ -114,16 +114,17 @@ impl ElementInternals for CalendarInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         let year_id = self.year_dropdown.borrow().element_data().internal_id;
         let month_id = self.month_dropdown.borrow().element_data().internal_id;
         if let EventKind::DropdownItemSelected(index) = message {
@@ -316,7 +317,11 @@ impl CalendarInner {
         for month in 0..12 {
             dropdown
                 .clone()
-                .push(Text::new(&month_name(&self.locale, Month::new(month + 1), self.focus_year)))
+                .push(Text::new(&month_name(
+                    &self.locale,
+                    Month::new(month + 1),
+                    self.focus_year,
+                )))
                 .font_size(20.0);
             if month + 1 == self.focus_month {
                 dropdown.clone().selected_item(month as usize);

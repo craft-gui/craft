@@ -3,8 +3,8 @@ pub mod image;
 mod lock_free_map;
 pub mod resource;
 
-pub mod resource_event;
 pub mod decoders;
+pub mod resource_event;
 pub mod resource_type;
 
 use std::any::Any;
@@ -13,13 +13,13 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use craft_runtime::{CraftRuntimeHandle, Sender};
 use crate::decoders::{image_decoder, tinyvg_decoder};
 pub use crate::identifier::ResourceId;
 use crate::lock_free_map::LockFreeMap;
 use crate::resource::Resource;
 use crate::resource_event::ResourceEvent;
 use crate::resource_type::ResourceType;
+use craft_runtime::{CraftRuntimeHandle, Sender};
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
 
@@ -38,7 +38,7 @@ impl<T: From<ResourceEvent> + 'static> ResourceEventHandler for T {}
 pub struct ResourceManager {
     resources: LockFreeMap<ResourceId, Resource>,
     pub(crate) runtime: CraftRuntimeHandle,
-    decoders: HashMap<ResourceType, fn(Vec<u8>) -> Box<dyn Any + Send>>
+    decoders: HashMap<ResourceType, fn(Vec<u8>) -> Box<dyn Any + Send>>,
 }
 
 impl ResourceManager {
@@ -46,12 +46,16 @@ impl ResourceManager {
         Self {
             resources: LockFreeMap::new(),
             runtime: craft_runtime_handle,
-            decoders: HashMap::from(
-                [
-                    (ResourceType::Image, image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>),
-                    (ResourceType::TinyVg, tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>)
-                ]
-            ),
+            decoders: HashMap::from([
+                (
+                    ResourceType::Image,
+                    image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>,
+                ),
+                (
+                    ResourceType::TinyVg,
+                    tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>,
+                ),
+            ]),
         }
     }
 
@@ -65,7 +69,7 @@ impl ResourceManager {
 
         let resource_id = resource_id.clone();
         let resource_type = resource_type.clone();
-        let decoder_fn =  *self.decoders.get(&resource_type).unwrap();
+        let decoder_fn = *self.decoders.get(&resource_type).unwrap();
         let app_sender_copy = app_sender.clone();
         let f = async move {
             let bytes = resource_id.fetch_data_from_resource_id().await;

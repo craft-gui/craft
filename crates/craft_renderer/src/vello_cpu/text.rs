@@ -1,15 +1,15 @@
 use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 
-use vello_common::{kurbo, peniko};
 use glifo::Glyph;
+use vello_common::{kurbo, peniko};
 use vello_cpu::{RenderContext, Resources};
 
 use crate::helpers::{brush_to_paint, text_bounds};
-use crate::text_renderer_data::TextScroll;
-use craft_primitives::geometry::Rectangle;
 use crate::render_command::{DrawRectCmd, DrawTextCmd};
+use crate::text_renderer_data::TextScroll;
 use crate::vello_cpu::draw_rect;
+use craft_primitives::geometry::Rectangle;
 
 pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources: &mut Resources, window: &Rectangle) {
     let text_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
@@ -19,7 +19,9 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
         .then_translate(kurbo::Vec2::new(0.0, -scroll as f64));
 
     let text_data = cmd.data.upgrade();
-    if text_data.is_none() { return; }
+    if text_data.is_none() {
+        return;
+    }
     let text_data = text_data.unwrap();
     let text_data = text_data.borrow();
     let text_render = text_data.get_text_renderer().expect("Text render not found");
@@ -46,11 +48,14 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
                 width: background.width,
                 height: background.height,
             };
-            draw_rect(scene, &DrawRectCmd {
-                rect: background_rect,
-                brush: color.clone(),
-                transform: cmd.transform
-            });
+            draw_rect(
+                scene,
+                &DrawRectCmd {
+                    rect: background_rect,
+                    brush: color.clone(),
+                    transform: cmd.transform,
+                },
+            );
         }
 
         for (selection, selection_color) in &line.selections {
@@ -60,11 +65,14 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
                 width: selection.width,
                 height: selection.height,
             };
-            draw_rect(scene, &DrawRectCmd {
-                rect: selection_rect,
-                brush: selection_color.clone(),
-                transform: cmd.transform
-            });
+            draw_rect(
+                scene,
+                &DrawRectCmd {
+                    rect: selection_rect,
+                    brush: selection_color.clone(),
+                    transform: cmd.transform,
+                },
+            );
         }
 
         scene.set_transform(cmd.transform * text_transform);
@@ -103,10 +111,13 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
             width: cursor.width,
             height: cursor.height,
         };
-        draw_rect(scene, &DrawRectCmd {
-            rect: cursor_rect,
-            brush: cursor_brush.clone(),
-            transform: cmd.transform
-        });
+        draw_rect(
+            scene,
+            &DrawRectCmd {
+                rect: cursor_rect,
+                brush: cursor_brush.clone(),
+                transform: cmd.transform,
+            },
+        );
     }
 }

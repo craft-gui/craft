@@ -1,10 +1,10 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
+use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use craft_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 
 use craft_renderer::Brush;
 
@@ -12,20 +12,20 @@ use craft_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
-use crate::app::{queue_event, request_apply_layout, TAFFY_TREE};
+use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
-use crate::elements::{resolve_clip_for_scrollable, AsElement, Element, ElementData, ElementInternals};
+use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
 use crate::events::{Event, EventKind};
-use crate::layout::layout::Layout;
 use crate::layout::TaffyTree;
+use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
 use craft_renderer::renderer::Renderer;
-use ui_events::pointer::PointerId;
 use craft_resource_manager::ResourceManager;
+use ui_events::pointer::PointerId;
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
@@ -195,7 +195,13 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -209,7 +215,12 @@ impl ElementInternals for DropdownInner {
         self.draw_selected_element(renderer, resource_manager.clone(), text_context, scale_factor);
 
         // Draw the arrow
-        let arrow_rect = self.arrow.layout.computed_box_transformed.border_rectangle().scale(scale_factor);
+        let arrow_rect = self
+            .arrow
+            .layout
+            .computed_box_transformed
+            .border_rectangle()
+            .scale(scale_factor);
         let thickness = 2.0 * scale_factor;
         let mut path = BezPath::new();
         let left_x = arrow_rect.x as f64;
@@ -261,12 +272,7 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         // Take focus if clicked.
         if let EventKind::PointerButtonDown(_pb) = message {
             self.focus();
@@ -301,7 +307,12 @@ impl ElementInternals for DropdownInner {
 
             self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
             self.handle_click_in_select_box(is_pointer_in_select_box, &pointer_id.unwrap());
-            self.handle_child_click(&pointer_position, is_pointer_in_window, is_pointer_in_scrollbar, &pointer_id.unwrap());
+            self.handle_child_click(
+                &pointer_position,
+                is_pointer_in_window,
+                is_pointer_in_scrollbar,
+                &pointer_id.unwrap(),
+            );
         }
 
         // Handle updating the scroll state.
@@ -338,7 +349,13 @@ impl ElementInternals for DropdownInner {
         });
     }
 
-    fn draw_children(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw_children(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         for (index, child) in self.children().iter().enumerate() {
             let floating_window_box = &self.floating_window.layout.computed_box_transformed;
             let mut child_rect = child
@@ -353,10 +370,15 @@ impl ElementInternals for DropdownInner {
 
             let is_hovered = self.currently_hovered_element == Some(index);
             if is_hovered {
-                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_brush.as_ref().unwrap().clone());
+                renderer.draw_rect(
+                    child_rect.scale(scale_factor),
+                    self.hovered_bg_brush.as_ref().unwrap().clone(),
+                );
             }
 
-            child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
+            child
+                .borrow_mut()
+                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -430,8 +452,13 @@ impl Shape {
             let border_radius = current_style.get_border_radius();
             let border_color = &current_style.get_border_color();
             let box_shadows = current_style.get_box_shadows();
-            self.layout
-                .apply_borders(has_border, border_radius, scale_factor, border_color.clone(), box_shadows.to_vec());
+            self.layout.apply_borders(
+                has_border,
+                border_radius,
+                scale_factor,
+                border_color.clone(),
+                box_shadows.to_vec(),
+            );
             // Refactor END
 
             // For scroll changes from taffy;
@@ -583,7 +610,13 @@ impl Dropdown {
 }
 
 impl DropdownInner {
-    fn draw_selected_element(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, text_context: &mut TextContext, scale_factor: f64) {
+    fn draw_selected_element(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        text_context: &mut TextContext,
+        scale_factor: f64,
+    ) {
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
             binding.draw(renderer, resource_manager.clone(), scale_factor, text_context);

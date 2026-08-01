@@ -104,12 +104,7 @@ pub fn gradient() -> Container {
         ColorStop::new(1.0, Color::from_rgb8(255, 0, 0)),
     ]);
 
-    let radial = Gradient::new_radial(
-        Point::new(0.5, 0.5),
-        0.0,
-        Point::new(0.5, 0.5),
-        0.75,
-    ).color_stops(&[
+    let radial = Gradient::new_radial(Point::new(0.5, 0.5), 0.0, Point::new(0.5, 0.5), 0.75).color_stops(&[
         ColorStop::new(0.0, Color::from_rgb8(255, 245, 157)),
         ColorStop::new(0.55, Color::from_rgb8(255, 112, 67)),
         ColorStop::new(1.0, Color::from_rgb8(74, 20, 140)),
@@ -144,8 +139,7 @@ pub fn gradient() -> Container {
         .font_weight(FontWeight::BOLD)
         .text_gradient(linear.clone());
 
-    let underline_text = Text::new("Gradient Underline")
-        .underline_gradient(Some(3.0), linear, None);
+    let underline_text = Text::new("Gradient Underline").underline_gradient(Some(3.0), linear, None);
 
     container
         .display(Display::Flex)
@@ -277,8 +271,8 @@ pub fn radio_buttons() -> Container {
     let green = Image::new(ResourceId::Url(
         "https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string(),
     ))
-        .border_width_all(px(1))
-        .border_color_all(rgba(0, 0, 0, 0));
+    .border_width_all(px(1))
+    .border_color_all(rgba(0, 0, 0, 0));
     Container::new()
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
@@ -311,20 +305,20 @@ pub fn checkbox() -> Container {
         .flex_direction(FlexDirection::Column)
         .push(title("Checkbox"))
         .push(
-        CheckboxGroup::new("Select your favorite foods")
-            .on_checkbox_toggled(Rc::new(move |_event, checkbox_toggled| {
-                println!(
-                    "checkbox toggled: {} - {}",
-                    checkbox_toggled.label, checkbox_toggled.status
-                );
-            }))
-            .flex_direction(FlexDirection::Column)
-            .gap(px(15.0), px(15.0))
-            .push(Checkbox::new("coffee", true).push(Text::new("Coffee").selectable(false)))
-            .push(Checkbox::new("tea", false).push(Text::new("Tea").selectable(false)))
-            .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉").selectable(false)))
-            .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー").selectable(false))),
-    )
+            CheckboxGroup::new("Select your favorite foods")
+                .on_checkbox_toggled(Rc::new(move |_event, checkbox_toggled| {
+                    println!(
+                        "checkbox toggled: {} - {}",
+                        checkbox_toggled.label, checkbox_toggled.status
+                    );
+                }))
+                .flex_direction(FlexDirection::Column)
+                .gap(px(15.0), px(15.0))
+                .push(Checkbox::new("coffee", true).push(Text::new("Coffee").selectable(false)))
+                .push(Checkbox::new("tea", false).push(Text::new("Tea").selectable(false)))
+                .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉").selectable(false)))
+                .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー").selectable(false))),
+        )
 }
 
 #[cfg(feature = "audio")]
@@ -372,8 +366,7 @@ pub fn main() {
         .push(radio_buttons())
         .push(checkbox())
         .push(scrollable())
-        .push(multiple_windows())
-        ;
+        .push(multiple_windows());
 
     window.push(wrapper);
 

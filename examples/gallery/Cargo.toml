@@ -18,7 +18,6 @@ util = { path = "../util" }
 path = "../../crates/craft_retained"
 default-features = false
 features = [
-    "accesskit",
     "system_fonts",
     "http_client",
     "jpeg",
