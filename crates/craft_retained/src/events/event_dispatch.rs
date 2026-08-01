@@ -198,19 +198,6 @@ impl EventDispatcher {
         // Handle bubbling
         let bubbling_event = dispatch_bubbling_event(message, &mut targets);
 
-
-
-        // Drain the event dispatch queue and invoke user callbacks.
-        while let Some((event, message)) = dequeue_event() {
-            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target);
-            // Handle capturing
-            dispatch_capturing_event(&message, &mut targets);
-
-            // Handle bubbling
-            let _ = dispatch_bubbling_event(&message, &mut targets);
-        }
-
-
         if !bubbling_event.prevent_defaults {
             let target = targets[0].clone();
             let mut event = Event::new(target.clone());
@@ -254,5 +241,35 @@ impl EventDispatcher {
         if message.is_system_pointer_event() {
             self.previous_targets = targets.iter().map(Rc::downgrade).collect();
         }
+
+        // Handle Semantic Events (DropdownItemSelected, Click, and etc.)
+
+        // Drain the event dispatch queue and invoke user callbacks.
+        while let Some((event, message)) = dequeue_event() {
+            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target);
+            // Handle capturing
+            dispatch_capturing_event(&message, &mut targets);
+
+            // Handle bubbling
+            let bubbling_event = dispatch_bubbling_event(&message, &mut targets);
+
+            // TODO: Abstract this.
+            if !bubbling_event.prevent_defaults {
+                let target = targets[0].clone();
+                let mut event = Event::new(target.clone());
+
+                // Call the default on_event element functions.
+                for current_target in targets.iter() {
+                    event.current_target = current_target.clone();
+                    current_target.borrow_mut().on_event(&message, text_context, &mut event);
+                    if !event.propagate {
+                        break;
+                    }
+                }
+            }
+        }
+
+
+
     }
 }

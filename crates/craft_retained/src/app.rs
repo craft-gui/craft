@@ -286,9 +286,6 @@ impl App {
 }
 
 /// Enqueues an event at the back of the dispatch queue.
-///
-/// This does **not** invoke any element `on_event` handlers.
-/// Only user-registered event callbacks will be dispatched.
 pub fn queue_event(event: Event, message: EventKind) {
     EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
         event_queue.push_back((event, message));
