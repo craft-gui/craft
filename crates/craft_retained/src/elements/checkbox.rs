@@ -123,13 +123,13 @@ impl ElementInternals for CheckboxInner {
 
         let color = rgb(0, 100, 255);
         let border_color = if self.checked { color } else { rgb(150, 150, 150) };
-        renderer.draw_rect_outline(self.box_rect.scale(_scale_factor), border_color, 2.0 * _scale_factor);
+        renderer.draw_rect_outline(self.box_rect.scale(_scale_factor), Brush::Color(border_color), 2.0 * _scale_factor);
 
         let s = self.box_rect;
         let blue = rgb(0, 100, 255);
         let grey = rgb(150, 150, 150);
         if self.checked {
-            renderer.draw_rect(s.scale(_scale_factor), blue);
+            renderer.draw_rect(s.scale(_scale_factor), Brush::Color(blue));
 
             let scale_factor = _scale_factor as f32;
             let mut path = kurbo::BezPath::new();
@@ -139,7 +139,7 @@ impl ElementInternals for CheckboxInner {
 
             renderer.stroke_bez_path(path, Brush::Color(rgb(255, 255, 255)));
         } else {
-            renderer.draw_rect_outline(s.scale(_scale_factor), grey, 1.5 * _scale_factor);
+            renderer.draw_rect_outline(s.scale(_scale_factor), Brush::Color(grey), 1.5 * _scale_factor);
         }
 
         self.draw_children(renderer, resource_manager.clone(), _scale_factor, _text_context);
@@ -152,7 +152,6 @@ impl ElementInternals for CheckboxInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {

@@ -1,5 +1,5 @@
-mod render_context;
 pub mod image;
+mod render_context;
 pub mod text;
 
 use std::any::Any;
@@ -11,27 +11,27 @@ use peniko::kurbo::Shape;
 use peniko::{BlendMode, Compose, Fill, Mix};
 
 use vello_common::filter_effects::{Filter, FilterFunction};
-use vello_common::paint::{ImageId, PaintType};
+use vello_common::paint::ImageId;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
-use wgpu::CommandEncoder;
-use wgpu::{CurrentSurfaceTexture, TextureFormat};
-
 use winit::window::Window;
 
-use craft_primitives::geometry::{Rectangle, TOLERANCE};
-use craft_primitives::Color;
-use craft_resource_manager::ResourceManager;
+use wgpu::{CommandEncoder, CurrentSurfaceTexture, TextureFormat};
+
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use render_context::{create_vello_renderer, RenderContext, RenderSurface};
 use crate::RenderCommand;
+use craft_primitives::brush::Brush;
+use craft_primitives::geometry::{Rectangle, TOLERANCE};
+use craft_primitives::Color;
+use craft_resource_manager::ResourceManager;
 use image::{draw_image, upload_image};
+use render_context::{create_vello_renderer, DeviceHandle, RenderContext, RenderSurface};
 use text::draw_text;
 
 pub struct ActiveRenderState {
@@ -119,11 +119,7 @@ impl Renderer for VelloHybridRenderer {
         self
     }
 
-    fn prepare(
-        &mut self,
-        resource_manager: Arc<ResourceManager>,
-        window: Rectangle,
-    ) {
+    fn prepare(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle) {
         let render_state = match &mut self.state {
             RenderState::Active(state) => state,
             _ => panic!("!!!"),
@@ -145,9 +141,9 @@ impl Renderer for VelloHybridRenderer {
             &mut self.scene,
             &DrawRectCmd {
                 rect: Rectangle::new(0.0, 0.0, width as f32, height as f32),
-                color: self.surface_clear_color,
+                brush: Brush::Color(self.surface_clear_color),
                 transform: Affine::IDENTITY,
-            }
+            },
         );
 
         let renderer = self.renderers[surface.dev_id].as_mut().unwrap();
@@ -160,7 +156,6 @@ impl Renderer for VelloHybridRenderer {
 
         let render_list = &self.render_list;
         SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
-
             match command {
                 RenderCommand::DrawCircle(cmd) => draw_circle(&mut self.scene, cmd),
                 RenderCommand::DrawCircleOutline(cmd) => draw_circle_outline(&mut self.scene, cmd),
@@ -185,12 +180,7 @@ impl Renderer for VelloHybridRenderer {
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
-                    draw_text(
-                        cmd,
-                        &mut self.scene,
-                        &mut self.resources,
-                        &window
-                    );
+                    draw_text(cmd, &mut self.scene, &mut self.resources, &window);
                 }
                 RenderCommand::PushLayer(cmd) => {
                     push_layer(cmd, &mut self.scene);
@@ -214,8 +204,9 @@ impl Renderer for VelloHybridRenderer {
             &mut self.resources_seen,
             renderer,
             &mut encoder,
+            device_handle,
             &mut self.resources,
-            &mut self.resource_mapper
+            &mut self.resource_mapper,
         );
 
         device_handle.queue.submit([encoder.finish()]);
@@ -345,21 +336,19 @@ impl VelloHybridRenderer {
         vello_renderer
     }
 
-    pub(crate) fn delete_unseen_resources(resources_seen: &mut HashSet<RendererResourceId>,
-                                          renderer: &mut VelloRenderer,
-                                          encoder: &mut CommandEncoder,
-                                          resources: &mut Resources,
-                                          resource_mapper: &mut ResourceMapper
+    pub(crate) fn delete_unseen_resources(
+        resources_seen: &mut HashSet<RendererResourceId>,
+        renderer: &mut VelloRenderer,
+        encoder: &mut CommandEncoder,
+        device_handle: &DeviceHandle,
+        resources: &mut Resources,
+        resource_mapper: &mut ResourceMapper,
     ) {
         resource_mapper.resources.retain(|_key, value| {
             if resources_seen.contains(&value) {
                 true
             } else {
-                renderer.destroy_image(
-                    resources,
-                    encoder,
-                    ImageId::new(value.0 as u32),
-                );
+                renderer.destroy_image(resources, encoder, ImageId::new(value.0 as u32));
 
                 false
             }
@@ -369,13 +358,15 @@ impl VelloHybridRenderer {
 
 fn draw_circle(scene: &mut Scene, cmd: &DrawCircleCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(cmd.circle.bounding_box(), &cmd.brush));
     scene.fill_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn draw_rect(scene: &mut Scene, cmd: &DrawRectCmd) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(PaintType::from(cmd.color));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(cmd.rect, &cmd.brush));
     scene.fill_rect(&cmd.rect.to_kurbo());
 }
 
@@ -423,30 +414,32 @@ fn draw_box_shadow(scene: &mut Scene, cmd: &BoxShadowCmd) {
 
 fn draw_circle_outline(scene: &mut Scene, cmd: &DrawCircleOutlineCmd) {
     scene.set_transform(cmd.transform);
+    scene.reset_paint_transform();
     scene.set_stroke(Stroke::new(cmd.thickness as f64));
-    scene.set_paint(PaintType::from(cmd.outline_color));
+    scene.set_paint(brush_to_paint(cmd.circle.bounding_box(), &cmd.outline_brush));
     scene.stroke_path(&cmd.circle.to_kurbo().to_path(TOLERANCE));
 }
 
 fn draw_rect_outline(scene: &mut Scene, cmd: &DrawRectOutlineCmd) {
     scene.set_transform(cmd.transform);
-   scene.set_stroke(Stroke::new(cmd.thickness));
-   scene.set_paint(PaintType::from(cmd.outline_color));
-   scene.stroke_rect(&cmd.rect.to_kurbo());
+    scene.reset_paint_transform();
+    scene.set_stroke(Stroke::new(cmd.thickness));
+    scene.set_paint(brush_to_paint(cmd.rect, &cmd.outline_brush));
+    scene.stroke_rect(&cmd.rect.to_kurbo());
 }
 
 fn push_layer(cmd: &PushLayerCmd, scene: &mut Scene) {
-   match cmd {
+    match cmd {
         PushLayerCmd::BezPath(path, transform) => {
             scene.set_transform(*transform);
             scene.push_layer(Some(path), None, None, None, None);
-        },
+        }
         PushLayerCmd::Rect(rect, transform) => {
             scene.set_transform(*transform);
             let clip_path = &rect.to_kurbo().into_path(0.1);
             scene.push_layer(Some(clip_path), None, None, None, None);
-        },
-   };
+        }
+    };
 }
 
 fn pop_layer(scene: &mut Scene) {
@@ -455,12 +448,20 @@ fn pop_layer(scene: &mut Scene) {
 
 fn draw_filled_bez_path(cmd: &FillBezPathCmd, scene: &mut Scene) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(brush_to_paint(&cmd.brush));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(
+        Rectangle::from_kurbo(cmd.path.bounding_box()),
+        &cmd.brush,
+    ));
     scene.fill_path(&cmd.path);
 }
 
 fn draw_stroked_bez_path(cmd: &StrokeBezPathCmd, scene: &mut Scene) {
     scene.set_transform(cmd.transform);
-    scene.set_paint(brush_to_paint(&cmd.brush));
+    scene.reset_paint_transform();
+    scene.set_paint(brush_to_paint(
+        Rectangle::from_kurbo(cmd.path.bounding_box()),
+        &cmd.brush,
+    ));
     scene.stroke_path(&cmd.path);
 }

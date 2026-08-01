@@ -3,20 +3,20 @@ use std::sync::Arc;
 use kurbo::Affine;
 
 use vello_common::color::PremulRgba8;
+use vello_common::kurbo;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
-use vello_common::kurbo;
 use vello_hybrid::{Renderer as VelloRenderer, Resources, Scene};
 
 use wgpu::CommandEncoder;
 
+use crate::render_command::DrawImageCmd;
+use crate::resource_mapper::{RendererResourceId, ResourceMapper};
+use crate::vello_hybrid::render_context::DeviceHandle;
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::image::ImageResource;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::resource_type::ResourceType;
-use crate::render_command::DrawImageCmd;
-use crate::resource_mapper::{RendererResourceId, ResourceMapper};
-use crate::vello_hybrid::render_context::DeviceHandle;
 
 pub(crate) fn upload_image(
     cmd: &DrawImageCmd,
@@ -49,13 +49,7 @@ pub(crate) fn upload_image(
             })
             .collect();
         let pixmap = Pixmap::from_parts(premul_data, image.get_width() as u16, image.get_height() as u16);
-        let image_id = renderer.upload_image(
-            resources,
-            &device_handle.device,
-            &device_handle.queue,
-            encoder,
-            &pixmap,
-        );
+        let image_id = renderer.upload_image(resources, &device_handle.device, &device_handle.queue, encoder, &pixmap);
 
         let renderer_resource_id = RendererResourceId(image_id.as_u32() as u64);
 
@@ -83,6 +77,7 @@ pub(crate) fn draw_image(
         cmd.rect.height as f64 / image.get_height() as f64,
     );
     scene.set_transform(cmd.transform * transform);
+    scene.reset_paint_transform();
 
     let vello_image = vello_common::paint::Image {
         image: ImageSource::OpaqueId {

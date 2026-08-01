@@ -223,13 +223,13 @@ impl App {
     fn dispatch_event(&mut self, window: Window, message: &EventKind) {
         let mouse_pos = window.mouse_position();
         let binding = window.inner.borrow().renderer.clone();
-        let render_list = &mut *binding.borrow_mut();
+        let renderer = &mut *binding.borrow_mut();
         self.event_dispatcher.dispatch_event(
             message,
             mouse_pos,
             window.inner.clone(),
             self.text_context.as_mut().unwrap(),
-            render_list,
+            renderer,
             &mut self.target_scratch,
         );
         window.winit_window().unwrap().request_redraw();
@@ -315,9 +315,6 @@ mod tests {
 }
 
 /// Enqueues an event at the back of the dispatch queue.
-///
-/// This does **not** invoke any element `on_event` handlers.
-/// Only user-registered event callbacks will be dispatched.
 pub fn queue_event(event: Event, message: EventKind) {
     EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
         event_queue.push_back((event, message));

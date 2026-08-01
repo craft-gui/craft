@@ -2,12 +2,11 @@ use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
-
 use craft_primitives::geometry::Point;
 
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
-use crate::events::helpers::{call_default_element_event_handler, call_user_event_handlers, find_target, freeze_target_list};
+use crate::events::helpers::{call_user_event_handlers, find_target, freeze_target_list};
 use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 
@@ -21,21 +20,21 @@ pub(super) fn dispatch_capturing_event(
 /// The first dispatch happens at the top-most visual element.
 pub(super) fn dispatch_bubbling_event(
     message: &EventKind,
-    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
-    text_context: &mut TextContext,
+    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>
 ) -> Event {
     let target = targets[0].clone();
-    let mut base_event = Event::new(target.clone());
+    let mut event = Event::new(target.clone());
 
     // Call the callback handlers.
     for current_target in targets.iter_mut() {
-        call_user_event_handlers(&mut base_event, current_target, message, text_context);
-        if !base_event.propagate {
+        event.current_target = current_target.clone();
+        call_user_event_handlers(&mut event, message);
+        if !event.propagate {
             break;
         }
     }
 
-    base_event
+    event
 }
 
 /// Responsible for dispatching events.
@@ -58,18 +57,12 @@ impl EventDispatcher {
     pub(super) fn dispatch_once(
         &self,
         message: &EventKind,
-        text_context: &mut TextContext,
         target: &Rc<RefCell<dyn ElementInternals>>,
     ) {
         let mut base_event = Event::new(target.clone());
 
         // Call the callback handlers.
-        call_user_event_handlers(&mut base_event, target, message, text_context);
-
-        if !base_event.prevent_defaults {
-            // Call the default on_event element functions.
-            call_default_element_event_handler(&mut base_event, target, target, text_context, message);
-        }
+        call_user_event_handlers(&mut base_event, message);
     }
 
     /// Diffs the current and previous target lists and dispatches
@@ -104,7 +97,7 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                self.dispatch_once(&EventKind::PointerLeave(), text_context, &prev_target.clone());
+                self.dispatch_once(&EventKind::PointerLeave(), &prev_target.clone());
             }
         }
     }
@@ -139,7 +132,7 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                self.dispatch_once(&EventKind::PointerEnter(), text_context, &target.clone());
+                self.dispatch_once(&EventKind::PointerEnter(), &target.clone());
             }
         }
     }
@@ -153,7 +146,7 @@ impl EventDispatcher {
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut TextContext,
-        render_list: &mut dyn Renderer,
+        renderer: &mut dyn Renderer,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         let pointer_capture = root
@@ -167,15 +160,16 @@ impl EventDispatcher {
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        if message.is_pointer_event() {
+        if message.is_system_pointer_event() && let Some(pointer_id) = &message.pointer_id() {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
             let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                 &root,
                 mouse_position,
                 message,
-                render_list,
+                renderer,
                 target_scratch,
                 &pointer_capture.borrow(),
+                pointer_id
             );
             targets = freeze_target_list(target);
         } else if message.is_keyboard_event() {
@@ -184,8 +178,7 @@ impl EventDispatcher {
                 if let Some(focus_ref) = focus_ref.clone()
                     && let Some(focus) = focus_ref.upgrade()
                 {
-                    targets.clear();
-                    targets.push_back(focus);
+                    targets = freeze_target_list(focus);
                 }
             });
         }
@@ -194,7 +187,7 @@ impl EventDispatcher {
             targets.push_back(root.clone());
         }
 
-        if message.is_pointer_event() {
+        if message.is_system_pointer_event() {
             self.maybe_dispatch_pointer_leave(text_context, &targets);
             self.maybe_dispatch_pointer_enter(text_context, &targets);
         }
@@ -203,16 +196,17 @@ impl EventDispatcher {
         dispatch_capturing_event(message, &mut targets);
 
         // Handle bubbling
-        let mut base_event = dispatch_bubbling_event(message, &mut targets, text_context);
-        let target = targets[0].clone();
+        let bubbling_event = dispatch_bubbling_event(message, &mut targets);
 
-        // NOTE: Only certain events will trigger default behavior.
-        // We don't currently check for this, but we should.
-        if !base_event.prevent_defaults {
+        if !bubbling_event.prevent_defaults {
+            let target = targets[0].clone();
+            let mut event = Event::new(target.clone());
+
             // Call the default on_event element functions.
             for current_target in targets.iter() {
-                call_default_element_event_handler(&mut base_event, current_target, &target, text_context, message);
-                if !base_event.propagate {
+                event.current_target = current_target.clone();
+                current_target.borrow_mut().on_event(message, text_context, &mut event);
+                if !event.propagate {
                     break;
                 }
             }
@@ -223,11 +217,32 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        if message.is_pointer_event() {
-            pointer_capture
+        if message.is_system_pointer_event() && let Some(pointer_id) = message.pointer_id() {
+            let did_pointer_capture_change = pointer_capture
                 .borrow_mut()
-                .maybe_handle_implicit_pointer_capture_release(message, text_context);
+                .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
+
+            if did_pointer_capture_change {
+                let target: Rc<RefCell<dyn ElementInternals>> = find_target(
+                    &root,
+                    mouse_position,
+                    message,
+                    renderer,
+                    target_scratch,
+                    &pointer_capture.borrow(),
+                    &pointer_id
+                );
+                targets = freeze_target_list(target);
+                self.maybe_dispatch_pointer_leave(text_context, &targets);
+                self.maybe_dispatch_pointer_enter(text_context, &targets);
+            }
         }
+
+        if message.is_system_pointer_event() {
+            self.previous_targets = targets.iter().map(Rc::downgrade).collect();
+        }
+
+        // Handle Semantic Events (DropdownItemSelected, Click, and etc.)
 
         // Drain the event dispatch queue and invoke user callbacks.
         while let Some((event, message)) = dequeue_event() {
@@ -236,9 +251,25 @@ impl EventDispatcher {
             dispatch_capturing_event(&message, &mut targets);
 
             // Handle bubbling
-            let _ = dispatch_bubbling_event(&message, &mut targets, text_context);
+            let bubbling_event = dispatch_bubbling_event(&message, &mut targets);
+
+            // TODO: Abstract this.
+            if !bubbling_event.prevent_defaults {
+                let target = targets[0].clone();
+                let mut event = Event::new(target.clone());
+
+                // Call the default on_event element functions.
+                for current_target in targets.iter() {
+                    event.current_target = current_target.clone();
+                    current_target.borrow_mut().on_event(&message, text_context, &mut event);
+                    if !event.propagate {
+                        break;
+                    }
+                }
+            }
         }
 
-        self.previous_targets = targets.iter().map(Rc::downgrade).collect();
+
+
     }
 }

@@ -7,7 +7,8 @@ use craft_primitives::geometry::{Affine, Point, Rectangle};
 use peniko::Color;
 
 use ui_events::keyboard::{Code, KeyState};
-use ui_events::pointer::PointerId;
+use craft_primitives::brush::Brush;
+use craft_primitives::gradient::Gradient;
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
 use crate::app::queue_event;
@@ -45,11 +46,11 @@ pub struct SliderInner {
 
     // Thumb
     thumb_size: f64,
-    thumb_background_color: Color,
+    thumb_background_brush: Brush,
     thumb_border_radius: Option<[(f32, f32); 4]>,
 
     // Track
-    track_background_color: Option<Color>,
+    track_background_brush: Option<Brush>,
     track_border_radius: Option<[(f32, f32); 4]>,
 }
 
@@ -114,13 +115,13 @@ impl Slider {
         self.inner.borrow().get_thumb_size()
     }
 
-    pub fn thumb_color(self, thumb_background_color: Color) -> Self {
+    pub fn thumb_color(self, thumb_background_color: Brush) -> Self {
         self.inner.borrow_mut().set_thumb_color(thumb_background_color);
         self
     }
 
-    pub fn get_thumb_color(&self) -> Color {
-        self.inner.borrow().get_thumb_color()
+    pub fn get_thumb_brush(&self) -> Brush {
+        self.inner.borrow().get_thumb_brush()
     }
 
     pub fn thumb_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
@@ -135,12 +136,17 @@ impl Slider {
     }
 
     pub fn track_color(self, track_background_color: Color) -> Self {
-        self.inner.borrow_mut().set_track_color(track_background_color);
+        self.inner.borrow_mut().set_track_brush(Brush::Color(track_background_color));
         self
     }
 
-    pub fn get_track_color(&self) -> Option<Color> {
-        self.inner.borrow().get_track_color()
+    pub fn track_gradient(self, track_background_gradient: Gradient) -> Self {
+        self.inner.borrow_mut().set_track_brush(Brush::Gradient(track_background_gradient));
+        self
+    }
+
+    pub fn get_track_brush(&self) -> Option<Brush> {
+        self.inner.borrow().get_track_brush()
     }
 
     pub fn track_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
@@ -167,16 +173,16 @@ impl SliderInner {
                 value: 0.0,
                 dragging: false,
                 thumb_size: thumb_size as f64,
-                thumb_background_color: Color::BLACK,
+                thumb_background_brush: Brush::Color(Color::BLACK),
                 thumb_border_radius: None,
-                track_background_color: Some(palette::css::DODGER_BLUE),
+                track_background_brush: Some(Brush::Color(palette::css::DODGER_BLUE)),
                 track_border_radius: None,
             })
         });
 
         me.borrow_mut().element_data.create_layout_node(None);
 
-        me.borrow_mut().set_background_color(palette::css::LIGHT_GRAY);
+        me.borrow_mut().set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
         let border_radius = 25.0;
         me.borrow_mut().set_border_radius(
             (border_radius, border_radius),
@@ -260,12 +266,12 @@ impl SliderInner {
         self.thumb_size
     }
 
-    pub fn set_thumb_color(&mut self, thumb_background_color: Color) {
-        self.thumb_background_color = thumb_background_color;
+    pub fn set_thumb_color(&mut self, thumb_background_brush: Brush) {
+        self.thumb_background_brush = thumb_background_brush;
     }
 
-    pub fn get_thumb_color(&self) -> Color {
-        self.thumb_background_color
+    pub fn get_thumb_brush(&self) -> Brush {
+        self.thumb_background_brush.clone()
     }
 
     pub fn set_thumb_border_radius(
@@ -282,12 +288,12 @@ impl SliderInner {
         self.thumb_border_radius
     }
 
-    pub fn set_track_color(&mut self, track_background_color: Color) {
-        self.track_background_color = Some(track_background_color);
+    pub fn set_track_brush(&mut self, track_background_brush: Brush) {
+        self.track_background_brush = Some(track_background_brush);
     }
 
-    pub fn get_track_color(&self) -> Option<Color> {
-        self.track_background_color
+    pub fn get_track_brush(&self) -> Option<Brush> {
+        self.track_background_brush.clone()
     }
 
     pub fn set_track_border_radius(
@@ -387,8 +393,7 @@ impl ElementInternals for SliderInner {
         &mut self,
         message: &EventKind,
         _text_context: &mut TextContext,
-        event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
+        _event: &mut Event,
     ) {
         match message {
             EventKind::KeyboardInputEvent(key) => {
@@ -409,31 +414,29 @@ impl ElementInternals for SliderInner {
                 if let Some(new_value) = new_value {
                     self.value = new_value;
 
-                    let new_event = Event::new(event.target.clone());
+                    let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                     queue_event(new_event, EventKind::SliderValueChanged(self.value));
                 }
             }
             EventKind::PointerButtonUp(pointer_button_update) => {
                 self.focus();
                 self.dragging = false;
-                // FIXME: Turn pointer capture on with the correct device id.
-                self.release_pointer_capture(PointerId::new(1).unwrap());
+                self.release_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerButtonDown(pointer_button_update) => {
                 self.dragging = true;
-                // FIXME: Turn pointer capture on with the correct device id.
-                self.set_pointer_capture(PointerId::new(1).unwrap());
+                self.set_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerMovedEvent(pointer_update) => {
@@ -444,7 +447,7 @@ impl ElementInternals for SliderInner {
                 let value = self.compute_slider_value(&pointer_update.current.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             _ => {}

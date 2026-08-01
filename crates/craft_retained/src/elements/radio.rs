@@ -4,9 +4,13 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
 use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
+use craft_primitives::brush::Brush;
+
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
+
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -127,10 +131,10 @@ impl ElementInternals for RadioInner {
 
         if !self.hide_radio {
             if self.is_selected() {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(0, 100, 255), _scale_factor as f32);
-                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), rgb(0, 100, 255));
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(0, 100, 255)), _scale_factor as f32);
+                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), Brush::Color(rgb(0, 100, 255)));
             } else {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), rgb(150, 150, 150), _scale_factor as f32);
+                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(150, 150, 150)), _scale_factor as f32);
             }
         }
 
@@ -144,7 +148,6 @@ impl ElementInternals for RadioInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
@@ -168,7 +171,7 @@ impl ElementInternals for RadioInner {
                     }
                 }
             }
-            let new_event = Event::new(event.target.clone());
+            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
             queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
         }
     }

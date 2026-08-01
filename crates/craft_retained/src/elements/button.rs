@@ -1,59 +1,57 @@
-//! A basic code editor.
+//! Stores one or more elements.
 
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
-
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, TextInput};
-use crate::elements::codeeditor::highlighter::compute_code_editor_style;
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
-pub struct CodeEditor {
-    pub inner: Rc<RefCell<CodeEditorInner>>,
+pub struct Button {
+    pub inner: Rc<RefCell<ButtonInner>>,
 }
-
-pub mod highlighter;
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct CodeEditorInner {
+pub struct ButtonInner {
     element_data: ElementData,
-    extension: String,
-    theme: String,
-    text_input: TextInput,
-    // TODO: Retain syntax_set and theme set.
 }
 
-impl Default for CodeEditor {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ButtonState {
+    Default,
+    Hovered,
+    Pressed,
+    Focused,
+}
+
+impl Default for Button {
     fn default() -> Self {
-        Self::new("", "rs", "base16-ocean.dark")
+        Self::new()
     }
 }
 
-impl Element for CodeEditor {}
+impl Element for Button {}
 
-impl Drop for CodeEditorInner {
+impl Drop for ButtonInner {
     fn drop(&mut self) {
         ElementInternals::drop(self)
     }
 }
 
-impl AsElement for CodeEditor {
+impl AsElement for Button {
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -67,7 +65,7 @@ impl AsElement for CodeEditor {
     }
 }
 
-impl crate::elements::ElementData for CodeEditorInner {
+impl crate::elements::ElementData for ButtonInner {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -77,7 +75,7 @@ impl crate::elements::ElementData for CodeEditorInner {
     }
 }
 
-impl ElementInternals for CodeEditorInner {
+impl ElementInternals for ButtonInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.deep_clone_internal()
     }
@@ -110,22 +108,11 @@ impl ElementInternals for CodeEditorInner {
 
     fn on_event(
         &mut self,
-        message: &EventKind,
+        _message: &EventKind,
         _text_context: &mut TextContext,
         _event: &mut Event,
     ) {
-        if let EventKind::TextInputChanged(_) = message {
-            self.highlight();
-        }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
-        }
+        
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -141,36 +128,14 @@ impl ElementInternals for CodeEditorInner {
     }
 }
 
-impl CodeEditor {
-    pub fn new(code: &str, extension: &str, theme: &str) -> Self {
-        println!("Extension: {}", extension);
-        let text_input = TextInput::new(code);
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<CodeEditorInner>>| {
-            RefCell::new(CodeEditorInner {
+impl Button {
+    pub fn new() -> Self {
+        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ButtonInner>>| {
+            RefCell::new(ButtonInner {
                 element_data: ElementData::new(me.clone(), true),
-                extension: extension.to_string(),
-                theme: theme.to_string(),
-                text_input: text_input.clone(),
             })
         });
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.element_data.create_layout_node(None);
-        inner_mut.push(text_input.inner);
-        inner_mut.highlight();
-        drop(inner_mut);
+        inner.borrow_mut().element_data.create_layout_node(None);
         Self { inner }
     }
-}
-
-
-impl CodeEditorInner {
-
-    fn highlight(&mut self) {
-        let mut text = self.text_input.inner.borrow_mut();
-        let code_editor = compute_code_editor_style(text.get_text(), None, None, &self.extension, &self.theme);
-        text.set_ranged_styles(code_editor.ranged_styles);
-        text.set_background_brush(Brush::Color(code_editor.background_color));
-        text.set_text_brush(Brush::Color(code_editor.foreground_color));
-    }
-
 }

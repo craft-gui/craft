@@ -52,3 +52,4 @@ mod markdown;
 mod codeeditor;
 #[cfg(feature = "audio")]
 mod audio;
+pub mod button;

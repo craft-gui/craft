@@ -70,7 +70,7 @@ pub struct DropdownInner {
     selected_element: Option<Rc<RefCell<dyn ElementInternals>>>,
     selected_element_index: Option<usize>,
     currently_hovered_element: Option<usize>,
-    hovered_bg_color: Option<Color>,
+    hovered_bg_brush: Option<Brush>,
 }
 
 impl Default for Dropdown {
@@ -266,7 +266,6 @@ impl ElementInternals for DropdownInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         // Take focus if clicked.
         if let EventKind::PointerButtonDown(_pb) = message {
@@ -279,6 +278,7 @@ impl ElementInternals for DropdownInner {
 
         self.update_most_recently_hovered_child(message, list_box, list_scroll_box);
 
+        let pointer_id = message.pointer_id();
         if let EventKind::PointerButtonUp(pb) = message {
             let pointer_position = pb.state.logical_point();
             let is_pointer_in_select_box = self
@@ -300,8 +300,8 @@ impl ElementInternals for DropdownInner {
                 .contains(&pointer_position);
 
             self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
-            self.handle_click_in_select_box(is_pointer_in_select_box);
-            self.handle_child_click(event, &pointer_position, is_pointer_in_window, is_pointer_in_scrollbar);
+            self.handle_click_in_select_box(is_pointer_in_select_box, &pointer_id.unwrap());
+            self.handle_child_click(&pointer_position, is_pointer_in_window, is_pointer_in_scrollbar, &pointer_id.unwrap());
         }
 
         // Handle updating the scroll state.
@@ -312,9 +312,9 @@ impl ElementInternals for DropdownInner {
             request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
         }
         if result.set_pointer_capture {
-            self.set_pointer_capture(PointerId::new(1).unwrap())
+            self.set_pointer_capture(result.pointer_id.unwrap())
         } else if result.release_pointer_capture {
-            self.release_pointer_capture(PointerId::new(1).unwrap());
+            self.release_pointer_capture(result.pointer_id.unwrap());
         }
     }
 
@@ -353,7 +353,7 @@ impl ElementInternals for DropdownInner {
 
             let is_hovered = self.currently_hovered_element == Some(index);
             if is_hovered {
-                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_color.unwrap());
+                renderer.draw_rect(child_rect.scale(scale_factor), self.hovered_bg_brush.as_ref().unwrap().clone());
             }
 
             child.borrow_mut().draw(renderer, resource_manager.clone(), scale_factor, text_context);
@@ -431,7 +431,7 @@ impl Shape {
             let border_color = &current_style.get_border_color();
             let box_shadows = current_style.get_box_shadows();
             self.layout
-                .apply_borders(has_border, border_radius, scale_factor, *border_color, box_shadows.to_vec());
+                .apply_borders(has_border, border_radius, scale_factor, border_color.clone(), box_shadows.to_vec());
             // Refactor END
 
             // For scroll changes from taffy;
@@ -461,7 +461,7 @@ impl Dropdown {
                 selected_element: None,
                 selected_element_index: None,
                 currently_hovered_element: None,
-                hovered_bg_color: Some(Color::from_rgba8(213, 213, 215, 255)),
+                hovered_bg_brush: Some(Brush::Color(Color::from_rgba8(213, 213, 215, 255))),
             })
         });
 
@@ -498,7 +498,7 @@ impl Dropdown {
             .borrow_mut()
             .floating_window
             .style
-            .set_background_color(Color::WHITE);
+            .set_background_brush(Brush::Color(Color::WHITE));
         inner
             .borrow_mut()
             .floating_window
@@ -656,13 +656,14 @@ impl DropdownInner {
         }
     }
 
-    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool) {
+    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool, pointer_id: &PointerId) {
         if is_pointer_in_select_box {
             self.is_floating_window_hidden = !self.is_floating_window_hidden;
             self.currently_hovered_element = self.selected_element_index;
+            self.queue_dropdown_event(EventKind::DropdownToggled(!self.is_floating_window_hidden));
 
             if self.is_floating_window_hidden {
-                self.release_pointer_capture(PointerId::new(1).unwrap());
+                self.release_pointer_capture(*pointer_id);
             }
         }
     }
@@ -670,15 +671,16 @@ impl DropdownInner {
     fn handle_click_outside_menu(&mut self, is_pointer_in_select_box: bool, is_pointer_in_window: bool) {
         if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
             self.is_floating_window_hidden = true;
+            self.queue_dropdown_event(EventKind::DropdownToggled(false));
         }
     }
 
     fn handle_child_click(
         &mut self,
-        event: &mut Event,
         pointer_position: &Point,
         is_pointer_in_window: bool,
         is_pointer_in_scrollbar: bool,
+        pointer_id: &PointerId,
     ) {
         if is_pointer_in_window && !is_pointer_in_scrollbar {
             let mut should_hide_window = false;
@@ -694,10 +696,9 @@ impl DropdownInner {
                 if contains {
                     should_hide_window = true;
                     self.set_selected_element(child_index);
-                    self.release_pointer_capture(PointerId::new(1).unwrap());
+                    self.release_pointer_capture(*pointer_id);
 
-                    let new_event = Event::new(event.target.clone());
-                    queue_event(new_event, EventKind::DropdownItemSelected(child_index));
+                    self.queue_dropdown_event(EventKind::DropdownItemSelected(child_index));
 
                     break;
                 }
@@ -705,7 +706,13 @@ impl DropdownInner {
 
             if should_hide_window {
                 self.is_floating_window_hidden = true;
+                self.queue_dropdown_event(EventKind::DropdownToggled(false));
             }
         }
+    }
+
+    fn queue_dropdown_event(&self, message: EventKind) {
+        let new_event = Event::new(self.element_data.me.upgrade().unwrap());
+        queue_event(new_event, message);
     }
 }

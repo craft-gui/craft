@@ -5,6 +5,10 @@ edition.workspace = true
 
 [dependencies]
 
+[dependencies.smallvec]
+version = "1.15.1"
+default-features = false
+
 [dependencies.kurbo]
 workspace = true
 

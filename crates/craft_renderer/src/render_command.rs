@@ -2,12 +2,11 @@ use std::cell::RefCell;
 use std::rc::Weak;
 
 use peniko::Color;
-
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Vec2};
 
 use craft_resource_manager::ResourceId;
 
-use crate::Brush;
 use crate::text_renderer_data::{TextData, TextScroll};
 
 #[derive(Clone)]
@@ -27,32 +26,32 @@ pub enum RenderCommand {
     BoxShadowCmd(BoxShadowCmd),
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DrawCircleCmd {
     pub circle: Circle,
-    pub color: Color,
+    pub brush: Brush,
     pub transform: Affine,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DrawCircleOutlineCmd {
     pub circle: Circle,
-    pub outline_color: Color,
+    pub outline_brush: Brush,
     pub thickness: f32,
     pub transform: Affine,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DrawRectCmd {
     pub rect: Rectangle,
-    pub color: Color,
+    pub brush: Brush,
     pub transform: Affine,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DrawRectOutlineCmd {
     pub rect: Rectangle,
-    pub outline_color: Color,
+    pub outline_brush: Brush,
     pub thickness: f64,
     pub transform: Affine,
 }

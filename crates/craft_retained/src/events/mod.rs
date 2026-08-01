@@ -12,7 +12,7 @@ pub use crate::events::mouse_wheel::MouseWheel;
 pub(crate) use event_dispatch::EventDispatcher;
 
 use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
+use ui_events::pointer::{PointerButtonEvent, PointerId, PointerScrollEvent, PointerUpdate};
 
 use crate::PinnedFutureAny;
 use crate::elements::ElementInternals;
@@ -89,6 +89,8 @@ pub struct TextInputChanged {
 /// The result of an update.
 pub struct Event {
     pub target: Rc<RefCell<dyn ElementInternals>>,
+    pub current_target: Rc<RefCell<dyn ElementInternals>>,
+
     /// Propagate craft_events to the next element. True by default.
     pub propagate: bool,
     /// A future that will produce a message when complete. The message will be sent to the origin component.
@@ -99,16 +101,24 @@ pub struct Event {
 }
 
 impl EventKind {
-    pub(super) fn is_pointer_event(&self) -> bool {
+    pub(super) fn is_system_pointer_event(&self) -> bool {
         matches!(
             self,
             EventKind::PointerMovedEvent(_)
                 | EventKind::PointerButtonUp(_)
                 | EventKind::PointerButtonDown(_)
-                | EventKind::GotPointerCapture()
-                | EventKind::LostPointerCapture()
                 | EventKind::PointerScroll(_)
         )
+    }
+
+    pub(super) fn pointer_id(&self) -> Option<PointerId> {
+        match self {
+            EventKind::PointerButtonUp(e) => e.pointer.pointer_id,
+            EventKind::PointerButtonDown(e) =>  e.pointer.pointer_id,
+            EventKind::PointerMovedEvent(e) =>  e.pointer.pointer_id,
+            EventKind::PointerScroll(e) => e.pointer.pointer_id,
+            _ => None
+        }
     }
 
     pub(super) fn is_keyboard_event(&self) -> bool {
@@ -150,7 +160,8 @@ impl Event {
 
     pub fn new(target: Rc<RefCell<dyn ElementInternals>>) -> Self {
         Event {
-            target,
+            target: target.clone(),
+            current_target: target,
             propagate: true,
             future: None,
             prevent_defaults: false,
