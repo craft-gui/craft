@@ -50,8 +50,7 @@ pub(crate) fn reparent_subtree(
             data.access_tree.ptr_eq(tree),
             "elements from different accessibility trees cannot be reparented"
         );
-        data.access_key
-            .expect("element accessibility node was not created")
+        data.access_key.expect("element accessibility node was not created")
     };
     tree.append_child(parent, key);
     set_subtree_context(element, tree, root, scale_factor);
@@ -79,12 +78,7 @@ mod tests {
     fn text_name_changes_are_retained_immediately() {
         let text = Text::new("before");
         let detached_key = text.inner.borrow().element_data().access_key.unwrap();
-        let detached_tree = text
-            .inner
-            .borrow()
-            .element_data()
-            .access_tree
-            .clone();
+        let detached_tree = text.inner.borrow().element_data().access_tree.clone();
         assert!(detached_tree.contains_node(detached_key));
         assert_eq!(detached_tree.get_node(detached_key).unwrap().name(), "before");
 
@@ -126,12 +120,7 @@ mod tests {
         let text = Text::new("child");
         parent.inner.borrow_mut().push(text.inner.clone());
         let key = text.inner.borrow().element_data().access_key.unwrap();
-        let tree = text
-            .inner
-            .borrow()
-            .element_data()
-            .access_tree
-            .clone();
+        let tree = text.inner.borrow().element_data().access_tree.clone();
 
         drop(parent);
 
@@ -147,12 +136,7 @@ mod tests {
         let original_key = text.inner.borrow().element_data().access_key.unwrap();
         let clone = text.inner.borrow().deep_clone();
         let clone_key = clone.borrow().element_data().access_key.unwrap();
-        let tree = text
-            .inner
-            .borrow()
-            .element_data()
-            .access_tree
-            .clone();
+        let tree = text.inner.borrow().element_data().access_tree.clone();
 
         assert_ne!(clone_key, original_key);
         assert_eq!(tree.get_node(clone_key).unwrap().name(), "clone me");

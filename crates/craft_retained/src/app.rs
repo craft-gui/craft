@@ -15,7 +15,6 @@ use craft_resource_manager::resource_event::ResourceEvent;
 use craft_resource_manager::resource_type::ResourceType;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
-
 use craft_runtime::{CraftRuntimeHandle, Sender};
 use taffy::NodeId;
 
@@ -26,15 +25,15 @@ use winit::event::{Ime, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
+use crate::CraftOptions;
 #[cfg(feature = "audio")]
-use crate::elements::{AudioInner, AUDIO_CONTEXT};
+use crate::elements::{AUDIO_CONTEXT, AudioInner};
 use crate::elements::{ElementIdMap, ElementInternals, Window};
 use crate::events::internal::InternalMessage;
 use crate::events::{Event, EventDispatcher, EventKind};
 use crate::layout::TaffyTree;
 use crate::text::text_context::TextContext;
 use crate::window_manager::WindowManager;
-use crate::CraftOptions;
 
 thread_local! {
     pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());

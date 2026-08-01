@@ -11,7 +11,7 @@ use chrono::{Datelike, Local};
 use icu::calendar::preferences::FirstDay;
 use icu::calendar::week::WeekPreferences;
 use icu::calendar::{Date, Gregorian};
-use icu::datetime::{fieldsets, FixedCalendarDateTimeFormatter};
+use icu::datetime::{FixedCalendarDateTimeFormatter, fieldsets};
 
 pub use icu::calendar::options::DateAddOptions;
 pub use icu::calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};

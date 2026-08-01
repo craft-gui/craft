@@ -5,8 +5,8 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
 use craft_primitives::brush::Brush;
+use craft_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
 
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
@@ -121,7 +121,13 @@ impl ElementInternals for RadioInner {
         self.circle.y = self.circle_layout.layout.computed_box_transformed.content_rectangle().y + self.circle.radius;
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -131,10 +137,21 @@ impl ElementInternals for RadioInner {
 
         if !self.hide_radio {
             if self.is_selected() {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(0, 100, 255)), _scale_factor as f32);
-                renderer.draw_circle(self.circle.expand(-4.0).scale(_scale_factor), Brush::Color(rgb(0, 100, 255)));
+                renderer.draw_circle_outline(
+                    self.circle.scale(_scale_factor),
+                    Brush::Color(rgb(0, 100, 255)),
+                    _scale_factor as f32,
+                );
+                renderer.draw_circle(
+                    self.circle.expand(-4.0).scale(_scale_factor),
+                    Brush::Color(rgb(0, 100, 255)),
+                );
             } else {
-                renderer.draw_circle_outline(self.circle.scale(_scale_factor), Brush::Color(rgb(150, 150, 150)), _scale_factor as f32);
+                renderer.draw_circle_outline(
+                    self.circle.scale(_scale_factor),
+                    Brush::Color(rgb(150, 150, 150)),
+                    _scale_factor as f32,
+                );
             }
         }
 
@@ -143,16 +160,11 @@ impl ElementInternals for RadioInner {
         self.draw_scrollbar(renderer, _scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.active_value.replace(self.value.clone());
-                {
+            {
                 self.set_accessibility_selection();
                 let me = self.element_data.me.upgrade();
                 let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
@@ -161,11 +173,7 @@ impl ElementInternals for RadioInner {
                         if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
                             continue;
                         }
-                        if let Some(radio) = sibling
-                            .borrow_mut()
-                            .as_any_mut()
-                            .downcast_mut::<RadioInner>()
-                        {
+                        if let Some(radio) = sibling.borrow_mut().as_any_mut().downcast_mut::<RadioInner>() {
                             radio.set_accessibility_selection();
                         }
                     }
@@ -204,11 +212,8 @@ impl RadioInner {
     }
 
     fn set_accessibility_selection(&mut self) {
-        self.element_data.set_accessibility_value(if self.is_selected() {
-            "selected"
-        } else {
-            "not selected"
-        });
+        self.element_data
+            .set_accessibility_value(if self.is_selected() { "selected" } else { "not selected" });
     }
 }
 
@@ -241,12 +246,8 @@ impl Radio {
             taffy_tree.add_child(inner_mut.element_data.layout.taffy_node_id(), node_id);
         });
         {
-            inner_mut
-                .element_data
-                .set_accessibility_role(issho::Role::RadioButton);
-            inner_mut
-                .element_data
-                .set_accessibility_name(label.to_string());
+            inner_mut.element_data.set_accessibility_role(issho::Role::RadioButton);
+            inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.set_accessibility_selection();
         }
 

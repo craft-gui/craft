@@ -3,17 +3,17 @@ use std::sync::Arc;
 use kurbo::Affine;
 
 use vello_common::color::PremulRgba8;
+use vello_common::kurbo;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::pixmap::Pixmap;
-use vello_common::kurbo;
 use vello_cpu::{RenderContext, Resources};
 
+use crate::render_command::DrawImageCmd;
+use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use craft_resource_manager::ResourceManager;
 use craft_resource_manager::image::ImageResource;
 use craft_resource_manager::resource::Resource;
 use craft_resource_manager::resource_type::ResourceType;
-use crate::render_command::DrawImageCmd;
-use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 
 pub(crate) fn upload_image(
     cmd: &DrawImageCmd,
@@ -58,10 +58,14 @@ pub(crate) fn draw_image(
     cmd: &DrawImageCmd,
     scene: &mut RenderContext,
     resource_manager: Arc<ResourceManager>,
-    resource_id: RendererResourceId
+    resource_id: RendererResourceId,
 ) {
-    let Some(resource) = resource_manager.get(&cmd.resource_id) else { return };
-    let Some(image) = resource_to_image_resource(resource.as_ref()) else { return };
+    let Some(resource) = resource_manager.get(&cmd.resource_id) else {
+        return;
+    };
+    let Some(image) = resource_to_image_resource(resource.as_ref()) else {
+        return;
+    };
 
     let mut transform = Affine::IDENTITY;
     transform = transform.with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64));
@@ -74,7 +78,7 @@ pub(crate) fn draw_image(
     let vello_image = vello_common::paint::Image {
         image: ImageSource::OpaqueId {
             id: ImageId::new(resource_id.0 as u32),
-            may_have_transparency: true
+            may_have_transparency: true,
         },
         sampler: Default::default(),
     };

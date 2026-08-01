@@ -1,14 +1,5 @@
 //! A toggleable checkbox.
 
-use std::any::Any;
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
-use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
-use craft_renderer::Brush;
-use peniko::kurbo;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
 use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -19,6 +10,15 @@ use crate::layout::TaffyTree;
 use crate::style::{Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
+use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+use craft_renderer::Brush;
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
+use peniko::kurbo;
+use std::any::Any;
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Checkbox {
@@ -113,7 +113,13 @@ impl ElementInternals for CheckboxInner {
         self.box_rect = self.box_layout.layout.computed_box_transformed.content_rectangle();
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -123,7 +129,11 @@ impl ElementInternals for CheckboxInner {
 
         let color = rgb(0, 100, 255);
         let border_color = if self.checked { color } else { rgb(150, 150, 150) };
-        renderer.draw_rect_outline(self.box_rect.scale(_scale_factor), Brush::Color(border_color), 2.0 * _scale_factor);
+        renderer.draw_rect_outline(
+            self.box_rect.scale(_scale_factor),
+            Brush::Color(border_color),
+            2.0 * _scale_factor,
+        );
 
         let s = self.box_rect;
         let blue = rgb(0, 100, 255);
@@ -133,9 +143,18 @@ impl ElementInternals for CheckboxInner {
 
             let scale_factor = _scale_factor as f32;
             let mut path = kurbo::BezPath::new();
-            path.move_to((((s.x + s.width * 0.25) * scale_factor) as f64, ((s.y + s.height * 0.5) * scale_factor) as f64));
-            path.line_to((((s.x + s.width * 0.45) * scale_factor) as f64, ((s.y + s.height * 0.7) * scale_factor) as f64));
-            path.line_to((((s.x + s.width * 0.75) * scale_factor) as f64, ((s.y + s.height * 0.3) * scale_factor) as f64));
+            path.move_to((
+                ((s.x + s.width * 0.25) * scale_factor) as f64,
+                ((s.y + s.height * 0.5) * scale_factor) as f64,
+            ));
+            path.line_to((
+                ((s.x + s.width * 0.45) * scale_factor) as f64,
+                ((s.y + s.height * 0.7) * scale_factor) as f64,
+            ));
+            path.line_to((
+                ((s.x + s.width * 0.75) * scale_factor) as f64,
+                ((s.y + s.height * 0.3) * scale_factor) as f64,
+            ));
 
             renderer.stroke_bez_path(path, Brush::Color(rgb(255, 255, 255)));
         } else {
@@ -147,12 +166,7 @@ impl ElementInternals for CheckboxInner {
         self.draw_scrollbar(renderer, _scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.toggle();
@@ -211,23 +225,15 @@ impl Checkbox {
             );
         });
         {
-            inner_mut
-                .element_data
-                .set_accessibility_role(issho::Role::CheckBox);
-            inner_mut
-                .element_data
-                .set_accessibility_name(label.to_string());
-            inner_mut
-                .element_data
-                .set_accessibility_checked(checked);
+            inner_mut.element_data.set_accessibility_role(issho::Role::CheckBox);
+            inner_mut.element_data.set_accessibility_name(label.to_string());
+            inner_mut.element_data.set_accessibility_checked(checked);
             let inner = Rc::downgrade(&inner);
-            inner_mut
-                .element_data
-                .set_accessibility_toggle_action(move || {
-                    if let Some(inner) = inner.upgrade() {
-                        inner.borrow_mut().toggle();
-                    }
-                });
+            inner_mut.element_data.set_accessibility_toggle_action(move || {
+                if let Some(inner) = inner.upgrade() {
+                    inner.borrow_mut().toggle();
+                }
+            });
         }
 
         drop(inner_mut);
@@ -238,8 +244,7 @@ impl Checkbox {
 impl CheckboxInner {
     fn toggle(&mut self) {
         self.checked = !self.checked;
-        self.element_data
-            .set_accessibility_checked(self.checked);
+        self.element_data.set_accessibility_checked(self.checked);
         let target = self
             .element_data
             .me

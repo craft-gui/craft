@@ -1,9 +1,9 @@
+use craft_primitives::geometry::Point;
 use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use ui_events::pointer::PointerId;
-use craft_primitives::geometry::Point;
 
 use craft_renderer::TargetItem;
 
@@ -68,10 +68,7 @@ pub(super) fn find_target(
     target.unwrap_or(Rc::clone(root))
 }
 
-pub(super) fn call_user_event_handlers(
-    event: &mut Event,
-    message: &EventKind,
-) {
+pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind) {
     let current_target = event.current_target.clone();
 
     match message {

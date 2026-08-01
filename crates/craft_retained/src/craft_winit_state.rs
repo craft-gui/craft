@@ -1,13 +1,13 @@
 //! Integration with the winit event loop.
 
+use craft_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 use std::time::Instant;
-use craft_logging::info;
 
 use craft_primitives::geometry::Size;
 
-use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, pop_gui_thread_work, Job, push_gui_thread_work};
+use craft_runtime::{CraftRuntimeHandle, Job, Receiver, Sender, pop_gui_thread_work, push_gui_thread_work};
 
 use ui_events::pointer::PointerEvent;
 

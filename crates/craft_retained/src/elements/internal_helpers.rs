@@ -5,12 +5,12 @@ use crate::text::text_context::TextContext;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle};
 
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::Arc;
 use crate::elements::element_data::ElementData;
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
 
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -35,8 +35,7 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
 
     {
         let data = parent.element_data();
-        if let Some((parent_node, root)) = data.access_key.zip(data.access_root)
-        {
+        if let Some((parent_node, root)) = data.access_key.zip(data.access_root) {
             crate::accessibility::reparent_subtree(
                 &mut *child.borrow_mut(),
                 &data.access_tree,

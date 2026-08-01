@@ -11,10 +11,6 @@ use craft_primitives::geometry::{Affine, Point, Rectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::{ResourceId, ResourceManager};
 
-use maudio::engine::Engine;
-use maudio::sound::Sound;
-use maudio::sound::notifier::EndNotifier;
-use craft_primitives::brush::Brush;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
@@ -24,6 +20,10 @@ use crate::layout::TaffyTree;
 use crate::style::{AlignItems, Display, Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, rgb};
+use craft_primitives::brush::Brush;
+use maudio::engine::Engine;
+use maudio::sound::Sound;
+use maudio::sound::notifier::EndNotifier;
 
 #[derive(Clone)]
 pub struct SoundData {
@@ -135,12 +135,7 @@ impl ElementInternals for AudioInner {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
     }
 
@@ -175,7 +170,9 @@ impl Audio {
             .color(Color::WHITE)
             .width(Unit::Px(16.0))
             .height(Unit::Px(16.0));
-        let track = Slider::new(16.0).width(Unit::Px(200.0)).thumb_color(Brush::Color(Color::WHITE));
+        let track = Slider::new(16.0)
+            .width(Unit::Px(200.0))
+            .thumb_color(Brush::Color(Color::WHITE));
         let volume_track = Slider::new(16.0)
             .thumb_color(Brush::Color(Color::WHITE))
             .min(0.0)

@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use winit::event_loop::ActiveEventLoop;
-use winit::window::WindowId;
-use craft_renderer::blank_renderer::BlankRenderer;
 use crate::app::{App, TAFFY_TREE};
 use crate::elements::{ElementData, Window};
+use craft_renderer::blank_renderer::BlankRenderer;
+use winit::event_loop::ActiveEventLoop;
+use winit::window::WindowId;
 
 pub(crate) struct WindowManager {
     windows: Vec<Window>,
@@ -24,7 +24,9 @@ impl WindowManager {
 
     pub(crate) fn get_window_by_id(&self, window_id: WindowId) -> Option<Window> {
         for window in &self.windows {
-            if let Some(winit_window) = window.winit_window() && winit_window.id() == window_id {
+            if let Some(winit_window) = window.winit_window()
+                && winit_window.id() == window_id
+            {
                 return Some(window.clone());
             }
         }

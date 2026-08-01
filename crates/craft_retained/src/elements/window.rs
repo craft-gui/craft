@@ -9,8 +9,8 @@ use craft_logging::info;
 
 use craft_primitives::geometry::{Affine, Point, Rectangle, Size};
 
-use craft_renderer::renderer::{Renderer, Screenshot};
 use craft_renderer::RendererType;
+use craft_renderer::renderer::{Renderer, Screenshot};
 
 use craft_resource_manager::ResourceManager;
 
@@ -27,9 +27,6 @@ use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
-#[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
-use craft_renderer::blank_renderer::BlankRenderer;
 use crate::accessibility::CraftAccessTree;
 use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::element_data::ElementData;
@@ -44,6 +41,9 @@ use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
+use craft_renderer::blank_renderer::BlankRenderer;
+#[cfg(target_arch = "wasm32")]
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
 
 pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
 
@@ -153,16 +153,17 @@ impl ElementInternals for WindowInternal {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
     }
 
@@ -324,9 +325,7 @@ impl WindowInternal {
 
         {
             let mut inner_mut = inner.borrow_mut();
-            inner_mut
-                .element_data
-                .set_accessibility_role(issho::Role::Window);
+            inner_mut.element_data.set_accessibility_role(issho::Role::Window);
             if let Some(title) = inner_mut.title.clone() {
                 inner_mut.element_data.set_accessibility_name(title);
             }
@@ -355,20 +354,15 @@ impl WindowInternal {
                 .expect("window accessibility root is not attached");
             if focused {
                 let focus = crate::app::FOCUS.with(|focus| {
-                    focus
-                        .borrow()
-                        .as_ref()
-                        .and_then(Weak::upgrade)
-                        .and_then(|element| {
-                            let element = element.borrow();
-                            let data = element.element_data();
-                            let belongs_to_window = data.access_tree.ptr_eq(&self.access_tree)
-                                && data.access_root == Some(root);
-                            belongs_to_window.then_some(data.access_key).flatten()
-                        })
+                    focus.borrow().as_ref().and_then(Weak::upgrade).and_then(|element| {
+                        let element = element.borrow();
+                        let data = element.element_data();
+                        let belongs_to_window =
+                            data.access_tree.ptr_eq(&self.access_tree) && data.access_root == Some(root);
+                        belongs_to_window.then_some(data.access_key).flatten()
+                    })
                 });
-                self.access_tree
-                    .set_focus(root, Some(focus.unwrap_or(root)));
+                self.access_tree.set_focus(root, Some(focus.unwrap_or(root)));
             } else {
                 self.access_tree.set_focus(root, None);
             }
@@ -475,8 +469,11 @@ impl WindowInternal {
         self.window_size = new_size;
         let size = self.window_size;
 
-        self.renderer.borrow_mut().resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
-        self.renderer.borrow_mut()
+        self.renderer
+            .borrow_mut()
+            .resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
+        self.renderer
+            .borrow_mut()
             .set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
 
         // On macOS the window needs to be redrawn manually after resizing
@@ -630,7 +627,12 @@ impl WindowInternal {
         let renderer_clone = self.renderer.clone();
         self.renderer.borrow_mut().clear();
 
-        self.draw(&mut *renderer_clone.borrow_mut(), resource_manager.clone(), self.effective_scale_factor(), text_context);
+        self.draw(
+            &mut *renderer_clone.borrow_mut(),
+            resource_manager.clone(),
+            self.effective_scale_factor(),
+            text_context,
+        );
 
         self.winit_window.clone().unwrap().pre_present_notify();
 
@@ -638,7 +640,12 @@ impl WindowInternal {
             let renderer = renderer_clone.clone();
             renderer.borrow_mut().sort_render_list();
 
-            let window = Rectangle::new(0.0, 0.0, renderer.borrow().surface_width(), renderer.borrow().surface_height());
+            let window = Rectangle::new(
+                0.0,
+                0.0,
+                renderer.borrow().surface_width(),
+                renderer.borrow().surface_height(),
+            );
             renderer.borrow_mut().prepare(resource_manager.clone(), window);
             renderer.borrow_mut().submit(resource_manager.clone());
         }

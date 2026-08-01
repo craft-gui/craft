@@ -4,11 +4,11 @@ mod taffy_conversions;
 
 pub use box_shadow::BoxShadow;
 use craft_primitives::Color;
+use craft_primitives::brush::Brush;
 use parley::GenericFamily;
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
-use craft_primitives::brush::Brush;
 pub use styles::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -262,9 +262,7 @@ impl TextStyleProperty {
 
             TextStyleProperty::FontSize(font_size) => Some(parley::StyleProperty::FontSize(*font_size)),
 
-            TextStyleProperty::Color(brush) => {
-                Some(parley::StyleProperty::Brush(brush.clone()))
-            }
+            TextStyleProperty::Color(brush) => Some(parley::StyleProperty::Brush(brush.clone())),
 
             TextStyleProperty::FontStyle(font_style) => {
                 let font_style = match font_style {

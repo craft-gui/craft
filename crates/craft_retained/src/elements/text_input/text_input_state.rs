@@ -3,6 +3,17 @@ use std::ops::Range;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
+use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
+use crate::elements::element_data::ElementData;
+use crate::elements::text_input::parley_box_to_rect;
+use crate::elements::{ElementInternals, TextInputInner};
+use crate::events::{Event, EventKind, TextInputChanged};
+use crate::layout::layout_context::TextHashKey;
+use crate::style::{Style, TextStyleProperty};
+use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
+use crate::text::text_context::TextContext;
+use crate::text::{RangedStyles, text_render_data};
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_renderer::text_renderer_data::TextRender;
 use parley::{Affinity, ContentWidths, Cursor, Selection};
@@ -13,17 +24,6 @@ use ui_events::pointer::PointerUpdate;
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 use winit::dpi;
-use craft_primitives::brush::Brush;
-use crate::app::{TAFFY_TREE, request_apply_layout, queue_event};
-use crate::elements::element_data::ElementData;
-use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::{ElementInternals, TextInputInner};
-use crate::events::{Event, EventKind, TextInputChanged};
-use crate::layout::layout_context::TextHashKey;
-use crate::style::{Style, TextStyleProperty};
-use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
-use crate::text::text_context::TextContext;
-use crate::text::{RangedStyles, text_render_data};
 
 #[derive(Clone)]
 pub struct TextInputState {
@@ -412,9 +412,12 @@ impl TextInputState {
 
     fn generate_text_changed_event(&self, element_data: &ElementData) {
         let new_event = Event::new(element_data.me.upgrade().unwrap());
-        queue_event(new_event, EventKind::TextInputChanged(TextInputChanged {
-            value: self.editor.raw_text().to_string(),
-        }));
+        queue_event(
+            new_event,
+            EventKind::TextInputChanged(TextInputChanged {
+                value: self.editor.raw_text().to_string(),
+            }),
+        );
     }
 
     pub fn key_press(
@@ -747,7 +750,6 @@ impl TextInputState {
             text_renderer.cursor = None;
         }
     }
-
 }
 
 #[cfg(all(

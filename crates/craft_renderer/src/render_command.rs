@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Weak;
 
-use peniko::Color;
 use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Vec2};
+use peniko::Color;
 
 use craft_resource_manager::ResourceId;
 

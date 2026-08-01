@@ -7,9 +7,9 @@ use std::time;
 
 use craft_renderer::text_renderer_data::TextData;
 
-use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
 use craft_primitives::Color;
 use craft_primitives::brush::Brush;
+use craft_primitives::geometry::{Affine, Point, Rectangle, Vec2};
 
 use craft_renderer::renderer::Renderer;
 
@@ -194,11 +194,16 @@ impl ElementInternals for TextInner {
         }
 
         state.try_update_text_render(text_context, self.element_data.style.get_selection_brush());
-        self.element_data
-            .set_accessibility_bounds_from_layout(scale_factor);
+        self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -216,12 +221,7 @@ impl ElementInternals for TextInner {
         _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         if !self.selectable {
             return;
         }
@@ -325,9 +325,7 @@ impl Text {
         });
         let mut inner_mut = inner.borrow_mut();
 
-        inner_mut
-            .element_data
-            .set_accessibility_role(issho::Role::Label);
+        inner_mut.element_data.set_accessibility_role(issho::Role::Label);
         let text_context = Some(LayoutContext::Text(TaffyTextContext {
             element: inner_mut.me.clone(),
         }));
@@ -394,8 +392,7 @@ impl TextInner {
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
         self.mark_dirty();
-        self.element_data
-            .set_accessibility_name(self.state.text.clone());
+        self.element_data.set_accessibility_name(self.state.text.clone());
     }
 
     pub(crate) fn measure(

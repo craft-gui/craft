@@ -1088,11 +1088,7 @@ impl PlainEditor {
     /// If the required contexts are not available, then [`refresh_layout`](Self::refresh_layout) can
     /// be called in a scope when they are available, and [`try_layout`](Self::try_layout) can
     /// be used instead.
-    pub fn layout(
-        &mut self,
-        font_cx: &mut FontContext,
-        layout_cx: &mut LayoutContext<Brush>,
-    ) -> &Layout<Brush> {
+    pub fn layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> &Layout<Brush> {
         self.refresh_layout(font_cx, layout_cx);
         &self.layout
     }

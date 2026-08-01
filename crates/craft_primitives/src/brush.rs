@@ -1,10 +1,10 @@
-use peniko::{Color};
 use crate::gradient::Gradient;
+use peniko::Color;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Brush {
     Color(Color),
-    Gradient(Gradient)
+    Gradient(Gradient),
 }
 
 impl Default for Brush {

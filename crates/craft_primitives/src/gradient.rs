@@ -14,12 +14,7 @@ pub struct Gradient {
 impl Gradient {
     pub fn new_linear(start: Point, end: Point) -> Self {
         Gradient {
-            kind: GradientKind::Linear(
-                LinearGradientData {
-                    start,
-                    end,
-                }
-            ),
+            kind: GradientKind::Linear(LinearGradientData { start, end }),
             color_stops: Default::default(),
             extend: Default::default(),
             hue_direction: Default::default(),
@@ -28,14 +23,12 @@ impl Gradient {
 
     pub fn new_radial(start_center: Point, start_radius: f32, end_center: Point, end_radius: f32) -> Self {
         Gradient {
-            kind: GradientKind::Radial(
-                RadialGradientData {
-                    start_center,
-                    start_radius,
-                    end_center,
-                    end_radius,
-                }
-            ),
+            kind: GradientKind::Radial(RadialGradientData {
+                start_center,
+                start_radius,
+                end_center,
+                end_radius,
+            }),
             color_stops: Default::default(),
             extend: Default::default(),
             hue_direction: Default::default(),
@@ -44,13 +37,11 @@ impl Gradient {
 
     pub fn new_sweep(center: Point, start_angle: f32, end_angle: f32) -> Self {
         Gradient {
-            kind: GradientKind::Sweep(
-                SweepGradientData {
-                    center,
-                    start_angle,
-                    end_angle,
-                }
-            ),
+            kind: GradientKind::Sweep(SweepGradientData {
+                center,
+                start_angle,
+                end_angle,
+            }),
             color_stops: Default::default(),
             extend: Default::default(),
             hue_direction: Default::default(),
@@ -76,15 +67,12 @@ pub enum Extend {
 pub struct ColorStop {
     /// Normalized (0.0 - 1.0)
     pub offset: f32,
-    pub color: Color
+    pub color: Color,
 }
 
 impl ColorStop {
     pub fn new(offset: f32, color: Color) -> Self {
-        Self {
-            offset,
-            color,
-        }
+        Self { offset, color }
     }
 }
 
@@ -128,5 +116,5 @@ pub struct SweepGradientData {
 pub enum GradientKind {
     Linear(LinearGradientData),
     Radial(RadialGradientData),
-    Sweep(SweepGradientData)
+    Sweep(SweepGradientData),
 }

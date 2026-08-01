@@ -1,16 +1,11 @@
+use craft_primitives::geometry::{Affine, Point, Rectangle};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use craft_primitives::geometry::{Affine, Point, Rectangle};
 
 use peniko::Color;
 
-use ui_events::keyboard::{Code, KeyState};
-use craft_primitives::brush::Brush;
-use craft_primitives::gradient::Gradient;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
@@ -20,6 +15,11 @@ use crate::layout::TaffyTree;
 use crate::palette;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
+use craft_primitives::brush::Brush;
+use craft_primitives::gradient::Gradient;
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
+use ui_events::keyboard::{Code, KeyState};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -136,12 +136,16 @@ impl Slider {
     }
 
     pub fn track_color(self, track_background_color: Color) -> Self {
-        self.inner.borrow_mut().set_track_brush(Brush::Color(track_background_color));
+        self.inner
+            .borrow_mut()
+            .set_track_brush(Brush::Color(track_background_color));
         self
     }
 
     pub fn track_gradient(self, track_background_gradient: Gradient) -> Self {
-        self.inner.borrow_mut().set_track_brush(Brush::Gradient(track_background_gradient));
+        self.inner
+            .borrow_mut()
+            .set_track_brush(Brush::Gradient(track_background_gradient));
         self
     }
 
@@ -182,7 +186,8 @@ impl SliderInner {
 
         me.borrow_mut().element_data.create_layout_node(None);
 
-        me.borrow_mut().set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
+        me.borrow_mut()
+            .set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
         let border_radius = 25.0;
         me.borrow_mut().set_border_radius(
             (border_radius, border_radius),
@@ -377,7 +382,13 @@ impl ElementInternals for SliderInner {
         }
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -389,12 +400,7 @@ impl ElementInternals for SliderInner {
         self.draw_thumb(_renderer, _scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        _text_context: &mut TextContext,
-        _event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
         match message {
             EventKind::KeyboardInputEvent(key) => {
                 if key.state != KeyState::Down || !self.is_focused() {

@@ -1,8 +1,8 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
-use craft_retained::{Brush, Color};
 use craft_retained::elements::{AsElement, ElementInternals, SliderDirection};
+use craft_retained::{Brush, Color};
 
 use crate::elements::Element;
 use crate::signals::Bindable;

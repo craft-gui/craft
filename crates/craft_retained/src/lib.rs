@@ -1,7 +1,7 @@
 //! A retained GUI.
 
 pub use craft_primitives::brush::Brush;
-pub use craft_primitives::{Color, geometry, palette, Gradient, GradientKind, LinearGradientData, RadialGradientData, SweepGradientData, HueDirection, ColorStop, Extend};
+pub use craft_primitives::{Color, ColorStop, Extend, Gradient, GradientKind, HueDirection, LinearGradientData, RadialGradientData, SweepGradientData, geometry, palette};
 
 pub use craft_renderer::RendererType;
 
@@ -32,7 +32,7 @@ use craft_logging::info;
 
 use craft_resource_manager::ResourceManager;
 
-use craft_runtime::{channel, CraftRuntimeHandle, Receiver, Sender};
+use craft_runtime::{CraftRuntimeHandle, Receiver, Sender, channel};
 
 use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]

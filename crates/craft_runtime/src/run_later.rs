@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 pub struct Job {
     pub callback: JobCallback,
     pub interval: Option<Duration>,
-    pub last_run: Instant
+    pub last_run: Instant,
 }
 
 impl Job {
@@ -50,11 +50,9 @@ pub fn run_later(work: Job) {
 }
 
 impl GuiThreadJobQueue {
-
     pub fn push(&mut self, item: Job) {
         self.inner.push_back(item);
     }
-
 
     pub fn pop(&mut self) -> Option<Job> {
         self.inner.pop_front()

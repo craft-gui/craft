@@ -4,7 +4,7 @@ pub use hit_testable::HitTestable;
 
 pub mod geometry;
 
-mod color;
-mod hit_testable;
-pub mod gradient;
 pub mod brush;
+mod color;
+pub mod gradient;
+mod hit_testable;

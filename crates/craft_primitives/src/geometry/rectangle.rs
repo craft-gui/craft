@@ -1,6 +1,6 @@
+use crate::geometry::Point;
 use dpi;
 use kurbo::Affine;
-use crate::geometry::Point;
 
 /// A structure representing a rectangle in 2D space.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -125,7 +125,7 @@ impl Rectangle {
     pub fn intersects(&self, other: &Rectangle) -> bool {
         self.x < other.right() && self.right() > other.x && self.y < other.bottom() && self.bottom() > other.y
     }
-    
+
     pub fn apply_transform(&self, transform: Affine) -> Self {
         Self::from_kurbo(transform.transform_rect_bbox(self.to_kurbo()))
     }

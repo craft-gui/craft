@@ -3,5 +3,5 @@ pub enum ResourceType {
     Image,
     Font,
     TinyVg,
-    Other(String)
+    Other(String),
 }

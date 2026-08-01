@@ -24,9 +24,7 @@ where
             new_data.parent = None;
             let (access_tree, access_key) = {
                 let tree = crate::accessibility::access_tree();
-                let source_key = new_data
-                    .access_key
-                    .expect("source accessibility node was not created");
+                let source_key = new_data.access_key.expect("source accessibility node was not created");
                 let node = new_data
                     .access_tree
                     .get_node(source_key)

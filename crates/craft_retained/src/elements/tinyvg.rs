@@ -5,21 +5,15 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+use peniko::Color;
 use peniko::color::AlphaColor;
 use peniko::kurbo::{self, Stroke, StrokeOpts};
-use peniko::Color;
 
 use tinyvg_rs::TinyVg as TinyVgData;
 use tinyvg_rs::color_table::{ColorTable, RgbaF32};
 use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
 use tinyvg_rs::common::Unit;
 
-use craft_primitives::geometry::{Affine, BezPath, Point, Rectangle, Shape, TOLERANCE};
-use craft_primitives::brush::Brush;
-use craft_primitives::gradient::{ColorStop, Gradient};
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::{ResourceId, ResourceManager};
-use craft_resource_manager::resource_type::ResourceType;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -29,6 +23,12 @@ use crate::layout::TaffyTree;
 use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::rgba;
 use crate::text::text_context::TextContext;
+use craft_primitives::brush::Brush;
+use craft_primitives::geometry::{Affine, BezPath, Point, Rectangle, Shape, TOLERANCE};
+use craft_primitives::gradient::{ColorStop, Gradient};
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::resource_type::ResourceType;
+use craft_resource_manager::{ResourceId, ResourceManager};
 
 /// Displays an TinyVg.
 #[derive(Clone)]
@@ -101,7 +101,13 @@ impl ElementInternals for TinyVgInner {
         );
     }
 
-    fn draw(&mut self, renderer: &mut dyn Renderer, resource_manager: Arc<ResourceManager>, scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -113,7 +119,9 @@ impl ElementInternals for TinyVgInner {
         let content_rectangle = computed_box_transformed.content_rectangle();
 
         let mut color = None;
-        if let Brush::Color(c) = self.style().get_text_brush() && c != rgba(0, 0, 0, 0) {
+        if let Brush::Color(c) = self.style().get_text_brush()
+            && c != rgba(0, 0, 0, 0)
+        {
             color = Some(c);
         }
 
@@ -147,7 +155,10 @@ impl TinyVg {
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_id.clone())));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner.borrow_mut().style_mut().set_text_brush(Brush::Color(Color::TRANSPARENT));
+        inner
+            .borrow_mut()
+            .style_mut()
+            .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
         PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
             pending_resources.push_back((resource_id, ResourceType::TinyVg));
@@ -166,7 +177,10 @@ impl TinyVg {
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(ResourceId::DUMMY)));
         inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner.borrow_mut().style_mut().set_text_brush(Brush::Color(Color::TRANSPARENT));
+        inner
+            .borrow_mut()
+            .style_mut()
+            .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
         Self { inner }
     }
@@ -272,7 +286,7 @@ impl TinyVgInner {
                         &data.style,
                         None,
                         &tiny_vg.color_table,
-                        override_color
+                        override_color,
                     );
                 }
                 DrawCommand::DrawLines(data) => {
@@ -320,7 +334,7 @@ impl TinyVgInner {
                         &data.style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        override_color
+                        override_color,
                     );
                 }
                 DrawCommand::OutlineFillPolygon(data) => {
@@ -358,7 +372,7 @@ impl TinyVgInner {
                         &data.fill_style,
                         None,
                         &tiny_vg.color_table,
-                        override_color
+                        override_color,
                     );
                     draw_path(
                         renderer,
@@ -366,7 +380,7 @@ impl TinyVgInner {
                         &data.line_style,
                         Some(&data.line_width),
                         &tiny_vg.color_table,
-                        override_color
+                        override_color,
                     );
                 }
                 DrawCommand::TextHint(_data) => {}
@@ -400,7 +414,7 @@ fn draw_path(
     fill_style: &Style,
     line_width: Option<&Unit>,
     color_table: &ColorTable,
-    override_color: &Option<Color>
+    override_color: &Option<Color>,
 ) {
     let bezier_path = assemble_path(path);
     let brush = get_brush(fill_style, color_table, override_color);
@@ -527,9 +541,10 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             let start = to_kurbo_point(linear_gradient.point_0);
             let end = to_kurbo_point(linear_gradient.point_1);
 
-            let linear =
-            Gradient::new_linear(start, end)
-                .color_stops(&[ColorStop::new(0.0, to_peniko_color(color_0)), ColorStop::new(1.0, to_peniko_color(color_1))]);
+            let linear = Gradient::new_linear(start, end).color_stops(&[
+                ColorStop::new(0.0, to_peniko_color(color_0)),
+                ColorStop::new(1.0, to_peniko_color(color_1)),
+            ]);
 
             Brush::Gradient(linear)
         }
@@ -541,8 +556,10 @@ fn get_brush(fill_style: &Style, color_table: &ColorTable, override_color: &Opti
             let edge = to_kurbo_point(radial_gradient.point_1);
             let radius = center.distance(edge);
 
-            let radial = Gradient::new_radial(center, 0.0, center, radius as f32)
-                .color_stops(&[ColorStop::new(0.0, to_peniko_color(color_0)), ColorStop::new(1.0, to_peniko_color(color_1))]);
+            let radial = Gradient::new_radial(center, 0.0, center, radius as f32).color_stops(&[
+                ColorStop::new(0.0, to_peniko_color(color_0)),
+                ColorStop::new(1.0, to_peniko_color(color_1)),
+            ]);
             Brush::Gradient(radial)
         }
     }

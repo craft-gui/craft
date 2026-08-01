@@ -1,8 +1,8 @@
+use craft_primitives::geometry::Point;
 use craft_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
-use craft_primitives::geometry::Point;
 
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
@@ -20,7 +20,7 @@ pub(super) fn dispatch_capturing_event(
 /// The first dispatch happens at the top-most visual element.
 pub(super) fn dispatch_bubbling_event(
     message: &EventKind,
-    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>
+    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
 ) -> Event {
     let target = targets[0].clone();
     let mut event = Event::new(target.clone());
@@ -54,11 +54,7 @@ impl EventDispatcher {
 
     /// Dispatches 1 event to 1 element.
     /// NOTE: This calls the user callbacks + the default event handler (if prevent_default() is not called).
-    pub(super) fn dispatch_once(
-        &self,
-        message: &EventKind,
-        target: &Rc<RefCell<dyn ElementInternals>>,
-    ) {
+    pub(super) fn dispatch_once(&self, message: &EventKind, target: &Rc<RefCell<dyn ElementInternals>>) {
         let mut base_event = Event::new(target.clone());
 
         // Call the callback handlers.
@@ -160,7 +156,9 @@ impl EventDispatcher {
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        if message.is_system_pointer_event() && let Some(pointer_id) = &message.pointer_id() {
+        if message.is_system_pointer_event()
+            && let Some(pointer_id) = &message.pointer_id()
+        {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
             let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                 &root,
@@ -169,7 +167,7 @@ impl EventDispatcher {
                 renderer,
                 target_scratch,
                 &pointer_capture.borrow(),
-                pointer_id
+                pointer_id,
             );
             targets = freeze_target_list(target);
         } else if message.is_keyboard_event() {
@@ -217,7 +215,9 @@ impl EventDispatcher {
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        if message.is_system_pointer_event() && let Some(pointer_id) = message.pointer_id() {
+        if message.is_system_pointer_event()
+            && let Some(pointer_id) = message.pointer_id()
+        {
             let did_pointer_capture_change = pointer_capture
                 .borrow_mut()
                 .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
@@ -230,7 +230,7 @@ impl EventDispatcher {
                     renderer,
                     target_scratch,
                     &pointer_capture.borrow(),
-                    &pointer_id
+                    &pointer_id,
                 );
                 targets = freeze_target_list(target);
                 self.maybe_dispatch_pointer_leave(text_context, &targets);
@@ -268,8 +268,5 @@ impl EventDispatcher {
                 }
             }
         }
-
-
-
     }
 }

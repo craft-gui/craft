@@ -3,10 +3,8 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use ui_events::pointer::PointerId;
-use craft_primitives::brush::Brush;
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
-use crate::elements::scrollable::{draw_scrollbar, ScrollState};
+use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
@@ -14,9 +12,11 @@ use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, CraftError};
+use craft_primitives::brush::Brush;
 use craft_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
 use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
+use ui_events::pointer::PointerId;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 ///
@@ -165,13 +165,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// Handles default events.
-    fn on_event(
-        &mut self,
-        _message: &EventKind,
-        _text_context: &mut TextContext,
-        _event: &mut Event,
-    ) {
-    }
+    fn on_event(&mut self, _message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {}
 
     /// Computes this element's box model.
     fn resolve_box(
@@ -1006,7 +1000,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             FOCUS.with(|focus| {
                 *focus.borrow_mut() = None;
             });
-                {
+            {
                 let data = self.element_data();
                 if let Some(root) = data.access_root {
                     data.access_tree.set_focus(root, Some(root));

@@ -1,12 +1,12 @@
 mod text_input_state;
 
+use craft_primitives::Color;
+use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use craft_primitives::Color;
-use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 
 use craft_renderer::text_renderer_data::{TextData, TextScroll};
 
@@ -14,10 +14,7 @@ use parley::BoundingBox;
 
 use ui_events::pointer::{PointerButton, PointerId};
 
-use winit::event::Ime;
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::ResourceManager;
-use crate::app::{ELEMENTS};
+use crate::app::ELEMENTS;
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::DeepClone;
@@ -30,6 +27,9 @@ use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 use crate::utils::cloneable_any::CloneableAny;
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::ResourceManager;
+use winit::event::Ime;
 
 #[derive(Clone)]
 pub struct TextInput {
@@ -62,7 +62,7 @@ pub enum TextInputMessage {
 impl TextInput {
     pub fn new(text: &str) -> Self {
         Self {
-            inner: TextInputInner::new(text)
+            inner: TextInputInner::new(text),
         }
     }
 
@@ -194,13 +194,17 @@ impl ElementInternals for TextInputInner {
             true,
         );
 
-        self.state
-            .render_text(self.is_focused(), self.element_data.style());
-        self.element_data
-            .set_accessibility_bounds_from_layout(scale_factor);
+        self.state.render_text(self.is_focused(), self.element_data.style());
+        self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
@@ -241,12 +245,7 @@ impl ElementInternals for TextInputInner {
         self.draw_scrollbar(_renderer, _scale_factor);
     }
 
-    fn on_event(
-        &mut self,
-        message: &EventKind,
-        text_context: &mut TextContext,
-        event: &mut Event,
-    ) {
+    fn on_event(&mut self, message: &EventKind, text_context: &mut TextContext, event: &mut Event) {
         self.state.is_active = true;
 
         scrollable::handle_scroll_logic(self, message, event);
@@ -289,7 +288,8 @@ impl ElementInternals for TextInputInner {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
-                self.state.key_press(text_context, keyboard_event, &mut self.element_data);
+                self.state
+                    .key_press(text_context, keyboard_event, &mut self.element_data);
             }
             EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
@@ -367,7 +367,6 @@ impl ElementInternals for TextInputInner {
 }
 
 impl TextInputInner {
-
     pub fn new(text: &str) -> Rc<RefCell<Self>> {
         let default_style = TextInputInner::get_default_style();
 
@@ -388,9 +387,7 @@ impl TextInputInner {
         inner_mut.element_data.style = default_style;
 
         {
-            inner_mut
-                .element_data
-                .set_accessibility_role(issho::Role::TextInput);
+            inner_mut.element_data.set_accessibility_role(issho::Role::TextInput);
             inner_mut.element_data.set_accessibility_enabled(true);
         }
         inner_mut.set_text(text);
@@ -438,8 +435,7 @@ impl TextInputInner {
     pub fn set_text(&mut self, text: &str) -> &mut Self {
         self.state.set_text(text);
         self.mark_dirty();
-        self.element_data
-            .set_accessibility_value(text.to_owned());
+        self.element_data.set_accessibility_value(text.to_owned());
         self
     }
 

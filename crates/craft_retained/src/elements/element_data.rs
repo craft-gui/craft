@@ -3,6 +3,7 @@ use std::rc::{Rc, Weak};
 
 use smol_str::SmolStr;
 
+use crate::accessibility::CraftAccessTree;
 use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
@@ -11,7 +12,6 @@ use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Keyboar
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
-use crate::accessibility::CraftAccessTree;
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -67,10 +67,7 @@ impl ElementData {
         Self::new_internal(me, is_scrollable, true)
     }
 
-    pub(crate) fn new_pseudo (
-        me: Weak<RefCell<dyn ElementInternals>>,
-        is_scrollable: bool,
-    ) -> Self {
+    pub(crate) fn new_pseudo(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
         Self::new_internal(me, is_scrollable, false)
     }
 
@@ -205,8 +202,13 @@ impl ElementData {
         let border_radius = current_style.get_border_radius();
         let border_color = current_style.get_border_color();
         let box_shadows = current_style.get_box_shadows();
-        self.layout
-            .apply_borders(has_border, border_radius, scale_factor, border_color, box_shadows.to_vec());
+        self.layout.apply_borders(
+            has_border,
+            border_radius,
+            scale_factor,
+            border_color,
+            box_shadows.to_vec(),
+        );
     }
 
     /// Computes the scrollbar's tack and thumb layout.

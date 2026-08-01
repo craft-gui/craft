@@ -1,15 +1,15 @@
 use craft_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use craft_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
 
-use craft_renderer::render_command::DrawBoxShadow;
 use craft_renderer::Brush;
+use craft_renderer::render_command::DrawBoxShadow;
 
 use peniko::Color;
 
-use taffy::NodeId;
-use craft_renderer::renderer::Renderer;
 use crate::elements::scrollable::ScrollState;
 use crate::style::{BoxShadow, Position, Style};
+use craft_renderer::renderer::Renderer;
+use taffy::NodeId;
 
 #[derive(Clone, Default)]
 pub struct Layout {
@@ -394,7 +394,11 @@ impl Layout {
                 let border_color = current_style.get_border_color().top;
 
                 if thickness != 0.0 && border_color.components[3] != 0.0 {
-                    renderer.draw_rect_outline(border_rect, Brush::Color(border_color), thickness as f64 * scale_factor);
+                    renderer.draw_rect_outline(
+                        border_rect,
+                        Brush::Color(border_color),
+                        thickness as f64 * scale_factor,
+                    );
                 }
             }
             ComputedBorder::CssComputed(computed_border) => {

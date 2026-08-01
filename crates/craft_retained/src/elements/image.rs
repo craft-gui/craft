@@ -1,16 +1,13 @@
 //! Displays an image.
 
+use craft_primitives::geometry::Rectangle;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use craft_primitives::geometry::Rectangle;
 
 use craft_resource_manager::{ResourceId, ResourceManager};
 
-use craft_primitives::geometry::{Affine, Point};
-use craft_renderer::renderer::Renderer;
-use craft_resource_manager::resource_type::ResourceType;
 use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
@@ -19,6 +16,9 @@ use crate::elements::{AsElement, Element, ElementInternals};
 use crate::layout::TaffyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
+use craft_primitives::geometry::{Affine, Point};
+use craft_renderer::renderer::Renderer;
+use craft_resource_manager::resource_type::ResourceType;
 
 /// Displays an image.
 #[derive(Clone)]
@@ -91,7 +91,13 @@ impl ElementInternals for ImageInner {
         );
     }
 
-    fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
+    fn draw(
+        &mut self,
+        _renderer: &mut dyn Renderer,
+        _resource_manager: Arc<ResourceManager>,
+        _scale_factor: f64,
+        _text_context: &mut TextContext,
+    ) {
         if !self.is_visible() {
             return;
         }
