@@ -5,7 +5,7 @@ edition = "2024"
 license-file = "LICENSE"
 description = "A logging library for the RetGui project, providing structured logging and tracing capabilities."
 homepage = "https://retguigui.com/"
-repository = "https://github.com/retgui-gui/retgui"
+repository = "https://github.com/RetGui/retgui"
 
 [dependencies]
 

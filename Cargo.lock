@@ -753,121 +753,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "retgui"
-version = "0.1.0"
-dependencies = [
- "retgui_retained",
-]
-
-[[package]]
-name = "retgui_calendar"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "icu",
- "sys-locale",
- "web-sys",
- "windows 0.62.2",
-]
-
-[[package]]
-name = "retgui_logging"
-version = "0.1.0"
-dependencies = [
- "tracing",
-]
-
-[[package]]
-name = "retgui_primitives"
-version = "0.1.1"
-dependencies = [
- "dpi",
- "kurbo",
- "peniko",
- "smallvec",
-]
-
-[[package]]
-name = "retgui_renderer"
-version = "0.1.1"
-dependencies = [
- "chrono",
- "retgui_primitives",
- "retgui_resource_manager",
- "glifo",
- "peniko",
- "softbuffer",
- "tinyvg-rs",
- "vello_common",
- "vello_cpu",
- "vello_hybrid",
- "wgpu",
- "winit",
-]
-
-[[package]]
-name = "retgui_resource_manager"
-version = "0.1.1"
-dependencies = [
- "chrono",
- "retgui_logging",
- "retgui_runtime",
- "image",
- "reqwest",
- "tinyvg-rs",
-]
-
-[[package]]
-name = "retgui_retained"
-version = "0.1.1"
-dependencies = [
- "bitflags 2.11.0",
- "chrono",
- "clipboard-rs",
- "retgui_calendar",
- "retgui_logging",
- "retgui_primitives",
- "retgui_renderer",
- "retgui_resource_manager",
- "retgui_runtime",
- "retgui_undo",
- "image",
- "issho",
- "libtest-mimic-collect",
- "maudio",
- "open",
- "parley",
- "peniko",
- "pulldown-cmark",
- "rustc-hash 2.1.2",
- "smallvec",
- "smol_str 0.3.6",
- "syntect",
- "taffy",
- "tinyvg-rs",
- "ui-events",
- "ui-events-winit",
- "wasm-bindgen",
- "web-sys",
- "web-time",
- "windows 0.62.2",
- "winit",
-]
-
-[[package]]
-name = "retgui_runtime"
-version = "0.1.1"
-dependencies = [
- "open",
- "tokio",
- "wasm-bindgen-futures",
-]
-
-[[package]]
-name = "retgui_undo"
-version = "0.1.1"
-
-[[package]]
 name = "crc32fast"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2318,7 +2203,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "issho"
 version = "0.1.0"
-source = "git+https://github.com/retgui-gui/issho.git?rev=4284448de2048417a8805fb346bd488ddae433e9#4284448de2048417a8805fb346bd488ddae433e9"
+source = "git+https://github.com/RetGui/issho.git?rev=4284448de2048417a8805fb346bd488ddae433e9#4284448de2048417a8805fb346bd488ddae433e9"
 dependencies = [
  "hashbrown 0.17.1",
  "log",
@@ -2459,8 +2344,8 @@ dependencies = [
 name = "jsframeworkbench"
 version = "0.1.0"
 dependencies = [
- "retgui_retained",
  "rand",
+ "retgui_retained",
  "util",
 ]
 
@@ -4257,6 +4142,121 @@ dependencies = [
 ]
 
 [[package]]
+name = "retgui"
+version = "0.1.0"
+dependencies = [
+ "retgui_retained",
+]
+
+[[package]]
+name = "retgui_calendar"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "icu",
+ "sys-locale",
+ "web-sys",
+ "windows 0.62.2",
+]
+
+[[package]]
+name = "retgui_logging"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
+name = "retgui_primitives"
+version = "0.1.1"
+dependencies = [
+ "dpi",
+ "kurbo",
+ "peniko",
+ "smallvec",
+]
+
+[[package]]
+name = "retgui_renderer"
+version = "0.1.1"
+dependencies = [
+ "chrono",
+ "glifo",
+ "peniko",
+ "retgui_primitives",
+ "retgui_resource_manager",
+ "softbuffer",
+ "tinyvg-rs",
+ "vello_common",
+ "vello_cpu",
+ "vello_hybrid",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
+name = "retgui_resource_manager"
+version = "0.1.1"
+dependencies = [
+ "chrono",
+ "image",
+ "reqwest",
+ "retgui_logging",
+ "retgui_runtime",
+ "tinyvg-rs",
+]
+
+[[package]]
+name = "retgui_retained"
+version = "0.1.1"
+dependencies = [
+ "bitflags 2.11.0",
+ "chrono",
+ "clipboard-rs",
+ "image",
+ "issho",
+ "libtest-mimic-collect",
+ "maudio",
+ "open",
+ "parley",
+ "peniko",
+ "pulldown-cmark",
+ "retgui_calendar",
+ "retgui_logging",
+ "retgui_primitives",
+ "retgui_renderer",
+ "retgui_resource_manager",
+ "retgui_runtime",
+ "retgui_undo",
+ "rustc-hash 2.1.2",
+ "smallvec",
+ "smol_str 0.3.6",
+ "syntect",
+ "taffy",
+ "tinyvg-rs",
+ "ui-events",
+ "ui-events-winit",
+ "wasm-bindgen",
+ "web-sys",
+ "web-time",
+ "windows 0.62.2",
+ "winit",
+]
+
+[[package]]
+name = "retgui_runtime"
+version = "0.1.1"
+dependencies = [
+ "open",
+ "tokio",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
+name = "retgui_undo"
+version = "0.1.1"
+
+[[package]]
 name = "rgb"
 version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5746,9 +5746,9 @@ name = "website"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "retgui_retained",
  "open",
  "reqwest",
+ "retgui_retained",
  "serde",
  "serde_json",
  "tracing",

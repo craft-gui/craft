@@ -6,7 +6,7 @@ edition = "2024"
 resolver = "2"
 license-file = "LICENSE"
 homepage = "https://retguigui.com/"
-repository = "https://github.com/retgui-gui/retgui"
+repository = "https://github.com/RetGui/retgui"
 
 [features]
 audio = ["dep:maudio", "dep:windows"]
@@ -41,7 +41,7 @@ optional = true
 
 
 [dependencies.issho]
-git = "https://github.com/retgui-gui/issho.git"
+git = "https://github.com/RetGui/issho.git"
 rev = "4284448de2048417a8805fb346bd488ddae433e9"
 
 [dependencies.bitflags]

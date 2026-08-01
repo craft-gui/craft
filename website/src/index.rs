@@ -78,7 +78,7 @@ fn hero_intro(navigate_fn: NavigateFn) -> Container {
         .gap(px(17), px(17))
         .margin(px(40), px(0), px(0), px(0))
         .push(Link(move || navigate_fn("/docs")).push(retgui_button))
-        .push(WebLink("https://github.com/retgui-gui/retgui").push(github_button));
+        .push(WebLink("https://github.com/RetGui/retgui").push(github_button));
 
     let inner_wrapper = inner_wrapper.push(buttons);
 
