@@ -42,7 +42,8 @@ pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
 pub enum EventDispatchType {
-    Bubbling,
+    Bubble,
+    Capture,
 }
 
 #[derive(Clone)]
@@ -121,10 +122,6 @@ impl EventKind {
 
     pub(super) fn is_keyboard_event(&self) -> bool {
         matches!(self, EventKind::KeyboardInputEvent(_) | EventKind::ImeEvent(_))
-    }
-
-    pub(super) fn is_got_or_lost_pointer_capture(&self) -> bool {
-        matches!(self, EventKind::GotPointerCapture() | EventKind::LostPointerCapture())
     }
 
     pub fn new_element_message<T>(data: T) -> EventKind

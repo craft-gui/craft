@@ -5,8 +5,8 @@ use std::rc::{Rc, Weak};
 use ui_events::pointer::PointerId;
 
 use crate::elements::ElementInternals;
-use crate::events::EventKind;
-use crate::events::event_dispatch::{dispatch_bubbling_event, dispatch_capturing_event};
+use crate::events::event_dispatch::dispatch_event;
+use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
@@ -70,8 +70,8 @@ impl PointerCapture {
         if let Some(pointer_capture_val) = pointer_capture_val.clone()
             && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
         {
-            let msg = EventKind::LostPointerCapture();
-            let target = self.find_pointer_capture_target(&msg, pointer_id);
+            let event_kind = EventKind::LostPointerCapture();
+            let target = self.find_pointer_capture_target(&event_kind, pointer_id);
 
             if let Some(target) = target {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
@@ -81,8 +81,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets);
+                let mut event = Event::new(target.clone());
+                dispatch_event(&mut event, &event_kind, &mut targets, text_context);
             }
 
             did_pointer_capture_change = true;
@@ -93,8 +93,8 @@ impl PointerCapture {
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
             && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
         {
-            let msg = EventKind::GotPointerCapture();
-            let target = self.find_pointer_capture_target(&msg, pointer_id);
+            let event_kind = EventKind::GotPointerCapture();
+            let target = self.find_pointer_capture_target(&event_kind, pointer_id);
 
             if let Some(target) = target {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
@@ -104,8 +104,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                dispatch_capturing_event(&msg, &mut targets);
-                dispatch_bubbling_event(&msg, &mut targets);
+                let mut event = Event::new(target.clone());
+                dispatch_event(&mut event, &event_kind, &mut targets, text_context);
             }
 
             did_pointer_capture_change = true;

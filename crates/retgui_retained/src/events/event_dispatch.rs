@@ -10,31 +10,36 @@ use crate::events::helpers::{call_user_event_handlers, find_target, freeze_targe
 use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 
-pub(super) fn dispatch_capturing_event(
-    _message: &EventKind,
-    _targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
-) {
-}
 
-/// Dispatches 1 event to many elements.
-/// The first dispatch happens at the top-most visual element.
-pub(super) fn dispatch_bubbling_event(
-    message: &EventKind,
-    targets: &mut VecDeque<Rc<RefCell<dyn ElementInternals>>>,
-) -> Event {
-    let target = targets[0].clone();
-    let mut event = Event::new(target.clone());
-
-    // Call the callback handlers.
-    for current_target in targets.iter_mut() {
+pub (super) fn dispatch_event(event: &mut Event, event_kind: &EventKind, targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>, text_context: &mut TextContext) {
+    // Bubbling
+    for current_target in targets.iter() {
         event.current_target = current_target.clone();
-        call_user_event_handlers(&mut event, message);
+        call_user_event_handlers(event, event_kind);
         if !event.propagate {
             break;
         }
     }
 
-    event
+    if !event.prevent_defaults {
+        // Call the default on_event element functions.
+        for current_target in targets.iter() {
+            event.current_target = current_target.clone();
+            current_target.borrow_mut().on_event(event_kind, text_context, event);
+            if !event.propagate {
+                break;
+            }
+        }
+    }
+}
+
+pub (super) fn dispatch_event_once(event: &mut Event, event_kind: &EventKind, text_context: &mut TextContext) {
+    call_user_event_handlers(event, event_kind);
+
+    if !event.prevent_defaults {
+        let target = event.target.clone();
+        target.borrow_mut().on_event(event_kind, text_context, event);
+    }
 }
 
 /// Responsible for dispatching events.
@@ -50,15 +55,6 @@ impl EventDispatcher {
         Self {
             previous_targets: Default::default(),
         }
-    }
-
-    /// Dispatches 1 event to 1 element.
-    /// NOTE: This calls the user callbacks + the default event handler (if prevent_default() is not called).
-    pub(super) fn dispatch_once(&self, message: &EventKind, target: &Rc<RefCell<dyn ElementInternals>>) {
-        let mut base_event = Event::new(target.clone());
-
-        // Call the callback handlers.
-        call_user_event_handlers(&mut base_event, message);
     }
 
     /// Diffs the current and previous target lists and dispatches
@@ -93,7 +89,9 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                self.dispatch_once(&EventKind::PointerLeave(), &prev_target.clone());
+                let mut event = Event::new(prev_target.clone());
+                let event_kind = EventKind::PointerLeave();
+                dispatch_event_once(&mut event, &event_kind, text_context);
             }
         }
     }
@@ -128,7 +126,9 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                self.dispatch_once(&EventKind::PointerEnter(), &target.clone());
+                let mut event = Event::new(target.clone());
+                let event_kind = EventKind::PointerEnter();
+                dispatch_event_once(&mut event, &event_kind, text_context);
             }
         }
     }
@@ -138,7 +138,7 @@ impl EventDispatcher {
     #[allow(clippy::too_many_arguments)]
     pub fn dispatch_event(
         &mut self,
-        message: &EventKind,
+        event_kind: &EventKind,
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut TextContext,
@@ -156,21 +156,21 @@ impl EventDispatcher {
 
         let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
 
-        if message.is_system_pointer_event()
-            && let Some(pointer_id) = &message.pointer_id()
+        if event_kind.is_system_pointer_event()
+            && let Some(pointer_id) = &event_kind.pointer_id()
         {
             // Find the target and freeze the list, so the same set of elements are visited across sub event dispatches.
             let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                 &root,
                 mouse_position,
-                message,
+                event_kind,
                 renderer,
                 target_scratch,
                 &pointer_capture.borrow(),
                 pointer_id,
             );
             targets = freeze_target_list(target);
-        } else if message.is_keyboard_event() {
+        } else if event_kind.is_keyboard_event() {
             FOCUS.with(|f| {
                 let focus_ref = f.borrow();
                 if let Some(focus_ref) = focus_ref.clone()
@@ -185,48 +185,31 @@ impl EventDispatcher {
             targets.push_back(root.clone());
         }
 
-        if message.is_system_pointer_event() {
+        if event_kind.is_system_pointer_event() {
             self.maybe_dispatch_pointer_leave(text_context, &targets);
             self.maybe_dispatch_pointer_enter(text_context, &targets);
         }
 
-        // Handle capturing
-        dispatch_capturing_event(message, &mut targets);
-
-        // Handle bubbling
-        let bubbling_event = dispatch_bubbling_event(message, &mut targets);
-
-        if !bubbling_event.prevent_defaults {
-            let target = targets[0].clone();
-            let mut event = Event::new(target.clone());
-
-            // Call the default on_event element functions.
-            for current_target in targets.iter() {
-                event.current_target = current_target.clone();
-                current_target.borrow_mut().on_event(message, text_context, &mut event);
-                if !event.propagate {
-                    break;
-                }
-            }
-        }
+        let mut system_event = Event::new(targets[0].clone());
+        dispatch_event(&mut system_event, event_kind, &mut targets, text_context);
 
         // NOTE: May dispatch gotpointercapture and lostpointercapture. Handles capturing and bubbling.
         // The event dispatch flow looks like this:
         // - pointer_event(capture), pointer_event(bubble) (Executed above)
         // - lostpointercapture(capture), lostpointercapture(bubble)
         // - gotpointercapture(capture), gotpointercapture(bubble)
-        if message.is_system_pointer_event()
-            && let Some(pointer_id) = message.pointer_id()
+        if event_kind.is_system_pointer_event()
+            && let Some(pointer_id) = event_kind.pointer_id()
         {
             let did_pointer_capture_change = pointer_capture
                 .borrow_mut()
-                .maybe_handle_implicit_pointer_capture_release(message, text_context, &pointer_id);
+                .maybe_handle_implicit_pointer_capture_release(event_kind, text_context, &pointer_id);
 
             if did_pointer_capture_change {
                 let target: Rc<RefCell<dyn ElementInternals>> = find_target(
                     &root,
                     mouse_position,
-                    message,
+                    event_kind,
                     renderer,
                     target_scratch,
                     &pointer_capture.borrow(),
@@ -238,35 +221,14 @@ impl EventDispatcher {
             }
         }
 
-        if message.is_system_pointer_event() {
+        if event_kind.is_system_pointer_event() {
             self.previous_targets = targets.iter().map(Rc::downgrade).collect();
         }
 
         // Handle Semantic Events (DropdownItemSelected, Click, and etc.)
-
-        // Drain the event dispatch queue and invoke user callbacks.
-        while let Some((event, message)) = dequeue_event() {
-            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target);
-            // Handle capturing
-            dispatch_capturing_event(&message, &mut targets);
-
-            // Handle bubbling
-            let bubbling_event = dispatch_bubbling_event(&message, &mut targets);
-
-            // TODO: Abstract this.
-            if !bubbling_event.prevent_defaults {
-                let target = targets[0].clone();
-                let mut event = Event::new(target.clone());
-
-                // Call the default on_event element functions.
-                for current_target in targets.iter() {
-                    event.current_target = current_target.clone();
-                    current_target.borrow_mut().on_event(&message, text_context, &mut event);
-                    if !event.propagate {
-                        break;
-                    }
-                }
-            }
+        while let Some((mut event, message)) = dequeue_event() {
+            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target.clone());
+            dispatch_event(&mut event, &message, &mut targets, text_context);
         }
     }
 }
