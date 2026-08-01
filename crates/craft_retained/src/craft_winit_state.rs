@@ -67,11 +67,6 @@ impl ApplicationHandler for CraftWinitState {
 
         let craft_state = &mut self.craft_state;
 
-        /*#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-        if let Some(accesskit_adapter) = &mut craft_state.craft_app.accesskit_adapter {
-            accesskit_adapter.process_event(craft_state.craft_app.window.as_ref().unwrap(), &event);
-        }*/
-
         if !matches!(
             event,
             WindowEvent::KeyboardInput {
@@ -143,6 +138,9 @@ impl ApplicationHandler for CraftWinitState {
             }
             WindowEvent::Moved(_) => {
                 craft_state.craft_app.on_move(window);
+            }
+            WindowEvent::Focused(focused) => {
+                window.on_focused(focused);
             }
             _ => (),
         }

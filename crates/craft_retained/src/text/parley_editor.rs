@@ -14,12 +14,8 @@ use core::fmt::{Debug, Display};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Node, NodeId, TreeUpdate};
 use craft_primitives::ColorBrush;
 use craft_undo::UndoManager;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use parley::layout::LayoutAccessibility;
 
 use crate::app::{request_apply_layout, request_layout};
 use crate::text::RangedStyles;
@@ -105,8 +101,6 @@ pub struct PlainEditor {
     buffer: String,
     default_style: StyleSet<ColorBrush>,
     pub(crate) ranged_styles: RangedStyles,
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    layout_access: LayoutAccessibility,
     selection: Selection,
     /// Byte offsets of IME composing preedit text in the text buffer.
     /// `None` if the IME is not currently composing.
@@ -139,8 +133,6 @@ impl Default for PlainEditor {
             buffer: "".to_string(),
             default_style: StyleSet::new(1.0),
             ranged_styles: Default::default(),
-            #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-            layout_access: Default::default(),
             selection: Default::default(),
             compose: None,
             show_cursor: false,
@@ -163,8 +155,6 @@ impl PlainEditor {
             default_style: StyleSet::new(font_size),
             buffer: Default::default(),
             layout: Default::default(),
-            #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-            layout_access: Default::default(),
             selection: Default::default(),
             compose: None,
             show_cursor: true,
@@ -846,36 +836,7 @@ impl PlainEditorDriver<'_> {
         }
     }
 
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    /// Select inside the editor based on the selection provided by accesskit.
-    #[allow(dead_code)]
-    pub fn select_from_accesskit(&mut self, selection: &accesskit::TextSelection) {
-        self.refresh_layout();
-        if let Some(selection) =
-            Selection::from_access_selection(selection, &self.editor.layout, &self.editor.layout_access)
-        {
-            self.editor.set_selection(selection);
-        }
-    }
-
     // --- MARK: Rendering ---
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    /// Perform an accessibility update.
-    #[allow(dead_code)]
-    pub fn accessibility(
-        &mut self,
-        update: &mut TreeUpdate,
-        node: &mut Node,
-        next_node_id: impl FnMut() -> NodeId,
-        x_offset: f64,
-        y_offset: f64,
-    ) -> Option<()> {
-        self.refresh_layout();
-        self.editor
-            .accessibility_unchecked(update, node, next_node_id, x_offset, y_offset);
-        Some(())
-    }
-
     /// Get the up-to-date layout for this driver.
     #[allow(dead_code)]
     pub fn layout(&mut self) -> &Layout<ColorBrush> {
@@ -1148,35 +1109,10 @@ impl PlainEditor {
         if self.layout_dirty { None } else { Some(&self.layout) }
     }
 
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    #[inline]
-    /// Perform an accessibility update if the layout is valid.
-    ///
-    /// Returns `None` if the layout is not up-to-date.
-    /// You can call [`refresh_layout`](Self::refresh_layout) before using this method,
-    /// to ensure that the layout is up-to-date.
-    /// The [`accessibility`](PlainEditorDriver::accessibility) method on the driver type
-    /// should be preferred if the contexts are available, which will do this automatically.
-    pub fn try_accessibility(
-        &mut self,
-        update: &mut TreeUpdate,
-        node: &mut Node,
-        next_node_id: impl FnMut() -> NodeId,
-        x_offset: f64,
-        y_offset: f64,
-    ) -> Option<()> {
-        if self.layout_dirty {
-            return None;
-        }
-        self.accessibility_unchecked(update, node, next_node_id, x_offset, y_offset);
-        Some(())
-    }
-
     /// Update the layout if it is dirty.
     ///
-    /// This should only be used alongside [`try_layout`](Self::try_layout)
-    /// or [`try_accessibility`](Self::try_accessibility), if those will be
-    /// called in a scope where the contexts are not available.
+    /// This should only be used alongside [`try_layout`](Self::try_layout) if
+    /// that will be called in a scope where the contexts are not available.
     pub fn refresh_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<ColorBrush>) {
         if self.layout_dirty {
             self.update_layout(font_cx, layout_cx);
@@ -1306,41 +1242,5 @@ impl PlainEditor {
         self.selection = self.selection.refresh(&self.layout);
         self.layout_dirty = false;
         self.generation.nudge();
-    }
-
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    /// Perform an accessibility update, assuming that the layout is valid.
-    ///
-    /// The wrapper [`accessibility`](PlainEditorDriver::accessibility) on the driver type should
-    /// be preferred.
-    ///
-    /// You should always call [`refresh_layout`](Self::refresh_layout) before using this method,
-    /// with no other modifying method calls in between.
-    fn accessibility_unchecked(
-        &mut self,
-        update: &mut TreeUpdate,
-        node: &mut Node,
-        next_node_id: impl FnMut() -> NodeId,
-        x_offset: f64,
-        y_offset: f64,
-    ) {
-        self.layout_access.build_nodes(
-            &self.buffer,
-            &self.layout,
-            update,
-            node,
-            next_node_id,
-            x_offset,
-            y_offset,
-            |_, _| {},
-        );
-        if self.show_cursor {
-            if let Some(selection) = self.selection.to_access_selection(&self.layout, &self.layout_access) {
-                node.set_text_selection(selection);
-            }
-        } else {
-            node.clear_text_selection();
-        }
-        node.add_action(accesskit::Action::SetTextSelection);
     }
 }

@@ -2,9 +2,10 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::TreeUpdate;
+#[cfg(all(feature = "audio", not(target_arch = "wasm32")))]
+use std::time::{Duration, Instant};
+#[cfg(all(feature = "audio", target_arch = "wasm32"))]
+use web_time::{Duration, Instant};
 
 use craft_logging::info;
 
@@ -48,6 +49,15 @@ thread_local! {
     static WINDOW_EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(WindowId, WindowEvent)>> = RefCell::new(VecDeque::with_capacity(10));
 }
 
+/// Update interval for audio elements.
+#[cfg(feature = "audio")]
+const AUDIO_UI_UPDATE_INTERVAL: Duration = Duration::from_millis(250);
+
+#[cfg(feature = "audio")]
+fn audio_ui_update_due(last_update: Option<Instant>, now: Instant) -> bool {
+    last_update.is_none_or(|last_update| now.duration_since(last_update) >= AUDIO_UI_UPDATE_INTERVAL)
+}
+
 pub struct App {
     pub(crate) event_dispatcher: EventDispatcher,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
@@ -67,6 +77,9 @@ pub struct App {
 
     /// True if the winit app is active.
     pub(crate) active: bool,
+
+    #[cfg(feature = "audio")]
+    pub(crate) last_audio_ui_update: Option<Instant>,
 }
 
 impl App {
@@ -89,18 +102,7 @@ impl App {
 
     pub fn on_about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
         #[cfg(feature = "audio")]
-        AUDIO_CONTEXT.with(|audio_context| {
-            if let Some(ctx) = audio_context.get() {
-                for audio_element in &ctx.borrow().sounds {
-                    if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
-                        let audio = audio.upgrade().unwrap();
-                        let mut audio = audio.borrow_mut();
-                        let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
-                        audio.update();
-                    }
-                }
-            }
-        });
+        self.update_audio_ui();
 
         WINDOW_MANAGER.with_borrow_mut(|window_manager| {
             window_manager.on_about_to_wait(self, event_loop);
@@ -114,6 +116,28 @@ impl App {
         }
     }
 
+    #[cfg(feature = "audio")]
+    fn update_audio_ui(&mut self) {
+        let now = Instant::now();
+        if !audio_ui_update_due(self.last_audio_ui_update, now) {
+            return;
+        }
+        self.last_audio_ui_update = Some(now);
+
+        AUDIO_CONTEXT.with(|audio_context| {
+            if let Some(ctx) = audio_context.get() {
+                for audio_element in &ctx.borrow().sounds {
+                    if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
+                        let audio = audio.upgrade().unwrap();
+                        let mut audio = audio.borrow_mut();
+                        let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
+                        audio.update();
+                    }
+                }
+            }
+        });
+    }
+
     pub fn on_suspended(&mut self, _event_loop: &ActiveEventLoop) {
         self.active = false;
     }
@@ -124,21 +148,6 @@ impl App {
     }
 
     /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub fn on_request_redraw(&mut self, window: Window) -> Option<TreeUpdate> {
-        self.on_request_redraw_internal(window.clone());
-
-        let tree_update = window.compute_accessibility_tree_window();
-        if let Some(accesskit_adapter) = &mut window.inner.borrow_mut().accesskit_adapter {
-            accesskit_adapter.update_if_active(|| tree_update);
-            None
-        } else {
-            Some(tree_update)
-        }
-    }
-
-    /// Updates the reactive tree, layouts the elements, and draws the view.
-    #[cfg(any(not(feature = "accesskit"), target_arch = "wasm32"))]
     pub fn on_request_redraw(&mut self, window: Window) {
         self.on_request_redraw_internal(window);
     }
@@ -282,6 +291,26 @@ impl App {
 
             self.text_context = Some(text_context);
         }
+    }
+}
+
+#[cfg(all(test, feature = "audio"))]
+mod tests {
+    use super::{AUDIO_UI_UPDATE_INTERVAL, Duration, Instant, audio_ui_update_due};
+
+    #[test]
+    fn audio_ui_updates_are_throttled() {
+        let first_update = Instant::now();
+
+        assert!(audio_ui_update_due(None, first_update));
+        assert!(!audio_ui_update_due(
+            Some(first_update),
+            first_update + AUDIO_UI_UPDATE_INTERVAL - Duration::from_millis(1),
+        ));
+        assert!(audio_ui_update_due(
+            Some(first_update),
+            first_update + AUDIO_UI_UPDATE_INTERVAL,
+        ));
     }
 }
 

@@ -3,9 +3,6 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Action, Role};
-
 use ui_events::pointer::PointerId;
 
 use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
@@ -154,30 +151,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ) {
     }
 
-    /// Computes a [`TreeUpdate`] reflecting any accessibility changes.
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        scale_factor: f64,
-    ) {
-        let current_node_id = accesskit::NodeId(self.element_data().internal_id);
-
-        let mut current_node = accesskit::Node::new(Role::GenericContainer);
-        if !self.element_data().on_pointer_button_up.is_empty() {
-            current_node.set_role(Role::Button);
-            current_node.add_action(Action::Click);
-        }
-
-        crate::elements::internal_helpers::add_generic_accesskit_data(
-            self.element_data_mut(),
-            current_node,
-            current_node_id,
-            tree,
-            parent_index,
-            scale_factor,
-        );
+    fn sync_accessibility_children(&mut self) {
+        let data = self.element_data();
+        let Some(node) = data.access_key else {
+            return;
+        };
+        let children = data
+            .children
+            .iter()
+            .filter_map(|child| child.borrow().element_data().access_key)
+            .collect::<Vec<_>>();
+        data.access_tree.set_children(node, &children);
     }
 
     /// Handles default events.
@@ -399,6 +383,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
         });
 
+        // TODO: Fix. This is likely doing more work than required.
+        self.sync_accessibility_children();
+
         Ok(())
     }
 
@@ -456,6 +443,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
 
         child.borrow_mut().unfocus();
+
+        crate::accessibility::detach_subtree(&mut *child.borrow_mut());
 
         Ok(child)
     }
@@ -974,9 +963,29 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// The focused element is the element that will receive keyboard and similar events by default.
     fn focus(&mut self) {
         // Todo: check if the element is focusable. Should we return a result?
-        FOCUS.with_borrow_mut(|focus| {
-            *focus = Some(self.element_data().me.clone());
+        let me = self.element_data().me.clone();
+        let _previous = FOCUS.with_borrow_mut(|focus| {
+            let previous = focus.take();
+            *focus = Some(me.clone());
+            previous
         });
+        {
+            if let Some(previous) = _previous
+                && !Weak::ptr_eq(&previous, &me)
+                && let Some(previous) = previous.upgrade()
+            {
+                let previous = previous.borrow();
+                let data = previous.element_data();
+                if let Some(root) = data.access_root {
+                    data.access_tree.set_focus(root, Some(root));
+                }
+            }
+
+            let data = self.element_data();
+            if let Some((root, node)) = data.access_root.zip(data.access_key) {
+                data.access_tree.set_focus(root, Some(node));
+            }
+        }
     }
 
     /// Returns true if the element has focus.
@@ -998,6 +1007,12 @@ pub trait ElementInternals: ElementData + Any + Drop {
             FOCUS.with(|focus| {
                 *focus.borrow_mut() = None;
             });
+                {
+                let data = self.element_data();
+                if let Some(root) = data.access_root {
+                    data.access_tree.set_focus(root, Some(root));
+                }
+            }
         }
     }
 
@@ -1049,6 +1064,12 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn drop(&mut self) {
+        for child in self.element_data().children.clone() {
+            crate::accessibility::detach_subtree(&mut *child.borrow_mut());
+        }
+        if let Some(key) = self.element_data().access_key {
+            self.element_data().access_tree.remove_node(key);
+        }
         if let Some(taffy_node) = self.element_data().layout.taffy_node_id {
             TAFFY_TREE.with_borrow_mut(|taffy_tree| {
                 taffy_tree.remove_node(taffy_node);

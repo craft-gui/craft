@@ -4,8 +4,6 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Action, Role, Toggled, TreeUpdate};
 use craft_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
 use craft_renderer::Brush;
 use peniko::kurbo;
@@ -15,7 +13,7 @@ use crate::app::{TAFFY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementData as ElementDataTrait, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CheckboxToggled, Event, EventKind};
 use crate::layout::TaffyTree;
 use crate::style::{Overflow, Unit};
@@ -149,24 +147,6 @@ impl ElementInternals for CheckboxInner {
         self.draw_scrollbar(renderer, _scale_factor);
     }
 
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    fn compute_accessibility_tree(&mut self, tree: &mut TreeUpdate, parent_index: Option<usize>, scale_factor: f64) {
-        let current_node_id = accesskit::NodeId(self.element_data().internal_id);
-        let mut current_node = accesskit::Node::new(Role::CheckBox);
-        current_node.set_label(self.label.clone());
-        current_node.add_action(Action::Click);
-        current_node.set_toggled(if self.checked { Toggled::True } else { Toggled::False });
-
-        crate::elements::internal_helpers::add_generic_accesskit_data(
-            &mut self.element_data,
-            current_node,
-            current_node_id,
-            tree,
-            parent_index,
-            scale_factor,
-        )
-    }
-
     fn on_event(
         &mut self,
         message: &EventKind,
@@ -176,15 +156,7 @@ impl ElementInternals for CheckboxInner {
     ) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
-            self.checked = !self.checked;
-            let new_event = Event::new(event.target.clone());
-            queue_event(
-                new_event,
-                EventKind::CheckboxToggled(CheckboxToggled {
-                    label: self.label.clone(),
-                    status: self.checked,
-                }),
-            );
+            self.toggle();
         }
     }
 
@@ -216,7 +188,7 @@ impl Checkbox {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<CheckboxInner>>| {
             RefCell::new(CheckboxInner {
                 element_data: ElementData::new(me.clone(), true),
-                box_layout: ElementData::new(me.clone(), false),
+                box_layout: ElementData::new_pseudo(me.clone(), false),
                 box_rect: Rectangle::new(0.0, 0.0, size, size),
                 label: label.to_string(),
                 checked,
@@ -239,8 +211,71 @@ impl Checkbox {
                 inner_mut.box_layout.layout.taffy_node_id(),
             );
         });
+        {
+            inner_mut
+                .element_data
+                .set_accessibility_role(issho::Role::CheckBox);
+            inner_mut
+                .element_data
+                .set_accessibility_name(label.to_string());
+            inner_mut
+                .element_data
+                .set_accessibility_checked(checked);
+            let inner = Rc::downgrade(&inner);
+            inner_mut
+                .element_data
+                .set_accessibility_toggle_action(move || {
+                    if let Some(inner) = inner.upgrade() {
+                        inner.borrow_mut().toggle();
+                    }
+                });
+        }
 
         drop(inner_mut);
         Self { inner }
+    }
+}
+
+impl CheckboxInner {
+    fn toggle(&mut self) {
+        self.checked = !self.checked;
+        self.element_data
+            .set_accessibility_checked(self.checked);
+        let target = self
+            .element_data
+            .me
+            .upgrade()
+            .expect("checkbox was detached while handling its toggle action");
+        queue_event(
+            Event::new(target),
+            EventKind::CheckboxToggled(CheckboxToggled {
+                label: self.label.clone(),
+                status: self.checked,
+            }),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Checkbox;
+    use crate::app::dequeue_event;
+    use crate::elements::ElementData as _;
+
+    #[test]
+    fn toggle_updates_the_retained_checked_state_immediately() {
+        let checkbox = Checkbox::new("Choice", true);
+        let (tree, key) = {
+            let checkbox = checkbox.inner.borrow();
+            let data = checkbox.element_data();
+            (data.access_tree.clone(), data.access_key.unwrap())
+        };
+
+        assert!(tree.get_node(key).unwrap().checked());
+
+        checkbox.inner.borrow_mut().toggle();
+
+        assert!(!tree.get_node(key).unwrap().checked());
+        while dequeue_event().is_some() {}
     }
 }

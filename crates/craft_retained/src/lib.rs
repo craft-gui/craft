@@ -47,8 +47,7 @@ use crate::app::App;
 use crate::craft_winit_state::CraftState;
 use crate::events::internal::InternalMessage;
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-pub mod accessibility;
+mod accessibility;
 pub mod craft_winit_state;
 pub mod elements;
 pub mod events;
@@ -172,6 +171,8 @@ fn setup_craft(craft_options: Option<CraftOptions>) -> CraftState {
         target_scratch: Vec::new(),
         craft_options: craft_options.clone(),
         active: false,
+        #[cfg(feature = "audio")]
+        last_audio_ui_update: None,
     });
 
     CraftState::new(runtime, winit_receiver, app_sender, craft_options, craft_app)

@@ -19,8 +19,6 @@ use craft_renderer::renderer::Renderer;
 use craft_resource_manager::ResourceManager;
 use crate::app::{ELEMENTS};
 use crate::elements::element_data::ElementData;
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use crate::elements::element_id::create_unique_element_id;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
@@ -198,6 +196,8 @@ impl ElementInternals for TextInputInner {
 
         self.state
             .render_text(self.is_focused(), self.element_data.style());
+        self.element_data
+            .set_accessibility_bounds_from_layout(scale_factor);
     }
 
     fn draw(&mut self, _renderer: &mut dyn Renderer, _resource_manager: Arc<ResourceManager>, _scale_factor: f64, _text_context: &mut TextContext) {
@@ -239,52 +239,6 @@ impl ElementInternals for TextInputInner {
         _renderer.pop_layer();
 
         self.draw_scrollbar(_renderer, _scale_factor);
-    }
-
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    fn compute_accessibility_tree(
-        &mut self,
-        tree: &mut accesskit::TreeUpdate,
-        parent_index: Option<usize>,
-        scale_factor: f64,
-    ) {
-        let state: &mut TextInputState = &mut self.state;
-
-        if state.editor().try_layout().is_none() {
-            return;
-        }
-
-        let current_node_id = accesskit::NodeId(self.element_data.internal_id);
-
-        let mut current_node = accesskit::Node::new(accesskit::Role::TextInput);
-        let padding_box = self
-            .element_data
-            .layout
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
-
-        current_node.set_bounds(accesskit::Rect {
-            x0: padding_box.left() as f64,
-            y0: padding_box.top() as f64,
-            x1: padding_box.right() as f64,
-            y1: padding_box.bottom() as f64,
-        });
-
-        self.state.try_accessibility(
-            tree,
-            &mut current_node,
-            || accesskit::NodeId(create_unique_element_id()),
-            padding_box.x as f64,
-            padding_box.y as f64,
-        );
-
-        if let Some(parent_index) = parent_index {
-            let parent_node = tree.nodes.get_mut(parent_index).unwrap();
-            parent_node.1.push_child(current_node_id);
-        }
-
-        tree.nodes.push((current_node_id, current_node));
     }
 
     fn on_event(
@@ -364,6 +318,10 @@ impl ElementInternals for TextInputInner {
         if self.state.is_layout_dirty {
             self.mark_dirty();
         }
+        {
+            let value = self.state.editor().raw_text().to_owned();
+            self.element_data.set_accessibility_value(value);
+        }
     }
 
     fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
@@ -430,6 +388,12 @@ impl TextInputInner {
         let mut inner_mut = inner.borrow_mut();
         inner_mut.element_data.style = default_style;
 
+        {
+            inner_mut
+                .element_data
+                .set_accessibility_role(issho::Role::TextInput);
+            inner_mut.element_data.set_accessibility_enabled(true);
+        }
         inner_mut.set_text(text);
 
         let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
@@ -456,6 +420,7 @@ impl TextInputInner {
 
     pub fn disable(&mut self) -> &mut Self {
         self.disabled = true;
+        self.element_data.set_accessibility_enabled(false);
         self
     }
 
@@ -474,6 +439,8 @@ impl TextInputInner {
     pub fn set_text(&mut self, text: &str) -> &mut Self {
         self.state.set_text(text);
         self.mark_dirty();
+        self.element_data
+            .set_accessibility_value(text.to_owned());
         self
     }
 

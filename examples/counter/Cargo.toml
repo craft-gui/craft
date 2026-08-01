@@ -18,7 +18,7 @@ default-features = false
 [dependencies.craft_retained]
 path = "../../crates/craft_retained"
 default-features = false
-features = ["accesskit", "system_fonts"]
+features = ["system_fonts"]
 
 [target.'cfg(not(target_os = "android"))'.dependencies.craft_renderer]
 path = "../../crates/craft_renderer"

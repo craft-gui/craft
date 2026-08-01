@@ -3,8 +3,6 @@ use std::ops::Range;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
-#[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-use accesskit::{Node, TreeUpdate};
 use craft_primitives::geometry::{Point, Rectangle};
 use craft_renderer::text_renderer_data::TextRender;
 use parley::{Affinity, ContentWidths, Cursor, Selection};
@@ -750,18 +748,6 @@ impl TextInputState {
         }
     }
 
-    #[cfg(all(feature = "accesskit", not(target_arch = "wasm32")))]
-    pub fn try_accessibility(
-        &mut self,
-        tree: &mut TreeUpdate,
-        current_node: &mut Node,
-        next_node_id: impl FnMut() -> accesskit::NodeId,
-        x_offset: f64,
-        y_offset: f64,
-    ) {
-        self.editor
-            .try_accessibility(tree, current_node, next_node_id, x_offset, y_offset);
-    }
 }
 
 #[cfg(all(
