@@ -7,7 +7,6 @@ use craft_primitives::geometry::{Affine, Point, Rectangle};
 use peniko::Color;
 
 use ui_events::keyboard::{Code, KeyState};
-use ui_events::pointer::PointerId;
 use craft_primitives::brush::Brush;
 use craft_primitives::gradient::Gradient;
 use craft_renderer::renderer::Renderer;
@@ -394,7 +393,7 @@ impl ElementInternals for SliderInner {
         &mut self,
         message: &EventKind,
         _text_context: &mut TextContext,
-        event: &mut Event,
+        _event: &mut Event,
     ) {
         match message {
             EventKind::KeyboardInputEvent(key) => {
@@ -415,7 +414,7 @@ impl ElementInternals for SliderInner {
                 if let Some(new_value) = new_value {
                     self.value = new_value;
 
-                    let new_event = Event::new(event.target.clone());
+                    let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                     queue_event(new_event, EventKind::SliderValueChanged(self.value));
                 }
             }
@@ -427,7 +426,7 @@ impl ElementInternals for SliderInner {
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerButtonDown(pointer_button_update) => {
@@ -437,7 +436,7 @@ impl ElementInternals for SliderInner {
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerMovedEvent(pointer_update) => {
@@ -448,7 +447,7 @@ impl ElementInternals for SliderInner {
                 let value = self.compute_slider_value(&pointer_update.current.logical_point());
                 self.value = value;
 
-                let new_event = Event::new(event.target.clone());
+                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             _ => {}

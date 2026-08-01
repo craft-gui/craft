@@ -176,7 +176,7 @@ impl ElementInternals for CheckboxInner {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.checked = !self.checked;
-            let new_event = Event::new(event.target.clone());
+            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
             queue_event(
                 new_event,
                 EventKind::CheckboxToggled(CheckboxToggled {

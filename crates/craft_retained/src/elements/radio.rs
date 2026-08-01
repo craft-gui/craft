@@ -174,7 +174,7 @@ impl ElementInternals for RadioInner {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.active_value.replace(self.value.clone());
-            let new_event = Event::new(event.target.clone());
+            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
             queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
         }
     }

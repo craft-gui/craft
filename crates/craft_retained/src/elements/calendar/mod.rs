@@ -127,8 +127,6 @@ impl ElementInternals for CalendarInner {
         let year_id = self.year_dropdown.borrow().element_data().internal_id;
         let month_id = self.month_dropdown.borrow().element_data().internal_id;
         if let EventKind::DropdownItemSelected(index) = message {
-            println!("HERE");
-
             let target_id = event.target.borrow().element_data().internal_id;
             if target_id == year_id {
                 self.select_year(*index);

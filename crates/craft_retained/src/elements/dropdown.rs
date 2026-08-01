@@ -301,7 +301,7 @@ impl ElementInternals for DropdownInner {
 
             self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
             self.handle_click_in_select_box(is_pointer_in_select_box, &pointer_id.unwrap());
-            self.handle_child_click(event, &pointer_position, is_pointer_in_window, is_pointer_in_scrollbar, &pointer_id.unwrap());
+            self.handle_child_click(&pointer_position, is_pointer_in_window, is_pointer_in_scrollbar, &pointer_id.unwrap());
         }
 
         // Handle updating the scroll state.
@@ -660,6 +660,7 @@ impl DropdownInner {
         if is_pointer_in_select_box {
             self.is_floating_window_hidden = !self.is_floating_window_hidden;
             self.currently_hovered_element = self.selected_element_index;
+            self.queue_dropdown_event(EventKind::DropdownToggled(!self.is_floating_window_hidden));
 
             if self.is_floating_window_hidden {
                 self.release_pointer_capture(*pointer_id);
@@ -670,12 +671,12 @@ impl DropdownInner {
     fn handle_click_outside_menu(&mut self, is_pointer_in_select_box: bool, is_pointer_in_window: bool) {
         if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
             self.is_floating_window_hidden = true;
+            self.queue_dropdown_event(EventKind::DropdownToggled(false));
         }
     }
 
     fn handle_child_click(
         &mut self,
-        event: &mut Event,
         pointer_position: &Point,
         is_pointer_in_window: bool,
         is_pointer_in_scrollbar: bool,
@@ -697,8 +698,7 @@ impl DropdownInner {
                     self.set_selected_element(child_index);
                     self.release_pointer_capture(*pointer_id);
 
-                    let new_event = Event::new(event.target.clone());
-                    queue_event(new_event, EventKind::DropdownItemSelected(child_index));
+                    self.queue_dropdown_event(EventKind::DropdownItemSelected(child_index));
 
                     break;
                 }
@@ -706,7 +706,13 @@ impl DropdownInner {
 
             if should_hide_window {
                 self.is_floating_window_hidden = true;
+                self.queue_dropdown_event(EventKind::DropdownToggled(false));
             }
         }
+    }
+
+    fn queue_dropdown_event(&self, message: EventKind) {
+        let new_event = Event::new(self.element_data.me.upgrade().unwrap());
+        queue_event(new_event, message);
     }
 }
