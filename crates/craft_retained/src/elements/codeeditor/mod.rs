@@ -113,7 +113,6 @@ impl ElementInternals for CodeEditorInner {
         message: &EventKind,
         _text_context: &mut TextContext,
         _event: &mut Event,
-        _target: Option<Rc<RefCell<dyn ElementInternals>>>,
     ) {
         if let EventKind::TextInputChanged(_) = message {
             self.highlight();
