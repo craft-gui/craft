@@ -6,7 +6,7 @@ use crate::RetGuiError;
 use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
-use crate::events::{CheckboxToggledHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 use retgui_primitives::brush::Brush;
 use retgui_primitives::gradient::Gradient;
@@ -112,6 +112,11 @@ pub trait Element: Clone + AsElement {
 
     fn on_pointer_button_up(self, on_pointer_button_up: PointerEventHandler) -> Self {
         self.borrow_mut().on_pointer_button_up(on_pointer_button_up);
+        self
+    }
+
+    fn on_click(self, on_click: ClickHandler) -> Self {
+        self.borrow_mut().on_click(on_click);
         self
     }
 

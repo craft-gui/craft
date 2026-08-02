@@ -1,7 +1,7 @@
 use crate::signals::Bindable;
 use retgui_retained::elements::{AsElement, DynElement, ScrollOptions, ScrollState};
 use retgui_retained::events::ui_events::pointer::PointerId;
-use retgui_retained::events::{KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
+use retgui_retained::events::{ClickHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler};
 use retgui_retained::geometry::ElementBox;
 use retgui_retained::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 use retgui_retained::winit::dpi::PhysicalPosition;
@@ -89,6 +89,11 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn on_click(self, on_click: ClickHandler) -> Self {
+        self.borrow_mut().on_click(on_click);
+        self
+    }
+    
     fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
         self.borrow_mut().on_pointer_moved(on_pointer_moved);
         self

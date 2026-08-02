@@ -33,6 +33,7 @@ pub type PointerEnterHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
+pub type ClickHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
 pub type RadioValueChangedHandler = Rc<dyn Fn(&mut Event, Rc<RefCell<String>>)>;
 pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
@@ -54,6 +55,7 @@ pub enum EventKind {
     PointerLeave(),
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
+    Click(),
     KeyboardInputEvent(KeyboardEvent),
     PointerMovedEvent(PointerUpdate),
     PointerScroll(PointerScrollEvent),

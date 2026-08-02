@@ -8,7 +8,7 @@ use crate::app::{ELEMENTS, TAFFY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
-use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
@@ -55,6 +55,7 @@ pub struct ElementData {
     pub on_pointer_button_down: Vec<PointerEventHandler>,
     pub on_pointer_button_up: Vec<PointerEventHandler>,
     pub on_pointer_moved: Vec<PointerUpdateHandler>,
+    pub on_click: Vec<ClickHandler>,
     pub on_keyboard_input: Vec<KeyboardInputHandler>,
     pub on_scroll: Vec<ScrollHandler>,
     pub on_radio_value_changed: Vec<RadioValueChangedHandler>,
@@ -106,6 +107,7 @@ impl ElementData {
             on_pointer_button_down: Vec::new(),
             on_pointer_button_up: Vec::new(),
             on_pointer_moved: Vec::new(),
+            on_click: Vec::new(),
             on_keyboard_input: Vec::new(),
             on_scroll: Vec::new(),
             on_radio_value_changed: Vec::new(),

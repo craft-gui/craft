@@ -28,6 +28,27 @@ pub(super) fn freeze_target_list(
     targets
 }
 
+pub(super) fn nearest_common_ancestor(
+    a: &Rc<RefCell<dyn ElementInternals>>,
+    b: &Rc<RefCell<dyn ElementInternals>>,
+) -> Option<Rc<RefCell<dyn ElementInternals>>> {
+    let a_targets = freeze_target_list(a.clone());
+    let b_targets = freeze_target_list(b.clone());
+
+    for b_target in b_targets {
+        let b_id = b_target.borrow().id();
+
+        if a_targets
+            .iter()
+            .any(|a_target| a_target.borrow().id() == b_id)
+        {
+            return Some(b_target);
+        }
+    }
+
+    None
+}
+
 /// Find the target that should be visited.
 pub(super) fn find_target(
     root: &Rc<RefCell<dyn ElementInternals>>,
@@ -98,6 +119,13 @@ pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind) {
             for i in 0..len {
                 let handler = current_target.borrow().element_data().on_pointer_button_down[i].clone();
                 (*handler)(event, e);
+            }
+        }
+        EventKind::Click() => {
+            let element_data = current_target.borrow().element_data().clone();
+
+            for handler in &element_data.on_click {
+                (*handler)(event);
             }
         }
         EventKind::KeyboardInputEvent(e) => {

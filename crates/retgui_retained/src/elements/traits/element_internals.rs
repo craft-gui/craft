@@ -7,7 +7,7 @@ use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::layout::TaffyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -522,6 +522,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().on_pointer_button_up.push(on_pointer_button_up);
     }
 
+    fn on_click(&mut self, on_click: ClickHandler) {
+        self.element_data_mut().on_click.push(on_click);
+    }
+    
     fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
         self.element_data_mut().on_pointer_moved.push(on_pointer_moved);
     }
