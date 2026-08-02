@@ -17,7 +17,6 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle};
 use retgui_renderer::text_renderer_data::TextRender;
 use parley::{Affinity, ContentWidths, Cursor, Selection};
-use peniko::Color;
 use taffy::{AvailableSpace, NodeId};
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerUpdate;

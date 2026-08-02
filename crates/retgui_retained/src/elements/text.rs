@@ -5,16 +5,6 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-use retgui_renderer::text_renderer_data::TextData;
-
-use retgui_primitives::Color;
-use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Affine, Point, Rectangle, Vec2};
-
-use retgui_renderer::renderer::Renderer;
-
-use retgui_resource_manager::ResourceManager;
-
 use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
 use rustc_hash::FxHashMap;
@@ -24,14 +14,18 @@ use smol_str::{SmolStr, ToSmolStr};
 use taffy::{AvailableSpace, Size};
 
 use time::{Duration, Instant};
-
-use ui_events::pointer::{PointerButton, PointerId};
-
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
+use ui_events::pointer::PointerButton;
+
 use winit::dpi;
 
+use retgui_renderer::text_renderer_data::TextData;
+use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Affine, Point, Rectangle, Vec2};
+use retgui_renderer::renderer::Renderer;
+use retgui_resource_manager::ResourceManager;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};

@@ -1,20 +1,20 @@
 //! Stores one or more elements.
 
-use crate::elements::element_data::ElementData;
-use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
-use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
-use crate::style::Overflow;
-use crate::text::text_context::TextContext;
-use retgui_primitives::geometry::{Affine, Point, Rectangle};
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
+use crate::elements::element_data::ElementData;
+use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
+use crate::elements::traits::DeepClone;
+use crate::elements::{AsElement, Element, ElementInternals};
+use crate::events::{Event, EventKind};
+use crate::layout::TaffyTree;
+use crate::text::text_context::TextContext;
+use retgui_primitives::geometry::{Affine, Point, Rectangle};
+use retgui_renderer::renderer::Renderer;
+use retgui_resource_manager::ResourceManager;
 
 #[derive(Clone)]
 pub struct Button {

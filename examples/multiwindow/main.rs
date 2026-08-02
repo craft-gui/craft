@@ -42,12 +42,10 @@ fn create_button(
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
         .background_color(base_color)
-        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
-            if pointer_button_event.button == Some(PointerButton::Primary) {
-                state.borrow_mut().change(delta);
-                count_text.clone().text(&format!("Count: {}", state.borrow().count()));
-                event.prevent_propagate();
-            }
+        .on_click(Rc::new(move |event| {
+            state.borrow_mut().change(delta);
+            count_text.clone().text(&format!("Count: {}", state.borrow().count()));
+            event.prevent_propagate();
         }))
         .push(label)
 }

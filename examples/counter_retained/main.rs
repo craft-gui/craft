@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use retgui_retained::elements::{Container, Element, Text, Window};
-use retgui_retained::events::ui_events::pointer::PointerButton;
 use retgui_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
 use retgui_retained::{Color, RetGuiOptions, retgui_main, pct, px, rgb, rgba};
 use util::setup_logging;

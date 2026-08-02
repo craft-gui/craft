@@ -327,26 +327,26 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
         .max_height(Unit::Px(150.0));
 
     let state1 = state.clone();
-    let btn_create_1k = build_button("Create 1,000 rows", move |_, _| {
+    let btn_create_1k = build_button("Create 1,000 rows", move |_| {
         state1.borrow_mut().run();
     });
 
     let state2 = state.clone();
-    let btn_create_10k = build_button("Create 10,000 rows", move |_, _| {
+    let btn_create_10k = build_button("Create 10,000 rows", move |_| {
         state2.borrow_mut().run_lots();
     });
 
     let state3 = state.clone();
-    let btn_append_1k = build_button("Append 1,000 rows", move |_, _| state3.borrow_mut().add());
+    let btn_append_1k = build_button("Append 1,000 rows", move |_| state3.borrow_mut().add());
 
     let state4 = state.clone();
-    let btn_update_10th_row = build_button("Update every 10th row", move |_, _| state4.borrow_mut().update());
+    let btn_update_10th_row = build_button("Update every 10th row", move |_| state4.borrow_mut().update());
 
     let state5 = state.clone();
-    let btn_clear = build_button("Clear", move |_, _| state5.borrow_mut().clear());
+    let btn_clear = build_button("Clear", move |_| state5.borrow_mut().clear());
 
     let state6 = state.clone();
-    let btn_swap = build_button("Swap Rows", move |_, _| state6.borrow_mut().swap_rows());
+    let btn_swap = build_button("Swap Rows", move |_| state6.borrow_mut().swap_rows());
 
     buttons
         .push(btn_create_1k)
@@ -359,7 +359,7 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
 
 fn build_button<F>(label: &str, callback: F) -> Container
 where
-    F: Fn(&mut Event, &PointerButtonEvent) + 'static,
+    F: Fn(&mut Event) + 'static,
 {
     Container::new()
         .background_color(Color::from_rgb8(211, 211, 211))
@@ -374,5 +374,5 @@ where
         .color(WHITE)
         .border_radius_all((4.0, 4.0))
         .push(Text::new(label).selectable(false).color(Color::WHITE))
-        .on_pointer_button_up(Rc::new(callback))
+        .on_click(Rc::new(callback))
 }

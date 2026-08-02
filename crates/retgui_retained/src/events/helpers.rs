@@ -11,7 +11,6 @@ use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
-use crate::text::text_context::TextContext;
 
 pub(super) fn freeze_target_list(
     target: Rc<RefCell<dyn ElementInternals>>,

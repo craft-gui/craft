@@ -193,7 +193,7 @@ pub fn multiple_windows() -> Container {
         .border_color(border_color, border_color, border_color, border_color)
         .border_width(border_width, border_width, border_width, border_width);
 
-    open_new_window_btn.clone().on_pointer_button_down(Rc::new(|_e, _pb| {
+    open_new_window_btn.clone().on_click(Rc::new(|_e| {
         Window::new("A new window!").push(Text::new("Hi!").font_size(32.0).font_weight(FontWeight::BOLD));
     }));
     container
@@ -259,7 +259,7 @@ pub fn scrollable() -> Container {
                 .color(Color::WHITE)
                 .font_size(14.0)
                 .padding(px(3.0), px(5.0), px(3.0), px(5.0))
-                .on_pointer_button_down(Rc::new(move |_e, _pb| {
+                .on_click(Rc::new(move |_e| {
                     scrollable_container.clone().scroll_to_top();
                 })),
         )

@@ -3,7 +3,6 @@ mod styles;
 mod taffy_conversions;
 
 pub use box_shadow::BoxShadow;
-use retgui_primitives::Color;
 use retgui_primitives::brush::Brush;
 use parley::GenericFamily;
 use std::borrow::Cow;

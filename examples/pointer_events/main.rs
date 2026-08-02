@@ -37,7 +37,7 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
         .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
-        .on_pointer_button_down(Rc::new(move |_e, _pb_event| {
+        .on_click(Rc::new(move |_e| {
             let to_remove = event_log_copy.get_children();
             for child in to_remove {
                 event_log_copy.remove_child(child).expect("Failed to remove child!");

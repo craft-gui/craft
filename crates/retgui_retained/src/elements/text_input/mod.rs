@@ -12,7 +12,7 @@ use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
-use ui_events::pointer::{PointerButton, PointerId};
+use ui_events::pointer::PointerButton;
 
 use crate::app::ELEMENTS;
 use crate::elements::element_data::ElementData;

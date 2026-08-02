@@ -31,7 +31,7 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Rectangle, TOLERANCE};
 use retgui_resource_manager::ResourceManager;
 use image::{draw_image, upload_image};
-use render_context::{DeviceHandle, RenderContext, RenderSurface, create_vello_renderer};
+use render_context::{RenderContext, RenderSurface, create_vello_renderer};
 use text::draw_text;
 
 pub struct ActiveRenderState {
@@ -204,7 +204,6 @@ impl Renderer for VelloHybridRenderer {
             &mut self.resources_seen,
             renderer,
             &mut encoder,
-            device_handle,
             &mut self.resources,
             &mut self.resource_mapper,
         );
@@ -340,7 +339,6 @@ impl VelloHybridRenderer {
         resources_seen: &mut HashSet<RendererResourceId>,
         renderer: &mut VelloRenderer,
         encoder: &mut CommandEncoder,
-        device_handle: &DeviceHandle,
         resources: &mut Resources,
         resource_mapper: &mut ResourceMapper,
     ) {

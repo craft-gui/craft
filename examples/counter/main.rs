@@ -2,8 +2,6 @@ use std::rc::Rc;
 
 use retgui::Signal;
 use retgui::elements::{Conditional, Container, Element, Text, Window};
-
-use retgui_retained::events::ui_events::pointer::PointerButton;
 use retgui_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
 use retgui_retained::{Color, RetGuiOptions, retgui_main, pct, px, rgb, rgba};
 
@@ -22,11 +20,9 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Signal<i64>)
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
-        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
-            if pointer_button_event.button == Some(PointerButton::Primary) {
-                state.set(state.get() + delta);
-                event.prevent_propagate();
-            }
+        .on_click(Rc::new(move |event| {
+            state.set(state.get() + delta);
+            event.prevent_propagate();
         }))
         .push(Text::new(label).font_size(24.0).color(Color::WHITE))
 }

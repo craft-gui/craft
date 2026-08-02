@@ -2,13 +2,11 @@ use kurbo::{Affine, Stroke};
 use peniko::kurbo::Shape;
 
 use crate::helpers::{brush_to_paint, text_bounds};
-use crate::render_command::{DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd};
+use crate::render_command::{DrawRectCmd, DrawTextCmd};
 use crate::text_renderer_data::TextScroll;
-use crate::vello_hybrid::{draw_rect, draw_rect_outline};
-use retgui_primitives::brush::Brush;
+use crate::vello_hybrid::draw_rect;
 use retgui_primitives::geometry::Rectangle;
 use glifo::Glyph;
-use peniko::Color;
 use vello_common::{kurbo, peniko};
 use vello_hybrid::{Resources, Scene};
 
