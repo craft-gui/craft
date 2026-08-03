@@ -6,8 +6,16 @@
 </p>
 
 ## Introduction
+RetGui is a Rust library for creating desktop user interfaces. `retgui_retained` provides platform-independent widgets.
 
-RetGui is a library for creating desktops user interfaces. retgui_retained provides platform independent widgets.
+## Installation
+Add the following to your `Cargo.toml`:
+```toml
+[dependencies.retgui_retained]
+git = "https://github.com/RetGui/RetGui"
+default-features = false
+features = ["system_fonts", "vello_hybrid_renderer"]
+```
 
 ## Example
 
@@ -71,19 +79,29 @@ fn main() {
 }
 ```
 
+## Supported Platforms
+| Platform | Status |
+| --- | --- |
+| Windows | Officially supported |
+| macOS | Officially supported |
+| Linux | Officially supported |
+| Web | Runs, but not officially supported |
+| Android | Runs, but not officially supported |
+| iOS | Runs, but not officially supported |
 
 ## Showcase
 <p>
   <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
-  <img src="./images/counter.png" alt="The RetGui gallery example." width="40%">
-</p>
-<p align="center">
+  <img src="./images/counter.png" alt="The RetGui counter example." width="40%">
 </p>
 
 ## FAQ
 ### 1. Are Android, iOS, and the Web Supported? 
-No. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
+RetGui can run on those platforms, but they are not officially supported. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
 
-### 2. Why do I have to clone an Element into a separate variable before using it in a callback?
+### 2. Why do I have to clone an `Element` into a separate variable before using it in a callback?
 `Element` is `Clone`, but not `Copy`, so it requires a clone. Luckily, there is a Rust project goal for improving the ergonomics, so that an explicit clone is not required:
 https://github.com/rust-lang/rust-project-goals/issues/107
+
+## License
+Distributed under the Unlicense License. See the [LICENSE](./LICENSE) for more information.
