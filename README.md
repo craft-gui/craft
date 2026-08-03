@@ -1,4 +1,6 @@
-![RetGui Logo](./images/retgui_logo.svg)
+<img src="./images/retgui_logo.svg" alt="The RetGui logo" width="40%">
+
+---
 
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](./LICENSE)
 [![Discord](https://img.shields.io/discord/1382383100562243746?logo=discord&logoColor=%23ffffff&labelColor=%236A7EC2&color=%237389D8)](https://discord.gg/Atb8nuAub2)
@@ -6,8 +8,8 @@
 RetGui is a library for creating desktops user interfaces. retgui_retained provides platform independent widgets.
 
 <p align="center">
-  <img src="./images/gallery.png" alt="The RetGui gallery example." width="45%">
-  <img src="./images/counter.png" alt="The RetGui gallery example." width="45%">
+  <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
+  <img src="./images/counter.png" alt="The RetGui gallery example." width="40%">
 </p>
 <p align="center">
 </p>
