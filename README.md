@@ -89,12 +89,6 @@ fn main() {
 | Android | Runs, but not officially supported | TBD
 | iOS | Runs, but not officially supported | TBD
 
-## Showcase
-<p>
-  <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
-  <img src="./images/counter.png" alt="The RetGui counter example." width="40%">
-</p>
-
 ## Features
 | Feature               | Description                                                                 | Platforms Not Supported |
 |-----------------------|-----------------------------------------------------------------------------|-------------------------|
@@ -109,6 +103,12 @@ fn main() {
 | jpeg                  | Enables decoding JPEG images                                                |                         |
 | markdown              | Provides the ability to render markdown via an element.                     |                         |
 | link                  | Allows opening links with your default browser.                             |                         |
+
+## Showcase
+<p>
+  <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
+  <img src="./images/counter.png" alt="The RetGui counter example." width="40%">
+</p>
 
 ## FAQ
 ### 1. Are Android, iOS, and the Web Supported? 
