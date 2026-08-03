@@ -80,20 +80,35 @@ fn main() {
 ```
 
 ## Supported Platforms
-| Platform | Status |
-| --- | --- |
-| Windows | Officially supported |
-| macOS | Officially supported |
-| Linux | Officially supported |
-| Web | Runs, but not officially supported |
-| Android | Runs, but not officially supported |
-| iOS | Runs, but not officially supported |
+| Platform | Status | Accessibility Status
+| --- | --- |  --- |
+| Windows | Officially supported | In Progress
+| macOS | Officially supported | Planned
+| Linux | Officially supported | Planned
+| Web | Runs, but not officially supported | TBD
+| Android | Runs, but not officially supported | TBD
+| iOS | Runs, but not officially supported | TBD
 
 ## Showcase
 <p>
   <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
   <img src="./images/counter.png" alt="The RetGui counter example." width="40%">
 </p>
+
+## Features
+| Feature               | Description                                                                 | Platforms Not Supported |
+|-----------------------|-----------------------------------------------------------------------------|-------------------------|
+| audio                 | Enables playing audio via MiniAudio.                                        | Web, Android, and iOS   |
+| dynamic_linking       | Build RetGui as a C dynamic library.                                        | All platforms (WIP)     |
+| clipboard             | Enables clipboard support in text elements.                                 |                         |
+| vello_cpu_renderer    | Enables the Vello CPU renderer.                                             |                         |
+| vello_hybrid_renderer | Enables the Vello Hybrid renderer.                                          |                         |
+| http_client           | Enables the HTTP client, which allows loading resources from URLs and more. |                         |
+| system_fonts          | Tells the font engine to load system fonts automatically.                   |                         |
+| png                   | Enables decoding PNG images.                                                |                         |
+| jpeg                  | Enables decoding JPEG images                                                |                         |
+| markdown              | Provides the ability to render markdown via an element.                     |                         |
+| link                  | Allows opening links with your default browser.                             |                         |
 
 ## FAQ
 ### 1. Are Android, iOS, and the Web Supported? 
