@@ -40,7 +40,7 @@ fn main() {
     let count = Rc::new(RefCell::new(0));
     let count_text = Text::new(&format!("Count: {}", count.borrow()));
 
-    Window::new()
+    Window::new("Counter")
         .flex_direction(FlexDirection::Column)
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
@@ -85,5 +85,5 @@ fn main() {
 No. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
 
 ### 2. Why do I have to clone an Element into a separate variable before using it in a callback?
-`Element` is `Clone`, but not Copy, so it requires a clone. There is a Rust project goal for improving the ergonomics around this behavior.
+`Element` is `Clone`, but not `Copy`, so it requires a clone. Luckily, there is a Rust project goal for improving the ergonomics, so that an explicit clone is not required:
 https://github.com/rust-lang/rust-project-goals/issues/107
