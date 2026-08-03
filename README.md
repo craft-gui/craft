@@ -1,18 +1,13 @@
-<img src="./images/retgui_logo.svg" alt="The RetGui logo" width="40%">
+# <p align="center"><img src="./images/retgui_logo.svg" alt="The RetGui logo" width="40%"></p>
 
----
+<p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Unlicense-blue.svg" alt="License: Unlicense"></a>
+  <a href="https://discord.gg/Atb8nuAub2"><img src="https://img.shields.io/discord/1382383100562243746?logo=discord&logoColor=%23ffffff&labelColor=%236A7EC2&color=%237389D8" alt="Discord"></a>
+</p>
 
-[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](./LICENSE)
-[![Discord](https://img.shields.io/discord/1382383100562243746?logo=discord&logoColor=%23ffffff&labelColor=%236A7EC2&color=%237389D8)](https://discord.gg/Atb8nuAub2)
+## Introduction
 
 RetGui is a library for creating desktops user interfaces. retgui_retained provides platform independent widgets.
-
-<p align="center">
-  <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
-  <img src="./images/counter.png" alt="The RetGui gallery example." width="40%">
-</p>
-<p align="center">
-</p>
 
 ## Example
 
@@ -33,12 +28,10 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
-        .on_pointer_button_up(Rc::new(move |event, pointer_button_event| {
-            if pointer_button_event.button == Some(PointerButton::Primary) {
-                *state.borrow_mut() += delta;
-                count_text.clone().text(&format!("Count: {}", state.borrow()));
-                event.prevent_propagate();
-            }
+        .on_click(Rc::new(move |event| {
+            *state.borrow_mut() += delta;
+            count_text.clone().text(&format!("Count: {}", state.borrow()));
+            event.prevent_propagate();
         }))
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }
@@ -77,3 +70,12 @@ fn main() {
     retgui_retained::retgui_main(RetGuiOptions::basic("Counter"));
 }
 ```
+
+
+## Showcase
+<p>
+  <img src="./images/gallery.png" alt="The RetGui gallery example." width="40%">
+  <img src="./images/counter.png" alt="The RetGui gallery example." width="40%">
+</p>
+<p align="center">
+</p>
