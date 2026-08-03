@@ -7,6 +7,7 @@ RetGui is a library for creating desktops user interfaces. retgui_retained provi
 
 <p align="center">
   <img src="./images/gallery.png" alt="The RetGui gallery example." width="45%">
+  <img src="./images/counter.png" alt="The RetGui gallery example." width="45%">
 </p>
 <p align="center">
 </p>
