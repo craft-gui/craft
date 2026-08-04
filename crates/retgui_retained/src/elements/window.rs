@@ -469,6 +469,10 @@ impl WindowInternal {
         true
     }
 
+    pub(crate) fn perf_stats_enabled(&self) -> bool {
+        self.perf_stats.is_enabled()
+    }
+
     pub(crate) fn update_modifiers(&mut self, keyboard_input: &KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
         if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {

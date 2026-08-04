@@ -157,8 +157,13 @@ impl ApplicationHandler for RetGuiWinitState {
         self.retgui_state.retgui_app.on_about_to_wait(event_loop);
         self.maybe_exit(event_loop);
 
-        //event_loop.set_control_flow(ControlFlow::Poll);
-        event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+        let perf_stats_enabled =
+            WINDOW_MANAGER.with_borrow(|window_manager| window_manager.any_perf_stats_enabled());
+        if perf_stats_enabled {
+            event_loop.set_control_flow(ControlFlow::Poll);
+        } else {
+            event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+        }
     }
 
     fn suspended(&mut self, event_loop: &ActiveEventLoop) {

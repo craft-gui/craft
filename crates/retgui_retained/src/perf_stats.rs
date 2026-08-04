@@ -16,7 +16,7 @@ use retgui_renderer::text_renderer_data::TextData;
 use crate::elements::{ElementInternals, Text};
 use crate::text::text_context::TextContext;
 
-const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(1250);
+const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
 const FPS_OVERLAY_PADDING_X: f32 = 8.0;
 const FPS_OVERLAY_PADDING_Y: f32 = 5.0;
 const FPS_OVERLAY_MARGIN: f32 = 8.0;

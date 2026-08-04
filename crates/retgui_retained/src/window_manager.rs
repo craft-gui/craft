@@ -90,6 +90,12 @@ impl WindowManager {
         }
     }
 
+    pub(crate) fn any_perf_stats_enabled(&self) -> bool {
+        self.windows
+            .iter()
+            .any(|window| window.inner.borrow().perf_stats_enabled())
+    }
+
     pub fn close_window(&mut self, window: &Window) {
         self.windows.retain(|w| {
             let is_target = Rc::ptr_eq(&w.inner, &window.inner);
