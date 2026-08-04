@@ -738,7 +738,6 @@ dependencies = [
 name = "counter_retained"
 version = "0.1.0"
 dependencies = [
- "retgui_renderer",
  "retgui_retained",
  "util",
 ]

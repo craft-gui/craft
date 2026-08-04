@@ -107,6 +107,17 @@ impl Renderer for VelloHybridRenderer {
         self.surface_clear_color = color;
     }
 
+    fn set_vsync(&mut self, enabled: bool) {
+        let render_state = match &mut self.state {
+            RenderState::Active(state) => state,
+            RenderState::Suspended => return,
+        };
+
+        render_state.surface.config.present_mode = present_mode_for_vsync(enabled);
+        self.context.configure_surface(&render_state.surface);
+        self.window.request_redraw();
+    }
+
     fn render_list(&self) -> &RenderList {
         &self.render_list
     }
@@ -311,7 +322,7 @@ impl VelloHybridRenderer {
                 window.clone(),
                 width,
                 height,
-                wgpu::PresentMode::AutoVsync,
+                present_mode_for_vsync(true),
                 #[cfg(feature = "vello_hybrid_renderer_webgl")]
                 TextureFormat::Rgba8Unorm,
                 #[cfg(not(feature = "vello_hybrid_renderer_webgl"))]
@@ -351,6 +362,14 @@ impl VelloHybridRenderer {
                 false
             }
         });
+    }
+}
+
+fn present_mode_for_vsync(enabled: bool) -> wgpu::PresentMode {
+    if enabled {
+        wgpu::PresentMode::AutoVsync
+    } else {
+        wgpu::PresentMode::AutoNoVsync
     }
 }
 

@@ -22,6 +22,7 @@ pub trait Renderer: Any {
     fn surface_height(&self) -> f32;
     fn resize_surface(&mut self, width: f32, height: f32);
     fn surface_set_clear_color(&mut self, color: Color);
+    fn set_vsync(&mut self, _enabled: bool) {}
 
     fn render_list(&self) -> &RenderList;
     fn render_list_mut(&mut self) -> &mut RenderList;

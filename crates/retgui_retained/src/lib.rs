@@ -64,6 +64,7 @@ pub mod winit {
 mod app;
 mod retguicallback;
 mod options;
+mod perf_stats;
 #[cfg(test)]
 mod tests;
 mod utils;

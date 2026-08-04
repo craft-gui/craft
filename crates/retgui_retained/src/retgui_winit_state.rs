@@ -156,6 +156,8 @@ impl ApplicationHandler for RetGuiWinitState {
         self.process_external_work();
         self.retgui_state.retgui_app.on_about_to_wait(event_loop);
         self.maybe_exit(event_loop);
+
+        //event_loop.set_control_flow(ControlFlow::Poll);
         event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
     }
 

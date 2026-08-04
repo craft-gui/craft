@@ -5,6 +5,12 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::time;
+use time::{Duration, Instant};
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+
 use retgui_logging::info;
 
 use retgui_primitives::geometry::{Affine, Point, Rectangle, Size};
@@ -16,7 +22,7 @@ use retgui_resource_manager::ResourceManager;
 
 use peniko::Color;
 
-use taffy::{AvailableSpace, NodeId};
+use taffy::AvailableSpace;
 
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
@@ -37,6 +43,7 @@ use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
 use crate::layout::TaffyTree;
+use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
@@ -77,6 +84,7 @@ pub struct WindowInternal {
     scale_factor: f64,
     /// Zoom scale factor.
     zoom_scale_factor: f64,
+    perf_stats: PerfStats,
     mouse_positon: Option<Point>,
     element_data: ElementData,
     pub(crate) modifiers: Modifiers,
@@ -306,6 +314,7 @@ impl WindowInternal {
                 window_size: Default::default(),
                 scale_factor: 1.0,
                 zoom_scale_factor: 1.0,
+                perf_stats: PerfStats::new(),
                 mouse_positon: None,
                 renderer: Rc::new(RefCell::new(BlankRenderer::default())),
                 winit_window: None,
@@ -446,6 +455,20 @@ impl WindowInternal {
         false
     }
 
+    pub(crate) fn maybe_toggle_perf_stats(&mut self, keyboard_input: &KeyboardEvent) -> bool {
+        if keyboard_input.repeat || !keyboard_input.state.is_down() {
+            return false;
+        }
+
+        if keyboard_input.key != ui_events::keyboard::Key::Named(NamedKey::F3) {
+            return false;
+        }
+
+        self.perf_stats.toggle(&mut *self.renderer.borrow_mut());
+        self.request_redraw();
+        true
+    }
+
     pub(crate) fn update_modifiers(&mut self, keyboard_input: &KeyboardEvent) {
         self.modifiers = keyboard_input.modifiers;
         if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
@@ -493,11 +516,13 @@ impl WindowInternal {
         //    return;
         //}
 
+        let frame_start = Instant::now();
         self.renderer.borrow_mut().surface_set_clear_color(Color::WHITE);
 
-        self.layout_window(text_context, resource_manager.clone());
+        let layout_stats = self.layout_window(text_context, resource_manager.clone());
 
-        self.draw_window(text_context, resource_manager);
+        let render_stats = self.draw_window(text_context, resource_manager);
+        self.perf_stats.update_stats(frame_start.elapsed(), layout_stats, render_stats);
     }
 
     pub(crate) fn on_scale_factor_changed(&mut self, scale_factor: f64) {
@@ -571,7 +596,11 @@ impl WindowInternal {
         winit_window.set_visible(true);
     }
 
-    fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> NodeId {
+    fn layout_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> LayoutStats {
+        let total_start = Instant::now();
+        let mut compute = Duration::from_secs(0);
+        let mut apply = Duration::from_secs(0);
+
         let root_node = self
             .element_data
             .layout
@@ -588,17 +617,14 @@ impl WindowInternal {
             let root_dirty = taffy_tree.is_layout_dirty(root_node);
 
             if root_dirty {
-                /*let span = span!(Level::INFO, "layout(taffy)");
-                let _enter = span.enter();*/
+                let compute_start = Instant::now();
                 taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
+                compute = compute_start.elapsed();
             }
-
-            //if self.taffy_tree.borrow().is_apply_layout_dirty() {
-            /*let span = span!(Level::INFO, "layout(apply)");
-            let _enter = span.enter();*/
 
             if root_dirty || taffy_tree.is_apply_layout_dirty(&root_node) {
                 // TODO: move into taffy_tree
+                let apply_start = Instant::now();
                 let mut layout_order: u32 = 0;
                 let sf = self.effective_scale_factor();
                 self.apply_layout(
@@ -616,29 +642,42 @@ impl WindowInternal {
                     sf,
                 );
                 taffy_tree.apply_layout(root_node);
+                apply = apply_start.elapsed();
             }
             //}
         });
 
-        root_node
+        LayoutStats::new(total_start.elapsed(), compute, apply)
     }
 
-    fn draw_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
+    fn draw_window(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) -> RenderStats {
+        let total_start = Instant::now();
         let renderer_clone = self.renderer.clone();
+
+        let build_list_start = Instant::now();
         self.renderer.borrow_mut().clear();
+        let scale_factor = self.effective_scale_factor();
 
         self.draw(
             &mut *renderer_clone.borrow_mut(),
             resource_manager.clone(),
-            self.effective_scale_factor(),
+            scale_factor,
             text_context,
         );
+        let build_list = build_list_start.elapsed();
+
+        let debug_overlay_start = Instant::now();
+        self.perf_stats
+            .draw(&mut *renderer_clone.borrow_mut(), text_context, scale_factor);
+        let debug_overlay = debug_overlay_start.elapsed();
 
         self.winit_window.clone().unwrap().pre_present_notify();
 
-        {
+        let (sort, prepare, submit) = {
             let renderer = renderer_clone.clone();
+            let sort_start = Instant::now();
             renderer.borrow_mut().sort_render_list();
+            let sort = sort_start.elapsed();
 
             let window = Rectangle::new(
                 0.0,
@@ -646,9 +685,21 @@ impl WindowInternal {
                 renderer.borrow().surface_width(),
                 renderer.borrow().surface_height(),
             );
+            let prepare_start = Instant::now();
             renderer.borrow_mut().prepare(resource_manager.clone(), window);
+            let prepare = prepare_start.elapsed();
+            let submit_start = Instant::now();
             renderer.borrow_mut().submit(resource_manager.clone());
+            let submit = submit_start.elapsed();
+
+            (sort, prepare, submit)
+        };
+
+        if self.perf_stats.is_enabled() {
+            self.request_redraw();
         }
+
+        RenderStats::new(total_start.elapsed(), build_list, debug_overlay, sort, prepare, submit)
     }
 
     fn screenshot(&self) -> Screenshot {

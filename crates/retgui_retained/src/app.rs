@@ -184,6 +184,9 @@ impl App {
 
     pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyboardEvent) {
         window.inner.borrow_mut().update_modifiers(&keyboard_input);
+        if window.inner.borrow_mut().maybe_toggle_perf_stats(&keyboard_input) {
+            return;
+        }
         if window.inner.borrow_mut().maybe_zoom_keyboard(&keyboard_input) {
             return;
         }
