@@ -19,12 +19,4 @@ util = { path = "../util" }
 [dependencies.retgui_retained]
 path = "../../crates/retgui_retained"
 default-features = false
-features = ["system_fonts"]
-
-[target.'cfg(not(target_os = "android"))'.dependencies.retgui_renderer]
-path = "../../crates/retgui_renderer"
-features = ["vello_hybrid_renderer"]
-
-[target.'cfg(target_os = "android")'.dependencies.retgui_renderer]
-path = "../../crates/retgui_renderer"
-features = ["vello_hybrid_renderer"]
+features = ["system_fonts", "vello_hybrid_renderer"]
