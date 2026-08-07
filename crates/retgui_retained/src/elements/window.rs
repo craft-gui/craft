@@ -22,7 +22,7 @@ use retgui_resource_manager::ResourceManager;
 
 use peniko::Color;
 
-use taffy::AvailableSpace;
+use gummy::AvailableSpace;
 
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
@@ -34,7 +34,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 use crate::accessibility::RetGuiAccessTree;
-use crate::app::{App, TAFFY_TREE, WINDOW_MANAGER, queue_window_event};
+use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
@@ -42,7 +42,7 @@ use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scr
 use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
@@ -141,7 +141,7 @@ impl ElementInternals for WindowInternal {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -151,7 +151,7 @@ impl ElementInternals for WindowInternal {
     ) {
         apply_generic_container_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,
@@ -489,8 +489,8 @@ impl WindowInternal {
     }
 
     pub(crate) fn on_resize(&mut self, new_size: Size<f32>) {
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            taffy_tree.mark_dirty(self.element_data.layout.taffy_node_id.unwrap());
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            gummy_tree.mark_dirty(self.element_data.layout.gummy_node_id.unwrap());
         });
 
         self.window_size = new_size;
@@ -608,31 +608,31 @@ impl WindowInternal {
         let root_node = self
             .element_data
             .layout
-            .taffy_node_id
+            .gummy_node_id
             .expect("A root element must have a layout node.");
 
         let window_size = self.window_size();
-        let available_space: taffy::Size<AvailableSpace> = taffy::Size {
+        let available_space: gummy::Size<AvailableSpace> = gummy::Size {
             width: AvailableSpace::Definite(window_size.width),
             height: AvailableSpace::Definite(window_size.height),
         };
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let root_dirty = taffy_tree.is_layout_dirty(root_node);
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let root_dirty = gummy_tree.is_layout_dirty(root_node);
 
             if root_dirty {
                 let compute_start = Instant::now();
-                taffy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
+                gummy_tree.compute_layout(root_node, available_space, text_context, resource_manager.clone());
                 compute = compute_start.elapsed();
             }
 
-            if root_dirty || taffy_tree.is_apply_layout_dirty(&root_node) {
-                // TODO: move into taffy_tree
+            if root_dirty || gummy_tree.is_apply_layout_dirty(&root_node) {
+                // TODO: move into gummy_tree
                 let apply_start = Instant::now();
                 let mut layout_order: u32 = 0;
                 let sf = self.effective_scale_factor();
                 self.apply_layout(
-                    taffy_tree,
+                    gummy_tree,
                     Point::new(0.0, 0.0),
                     &mut layout_order,
                     Affine::IDENTITY,
@@ -645,7 +645,7 @@ impl WindowInternal {
                     )),
                     sf,
                 );
-                taffy_tree.apply_layout(root_node);
+                gummy_tree.apply_layout(root_node);
                 apply = apply_start.elapsed();
             }
             //}

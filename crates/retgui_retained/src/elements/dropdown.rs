@@ -12,13 +12,13 @@ use retgui_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
-use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
+use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
@@ -118,7 +118,7 @@ impl ElementInternals for DropdownInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -126,9 +126,9 @@ impl ElementInternals for DropdownInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout.taffy_node_id();
-        let layout = taffy_tree.get_layout(node);
-        self.element_data.layout.has_new_layout = taffy_tree.has_new_layout(node);
+        let node = self.element_data.layout.gummy_node_id();
+        let layout = gummy_tree.get_layout(node);
+        self.element_data.layout.has_new_layout = gummy_tree.has_new_layout(node);
         let dirty = self.element_data.layout.has_new_layout
             || transform != self.element_data.layout.get_transform()
             || position != self.element_data.layout.position
@@ -141,11 +141,11 @@ impl ElementInternals for DropdownInner {
             self.element_data.layout.parent_clip = clip_bounds;
             self.element_data.layout.scroll_state.mark_old();
         }
-        taffy_tree.mark_seen(node);
+        gummy_tree.mark_seen(node);
 
         if let Some(selected_element) = &self.selected_element {
             selected_element.borrow_mut().apply_layout(
-                taffy_tree,
+                gummy_tree,
                 self.element_data().layout.computed_box.position,
                 z_index,
                 transform,
@@ -153,7 +153,7 @@ impl ElementInternals for DropdownInner {
                 self.element_data().layout.clip_bounds,
                 scale_factor,
             );
-            taffy_tree.mark_seen(selected_element.borrow().element_data().layout.taffy_node_id());
+            gummy_tree.mark_seen(selected_element.borrow().element_data().layout.gummy_node_id());
         }
 
         // Position the floating window below the dropdown with a gap.
@@ -163,7 +163,7 @@ impl ElementInternals for DropdownInner {
         );
 
         self.floating_window.apply_simple_layout(
-            taffy_tree,
+            gummy_tree,
             transform,
             floating_window_position,
             z_index,
@@ -171,7 +171,7 @@ impl ElementInternals for DropdownInner {
             None,
         );
         self.arrow.apply_simple_layout(
-            taffy_tree,
+            gummy_tree,
             transform,
             self.element_data().layout.computed_box.position,
             z_index,
@@ -184,7 +184,7 @@ impl ElementInternals for DropdownInner {
 
         for child in &self.element_data.children {
             child.borrow_mut().apply_layout(
-                taffy_tree,
+                gummy_tree,
                 floating_window_position,
                 z_index,
                 transform * child_transform,
@@ -320,7 +320,7 @@ impl ElementInternals for DropdownInner {
         let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&floating_window.style, &mut floating_window.layout, message, event);
         if result.request_apply_layout {
-            request_apply_layout(self.element_data.layout.taffy_node_id.unwrap());
+            request_apply_layout(self.element_data.layout.gummy_node_id.unwrap());
         }
         if result.set_pointer_capture {
             self.set_pointer_capture(result.pointer_id.unwrap())
@@ -342,10 +342,10 @@ impl ElementInternals for DropdownInner {
         child.borrow_mut().propagate_window_down();
 
         // Add the children to the floating window layout.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.floating_window.layout.taffy_node_id.unwrap();
-            let child_id = child.borrow().element_data().layout.taffy_node_id();
-            taffy_tree.add_child(parent_id, child_id);
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let parent_id = self.floating_window.layout.gummy_node_id.unwrap();
+            let child_id = child.borrow().element_data().layout.gummy_node_id();
+            gummy_tree.add_child(parent_id, child_id);
         });
     }
 
@@ -418,33 +418,33 @@ impl Shape {
         Self { layout, style }
     }
 
-    pub fn create_taffy_node(&mut self) {
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let style = self.style.to_taffy_style();
-            let node_id = taffy_tree.new_leaf(style);
-            self.layout.taffy_node_id = Some(node_id);
+    pub fn create_gummy_node(&mut self) {
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let style = self.style.to_gummy_style();
+            let node_id = gummy_tree.new_leaf(style);
+            self.layout.gummy_node_id = Some(node_id);
         });
     }
 
     pub fn apply_simple_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         transform: Affine,
         position: Point,
         z_index: &mut u32,
         scale_factor: f64,
         clip_bounds: Option<Rectangle>,
     ) {
-        let node = self.layout.taffy_node_id();
-        let taffy_layout = taffy_tree.get_layout(node);
-        self.layout.has_new_layout = taffy_tree.has_new_layout(node);
+        let node = self.layout.gummy_node_id();
+        let gummy_layout = gummy_tree.get_layout(node);
+        self.layout.has_new_layout = gummy_tree.has_new_layout(node);
 
         let dirty =
             self.layout.has_new_layout || transform != self.layout.get_transform() || position != self.layout.position;
 
         if dirty {
             self.layout
-                .resolve_box(position, transform, taffy_layout, z_index, self.style.get_position());
+                .resolve_box(position, transform, gummy_layout, z_index, self.style.get_position());
 
             // Refactor START
             let current_style = &self.style;
@@ -461,19 +461,19 @@ impl Shape {
             );
             // Refactor END
 
-            // For scroll changes from taffy;
-            apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
+            // For scroll changes from gummy;
+            apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
             self.layout.resolve_clip_for_scrollable(clip_bounds); // self.apply_clip
             self.layout.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
         if !dirty && self.layout.scroll_state.is_new() {
-            apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
+            apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
             self.layout.scroll_state.mark_old();
         }
 
-        taffy_tree.mark_seen(node);
+        gummy_tree.mark_seen(node);
     }
 }
 
@@ -574,7 +574,7 @@ impl Dropdown {
             .floating_window
             .style
             .set_border_color(TrblRectangle::new_all(border_color));
-        inner.borrow_mut().floating_window.create_taffy_node();
+        inner.borrow_mut().floating_window.create_gummy_node();
 
         inner.borrow_mut().arrow.style.set_width(px(12.0));
         inner.borrow_mut().arrow.style.set_height(px(6.0));
@@ -583,15 +583,15 @@ impl Dropdown {
             .arrow
             .style
             .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), auto()));
-        inner.borrow_mut().arrow.create_taffy_node();
+        inner.borrow_mut().arrow.create_gummy_node();
 
         // Set the floating window's parent and the arrow to the Dropdown element.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = inner.borrow_mut().element_data.layout.taffy_node_id();
-            let floating_window_child_id = inner.borrow_mut().floating_window.layout.taffy_node_id();
-            let arrow_child_id = inner.borrow_mut().arrow.layout.taffy_node_id();
-            taffy_tree.add_child(parent_id, floating_window_child_id);
-            taffy_tree.add_child(parent_id, arrow_child_id);
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let parent_id = inner.borrow_mut().element_data.layout.gummy_node_id();
+            let floating_window_child_id = inner.borrow_mut().floating_window.layout.gummy_node_id();
+            let arrow_child_id = inner.borrow_mut().arrow.layout.gummy_node_id();
+            gummy_tree.add_child(parent_id, floating_window_child_id);
+            gummy_tree.add_child(parent_id, arrow_child_id);
         });
 
         Self { inner }
@@ -626,8 +626,8 @@ impl DropdownInner {
     fn set_selected_element(&mut self, child_index: usize) {
         // Remove the old selected element from the layout tree.
         if let Some(old_selected_element) = &self.selected_element {
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.unparent_node(old_selected_element.borrow().element_data().layout.taffy_node_id());
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.unparent_node(old_selected_element.borrow().element_data().layout.gummy_node_id());
             });
         }
 
@@ -645,12 +645,12 @@ impl DropdownInner {
             .borrow()
             .element_data()
             .layout
-            .taffy_node_id();
+            .gummy_node_id();
 
         // Add the selected element to the parent's layout tree at index 1.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data.layout.taffy_node_id.unwrap();
-            taffy_tree.add_child_at_index(parent_id, selected_element_id, 1);
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let parent_id = self.element_data.layout.gummy_node_id.unwrap();
+            gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
         });
     }
 

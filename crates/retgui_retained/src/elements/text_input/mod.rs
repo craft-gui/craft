@@ -20,8 +20,8 @@ use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
-use crate::layout::layout_context::{LayoutContext, TaffyTextInputContext};
+use crate::layout::GummyTree;
+use crate::layout::layout_context::{LayoutContext, GummyTextInputContext};
 use crate::style::{Display, Overflow, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
@@ -140,7 +140,7 @@ impl ElementInternals for TextInputInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -148,8 +148,8 @@ impl ElementInternals for TextInputInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout.taffy_node_id.unwrap();
-        let has_new_layout = taffy_tree.has_new_layout(node);
+        let node = self.element_data.layout.gummy_node_id.unwrap();
+        let has_new_layout = gummy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
@@ -158,7 +158,7 @@ impl ElementInternals for TextInputInner {
         self.element_data.layout.has_new_layout = has_new_layout;
 
         if dirty {
-            let result = taffy_tree.get_layout(node);
+            let result = gummy_tree.get_layout(node);
             self.resolve_box(position, transform, result, z_index);
             self.apply_clip(clip_bounds);
             self.element_data.layout.parent_clip = clip_bounds;
@@ -178,13 +178,13 @@ impl ElementInternals for TextInputInner {
 
         // For manual scroll updates.
         if !dirty && self.element_data.layout.scroll_state.is_new() {
-            let result = taffy_tree.get_layout(node);
+            let result = gummy_tree.get_layout(node);
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();
         }
 
         if has_new_layout {
-            taffy_tree.mark_seen(node);
+            gummy_tree.mark_seen(node);
         }
 
         self.state.layout(
@@ -392,14 +392,14 @@ impl TextInputInner {
         }
         inner_mut.set_text(text);
 
-        let context = Some(LayoutContext::TextInput(TaffyTextInputContext {
+        let context = Some(LayoutContext::TextInput(GummyTextInputContext {
             element: inner_mut.me.clone(),
         }));
         inner_mut.element_data.create_layout_node(context);
 
-        let taffy_id = inner_mut.element_data.layout.taffy_node_id;
-        inner_mut.state.taffy_id = taffy_id;
-        inner_mut.state.editor.taffy_id = taffy_id;
+        let gummy_id = inner_mut.element_data.layout.gummy_node_id;
+        inner_mut.state.gummy_id = gummy_id;
+        inner_mut.state.editor.gummy_id = gummy_id;
 
         ELEMENTS.with_borrow_mut(|elements| {
             elements.insert(inner_mut.deref());

@@ -6,16 +6,16 @@ use crate::elements::{TextInner, TextInputInner};
 use crate::text::text_context::TextContext;
 use retgui_resource_manager::image::ImageResource;
 use retgui_resource_manager::{ResourceId, ResourceManager};
-use taffy::{AvailableSpace, Size};
+use gummy::{AvailableSpace, Size};
 use tinyvg_rs::TinyVg;
 
 #[derive(Clone)]
-pub struct TaffyTextContext {
+pub struct GummyTextContext {
     pub element: Weak<RefCell<TextInner>>,
 }
 
 #[derive(Clone)]
-pub struct TaffyTextInputContext {
+pub struct GummyTextInputContext {
     pub element: Weak<RefCell<TextInputInner>>,
 }
 
@@ -37,7 +37,7 @@ pub enum AvailableSpaceKey {
     MaxContent,
 }
 
-impl TaffyTextContext {}
+impl GummyTextContext {}
 
 #[derive(Clone)]
 pub struct ImageContext {
@@ -54,7 +54,7 @@ impl ImageContext {
         known_dimensions: Size<Option<f32>>,
         _available_space: Size<AvailableSpace>,
         resource_manager: Arc<ResourceManager>,
-        _style: &taffy::Style,
+        _style: &gummy::Style,
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;
@@ -91,24 +91,24 @@ pub type LayoutFn = fn(
 
 #[derive(Clone)]
 pub enum LayoutContext {
-    Text(TaffyTextContext),
-    TextInput(TaffyTextInputContext),
+    Text(GummyTextContext),
+    TextInput(GummyTextInputContext),
     Image(ImageContext),
     TinyVg(TinyVgContext),
     Other(LayoutFn),
 }
 //////////////////////////////////////////////////////////////////////////////
 impl TextHashKey {
-    pub fn new(known_dimensions: Size<Option<f32>>, available_space: Size<taffy::AvailableSpace>) -> Self {
+    pub fn new(known_dimensions: Size<Option<f32>>, available_space: Size<gummy::AvailableSpace>) -> Self {
         let available_space_width_u32: AvailableSpaceKey = match available_space.width {
-            taffy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
-            taffy::AvailableSpace::Definite(width) => AvailableSpaceKey::Definite(width.to_bits()),
+            gummy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
+            gummy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
+            gummy::AvailableSpace::Definite(width) => AvailableSpaceKey::Definite(width.to_bits()),
         };
         let available_space_height_u32: AvailableSpaceKey = match available_space.height {
-            taffy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
-            taffy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
-            taffy::AvailableSpace::Definite(height) => AvailableSpaceKey::Definite(height.to_bits()),
+            gummy::AvailableSpace::MinContent => AvailableSpaceKey::MinContent,
+            gummy::AvailableSpace::MaxContent => AvailableSpaceKey::MaxContent,
+            gummy::AvailableSpace::Definite(height) => AvailableSpaceKey::Definite(height.to_bits()),
         };
 
         Self {
@@ -119,17 +119,17 @@ impl TextHashKey {
         }
     }
 
-    pub fn available_space(&self) -> Size<taffy::AvailableSpace> {
+    pub fn available_space(&self) -> Size<gummy::AvailableSpace> {
         Size {
             width: match self.available_space_width {
-                AvailableSpaceKey::Definite(width) => taffy::AvailableSpace::Definite(f32::from_bits(width)),
-                AvailableSpaceKey::MinContent => taffy::AvailableSpace::MinContent,
-                AvailableSpaceKey::MaxContent => taffy::AvailableSpace::MaxContent,
+                AvailableSpaceKey::Definite(width) => gummy::AvailableSpace::Definite(f32::from_bits(width)),
+                AvailableSpaceKey::MinContent => gummy::AvailableSpace::MinContent,
+                AvailableSpaceKey::MaxContent => gummy::AvailableSpace::MaxContent,
             },
             height: match self.available_space_height {
-                AvailableSpaceKey::Definite(height) => taffy::AvailableSpace::Definite(f32::from_bits(height)),
-                AvailableSpaceKey::MinContent => taffy::AvailableSpace::MinContent,
-                AvailableSpaceKey::MaxContent => taffy::AvailableSpace::MaxContent,
+                AvailableSpaceKey::Definite(height) => gummy::AvailableSpace::Definite(f32::from_bits(height)),
+                AvailableSpaceKey::MinContent => gummy::AvailableSpace::MinContent,
+                AvailableSpaceKey::MaxContent => gummy::AvailableSpace::MaxContent,
             },
         }
     }
@@ -149,11 +149,11 @@ pub struct TinyVgContext {
 
 pub fn measure_content(
     known_dimensions: Size<Option<f32>>,
-    available_space: Size<taffy::AvailableSpace>,
+    available_space: Size<gummy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
     text_context: &mut TextContext,
     resource_manager: Arc<ResourceManager>,
-    style: &taffy::Style,
+    style: &gummy::Style,
 ) -> Size<f32> {
     if let Size {
         width: Some(width),
@@ -165,8 +165,8 @@ pub fn measure_content(
 
     match node_context {
         None => Size::ZERO,
-        Some(LayoutContext::Text(taffy_text_context)) => {
-            let element = &taffy_text_context.element;
+        Some(LayoutContext::Text(gummy_text_context)) => {
+            let element = &gummy_text_context.element;
             if let Some(element) = element.upgrade()
                 && let Ok(mut element) = element.try_borrow_mut()
             {
@@ -174,8 +174,8 @@ pub fn measure_content(
             }
             Size::ZERO
         }
-        Some(LayoutContext::TextInput(taffy_text_input_context)) => {
-            let element = &taffy_text_input_context.element;
+        Some(LayoutContext::TextInput(gummy_text_input_context)) => {
+            let element = &gummy_text_input_context.element;
             if let Some(element) = element.upgrade()
                 && let Ok(mut element) = element.try_borrow_mut()
             {
@@ -201,9 +201,9 @@ impl TinyVgContext {
     pub fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
-        _available_space: Size<taffy::AvailableSpace>,
+        _available_space: Size<gummy::AvailableSpace>,
         resource_manager: Arc<ResourceManager>,
-        _style: &taffy::Style,
+        _style: &gummy::Style,
     ) -> Size<f32> {
         let mut original_image_width: f32 = 0.0;
         let mut original_image_height: f32 = 0.0;

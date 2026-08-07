@@ -1,4 +1,4 @@
-use crate::app::{TAFFY_TREE, request_apply_layout, request_layout};
+use crate::app::{GUMMY_TREE, request_apply_layout, request_layout};
 use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
 use std::cell::RefCell;
@@ -38,8 +38,8 @@ where
             };
 
             // Clone the layout node
-            let node_id = new_data.layout.taffy_node_id_mut();
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| *node_id = taffy_tree.clone_node(*node_id));
+            let node_id = new_data.layout.gummy_node_id_mut();
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| *node_id = gummy_tree.clone_node(*node_id));
             request_apply_layout(*node_id);
             request_layout(*node_id);
 
@@ -61,10 +61,10 @@ where
                 new_children.push(new_child.clone());
 
                 let new_child_copy = new_child.clone();
-                TAFFY_TREE.with_borrow_mut(move |taffy_tree| {
-                    taffy_tree.add_child(
+                GUMMY_TREE.with_borrow_mut(move |gummy_tree| {
+                    gummy_tree.add_child(
                         node_id_copy,
-                        new_child_copy.borrow().element_data().layout.taffy_node_id.unwrap(),
+                        new_child_copy.borrow().element_data().layout.gummy_node_id.unwrap(),
                     );
                 });
             }

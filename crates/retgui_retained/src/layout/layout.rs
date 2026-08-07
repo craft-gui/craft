@@ -9,13 +9,13 @@ use peniko::Color;
 use crate::elements::scrollable::ScrollState;
 use crate::style::{BoxShadow, Position, Style};
 use retgui_renderer::renderer::Renderer;
-use taffy::NodeId;
+use gummy::NodeId;
 
 #[derive(Clone, Default)]
 pub struct Layout {
-    /// The taffy node id after this element is laid out.
+    /// The gummy node id after this element is laid out.
     /// This may be None if this is a non-visual element like Font.
-    pub taffy_node_id: Option<NodeId>,
+    pub gummy_node_id: Option<NodeId>,
     pub content_size: Size<f32>,
     // The computed values after transforms are applied.
     pub computed_box_transformed: ElementBox,
@@ -132,12 +132,12 @@ impl Layout {
         }
     }
 
-    pub fn taffy_node_id(&self) -> NodeId {
-        self.taffy_node_id.unwrap()
+    pub fn gummy_node_id(&self) -> NodeId {
+        self.gummy_node_id.unwrap()
     }
 
-    pub fn taffy_node_id_mut(&mut self) -> &mut NodeId {
-        self.taffy_node_id.as_mut().unwrap()
+    pub fn gummy_node_id_mut(&mut self) -> &mut NodeId {
+        self.gummy_node_id.as_mut().unwrap()
     }
 
     /// This only returns if an element is a scrollable, not if Overflow[1] == true.
@@ -153,7 +153,7 @@ impl Layout {
         &mut self,
         relative_position: Point,
         scroll_transform: Affine,
-        result: &taffy::Layout,
+        result: &gummy::Layout,
         layout_order: &mut u32,
         position: Position,
     ) {
@@ -161,9 +161,9 @@ impl Layout {
         *layout_order += 1;
 
         let at_position = match position {
-            Position::Relative => relative_position + from_taffy_point(result.location).to_vec2(),
+            Position::Relative => relative_position + from_gummy_point(result.location).to_vec2(),
             // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
-            Position::Absolute => relative_position + from_taffy_point(result.location).to_vec2(),
+            Position::Absolute => relative_position + from_gummy_point(result.location).to_vec2(),
         };
 
         let size = Size {
@@ -483,7 +483,7 @@ impl BezPathOrRect {
 }
 
 #[inline(always)]
-fn from_taffy_point(p: taffy::Point<f32>) -> Point {
+fn from_gummy_point(p: gummy::Point<f32>) -> Point {
     Point {
         x: p.x as f64,
         y: p.y as f64,

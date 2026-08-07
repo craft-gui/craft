@@ -96,7 +96,7 @@ impl<'source> IntoIterator for SplitString<'source> {
 /// This layout is invalidated by a number.
 #[derive(Clone)]
 pub struct PlainEditor {
-    pub(crate) taffy_id: Option<taffy::NodeId>,
+    pub(crate) gummy_id: Option<gummy::NodeId>,
     layout: Layout<Brush>,
     buffer: String,
     default_style: StyleSet<Brush>,
@@ -128,7 +128,7 @@ pub struct PlainEditor {
 impl Default for PlainEditor {
     fn default() -> Self {
         PlainEditor {
-            taffy_id: None,
+            gummy_id: None,
             layout: Default::default(),
             buffer: "".to_string(),
             default_style: StyleSet::new(1.0),
@@ -149,9 +149,9 @@ impl Default for PlainEditor {
 
 impl PlainEditor {
     /// Create a new editor, with default font size `font_size`.
-    pub fn new(font_size: f32, taffy_id: Option<taffy::NodeId>) -> Self {
+    pub fn new(font_size: f32, gummy_id: Option<gummy::NodeId>) -> Self {
         Self {
-            taffy_id,
+            gummy_id,
             default_style: StyleSet::new(font_size),
             buffer: Default::default(),
             layout: Default::default(),
@@ -668,14 +668,14 @@ impl PlainEditorDriver<'_> {
     }
 
     fn request_apply_layout(&self) {
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_apply_layout(taffy_id);
+        if let Some(gummy_id) = self.editor.gummy_id {
+            request_apply_layout(gummy_id);
         }
     }
 
     fn request_layout(&self) {
-        if let Some(taffy_id) = self.editor.taffy_id {
-            request_layout(taffy_id);
+        if let Some(gummy_id) = self.editor.gummy_id {
+            request_layout(gummy_id);
         }
     }
 

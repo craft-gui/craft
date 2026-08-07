@@ -142,7 +142,7 @@ fn hero_features() -> Container {
                 .push(
                     hero_item(
                         "Web-like styling",
-                        "We use Taffy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.",
+                        "We use Gummy, an implementation of the CSS flexbox, block, and grid layout algorithms, for simple and familiar styling.",
                         ResourceId::StaticBytes(include_bytes!("../assets/brush_24dp_000000_FILL0_wght400_GRAD0_opsz24.tvg"))
                     )
                 )

@@ -7,7 +7,7 @@ use time::{Duration, Instant};
 use web_time as time;
 
 use peniko::Color;
-use taffy::AvailableSpace;
+use gummy::AvailableSpace;
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Rectangle, Size};
@@ -251,11 +251,11 @@ impl PerfStats {
         }
 
         let size = text_inner.measure(
-            taffy::Size {
+            gummy::Size {
                 width: None,
                 height: None,
             },
-            taffy::Size {
+            gummy::Size {
                 width: AvailableSpace::MaxContent,
                 height: AvailableSpace::MaxContent,
             },

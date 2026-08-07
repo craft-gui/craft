@@ -8,12 +8,12 @@ use std::sync::Arc;
 
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
+use crate::app::{PENDING_RESOURCES, GUMMY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
 use retgui_primitives::geometry::{Affine, Point};
@@ -72,7 +72,7 @@ impl ElementInternals for ImageInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -82,7 +82,7 @@ impl ElementInternals for ImageInner {
     ) {
         apply_generic_leaf_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,
@@ -173,14 +173,14 @@ impl ImageInner {
             pending_resources.push_back((self.resource_id.clone(), ResourceType::Image));
         });
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let context = LayoutContext::Image(ImageContext::new(resource_id));
             let node = self
                 .element_data
                 .layout
-                .taffy_node_id
+                .gummy_node_id
                 .expect("Failed to get Image node");
-            taffy_tree.set_node_context(node, Some(context));
+            gummy_tree.set_node_context(node, Some(context));
         });
     }
 

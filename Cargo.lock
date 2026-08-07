@@ -1458,6 +1458,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gummy"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6de6b17c1f52dc906a2411748239e59534dcf0203396962fd444bcf384f30146"
+dependencies = [
+ "arrayvec",
+ "grid",
+ "serde",
+ "slotmap",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4212,6 +4224,7 @@ dependencies = [
  "bitflags 2.11.0",
  "chrono",
  "clipboard-rs",
+ "gummy",
  "image",
  "issho",
  "libtest-mimic-collect",
@@ -4231,7 +4244,6 @@ dependencies = [
  "smallvec",
  "smol_str 0.3.6",
  "syntect",
- "taffy",
  "tinyvg-rs",
  "ui-events",
  "ui-events-winit",
@@ -4873,17 +4885,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "taffy"
-version = "0.12.1"
-source = "git+https://github.com/AustinMReppert/taffy?rev=2b09f931c5a087624a67208f94de3ac559a64210#2b09f931c5a087624a67208f94de3ac559a64210"
-dependencies = [
- "arrayvec",
- "grid",
- "serde",
- "slotmap",
-]
-
-[[package]]
 name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4908,7 +4909,7 @@ version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8c27177b12a6399ffc08b98f76f7c9a1f4fe9fc967c784c5a071fa8d93cf7e1"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

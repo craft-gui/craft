@@ -1,6 +1,6 @@
-use crate::app::TAFFY_TREE;
+use crate::app::GUMMY_TREE;
 use crate::elements::ElementInternals;
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
 use retgui_primitives::geometry::{Affine, Point, Rectangle};
@@ -23,14 +23,14 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
     child.borrow_mut().propagate_window_down();
     parent.element_data_mut().children.push(child.clone());
 
-    // Add the children's taffy node.
-    TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-        let parent_id = parent.element_data().layout.taffy_node_id.unwrap();
-        let child_id = child.borrow().element_data().layout.taffy_node_id;
+    // Add the children's gummy node.
+    GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+        let parent_id = parent.element_data().layout.gummy_node_id.unwrap();
+        let child_id = child.borrow().element_data().layout.gummy_node_id;
         if let Some(child_id) = child_id {
-            taffy_tree.add_child(parent_id, child_id);
+            gummy_tree.add_child(parent_id, child_id);
         }
-        child.borrow_mut().on_post_add_layout_tree(taffy_tree);
+        child.borrow_mut().on_post_add_layout_tree(gummy_tree);
     });
 
     {
@@ -50,7 +50,7 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
 #[allow(clippy::too_many_arguments)]
 pub fn apply_generic_container_layout(
     element: &mut dyn ElementInternals,
-    taffy_tree: &mut TaffyTree,
+    gummy_tree: &mut GummyTree,
     position: Point,
     z_index: &mut u32,
     transform: Affine,
@@ -58,9 +58,9 @@ pub fn apply_generic_container_layout(
     clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
-    let node = element.element_data_mut().layout.taffy_node_id.unwrap();
-    let layout = taffy_tree.get_layout(node);
-    let has_new_layout = taffy_tree.has_new_layout(node);
+    let node = element.element_data_mut().layout.gummy_node_id.unwrap();
+    let layout = gummy_tree.get_layout(node);
+    let has_new_layout = gummy_tree.has_new_layout(node);
 
     let dirty = has_new_layout
         || transform != element.element_data_mut().layout.get_transform()
@@ -70,7 +70,7 @@ pub fn apply_generic_container_layout(
     if dirty {
         element.resolve_box(position, transform, layout, z_index);
         element.apply_borders(scale_factor);
-        // For scroll changes from taffy;
+        // For scroll changes from gummy;
         element.element_data_mut().apply_scroll(layout);
         element.apply_clip(clip_bounds);
         element.element_data_mut().layout.parent_clip = clip_bounds;
@@ -84,7 +84,7 @@ pub fn apply_generic_container_layout(
     }
 
     if has_new_layout {
-        taffy_tree.mark_seen(node);
+        gummy_tree.mark_seen(node);
     }
 
     element
@@ -95,7 +95,7 @@ pub fn apply_generic_container_layout(
     let child_transform = Affine::translate((0.0, -scroll_y));
 
     element.apply_layout_children(
-        taffy_tree,
+        gummy_tree,
         z_index,
         transform * child_transform,
         text_context,
@@ -107,16 +107,16 @@ pub fn apply_generic_container_layout(
 #[allow(clippy::too_many_arguments)]
 pub fn apply_generic_container_layout_non_dom(
     element: &mut ElementData,
-    taffy_tree: &mut TaffyTree,
+    gummy_tree: &mut GummyTree,
     position: Point,
     z_index: &mut u32,
     transform: Affine,
     clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
-    let node = element.layout.taffy_node_id.unwrap();
-    let layout = taffy_tree.get_layout(node);
-    let has_new_layout = taffy_tree.has_new_layout(node);
+    let node = element.layout.gummy_node_id.unwrap();
+    let layout = gummy_tree.get_layout(node);
+    let has_new_layout = gummy_tree.has_new_layout(node);
 
     let dirty = has_new_layout
         || transform != element.layout.get_transform()
@@ -128,7 +128,7 @@ pub fn apply_generic_container_layout_non_dom(
             .layout
             .resolve_box(position, transform, layout, z_index, element.style.get_position());
         element.apply_borders(scale_factor);
-        // For scroll changes from taffy;
+        // For scroll changes from gummy;
         element.apply_scroll(layout);
         element.layout.apply_clip(clip_bounds);
         element.layout.parent_clip = clip_bounds;
@@ -142,23 +142,23 @@ pub fn apply_generic_container_layout_non_dom(
     }
 
     if has_new_layout {
-        taffy_tree.mark_seen(node);
+        gummy_tree.mark_seen(node);
     }
 }
 
 #[allow(clippy::too_many_arguments)]
 pub fn apply_generic_leaf_layout(
     element: &mut dyn ElementInternals,
-    taffy_tree: &mut TaffyTree,
+    gummy_tree: &mut GummyTree,
     position: Point,
     z_index: &mut u32,
     transform: Affine,
     clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
-    let node = element.element_data_mut().layout.taffy_node_id.unwrap();
-    let layout = taffy_tree.get_layout(node);
-    let has_new_layout = taffy_tree.has_new_layout(node);
+    let node = element.element_data_mut().layout.gummy_node_id.unwrap();
+    let layout = gummy_tree.get_layout(node);
+    let has_new_layout = gummy_tree.has_new_layout(node);
 
     let dirty = has_new_layout
         || transform != element.element_data_mut().layout.get_transform()
@@ -174,7 +174,7 @@ pub fn apply_generic_leaf_layout(
     }
 
     if has_new_layout {
-        taffy_tree.mark_seen(node);
+        gummy_tree.mark_seen(node);
     }
 
     element

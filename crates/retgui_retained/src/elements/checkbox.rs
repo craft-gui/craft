@@ -1,12 +1,12 @@
 //! A toggleable checkbox.
 
-use crate::app::{TAFFY_TREE, queue_event};
+use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{CheckboxToggled, Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::style::{Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
@@ -79,7 +79,7 @@ impl ElementInternals for CheckboxInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -89,7 +89,7 @@ impl ElementInternals for CheckboxInner {
     ) {
         apply_generic_container_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,
@@ -103,7 +103,7 @@ impl ElementInternals for CheckboxInner {
 
         apply_generic_container_layout_non_dom(
             &mut self.box_layout,
-            taffy_tree,
+            gummy_tree,
             p,
             z_index,
             child_transform,
@@ -218,10 +218,10 @@ impl Checkbox {
             .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
         inner_mut.box_layout.create_layout_node(None);
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            taffy_tree.add_child(
-                inner_mut.element_data.layout.taffy_node_id(),
-                inner_mut.box_layout.layout.taffy_node_id(),
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            gummy_tree.add_child(
+                inner_mut.element_data.layout.gummy_node_id(),
+                inner_mut.box_layout.layout.gummy_node_id(),
             );
         });
         {

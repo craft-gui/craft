@@ -4,7 +4,7 @@ use std::rc::{Rc, Weak};
 use smol_str::SmolStr;
 
 use crate::accessibility::RetGuiAccessTree;
-use crate::app::{ELEMENTS, TAFFY_TREE};
+use crate::app::{ELEMENTS, GUMMY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
@@ -122,16 +122,16 @@ impl ElementData {
         default
     }
 
-    /// Creates a new taffy node for this element with optional layout context.
+    /// Creates a new gummy node for this element with optional layout context.
     pub fn create_layout_node(&mut self, layout_context: Option<LayoutContext>) {
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let style = self.style.to_taffy_style();
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let style = self.style.to_gummy_style();
             let node_id = if let Some(layout_context) = layout_context {
-                taffy_tree.new_leaf_with_context(style, layout_context)
+                gummy_tree.new_leaf_with_context(style, layout_context)
             } else {
-                taffy_tree.new_leaf(style)
+                gummy_tree.new_leaf(style)
             };
-            self.layout.taffy_node_id = Some(node_id);
+            self.layout.gummy_node_id = Some(node_id);
         });
     }
 
@@ -214,8 +214,8 @@ impl ElementData {
     }
 
     /// Computes the scrollbar's tack and thumb layout.
-    pub(crate) fn apply_scroll(&mut self, taffy_layout: &taffy::Layout) {
-        apply_scroll_layout(&self.style, &mut self.layout, taffy_layout);
+    pub(crate) fn apply_scroll(&mut self, gummy_layout: &gummy::Layout) {
+        apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {

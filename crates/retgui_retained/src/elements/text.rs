@@ -11,7 +11,7 @@ use rustc_hash::FxHashMap;
 
 use smol_str::{SmolStr, ToSmolStr};
 
-use taffy::{AvailableSpace, Size};
+use gummy::{AvailableSpace, Size};
 
 use time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
@@ -30,8 +30,8 @@ use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
-use crate::layout::layout_context::{LayoutContext, TaffyTextContext, TextHashKey};
+use crate::layout::GummyTree;
+use crate::layout::layout_context::{LayoutContext, GummyTextContext, TextHashKey};
 use crate::style::{Style, TextAlign};
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
@@ -151,7 +151,7 @@ impl ElementInternals for TextInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -159,9 +159,9 @@ impl ElementInternals for TextInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout.taffy_node_id.unwrap();
-        let result = taffy_tree.get_layout(node);
-        let has_new_layout = taffy_tree.has_new_layout(node);
+        let node = self.element_data.layout.gummy_node_id.unwrap();
+        let result = gummy_tree.get_layout(node);
+        let has_new_layout = gummy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()
@@ -176,7 +176,7 @@ impl ElementInternals for TextInner {
         }
 
         if has_new_layout {
-            taffy_tree.mark_seen(node);
+            gummy_tree.mark_seen(node);
         }
 
         let state: &mut TextState = &mut self.state;
@@ -303,7 +303,7 @@ impl ElementInternals for TextInner {
         self.state.is_render_dirty = true;
         self.mark_dirty();
         self.style_mut().set_text_brush(brush);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 }
 
@@ -320,7 +320,7 @@ impl Text {
         let mut inner_mut = inner.borrow_mut();
 
         inner_mut.element_data.set_accessibility_role(issho::Role::Label);
-        let text_context = Some(LayoutContext::Text(TaffyTextContext {
+        let text_context = Some(LayoutContext::Text(GummyTextContext {
             element: inner_mut.me.clone(),
         }));
         inner_mut.element_data.create_layout_node(text_context);

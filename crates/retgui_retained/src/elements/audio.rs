@@ -16,7 +16,7 @@ use crate::elements::internal_helpers::{apply_generic_container_layout, draw_gen
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Container, Element, ElementInternals, Slider, Text, TinyVg, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, rgb};
@@ -105,7 +105,7 @@ impl ElementInternals for AudioInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -115,7 +115,7 @@ impl ElementInternals for AudioInner {
     ) {
         apply_generic_container_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,

@@ -3,7 +3,7 @@ use std::ops::Range;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
-use crate::app::{TAFFY_TREE, queue_event, request_apply_layout};
+use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::elements::{ElementInternals, TextInputInner};
@@ -17,7 +17,7 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle};
 use retgui_renderer::text_renderer_data::TextRender;
 use parley::{Affinity, ContentWidths, Cursor, Selection};
-use taffy::{AvailableSpace, NodeId};
+use gummy::{AvailableSpace, NodeId};
 use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerUpdate;
 #[cfg(target_arch = "wasm32")]
@@ -26,7 +26,7 @@ use winit::dpi;
 
 #[derive(Clone)]
 pub struct TextInputState {
-    pub(crate) taffy_id: Option<NodeId>,
+    pub(crate) gummy_id: Option<NodeId>,
     origin: Point,
 
     pub is_active: bool,
@@ -34,7 +34,7 @@ pub struct TextInputState {
     pub(crate) ime_state: ImeState,
     pub(crate) editor: PlainEditor,
 
-    cache: HashMap<TextHashKey, taffy::Size<f32>>,
+    cache: HashMap<TextHashKey, gummy::Size<f32>>,
 
     // The current key used for laying out the text input.
     current_layout_key: Option<TextHashKey>,
@@ -68,7 +68,7 @@ impl Default for TextInputState {
         let style_set = editor.edit_styles();
         default_style.add_styles_to_style_set(style_set);
         Self {
-            taffy_id: None,
+            gummy_id: None,
             origin: Default::default(),
             ime_state: ImeState::default(),
             is_active: false,
@@ -125,8 +125,8 @@ impl TextInputState {
             let cursor_pos = self.cursor_pos();
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
-            if let Some(taffy_id) = self.taffy_id {
-                request_apply_layout(taffy_id);
+            if let Some(gummy_id) = self.gummy_id {
+                request_apply_layout(gummy_id);
             }
         }
     }
@@ -167,10 +167,10 @@ impl TextInputState {
 
     pub fn measure(
         &mut self,
-        known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<AvailableSpace>,
+        known_dimensions: gummy::Size<Option<f32>>,
+        available_space: gummy::Size<AvailableSpace>,
         text_context: &mut TextContext,
-    ) -> taffy::Size<f32> {
+    ) -> gummy::Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
 
         self.last_requested_key = Some(key);
@@ -187,20 +187,20 @@ impl TextInputState {
         self.text_render = None;
         self.content_widths = None;
 
-        if let Some(id) = self.taffy_id {
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.mark_dirty(id);
+        if let Some(id) = self.gummy_id {
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.mark_dirty(id);
             })
         }
     }
 
     pub fn layout(
         &mut self,
-        known_dimensions: taffy::Size<Option<f32>>,
-        available_space: taffy::Size<AvailableSpace>,
+        known_dimensions: gummy::Size<Option<f32>>,
+        available_space: gummy::Size<AvailableSpace>,
         text_context: &mut TextContext,
         last_pass: bool,
-    ) -> taffy::Size<f32> {
+    ) -> gummy::Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
 
         if let Some(value) = self.cache.get(&key) {
@@ -237,7 +237,7 @@ impl TextInputState {
             .map(|width| {
                 let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
                 // TODO: Ignored old comment. Does this issue still happen?
-                // Taffy may give a min width > max_width.
+                // Gummy may give a min width > max_width.
                 // Min-width is preserved in this scenario to ensure text is readable.
                 //width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
                 width
@@ -265,7 +265,7 @@ impl TextInputState {
         let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor).0;
         let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor).0;
 
-        let size = taffy::Size {
+        let size = gummy::Size {
             width: logical_width,
             height: logical_height,
         };

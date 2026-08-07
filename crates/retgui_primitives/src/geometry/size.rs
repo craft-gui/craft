@@ -24,17 +24,17 @@ impl<T> Size<T> {
     }
 }
 
-/*impl From<taffy::Size<f32>> for Size<f32> {
-    /// Converts a `taffy::Size<f32>` to a `Size`.
+/*impl From<gummy::Size<f32>> for Size<f32> {
+    /// Converts a `gummy::Size<f32>` to a `Size`.
     ///
     /// # Arguments
     ///
-    /// * `size` - A `taffy::Size<f32>` instance to convert.
+    /// * `size` - A `gummy::Size<f32>` instance to convert.
     ///
     /// # Returns
     ///
     /// A `Size` instance with the same width and height as the input.
-    fn from(size: taffy::Size<f32>) -> Self {
+    fn from(size: gummy::Size<f32>) -> Self {
         Self::new(size.width, size.height)
     }
 }

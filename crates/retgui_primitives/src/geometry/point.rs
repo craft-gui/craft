@@ -9,6 +9,6 @@ pub trait PointConverter {
     /// Convert a winit position into a kurbo::Point
     fn from_physical_pos(pos: PhysicalPosition<f64>) -> Self;
 
-    ///// Convert a taffy::Point into a kurbo::Point
-    //fn from_taffy_point(p: taffy::Point<f32>) -> Self;
+    ///// Convert a gummy::Point into a kurbo::Point
+    //fn from_gummy_point(p: gummy::Point<f32>) -> Self;
 }

@@ -16,7 +16,7 @@ use crate::elements::internal_helpers::{apply_generic_container_layout, draw_gen
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, TextInput, resolve_clip_for_scrollable};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
@@ -84,7 +84,7 @@ impl ElementInternals for CodeEditorInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -94,7 +94,7 @@ impl ElementInternals for CodeEditorInner {
     ) {
         apply_generic_container_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,

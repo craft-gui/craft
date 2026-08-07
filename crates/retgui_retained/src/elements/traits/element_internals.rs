@@ -3,12 +3,12 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use crate::app::{ELEMENTS, FOCUS, TAFFY_TREE};
+use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
@@ -20,7 +20,7 @@ use ui_events::pointer::PointerId;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 ///
-/// Drop is required to clean up any taffy nodes allocated by the element.
+/// Drop is required to clean up any gummy nodes allocated by the element.
 #[allow(drop_bounds)]
 pub trait ElementInternals: ElementData + Any + Drop {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>>;
@@ -47,7 +47,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     #[allow(clippy::too_many_arguments)]
     fn apply_layout_children(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         z_index: &mut u32,
         transform: Affine,
         text_context: &mut TextContext,
@@ -56,7 +56,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ) {
         for child in &self.element_data().children {
             child.borrow_mut().apply_layout(
-                taffy_tree,
+                gummy_tree,
                 self.element_data().layout.computed_box.position,
                 z_index,
                 transform,
@@ -89,24 +89,24 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// A helper to re-apply the style to the layout node when dirty.
-    fn apply_style_to_layout_node_if_dirty(&mut self, taffy_tree: &mut TaffyTree) {
+    fn apply_style_to_layout_node_if_dirty(&mut self, gummy_tree: &mut GummyTree) {
         let element_data = self.element_data_mut();
         if element_data.style.is_dirty {
-            let node_id = element_data.layout.taffy_node_id.unwrap();
-            let style: taffy::Style = element_data.style.to_taffy_style();
-            taffy_tree.set_style(node_id, style);
+            let node_id = element_data.layout.gummy_node_id.unwrap();
+            let style: gummy::Style = element_data.style.to_gummy_style();
+            gummy_tree.set_style(node_id, style);
             element_data.style.is_dirty = false;
         }
     }
 
-    /// Applies the layout results from the [`TaffyTree`].
+    /// Applies the layout results from the [`GummyTree`].
     /// This method retrieves the computed layout for `root_node` and updates the
     /// element’s internal state accordingly. It resolves the element's position,
     /// transform, clipping, borders, and stacking order, producing the final
     /// layout state used for rendering.
     ///
     /// # Parameters
-    /// - `taffy_tree`: The layout tree containing the computed results.
+    /// - `gummy_tree`: The layout tree containing the computed results.
     /// - `root_node`: The node whose layout information should be applied.
     /// - `position`: The absolute position of the element within its parent context.
     /// - `z_index`: A mutable counter used to assign stacking order as elements
@@ -123,7 +123,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     #[allow(clippy::too_many_arguments)]
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -172,7 +172,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         &mut self,
         relative_position: Point,
         scroll_transform: Affine,
-        result: &taffy::Layout,
+        result: &gummy::Layout,
         layout_order: &mut u32,
     ) {
         let position = self.element_data().style.get_position();
@@ -257,20 +257,20 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
-        let id = self.element_data().layout.taffy_node_id;
+        let id = self.element_data().layout.gummy_node_id;
         if let Some(id) = id {
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.mark_dirty(id);
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.mark_dirty(id);
             });
         }
     }
 
-    /// Updates taffy's style to reflect retgui's style struct.
-    fn update_taffy_style(&mut self) {
-        let id = self.element_data().layout.taffy_node_id;
+    /// Updates gummy's style to reflect retgui's style struct.
+    fn update_gummy_style(&mut self) {
+        let id = self.element_data().layout.gummy_node_id;
         if let Some(id) = id {
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.set_style(id, self.element_data().style.to_taffy_style());
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.set_style(id, self.element_data().style.to_gummy_style());
             });
         }
     }
@@ -344,35 +344,35 @@ pub trait ElementInternals: ElementData + Any + Drop {
         // Swap the children.
         self.element_data_mut().children.swap(position_1, position_2);
 
-        // Swap the children's taffy nodes.
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let parent_id = self.element_data().layout.taffy_node_id;
-            let child_1_id = child_1.borrow().element_data().layout.taffy_node_id;
-            let child_2_id = child_2.borrow().element_data().layout.taffy_node_id;
+        // Swap the children's gummy nodes.
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let parent_id = self.element_data().layout.gummy_node_id;
+            let child_1_id = child_1.borrow().element_data().layout.gummy_node_id;
+            let child_2_id = child_2.borrow().element_data().layout.gummy_node_id;
 
             if let Some(parent_id) = parent_id
                 && let Some(child_1_id) = child_1_id
                 && let Some(child_2_id) = child_2_id
             {
-                // There isn't a swap API in the taffy tree. Instead swap the children and call set_children.
-                let mut tchildren = taffy_tree.children(parent_id).to_vec();
+                // There isn't a swap API in the gummy tree. Instead swap the children and call set_children.
+                let mut tchildren = gummy_tree.children(parent_id).to_vec();
 
                 let i1 = tchildren
                     .iter()
                     .position(|x| *x == child_1_id)
                     .ok_or(RetGuiError::ElementNotFound)
-                    .expect("Failed to find taffy child");
+                    .expect("Failed to find gummy child");
                 let i2 = tchildren
                     .iter()
                     .position(|x| *x == child_2_id)
                     .ok_or(RetGuiError::ElementNotFound)
-                    .expect("Failed to find taffy child");
+                    .expect("Failed to find gummy child");
 
                 tchildren.swap(i1, i2);
 
-                taffy_tree.set_children(parent_id, &tchildren);
-                taffy_tree.mark_dirty(parent_id);
-                taffy_tree.request_layout();
+                gummy_tree.set_children(parent_id, &tchildren);
+                gummy_tree.mark_dirty(parent_id);
+                gummy_tree.request_layout();
             }
         });
 
@@ -389,7 +389,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// of this element.
     ///
     /// # Panics
-    /// Panics if the corresponding Taffy layout nodes fail to be removed.
+    /// Panics if the corresponding Gummy layout nodes fail to be removed.
     fn remove_child(
         &mut self,
         child: Rc<RefCell<dyn ElementInternals>>,
@@ -412,15 +412,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
         //child.borrow_mut().element_data_mut().window = None;
         child.borrow_mut().propagate_window_down();
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-            let child_id = child.borrow().element_data().layout.taffy_node_id;
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            let child_id = child.borrow().element_data().layout.gummy_node_id;
 
             if let Some(child_id) = child_id {
-                taffy_tree.unparent_node(child_id);
+                gummy_tree.unparent_node(child_id);
             }
 
-            let parent_id = self.element_data().layout.taffy_node_id;
-            taffy_tree.mark_dirty(parent_id.unwrap());
+            let parent_id = self.element_data().layout.gummy_node_id;
+            gummy_tree.mark_dirty(parent_id.unwrap());
         });
 
         // TODO: Move to document
@@ -453,8 +453,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
         panic!("Pushing children is not supported.")
     }
 
-    /// Called after a node is added to the taffy tree.
-    fn on_post_add_layout_tree(&mut self, _taffy_tree: &mut TaffyTree) {}
+    /// Called after a node is added to the gummy tree.
+    fn on_post_add_layout_tree(&mut self, _gummy_tree: &mut GummyTree) {}
 
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
@@ -675,23 +675,23 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_display(&mut self, display: Display) {
         self.style_mut().set_display(display);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_box_sizing(&mut self, box_sizing: BoxSizing) {
         self.style_mut().set_box_sizing(box_sizing);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_position(&mut self, position: Position) {
         self.style_mut().set_position(position);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_margin(TrblRectangle::new(top, right, bottom, left));
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_margin_all(&mut self, value: Unit) {
@@ -711,7 +711,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_padding(TrblRectangle::new(top, right, bottom, left));
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_padding_all(&mut self, value: Unit) {
@@ -730,7 +730,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_gap(&mut self, column_gap: Unit, row_gap: Unit) {
         self.style_mut().set_gap([column_gap, row_gap]);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_row_gap(&mut self, value: Unit) {
@@ -745,82 +745,82 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_min_width(&mut self, min_width: Unit) {
         self.style_mut().set_min_width(min_width);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_min_height(&mut self, min_height: Unit) {
         self.style_mut().set_min_height(min_height);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_width(&mut self, width: Unit) {
         self.style_mut().set_width(width);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_height(&mut self, height: Unit) {
         self.style_mut().set_height(height);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_max_width(&mut self, max_width: Unit) {
         self.style_mut().set_max_width(max_width);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_max_height(&mut self, max_height: Unit) {
         self.style_mut().set_max_height(max_height);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_wrap(&mut self, wrap: FlexWrap) {
         self.style_mut().set_wrap(wrap);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_align_items(&mut self, align_items: Option<AlignItems>) {
         self.style_mut().set_align_items(align_items);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_justify_content(&mut self, justify_content: Option<JustifyContent>) {
         self.style_mut().set_justify_content(justify_content);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_flex_direction(&mut self, flex_direction: FlexDirection) {
         self.style_mut().set_flex_direction(flex_direction);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_flex_grow(&mut self, flex_grow: f32) {
         self.style_mut().set_flex_grow(flex_grow);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_flex_shrink(&mut self, flex_shrink: f32) {
         self.style_mut().set_flex_shrink(flex_shrink);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_flex_basis(&mut self, flex_basis: Unit) {
         self.style_mut().set_flex_basis(flex_basis);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_font_family(&mut self, font_family: FontFamily) {
         self.style_mut().set_font_family(font_family);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_text_brush(&mut self, brush: Brush) {
         self.style_mut().set_text_brush(brush);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_background_brush(&mut self, brush: Brush) {
@@ -829,37 +829,37 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_font_size(&mut self, font_size: f32) {
         self.style_mut().set_font_size(font_size);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_line_height(&mut self, line_height: f32) {
         self.style_mut().set_line_height(line_height);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_font_weight(&mut self, font_weight: FontWeight) {
         self.style_mut().set_font_weight(font_weight);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_font_style(&mut self, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_text_align(&mut self, text_align: TextAlign) {
         self.style_mut().set_text_align(text_align);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_underline(&mut self, underline: Option<Underline>) {
         self.style_mut().set_underline(underline);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_overflow_x(&mut self, overflow: Overflow) {
@@ -894,7 +894,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_border_width(TrblRectangle::new(top, right, bottom, left));
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_border_width_all(&mut self, value: Unit) {
@@ -913,7 +913,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_border_radius([top, right, bottom, left]);
-        self.update_taffy_style();
+        self.update_gummy_style();
     }
 
     fn set_border_radius_all(&mut self, value: (f32, f32)) {
@@ -1067,9 +1067,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
         if let Some(key) = self.element_data().access_key {
             self.element_data().access_tree.remove_node(key);
         }
-        if let Some(taffy_node) = self.element_data().layout.taffy_node_id {
-            TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                taffy_tree.remove_node(taffy_node);
+        if let Some(gummy_node) = self.element_data().layout.gummy_node_id {
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.remove_node(gummy_node);
             });
         }
         ELEMENTS.with_borrow_mut(|elements| {

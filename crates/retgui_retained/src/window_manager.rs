@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::app::{App, TAFFY_TREE};
+use crate::app::{App, GUMMY_TREE};
 use crate::elements::{ElementData, Window};
 use retgui_renderer::blank_renderer::BlankRenderer;
 use winit::event_loop::ActiveEventLoop;
@@ -47,7 +47,7 @@ impl WindowManager {
         }
     }
 
-    /// Dirties all taffy nodes and redraws each window.
+    /// Dirties all gummy nodes and redraws each window.
     pub(crate) fn dirty_and_redraw_all_windows(&mut self, retgui_app: &mut App) {
         if !retgui_app.active {
             return;
@@ -61,10 +61,10 @@ impl WindowManager {
                     .borrow_mut()
                     .element_data()
                     .layout
-                    .taffy_node_id
+                    .gummy_node_id
                     .unwrap();
-                TAFFY_TREE.with_borrow_mut(|taffy_tree| {
-                    taffy_tree.mark_node_and_leaves_dirty(id);
+                GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                    gummy_tree.mark_node_and_leaves_dirty(id);
                 });
                 winit_window.request_redraw();
             }

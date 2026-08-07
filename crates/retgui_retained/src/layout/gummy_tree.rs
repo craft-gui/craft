@@ -1,23 +1,26 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use retgui_resource_manager::ResourceManager;
-use taffy::{Layout, NodeId, PrintTree, Size, Style};
+use gummy::{Layout, NodeId, Size, Style};
 
 use crate::layout::layout_context::{LayoutContext, measure_content};
 use crate::text::text_context::TextContext;
 
-pub struct TaffyTree {
-    inner: taffy::TaffyTree<LayoutContext>,
+pub struct GummyTree {
+    inner: gummy::GummyTree<LayoutContext>,
+    seen_layouts: HashMap<NodeId, Layout>,
     /// True if at least one node is dirty.
     is_layout_dirty: bool,
     /// True if the layout should be re-applied.
     is_apply_layout_dirty: Vec<NodeId>,
 }
 
-impl TaffyTree {
+impl GummyTree {
     pub(crate) fn new() -> Self {
         Self {
-            inner: taffy::TaffyTree::<LayoutContext>::new(),
+            inner: gummy::GummyTree::<LayoutContext>::new(),
+            seen_layouts: HashMap::new(),
             is_layout_dirty: true,
             is_apply_layout_dirty: Vec::new(),
         }
@@ -82,7 +85,7 @@ impl TaffyTree {
     pub fn compute_layout(
         &mut self,
         node_id: NodeId,
-        available_space: Size<taffy::AvailableSpace>,
+        available_space: Size<gummy::AvailableSpace>,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
@@ -130,6 +133,7 @@ impl TaffyTree {
     /// Remove a specific node from the tree and drop it
     pub fn remove_node(&mut self, node: NodeId) {
         self.inner.remove(node).unwrap();
+        self.seen_layouts.remove(&node);
         self.request_layout();
     }
 
@@ -161,13 +165,14 @@ impl TaffyTree {
 
     #[inline(always)]
     pub fn has_new_layout(&self, node_id: NodeId) -> bool {
-        self.inner.get_has_new_layout(node_id)
+        self.seen_layouts.get(&node_id) != Some(self.get_layout(node_id))
     }
 
     /// Marks the layout of this node as seen
     #[inline]
     pub fn mark_seen(&mut self, node: NodeId) {
-        self.inner.mark_seen(node);
+        let layout = *self.get_layout(node);
+        self.seen_layouts.insert(node, layout);
     }
 
     #[inline(always)]

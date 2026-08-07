@@ -47,14 +47,14 @@ where
     }
 }
 
-/*impl From<taffy::Rect<f32>> for TrblRectangle<f32> {
-    fn from(rect: taffy::Rect<f32>) -> Self {
+/*impl From<gummy::Rect<f32>> for TrblRectangle<f32> {
+    fn from(rect: gummy::Rect<f32>) -> Self {
         TrblRectangle::new(rect.top, rect.right, rect.bottom, rect.left)
     }
 }
 
-impl From<taffy::Rect<f64>> for TrblRectangle<f64> {
-    fn from(rect: taffy::Rect<f64>) -> Self {
+impl From<gummy::Rect<f64>> for TrblRectangle<f64> {
+    fn from(rect: gummy::Rect<f64>) -> Self {
         TrblRectangle::new(rect.top, rect.right, rect.bottom, rect.left)
     }
 }

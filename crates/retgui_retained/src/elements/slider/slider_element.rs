@@ -11,7 +11,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::palette;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
@@ -205,9 +205,9 @@ impl SliderInner {
 
         // TODO: FIX
         /* {
-            let mut taffy_tree = self.element_data.taffy_tree.borrow_mut();
-            let node_id = taffy_tree.new_leaf(me.borrow().style().to_taffy_style());
-            me.borrow_mut().element_data.layout_item.taffy_node_id = Some(node_id);
+            let mut gummy_tree = self.element_data.gummy_tree.borrow_mut();
+            let node_id = gummy_tree.new_leaf(me.borrow().style().to_gummy_style());
+            me.borrow_mut().element_data.layout_item.gummy_node_id = Some(node_id);
         });
 
         ELEMENTS.with_borrow_mut(|elements| {
@@ -355,7 +355,7 @@ impl ElementInternals for SliderInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -363,9 +363,9 @@ impl ElementInternals for SliderInner {
         clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
-        let node = self.element_data.layout.taffy_node_id.unwrap();
-        let layout = taffy_tree.get_layout(node);
-        let has_new_layout = taffy_tree.has_new_layout(node);
+        let node = self.element_data.layout.gummy_node_id.unwrap();
+        let layout = gummy_tree.get_layout(node);
+        let has_new_layout = gummy_tree.has_new_layout(node);
 
         let dirty = has_new_layout
             || transform != self.element_data.layout.get_transform()

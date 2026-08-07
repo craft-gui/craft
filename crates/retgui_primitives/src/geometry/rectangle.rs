@@ -140,8 +140,8 @@ impl Rectangle {
     }
 }
 
-/*impl From<taffy::Rect<f32>> for Rectangle {
-    fn from(rect: taffy::Rect<f32>) -> Self {
+/*impl From<gummy::Rect<f32>> for Rectangle {
+    fn from(rect: gummy::Rect<f32>) -> Self {
         Rectangle {
             x: rect.left,
             y: rect.top,

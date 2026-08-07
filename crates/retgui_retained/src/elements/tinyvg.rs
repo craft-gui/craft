@@ -14,12 +14,12 @@ use tinyvg_rs::color_table::{ColorTable, RgbaF32};
 use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
 use tinyvg_rs::common::Unit;
 
-use crate::app::{PENDING_RESOURCES, TAFFY_TREE};
+use crate::app::{PENDING_RESOURCES, GUMMY_TREE};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
-use crate::layout::TaffyTree;
+use crate::layout::GummyTree;
 use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::rgba;
 use crate::text::text_context::TextContext;
@@ -82,7 +82,7 @@ impl ElementInternals for TinyVgInner {
 
     fn apply_layout(
         &mut self,
-        taffy_tree: &mut TaffyTree,
+        gummy_tree: &mut GummyTree,
         position: Point,
         z_index: &mut u32,
         transform: Affine,
@@ -92,7 +92,7 @@ impl ElementInternals for TinyVgInner {
     ) {
         apply_generic_leaf_layout(
             self,
-            taffy_tree,
+            gummy_tree,
             position,
             z_index,
             transform,
@@ -204,14 +204,14 @@ impl TinyVgInner {
             pending_resources.push_back((resource_id.clone(), ResourceType::TinyVg));
         });
 
-        TAFFY_TREE.with_borrow_mut(|taffy_tree| {
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
             let node = self
                 .element_data
                 .layout
-                .taffy_node_id
+                .gummy_node_id
                 .expect("Failed to get TinyVg node");
-            taffy_tree.set_node_context(node, Some(context));
+            gummy_tree.set_node_context(node, Some(context));
         });
     }
 

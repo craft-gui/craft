@@ -118,7 +118,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
 
     data.layout.scroll_state.set_scroll_y(f32::max(0.0, y));
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
-    request_apply_layout(data.layout.taffy_node_id.unwrap());
+    request_apply_layout(data.layout.gummy_node_id.unwrap());
     queue_event(new_event, EventKind::Scroll());
 }
 
@@ -170,12 +170,12 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 }
 
 /// Computes the scrollbar's tack and thumb layout.
-pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layout: &taffy::Layout) {
+pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, gummy_layout: &gummy::Layout) {
     layout.scrollbar_thumb_margin = style.get_scrollbar_thumb_margin();
     layout.scrollbar_thumb_radius = style.get_scrollbar_thumb_radius();
 
-    layout.scrollbar_size = Size::new(taffy_layout.scrollbar_size.width, taffy_layout.scrollbar_size.height);
-    layout.computed_scrollbar_size = Size::new(taffy_layout.scroll_width(), taffy_layout.scroll_height());
+    layout.scrollbar_size = Size::new(gummy_layout.scrollbar_size.width, gummy_layout.scrollbar_size.height);
+    layout.computed_scrollbar_size = Size::new(gummy_layout.scroll_width(), gummy_layout.scroll_height());
     let state = &mut layout.scroll_state;
 
     if style.get_overflow()[1] != Overflow::Scroll {
@@ -188,7 +188,7 @@ pub(crate) fn apply_scroll_layout(style: &Style, layout: &mut Layout, taffy_layo
     let client_height = box_transformed.padding_rectangle().height;
 
     let mut content_height = layout.content_size.height;
-    // Taffy is adding the top border and padding height to the content size.
+    // Gummy is adding the top border and padding height to the content size.
     content_height -= box_transformed.border.top;
     content_height -= box_transformed.padding.top;
 
@@ -247,7 +247,7 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
     let result = handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event);
 
     if result.request_apply_layout {
-        request_apply_layout(element.element_data().layout.taffy_node_id());
+        request_apply_layout(element.element_data().layout.gummy_node_id());
     }
 
     if result.set_pointer_capture {
