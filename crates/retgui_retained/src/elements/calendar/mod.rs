@@ -2,7 +2,7 @@
 
 use retgui_calendar::sys_locale::get_locale_or_default;
 use retgui_calendar::{DateAddOptions, DateDuration, Locale, Month, Weekday, current_calendar_start, current_month, day_abbreviation, first_day_of_week, format_date_day_number, month_name, year_name};
-use std::any::Any;
+
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -148,14 +148,6 @@ impl ElementInternals for CalendarInner {
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

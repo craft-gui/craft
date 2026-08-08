@@ -1,7 +1,6 @@
 //! Displays an image.
 
 use retgui_primitives::geometry::Rectangle;
-use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -112,13 +111,6 @@ impl ElementInternals for ImageInner {
         _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_id.clone());
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl Image {

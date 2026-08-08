@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::sync::Arc;
 
 use retgui_primitives::Color;
@@ -32,10 +31,6 @@ impl Renderer for BlankRenderer {
 
     fn render_list_mut(&mut self) -> &mut RenderList {
         &mut self.render_list
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn prepare<'a>(&mut self, _resource_manager: Arc<ResourceManager>, _window: Rectangle) {}

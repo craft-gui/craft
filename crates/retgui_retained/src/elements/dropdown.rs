@@ -1,7 +1,6 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
 use retgui_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
-use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -401,13 +400,6 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl Shape {

@@ -2,7 +2,6 @@ pub mod image;
 mod render_context;
 pub mod text;
 
-use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -124,10 +123,6 @@ impl Renderer for VelloHybridRenderer {
 
     fn render_list_mut(&mut self) -> &mut RenderList {
         &mut self.render_list
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn prepare(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle) {

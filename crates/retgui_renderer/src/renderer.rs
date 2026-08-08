@@ -27,8 +27,6 @@ pub trait Renderer: Any {
     fn render_list(&self) -> &RenderList;
     fn render_list_mut(&mut self) -> &mut RenderList;
 
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-
     fn sort_render_list(&mut self) {
         sort_render_list_internal(self.render_list_mut());
     }

@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -669,10 +670,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn as_any(&self) -> &dyn Any;
-
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-
     fn set_display(&mut self, display: Display) {
         self.style_mut().set_display(display);
         self.update_gummy_style();
@@ -1037,8 +1034,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// This will panic if the element does not have a window as its root.
     fn get_winit_window(&self) -> Option<Arc<winit::window::Window>> {
         let root = self.get_root_element().upgrade().unwrap();
-        root.borrow()
-            .as_any()
+        (root.borrow().deref() as &dyn Any)
             .downcast_ref::<WindowInternal>()
             .unwrap()
             .winit_window

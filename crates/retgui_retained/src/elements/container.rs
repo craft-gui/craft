@@ -11,7 +11,7 @@ use crate::text::text_context::TextContext;
 use retgui_primitives::geometry::{Affine, Point, Rectangle};
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
-use std::any::Any;
+
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -121,13 +121,6 @@ impl ElementInternals for ContainerInner {
         push_child_to_element(self, child);
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl Container {

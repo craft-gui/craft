@@ -117,6 +117,8 @@ impl App {
 
     #[cfg(feature = "audio")]
     fn update_audio_ui(&mut self) {
+        use std::any::Any;
+        use std::ops::DerefMut;
         let now = Instant::now();
         if !audio_ui_update_due(self.last_audio_ui_update, now) {
             return;
@@ -129,7 +131,7 @@ impl App {
                     if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
                         let audio = audio.upgrade().unwrap();
                         let mut audio = audio.borrow_mut();
-                        let audio: &mut AudioInner = audio.as_any_mut().downcast_mut().expect("Failed to downcast");
+                        let audio: &mut AudioInner = (audio.deref_mut() as &mut dyn Any).downcast_mut().expect("Failed to downcast");
                         audio.update();
                     }
                 }

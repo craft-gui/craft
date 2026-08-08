@@ -2,6 +2,7 @@
 
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
+use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -173,7 +174,7 @@ impl ElementInternals for RadioInner {
                         if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
                             continue;
                         }
-                        if let Some(radio) = sibling.borrow_mut().as_any_mut().downcast_mut::<RadioInner>() {
+                        if let Some(radio) = (sibling.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>() {
                             radio.set_accessibility_selection();
                         }
                     }
@@ -195,14 +196,6 @@ impl ElementInternals for RadioInner {
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 }
 

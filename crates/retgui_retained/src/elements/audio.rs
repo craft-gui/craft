@@ -1,6 +1,5 @@
 //! Stores one or more elements.
 
-use std::any::Any;
 use std::cell::{OnceCell, Ref, RefCell, RefMut};
 use std::collections::HashSet;
 use std::path::Path;
@@ -152,13 +151,6 @@ impl ElementInternals for AudioInner {
         push_child_to_element(self, child);
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl Audio {

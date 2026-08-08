@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -287,14 +286,6 @@ impl ElementInternals for TextInner {
         self.state.is_render_dirty = true;
         self.mark_dirty();
         self.state.scale_factor = scale_factor;
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn set_text_brush(&mut self, brush: Brush) {

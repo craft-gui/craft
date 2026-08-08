@@ -26,7 +26,6 @@ use crate::style::{Display, Overflow, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
-use crate::utils::cloneable_any::CloneableAny;
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 use winit::event::Ime;
@@ -259,7 +258,7 @@ impl ElementInternals for TextInputInner {
         let focused = self.is_focused();
 
         if let EventKind::ElementMessage(msg) = message
-            && let Some(msg) = msg.as_any().downcast_ref::<TextInputMessage>()
+            && let Some(msg) = (msg as &dyn Any).downcast_ref::<TextInputMessage>()
         {
             match msg {
                 TextInputMessage::Copy => {
@@ -357,13 +356,6 @@ impl ElementInternals for TextInputInner {
         self.mark_dirty();
     }
 
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl TextInputInner {

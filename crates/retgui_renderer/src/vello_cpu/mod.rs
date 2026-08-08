@@ -268,9 +268,6 @@ impl Renderer for VelloCpuRenderer {
         &mut self.render_list
     }
 
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 
     fn prepare(&mut self, resource_manager: Arc<RetGuiResourceManager>, window: Rectangle) {
         self.resources_seen.clear();
