@@ -1,3 +1,16 @@
+use peniko::InterpolationAlphaSpace;
+use peniko::color::ColorSpaceTag;
+
+use retgui_primitives::geometry::{Point, Rectangle};
+use retgui_primitives::gradient::{Extend, GradientKind, HueDirection};
+
+#[cfg(any(
+    feature = "vello_cpu_renderer",
+    feature = "vello_hybrid_renderer",
+    feature = "vello_hybrid_renderer_webgl"
+))]
+use vello_common::paint::PaintType;
+
 #[cfg(any(
     feature = "vello_cpu_renderer",
     feature = "vello_hybrid_renderer",
@@ -5,16 +18,6 @@
 ))]
 use crate::Brush;
 use crate::text_renderer_data::TextRenderLine;
-use retgui_primitives::geometry::{Point, Rectangle};
-use retgui_primitives::gradient::{Extend, GradientKind, HueDirection};
-use peniko::InterpolationAlphaSpace;
-use peniko::color::ColorSpaceTag;
-#[cfg(any(
-    feature = "vello_cpu_renderer",
-    feature = "vello_hybrid_renderer",
-    feature = "vello_hybrid_renderer_webgl"
-))]
-use vello_common::paint::PaintType;
 
 #[cfg(any(
     feature = "vello_cpu_renderer",

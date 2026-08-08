@@ -79,7 +79,9 @@ impl ElementData {
     ) -> Self {
         let access_tree = crate::accessibility::access_tree();
         let (access_key, access_root) = if create_accessibility_node {
-            let key = access_tree.insert_node(issho::AccessNode::new(), None);
+            let mut node = issho::AccessNode::new();
+            node.set_context(me.clone());
+            let key = access_tree.insert_node(node, None);
             (Some(key), Some(key))
         } else {
             (None, None)
@@ -143,6 +145,19 @@ impl ElementData {
         }
     }
 
+    pub(crate) fn set_selectable(&mut self, selectable: bool) {
+        let text_selectable = if selectable {
+            issho::SupportedTextSelection::Single
+        } else {
+            issho::SupportedTextSelection::None
+        };
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_text_supported_text_selection(text_selectable);
+        }
+    }
+
     pub(crate) fn set_accessibility_name(&mut self, name: impl Into<SmolStr>) {
         if let Some(key) = self.access_key {
             self.access_tree.set_name(key, name);
@@ -166,14 +181,6 @@ impl ElementData {
     pub(crate) fn set_accessibility_checked(&mut self, checked: bool) {
         if let Some(key) = self.access_key {
             self.access_tree.set_checked(key, checked);
-        }
-    }
-
-    pub(crate) fn set_accessibility_toggle_action(&mut self, action: impl Fn() + 'static) {
-        if let Some(key) = self.access_key
-            && let Some(mut node) = self.access_tree.get_node_mut(key)
-        {
-            node.set_toggle_action(action);
         }
     }
 

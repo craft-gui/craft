@@ -32,27 +32,26 @@ use retgui_logging::info;
 
 use retgui_resource_manager::ResourceManager;
 
-use retgui_runtime::{RetGuiRuntimeHandle, Receiver, Sender, channel};
+use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 
 use winit::event_loop::EventLoopBuilder;
 #[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
-use crate::retgui_winit_state::RetGuiWinitState;
 use crate::events::EventDispatcher;
+use crate::retgui_winit_state::RetGuiWinitState;
 use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
-
 use crate::app::App;
-use crate::retgui_winit_state::RetGuiState;
 use crate::events::internal::InternalMessage;
+use crate::retgui_winit_state::RetGuiState;
 
 mod accessibility;
-pub mod retgui_winit_state;
 pub mod elements;
 pub mod events;
 pub mod layout;
+pub mod retgui_winit_state;
 pub mod style;
 pub mod text;
 #[cfg(target_arch = "wasm32")]
@@ -62,9 +61,9 @@ pub mod winit {
 }
 
 mod app;
-mod retguicallback;
 mod options;
 mod perf_stats;
+mod retguicallback;
 #[cfg(test)]
 mod tests;
 mod utils;

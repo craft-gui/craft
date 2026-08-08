@@ -5,14 +5,21 @@ use std::rc::{Rc, Weak};
 use ui_events::pointer::{PointerButton, PointerId};
 
 use retgui_primitives::geometry::Point;
+
 use retgui_renderer::renderer::Renderer;
+
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
 use crate::events::{Event, EventKind};
 use crate::text::text_context::TextContext;
 
-pub (super) fn dispatch_event(event: &mut Event, event_kind: &EventKind, targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>, text_context: &mut TextContext) {
+pub(super) fn dispatch_event(
+    event: &mut Event,
+    event_kind: &EventKind,
+    targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
+    text_context: &mut TextContext,
+) {
     // Bubbling
     for current_target in targets.iter() {
         event.current_target = current_target.clone();
@@ -34,7 +41,7 @@ pub (super) fn dispatch_event(event: &mut Event, event_kind: &EventKind, targets
     }
 }
 
-pub (super) fn dispatch_event_once(event: &mut Event, event_kind: &EventKind, text_context: &mut TextContext) {
+pub(super) fn dispatch_event_once(event: &mut Event, event_kind: &EventKind, text_context: &mut TextContext) {
     call_user_event_handlers(event, event_kind);
 
     if !event.prevent_defaults {
@@ -108,43 +115,43 @@ impl EventDispatcher {
     ) {
         match event_kind {
             EventKind::PointerButtonDown(pb)
-            if pb.pointer.is_primary_pointer()
-                && pb.button == Some(PointerButton::Primary) =>
-                {
-                    if let Some(pointer_id) = pb.pointer.pointer_id {
-                        let down_target = dispatched_pointer_up_down_target.unwrap();
-                        self.active_pointer_targets
-                            .insert(pointer_id, Rc::downgrade(&down_target));
-                    }
+                if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
+            {
+                if let Some(pointer_id) = pb.pointer.pointer_id {
+                    let down_target = dispatched_pointer_up_down_target.unwrap();
+                    self.active_pointer_targets
+                        .insert(pointer_id, Rc::downgrade(&down_target));
                 }
+            }
 
             EventKind::PointerButtonUp(pb)
-            if pb.pointer.is_primary_pointer()
-                && pb.button == Some(PointerButton::Primary) =>
+                if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
+            {
+                let pointer_id = pb.pointer.pointer_id.unwrap();
+                if let Some(down_target) = self
+                    .active_pointer_targets
+                    .get(&pointer_id)
+                    .and_then(|target| target.upgrade())
                 {
-                    let pointer_id = pb.pointer.pointer_id.unwrap();
-                    if let Some(down_target) = self.active_pointer_targets.get(&pointer_id).and_then(|target| target.upgrade())
-                    {
-                        let up_target = dispatched_pointer_up_down_target.unwrap();
+                    let up_target = dispatched_pointer_up_down_target.unwrap();
 
-                        let click_target = if target_was_pointer_captured {
-                            Some(up_target.clone())
-                        } else {
-                            nearest_common_ancestor(&down_target, &up_target)
-                        };
+                    let click_target = if target_was_pointer_captured {
+                        Some(up_target.clone())
+                    } else {
+                        nearest_common_ancestor(&down_target, &up_target)
+                    };
 
-                        if let Some(click_target) = click_target
-                        {
-                            let mut click_event = Event::new(click_target.clone());
-                            let click_kind = EventKind::Click();
-                            let click_targets = freeze_target_list(click_target);
+                    if let Some(click_target) = click_target {
+                        let mut click_event = Event::new(click_target.clone());
+                        let click_kind = EventKind::Click();
+                        let click_targets = freeze_target_list(click_target);
 
-                            dispatch_event(&mut click_event, &click_kind, &click_targets, text_context);
-                        }
+                        dispatch_event(&mut click_event, &click_kind, &click_targets, text_context);
                     }
-
-                    self.active_pointer_targets.remove(&pointer_id);
                 }
+
+                self.active_pointer_targets.remove(&pointer_id);
+            }
 
             _ => {}
         }
@@ -252,7 +259,10 @@ impl EventDispatcher {
         let mut system_event = Event::new(targets[0].clone());
         dispatch_event(&mut system_event, event_kind, &mut targets, text_context);
 
-        let dispatched_pointer_up_down_target = if matches!(event_kind, EventKind::PointerButtonUp(_) | EventKind::PointerButtonDown(_)) {
+        let dispatched_pointer_up_down_target = if matches!(
+            event_kind,
+            EventKind::PointerButtonUp(_) | EventKind::PointerButtonDown(_)
+        ) {
             Some(system_event.target.clone())
         } else {
             None
@@ -286,7 +296,12 @@ impl EventDispatcher {
             }
         }
 
-        self.maybe_dispatch_pointer_click(dispatched_pointer_up_down_target, is_pointer_captured, event_kind, text_context);
+        self.maybe_dispatch_pointer_click(
+            dispatched_pointer_up_down_target,
+            is_pointer_captured,
+            event_kind,
+            text_context,
+        );
 
         if event_kind.is_system_pointer_event() {
             self.previous_targets = targets.iter().map(Rc::downgrade).collect();

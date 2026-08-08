@@ -3,6 +3,23 @@ use std::ops::Range;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
+use gummy::{AvailableSpace, NodeId};
+
+use parley::{Affinity, ContentWidths, Cursor, Selection};
+
+use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Point, Rectangle};
+
+use retgui_renderer::text_renderer_data::TextRender;
+
+use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
+use ui_events::pointer::PointerUpdate;
+
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
+
+use winit::dpi;
+
 use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
@@ -13,16 +30,6 @@ use crate::style::{Style, TextStyleProperty};
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
 use crate::text::text_context::TextContext;
 use crate::text::{RangedStyles, text_render_data};
-use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Point, Rectangle};
-use retgui_renderer::text_renderer_data::TextRender;
-use parley::{Affinity, ContentWidths, Cursor, Selection};
-use gummy::{AvailableSpace, NodeId};
-use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::PointerUpdate;
-#[cfg(target_arch = "wasm32")]
-use web_time::{Duration, Instant};
-use winit::dpi;
 
 #[derive(Clone)]
 pub struct TextInputState {

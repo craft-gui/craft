@@ -119,7 +119,7 @@ pub fn month_name(locale: &Locale, month: Month, year: i32) -> String {
 pub fn year_name(locale: &Locale, year: i32) -> String {
     let year_name = cfg_select! {
         windows => Some(windows::year_name(year)),
-        target_vendor =  "apple" => Some(apple::year_name(year)),
+        target_vendor = "apple" => Some(apple::year_name(year)),
         _ => None,
     };
 

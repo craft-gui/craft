@@ -30,15 +30,9 @@ pub enum RendererType {
 impl Default for RendererType {
     fn default() -> Self {
         cfg_select! {
-            feature = "vello_hybrid_renderer" => {
-                RendererType::VelloHybrid
-            },
-            feature = "vello_cpu_renderer" => {
-                RendererType::VelloCPU
-            },
-            _ => {
-                RendererType::Blank
-            }
+            feature = "vello_hybrid_renderer" => RendererType::VelloHybrid,
+            feature = "vello_cpu_renderer" => RendererType::VelloCPU,
+            _ => RendererType::Blank,
         }
     }
 }

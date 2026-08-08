@@ -2,12 +2,15 @@ use std::cell::RefCell;
 use std::rc::Weak;
 use std::sync::Arc;
 
-use crate::elements::{TextInner, TextInputInner};
-use crate::text::text_context::TextContext;
+use gummy::{AvailableSpace, Size};
+
 use retgui_resource_manager::image::ImageResource;
 use retgui_resource_manager::{ResourceId, ResourceManager};
-use gummy::{AvailableSpace, Size};
+
 use tinyvg_rs::TinyVg;
+
+use crate::elements::{TextInner, TextInputInner};
+use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct GummyTextContext {

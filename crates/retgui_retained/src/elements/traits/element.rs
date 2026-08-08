@@ -34,7 +34,10 @@ pub trait Element: Clone + AsElement {
     fn get_parent(&self) -> Result<DynElement, RetGuiError> {
         let parent = self.borrow().parent();
         if let Some(parent) = parent {
-            parent.upgrade().ok_or(RetGuiError::ElementNotFound).map(DynElement::new)
+            parent
+                .upgrade()
+                .ok_or(RetGuiError::ElementNotFound)
+                .map(DynElement::new)
         } else {
             Err(RetGuiError::ElementNotFound)
         }

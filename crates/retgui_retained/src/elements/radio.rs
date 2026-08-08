@@ -6,6 +6,8 @@ use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+use issho::{AccessEvent, IsshoError};
+
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
 
@@ -164,24 +166,7 @@ impl ElementInternals for RadioInner {
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
-            self.active_value.replace(self.value.clone());
-            {
-                self.set_accessibility_selection();
-                let me = self.element_data.me.upgrade();
-                let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
-                if let Some(parent) = parent {
-                    for sibling in parent.borrow().children().to_vec() {
-                        if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
-                            continue;
-                        }
-                        if let Some(radio) = (sibling.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>() {
-                            radio.set_accessibility_selection();
-                        }
-                    }
-                }
-            }
-            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-            queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
+            self.set_value();
         }
     }
 
@@ -197,14 +182,44 @@ impl ElementInternals for RadioInner {
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
     }
+
+    fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
+        if let AccessEvent::Toggle = event {
+            self.set_value();
+        }
+        Ok(())
+    }
 }
 
 impl RadioInner {
+    fn set_value(&mut self) {
+        self.active_value.replace(self.value.clone());
+        self.set_accessibility_selection();
+
+        let me = self.element_data.me.upgrade();
+        let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
+        if let Some(parent) = parent {
+            for sibling in parent.borrow().children().to_vec() {
+                if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
+                    continue;
+                }
+                if let Some(radio) = (sibling.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>() {
+                    radio.set_accessibility_selection();
+                }
+            }
+        }
+
+        let new_event = Event::new(self.element_data.me.upgrade().unwrap());
+        queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
+        self.request_window_redraw();
+    }
+
     fn is_selected(&self) -> bool {
         self.active_value.borrow().as_str() == self.value
     }
 
     fn set_accessibility_selection(&mut self) {
+        self.element_data.set_accessibility_checked(self.is_selected());
         self.element_data
             .set_accessibility_value(if self.is_selected() { "selected" } else { "not selected" });
     }

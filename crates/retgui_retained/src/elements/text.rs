@@ -20,17 +20,20 @@ use ui_events::pointer::PointerButton;
 
 use winit::dpi;
 
-use retgui_renderer::text_renderer_data::TextData;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, Point, Rectangle, Vec2};
+
 use retgui_renderer::renderer::Renderer;
+use retgui_renderer::text_renderer_data::TextData;
+
 use retgui_resource_manager::ResourceManager;
+
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::layout::layout_context::{LayoutContext, GummyTextContext, TextHashKey};
+use crate::layout::layout_context::{GummyTextContext, LayoutContext, TextHashKey};
 use crate::style::{Style, TextAlign};
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data;
@@ -311,6 +314,9 @@ impl Text {
         let mut inner_mut = inner.borrow_mut();
 
         inner_mut.element_data.set_accessibility_role(issho::Role::Label);
+        let selectable = inner_mut.selectable;
+        inner_mut.set_selectable(selectable);
+
         let text_context = Some(LayoutContext::Text(GummyTextContext {
             element: inner_mut.me.clone(),
         }));
@@ -352,6 +358,7 @@ impl TextInner {
 
     pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
+        self.element_data.set_selectable(self.selectable);
         self
     }
 

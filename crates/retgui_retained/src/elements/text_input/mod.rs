@@ -14,6 +14,12 @@ use parley::BoundingBox;
 
 use ui_events::pointer::PointerButton;
 
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
+use winit::event::Ime;
+
 use crate::app::ELEMENTS;
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
@@ -21,14 +27,11 @@ use crate::elements::traits::DeepClone;
 use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::layout::layout_context::{LayoutContext, GummyTextInputContext};
+use crate::layout::layout_context::{GummyTextInputContext, LayoutContext};
 use crate::style::{Display, Overflow, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-use winit::event::Ime;
 
 #[derive(Clone)]
 pub struct TextInput {
@@ -355,7 +358,6 @@ impl ElementInternals for TextInputInner {
         self.state.set_scale_factor(scale_factor);
         self.mark_dirty();
     }
-
 }
 
 impl TextInputInner {

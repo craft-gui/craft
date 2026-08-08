@@ -7,7 +7,7 @@ use std::time::Instant;
 
 use retgui_primitives::geometry::Size;
 
-use retgui_runtime::{RetGuiRuntimeHandle, Job, Receiver, Sender, pop_gui_thread_work, push_gui_thread_work};
+use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
 
 use ui_events::pointer::PointerEvent;
 
@@ -157,8 +157,7 @@ impl ApplicationHandler for RetGuiWinitState {
         self.retgui_state.retgui_app.on_about_to_wait(event_loop);
         self.maybe_exit(event_loop);
 
-        let perf_stats_enabled =
-            WINDOW_MANAGER.with_borrow(|window_manager| window_manager.any_perf_stats_enabled());
+        let perf_stats_enabled = WINDOW_MANAGER.with_borrow(|window_manager| window_manager.any_perf_stats_enabled());
         if perf_stats_enabled {
             event_loop.set_control_flow(ControlFlow::Poll);
         } else {

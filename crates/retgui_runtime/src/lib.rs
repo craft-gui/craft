@@ -26,14 +26,10 @@ pub struct RetGuiRuntimeHandle {
 impl Default for RetGuiRuntime {
     fn default() -> Self {
         cfg_select! {
-            target_arch = "wasm32" => {
-                Self { }
+            target_arch = "wasm32" => Self {},
+            _ => Self {
+                tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
             },
-            _ => {
-                Self {
-                    tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
-                }
-            }
         }
     }
 }
@@ -48,27 +44,19 @@ impl Default for RetGuiRuntime {
 impl RetGuiRuntime {
     pub fn new() -> Self {
         cfg_select! {
-            target_arch = "wasm32" => {
-                Self { }
+            target_arch = "wasm32" => Self {},
+            _ => Self {
+                tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
             },
-            _ => {
-                Self {
-                    tokio_runtime: runtime::LocalRuntime::new().expect("Failed to create tokio runtime."),
-                }
-            }
         }
     }
 
     pub fn handle(&self) -> RetGuiRuntimeHandle {
         cfg_select! {
-            target_arch = "wasm32" => {
-                RetGuiRuntimeHandle { }
+            target_arch = "wasm32" => RetGuiRuntimeHandle {},
+            _ => RetGuiRuntimeHandle {
+                tokio_runtime: self.tokio_runtime.handle().clone(),
             },
-            _ => {
-                RetGuiRuntimeHandle {
-                    tokio_runtime: self.tokio_runtime.handle().clone(),
-                }
-            }
         }
     }
 

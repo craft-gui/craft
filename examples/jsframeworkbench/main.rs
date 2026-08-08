@@ -3,14 +3,15 @@ use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::Rc;
 
+use rand::rng;
+use rand::rngs::ThreadRng;
+use rand::seq::IndexedRandom;
+
 use retgui_retained::elements::{Container, Element, Text, TextInner, Window};
 use retgui_retained::events::Event;
 use retgui_retained::palette::css::WHITE;
 use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
 use retgui_retained::{Color, rgb};
-use rand::rng;
-use rand::rngs::ThreadRng;
-use rand::seq::IndexedRandom;
 
 const ADJECTIVES: &[&str] = &[
     "pretty",

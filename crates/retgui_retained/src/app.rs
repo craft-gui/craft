@@ -15,8 +15,9 @@ use retgui_resource_manager::resource_event::ResourceEvent;
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use retgui_runtime::{RetGuiRuntimeHandle, Sender};
 use gummy::NodeId;
+
+use retgui_runtime::{RetGuiRuntimeHandle, Sender};
 
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerScrollEvent, PointerUpdate};
@@ -131,7 +132,9 @@ impl App {
                     if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
                         let audio = audio.upgrade().unwrap();
                         let mut audio = audio.borrow_mut();
-                        let audio: &mut AudioInner = (audio.deref_mut() as &mut dyn Any).downcast_mut().expect("Failed to downcast");
+                        let audio: &mut AudioInner = (audio.deref_mut() as &mut dyn Any)
+                            .downcast_mut()
+                            .expect("Failed to downcast");
                         audio.update();
                     }
                 }

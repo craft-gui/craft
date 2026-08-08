@@ -517,7 +517,8 @@ impl WindowInternal {
         let layout_stats = self.layout_window(text_context, resource_manager.clone());
 
         let render_stats = self.draw_window(text_context, resource_manager);
-        self.perf_stats.update_stats(frame_start.elapsed(), layout_stats, render_stats);
+        self.perf_stats
+            .update_stats(frame_start.elapsed(), layout_stats, render_stats);
     }
 
     pub(crate) fn on_scale_factor_changed(&mut self, scale_factor: f64) {
@@ -558,13 +559,13 @@ impl WindowInternal {
 
         cfg_select! {
             not(target_arch = "wasm32") => {
-                    let renderer = retgui_app.runtime.borrow_tokio_runtime().block_on(async {
-                        let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(winit_window.clone()).await;
+                let renderer = retgui_app.runtime.borrow_tokio_runtime().block_on(async {
+                    let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(winit_window.clone()).await;
                     renderer
                 });
                 self.renderer = renderer;
                 info!("Created renderer")
-            },
+            }
             _ => {
                 let window_copy_2 = winit_window.clone();
                 retgui_app.runtime.spawn(async move {

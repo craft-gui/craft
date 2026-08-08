@@ -1,8 +1,12 @@
-use crate::image::ImageResource;
-use retgui_logging::info;
-use image::EncodableLayout;
 use std::any::Any;
+
+use image::EncodableLayout;
+
+use retgui_logging::info;
+
 use tinyvg_rs::TinyVg;
+
+use crate::image::ImageResource;
 
 pub fn image_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send> {
     info!("Image downloaded");

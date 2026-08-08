@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
+
 use retgui_resource_manager::ResourceId;
+
+use retgui_primitives::brush::Brush;
 
 use crate::elements::{AsElement, CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
 use crate::{Color, pct, px, rgb};
-use retgui_primitives::brush::Brush;
-use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 
 struct StyledText {
     pub text: String,

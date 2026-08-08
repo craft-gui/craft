@@ -37,10 +37,7 @@ pub(super) fn nearest_common_ancestor(
     for b_target in b_targets {
         let b_id = b_target.borrow().id();
 
-        if a_targets
-            .iter()
-            .any(|a_target| a_target.borrow().id() == b_id)
-        {
+        if a_targets.iter().any(|a_target| a_target.borrow().id() == b_id) {
             return Some(b_target);
         }
     }

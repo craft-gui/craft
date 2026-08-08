@@ -1,18 +1,20 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 #[cfg(not(target_arch = "wasm32"))]
-use std::time;
-use time::{Duration, Instant};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
+use std::time::{Duration, Instant};
 
-use peniko::Color;
 use gummy::AvailableSpace;
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Rectangle, Size};
+
 use retgui_renderer::renderer::Renderer;
 use retgui_renderer::text_renderer_data::TextData;
+
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
+
+use crate::Color;
 use crate::elements::{ElementInternals, Text};
 use crate::text::text_context::TextContext;
 
@@ -145,12 +147,7 @@ impl PerfStats {
         self.render = render;
     }
 
-    pub(crate) fn draw(
-        &mut self,
-        renderer: &mut dyn Renderer,
-        text_context: &mut TextContext,
-        scale_factor: f64,
-    ) {
+    pub(crate) fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
         if !self.enabled {
             return;
         }

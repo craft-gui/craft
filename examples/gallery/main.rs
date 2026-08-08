@@ -7,7 +7,8 @@ use retgui_retained::elements::Audio;
 use retgui_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui_retained::geometry::Point;
 use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
-use retgui_retained::{Color, ColorStop, RetGuiOptions, Gradient, ResourceId, retgui_main, pct, px, rgb, rgba};
+use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
+
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {

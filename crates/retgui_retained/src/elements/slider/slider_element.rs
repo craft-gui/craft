@@ -1,9 +1,17 @@
+use peniko::Color;
 use retgui_primitives::geometry::{Affine, Point, Rectangle};
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use peniko::Color;
+use retgui_primitives::brush::Brush;
+use retgui_primitives::gradient::Gradient;
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
+use ui_events::keyboard::{Code, KeyState};
 
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
@@ -14,11 +22,6 @@ use crate::layout::GummyTree;
 use crate::palette;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
-use retgui_primitives::brush::Brush;
-use retgui_primitives::gradient::Gradient;
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-use ui_events::keyboard::{Code, KeyState};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum SliderDirection {
@@ -487,5 +490,4 @@ impl ElementInternals for SliderInner {
             rect.contains(&point)
         }
     }
-
 }

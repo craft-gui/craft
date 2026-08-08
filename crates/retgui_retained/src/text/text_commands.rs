@@ -1,7 +1,8 @@
 use std::ops::Range;
 
-use retgui_undo::Command;
 use parley::{Affinity, Selection};
+
+use retgui_undo::Command;
 
 #[derive(Clone)]
 pub struct TextInsertion {

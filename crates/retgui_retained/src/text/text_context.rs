@@ -1,5 +1,6 @@
-use retgui_primitives::brush::Brush;
 use parley::{FontContext, TextStyle, TreeBuilder};
+
+use retgui_primitives::brush::Brush;
 
 pub struct TextContext {
     pub font_context: FontContext,

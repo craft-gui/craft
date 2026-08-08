@@ -1,14 +1,18 @@
-mod box_shadow;
-mod styles;
-mod gummy_conversions;
-
-pub use box_shadow::BoxShadow;
-use retgui_primitives::brush::Brush;
-use parley::GenericFamily;
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
+
+use parley::GenericFamily;
+
+use retgui_primitives::brush::Brush;
+
+
 pub use styles::*;
+pub use box_shadow::BoxShadow;
+
+mod box_shadow;
+mod gummy_conversions;
+mod styles;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Unit {

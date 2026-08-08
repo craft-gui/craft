@@ -1,16 +1,31 @@
+use issho::IsshoError;
+use std::cell::RefCell;
+use std::rc::Weak;
 use std::sync::Arc;
-
 use winit::window::Window;
 
 use crate::elements::ElementInternals;
 
-pub(crate) type RetGuiAccessTree = issho::AccessTree<Arc<Window>>;
+pub type RetGuiAccessTree = issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>;
 
 thread_local! {
     static ACCESS_TREE: RetGuiAccessTree = {
         let tree = RetGuiAccessTree::new();
         tree.set_framework_name("RetGui");
         tree.set_native_platform();
+        tree.set_on_access_event(|tree, node_id, event| -> Result<(), IsshoError> {
+            let element = {
+                let Some(node) = tree.get_node(node_id) else {
+                    return Err(IsshoError::MissingAccessNode(node_id));
+                };
+                let Some(context) = node.context() else {
+                    return Err(IsshoError::MissingAccessNode(node_id));
+                };
+                context.upgrade().unwrap()
+            };
+
+            element.borrow_mut().on_access_event(event)
+        });
         tree
     };
 }

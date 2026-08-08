@@ -1,5 +1,22 @@
 //! A toggleable checkbox.
 
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
+
+use issho::{AccessEvent, IsshoError};
+
+use peniko::kurbo;
+
+use retgui_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+
+use retgui_renderer::Brush;
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
+use ui_events::keyboard::{Code, KeyState};
+
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
@@ -10,15 +27,6 @@ use crate::layout::GummyTree;
 use crate::style::{Overflow, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
-use retgui_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
-use retgui_renderer::Brush;
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-use peniko::kurbo;
-
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Checkbox {
@@ -170,6 +178,13 @@ impl ElementInternals for CheckboxInner {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.toggle();
+            self.focus();
+        } else if self.is_focused()
+            && let EventKind::KeyboardInputEvent(key) = message
+            && key.code == Code::Space
+            && key.state == KeyState::Down
+        {
+            self.toggle();
         }
     }
 
@@ -186,6 +201,12 @@ impl ElementInternals for CheckboxInner {
         push_child_to_element(self, child);
     }
 
+    fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
+        if let AccessEvent::Toggle = event {
+            self.toggle();
+        }
+        Ok(())
+    }
 }
 
 impl Checkbox {
@@ -221,12 +242,6 @@ impl Checkbox {
             inner_mut.element_data.set_accessibility_role(issho::Role::CheckBox);
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.element_data.set_accessibility_checked(checked);
-            let inner = Rc::downgrade(&inner);
-            inner_mut.element_data.set_accessibility_toggle_action(move || {
-                if let Some(inner) = inner.upgrade() {
-                    inner.borrow_mut().toggle();
-                }
-            });
         }
 
         drop(inner_mut);
@@ -250,6 +265,7 @@ impl CheckboxInner {
                 status: self.checked,
             }),
         );
+        self.request_window_redraw();
     }
 }
 

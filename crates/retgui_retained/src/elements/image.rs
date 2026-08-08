@@ -7,7 +7,13 @@ use std::sync::Arc;
 
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use crate::app::{PENDING_RESOURCES, GUMMY_TREE};
+use retgui_primitives::geometry::{Affine, Point};
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::resource_type::ResourceType;
+
+use crate::app::{GUMMY_TREE, PENDING_RESOURCES};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::DeepClone;
@@ -15,9 +21,6 @@ use crate::elements::{AsElement, Element, ElementInternals};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
-use retgui_primitives::geometry::{Affine, Point};
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::resource_type::ResourceType;
 
 /// Displays an image.
 #[derive(Clone)]
@@ -110,7 +113,6 @@ impl ElementInternals for ImageInner {
 
         _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_id.clone());
     }
-
 }
 
 impl Image {

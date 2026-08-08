@@ -4,6 +4,17 @@ use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+use issho::{AccessEvent, IsshoError};
+
+use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
+use ui_events::pointer::PointerId;
+
 use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
@@ -13,11 +24,6 @@ use crate::layout::GummyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
-use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-use ui_events::pointer::PointerId;
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 ///
@@ -526,7 +532,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn on_click(&mut self, on_click: ClickHandler) {
         self.element_data_mut().on_click.push(on_click);
     }
-    
+
     fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
         self.element_data_mut().on_pointer_moved.push(on_pointer_moved);
     }
@@ -1086,6 +1092,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
             return;
         };
         winit_window.request_redraw();
+    }
+
+    fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {
+        Ok(())
     }
 }
 

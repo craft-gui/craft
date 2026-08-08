@@ -4,14 +4,16 @@ extern crate libtest_mimic_collect;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use image::RgbImage;
+
+use libtest_mimic_collect::TestCollection;
+use libtest_mimic_collect::libtest_mimic::Arguments;
+
 use retgui_renderer::RendererType;
 use retgui_retained::elements::{Container, Element, Text, Window};
 use retgui_retained::events::ui_events::pointer::PointerButton;
 use retgui_retained::style::{AlignItems, FlexDirection, JustifyContent};
 use retgui_retained::{Color, RetGuiCallback, RetGuiOptions, pct, px, rgb};
-use image::RgbImage;
-use libtest_mimic_collect::TestCollection;
-use libtest_mimic_collect::libtest_mimic::Arguments;
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);

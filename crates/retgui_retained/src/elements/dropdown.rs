@@ -399,7 +399,6 @@ impl ElementInternals for DropdownInner {
             rect.contains(&point)
         }
     }
-
 }
 
 impl Shape {

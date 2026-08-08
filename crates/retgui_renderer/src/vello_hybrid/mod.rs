@@ -6,18 +6,29 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use kurbo::{Affine, Stroke};
+
 use peniko::kurbo::Shape;
 use peniko::{BlendMode, Compose, Fill, Mix};
+
+use retgui_primitives::Color;
+use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Rectangle, TOLERANCE};
+
+use retgui_resource_manager::ResourceManager;
 
 use vello_common::filter_effects::{Filter, FilterFunction};
 use vello_common::paint::ImageId;
 use vello_common::{kurbo, peniko};
+
 use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
 use winit::window::Window;
 
 use wgpu::{CommandEncoder, CurrentSurfaceTexture, TextureFormat};
 
+use crate::vello_hybrid::text::draw_text;
+use crate::vello_hybrid::image::{draw_image, upload_image};
+use crate::vello_hybrid::render_context::{RenderContext, RenderSurface, create_vello_renderer};
 use crate::RenderCommand;
 use crate::helpers::brush_to_paint;
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
@@ -25,13 +36,6 @@ use crate::render_list::RenderList;
 use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::sort_commands::SortedCommands;
-use retgui_primitives::Color;
-use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Rectangle, TOLERANCE};
-use retgui_resource_manager::ResourceManager;
-use image::{draw_image, upload_image};
-use render_context::{RenderContext, RenderSurface, create_vello_renderer};
-use text::draw_text;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window

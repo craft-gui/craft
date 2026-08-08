@@ -1,8 +1,9 @@
-use retgui_primitives::geometry::borders::CssRoundedRect;
+;use retgui_primitives::geometry::borders::CssRoundedRect;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle, Vec2};
-use retgui_renderer::renderer::Renderer;
-use peniko::Color;
 
+use retgui_renderer::renderer::Renderer;
+
+use crate::Color;
 use crate::elements::slider::slider_element::SliderDirection;
 use crate::elements::{ElementInternals, SliderInner};
 use crate::layout::layout::{CssComputedBorder, draw_borders_generic};

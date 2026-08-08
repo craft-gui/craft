@@ -3,7 +3,8 @@ use std::rc::Rc;
 
 use retgui_retained::elements::{Container, Element, Text, Window};
 use retgui_retained::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
-use retgui_retained::{Color, RetGuiOptions, retgui_main, pct, px, rgb, rgba};
+use retgui_retained::{Color, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
+
 use util::setup_logging;
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {

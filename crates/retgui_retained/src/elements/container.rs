@@ -120,7 +120,6 @@ impl ElementInternals for ContainerInner {
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
     }
-
 }
 
 impl Container {

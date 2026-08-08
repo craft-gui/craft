@@ -28,7 +28,10 @@ pub trait Element: Clone + AsElement {
     fn get_parent(&self) -> Result<DynElement, RetGuiError> {
         let parent = self.borrow().parent();
         if let Some(parent) = parent {
-            parent.upgrade().ok_or(RetGuiError::ElementNotFound).map(DynElement::new)
+            parent
+                .upgrade()
+                .ok_or(RetGuiError::ElementNotFound)
+                .map(DynElement::new)
         } else {
             Err(RetGuiError::ElementNotFound)
         }
@@ -93,7 +96,7 @@ pub trait Element: Clone + AsElement {
         self.borrow_mut().on_click(on_click);
         self
     }
-    
+
     fn on_pointer_moved(self, on_pointer_moved: PointerUpdateHandler) -> Self {
         self.borrow_mut().on_pointer_moved(on_pointer_moved);
         self

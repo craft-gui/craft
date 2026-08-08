@@ -2214,7 +2214,7 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "issho"
 version = "0.1.0"
-source = "git+https://github.com/RetGui/issho.git?rev=4284448de2048417a8805fb346bd488ddae433e9#4284448de2048417a8805fb346bd488ddae433e9"
+source = "git+https://github.com/RetGui/issho.git?rev=330b1098bc96f0e1f3de4eb0d31f0061c84a3cde#330b1098bc96f0e1f3de4eb0d31f0061c84a3cde"
 dependencies = [
  "hashbrown 0.17.1",
  "log",

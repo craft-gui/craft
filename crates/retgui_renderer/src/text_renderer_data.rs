@@ -1,6 +1,7 @@
+use peniko::kurbo::{Affine, Line};
+
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::Rectangle;
-use peniko::kurbo::{Affine, Line};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TextScroll {

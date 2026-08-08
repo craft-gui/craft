@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use retgui_resource_manager::ResourceManager;
 use gummy::{Layout, NodeId, Size, Style};
+
+use retgui_resource_manager::ResourceManager;
 
 use crate::layout::layout_context::{LayoutContext, measure_content};
 use crate::text::text_context::TextContext;

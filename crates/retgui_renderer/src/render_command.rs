@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Weak;
 
+use retgui_primitives::Color;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Vec2};
-use peniko::Color;
 
 use retgui_resource_manager::ResourceId;
 

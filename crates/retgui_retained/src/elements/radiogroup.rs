@@ -119,7 +119,6 @@ impl ElementInternals for RadioGroupInner {
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
     }
-
 }
 
 impl RadioGroup {

@@ -7,6 +7,8 @@ use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
+use image::{draw_image, upload_image};
+
 use peniko::kurbo::{Affine, Shape};
 use peniko::{BlendMode, Color, Compose, Fill, Mix, kurbo};
 
@@ -19,6 +21,13 @@ use vello_cpu::{Pixmap, RenderContext, Resources};
 
 use winit::window::Window;
 
+use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Rectangle, TOLERANCE};
+
+use retgui_resource_manager::ResourceManager as RetGuiResourceManager;
+
+use text::draw_text;
+
 use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
@@ -27,11 +36,6 @@ use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::screenshot::Screenshot;
 use crate::sort_commands::SortedCommands;
-use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Rectangle, TOLERANCE};
-use retgui_resource_manager::ResourceManager as RetGuiResourceManager;
-use image::{draw_image, upload_image};
-use text::draw_text;
 
 pub(crate) struct VelloCpuRenderer {
     scene: RenderContext,
@@ -267,7 +271,6 @@ impl Renderer for VelloCpuRenderer {
     fn render_list_mut(&mut self) -> &mut RenderList {
         &mut self.render_list
     }
-
 
     fn prepare(&mut self, resource_manager: Arc<RetGuiResourceManager>, window: Rectangle) {
         self.resources_seen.clear();
