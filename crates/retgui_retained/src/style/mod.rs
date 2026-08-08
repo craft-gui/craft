@@ -6,9 +6,8 @@ use parley::GenericFamily;
 
 use retgui_primitives::brush::Brush;
 
-
-pub use styles::*;
 pub use box_shadow::BoxShadow;
+pub use styles::*;
 
 mod box_shadow;
 mod gummy_conversions;

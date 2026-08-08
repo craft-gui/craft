@@ -1,4 +1,4 @@
-;use retgui_primitives::geometry::borders::CssRoundedRect;
+use retgui_primitives::geometry::borders::CssRoundedRect;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle, Vec2};
 
 use retgui_renderer::renderer::Renderer;

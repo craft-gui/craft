@@ -6,8 +6,8 @@ use std::path::Path;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use retgui_primitives::geometry::{Affine, Point, Rectangle};
 use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::{Affine, Point, Rectangle};
 
 use retgui_renderer::renderer::Renderer;
 
