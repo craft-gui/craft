@@ -347,7 +347,6 @@ pub fn main() {
         .height(pct(100));
 
     let wrapper = Container::new()
-        .push(radio_buttons())
         .display(Display::Flex)
         .wrap(FlexWrap::Wrap)
         .padding_all(px(10.0))
@@ -365,6 +364,7 @@ pub fn main() {
         .push(gradient())
         .push(box_shadows())
         .push(sliders())
+        .push(radio_buttons())
         .push(checkbox())
         .push(scrollable())
         .push(multiple_windows());
