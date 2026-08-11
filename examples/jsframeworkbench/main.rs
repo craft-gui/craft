@@ -7,7 +7,7 @@ use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 
-use retgui_retained::elements::{Container, Element, Text, TextInner, Window};
+use retgui_retained::elements::{Button, Container, Element, Text, TextInner, Window};
 use retgui_retained::events::Event;
 use retgui_retained::palette::css::WHITE;
 use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
@@ -359,11 +359,11 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
         .push(btn_swap)
 }
 
-fn build_button<F>(label: &str, callback: F) -> Container
+fn build_button<F>(label: &str, callback: F) -> Button
 where
     F: Fn(&mut Event) + 'static,
 {
-    Container::new()
+    Button::new()
         .background_color(Color::from_rgb8(211, 211, 211))
         .border_color_all(Color::from_rgb8(111, 111, 111))
         .flex_direction(FlexDirection::Row)
