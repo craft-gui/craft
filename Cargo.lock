@@ -2214,14 +2214,14 @@ checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 [[package]]
 name = "issho"
 version = "0.1.0"
-source = "git+https://github.com/RetGui/issho.git?rev=330b1098bc96f0e1f3de4eb0d31f0061c84a3cde#330b1098bc96f0e1f3de4eb0d31f0061c84a3cde"
+source = "git+https://github.com/RetGui/issho.git?rev=f5decc64534ee8b8a00d81c2640387610a9f3875#f5decc64534ee8b8a00d81c2640387610a9f3875"
 dependencies = [
  "hashbrown 0.17.1",
  "log",
  "raw-window-handle",
  "slotmap",
+ "smallvec",
  "smol_str 0.3.6",
- "smolvec",
  "windows 0.62.2",
  "windows-core 0.62.2",
 ]
@@ -4657,9 +4657,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.15.1"
+version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "smithay-client-toolkit"
@@ -4704,12 +4704,6 @@ dependencies = [
  "borsh",
  "serde_core",
 ]
-
-[[package]]
-name = "smolvec"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b43855ed42c16647e6f7d19fdef4b020529c822f77a5ab417eb2278e11756da7"
 
 [[package]]
 name = "socket2"

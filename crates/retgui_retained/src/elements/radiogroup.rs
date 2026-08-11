@@ -8,6 +8,7 @@ use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::style::Overflow;
 use crate::text::text_context::TextContext;
+use issho::{SelectionData, SelectionGroup};
 use retgui_primitives::geometry::{Affine, Point, Rectangle};
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
@@ -122,7 +123,7 @@ impl ElementInternals for RadioGroupInner {
 }
 
 impl RadioGroup {
-    pub fn new(_label: &str) -> Self {
+    pub fn new(label: &str) -> Self {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<RadioGroupInner>>| {
             RefCell::new(RadioGroupInner {
                 element_data: ElementData::new(me.clone(), true),
@@ -132,7 +133,13 @@ impl RadioGroup {
         inner_mut.element_data.create_layout_node(None);
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::Group);
-            inner_mut.element_data.set_accessibility_name(_label.to_string());
+            inner_mut.element_data.set_accessibility_name(label.to_string());
+            inner_mut
+                .element_data
+                .set_accessibility_selection_data(Some(SelectionData::SelectionGroup(SelectionGroup {
+                    is_mandatory: true,
+                    multiple_selectable: false,
+                })));
         }
         drop(inner_mut);
         Self { inner }

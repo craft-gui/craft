@@ -1,4 +1,4 @@
-//! A toggleable circle.
+//! A selectable circle.
 
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
@@ -6,7 +6,7 @@ use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
-use issho::{AccessEvent, IsshoError};
+use issho::{AccessEvent, IsshoError, SelectionData, SelectionGroupItem};
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
@@ -184,7 +184,7 @@ impl ElementInternals for RadioInner {
     }
 
     fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
-        if let AccessEvent::Toggle = event {
+        if matches!(event, AccessEvent::Select | AccessEvent::AddToSelection) && !self.is_selected() {
             self.set_value();
         }
         Ok(())
@@ -208,7 +208,6 @@ impl RadioInner {
                 }
             }
         }
-
         let new_event = Event::new(self.element_data.me.upgrade().unwrap());
         queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
         self.request_window_redraw();
@@ -219,9 +218,11 @@ impl RadioInner {
     }
 
     fn set_accessibility_selection(&mut self) {
-        self.element_data.set_accessibility_checked(self.is_selected());
+        let is_selected = self.is_selected();
         self.element_data
-            .set_accessibility_value(if self.is_selected() { "selected" } else { "not selected" });
+            .set_accessibility_selection_data(Some(SelectionData::SelectionGroupItem(SelectionGroupItem {
+                is_selected,
+            })));
     }
 }
 
@@ -281,5 +282,105 @@ impl Radio {
 
     pub fn get_value(&self) -> String {
         self.inner.borrow().value.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    use issho::{AccessEvent, SelectionData};
+
+    use super::Radio;
+    use crate::app::dequeue_event;
+    use crate::elements::{ElementData as _, ElementInternals as _, RadioGroup};
+
+    #[test]
+    fn radio_group_and_items_retain_selection_state() {
+        let active_value = Rc::new(RefCell::new("first".to_string()));
+        let group = RadioGroup::new("Choices");
+        let first = Radio::new("first", "First", active_value.clone());
+        let second = Radio::new("second", "Second", active_value.clone());
+
+        group.inner.borrow_mut().push(first.inner.clone());
+        group.inner.borrow_mut().push(second.inner.clone());
+
+        let (tree, group_key) = {
+            let group = group.inner.borrow();
+            let data = group.element_data();
+            (data.access_tree.clone(), data.access_key.unwrap())
+        };
+        let first_key = first.inner.borrow().element_data().access_key.unwrap();
+        let second_key = second.inner.borrow().element_data().access_key.unwrap();
+
+        {
+            let group = tree.get_node(group_key).unwrap();
+            let Some(SelectionData::SelectionGroup(selection)) = group.selection_data() else {
+                panic!("radio group was not exposed as a selection group");
+            };
+            assert!(selection.is_mandatory);
+            assert!(!selection.multiple_selectable);
+        }
+        assert_eq!(tree.get_parent(first_key), Some(group_key));
+        assert_eq!(tree.get_parent(second_key), Some(group_key));
+        assert!(selection_item_state(&tree, first_key));
+        assert!(!selection_item_state(&tree, second_key));
+        assert!(!tree.get_node(first_key).unwrap().checked());
+        assert_eq!(tree.get_node(first_key).unwrap().value(), "");
+
+        assert!(tree.dispatch_access_event(second_key, AccessEvent::Select).is_ok());
+
+        assert_eq!(active_value.borrow().as_str(), "second");
+        assert!(!selection_item_state(&tree, first_key));
+        assert!(selection_item_state(&tree, second_key));
+        assert!(!tree.get_node(second_key).unwrap().checked());
+        assert_eq!(tree.get_node(second_key).unwrap().value(), "");
+
+        while dequeue_event().is_some() {}
+    }
+
+    #[test]
+    fn radio_accessibility_uses_selection_actions_instead_of_toggle() {
+        while dequeue_event().is_some() {}
+
+        let active_value = Rc::new(RefCell::new("second".to_string()));
+        let group = RadioGroup::new("Choices");
+        let first = Radio::new("first", "First", active_value.clone());
+        let second = Radio::new("second", "Second", active_value.clone());
+        group.inner.borrow_mut().push(first.inner.clone());
+        group.inner.borrow_mut().push(second.inner.clone());
+        let tree = first.inner.borrow().element_data().access_tree.clone();
+        let first_key = first.inner.borrow().element_data().access_key.unwrap();
+        let second_key = second.inner.borrow().element_data().access_key.unwrap();
+
+        assert!(tree.dispatch_access_event(second_key, AccessEvent::Select).is_ok());
+        assert!(dequeue_event().is_none());
+
+        assert!(tree.dispatch_access_event(first_key, AccessEvent::Toggle).is_ok());
+        assert_eq!(active_value.borrow().as_str(), "second");
+        assert!(dequeue_event().is_none());
+
+        assert!(
+            tree.dispatch_access_event(first_key, AccessEvent::AddToSelection)
+                .is_ok()
+        );
+        assert_eq!(active_value.borrow().as_str(), "first");
+        assert!(dequeue_event().is_some());
+        while dequeue_event().is_some() {}
+
+        assert!(tree.dispatch_access_event(first_key, AccessEvent::UnSelect).is_ok());
+        assert_eq!(active_value.borrow().as_str(), "first");
+        assert!(dequeue_event().is_none());
+
+        while dequeue_event().is_some() {}
+    }
+
+    fn selection_item_state(tree: &crate::accessibility::RetGuiAccessTree, key: issho::AccessKey) -> bool {
+        let node = tree.get_node(key).unwrap();
+        let Some(SelectionData::SelectionGroupItem(item)) = node.selection_data() else {
+            panic!("radio was not exposed as a selection group item");
+        };
+        item.is_selected
     }
 }

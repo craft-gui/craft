@@ -184,6 +184,14 @@ impl ElementData {
         }
     }
 
+    pub(crate) fn set_accessibility_selection_data(&mut self, selection_data: Option<issho::SelectionData>) {
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+        {
+            node.set_selection_data(selection_data);
+        }
+    }
+
     /// Applies the element's resolved padding box to its retained accessibility node.
     pub(crate) fn set_accessibility_bounds_from_layout(&mut self, scale_factor: f64) {
         self.access_scale_factor = scale_factor;
