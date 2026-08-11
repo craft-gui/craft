@@ -57,7 +57,7 @@ pub struct VelloHybridRenderer {
     context: RenderContext,
 
     // An array of renderers, one per wgpu device
-    renderers: Vec<Option<VelloRenderer>>,
+    renderers: Vec<Option<(VelloRenderer, Resources)>>,
 
     // State for our example where we store the winit Window and the wgpu Surface
     state: RenderState,
@@ -68,7 +68,6 @@ pub struct VelloHybridRenderer {
     scene: Scene,
     surface_clear_color: Color,
 
-    resources: Resources,
     resource_mapper: ResourceMapper,
     resources_seen: HashSet<RendererResourceId>,
 
@@ -156,7 +155,7 @@ impl Renderer for VelloHybridRenderer {
             },
         );
 
-        let renderer = self.renderers[surface.dev_id].as_mut().unwrap();
+        let (renderer, resources) = self.renderers[surface.dev_id].as_mut().unwrap();
         let device_handle = &self.context.devices[surface.dev_id];
         let mut encoder = device_handle
             .device
@@ -176,7 +175,7 @@ impl Renderer for VelloHybridRenderer {
                         cmd,
                         resource_manager.clone(),
                         &mut self.resource_mapper,
-                        &mut self.resources,
+                        resources,
                         renderer,
                         &mut encoder,
                         device_handle,
@@ -190,7 +189,7 @@ impl Renderer for VelloHybridRenderer {
                     }
                 }
                 RenderCommand::DrawText(cmd) => {
-                    draw_text(cmd, &mut self.scene, &mut self.resources, &window);
+                    draw_text(cmd, &mut self.scene, resources, &window);
                 }
                 RenderCommand::PushLayer(cmd) => {
                     push_layer(cmd, &mut self.scene);
@@ -214,7 +213,7 @@ impl Renderer for VelloHybridRenderer {
             &mut self.resources_seen,
             renderer,
             &mut encoder,
-            &mut self.resources,
+            resources,
             &mut self.resource_mapper,
         );
 
@@ -269,12 +268,11 @@ impl Renderer for VelloHybridRenderer {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderers[surface.dev_id]
-            .as_mut()
-            .unwrap()
+        let (renderer, resources) = self.renderers[surface.dev_id].as_mut().unwrap();
+        renderer
             .render(
                 &self.scene,
-                &mut self.resources,
+                resources,
                 &device_handle.device,
                 &device_handle.queue,
                 &mut encoder,
@@ -307,7 +305,6 @@ impl VelloHybridRenderer {
             state: RenderState::Suspended,
             scene: Scene::new(width as u16, height as u16),
             surface_clear_color: Color::WHITE,
-            resources: Resources::new(),
             resource_mapper: ResourceMapper::new(),
             resources_seen: HashSet::with_capacity(20),
             window: window.clone(),

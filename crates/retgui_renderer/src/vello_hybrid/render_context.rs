@@ -1,4 +1,4 @@
-use vello_hybrid::{RenderTargetConfig, Renderer};
+use vello_hybrid::{RenderTargetConfig, Renderer, Resources};
 use wgpu::{Adapter, Device, Features, Instance, Limits, MemoryHints, Queue, Surface, SurfaceConfiguration, SurfaceTarget, TextureFormat};
 
 /// Simple render context that maintains wgpu state for rendering the pipeline.
@@ -32,7 +32,7 @@ pub(crate) struct RenderSurface<'s> {
     pub(crate) dev_id: usize,
 }
 
-pub(crate) fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> Renderer {
+pub(crate) fn create_vello_renderer(render_cx: &RenderContext, surface: &RenderSurface) -> (Renderer, Resources) {
     Renderer::new(
         &render_cx.devices[surface.dev_id].device,
         &RenderTargetConfig {
