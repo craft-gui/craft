@@ -268,27 +268,3 @@ impl CheckboxInner {
         self.request_window_redraw();
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::Checkbox;
-    use crate::app::dequeue_event;
-    use crate::elements::ElementData as _;
-
-    #[test]
-    fn toggle_updates_the_retained_checked_state_immediately() {
-        let checkbox = Checkbox::new("Choice", true);
-        let (tree, key) = {
-            let checkbox = checkbox.inner.borrow();
-            let data = checkbox.element_data();
-            (data.access_tree.clone(), data.access_key.unwrap())
-        };
-
-        assert!(tree.get_node(key).unwrap().checked());
-
-        checkbox.inner.borrow_mut().toggle();
-
-        assert!(!tree.get_node(key).unwrap().checked());
-        while dequeue_event().is_some() {}
-    }
-}

@@ -399,7 +399,7 @@ impl WindowInternal {
 
     pub fn on_request_redraw(&mut self, retgui_app: &mut App) {
         self.on_redraw(
-            retgui_app.text_context.as_mut().unwrap(),
+            retgui_app.text_context.borrow_mut().as_mut().unwrap(),
             retgui_app.resource_manager.clone(),
         );
     }

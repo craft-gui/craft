@@ -1,20 +1,50 @@
-use issho::IsshoError;
 use std::cell::RefCell;
-use std::rc::Weak;
+use std::ops::Deref;
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
+
+use issho::IsshoError;
+
 use winit::window::Window;
 
 use crate::elements::ElementInternals;
+use crate::events::EventDispatcher;
+use crate::text::text_context::TextContext;
 
-pub type RetGuiAccessTree = issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>;
+#[derive(Clone)]
+pub struct RetGuiAccessTree {
+    tree: issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>,
+    pub(crate) event_dispatcher: Rc<RefCell<EventDispatcher>>,
+    pub(crate) text_context: Rc<RefCell<Option<TextContext>>>,
+}
+
+impl RetGuiAccessTree {
+    pub(crate) fn new() -> Self {
+        Self {
+            tree: issho::AccessTree::new(),
+            event_dispatcher: Rc::new(RefCell::new(EventDispatcher::new())),
+            text_context: Rc::new(RefCell::new(None)),
+        }
+    }
+}
+
+impl Deref for RetGuiAccessTree {
+    type Target = issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tree
+    }
+}
 
 thread_local! {
-    static ACCESS_TREE: RetGuiAccessTree = {
+    pub(crate) static ACCESS_TREE: RetGuiAccessTree = {
         let tree = RetGuiAccessTree::new();
         tree.set_framework_name("RetGui");
         tree.set_native_platform();
-        tree.set_on_access_event(|tree, node_id, event| -> Result<(), IsshoError> {
-            let element = {
+        let event_dispatcher = tree.event_dispatcher.clone();
+        let text_context = tree.text_context.clone();
+        tree.set_on_access_event(move |tree, node_id, event| -> Result<(), IsshoError> {
+            let element: Rc<RefCell<dyn ElementInternals>> = {
                 let Some(node) = tree.get_node(node_id) else {
                     return Err(IsshoError::MissingAccessNode(node_id));
                 };
@@ -23,8 +53,13 @@ thread_local! {
                 };
                 context.upgrade().unwrap()
             };
+            element.borrow_mut().on_access_event(event)?;
+            element.borrow_mut().request_window_redraw();
 
-            element.borrow_mut().on_access_event(event)
+            let mut event_dispatcher = event_dispatcher.borrow_mut();
+            let mut text_context = text_context.borrow_mut();
+            event_dispatcher.dispatch_queued_events(text_context.as_mut().unwrap());
+            Ok(())
         });
         tree
     };
@@ -85,9 +120,66 @@ pub(crate) fn detach_subtree(element: &mut dyn ElementInternals) {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::{Cell, RefCell};
+    use std::rc::Rc;
+
+    use issho::AccessEvent;
     use retgui_primitives::geometry::{Point, Size};
 
-    use crate::elements::{Container, ElementData as _, ElementInternals, Text, Window};
+    use crate::app::{dequeue_event, queue_event};
+    use crate::elements::{Button, Container, Element as _, ElementData as _, ElementInternals, Text, Window};
+    use crate::events::{Event, EventKind};
+    use crate::text::text_context::TextContext;
+
+    #[test]
+    fn access_events_drain_every_queued_event() {
+        while dequeue_event().is_some() {}
+
+        let button = Button::new();
+        let (tree, key) = {
+            let button = button.inner.borrow();
+            let data = button.element_data();
+            (data.access_tree.clone(), data.access_key.unwrap())
+        };
+        *tree.text_context.borrow_mut() = Some(TextContext::default());
+
+        let target: Rc<RefCell<dyn ElementInternals>> = button.inner.clone();
+        let target = Rc::downgrade(&target);
+        let click_count = Rc::new(Cell::new(0));
+        button.inner.borrow_mut().on_click({
+            let click_count = click_count.clone();
+            Rc::new(move |_| {
+                let next_count = click_count.get() + 1;
+                click_count.set(next_count);
+                if next_count == 1 {
+                    let target = target.upgrade().expect("button should still be alive");
+                    queue_event(Event::new(target), EventKind::Click());
+                }
+            })
+        });
+
+        assert!(tree.dispatch_access_event(key, AccessEvent::Invoke).is_ok());
+        assert_eq!(click_count.get(), 2);
+        assert!(dequeue_event().is_none());
+
+        *tree.text_context.borrow_mut() = None;
+    }
+
+    #[test]
+    fn accessibility_label_updates_the_retained_name() {
+        let button = Button::new().accessibility_name("Save changes");
+        let (tree, key) = {
+            let button = button.inner.borrow();
+            let data = button.element_data();
+            (data.access_tree.clone(), data.access_key.unwrap())
+        };
+
+        assert_eq!(tree.get_node(key).unwrap().name(), "Save changes");
+
+        let _button = button.accessibility_name("Submit");
+
+        assert_eq!(tree.get_node(key).unwrap().name(), "Submit");
+    }
 
     #[test]
     fn text_name_changes_are_retained_immediately() {

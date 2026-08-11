@@ -34,17 +34,16 @@ use retgui_resource_manager::ResourceManager;
 
 use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 
-use winit::event_loop::EventLoopBuilder;
-#[cfg(target_os = "android")]
-use winit::platform::android::EventLoopBuilderExtAndroid;
-
+use crate::accessibility::ACCESS_TREE;
 use crate::app::App;
-use crate::events::EventDispatcher;
 use crate::events::internal::InternalMessage;
 use crate::retgui_winit_state::{RetGuiState, RetGuiWinitState};
 use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
+use winit::event_loop::EventLoopBuilder;
+#[cfg(target_os = "android")]
+use winit::platform::android::EventLoopBuilderExtAndroid;
 
 mod accessibility;
 pub mod elements;
@@ -161,10 +160,13 @@ fn setup_retgui(retgui_options: Option<RetGuiOptions>) -> RetGuiState {
     #[allow(clippy::arc_with_non_send_sync)]
     let resource_manager = Arc::new(ResourceManager::new(runtime.clone()));
 
+    let (event_dispatcher, text_context) =
+        ACCESS_TREE.with(|access_tree| (access_tree.event_dispatcher.clone(), access_tree.text_context.clone()));
+
     let retgui_app = Box::new(App {
-        event_dispatcher: EventDispatcher::new(),
+        event_dispatcher,
         app_sender: app_sender.clone(),
-        text_context: None,
+        text_context,
         resource_manager,
         reload_fonts: false,
         runtime: runtime.clone(),

@@ -67,6 +67,14 @@ impl EventDispatcher {
         }
     }
 
+    /// Dispatch all queued events.
+    pub(crate) fn dispatch_queued_events(&mut self, text_context: &mut TextContext) {
+        while let Some((mut event, message)) = dequeue_event() {
+            let targets = freeze_target_list(event.target.clone());
+            dispatch_event(&mut event, &message, &targets, text_context);
+        }
+    }
+
     /// Diffs the current and previous target lists and dispatches
     /// `pointer_leave` to any element that was present in the previous list
     /// but is not present in the current one.
@@ -308,9 +316,6 @@ impl EventDispatcher {
         }
 
         // Handle Semantic Events (DropdownItemSelected, Click, and etc.)
-        while let Some((mut event, message)) = dequeue_event() {
-            let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = freeze_target_list(event.target.clone());
-            dispatch_event(&mut event, &message, &mut targets, text_context);
-        }
+        self.dispatch_queued_events(text_context);
     }
 }

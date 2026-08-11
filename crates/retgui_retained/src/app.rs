@@ -59,9 +59,9 @@ fn audio_ui_update_due(last_update: Option<Instant>, now: Instant) -> bool {
 }
 
 pub struct App {
-    pub(crate) event_dispatcher: EventDispatcher,
+    pub(crate) event_dispatcher: Rc<RefCell<EventDispatcher>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
-    pub(crate) text_context: Option<TextContext>,
+    pub(crate) text_context: Rc<RefCell<Option<TextContext>>>,
     pub(crate) reload_fonts: bool,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
@@ -204,7 +204,7 @@ impl App {
                 IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
                     in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_id);
                 });
-                if let Some(_text_context) = self.text_context.as_mut()
+                if let Some(_text_context) = self.text_context.borrow_mut().as_mut()
                     && resource_type == ResourceType::Font
                 {
                     // Todo: Load the font into the text context.
@@ -224,18 +224,21 @@ impl App {
 
     fn on_request_redraw_internal(&mut self, window: Window) {
         self.update_resources();
-        window.on_redraw(self.text_context.as_mut().unwrap(), self.resource_manager.clone());
+        window.on_redraw(
+            self.text_context.borrow_mut().as_mut().unwrap(),
+            self.resource_manager.clone(),
+        );
     }
 
     fn dispatch_event(&mut self, window: Window, message: &EventKind) {
         let mouse_pos = window.mouse_position();
         let binding = window.inner.borrow().renderer.clone();
         let renderer = &mut *binding.borrow_mut();
-        self.event_dispatcher.dispatch_event(
+        self.event_dispatcher.borrow_mut().dispatch_event(
             message,
             mouse_pos,
             window.inner.clone(),
-            self.text_context.as_mut().unwrap(),
+            self.text_context.borrow_mut().as_mut().unwrap(),
             renderer,
             &mut self.target_scratch,
         );
@@ -265,7 +268,7 @@ impl App {
 
     /// Initialize any data needed to layout/render text.
     fn setup_text_context(&mut self) {
-        if self.text_context.is_none() {
+        if self.text_context.borrow().is_none() {
             #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
             let mut text_context = TextContext::new();
             #[cfg(all(not(target_arch = "wasm32"), feature = "system_fonts"))]
@@ -296,7 +299,7 @@ impl App {
                 register_and_append(medium, &mut text_context);
             }
 
-            self.text_context = Some(text_context);
+            *self.text_context.borrow_mut() = Some(text_context);
         }
     }
 }

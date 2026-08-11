@@ -99,6 +99,12 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    /// Sets the accessibility name.
+    fn accessibility_name(self, name: &str) -> Self {
+        self.borrow_mut().element_data_mut().set_accessibility_name(name);
+        self
+    }
+
     fn get_id(&self) -> Option<SmolStr> {
         self.borrow().get_id()
     }

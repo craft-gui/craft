@@ -42,7 +42,7 @@ optional = true
 
 [dependencies.issho]
 git = "https://github.com/RetGui/issho.git"
-rev = "f5decc64534ee8b8a00d81c2640387610a9f3875"
+rev = "f599e0e8fb68c993328bd63f5afb52fd88afd94e"
 
 [dependencies.bitflags]
 version = "2.10.0"

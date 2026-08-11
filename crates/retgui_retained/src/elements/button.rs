@@ -4,6 +4,9 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
+use issho::{AccessEvent, IsshoError, Role};
+
+use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
@@ -111,10 +114,26 @@ impl ElementInternals for ButtonInner {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, _message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {}
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
+        if let EventKind::Click() = message {
+            self.focus();
+        }
+    }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
+    }
+
+    fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
+        if let AccessEvent::Invoke = event {
+            let target = self
+                .element_data
+                .me
+                .upgrade()
+                .expect("button was detached while handling its invoke action");
+            queue_event(Event::new(target), EventKind::Click());
+        }
+        Ok(())
     }
 }
 
@@ -125,7 +144,10 @@ impl Button {
                 element_data: ElementData::new(me.clone(), true),
             })
         });
-        inner.borrow_mut().element_data.create_layout_node(None);
+        let mut inner_mut = inner.borrow_mut();
+        inner_mut.element_data.create_layout_node(None);
+        inner_mut.element_data.set_accessibility_role(Role::Button);
+        drop(inner_mut);
         Self { inner }
     }
 }

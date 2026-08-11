@@ -1,5 +1,6 @@
 #[cfg(feature = "audio")]
 pub use crate::elements::audio::{Audio, AudioInner};
+pub use crate::elements::button::{Button, ButtonInner};
 pub use crate::elements::calendar::{Calendar, CalendarInner};
 pub use crate::elements::checkbox::{Checkbox, CheckboxInner};
 pub use crate::elements::checkboxgroup::{CheckboxGroup, CheckboxGroupInner};

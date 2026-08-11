@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 #[cfg(feature = "audio")]
 use retgui_retained::elements::Audio;
-use retgui_retained::elements::{Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui_retained::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui_retained::geometry::Point;
 use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
 use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
@@ -188,7 +188,7 @@ pub fn multiple_windows() -> Container {
     let border_color = Color::BLACK;
     let border_width = px(1.0);
 
-    let open_new_window_btn = Text::new("Open a new window")
+    let open_new_window_btn = Button::new().push(Text::new("Open a new window"))
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
         .border_radius(border_radius, border_radius, border_radius, border_radius)
         .border_color(border_color, border_color, border_color, border_color)
@@ -254,16 +254,19 @@ pub fn scrollable() -> Container {
         .push(title("Scrollable"))
         .push(scrollable_container.clone())
         .push(
-            Text::new("Scroll to the top")
+            Button::new()
                 .width(px(120.0))
                 .background_color(Color::from_rgb8(35, 127, 183))
-                .color(Color::WHITE)
-                .font_size(14.0)
-                .padding(px(3.0), px(5.0), px(3.0), px(5.0))
-                .on_click(Rc::new(move |_e| {
-                    scrollable_container.clone().scroll_to_top();
-                })),
+                .push(
+                Text::new("Scroll to the top")
+                    .color(Color::WHITE)
+                    .font_size(14.0)
+                    .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
+            ),
         )
+        .on_click(Rc::new(move |_e| {
+            scrollable_container.clone().scroll_to_top();
+        }))
 }
 
 pub fn radio_buttons() -> Container {

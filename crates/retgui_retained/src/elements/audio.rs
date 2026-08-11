@@ -20,7 +20,7 @@ use maudio::sound::notifier::EndNotifier;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Container, Element, ElementInternals, Slider, Text, TinyVg, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{AsElement, Button, Element, ElementInternals, Slider, Text, TinyVg, resolve_clip_for_scrollable, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Overflow, Unit};
@@ -57,7 +57,8 @@ pub struct Audio {
 #[derive(Clone)]
 pub struct AudioInner {
     element_data: ElementData,
-    play_button: TinyVg,
+    play_button: Button,
+    play_button_icon: TinyVg,
     track: Slider,
     controls: bool,
     play_icon: ResourceId,
@@ -160,6 +161,7 @@ impl Audio {
         let play_icon = ResourceId::StaticBytes(PLAY);
         let pause_icon = ResourceId::StaticBytes(PAUSE);
         let volume_icon = ResourceId::StaticBytes(VOLUME);
+        let play_button = Button::new().accessibility_name("play");
         let play = TinyVg::new(play_icon.clone())
             .color(Color::WHITE)
             .width(Unit::Px(16.0))
@@ -177,7 +179,8 @@ impl Audio {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<AudioInner>>| {
             RefCell::new(AudioInner {
                 element_data: ElementData::new(me.clone(), true),
-                play_button: play.clone(),
+                play_button: play_button.clone(),
+                play_button_icon: play.clone(),
                 track: track.clone(),
                 controls: true,
                 play_icon,
@@ -199,9 +202,9 @@ impl Audio {
         inner_mut.set_column_gap(Unit::Px(12.0));
         inner_mut.element_data.create_layout_node(None);
         inner_mut.push(
-            Container::new()
+            play_button
                 .push(play)
-                .on_pointer_button_up(Rc::new(move |_event, _pb| {
+                .on_click(Rc::new(move |_event| {
                     inner2.borrow_mut().toggle();
                 }))
                 .inner,
@@ -318,7 +321,8 @@ impl AudioInner {
 
     fn play(&self) {
         if let Some(sound_data) = &self.sound_data {
-            self.play_button.clone().resource_id(self.pause_icon.clone());
+            self.play_button.clone().accessibility_name("pause");
+            self.play_button_icon.clone().resource_id(self.pause_icon.clone());
             sound_data
                 .sound
                 .borrow_mut()
@@ -328,7 +332,8 @@ impl AudioInner {
     }
 
     fn pause(&self) {
-        self.play_button.clone().resource_id(self.play_icon.clone());
+        self.play_button.clone().accessibility_name("play");
+        self.play_button_icon.clone().resource_id(self.play_icon.clone());
         if let Some(sound_data) = &self.sound_data {
             sound_data
                 .sound
@@ -366,7 +371,7 @@ impl AudioInner {
                 request_redraw = true;
             }
             sound_data.end_notifier.take_with(|| {
-                self.play_button.clone().resource_id(self.play_icon.clone());
+                self.play_button_icon.clone().resource_id(self.play_icon.clone());
                 request_redraw = true;
             });
             if request_redraw {
