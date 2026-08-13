@@ -193,6 +193,7 @@ impl ElementInternals for RadioInner {
 
 impl RadioInner {
     fn set_value(&mut self) {
+        let selection_changed = !self.is_selected();
         self.active_value.replace(self.value.clone());
         self.set_accessibility_selection();
 
@@ -210,7 +211,9 @@ impl RadioInner {
         }
         let new_event = Event::new(self.element_data.me.upgrade().unwrap());
         queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
-        self.request_window_redraw();
+        if selection_changed {
+            self.request_window_redraw();
+        }
     }
 
     fn is_selected(&self) -> bool {
@@ -267,7 +270,9 @@ impl Radio {
     /// Hide the default circle radio button.
     pub fn set_hide_radio(&mut self, value: bool) {
         // TODO: Hide in gummy.
-        self.inner.borrow_mut().hide_radio = value;
+        let mut inner = self.inner.borrow_mut();
+        inner.hide_radio = value;
+        inner.request_window_redraw();
     }
 
     /// Hide the default circle radio button.

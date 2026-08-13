@@ -54,11 +54,12 @@ thread_local! {
                 context.upgrade().unwrap()
             };
             element.borrow_mut().on_access_event(event)?;
-            element.borrow_mut().request_window_redraw();
 
             let mut event_dispatcher = event_dispatcher.borrow_mut();
             let mut text_context = text_context.borrow_mut();
-            event_dispatcher.dispatch_queued_events(text_context.as_mut().unwrap());
+            if let Some(text_context) = text_context.as_mut() {
+                event_dispatcher.dispatch_queued_events(text_context);
+            }
             Ok(())
         });
         tree

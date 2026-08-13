@@ -20,7 +20,7 @@ use retgui_resource_manager::ResourceManager;
 
 use winit::event::Ime;
 
-use crate::app::ELEMENTS;
+use crate::app::{ELEMENTS, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::DeepClone;
@@ -196,7 +196,7 @@ impl ElementInternals for TextInputInner {
             true,
         );
 
-        self.state.render_text(self.is_focused(), self.element_data.style());
+        self.state.render_text(self.element_data.style());
         self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
@@ -256,6 +256,7 @@ impl ElementInternals for TextInputInner {
             return;
         }
 
+        let editor_generation = self.state.editor().generation();
         let scroll_y = self.element_data.scroll().scroll_y() as f64;
 
         let focused = self.is_focused();
@@ -318,6 +319,9 @@ impl ElementInternals for TextInputInner {
 
         if self.state.is_layout_dirty {
             self.mark_dirty();
+        } else if self.state.editor().generation() != editor_generation {
+            request_apply_layout(self.element_data.layout.gummy_node_id());
+            self.request_window_redraw();
         }
         {
             let value = self.state.editor().raw_text().to_owned();
@@ -354,9 +358,15 @@ impl ElementInternals for TextInputInner {
     }
 
     fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
         self.mark_dirty();
+    }
+
+    fn on_text_style_changed(&mut self) {
+        let style = self.element_data.style.clone();
+        self.state.set_style(&style);
     }
 }
 

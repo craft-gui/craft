@@ -221,6 +221,14 @@ impl SliderInner {
 
     pub fn set_value(&mut self, value: f64) {
         self.value = value.clamp(self.min, self.max);
+        self.request_window_redraw();
+    }
+
+    fn update_value_from_event(&mut self, value: f64) {
+        let value = value.clamp(self.min, self.max);
+        if self.value != value {
+            self.set_value(value);
+        }
     }
 
     pub fn get_value(&self) -> f64 {
@@ -240,6 +248,7 @@ impl SliderInner {
     pub fn set_min(&mut self, min: f64) {
         self.min = min;
         self.value = self.value.clamp(self.min, self.max);
+        self.request_window_redraw();
     }
 
     pub fn get_min(&self) -> f64 {
@@ -250,6 +259,7 @@ impl SliderInner {
     pub fn set_max(&mut self, max: f64) {
         self.max = max;
         self.value = self.value.clamp(self.min, self.max);
+        self.request_window_redraw();
     }
 
     pub fn get_max(&self) -> f64 {
@@ -259,6 +269,7 @@ impl SliderInner {
     /// Set the slider direction.
     pub fn set_direction(&mut self, direction: SliderDirection) {
         self.direction = direction;
+        self.request_window_redraw();
     }
 
     pub fn get_direction(&self) -> SliderDirection {
@@ -267,6 +278,7 @@ impl SliderInner {
 
     pub fn set_thumb_size(&mut self, thumb_size: f64) {
         self.thumb_size = thumb_size;
+        self.request_window_redraw();
     }
 
     pub fn get_thumb_size(&self) -> f64 {
@@ -275,6 +287,7 @@ impl SliderInner {
 
     pub fn set_thumb_color(&mut self, thumb_background_brush: Brush) {
         self.thumb_background_brush = thumb_background_brush;
+        self.request_window_redraw();
     }
 
     pub fn get_thumb_brush(&self) -> Brush {
@@ -289,6 +302,7 @@ impl SliderInner {
         left: (f32, f32),
     ) {
         self.thumb_border_radius = Some([top, right, bottom, left]);
+        self.request_window_redraw();
     }
 
     pub fn get_thumb_border_radius(&self) -> Option<[(f32, f32); 4]> {
@@ -297,6 +311,7 @@ impl SliderInner {
 
     pub fn set_track_brush(&mut self, track_background_brush: Brush) {
         self.track_background_brush = Some(track_background_brush);
+        self.request_window_redraw();
     }
 
     pub fn get_track_brush(&self) -> Option<Brush> {
@@ -311,6 +326,7 @@ impl SliderInner {
         left: (f32, f32),
     ) {
         self.track_border_radius = Some([top, right, bottom, left]);
+        self.request_window_redraw();
     }
 
     pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
@@ -420,7 +436,7 @@ impl ElementInternals for SliderInner {
                 };
 
                 if let Some(new_value) = new_value {
-                    self.value = new_value;
+                    self.update_value_from_event(new_value);
 
                     let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                     queue_event(new_event, EventKind::SliderValueChanged(self.value));
@@ -432,7 +448,7 @@ impl ElementInternals for SliderInner {
                 self.release_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
-                self.value = value;
+                self.update_value_from_event(value);
 
                 let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
@@ -442,7 +458,7 @@ impl ElementInternals for SliderInner {
                 self.set_pointer_capture(message.pointer_id().unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
-                self.value = value;
+                self.update_value_from_event(value);
 
                 let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));
@@ -453,7 +469,7 @@ impl ElementInternals for SliderInner {
                 }
 
                 let value = self.compute_slider_value(&pointer_update.current.logical_point());
-                self.value = value;
+                self.update_value_from_event(value);
 
                 let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                 queue_event(new_event, EventKind::SliderValueChanged(self.value));

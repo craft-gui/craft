@@ -200,14 +200,12 @@ impl RetGuiWinitState {
                 #[cfg(target_arch = "wasm32")]
                 InternalMessage::RendererCreated(winit_window, renderer) => {
                     WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                        let window = window_manager.get_window_by_id(winit_window.id());
-                        window.clone().unwrap().inner.borrow_mut().renderer = renderer;
+                        let window = window_manager.get_window_by_id(winit_window.id()).unwrap();
                         let sz = Size::new(
                             winit_window.inner_size().width as f32,
                             winit_window.inner_size().height as f32,
                         );
-                        window.unwrap().on_resize(sz);
-                        window_manager.redraw_all(&mut self.retgui_state.retgui_app);
+                        window.inner.borrow_mut().on_renderer_created(renderer, sz);
                     });
                 }
             });
@@ -215,16 +213,12 @@ impl RetGuiWinitState {
     }
 
     fn process_external_work(&mut self) {
-        // Do work scheduled for later and update all the windows.
-        let mut work_done = false;
-
+        // Elements changed by scheduled work request their own redraws.
         let mut timer_jobs: Vec<Job> = vec![];
         while let Some(mut work) = pop_gui_thread_work() {
             if work.interval.is_none() || work.last_run.elapsed() >= work.interval.unwrap() {
                 (work.callback)();
                 work.last_run = Instant::now();
-
-                work_done = true;
             }
 
             if work.interval.is_some() {
@@ -234,12 +228,6 @@ impl RetGuiWinitState {
 
         for timer_job in timer_jobs {
             push_gui_thread_work(timer_job);
-        }
-
-        if work_done {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                window_manager.redraw_all(&mut self.retgui_state.retgui_app);
-            });
         }
     }
 

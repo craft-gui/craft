@@ -14,13 +14,18 @@ use std::sync::Arc;
 
 /// A helper to push children.
 pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
-    let (me, me_window) = {
+    let (me, me_window, scale_factor) = {
         let element_data = parent.element_data();
-        (element_data.me.clone(), element_data.window.clone())
+        (
+            element_data.me.clone(),
+            element_data.window.clone(),
+            element_data.applied_scale_factor,
+        )
     };
     child.borrow_mut().element_data_mut().parent = Some(me);
     child.borrow_mut().element_data_mut().window = me_window;
     child.borrow_mut().propagate_window_down();
+    child.borrow_mut().set_scale_factor(scale_factor);
     parent.element_data_mut().children.push(child.clone());
 
     // Add the children's gummy node.
@@ -45,6 +50,7 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
             );
         }
     }
+    parent.request_window_redraw();
 }
 
 #[allow(clippy::too_many_arguments)]
