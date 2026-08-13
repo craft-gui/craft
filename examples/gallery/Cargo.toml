@@ -12,7 +12,13 @@ audio = ["retgui_retained/audio"]
 default = ["audio"]
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
 util = { path = "../util" }
+
+[dependencies.reqwest]
+workspace = true
+default-features = false
+features = ["json", "rustls"]
 
 [dependencies.retgui_retained]
 path = "../../crates/retgui_retained"

@@ -7,7 +7,9 @@ use retgui_retained::elements::Audio;
 use retgui_retained::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui_retained::geometry::Point;
 use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
-use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
+use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, pct, px, retgui_main, rgb, rgba};
+
+use serde::Deserialize;
 
 use util::setup_logging;
 
@@ -94,6 +96,100 @@ pub fn images() -> Container {
         .height(px(200.0));
 
     container.display(Display::Block).push(title("Image")).push(image)
+}
+
+#[derive(Deserialize)]
+struct WeatherResponse {
+    current: CurrentWeather,
+}
+
+#[derive(Deserialize)]
+struct CurrentWeather {
+    time: String,
+    temperature_2m: f64,
+    apparent_temperature: f64,
+    relative_humidity_2m: u8,
+    weather_code: u8,
+    wind_speed_10m: f64,
+}
+
+async fn fetch_amsterdam_weather() -> Result<CurrentWeather, String> {
+    let response = reqwest::get(
+        "https://api.open-meteo.com/v1/forecast?latitude=52.374&longitude=4.8897&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Europe%2FAmsterdam",
+    )
+    .await
+    .map_err(|error| error.to_string())?
+    .error_for_status()
+    .map_err(|error| error.to_string())?;
+
+    let weather = response
+        .json::<WeatherResponse>()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(weather.current)
+}
+
+fn weather_description(code: u8) -> &'static str {
+    match code {
+        0 => "Clear sky",
+        1..=3 => "Partly cloudy",
+        45 | 48 => "Fog",
+        51..=57 => "Drizzle",
+        61..=67 => "Rain",
+        71..=77 => "Snow",
+        80..=82 => "Rain showers",
+        85 | 86 => "Snow showers",
+        95..=99 => "Thunderstorm",
+        _ => "Unknown conditions",
+    }
+}
+
+pub fn async_weather() -> Container {
+    let status = Text::new("Click the button for the current conditions.")
+        .width(px(280.0))
+        .font_size(14.0);
+
+    let status_for_handler = status.clone();
+    let button = Button::new()
+        .padding(px(5.0), px(15.0), px(5.0), px(15.0))
+        .border_radius_all((4.0, 4.0))
+        .background_color(Color::from_rgb8(35, 127, 183))
+        .push(Text::new("Refresh Weather").color(Color::WHITE).selectable(false))
+        .on_click(Rc::new(move |event| {
+            status_for_handler.clone().text("Loading...");
+
+            let status = status_for_handler.clone();
+            RetGuiRuntime::spawn_local(async move {
+                match fetch_amsterdam_weather().await {
+                    Ok(weather) => {
+                        status.text(&format!(
+                            "{}\n{:.1} °C (feels like {:.1} °C)\nHumidity: {}%\nWind: {:.1} km/h\nUpdated: {}",
+                            weather_description(weather.weather_code),
+                            weather.temperature_2m,
+                            weather.apparent_temperature,
+                            weather.relative_humidity_2m,
+                            weather.wind_speed_10m,
+                            weather.time,
+                        ));
+                    }
+                    Err(error) => {
+                        status.text(&format!("Request failed: {error}"));
+                    }
+                }
+            });
+
+            event.prevent_propagate();
+        }));
+
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .row_gap(px(8.0))
+        .push(title("Amsterdam Weather"))
+        .push(button)
+        .push(status)
+        .push(Text::new("Weather data by Open-Meteo").font_size(12.0))
 }
 
 pub fn gradient() -> Container {
@@ -366,6 +462,7 @@ pub fn main() {
         .push(images())
         .push(gradient())
         .push(box_shadows())
+        .push(async_weather())
         .push(sliders())
         .push(radio_buttons())
         .push(checkbox())
