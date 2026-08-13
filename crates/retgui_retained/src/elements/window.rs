@@ -654,7 +654,7 @@ impl WindowInternal {
         self.renderer.borrow_mut().clear();
         let scale_factor = self.effective_scale_factor();
 
-        self.draw(
+        self.draw_with_overlay(
             &mut *renderer_clone.borrow_mut(),
             resource_manager.clone(),
             scale_factor,

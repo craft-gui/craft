@@ -377,7 +377,7 @@ impl ElementInternals for DropdownInner {
 
             child
                 .borrow_mut()
-                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
+                .draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -610,7 +610,7 @@ impl DropdownInner {
     ) {
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
-            binding.draw(renderer, resource_manager.clone(), scale_factor, text_context);
+            binding.draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 

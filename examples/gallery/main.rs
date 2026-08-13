@@ -6,8 +6,8 @@ use std::rc::Rc;
 use retgui_retained::elements::Audio;
 use retgui_retained::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui_retained::geometry::Point;
-use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
-use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
+use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
+use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, auto, pct, px, retgui_main, rgb, rgba};
 
 use util::setup_logging;
 
@@ -182,13 +182,66 @@ pub fn box_shadows() -> Container {
         .push(dropshadow_box)
 }
 
+pub fn overlay() -> Container {
+    let status = Text::new("Click where the cards overlap");
+
+    let overlay_status = status.clone();
+    let floating_card = Container::new()
+        .overlay(true)
+        .position(Position::Absolute)
+        .inset(px(20.0), auto(), auto(), px(20.0))
+        .width(px(150.0))
+        .height(px(100.0))
+        .padding_all(px(10.0))
+        .background_color(Color::from_rgb8(76, 175, 80))
+        .push(Text::new("Overlay").color(Color::WHITE).selectable(false))
+        .on_click(Rc::new(move |event| {
+            overlay_status.clone().text("The overlay received the click");
+            event.prevent_propagate();
+        }));
+
+    let normal_status = status.clone();
+    let normal_card = Container::new()
+        .position(Position::Absolute)
+        .inset(px(65.0), auto(), auto(), px(90.0))
+        .width(px(120.0))
+        .height(px(70.0))
+        .padding_all(px(10.0))
+        .background_color(Color::from_rgb8(33, 150, 243))
+        .push(Text::new("Normal sibling").color(Color::WHITE).selectable(false))
+        .on_click(Rc::new(move |event| {
+            normal_status.clone().text("The normal sibling received the click");
+            event.prevent_propagate();
+        }));
+
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .row_gap(px(8.0))
+        .width(px(280.0))
+        .min_width(auto())
+        .push(title("Overlay"))
+        .margin_horizontal(auto())
+        .push(
+            Container::new()
+                .position(Position::Relative)
+                .width(px(230.0))
+                .height(px(155.0))
+                .background_color(Color::from_rgb8(238, 238, 238))
+                .push(floating_card)
+                .push(normal_card),
+        )
+        .push(status)
+}
+
 pub fn multiple_windows() -> Container {
     let container = Container::new();
     let border_radius = (1.0, 1.0);
     let border_color = Color::BLACK;
     let border_width = px(1.0);
 
-    let open_new_window_btn = Button::new().push(Text::new("Open a new window"))
+    let open_new_window_btn = Button::new()
+        .push(Text::new("Open a new window"))
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
         .border_radius(border_radius, border_radius, border_radius, border_radius)
         .border_color(border_color, border_color, border_color, border_color)
@@ -258,11 +311,11 @@ pub fn scrollable() -> Container {
                 .width(px(120.0))
                 .background_color(Color::from_rgb8(35, 127, 183))
                 .push(
-                Text::new("Scroll to the top")
-                    .color(Color::WHITE)
-                    .font_size(14.0)
-                    .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
-            ),
+                    Text::new("Scroll to the top")
+                        .color(Color::WHITE)
+                        .font_size(14.0)
+                        .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
+                ),
         )
         .on_click(Rc::new(move |_e| {
             scrollable_container.clone().scroll_to_top();
@@ -366,6 +419,7 @@ pub fn main() {
         .push(images())
         .push(gradient())
         .push(box_shadows())
+        .push(overlay())
         .push(sliders())
         .push(radio_buttons())
         .push(checkbox())

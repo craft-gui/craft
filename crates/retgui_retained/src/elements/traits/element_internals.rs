@@ -91,7 +91,26 @@ pub trait ElementInternals: ElementData + Any + Drop {
         for child in self.children() {
             child
                 .borrow_mut()
-                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
+                .draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
+        }
+    }
+    
+    fn draw_with_overlay(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
+        let is_overlay = self.style().get_overlay() && self.is_visible();
+        if is_overlay {
+            renderer.start_overlay();
+        }
+
+        self.draw(renderer, resource_manager, scale_factor, text_context);
+
+        if is_overlay {
+            renderer.end_overlay();
         }
     }
 
@@ -689,6 +708,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn set_position(&mut self, position: Position) {
         self.style_mut().set_position(position);
         self.update_gummy_style();
+    }
+
+    fn set_overlay(&mut self, overlay: bool) {
+        self.style_mut().set_overlay(overlay);
     }
 
     fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {

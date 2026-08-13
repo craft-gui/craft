@@ -55,6 +55,7 @@ pub struct Style {
     scrollbar_thumb_radius: StyleProperty<[(f32, f32); 4]>,
     scrollbar_width: StyleProperty<f32>,
 
+    overlay: StyleProperty<bool>,
     visible: StyleProperty<bool>,
     selection_brush: StyleProperty<Brush>,
     cursor_brush: StyleProperty<Option<Brush>>,
@@ -118,6 +119,7 @@ impl Style {
             } else {
                 10.0
             }),
+            overlay: StyleProperty::new(false),
             visible: StyleProperty::new(true),
             selection_brush: StyleProperty::new(Brush::Color(Color::from_rgb8(0, 120, 215))),
             cursor_brush: StyleProperty::new(None),
@@ -458,6 +460,15 @@ impl Style {
     pub fn set_scrollbar_width(&mut self, val: f32) {
         self.is_dirty = true;
         self.scrollbar_width.set(val);
+    }
+
+    pub fn get_overlay(&self) -> bool {
+        *self.overlay.get()
+    }
+
+    pub fn set_overlay(&mut self, val: bool) {
+        self.is_dirty = true;
+        self.overlay.set(val);
     }
 
     pub fn get_visible(&self) -> bool {

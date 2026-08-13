@@ -203,6 +203,15 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn overlay(self, overlay: bool) -> Self {
+        self.borrow_mut().set_overlay(overlay);
+        self
+    }
+
+    fn get_overlay(&self) -> bool {
+        self.borrow().style().get_overlay()
+    }
+
     fn margin(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.borrow_mut().set_margin(top, right, bottom, left);
         self
