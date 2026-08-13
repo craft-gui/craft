@@ -176,6 +176,7 @@ impl ImageInner {
                 .expect("Failed to get Image node");
             gummy_tree.set_node_context(node, Some(context));
         });
+        self.request_window_redraw();
     }
 
     pub fn get_resource_id(&self) -> &ResourceId {

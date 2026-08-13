@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -14,7 +13,6 @@ pub(crate) use event_dispatch::EventDispatcher;
 use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerId, PointerScrollEvent, PointerUpdate};
 
-use crate::PinnedFutureAny;
 use crate::elements::ElementInternals;
 use crate::utils::cloneable_any::CloneableAny;
 
@@ -94,8 +92,6 @@ pub struct Event {
 
     /// Propagate retgui_events to the next element. True by default.
     pub propagate: bool,
-    /// A future that will produce a message when complete. The message will be sent to the origin component.
-    pub future: Option<PinnedFutureAny>,
     /// Prevent default event handlers from running when an retgui_event is not explicitly handled.
     /// False by default.
     pub prevent_defaults: bool,
@@ -125,58 +121,16 @@ impl EventKind {
     pub(super) fn is_keyboard_event(&self) -> bool {
         matches!(self, EventKind::KeyboardInputEvent(_) | EventKind::ImeEvent(_))
     }
-
-    pub fn new_element_message<T>(data: T) -> EventKind
-    where
-        T: Any + Send + Sync + Clone,
-    {
-        Self::ElementMessage(Arc::new(data))
-    }
 }
 
 impl Event {
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_result<T: Send + Sync + 'static + Clone>(t: T) -> Box<dyn CloneableAny + Send + Sync + 'static> {
-        Box::new(t)
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn async_result<T: 'static + Clone>(t: T) -> Box<dyn CloneableAny + 'static> {
-        Box::new(t)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn async_no_result() -> Box<dyn Any + Send + 'static> {
-        Box::new(())
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn async_no_result() -> Box<dyn Any + 'static> {
-        Box::new(())
-    }
-
     pub fn new(target: Rc<RefCell<dyn ElementInternals>>) -> Self {
         Event {
             target: target.clone(),
             current_target: target,
             propagate: true,
-            future: None,
             prevent_defaults: false,
         }
-    }
-
-    pub fn pinned_future(&mut self, future: PinnedFutureAny) {
-        self.future = Some(future);
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn future<F: Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send>(&mut self, future: F) {
-        self.future = Some(Box::pin(future));
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn future<F: Future<Output = Box<dyn CloneableAny>> + 'static>(&mut self, future: F) {
-        self.future = Some(Box::pin(future));
     }
 
     pub fn prevent_defaults(&mut self) {

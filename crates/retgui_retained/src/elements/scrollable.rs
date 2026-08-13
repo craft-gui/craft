@@ -101,37 +101,43 @@ impl ScrollState {
     }
 }
 
-pub(crate) fn scroll_to_bottom(data: &mut ElementData) {
+pub(crate) fn scroll_to_bottom(data: &mut ElementData) -> bool {
     let bottom_y = data.layout.max_scroll_y;
-    scroll_to(data, bottom_y);
+    scroll_to(data, bottom_y)
 }
 
-pub(crate) fn scroll_to_top(data: &mut ElementData) {
-    scroll_to(data, 0.0);
+pub(crate) fn scroll_to_top(data: &mut ElementData) -> bool {
+    scroll_to(data, 0.0)
 }
 
 /// Scroll to y. A valid y is in the interval [0, max_scroll_y].
-pub(crate) fn scroll_to(data: &mut ElementData, y: f32) {
+pub(crate) fn scroll_to(data: &mut ElementData, y: f32) -> bool {
     if !data.is_scrollable() {
-        return;
+        return false;
     }
 
-    data.layout.scroll_state.set_scroll_y(f32::max(0.0, y));
+    let y = f32::max(0.0, y);
+    let changed = data.layout.scroll_state.scroll_y() != y;
+    if changed {
+        data.layout.scroll_state.set_scroll_y(y);
+        request_apply_layout(data.layout.gummy_node_id.unwrap());
+    }
+
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
-    request_apply_layout(data.layout.gummy_node_id.unwrap());
     queue_event(new_event, EventKind::Scroll());
+    changed
 }
 
 /// Scroll an amount y from the current scroll position.
-pub(crate) fn scroll_by(data: &mut ElementData, y: f32) {
-    scroll_to(data, data.scroll().scroll_y() + y);
+pub(crate) fn scroll_by(data: &mut ElementData, y: f32) -> bool {
+    scroll_to(data, data.scroll().scroll_y() + y)
 }
 
 /// Scrolls to a child with the `id` and uses level-order traversal.
-pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &str, options: ScrollOptions) {
+pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &str, options: ScrollOptions) -> bool {
     let mut child_y: Option<f32> = None;
     if !data.is_scrollable() {
-        return;
+        return false;
     }
 
     let mut queue: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
@@ -165,7 +171,9 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 
     if let Some(child_y) = child_y {
         let offset = options.offset.unwrap_or(Point::new(0.0, 0.0));
-        scroll_to(data, child_y + offset.y as f32);
+        scroll_to(data, child_y + offset.y as f32)
+    } else {
+        false
     }
 }
 
@@ -248,6 +256,7 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
 
     if result.request_apply_layout {
         request_apply_layout(element.element_data().layout.gummy_node_id());
+        element.request_window_redraw();
     }
 
     if result.set_pointer_capture {
@@ -287,9 +296,11 @@ pub(crate) fn handle_scroll_logic_advance(
                 let max_scroll_y = layout.max_scroll_y;
 
                 let current_scroll_y = state.scroll_y();
-                state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-
-                result.request_apply_layout = true;
+                let new_scroll_y = (current_scroll_y + delta).clamp(0.0, max_scroll_y);
+                if new_scroll_y != current_scroll_y {
+                    state.set_scroll_y(new_scroll_y);
+                    result.request_apply_layout = true;
+                }
 
                 event.prevent_propagate();
                 event.prevent_defaults();
@@ -335,9 +346,11 @@ pub(crate) fn handle_scroll_logic_advance(
                     let percent = offset_y / layout.computed_scroll_track.height;
                     let scroll_y = percent * layout.max_scroll_y;
 
-                    state.set_scroll_y(scroll_y.clamp(0.0, layout.max_scroll_y));
-
-                    result.request_apply_layout = true;
+                    let new_scroll_y = scroll_y.clamp(0.0, layout.max_scroll_y);
+                    if new_scroll_y != state.scroll_y() {
+                        state.set_scroll_y(new_scroll_y);
+                        result.request_apply_layout = true;
+                    }
 
                     event.prevent_propagate();
                     event.prevent_defaults();
@@ -369,8 +382,11 @@ pub(crate) fn handle_scroll_logic_advance(
                     }
 
                     let current_scroll_y = state.scroll_y();
-                    state.set_scroll_y((current_scroll_y + delta).clamp(0.0, max_scroll_y));
-                    result.request_apply_layout = true;
+                    let new_scroll_y = (current_scroll_y + delta).clamp(0.0, max_scroll_y);
+                    if new_scroll_y != current_scroll_y {
+                        state.set_scroll_y(new_scroll_y);
+                        result.request_apply_layout = true;
+                    }
 
                     state.scroll_click = Some(Point::new(click.x, pointer_motion.current.position.y));
                     event.prevent_propagate();

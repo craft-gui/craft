@@ -231,7 +231,7 @@ impl ElementInternals for TextInner {
             let state: &mut TextState = &mut self.state;
             match message {
                 EventKind::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
-                    state.update_text_selection(self.element_data.style.get_selection_brush());
+                    let previous_selection = (state.selection.anchor(), state.selection.focus());
                     state.pointer_down = true;
                     state.cursor_reset();
                     let now = Instant::now();
@@ -252,13 +252,19 @@ impl ElementInternals for TextInner {
                         3 => state.select_line_at_point(cursor_pos),
                         _ => state.move_to_point(cursor_pos),
                     }
+                    let selection_changed = previous_selection != (state.selection.anchor(), state.selection.focus());
+                    if selection_changed {
+                        state.update_text_selection(self.element_data.style.get_selection_brush());
+                    }
                     if click_count == 1 {
                         self.set_pointer_capture(message.pointer_id().unwrap());
+                    }
+                    if selection_changed {
+                        self.request_window_redraw();
                     }
                     event.prevent_defaults();
                 }
                 EventKind::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
-                    state.update_text_selection(self.element_data.style.get_selection_brush());
                     state.pointer_down = false;
                     state.cursor_reset();
                     self.release_pointer_capture(message.pointer_id().unwrap());
@@ -271,10 +277,14 @@ impl ElementInternals for TextInner {
                         - Vec2::new(text_position.x as f64, text_position.y as f64);
                     // macOS seems to generate a spurious move after selecting word?
                     if state.pointer_down && prev_pos != state.cursor_pos {
-                        state.update_text_selection(self.element_data.style.get_selection_brush());
+                        let previous_selection = (state.selection.anchor(), state.selection.focus());
                         state.cursor_reset();
                         let cursor_pos = state.cursor_pos;
                         state.extend_selection_to_point(cursor_pos);
+                        if previous_selection != (state.selection.anchor(), state.selection.focus()) {
+                            state.update_text_selection(self.element_data.style.get_selection_brush());
+                            self.request_window_redraw();
+                        }
                     }
                     event.prevent_defaults();
                 }
@@ -284,6 +294,7 @@ impl ElementInternals for TextInner {
     }
 
     fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
@@ -295,9 +306,19 @@ impl ElementInternals for TextInner {
         // TODO: Fix this. Clearing cache is not needed here.
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
-        self.mark_dirty();
         self.style_mut().set_text_brush(brush);
         self.update_gummy_style();
+    }
+
+    fn on_text_style_changed(&mut self) {
+        self.state.is_layout_dirty = true;
+        self.state.is_render_dirty = true;
+    }
+
+    fn set_selection_brush(&mut self, selection_brush: Brush) {
+        self.style_mut().set_selection_brush(selection_brush.clone());
+        self.state.update_text_selection(selection_brush);
+        self.request_window_redraw();
     }
 }
 

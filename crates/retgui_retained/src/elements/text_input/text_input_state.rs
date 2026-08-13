@@ -348,6 +348,21 @@ impl TextInputState {
         self.clear_cache();
     }
 
+    pub fn set_style(&mut self, style: &Style) {
+        let style_set = self.editor.edit_styles();
+        style_set.clear();
+        style.add_styles_to_style_set(style_set);
+        self.editor.set_alignment(match style.get_text_align() {
+            crate::style::TextAlign::Start => parley::Alignment::Start,
+            crate::style::TextAlign::End => parley::Alignment::End,
+            crate::style::TextAlign::Left => parley::Alignment::Left,
+            crate::style::TextAlign::Center => parley::Alignment::Center,
+            crate::style::TextAlign::Right => parley::Alignment::Right,
+            crate::style::TextAlign::Justify => parley::Alignment::Justify,
+        });
+        self.clear_cache();
+    }
+
     pub fn pointer_down(&mut self, text_context: &mut TextContext) {
         self.cursor_visible = true;
         self.pointer_down = true;
@@ -694,7 +709,7 @@ impl TextInputState {
         self.clear_cache();
     }
 
-    pub fn render_text(&mut self, focused: bool, style: &Style) {
+    pub fn render_text(&mut self, style: &Style) {
         let backgrounds: Vec<(Range<usize>, Brush)> = self
             .editor()
             .ranged_styles
@@ -749,12 +764,8 @@ impl TextInputState {
                 .push((parley_box_to_rect(rect), style.get_selection_brush()));
         });
 
-        if focused {
-            let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
-            text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
-        } else {
-            text_renderer.cursor = None;
-        }
+        let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
+        text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
     }
 }
 

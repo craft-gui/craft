@@ -44,6 +44,7 @@ pub struct ElementData {
     pub(crate) access_key: Option<issho::AccessKey>,
     pub(crate) access_root: Option<issho::AccessKey>,
     pub(crate) access_scale_factor: f64,
+    pub(crate) applied_scale_factor: f64,
 
     // Events:
     pub on_dropdown_item_selected: Vec<DropdownItemSelectedHandler>,
@@ -100,6 +101,7 @@ impl ElementData {
             access_key,
             access_root,
             access_scale_factor: 1.0,
+            applied_scale_factor: 1.0,
             on_dropdown_item_selected: Vec::new(),
             on_slider_value_changed: Vec::new(),
             on_pointer_enter: Vec::new(),

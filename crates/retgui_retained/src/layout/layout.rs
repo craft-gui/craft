@@ -86,6 +86,8 @@ struct BorderSpec {
     width: TrblRectangle<f32>,
     radii: [(f32, f32); 4],
     scale_factor: f64,
+    has_border: bool,
+    uniform_border_color: bool,
     box_shadows: Vec<BoxShadow>,
 }
 
@@ -214,6 +216,8 @@ impl Layout {
             width: element_rect.border.clone(),
             radii: border_radius,
             scale_factor,
+            has_border,
+            uniform_border_color: border_color.are_edges_uniform(),
             box_shadows: box_shadows.to_vec(),
         };
 

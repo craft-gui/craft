@@ -134,6 +134,10 @@ impl crate::elements::ElementData for WindowInternal {
 }
 
 impl ElementInternals for WindowInternal {
+    fn request_window_redraw(&self) {
+        self.request_redraw();
+    }
+
     fn pointer_capture(&self) -> Option<Rc<RefCell<PointerCapture>>> {
         Some(self.pointer_capture.clone())
     }
@@ -235,7 +239,7 @@ impl Window {
     }
 
     pub fn set_scale_factor(&self, scale_factor: f64) {
-        self.inner.borrow_mut().set_scale_factor(scale_factor)
+        self.inner.borrow_mut().set_scale_factor(scale_factor);
     }
 
     /// Get the effective scale factor factoring window scale factor and zoom.
@@ -393,8 +397,6 @@ impl WindowInternal {
     pub fn update_zoom(&mut self) {
         let scale_factor = self.effective_scale_factor();
         self.set_scale_factor(scale_factor);
-        self.mark_dirty();
-        self.request_redraw();
     }
 
     pub fn on_request_redraw(&mut self, retgui_app: &mut App) {
@@ -410,7 +412,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn zoom_out(&mut self) {
-        self.zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
+        let zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
+        if self.zoom_scale_factor == zoom_scale_factor {
+            return;
+        }
+        self.zoom_scale_factor = zoom_scale_factor;
         self.update_zoom();
     }
 
@@ -480,26 +486,36 @@ impl WindowInternal {
     }
 
     pub(crate) fn on_resize(&mut self, new_size: Size<f32>) {
+        if self.window_size.width == new_size.width && self.window_size.height == new_size.height {
+            return;
+        }
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             gummy_tree.mark_dirty(self.element_data.layout.gummy_node_id.unwrap());
         });
 
         self.window_size = new_size;
-        let size = self.window_size;
+        self.resize_renderer_surface();
+        self.request_redraw();
+    }
 
-        self.renderer
-            .borrow_mut()
-            .resize_surface(new_size.width.max(1.0), new_size.height.max(1.0));
-        self.renderer
-            .borrow_mut()
-            .set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
-
-        // On macOS the window needs to be redrawn manually after resizing
-        #[cfg(target_os = "macos")]
-        {
-            // TODO: Fix
-            //self.window.as_ref().unwrap().request_redraw();
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn on_renderer_created(&mut self, renderer: Rc<RefCell<dyn Renderer>>, new_size: Size<f32>) {
+        self.renderer = renderer;
+        if self.window_size.width != new_size.width || self.window_size.height != new_size.height {
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.mark_dirty(self.element_data.layout.gummy_node_id.unwrap());
+            });
+            self.window_size = new_size;
         }
+        self.resize_renderer_surface();
+        self.request_redraw();
+    }
+
+    fn resize_renderer_surface(&mut self) {
+        let size = self.window_size;
+        let mut renderer = self.renderer.borrow_mut();
+        renderer.resize_surface(size.width.max(1.0), size.height.max(1.0));
+        renderer.set_cull(Some(Rectangle::new(0.0, 0.0, size.width, size.height)));
     }
 
     pub(crate) fn set_mouse_position(&mut self, point: Option<Point>) {
@@ -522,9 +538,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn on_scale_factor_changed(&mut self, scale_factor: f64) {
+        if self.scale_factor == scale_factor {
+            return;
+        }
         self.scale_factor = scale_factor;
         self.set_scale_factor(self.effective_scale_factor());
-        self.on_resize(self.window_size);
     }
 
     pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: &ActiveEventLoop) {

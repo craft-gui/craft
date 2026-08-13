@@ -115,6 +115,18 @@ impl ElementInternals for DropdownInner {
         self.deep_clone_internal()
     }
 
+    fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.element_data.applied_scale_factor = scale_factor;
+        self.apply_borders(scale_factor);
+        for child in &self.element_data.children {
+            child.borrow_mut().set_scale_factor(scale_factor);
+        }
+        if let Some(selected_element) = &self.selected_element {
+            selected_element.borrow_mut().set_scale_factor(scale_factor);
+        }
+        self.mark_dirty();
+    }
+
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
@@ -281,7 +293,9 @@ impl ElementInternals for DropdownInner {
         let list_box = list_layout.computed_box_transformed.border_rectangle();
         let list_scroll_box = list_layout.computed_scroll_track;
 
-        self.update_most_recently_hovered_child(message, list_box, list_scroll_box);
+        if self.update_most_recently_hovered_child(message, list_box, list_scroll_box) {
+            self.request_window_redraw();
+        }
 
         let pointer_id = message.pointer_id();
         if let EventKind::PointerButtonUp(pb) = message {
@@ -320,6 +334,7 @@ impl ElementInternals for DropdownInner {
         let result = handle_scroll_logic_advance(&floating_window.style, &mut floating_window.layout, message, event);
         if result.request_apply_layout {
             request_apply_layout(self.element_data.layout.gummy_node_id.unwrap());
+            self.request_window_redraw();
         }
         if result.set_pointer_capture {
             self.set_pointer_capture(result.pointer_id.unwrap())
@@ -339,6 +354,9 @@ impl ElementInternals for DropdownInner {
         self.element_data.children.push(child.clone());
         child.borrow_mut().element_data_mut().window = me_window;
         child.borrow_mut().propagate_window_down();
+        child
+            .borrow_mut()
+            .set_scale_factor(self.element_data.applied_scale_factor);
 
         // Add the children to the floating window layout.
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
@@ -346,6 +364,7 @@ impl ElementInternals for DropdownInner {
             let child_id = child.borrow().element_data().layout.gummy_node_id();
             gummy_tree.add_child(parent_id, child_id);
         });
+        self.request_window_redraw();
     }
 
     fn draw_children(
@@ -628,6 +647,11 @@ impl DropdownInner {
             .get(child_index)
             .expect("There is no child at this index.");
         self.selected_element = Some(child.clone().borrow().deep_clone());
+        self.selected_element
+            .as_ref()
+            .unwrap()
+            .borrow_mut()
+            .set_scale_factor(self.element_data.applied_scale_factor);
         self.selected_element_index = Some(child_index);
         let selected_element_id = self
             .selected_element
@@ -643,6 +667,7 @@ impl DropdownInner {
             let parent_id = self.element_data.layout.gummy_node_id.unwrap();
             gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
         });
+        self.request_window_redraw();
     }
 
     fn update_most_recently_hovered_child(
@@ -650,7 +675,11 @@ impl DropdownInner {
         message: &EventKind,
         list_box: Rectangle,
         list_scroll_box: Rectangle,
-    ) {
+    ) -> bool {
+        if self.is_floating_window_hidden {
+            return false;
+        }
+        let previous = self.currently_hovered_element;
         if let EventKind::PointerMovedEvent(pb) = message {
             let pointer_position = pb.current.logical_point();
             let is_pointer_in_list = list_box.contains(&pointer_position);
@@ -673,11 +702,12 @@ impl DropdownInner {
                     None
                 });
 
-                if let Some(hovered_child) = hovered_child {
-                    self.currently_hovered_element = Some(hovered_child);
-                }
+                self.currently_hovered_element = hovered_child;
+            } else {
+                self.currently_hovered_element = None;
             }
         }
+        previous != self.currently_hovered_element
     }
 
     fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool, pointer_id: &PointerId) {
@@ -689,6 +719,7 @@ impl DropdownInner {
             if self.is_floating_window_hidden {
                 self.release_pointer_capture(*pointer_id);
             }
+            self.request_window_redraw();
         }
     }
 
@@ -696,6 +727,7 @@ impl DropdownInner {
         if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
             self.is_floating_window_hidden = true;
             self.queue_dropdown_event(EventKind::DropdownToggled(false));
+            self.request_window_redraw();
         }
     }
 
@@ -731,6 +763,7 @@ impl DropdownInner {
             if should_hide_window {
                 self.is_floating_window_hidden = true;
                 self.queue_dropdown_event(EventKind::DropdownToggled(false));
+                self.request_window_redraw();
             }
         }
     }

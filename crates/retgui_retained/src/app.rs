@@ -242,7 +242,6 @@ impl App {
             renderer,
             &mut self.target_scratch,
         );
-        window.winit_window().unwrap().request_redraw();
     }
 
     fn update_resources(&mut self) {

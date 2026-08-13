@@ -33,20 +33,6 @@ impl WindowManager {
         None
     }
 
-    // Improve this.
-    pub(crate) fn redraw_all(&mut self, retgui_app: &mut App) {
-        if !retgui_app.active {
-            return;
-        }
-
-        // Create windows that were created during the program run.
-        for window_element in &self.windows {
-            if let Some(winit_window) = window_element.winit_window() {
-                winit_window.request_redraw();
-            }
-        }
-    }
-
     /// Dirties all gummy nodes and redraws each window.
     pub(crate) fn dirty_and_redraw_all_windows(&mut self, retgui_app: &mut App) {
         if !retgui_app.active {

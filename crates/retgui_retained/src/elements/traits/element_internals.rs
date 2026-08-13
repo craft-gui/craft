@@ -289,6 +289,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 gummy_tree.mark_dirty(id);
             });
         }
+        self.request_window_redraw();
     }
 
     /// Updates gummy's style to reflect retgui's style struct.
@@ -299,14 +300,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 gummy_tree.set_style(id, self.element_data().style.to_gummy_style());
             });
         }
+        self.request_window_redraw();
     }
 
     /// Set's this element's scale factor. This should not be used to scale individual elements.
     fn set_scale_factor(&mut self, scale_factor: f64) {
+        self.element_data_mut().applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         for child in &self.element_data().children {
             child.borrow_mut().set_scale_factor(scale_factor);
         }
+        self.mark_dirty();
     }
 
     fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
@@ -367,6 +371,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .position(|x| Rc::ptr_eq(x, &child_2))
             .ok_or(RetGuiError::ElementNotFound)?;
 
+        if position_1 == position_2 {
+            return Ok(());
+        }
+
         // Swap the children.
         self.element_data_mut().children.swap(position_1, position_2);
 
@@ -404,6 +412,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
         // TODO: Fix. This is likely doing more work than required.
         self.sync_accessibility_children();
+        self.request_window_redraw();
 
         Ok(())
     }
@@ -435,8 +444,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
         // Remove the parent reference.
         child.borrow_mut().element_data_mut().parent = None;
-        //child.borrow_mut().element_data_mut().window = None;
-        child.borrow_mut().propagate_window_down();
 
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let child_id = child.borrow().element_data().layout.gummy_node_id;
@@ -464,6 +471,12 @@ pub trait ElementInternals: ElementData + Any + Drop {
         child.borrow_mut().unfocus();
 
         crate::accessibility::detach_subtree(&mut *child.borrow_mut());
+        {
+            let mut child = child.borrow_mut();
+            child.element_data_mut().window = None;
+            child.propagate_window_down();
+        }
+        self.request_window_redraw();
 
         Ok(child)
     }
@@ -565,23 +578,33 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn scroll_to_child_by_id_with_options(&mut self, id: &str, options: ScrollOptions) {
-        crate::elements::scrollable::scroll_to_child_by_id_with_options(self.element_data_mut(), id, options);
+        if crate::elements::scrollable::scroll_to_child_by_id_with_options(self.element_data_mut(), id, options) {
+            self.request_window_redraw();
+        }
     }
 
     fn scroll_to(&mut self, y: f32) {
-        crate::elements::scrollable::scroll_to(self.element_data_mut(), y);
+        if crate::elements::scrollable::scroll_to(self.element_data_mut(), y) {
+            self.request_window_redraw();
+        }
     }
 
     fn scroll_to_top(&mut self) {
-        crate::elements::scrollable::scroll_to_top(self.element_data_mut());
+        if crate::elements::scrollable::scroll_to_top(self.element_data_mut()) {
+            self.request_window_redraw();
+        }
     }
 
     fn scroll_to_bottom(&mut self) {
-        crate::elements::scrollable::scroll_to_bottom(self.element_data_mut());
+        if crate::elements::scrollable::scroll_to_bottom(self.element_data_mut()) {
+            self.request_window_redraw();
+        }
     }
 
     fn scroll_by(&mut self, y: f32) {
-        crate::elements::scrollable::scroll_by(self.element_data_mut(), y);
+        if crate::elements::scrollable::scroll_by(self.element_data_mut(), y) {
+            self.request_window_redraw();
+        }
     }
 
     fn get_scroll_state(&self) -> ScrollState {
@@ -841,47 +864,58 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_font_family(&mut self, font_family: FontFamily) {
         self.style_mut().set_font_family(font_family);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_text_brush(&mut self, brush: Brush) {
         self.style_mut().set_text_brush(brush);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_background_brush(&mut self, brush: Brush) {
         self.style_mut().set_background_brush(brush);
+        self.request_window_redraw();
     }
 
     fn set_font_size(&mut self, font_size: f32) {
         self.style_mut().set_font_size(font_size);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_line_height(&mut self, line_height: f32) {
         self.style_mut().set_line_height(line_height);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_font_weight(&mut self, font_weight: FontWeight) {
         self.style_mut().set_font_weight(font_weight);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_font_style(&mut self, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_text_align(&mut self, text_align: TextAlign) {
         self.style_mut().set_text_align(text_align);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
 
     fn set_underline(&mut self, underline: Option<Underline>) {
         self.style_mut().set_underline(underline);
+        self.on_text_style_changed();
         self.update_gummy_style();
     }
+
+    fn on_text_style_changed(&mut self) {}
 
     fn set_overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
@@ -901,6 +935,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
         self.style_mut()
             .set_border_color(TrblRectangle::new(top, right, bottom, left));
+        self.apply_borders(self.element_data().applied_scale_factor);
+        self.request_window_redraw();
     }
 
     fn set_border_color_all(&mut self, value: Color) {
@@ -939,7 +975,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_border_radius([top, right, bottom, left]);
-        self.update_gummy_style();
+        self.apply_borders(self.element_data().applied_scale_factor);
+        self.request_window_redraw();
     }
 
     fn set_border_radius_all(&mut self, value: (f32, f32)) {
@@ -958,27 +995,46 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_scrollbar_color(&mut self, scrollbar_color: ScrollbarColor) {
         self.style_mut().set_scrollbar_brush(scrollbar_color);
+        self.request_window_redraw();
     }
 
     fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
         self.style_mut()
             .set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
+        self.refresh_scroll_layout();
+        self.request_window_redraw();
     }
 
     fn set_scrollbar_thumb_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
+        self.refresh_scroll_layout();
+        self.request_window_redraw();
     }
 
     fn set_scrollbar_width(&mut self, scrollbar_width: f32) {
         self.style_mut().set_scrollbar_width(scrollbar_width);
+        self.update_gummy_style();
     }
 
     fn set_selection_brush(&mut self, selection_brush: Brush) {
         self.style_mut().set_selection_brush(selection_brush);
+        self.mark_dirty();
     }
 
     fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
         self.style_mut().set_box_shadows(box_shadows);
+        self.apply_borders(self.element_data().applied_scale_factor);
+        self.request_window_redraw();
+    }
+
+    fn refresh_scroll_layout(&mut self) {
+        let Some(node) = self.element_data().layout.gummy_node_id else {
+            return;
+        };
+        GUMMY_TREE.with_borrow(|gummy_tree| {
+            let layout = gummy_tree.get_layout(node);
+            self.element_data_mut().apply_scroll(layout);
+        });
     }
 
     /// Sets focus on the specified element, if it can be focused.
@@ -992,6 +1048,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             *focus = Some(me.clone());
             previous
         });
+        let focus_changed = _previous.as_ref().is_none_or(|previous| !Weak::ptr_eq(previous, &me));
         {
             if let Some(previous) = _previous
                 && !Weak::ptr_eq(&previous, &me)
@@ -1002,12 +1059,16 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 if let Some(root) = data.access_root {
                     data.access_tree.set_focus(root, Some(root));
                 }
+                previous.request_window_redraw();
             }
 
             let data = self.element_data();
             if let Some((root, node)) = data.access_root.zip(data.access_key) {
                 data.access_tree.set_focus(root, Some(node));
             }
+        }
+        if focus_changed {
+            self.request_window_redraw();
         }
     }
 
@@ -1036,6 +1097,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
                     data.access_tree.set_focus(root, Some(root));
                 }
             }
+            self.request_window_redraw();
         }
     }
 
@@ -1104,17 +1166,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Use the element's window to request a redraw.
     fn request_window_redraw(&self) {
-        let Some(winit_window_weak) = &self.element_data().window else {
+        let Some(window_weak) = &self.element_data().window else {
             return;
         };
-        let Some(rc) = winit_window_weak.upgrade() else {
+        let Some(window) = window_weak.upgrade() else {
             return;
         };
-        let borrowed = rc.borrow();
-        let Some(winit_window) = &borrowed.winit_window else {
-            return;
-        };
-        winit_window.request_redraw();
+        if let Ok(window) = window.try_borrow() {
+            window.request_redraw();
+        }
     }
 
     fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {

@@ -362,21 +362,15 @@ impl AudioInner {
             let current_time = sound.cursor_seconds().unwrap() as f64;
             let track = self.track.clone();
 
-            let mut request_redraw = false;
             if track.get_value() != current_time {
                 track.value(current_time);
                 let total_time = sound.length_seconds().unwrap() as u32;
                 let time = format_time(current_time as u32, total_time);
                 self.duration.clone().text(&time);
-                request_redraw = true;
             }
             sound_data.end_notifier.take_with(|| {
                 self.play_button_icon.clone().resource_id(self.play_icon.clone());
-                request_redraw = true;
             });
-            if request_redraw {
-                self.request_window_redraw();
-            }
         }
     }
 

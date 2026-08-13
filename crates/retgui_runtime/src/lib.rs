@@ -60,6 +60,26 @@ impl RetGuiRuntime {
         }
     }
 
+    /// Queue an async io bound task to be run on the gui thread.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn spawn_local<F>(future: F)
+    where
+        F: Future<Output = ()> + 'static,
+    {
+        LOCAL_SET.with(|local_set| {
+            local_set.spawn_local(future);
+        });
+    }
+
+    /// Queue an async io bound task to be run on the gui thread.
+    #[cfg(target_arch = "wasm32")]
+    pub fn spawn_local<F>(future: F)
+    where
+        F: Future<Output = ()> + 'static,
+    {
+        wasm_bindgen_futures::spawn_local(future);
+    }
+
     #[allow(dead_code)]
     #[cfg(target_arch = "wasm32")]
     pub fn spawn<F>(future: F)
