@@ -411,11 +411,15 @@ impl ElementInternals for SliderInner {
             return;
         }
 
+        self.maybe_start_overlay(_renderer);
+
         self.add_hit_testable(_renderer, true, _scale_factor);
 
         self.draw_borders(_renderer, _scale_factor);
         self.draw_track(_renderer, _scale_factor);
         self.draw_thumb(_renderer, _scale_factor);
+
+        self.maybe_end_overlay(_renderer);
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {

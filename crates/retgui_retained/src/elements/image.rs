@@ -104,6 +104,8 @@ impl ElementInternals for ImageInner {
             return;
         }
 
+        self.maybe_start_overlay(_renderer);
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(_renderer, _scale_factor);
 
@@ -112,6 +114,8 @@ impl ElementInternals for ImageInner {
         self.draw_borders(_renderer, _scale_factor);
 
         _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_id.clone());
+
+        self.maybe_end_overlay(_renderer);
     }
 }
 

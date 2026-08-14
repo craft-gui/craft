@@ -198,10 +198,15 @@ pub fn draw_generic_container(
     if !element.is_visible() {
         return;
     }
+
+    element.maybe_start_overlay(renderer);
+
     element.add_hit_testable(renderer, true, scale_factor);
     element.draw_borders(renderer, scale_factor);
     element.maybe_start_layer(renderer, scale_factor);
     element.draw_children(renderer, resource_manager.clone(), scale_factor, text_context);
     element.maybe_end_layer(renderer);
     element.draw_scrollbar(renderer, scale_factor);
+
+    element.maybe_end_overlay(renderer);
 }

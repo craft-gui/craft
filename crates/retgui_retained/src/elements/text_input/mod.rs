@@ -211,6 +211,8 @@ impl ElementInternals for TextInputInner {
             return;
         }
 
+        self.maybe_start_overlay(_renderer);
+
         self.add_hit_testable(_renderer, true, _scale_factor);
 
         let computed_box_transformed = self.get_computed_box_transformed();
@@ -245,6 +247,8 @@ impl ElementInternals for TextInputInner {
         _renderer.pop_layer();
 
         self.draw_scrollbar(_renderer, _scale_factor);
+
+        self.maybe_end_overlay(_renderer);
     }
 
     fn on_event(&mut self, message: &EventKind, text_context: &mut TextContext, event: &mut Event) {

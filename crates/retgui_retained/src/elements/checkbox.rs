@@ -131,6 +131,9 @@ impl ElementInternals for CheckboxInner {
         if !self.is_visible() {
             return;
         }
+
+        self.maybe_start_overlay(renderer);
+
         self.add_hit_testable(renderer, true, _scale_factor);
         self.draw_borders(renderer, _scale_factor);
         self.maybe_start_layer(renderer, _scale_factor);
@@ -172,6 +175,8 @@ impl ElementInternals for CheckboxInner {
         self.draw_children(renderer, resource_manager.clone(), _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
+
+        self.maybe_end_overlay(renderer);
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {

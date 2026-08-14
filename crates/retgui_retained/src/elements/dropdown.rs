@@ -217,6 +217,8 @@ impl ElementInternals for DropdownInner {
             return;
         }
 
+        self.maybe_start_overlay(renderer);
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
         if self.is_floating_window_hidden {
@@ -281,6 +283,8 @@ impl ElementInternals for DropdownInner {
             );
             renderer.end_overlay();
         }
+
+        self.maybe_end_overlay(renderer);
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
@@ -396,7 +400,7 @@ impl ElementInternals for DropdownInner {
 
             child
                 .borrow_mut()
-                .draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
+                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -629,7 +633,7 @@ impl DropdownInner {
     ) {
         if let Some(selected_element) = &self.selected_element {
             let mut binding = selected_element.borrow_mut();
-            binding.draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
+            binding.draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 

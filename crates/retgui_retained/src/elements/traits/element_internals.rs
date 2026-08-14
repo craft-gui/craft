@@ -91,26 +91,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         for child in self.children() {
             child
                 .borrow_mut()
-                .draw_with_overlay(renderer, resource_manager.clone(), scale_factor, text_context);
-        }
-    }
-    
-    fn draw_with_overlay(
-        &mut self,
-        renderer: &mut dyn Renderer,
-        resource_manager: Arc<ResourceManager>,
-        scale_factor: f64,
-        text_context: &mut TextContext,
-    ) {
-        let is_overlay = self.style().get_overlay() && self.is_visible();
-        if is_overlay {
-            renderer.start_overlay();
-        }
-
-        self.draw(renderer, resource_manager, scale_factor, text_context);
-
-        if is_overlay {
-            renderer.end_overlay();
+                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
         }
     }
 
@@ -236,6 +217,18 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data()
             .layout
             .draw_borders(renderer, current_style, scale_factor);
+    }
+
+    fn maybe_start_overlay(&self, renderer: &mut dyn Renderer) {
+        if self.style().get_overlay() {
+            renderer.start_overlay();
+        }
+    }
+
+    fn maybe_end_overlay(&self, renderer: &mut dyn Renderer) {
+        if self.style().get_overlay() {
+            renderer.end_overlay();
+        }
     }
 
     fn maybe_start_layer(&self, renderer: &mut dyn Renderer, scale_factor: f64) {

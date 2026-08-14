@@ -203,6 +203,9 @@ impl ElementInternals for TextInner {
         if !self.is_visible() {
             return;
         }
+
+        self.maybe_start_overlay(_renderer);
+
         self.add_hit_testable(_renderer, true, _scale_factor);
 
         let computed_box_transformed = self.get_computed_box_transformed();
@@ -215,6 +218,8 @@ impl ElementInternals for TextInner {
         }*/
 
         _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
+
+        self.maybe_end_overlay(_renderer);
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
