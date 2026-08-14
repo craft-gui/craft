@@ -6,8 +6,7 @@ use std::rc::Rc;
 use retgui_retained::elements::Audio;
 use retgui_retained::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui_retained::geometry::Point;
-use retgui_retained::style::Position;
-use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, TextAlign};
+use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
 use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
 
 use serde::Deserialize;
@@ -408,11 +407,11 @@ pub fn scrollable() -> Container {
                 .width(px(120.0))
                 .background_color(Color::from_rgb8(35, 127, 183))
                 .push(
-                Text::new("Scroll to the top")
-                    .color(Color::WHITE)
-                    .font_size(14.0)
-                    .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
-            ),
+                    Text::new("Scroll to the top")
+                        .color(Color::WHITE)
+                        .font_size(14.0)
+                        .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
+                ),
         )
         .on_click(Rc::new(move |_e| {
             scrollable_container.clone().scroll_to_top();

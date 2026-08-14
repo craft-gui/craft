@@ -21,7 +21,7 @@ system_fonts = ["parley/system"]
 png = ["image/png"]
 jpeg = ["image/jpeg"]
 
-markdown = ["dep:pulldown-cmark", "code_highlighting", "link"]
+markdown = ["dep:pulldown-cmark", "code_highlighting", "http_client", "link"]
 code_highlighting = ["dep:syntect"]
 link = ["dep:open"]
 

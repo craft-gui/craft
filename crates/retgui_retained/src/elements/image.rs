@@ -106,12 +106,13 @@ impl ElementInternals for ImageInner {
 
         self.maybe_start_overlay(_renderer);
 
+        self.add_hit_testable(_renderer, true, _scale_factor);
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(_renderer, _scale_factor);
 
         let computed_box_transformed = self.get_computed_box_transformed();
         let content_rectangle = computed_box_transformed.content_rectangle();
-        self.draw_borders(_renderer, _scale_factor);
 
         _renderer.draw_image(content_rectangle.scale(_scale_factor), self.resource_id.clone());
 

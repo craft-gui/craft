@@ -116,6 +116,8 @@ impl ElementInternals for TinyVgInner {
 
         self.maybe_start_overlay(renderer);
 
+        self.add_hit_testable(renderer, true, scale_factor);
+
         // We draw the borders before we start any layers, so that we don't clip the borders.
         self.draw_borders(renderer, scale_factor);
 
