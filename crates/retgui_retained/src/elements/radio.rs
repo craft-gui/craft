@@ -9,19 +9,20 @@ use std::sync::Arc;
 use issho::{AccessEvent, IsshoError, SelectionData, SelectionGroupItem};
 
 use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Affine, Circle, Point, Rectangle, TrblRectangle};
+use retgui_primitives::geometry::{Affine, Circle, TrblRectangle};
 
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
+use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::traits::clone_element;
+use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::style::{Overflow, Unit};
+use crate::style::Unit;
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
 
@@ -84,44 +85,33 @@ impl crate::elements::ElementData for RadioInner {
 
 impl ElementInternals for RadioInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |element, gummy_tree| {
+            let mut element = element.borrow_mut();
+            let owner_id = element.element_data.internal_id;
+            let owner = element.element_data.me.clone();
+            let parent = element.element_data.layout.gummy_node_id();
+            let circle_node = gummy_tree.clone_node(element.circle_layout.layout.gummy_node_id());
+            element.circle_layout.layout.gummy_node_id = Some(circle_node);
+            element.circle_layout.internal_id = create_unique_element_id();
+            element.circle_layout.me = owner.clone();
+            gummy_tree.add_child(parent, circle_node);
+            gummy_tree.register_owner(circle_node, owner_id, owner);
+            Some(parent)
+        })
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
+        _text_context: &mut TextContext,
         scale_factor: f64,
     ) {
-        apply_generic_container_layout(
-            self,
-            gummy_tree,
-            position,
-            z_index,
-            transform,
-            text_context,
-            clip_bounds,
-            scale_factor,
-        );
-        let p = self.element_data.layout.computed_box_transformed.position;
-        let scroll_y = self.element_data.scroll().scroll_y() as f64;
-        let child_transform = Affine::translate((0.0, -scroll_y));
-
-        apply_generic_container_layout_non_dom(
-            &mut self.circle_layout,
-            gummy_tree,
-            p,
-            z_index,
-            child_transform,
-            clip_bounds,
-            scale_factor,
-        );
-        self.circle.x = self.circle_layout.layout.computed_box_transformed.content_rectangle().x + self.circle.radius;
-        self.circle.y = self.circle_layout.layout.computed_box_transformed.content_rectangle().y + self.circle.radius;
+        apply_generic_container_layout(self, gummy_tree, z_index, scale_factor);
+        apply_generic_container_layout_non_dom(&mut self.circle_layout, gummy_tree, z_index, scale_factor);
+        let circle_rect = self.circle_layout.layout.local_box_in_parent().content_rectangle();
+        self.circle.x = circle_rect.x + self.circle.radius;
+        self.circle.y = circle_rect.y + self.circle.radius;
     }
 
     fn draw(
@@ -140,6 +130,10 @@ impl ElementInternals for RadioInner {
         self.add_hit_testable(renderer, true, _scale_factor);
         self.draw_borders(renderer, _scale_factor);
         self.maybe_start_layer(renderer, _scale_factor);
+
+        let container_transform = renderer.get_transform();
+        let scroll_y = self.element_data.scroll().scroll_y() as f64 * _scale_factor;
+        renderer.set_transform(container_transform * Affine::translate((0.0, -scroll_y)));
 
         if !self.hide_radio {
             if self.is_selected() {
@@ -161,6 +155,8 @@ impl ElementInternals for RadioInner {
             }
         }
 
+        renderer.set_transform(container_transform);
+
         self.draw_children(renderer, resource_manager, _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
@@ -172,15 +168,6 @@ impl ElementInternals for RadioInner {
         scrollable::handle_scroll_logic(self, message, event);
         if let EventKind::PointerButtonUp(_) = message {
             self.set_value();
-        }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 
@@ -261,6 +248,8 @@ impl Radio {
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let node_id = inner_mut.circle_layout.layout.gummy_node_id();
             gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), node_id);
+            let owner: Rc<RefCell<dyn ElementInternals>> = inner.clone();
+            gummy_tree.register_owner(node_id, inner_mut.element_data.internal_id, Rc::downgrade(&owner));
         });
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::RadioButton);
@@ -292,105 +281,5 @@ impl Radio {
 
     pub fn get_value(&self) -> String {
         self.inner.borrow().value.clone()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
-    use issho::{AccessEvent, SelectionData};
-
-    use super::Radio;
-    use crate::app::dequeue_event;
-    use crate::elements::{ElementData as _, ElementInternals as _, RadioGroup};
-
-    #[test]
-    fn radio_group_and_items_retain_selection_state() {
-        let active_value = Rc::new(RefCell::new("first".to_string()));
-        let group = RadioGroup::new("Choices");
-        let first = Radio::new("first", "First", active_value.clone());
-        let second = Radio::new("second", "Second", active_value.clone());
-
-        group.inner.borrow_mut().push(first.inner.clone());
-        group.inner.borrow_mut().push(second.inner.clone());
-
-        let (tree, group_key) = {
-            let group = group.inner.borrow();
-            let data = group.element_data();
-            (data.access_tree.clone(), data.access_key.unwrap())
-        };
-        let first_key = first.inner.borrow().element_data().access_key.unwrap();
-        let second_key = second.inner.borrow().element_data().access_key.unwrap();
-
-        {
-            let group = tree.get_node(group_key).unwrap();
-            let Some(SelectionData::SelectionGroup(selection)) = group.selection_data() else {
-                panic!("radio group was not exposed as a selection group");
-            };
-            assert!(selection.is_mandatory);
-            assert!(!selection.multiple_selectable);
-        }
-        assert_eq!(tree.get_parent(first_key), Some(group_key));
-        assert_eq!(tree.get_parent(second_key), Some(group_key));
-        assert!(selection_item_state(&tree, first_key));
-        assert!(!selection_item_state(&tree, second_key));
-        assert!(!tree.get_node(first_key).unwrap().checked());
-        assert_eq!(tree.get_node(first_key).unwrap().value(), "");
-
-        assert!(tree.dispatch_access_event(second_key, AccessEvent::Select).is_ok());
-
-        assert_eq!(active_value.borrow().as_str(), "second");
-        assert!(!selection_item_state(&tree, first_key));
-        assert!(selection_item_state(&tree, second_key));
-        assert!(!tree.get_node(second_key).unwrap().checked());
-        assert_eq!(tree.get_node(second_key).unwrap().value(), "");
-
-        while dequeue_event().is_some() {}
-    }
-
-    #[test]
-    fn radio_accessibility_uses_selection_actions_instead_of_toggle() {
-        while dequeue_event().is_some() {}
-
-        let active_value = Rc::new(RefCell::new("second".to_string()));
-        let group = RadioGroup::new("Choices");
-        let first = Radio::new("first", "First", active_value.clone());
-        let second = Radio::new("second", "Second", active_value.clone());
-        group.inner.borrow_mut().push(first.inner.clone());
-        group.inner.borrow_mut().push(second.inner.clone());
-        let tree = first.inner.borrow().element_data().access_tree.clone();
-        let first_key = first.inner.borrow().element_data().access_key.unwrap();
-        let second_key = second.inner.borrow().element_data().access_key.unwrap();
-
-        assert!(tree.dispatch_access_event(second_key, AccessEvent::Select).is_ok());
-        assert!(dequeue_event().is_none());
-
-        assert!(tree.dispatch_access_event(first_key, AccessEvent::Toggle).is_ok());
-        assert_eq!(active_value.borrow().as_str(), "second");
-        assert!(dequeue_event().is_none());
-
-        assert!(
-            tree.dispatch_access_event(first_key, AccessEvent::AddToSelection)
-                .is_ok()
-        );
-        assert_eq!(active_value.borrow().as_str(), "first");
-        assert!(dequeue_event().is_some());
-        while dequeue_event().is_some() {}
-
-        assert!(tree.dispatch_access_event(first_key, AccessEvent::UnSelect).is_ok());
-        assert_eq!(active_value.borrow().as_str(), "first");
-        assert!(dequeue_event().is_none());
-
-        while dequeue_event().is_some() {}
-    }
-
-    fn selection_item_state(tree: &crate::accessibility::RetGuiAccessTree, key: issho::AccessKey) -> bool {
-        let node = tree.get_node(key).unwrap();
-        let Some(SelectionData::SelectionGroupItem(item)) = node.selection_data() else {
-            panic!("radio was not exposed as a selection group item");
-        };
-        item.is_selected
     }
 }

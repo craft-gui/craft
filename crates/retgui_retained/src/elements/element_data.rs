@@ -119,9 +119,11 @@ impl ElementData {
             on_text_input_changed: Vec::new(),
         };
 
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert_id(default.internal_id, default.me.clone());
-        });
+        if create_accessibility_node {
+            ELEMENTS.with_borrow_mut(|elements| {
+                elements.insert_id(default.internal_id, default.me.clone());
+            });
+        }
 
         default
     }
@@ -136,6 +138,7 @@ impl ElementData {
                 gummy_tree.new_leaf(style)
             };
             self.layout.gummy_node_id = Some(node_id);
+            gummy_tree.register_owner(node_id, self.internal_id, self.me.clone());
         });
     }
 
@@ -197,21 +200,20 @@ impl ElementData {
     /// Applies the element's resolved padding box to its retained accessibility node.
     pub(crate) fn set_accessibility_bounds_from_layout(&mut self, scale_factor: f64) {
         self.access_scale_factor = scale_factor;
-        let padding_box = self
-            .layout
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
+        let padding_box = self.layout.world_box().padding_rectangle().scale(scale_factor);
 
         if let Some(key) = self.access_key
             && let Some(mut node) = self.access_tree.get_node_mut(key)
         {
-            node.set_bounding_rect(issho::AccessRect::new(
+            let bounds = issho::AccessRect::new(
                 padding_box.x as f64,
                 padding_box.y as f64,
                 padding_box.width as f64,
                 padding_box.height as f64,
-            ));
+            );
+            if node.bounding_rect() != bounds {
+                node.set_bounding_rect(bounds);
+            }
         }
     }
 

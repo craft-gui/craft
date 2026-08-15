@@ -1,5 +1,5 @@
 //! A simple plain text editor and related types.
-use parley::layout::{Affinity, Alignment, AlignmentOptions, Layout};
+use parley::layout::{Affinity, Alignment, AlignmentOptions, ContentWidths, Layout};
 use parley::{BoundingBox, Cursor, FontContext, LayoutContext, Selection, StyleProperty, StyleSet};
 
 use crate::text::text_commands::{Backspace, Delete, TextInsertion, TextReplace};
@@ -123,6 +123,18 @@ pub struct PlainEditor {
     alignment: Alignment,
     generation: Generation,
     undo_manager: UndoManager<TextCommand>,
+}
+
+pub(crate) struct PreparedLayout {
+    layout: Layout<Brush>,
+    content_widths: ContentWidths,
+    laid_out_width: Option<Option<u32>>,
+}
+
+impl PreparedLayout {
+    pub(crate) fn content_widths(&self) -> ContentWidths {
+        self.content_widths
+    }
 }
 
 impl Default for PlainEditor {
@@ -1115,6 +1127,37 @@ impl PlainEditor {
         }
     }
 
+    pub(crate) fn prepare_layout(
+        &self,
+        font_cx: &mut FontContext,
+        layout_cx: &mut LayoutContext<Brush>,
+    ) -> PreparedLayout {
+        let layout = self.build_shaped_layout(font_cx, layout_cx);
+        let content_widths = layout.calculate_content_widths();
+        PreparedLayout {
+            layout,
+            content_widths,
+            laid_out_width: None,
+        }
+    }
+
+    /// Reflows a prepared layout without changing the editor's live layout or selection.
+    pub(crate) fn measure_layout(&self, prepared: &mut PreparedLayout, width: Option<f32>) -> (f32, f32) {
+        // Alignment only affects paint positions, not measured width/height.
+        // Deferring it also prevents speculative justification mutations.
+        self.reflow_prepared_layout(prepared, width);
+        (prepared.layout.width(), prepared.layout.height())
+    }
+
+    /// Makes a prepared layout the editor's live interactive layout.
+    pub(crate) fn adopt_prepared_layout(&mut self, mut prepared: PreparedLayout, width: Option<f32>) -> (f32, f32) {
+        self.reflow_prepared_layout(&mut prepared, width);
+        self.align_layout(&mut prepared.layout);
+        let dimensions = (prepared.layout.width(), prepared.layout.height());
+        self.commit_layout(prepared.layout, width);
+        dimensions
+    }
+
     // --- MARK: Internal Helpers ---
     /// Make a cursor at a given byte index.
     fn cursor_at(&self, index: usize) -> Cursor {
@@ -1218,6 +1261,28 @@ impl PlainEditor {
 
     /// Update the layout.
     fn update_layout(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) {
+        let mut layout = self.build_shaped_layout(font_cx, layout_cx);
+        self.finish_layout(&mut layout, self.width);
+        self.commit_layout(layout, self.width);
+    }
+
+    fn commit_layout(&mut self, layout: Layout<Brush>, width: Option<f32>) {
+        self.width = width;
+        self.selection = self.selection.refresh(&layout);
+        self.layout = layout;
+        self.layout_dirty = false;
+        self.generation.nudge();
+    }
+
+    fn reflow_prepared_layout(&self, prepared: &mut PreparedLayout, width: Option<f32>) {
+        let width_bits = width.map(f32::to_bits);
+        if prepared.laid_out_width != Some(width_bits) {
+            prepared.layout.break_all_lines(width);
+            prepared.laid_out_width = Some(width_bits);
+        }
+    }
+
+    fn build_shaped_layout(&self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> Layout<Brush> {
         let mut builder = layout_cx.ranged_builder(font_cx, &self.buffer, self.scale as f32, self.quantize);
         for prop in self.default_style.inner().values() {
             builder.push_default(prop.to_owned());
@@ -1232,11 +1297,15 @@ impl PlainEditor {
         if let Some(preedit_range) = &self.compose {
             builder.push(StyleProperty::Underline(true), preedit_range.clone());
         }
-        self.layout = builder.build(&self.buffer);
-        self.layout.break_all_lines(self.width);
-        self.layout.align(self.alignment, AlignmentOptions::default());
-        self.selection = self.selection.refresh(&self.layout);
-        self.layout_dirty = false;
-        self.generation.nudge();
+        builder.build(&self.buffer)
+    }
+
+    fn finish_layout(&self, layout: &mut Layout<Brush>, width: Option<f32>) {
+        layout.break_all_lines(width);
+        self.align_layout(layout);
+    }
+
+    fn align_layout(&self, layout: &mut Layout<Brush>) {
+        layout.align(self.alignment, AlignmentOptions::default());
     }
 }

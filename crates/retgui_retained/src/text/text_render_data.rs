@@ -38,7 +38,7 @@ pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
             // https://drafts.csswg.org/css-text-decor/#painting-order
             let underline: Option<TextRenderItemLine> = if let Some(underline) = &style.underline {
                 let underline_brush = underline.brush.clone();
-                let run_metrics = glyph_run.run().metrics();
+                let run_metrics = glyph_run.run().font_metrics();
                 let offset = match underline.offset {
                     Some(offset) => offset,
                     None => run_metrics.underline_offset,
@@ -90,7 +90,7 @@ pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
 
             let strikethrough = if let Some(strikethrough) = &style.strikethrough {
                 let strikethrough_brush = strikethrough.brush.clone();
-                let run_metrics = glyph_run.run().metrics();
+                let run_metrics = glyph_run.run().font_metrics();
                 let offset = match strikethrough.offset {
                     Some(offset) => offset,
                     None => run_metrics.strikethrough_offset,
@@ -125,7 +125,7 @@ pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
                 glyph_transform: glyph_xform,
                 font_size,
                 glyphs: glyphs.collect(),
-                font: font.clone(),
+                font: font.font.clone(),
             };
 
             text_render_line.items.push(text_render_item);

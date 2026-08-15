@@ -1,5 +1,5 @@
 use peniko::Color;
-use retgui_primitives::geometry::{Affine, Point, Rectangle};
+use retgui_primitives::geometry::{Point, Rectangle};
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -15,7 +15,7 @@ use ui_events::keyboard::{Code, KeyState};
 
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
-use crate::elements::traits::DeepClone;
+use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
@@ -368,35 +368,26 @@ impl crate::elements::ElementData for SliderInner {
 
 impl ElementInternals for SliderInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |_, _| None)
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
         _text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.gummy_node_id.unwrap();
         let layout = gummy_tree.get_layout(node);
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        let dirty = has_new_layout
-            || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position
-            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
-        if dirty {
-            self.resolve_box(position, transform, layout, z_index);
-
+        if has_new_layout {
+            self.resolve_box(layout, z_index);
             self.apply_borders(scale_factor);
-            self.apply_clip(clip_bounds);
-            self.element_data.layout.parent_clip = clip_bounds;
+            gummy_tree.mark_seen(node);
         }
     }
 
@@ -420,6 +411,29 @@ impl ElementInternals for SliderInner {
         self.draw_thumb(_renderer, _scale_factor);
 
         self.maybe_end_overlay(_renderer);
+    }
+
+    fn add_hit_testable(&mut self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
+        if !hit_testable {
+            return;
+        }
+
+        let track = self.element_data.layout.local_box().border_rectangle();
+        let thumb_position = self.local_thumb_position(self.value);
+        let thumb = Rectangle::new(
+            thumb_position.x as f32,
+            thumb_position.y as f32,
+            self.thumb_size as f32,
+            self.thumb_size as f32,
+        );
+        let left = track.left().min(thumb.left());
+        let top = track.top().min(thumb.top());
+        let right = track.right().max(thumb.right());
+        let bottom = track.bottom().max(thumb.bottom());
+        renderer.push_hit_testable(
+            self.element_data.internal_id,
+            Rectangle::new(left, top, right - left, bottom - top).scale(scale_factor),
+        );
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
@@ -486,7 +500,7 @@ impl ElementInternals for SliderInner {
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
-        let rect = element_data.layout.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout.world_box().border_rectangle();
 
         let thumb_pos = self.thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
@@ -497,17 +511,7 @@ impl ElementInternals for SliderInner {
             thumb_size as f32,
         );
 
-        if thumb_rect.contains(&point) {
-            return true;
-        }
-
-        if let Some(clip) = element_data.layout.clip_bounds {
-            match rect.intersection(&clip) {
-                Some(bounds) => bounds.contains(&point),
-                None => false,
-            }
-        } else {
-            rect.contains(&point)
-        }
+        let contains = thumb_rect.contains(&point) || rect.contains(&point);
+        contains && element_data.layout.clip_bounds.is_none_or(|clip| clip.contains(&point))
     }
 }

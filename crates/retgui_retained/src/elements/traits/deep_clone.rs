@@ -1,76 +1,95 @@
-use crate::app::{GUMMY_TREE, request_apply_layout, request_layout};
+use crate::app::{ELEMENTS, GUMMY_TREE, request_apply_layout, request_layout};
 use crate::elements::ElementInternals;
 use crate::elements::element_id::create_unique_element_id;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub trait DeepClone {
-    fn deep_clone_internal(&self) -> Rc<RefCell<dyn ElementInternals>>;
-}
-
-impl<T> DeepClone for T
+pub(crate) fn clone_element<T, F>(source: &T, remap: F) -> Rc<RefCell<T>>
 where
     T: ElementInternals + Clone + 'static,
+    F: FnOnce(&Rc<RefCell<T>>, &mut crate::layout::GummyTree) -> Option<gummy::NodeId>,
 {
-    fn deep_clone_internal(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        let new_element = Rc::new(RefCell::new(self.clone()));
-        let new_element: Rc<RefCell<dyn ElementInternals>> = new_element;
+    let new_typed_element = Rc::new(RefCell::new(source.clone()));
+    let new_element: Rc<RefCell<dyn ElementInternals>> = new_typed_element.clone();
 
-        {
-            let mut new_data_binding = new_element.borrow_mut();
-            let new_data = new_data_binding.element_data_mut();
-            new_data.internal_id = create_unique_element_id();
-            new_data.me = Rc::downgrade(&new_element);
-            new_data.parent = None;
-            let (access_tree, access_key) = {
-                let tree = crate::accessibility::access_tree();
-                let source_key = new_data.access_key.expect("source accessibility node was not created");
-                let node = new_data
-                    .access_tree
-                    .get_node(source_key)
-                    .expect("source accessibility node was not created")
-                    .clone();
-                let key = tree.insert_node(node, None);
-                new_data.access_tree = tree.clone();
-                new_data.access_key = Some(key);
-                new_data.access_root = Some(key);
-                (tree, key)
-            };
+    let (access_tree, access_key, access_scale_factor, source_children, node_id) = {
+        let mut new_data_binding = new_element.borrow_mut();
+        let new_data = new_data_binding.element_data_mut();
+        new_data.internal_id = create_unique_element_id();
+        new_data.me = Rc::downgrade(&new_element);
+        new_data.parent = None;
+        let (access_tree, access_key) = {
+            let tree = crate::accessibility::access_tree();
+            let source_key = new_data.access_key.expect("source accessibility node was not created");
+            let mut node = new_data
+                .access_tree
+                .get_node(source_key)
+                .expect("source accessibility node was not created")
+                .clone();
+            node.set_context(new_data.me.clone());
+            let key = tree.insert_node(node, None);
+            new_data.access_tree = tree.clone();
+            new_data.access_key = Some(key);
+            new_data.access_root = Some(key);
+            (tree, key)
+        };
 
-            // Clone the layout node
-            let node_id = new_data.layout.gummy_node_id_mut();
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| *node_id = gummy_tree.clone_node(*node_id));
-            request_apply_layout(*node_id);
-            request_layout(*node_id);
+        // Clone the layout node
+        let node_id = new_data.layout.gummy_node_id_mut();
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            *node_id = gummy_tree.clone_node(*node_id);
+            gummy_tree.register_owner(*node_id, new_data.internal_id, new_data.me.clone());
+        });
+        request_apply_layout(*node_id);
+        request_layout(*node_id);
 
-            let node_id_copy = *node_id;
-            let mut new_children = Vec::new();
-            for child in &new_data.children {
-                let new_child = child.borrow().deep_clone();
-                new_child.borrow_mut().element_data_mut().parent = Some(Rc::downgrade(&new_element));
-                {
-                    let scale_factor = new_data.access_scale_factor;
-                    crate::accessibility::reparent_subtree(
-                        &mut *new_child.borrow_mut(),
-                        &access_tree,
-                        access_key,
-                        access_key,
-                        scale_factor,
-                    );
-                }
-                new_children.push(new_child.clone());
+        (
+            access_tree,
+            access_key,
+            new_data.access_scale_factor,
+            new_data.children.clone(),
+            *node_id,
+        )
+    };
 
-                let new_child_copy = new_child.clone();
-                GUMMY_TREE.with_borrow_mut(move |gummy_tree| {
-                    gummy_tree.add_child(
-                        node_id_copy,
-                        new_child_copy.borrow().element_data().layout.gummy_node_id.unwrap(),
-                    );
-                });
-            }
-            new_data.children = new_children;
-        }
+    let (new_id, new_me) = {
+        let binding = new_element.borrow();
+        let data = binding.element_data();
+        (data.internal_id, data.me.clone())
+    };
+    ELEMENTS.with_borrow_mut(|elements| {
+        elements.insert_id(new_id, new_me);
+    });
 
-        new_element
+    let child_layout_parent = GUMMY_TREE
+        .with_borrow_mut(|gummy_tree| remap(&new_typed_element, gummy_tree))
+        .unwrap_or(node_id);
+
+    let mut new_children = Vec::with_capacity(source_children.len());
+    for child in source_children {
+        let new_child = child.borrow().deep_clone();
+        new_child.borrow_mut().element_data_mut().parent = Some(Rc::downgrade(&new_element));
+        crate::accessibility::reparent_subtree(
+            &mut *new_child.borrow_mut(),
+            &access_tree,
+            access_key,
+            access_key,
+            access_scale_factor,
+        );
+        new_children.push(new_child.clone());
+
+        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+            gummy_tree.add_child(
+                child_layout_parent,
+                new_child.borrow().element_data().layout.gummy_node_id.unwrap(),
+            );
+        });
     }
+    new_element.borrow_mut().element_data_mut().children = new_children;
+
+    // Keep the primary node scheduled even if an element hook added owned
+    // nodes or rebuilt retained state after it was initially cloned.
+    request_apply_layout(node_id);
+
+    new_typed_element
 }

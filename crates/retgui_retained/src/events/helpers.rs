@@ -60,10 +60,18 @@ pub(super) fn find_target(
         return target;
     }
 
+    let physical_mouse_position = mouse_position.map(|point| {
+        let scale_factor = root.borrow().element_data().applied_scale_factor;
+        Point::new(point.x * scale_factor, point.y * scale_factor)
+    });
+
     ELEMENTS.with_borrow_mut(|elements| {
         let targets = &mut renderer.render_list_mut().targets;
         TargetItem::sort_items_by_overlay_depth(targets);
         target_scratch.extend(targets.iter().rev().filter_map(|target_item| {
+            if !physical_mouse_position.is_some_and(|point| target_item.rectangle.contains(&point)) {
+                return None;
+            }
             // When an element is removed from the dom, we do not remove it from targets.
             // So we must handle it here.
             elements.get(target_item.custom_id).and_then(|target| target.upgrade())
@@ -73,7 +81,7 @@ pub(super) fn find_target(
     // Otherwise do hit-testing:
 
     for node in target_scratch.drain(..) {
-        let should_pass_hit_test = mouse_position.is_some() && node.borrow().in_bounds(mouse_position.unwrap());
+        let should_pass_hit_test = mouse_position.is_some_and(|point| node.borrow().in_bounds(point));
 
         // The first element to pass the hit test should be the target.
         if should_pass_hit_test && target.is_none() {

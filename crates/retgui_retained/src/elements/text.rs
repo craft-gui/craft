@@ -21,7 +21,7 @@ use ui_events::pointer::PointerButton;
 use winit::dpi;
 
 use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Affine, Point, Rectangle, Vec2};
+use retgui_primitives::geometry::{Point, Rectangle, Vec2};
 
 use retgui_renderer::renderer::Renderer;
 use retgui_renderer::text_renderer_data::TextData;
@@ -29,7 +29,7 @@ use retgui_renderer::text_renderer_data::TextData;
 use retgui_resource_manager::ResourceManager;
 
 use crate::elements::element_data::ElementData;
-use crate::elements::traits::DeepClone;
+use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
@@ -148,32 +148,33 @@ impl Default for TextState {
 
 impl ElementInternals for TextInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |element, gummy_tree| {
+            let me = Rc::downgrade(element);
+            let mut element = element.borrow_mut();
+            element.me = me;
+            let node = element.element_data.layout.gummy_node_id();
+            let context = LayoutContext::Text(GummyTextContext {
+                element: element.me.clone(),
+            });
+            gummy_tree.set_node_context(node, Some(context));
+            Some(node)
+        })
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
         text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.gummy_node_id.unwrap();
         let result = gummy_tree.get_layout(node);
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        let dirty = has_new_layout
-            || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position
-            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
-        if dirty {
-            self.resolve_box(position, transform, result, z_index);
-            self.apply_clip(clip_bounds);
-            self.element_data.layout.parent_clip = clip_bounds;
+        if has_new_layout {
+            self.resolve_box(result, z_index);
             self.apply_borders(scale_factor);
         }
 
@@ -190,7 +191,6 @@ impl ElementInternals for TextInner {
         }
 
         state.try_update_text_render(text_context, self.element_data.style.get_selection_brush());
-        self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
     fn draw(
@@ -208,14 +208,9 @@ impl ElementInternals for TextInner {
 
         self.add_hit_testable(_renderer, true, _scale_factor);
 
-        let computed_box_transformed = self.get_computed_box_transformed();
-        let content_rectangle = computed_box_transformed.content_rectangle();
+        let content_rectangle = self.element_data.layout.local_box().content_rectangle();
 
         self.draw_borders(_renderer, _scale_factor);
-
-        /*if self.element_data.layout_item.has_new_layout {
-            renderer.draw_rect_outline(self.element_data.layout_item.computed_box_transformed.padding_rectangle(), rgba(255, 0, 0, 100), 1.0);
-        }*/
 
         _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
 

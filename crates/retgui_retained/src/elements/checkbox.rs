@@ -8,7 +8,7 @@ use issho::{AccessEvent, IsshoError};
 
 use peniko::kurbo;
 
-use retgui_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+use retgui_primitives::geometry::{Affine, Rectangle, TrblRectangle};
 
 use retgui_renderer::Brush;
 use retgui_renderer::renderer::Renderer;
@@ -19,12 +19,13 @@ use ui_events::keyboard::{Code, KeyState};
 
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
+use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::traits::clone_element;
+use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 use crate::events::{CheckboxToggled, Event, EventKind};
 use crate::layout::GummyTree;
-use crate::style::{Overflow, Unit};
+use crate::style::Unit;
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
 
@@ -82,43 +83,31 @@ impl crate::elements::ElementData for CheckboxInner {
 
 impl ElementInternals for CheckboxInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |element, gummy_tree| {
+            let mut element = element.borrow_mut();
+            let owner_id = element.element_data.internal_id;
+            let owner = element.element_data.me.clone();
+            let parent = element.element_data.layout.gummy_node_id();
+            let box_node = gummy_tree.clone_node(element.box_layout.layout.gummy_node_id());
+            element.box_layout.layout.gummy_node_id = Some(box_node);
+            element.box_layout.internal_id = create_unique_element_id();
+            element.box_layout.me = owner.clone();
+            gummy_tree.add_child(parent, box_node);
+            gummy_tree.register_owner(box_node, owner_id, owner);
+            Some(parent)
+        })
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
+        _text_context: &mut TextContext,
         scale_factor: f64,
     ) {
-        apply_generic_container_layout(
-            self,
-            gummy_tree,
-            position,
-            z_index,
-            transform,
-            text_context,
-            clip_bounds,
-            scale_factor,
-        );
-        let p = self.element_data.layout.computed_box_transformed.position;
-        let scroll_y = self.element_data.scroll().scroll_y() as f64;
-        let child_transform = Affine::translate((0.0, -scroll_y));
-
-        apply_generic_container_layout_non_dom(
-            &mut self.box_layout,
-            gummy_tree,
-            p,
-            z_index,
-            child_transform,
-            clip_bounds,
-            scale_factor,
-        );
-        self.box_rect = self.box_layout.layout.computed_box_transformed.content_rectangle();
+        apply_generic_container_layout(self, gummy_tree, z_index, scale_factor);
+        apply_generic_container_layout_non_dom(&mut self.box_layout, gummy_tree, z_index, scale_factor);
+        self.box_rect = self.box_layout.layout.local_box_in_parent().content_rectangle();
     }
 
     fn draw(
@@ -137,6 +126,10 @@ impl ElementInternals for CheckboxInner {
         self.add_hit_testable(renderer, true, _scale_factor);
         self.draw_borders(renderer, _scale_factor);
         self.maybe_start_layer(renderer, _scale_factor);
+
+        let container_transform = renderer.get_transform();
+        let scroll_y = self.element_data.scroll().scroll_y() as f64 * _scale_factor;
+        renderer.set_transform(container_transform * Affine::translate((0.0, -scroll_y)));
 
         let color = rgb(0, 100, 255);
         let border_color = if self.checked { color } else { rgb(150, 150, 150) };
@@ -172,6 +165,8 @@ impl ElementInternals for CheckboxInner {
             renderer.draw_rect_outline(s.scale(_scale_factor), Brush::Color(grey), 1.5 * _scale_factor);
         }
 
+        renderer.set_transform(container_transform);
+
         self.draw_children(renderer, resource_manager.clone(), _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
@@ -190,15 +185,6 @@ impl ElementInternals for CheckboxInner {
             && key.state == KeyState::Down
         {
             self.toggle();
-        }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 
@@ -238,10 +224,10 @@ impl Checkbox {
         inner_mut.box_layout.create_layout_node(None);
 
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            gummy_tree.add_child(
-                inner_mut.element_data.layout.gummy_node_id(),
-                inner_mut.box_layout.layout.gummy_node_id(),
-            );
+            let box_node = inner_mut.box_layout.layout.gummy_node_id();
+            gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), box_node);
+            let owner: Rc<RefCell<dyn ElementInternals>> = inner.clone();
+            gummy_tree.register_owner(box_node, inner_mut.element_data.internal_id, Rc::downgrade(&owner));
         });
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::CheckBox);

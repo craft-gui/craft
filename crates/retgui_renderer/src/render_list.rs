@@ -11,6 +11,10 @@ pub struct RenderList {
     pub overlay: SortedCommands,
     pub cull: Option<Rectangle>,
     pub transform: Affine,
+    /// Effective world-space clip while the render list is being built.
+    pub(crate) current_clip: Option<Rectangle>,
+    pub(crate) clip_stack: Vec<Option<Rectangle>>,
+    pub(crate) overlay_clip_stack: Vec<Option<Rectangle>>,
 }
 
 impl Default for RenderList {
@@ -28,6 +32,9 @@ impl RenderList {
             overlay: SortedCommands { children: vec![] },
             cull: None,
             transform: Affine::IDENTITY,
+            current_clip: None,
+            clip_stack: Vec::new(),
+            overlay_clip_stack: Vec::new(),
         }
     }
 }

@@ -1,12 +1,18 @@
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use gummy::{Layout, NodeId, Size, Style};
 
 use retgui_resource_manager::ResourceManager;
 
+use crate::elements::ElementInternals;
 use crate::layout::layout_context::{LayoutContext, measure_content};
 use crate::text::text_context::TextContext;
+
+type LayoutOwnerRegistration = (u64, Weak<RefCell<dyn ElementInternals>>);
+pub(crate) type PendingLayoutOwner = (u64, Rc<RefCell<dyn ElementInternals>>, u32);
 
 pub struct GummyTree {
     inner: gummy::GummyTree<LayoutContext>,
@@ -14,7 +20,9 @@ pub struct GummyTree {
     /// True if at least one node is dirty.
     is_layout_dirty: bool,
     /// True if the layout should be re-applied.
-    is_apply_layout_dirty: Vec<NodeId>,
+    is_apply_layout_dirty: HashSet<NodeId>,
+    layout_owners: HashMap<NodeId, LayoutOwnerRegistration>,
+    layout_orders: HashMap<NodeId, u32>,
 }
 
 impl GummyTree {
@@ -23,7 +31,9 @@ impl GummyTree {
             inner: gummy::GummyTree::<LayoutContext>::new(),
             seen_layouts: HashMap::new(),
             is_layout_dirty: true,
-            is_apply_layout_dirty: Vec::new(),
+            is_apply_layout_dirty: HashSet::new(),
+            layout_owners: HashMap::new(),
+            layout_orders: HashMap::new(),
         }
     }
 
@@ -54,6 +64,7 @@ impl GummyTree {
     pub fn mark_dirty(&mut self, node: NodeId) {
         self.inner.mark_dirty(node).unwrap();
         self.request_layout();
+        self.request_apply_layout(node);
     }
 
     pub fn mark_node_and_leaves_dirty(&mut self, node: NodeId) {
@@ -67,6 +78,7 @@ impl GummyTree {
 
         if children.is_empty() {
             self.inner.mark_dirty(parent).ok();
+            self.request_apply_layout(parent);
         } else {
             for child in children {
                 self.mark_leaves_dirty(child);
@@ -133,15 +145,37 @@ impl GummyTree {
 
     /// Remove a specific node from the tree and drop it
     pub fn remove_node(&mut self, node: NodeId) {
+        let owner_id = self.layout_owners.get(&node).map(|(owner_id, _)| *owner_id);
+        let owned_children = owner_id.map_or_else(Vec::new, |owner_id| {
+            self.inner
+                .children(node)
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|child| self.layout_owners.get(child).map(|(id, _)| *id) == Some(owner_id))
+                .collect::<Vec<_>>()
+        });
+        for owned in owned_children {
+            self.inner.remove(owned).unwrap();
+            self.forget_node(owned);
+        }
+
         self.inner.remove(node).unwrap();
-        self.seen_layouts.remove(&node);
+        self.forget_node(node);
         self.request_layout();
+    }
+
+    fn forget_node(&mut self, node: NodeId) {
+        self.seen_layouts.remove(&node);
+        self.layout_owners.remove(&node);
+        self.layout_orders.remove(&node);
+        self.is_apply_layout_dirty.remove(&node);
     }
 
     #[inline]
     pub fn set_style(&mut self, node: NodeId, style: Style) {
         self.inner.set_style(node, style).unwrap();
         self.request_layout();
+        self.request_apply_layout(node);
     }
 
     /// Creates and adds a new unattached leaf node to the tree, and returns the [`NodeId`] of the new node
@@ -156,6 +190,7 @@ impl GummyTree {
     pub fn set_node_context(&mut self, node: NodeId, measure: Option<LayoutContext>) {
         self.inner.set_node_context(node, measure).unwrap();
         self.request_layout();
+        self.request_apply_layout(node);
     }
 
     /// Return this node layout relative to its parent
@@ -176,18 +211,78 @@ impl GummyTree {
         self.seen_layouts.insert(node, layout);
     }
 
+    pub(crate) fn register_owner(&mut self, node: NodeId, owner_id: u64, owner: Weak<RefCell<dyn ElementInternals>>) {
+        self.layout_owners.insert(node, (owner_id, owner));
+    }
+
+    /// Returns only owners whose own Gummy result changed or whose local
+    /// presentation state explicitly requested an apply.
+    ///
+    /// A Gummy recompute requires comparing the resulting tree because Gummy
+    /// does not expose its changed-node list. Apply-only invalidations use the
+    /// exact pending-node set and never walk the retained subtree.
+    pub(crate) fn take_layout_owners(&mut self, root: NodeId, layout_was_recomputed: bool) -> Vec<PendingLayoutOwner> {
+        fn collect(
+            tree: &mut GummyTree,
+            node: NodeId,
+            order: &mut u32,
+            seen_owners: &mut HashSet<u64>,
+            owners: &mut Vec<PendingLayoutOwner>,
+        ) {
+            let node_order = *order;
+            *order += 1;
+            tree.layout_orders.insert(node, node_order);
+            let needs_apply = tree.has_new_layout(node) || tree.is_apply_layout_dirty.contains(&node);
+            if needs_apply
+                && let Some((owner_id, owner)) = tree.layout_owners.get(&node)
+                && seen_owners.insert(*owner_id)
+                && let Some(owner) = owner.upgrade()
+            {
+                owners.push((*owner_id, owner, node_order));
+            }
+
+            for child in tree.inner.children(node).unwrap_or_default() {
+                collect(tree, child, order, seen_owners, owners);
+            }
+        }
+
+        let mut owners = Vec::new();
+        if layout_was_recomputed {
+            let mut order = 0;
+            collect(self, root, &mut order, &mut HashSet::new(), &mut owners);
+        } else {
+            let mut pending = self
+                .is_apply_layout_dirty
+                .iter()
+                .copied()
+                .filter(|node| self.root_of(*node) == root)
+                .collect::<Vec<_>>();
+            pending.sort_by_key(|node| self.layout_orders.get(node).copied().unwrap_or(u32::MAX));
+
+            let mut seen_owners = HashSet::new();
+            for node in pending {
+                if let Some((owner_id, owner)) = self.layout_owners.get(&node)
+                    && seen_owners.insert(*owner_id)
+                    && let Some(owner) = owner.upgrade()
+                {
+                    owners.push((*owner_id, owner, self.layout_orders.get(&node).copied().unwrap_or(0)));
+                }
+            }
+        }
+
+        let pending = std::mem::take(&mut self.is_apply_layout_dirty);
+        self.is_apply_layout_dirty = pending.into_iter().filter(|node| self.root_of(*node) != root).collect();
+        owners
+    }
+
     #[inline(always)]
     pub fn request_layout(&mut self) {
         self.is_layout_dirty = true;
-        self.is_apply_layout_dirty.clear();
     }
 
     #[inline(always)]
     pub fn request_apply_layout(&mut self, node: NodeId) {
-        let root = self.root_of(node);
-        if !self.is_apply_layout_dirty(&root) {
-            self.is_apply_layout_dirty.push(root);
-        }
+        self.is_apply_layout_dirty.insert(node);
     }
 
     /*#[inline(always)]
@@ -202,7 +297,9 @@ impl GummyTree {
 
     #[inline(always)]
     pub fn is_apply_layout_dirty(&self, root: &NodeId) -> bool {
-        self.is_apply_layout_dirty.contains(root)
+        self.is_apply_layout_dirty
+            .iter()
+            .any(|node| self.root_of(*node) == *root)
     }
 
     pub fn apply_layout(&mut self, root: NodeId) {

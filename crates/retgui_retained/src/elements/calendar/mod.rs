@@ -9,14 +9,13 @@ use std::sync::Arc;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Container, Dropdown, Element, ElementInternals, Text, resolve_clip_for_scrollable};
+use crate::elements::traits::clone_element;
+use crate::elements::{AsElement, Container, Dropdown, Element, ElementInternals, Text};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
+use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
 use crate::text::text_context::TextContext;
 use crate::{px, rgb};
-use retgui_primitives::geometry::{Affine, Point, Rectangle};
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
@@ -89,29 +88,17 @@ impl crate::elements::ElementData for CalendarInner {
 
 impl ElementInternals for CalendarInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |_, _| None)
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
+        _text_context: &mut TextContext,
         scale_factor: f64,
     ) {
-        apply_generic_container_layout(
-            self,
-            gummy_tree,
-            position,
-            z_index,
-            transform,
-            text_context,
-            clip_bounds,
-            scale_factor,
-        );
+        apply_generic_container_layout(self, gummy_tree, z_index, scale_factor);
     }
 
     fn draw(
@@ -134,15 +121,6 @@ impl ElementInternals for CalendarInner {
             } else if target_id == month_id {
                 self.select_month(*index);
             }
-        }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 

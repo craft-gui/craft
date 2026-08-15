@@ -46,7 +46,11 @@ pub trait Renderer: Any {
         self.render_list_mut().targets.clear();
         self.render_list_mut().commands.clear();
         self.render_list_mut().overlay.children.clear();
+        self.render_list_mut().current_overlay_depth = 0;
         self.render_list_mut().transform = Affine::IDENTITY;
+        self.render_list_mut().clip_stack.clear();
+        self.render_list_mut().overlay_clip_stack.clear();
+        self.render_list_mut().current_clip = self.render_list().cull;
     }
 
     #[inline(always)]
@@ -57,6 +61,12 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn get_transform(&self) -> Affine {
         self.render_list().transform
+    }
+
+    /// Returns the effective world-space clip while building the render list.
+    #[inline(always)]
+    fn get_clip(&self) -> Option<Rectangle> {
+        self.render_list().current_clip
     }
 
     fn draw_circle(&mut self, circle: Circle, brush: Brush) {
@@ -111,6 +121,14 @@ pub trait Renderer: Any {
         let transform = self.get_transform();
         if should_cull_rect(&transform, &bounding_box, self.render_list().cull.as_ref()) {
             return;
+        }
+
+        let mut bounding_box = Rectangle::from_kurbo(transform.transform_rect_bbox(bounding_box.to_kurbo()));
+        if let Some(clip) = self.get_clip() {
+            let Some(clipped) = bounding_box.intersection(&clip) else {
+                return;
+            };
+            bounding_box = clipped;
         }
 
         let overlay_depth = self.render_list().current_overlay_depth;
@@ -204,13 +222,24 @@ pub trait Renderer: Any {
             .push(RenderCommand::DrawImage(DrawImageCmd {
                 rect,
                 resource_id,
-                transform: Default::default(),
+                transform,
             }));
     }
 
     #[inline(always)]
     fn push_layer(&mut self, rect: Rectangle) {
         let transform = self.get_transform();
+        let world_rect = Rectangle::from_kurbo(transform.transform_rect_bbox(rect.to_kurbo()));
+        let previous_clip = self.render_list().current_clip;
+        let next_clip = match previous_clip {
+            Some(clip) => Some(
+                clip.intersection(&world_rect)
+                    .unwrap_or_else(|| Rectangle::new(0.0, 0.0, -1.0, -1.0)),
+            ),
+            None => Some(world_rect),
+        };
+        self.render_list_mut().clip_stack.push(previous_clip);
+        self.render_list_mut().current_clip = next_clip;
 
         self.render_list_mut()
             .commands
@@ -219,6 +248,17 @@ pub trait Renderer: Any {
 
     fn push_layer_with_bez_path(&mut self, path: BezPath) {
         let transform = self.get_transform();
+        let world_rect = Rectangle::from_kurbo(transform.transform_rect_bbox(path.bounding_box()));
+        let previous_clip = self.render_list().current_clip;
+        let next_clip = match previous_clip {
+            Some(clip) => Some(
+                clip.intersection(&world_rect)
+                    .unwrap_or_else(|| Rectangle::new(0.0, 0.0, -1.0, -1.0)),
+            ),
+            None => Some(world_rect),
+        };
+        self.render_list_mut().clip_stack.push(previous_clip);
+        self.render_list_mut().current_clip = next_clip;
 
         self.render_list_mut()
             .commands
@@ -227,10 +267,18 @@ pub trait Renderer: Any {
 
     #[inline(always)]
     fn pop_layer(&mut self) {
+        self.render_list_mut().current_clip = self
+            .render_list_mut()
+            .clip_stack
+            .pop()
+            .expect("renderer layer stack underflow");
         self.render_list_mut().commands.push(RenderCommand::PopLayer);
     }
 
     fn start_overlay(&mut self) {
+        let previous_clip = self.render_list().current_clip;
+        self.render_list_mut().overlay_clip_stack.push(previous_clip);
+        self.render_list_mut().current_clip = self.render_list().cull;
         self.render_list_mut().commands.push(RenderCommand::StartOverlay);
         self.render_list_mut().current_overlay_depth += 1;
     }
@@ -238,6 +286,11 @@ pub trait Renderer: Any {
     fn end_overlay(&mut self) {
         self.render_list_mut().commands.push(RenderCommand::EndOverlay);
         self.render_list_mut().current_overlay_depth -= 1;
+        self.render_list_mut().current_clip = self
+            .render_list_mut()
+            .overlay_clip_stack
+            .pop()
+            .expect("renderer overlay stack underflow");
     }
 
     #[inline(always)]
@@ -254,6 +307,9 @@ pub trait Renderer: Any {
 
     fn set_cull(&mut self, cull: Option<Rectangle>) {
         self.render_list_mut().cull = cull;
+        if self.render_list().clip_stack.is_empty() {
+            self.render_list_mut().current_clip = cull;
+        }
     }
 }
 
