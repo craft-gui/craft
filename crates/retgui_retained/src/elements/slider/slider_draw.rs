@@ -5,7 +5,7 @@ use retgui_renderer::renderer::Renderer;
 
 use crate::Color;
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementInternals, SliderInner};
+use crate::elements::{ElementData, ElementInternals, SliderInner};
 use crate::layout::layout::{CssComputedBorder, draw_borders_generic};
 
 fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
@@ -21,9 +21,9 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
 impl SliderInner {
     pub(super) fn draw_track(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
         if let Some(track_color) = self.get_track_brush() {
-            let mut track_box = self.get_computed_box_transformed();
+            let mut track_box = self.element_data().layout.local_box();
 
-            let computed_element_rect = self.get_computed_box_transformed().border_rectangle();
+            let computed_element_rect = track_box.border_rectangle();
 
             let range = self.get_max() - self.get_min();
             let normalized_value = if range == 0.0 {
@@ -61,7 +61,7 @@ impl SliderInner {
     }
 
     pub(super) fn draw_thumb(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
-        let thumb_pos = self.thumb_position(self.get_value());
+        let thumb_pos = self.local_thumb_position(self.get_value());
         let thumb_size = self.get_thumb_size();
         let thumb_background_color = self.get_thumb_brush();
         let thumb_rect = Rectangle::new(

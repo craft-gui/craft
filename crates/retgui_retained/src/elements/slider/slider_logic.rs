@@ -17,7 +17,7 @@ impl SliderInner {
     }
 
     pub(super) fn compute_slider_value(&self, pointer_position: &Point) -> f64 {
-        let content_rectangle = self.element_data().layout.computed_box_transformed.content_rectangle();
+        let content_rectangle = self.element_data().layout.world_box().content_rectangle();
         let start = if self.get_direction() == SliderDirection::Horizontal {
             content_rectangle.left() as f64
         } else {
@@ -51,8 +51,18 @@ impl SliderInner {
     }
 
     pub(super) fn thumb_position(&self, thumb_value: f64) -> Point {
-        let content_rectangle = self.element_data().layout.computed_box_transformed.content_rectangle();
+        self.thumb_position_in_rect(thumb_value, self.element_data().layout.world_box().content_rectangle())
+    }
 
+    pub(super) fn local_thumb_position(&self, thumb_value: f64) -> Point {
+        self.thumb_position_in_rect(thumb_value, self.element_data().layout.computed_box.content_rectangle())
+    }
+
+    fn thumb_position_in_rect(
+        &self,
+        thumb_value: f64,
+        content_rectangle: retgui_primitives::geometry::Rectangle,
+    ) -> Point {
         let range = self.get_max() - self.get_min();
         let normalized_value = if range == 0.0 {
             0.0

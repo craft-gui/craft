@@ -1,7 +1,7 @@
 mod text_input_state;
 
 use retgui_primitives::Color;
-use retgui_primitives::geometry::{Affine, Point, Rectangle, TrblRectangle};
+use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
@@ -23,12 +23,12 @@ use winit::event::Ime;
 use crate::app::{ELEMENTS, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::traits::clone_element;
+use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::layout::layout_context::{GummyTextInputContext, LayoutContext};
-use crate::style::{Display, Overflow, Style, Unit};
+use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
+use crate::style::{Display, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
@@ -137,50 +137,52 @@ impl crate::elements::ElementData for TextInputInner {
 
 impl ElementInternals for TextInputInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        clone_element::<Self, _>(self, |element, gummy_tree| {
+            let me = Rc::downgrade(element);
+            let mut element = element.borrow_mut();
+            element.me = me;
+            let gummy_id = element.element_data.layout.gummy_node_id();
+            element.state.gummy_id = Some(gummy_id);
+            element.state.editor.gummy_id = Some(gummy_id);
+            let context = LayoutContext::TextInput(GummyTextInputContext {
+                element: element.me.clone(),
+            });
+            gummy_tree.set_node_context(gummy_id, Some(context));
+            Some(gummy_id)
+        })
     }
 
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
         text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.gummy_node_id.unwrap();
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        let dirty = has_new_layout
-            || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position
-            || clip_bounds != self.element_data.layout.parent_clip;
         self.element_data.layout.has_new_layout = has_new_layout;
 
-        if dirty {
-            let result = gummy_tree.get_layout(node);
-            self.resolve_box(position, transform, result, z_index);
-            self.apply_clip(clip_bounds);
-            self.element_data.layout.parent_clip = clip_bounds;
+        let result = gummy_tree.get_layout(node);
+        let render_available_space = gummy::Size {
+            width: gummy::AvailableSpace::Definite((result.content_box_width() - result.scrollbar_size.width).max(0.0)),
+            height: gummy::AvailableSpace::Definite(
+                (result.content_box_height() - result.scrollbar_size.height).max(0.0),
+            ),
+        };
+        let render_key = TextHashKey::new(gummy::Size::NONE, render_available_space);
+        let scroll_to_cursor_after_layout = self.is_focused() && !self.state.is_rendered_for(render_key);
+        let needs_text_layout = self.state.needs_final_layout(render_key);
+        if has_new_layout {
+            self.resolve_box(result, z_index);
             self.apply_borders(scale_factor);
-
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();
-
-            let text_position = self.get_computed_box_transformed().content_rectangle();
-            self.state.set_origin(&text_position.position());
-            if self.is_focused() {
-                self.state.maybe_scroll_to_cursor(&mut self.element_data);
-            }
-
-            self.state.is_layout_dirty = false;
         }
 
         // For manual scroll updates.
-        if !dirty && self.element_data.layout.scroll_state.is_new() {
-            let result = gummy_tree.get_layout(node);
+        if !has_new_layout && self.element_data.layout.scroll_state.is_new() {
             self.element_data.apply_scroll(result);
             self.element_data.layout.scroll_state.mark_old();
         }
@@ -189,15 +191,15 @@ impl ElementInternals for TextInputInner {
             gummy_tree.mark_seen(node);
         }
 
-        self.state.layout(
-            self.state.last_requested_key.unwrap().known_dimensions(),
-            self.state.last_requested_key.unwrap().available_space(),
-            text_context,
-            true,
-        );
+        if needs_text_layout {
+            self.state.finalize_layout(render_available_space, text_context);
+
+            if scroll_to_cursor_after_layout {
+                self.state.maybe_scroll_to_cursor(&mut self.element_data);
+            }
+        }
 
         self.state.render_text(self.element_data.style());
-        self.element_data.set_accessibility_bounds_from_layout(scale_factor);
     }
 
     fn draw(
@@ -211,25 +213,28 @@ impl ElementInternals for TextInputInner {
             return;
         }
 
+        let text_position = self.get_computed_box_transformed().content_rectangle();
+        self.state.set_origin(&text_position.position());
+
         self.maybe_start_overlay(_renderer);
 
         self.add_hit_testable(_renderer, true, _scale_factor);
 
-        let computed_box_transformed = self.get_computed_box_transformed();
-        let content_rectangle = computed_box_transformed.content_rectangle();
+        let content_rectangle = self.element_data.layout.local_box().content_rectangle();
 
         self.draw_borders(_renderer, _scale_factor);
 
         let is_scrollable = self.element_data.is_scrollable();
 
         let element_data = &self.element_data;
-        let padding_rectangle = element_data.layout.computed_box_transformed.padding_rectangle();
+        let padding_rectangle = element_data.layout.local_box().padding_rectangle();
         _renderer.push_layer(padding_rectangle.scale(_scale_factor));
 
         let text_scroll = if is_scrollable {
-            Some(TextScroll::new(
+            Some(physical_text_scroll(
                 self.element_data.scroll().scroll_y(),
                 self.element_data.layout.computed_scroll_track.height,
+                _scale_factor,
             ))
         } else {
             None
@@ -301,7 +306,8 @@ impl ElementInternals for TextInputInner {
             EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
                 self.set_pointer_capture(message.pointer_id().unwrap());
-                self.state.pointer_down(text_context);
+                self.state
+                    .pointer_down(text_context, pointer_button.state.logical_point(), scroll_y);
             }
             EventKind::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.state.pointer_up();
@@ -330,15 +336,6 @@ impl ElementInternals for TextInputInner {
         {
             let value = self.state.editor().raw_text().to_owned();
             self.element_data.set_accessibility_value(value);
-        }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
         }
     }
 
@@ -467,4 +464,8 @@ fn parley_box_to_rect(bounding_box: BoundingBox) -> Rectangle {
         bounding_box.width() as f32,
         bounding_box.height() as f32,
     )
+}
+
+fn physical_text_scroll(scroll_y: f32, scroll_height: f32, scale_factor: f64) -> TextScroll {
+    TextScroll::new(scroll_y * scale_factor as f32, scroll_height * scale_factor as f32)
 }

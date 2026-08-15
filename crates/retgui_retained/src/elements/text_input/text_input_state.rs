@@ -27,11 +27,10 @@ use crate::elements::{ElementInternals, TextInputInner};
 use crate::events::{Event, EventKind, TextInputChanged};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
-use crate::text::parley_editor::{PlainEditor, PlainEditorDriver};
+use crate::text::parley_editor::{PlainEditor, PlainEditorDriver, PreparedLayout};
 use crate::text::text_context::TextContext;
 use crate::text::{RangedStyles, text_render_data};
 
-#[derive(Clone)]
 pub struct TextInputState {
     pub(crate) gummy_id: Option<NodeId>,
     origin: Point,
@@ -41,16 +40,15 @@ pub struct TextInputState {
     pub(crate) ime_state: ImeState,
     pub(crate) editor: PlainEditor,
 
-    cache: HashMap<TextHashKey, gummy::Size<f32>>,
+    size_cache: HashMap<TextHashKey, gummy::Size<f32>>,
 
-    // The current key used for laying out the text input.
-    current_layout_key: Option<TextHashKey>,
+    // The key used by the interactive editor's presented layout.
+    presented_layout_key: Option<TextHashKey>,
 
     current_render_key: Option<TextHashKey>,
     content_widths: Option<ContentWidths>,
+    prepared_layout: Option<PreparedLayout>,
 
-    // The most recently requested key for laying out the text input.
-    pub(crate) last_requested_key: Option<TextHashKey>,
     pub(crate) text_render: Option<TextRender>,
     scale_factor: f64,
 
@@ -67,6 +65,34 @@ pub struct TextInputState {
     pub is_layout_dirty: bool,
 }
 
+impl Clone for TextInputState {
+    fn clone(&self) -> Self {
+        Self {
+            gummy_id: self.gummy_id,
+            origin: self.origin,
+            is_active: self.is_active,
+            ime_state: self.ime_state,
+            editor: self.editor.clone(),
+            size_cache: self.size_cache.clone(),
+            presented_layout_key: self.presented_layout_key,
+            current_render_key: self.current_render_key,
+            content_widths: self.content_widths,
+            prepared_layout: None,
+            text_render: self.text_render.clone(),
+            scale_factor: self.scale_factor,
+            last_click_time: self.last_click_time,
+            click_count: self.click_count,
+            pointer_down: self.pointer_down,
+            cursor_pos: self.cursor_pos,
+            cursor_visible: self.cursor_visible,
+            modifiers: self.modifiers,
+            start_time: self.start_time,
+            blink_period: self.blink_period,
+            is_layout_dirty: self.is_layout_dirty,
+        }
+    }
+}
+
 impl Default for TextInputState {
     fn default() -> Self {
         let default_style = TextInputInner::get_default_style();
@@ -80,11 +106,11 @@ impl Default for TextInputState {
             ime_state: ImeState::default(),
             is_active: false,
             editor,
-            cache: Default::default(),
-            current_layout_key: None,
+            size_cache: Default::default(),
+            presented_layout_key: None,
             current_render_key: None,
             content_widths: None,
-            last_requested_key: None,
+            prepared_layout: None,
             text_render: None,
             scale_factor: 1.0,
             last_click_time: None,
@@ -107,25 +133,28 @@ pub(crate) struct ImeState {
 }
 
 impl TextInputState {
-    /// Returns the last know positon of the cursor relative to the origin.
+    /// Returns the last known pointer position in editor-layout coordinates.
     ///
-    /// The cursor is assumed to start at (0.0, 0.0). The cursor_pos may return points
-    /// outside the text input.
+    /// Editor-layout coordinates are element-local and include the editor scale
+    /// and text scroll offset. The point may be outside the text input.
     pub fn cursor_pos(&self) -> Point {
         self.cursor_pos
     }
 
-    /// Set the mouse positon.
+    pub(crate) fn is_rendered_for(&self, key: TextHashKey) -> bool {
+        self.text_render.is_some() && self.current_render_key == Some(key)
+    }
+
+    pub(crate) fn needs_final_layout(&self, key: TextHashKey) -> bool {
+        self.is_layout_dirty || !self.is_rendered_for(key) || self.presented_layout_key != Some(key)
+    }
+
+    /// Sets the pointer position from a pointer-move event.
     ///
     /// The point should be relative to the top left of the window.
     pub fn move_pointer(&mut self, text_context: &mut TextContext, pointer_moved: &PointerUpdate, scroll_y: f64) {
         let prev_pos = self.cursor_pos();
-        // NOTE: Cursor position should be relative to the top left of the text box.
-        let cursor_pos = pointer_moved.current.logical_point();
-        let cursor_pos: Point = (cursor_pos - self.origin).to_point();
-        let mut cursor_pos = Point::new(cursor_pos.x * self.scale_factor, cursor_pos.y * self.scale_factor);
-        cursor_pos.y += scroll_y;
-        self.cursor_pos = cursor_pos;
+        self.set_pointer_position(pointer_moved.current.logical_point(), scroll_y);
         // macOS seems to generate a spurious move after selecting word?
         if self.is_pointer_down() && prev_pos != self.cursor_pos() && !self.editor.is_composing() {
             self.reset_blink();
@@ -148,30 +177,22 @@ impl TextInputState {
             return current_scroll_y;
         };
 
-        let margin = 2.0;
-        let cursor_top = cursor_rect.top() - margin;
-        let cursor_bottom = cursor_rect.bottom() + margin;
-
-        let mut new_scroll = current_scroll_y;
-
-        if cursor_top < current_scroll_y {
-            new_scroll = cursor_top;
-        } else if cursor_bottom > current_scroll_y + viewport_height {
-            new_scroll = cursor_bottom - viewport_height;
-        }
-
-        new_scroll.max(0.0)
+        logical_scroll_to_cursor(cursor_rect, self.scale_factor, viewport_height, current_scroll_y)
     }
 
-    /// Set the origin of the text input state.
+    /// Sets the text input's content origin in window-logical coordinates.
     ///
     /// The point should be relative to the top left of the window.
     pub fn set_origin(&mut self, origin: &Point) {
-        let diff = *origin - self.origin;
-        self.cursor_pos += diff;
         self.origin = *origin;
     }
 
+    fn set_pointer_position(&mut self, pointer: Point, scroll_y: f64) {
+        self.cursor_pos = pointer_to_editor_position(pointer, self.origin, scroll_y, self.scale_factor);
+    }
+
+    /// Measures an alternate layout constraint without changing the interactive
+    /// editor's presented layout, selection, or render data.
     pub fn measure(
         &mut self,
         known_dimensions: gummy::Size<Option<f32>>,
@@ -179,20 +200,45 @@ impl TextInputState {
         text_context: &mut TextContext,
     ) -> gummy::Size<f32> {
         let key = TextHashKey::new(known_dimensions, available_space);
+        if let Some(size) = self.size_cache.get(&key) {
+            return *size;
+        }
 
-        self.last_requested_key = Some(key);
+        self.ensure_prepared_layout(text_context);
+        let content_widths = self.content_widths.unwrap();
+        let width_constraint = physical_width_constraint(
+            known_dimensions.width,
+            available_space.width,
+            content_widths,
+            self.scale_factor,
+        );
+        let (width, height) = self
+            .editor
+            .measure_layout(self.prepared_layout.as_mut().unwrap(), width_constraint);
 
-        self.layout(known_dimensions, available_space, text_context, false)
+        let size = physical_size_to_logical(width, height, self.scale_factor);
+        self.size_cache.insert(key, size);
+        size
+    }
+
+    fn ensure_prepared_layout(&mut self, text_context: &mut TextContext) {
+        if self.prepared_layout.is_none() {
+            let prepared = self
+                .editor
+                .prepare_layout(&mut text_context.font_context, &mut text_context.layout_context);
+            self.content_widths = Some(prepared.content_widths());
+            self.prepared_layout = Some(prepared);
+        }
     }
 
     pub fn clear_cache(&mut self) {
         self.is_layout_dirty = true;
-        self.cache.clear();
-        self.current_layout_key = None;
-        self.last_requested_key = None;
+        self.size_cache.clear();
+        self.presented_layout_key = None;
         self.current_render_key = None;
         self.text_render = None;
         self.content_widths = None;
+        self.prepared_layout = None;
 
         if let Some(id) = self.gummy_id {
             GUMMY_TREE.with_borrow_mut(|gummy_tree| {
@@ -201,84 +247,54 @@ impl TextInputState {
         }
     }
 
-    pub fn layout(
+    pub fn finalize_layout(
         &mut self,
-        known_dimensions: gummy::Size<Option<f32>>,
         available_space: gummy::Size<AvailableSpace>,
         text_context: &mut TextContext,
-        last_pass: bool,
     ) -> gummy::Size<f32> {
-        let key = TextHashKey::new(known_dimensions, available_space);
+        let key = TextHashKey::new(gummy::Size::NONE, available_space);
 
-        if let Some(value) = self.cache.get(&key) {
-            if last_pass {
-                if self.current_layout_key == Some(key) {
-                    if self.current_render_key != self.current_layout_key {
-                        self.current_render_key = self.current_layout_key;
-
-                        let layout = self.editor.try_layout().unwrap();
-                        self.text_render = Some(text_render_data::from_editor(layout));
-                    }
-                    return *value;
-                }
-            } else {
-                return *value;
+        if !self.is_layout_dirty
+            && self.presented_layout_key == Some(key)
+            && let Some(layout) = self.editor.try_layout()
+        {
+            let size = physical_size_to_logical(layout.width(), layout.height(), self.scale_factor);
+            self.size_cache.insert(key, size);
+            if !self.is_rendered_for(key) {
+                self.current_render_key = Some(key);
+                self.text_render = Some(text_render_data::from_editor(layout));
             }
+            return size;
         }
 
-        if self.editor.try_layout().is_none() || self.is_layout_dirty || self.content_widths.is_none() {
-            self.editor.set_width(None);
-            self.editor
-                .refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
-            self.content_widths = Some(self.editor.try_layout().unwrap().calculate_content_widths());
-        }
-
-        let content_widths = self.content_widths.unwrap();
-        let width_constraint: Option<f32> = known_dimensions
-            .width
-            .or(match available_space.width {
-                AvailableSpace::MinContent => Some(content_widths.min),
-                AvailableSpace::MaxContent => Some(content_widths.max),
-                AvailableSpace::Definite(width) => Some(width),
-            })
-            .map(|width| {
-                let width: f32 = dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0;
-                // TODO: Ignored old comment. Does this issue still happen?
-                // Gummy may give a min width > max_width.
-                // Min-width is preserved in this scenario to ensure text is readable.
-                //width.clamp(content_widths.min, content_widths.max.max(content_widths.min))
-                width
-            });
-
-        let _height_constraint: Option<f32> = known_dimensions
-            .height
-            .or(match available_space.height {
-                AvailableSpace::MinContent => None,
-                AvailableSpace::MaxContent => None,
-                AvailableSpace::Definite(height) => Some(height),
-            })
-            .map(|height| dpi::PhysicalUnit::from_logical::<f32, f32>(height, self.scale_factor).0);
-
-        self.editor.set_width(width_constraint);
-        self.editor
-            .refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
-        let layout = self.editor.try_layout().unwrap();
-
-        if last_pass {
-            self.current_render_key = self.current_layout_key;
-            self.text_render = Some(text_render_data::from_editor(layout));
-        }
-
-        let logical_width = dpi::LogicalUnit::from_physical::<f32, f32>(layout.width(), self.scale_factor).0;
-        let logical_height = dpi::LogicalUnit::from_physical::<f32, f32>(layout.height(), self.scale_factor).0;
-
-        let size = gummy::Size {
-            width: logical_width,
-            height: logical_height,
+        let width_constraint = match available_space.width {
+            AvailableSpace::Definite(width) => {
+                Some(dpi::PhysicalUnit::from_logical::<f32, f32>(width, self.scale_factor).0)
+            }
+            AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                self.ensure_prepared_layout(text_context);
+                let content_widths = self.content_widths.unwrap();
+                physical_width_constraint(None, available_space.width, content_widths, self.scale_factor)
+            }
         };
 
-        self.cache.insert(key, size);
-        self.current_layout_key = Some(key);
+        let (width, height) = if let Some(prepared) = self.prepared_layout.take() {
+            self.editor.adopt_prepared_layout(prepared, width_constraint)
+        } else {
+            self.editor.set_width(width_constraint);
+            self.editor
+                .refresh_layout(&mut text_context.font_context, &mut text_context.layout_context);
+            let layout = self.editor.try_layout().unwrap();
+            (layout.width(), layout.height())
+        };
+        let size = physical_size_to_logical(width, height, self.scale_factor);
+
+        self.size_cache.insert(key, size);
+        self.presented_layout_key = Some(key);
+        self.current_render_key = Some(key);
+        let layout = self.editor.try_layout().unwrap();
+        self.text_render = Some(text_render_data::from_editor(layout));
+        self.is_layout_dirty = false;
         size
     }
 
@@ -363,7 +379,8 @@ impl TextInputState {
         self.clear_cache();
     }
 
-    pub fn pointer_down(&mut self, text_context: &mut TextContext) {
+    pub fn pointer_down(&mut self, text_context: &mut TextContext, pointer_position: Point, scroll_y: f64) {
+        self.set_pointer_position(pointer_position, scroll_y);
         self.cursor_visible = true;
         self.pointer_down = true;
         self.reset_blink();
@@ -407,16 +424,12 @@ impl TextInputState {
     }
 
     pub fn maybe_scroll_to_cursor(&mut self, element_data: &mut ElementData) {
-        let height = element_data
-            .layout
-            .computed_box_transformed
-            .padding_rectangle_size()
-            .height;
+        let height = element_data.layout.computed_box.padding_rectangle_size().height;
         let x = self.calculate_scroll_to_cursor(height, element_data.layout.scroll_state.scroll_y());
         if x < 0.0 {
             return;
         }
-        element_data.layout.scroll_state.set_scroll_y(x);
+        crate::elements::scrollable::set_scroll_y(&mut element_data.layout, x);
     }
 
     /// Insert at cursor, or replace selection.
@@ -674,6 +687,7 @@ impl TextInputState {
 
     pub fn paste(&mut self, text_context: &mut TextContext) {
         paste(&mut self.driver(text_context));
+        self.clear_cache();
     }
 
     pub fn cut(&mut self, text_context: &mut TextContext) {
@@ -767,6 +781,57 @@ impl TextInputState {
         let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
         text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
     }
+}
+
+fn physical_width_constraint(
+    known_width: Option<f32>,
+    available_width: AvailableSpace,
+    content_widths: ContentWidths,
+    scale_factor: f64,
+) -> Option<f32> {
+    if let Some(width) = known_width {
+        return Some(dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0);
+    }
+
+    match available_width {
+        AvailableSpace::MinContent => Some(content_widths.min),
+        AvailableSpace::MaxContent => Some(content_widths.max),
+        AvailableSpace::Definite(width) => Some(dpi::PhysicalUnit::from_logical::<f32, f32>(width, scale_factor).0),
+    }
+}
+
+fn physical_size_to_logical(width: f32, height: f32, scale_factor: f64) -> gummy::Size<f32> {
+    gummy::Size {
+        width: dpi::LogicalUnit::from_physical::<f32, f32>(width, scale_factor).0,
+        height: dpi::LogicalUnit::from_physical::<f32, f32>(height, scale_factor).0,
+    }
+}
+
+fn pointer_to_editor_position(pointer: Point, origin: Point, scroll_y: f64, scale_factor: f64) -> Point {
+    let local = pointer - origin;
+    Point::new(local.x * scale_factor, (local.y + scroll_y) * scale_factor)
+}
+
+fn logical_scroll_to_cursor(
+    cursor_rect: Rectangle,
+    scale_factor: f64,
+    viewport_height: f32,
+    current_scroll_y: f32,
+) -> f32 {
+    let scale_factor = scale_factor as f32;
+    let margin = 2.0;
+    let cursor_top = cursor_rect.top() / scale_factor - margin;
+    let cursor_bottom = cursor_rect.bottom() / scale_factor + margin;
+
+    let mut new_scroll = current_scroll_y;
+
+    if cursor_top < current_scroll_y {
+        new_scroll = cursor_top;
+    } else if cursor_bottom > current_scroll_y + viewport_height {
+        new_scroll = cursor_bottom - viewport_height;
+    }
+
+    new_scroll.max(0.0)
 }
 
 #[cfg(all(

@@ -11,11 +11,11 @@ use retgui_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
-use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
+use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
-use crate::elements::traits::DeepClone;
-use crate::elements::{AsElement, Element, ElementData, ElementInternals, resolve_clip_for_scrollable};
+use crate::elements::traits::clone_element;
+use crate::elements::{AsElement, Element, ElementData, ElementInternals};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
@@ -112,12 +112,36 @@ impl ElementData for DropdownInner {
 
 impl ElementInternals for DropdownInner {
     fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.deep_clone_internal()
+        let element = clone_element::<Self, _>(self, |element, gummy_tree| {
+            let mut element = element.borrow_mut();
+            let owner_id = element.element_data.internal_id;
+            let owner = element.element_data.me.clone();
+            let parent = element.element_data.layout.gummy_node_id();
+            let floating_window_node = gummy_tree.clone_node(element.floating_window.layout.gummy_node_id());
+            let arrow_node = gummy_tree.clone_node(element.arrow.layout.gummy_node_id());
+
+            element.floating_window.layout.gummy_node_id = Some(floating_window_node);
+            element.arrow.layout.gummy_node_id = Some(arrow_node);
+            element.selected_element = None;
+
+            gummy_tree.add_child(parent, floating_window_node);
+            gummy_tree.add_child(parent, arrow_node);
+            gummy_tree.register_owner(floating_window_node, owner_id, owner.clone());
+            gummy_tree.register_owner(arrow_node, owner_id, owner);
+            Some(floating_window_node)
+        });
+        let selected_element_index = element.borrow().selected_element_index;
+        if let Some(index) = selected_element_index {
+            element.borrow_mut().set_selected_element(index);
+        }
+        element
     }
 
     fn set_scale_factor(&mut self, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
+        self.floating_window.apply_borders(scale_factor);
+        self.arrow.apply_borders(scale_factor);
         for child in &self.element_data.children {
             child.borrow_mut().set_scale_factor(scale_factor);
         }
@@ -130,80 +154,24 @@ impl ElementInternals for DropdownInner {
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
+        _text_context: &mut TextContext,
         scale_factor: f64,
     ) {
         let node = self.element_data.layout.gummy_node_id();
         let layout = gummy_tree.get_layout(node);
         self.element_data.layout.has_new_layout = gummy_tree.has_new_layout(node);
-        let dirty = self.element_data.layout.has_new_layout
-            || transform != self.element_data.layout.get_transform()
-            || position != self.element_data.layout.position
-            || clip_bounds != self.element_data.layout.parent_clip;
+        let has_new_layout = self.element_data.layout.has_new_layout;
 
-        if dirty {
-            self.resolve_box(position, transform, layout, z_index);
+        if has_new_layout {
+            self.resolve_box(layout, z_index);
             self.apply_borders(scale_factor);
-            self.apply_clip(clip_bounds);
-            self.element_data.layout.parent_clip = clip_bounds;
-            self.element_data.layout.scroll_state.mark_old();
         }
         gummy_tree.mark_seen(node);
 
-        if let Some(selected_element) = &self.selected_element {
-            selected_element.borrow_mut().apply_layout(
-                gummy_tree,
-                self.element_data().layout.computed_box.position,
-                z_index,
-                transform,
-                text_context,
-                self.element_data().layout.clip_bounds,
-                scale_factor,
-            );
-            gummy_tree.mark_seen(selected_element.borrow().element_data().layout.gummy_node_id());
-        }
-
-        // Position the floating window below the dropdown with a gap.
-        let floating_window_position = Point::new(
-            self.element_data.layout.computed_box.position.x,
-            self.element_data.layout.computed_box.position.y + self.element_data.layout.computed_box.size.height as f64,
-        );
-
-        self.floating_window.apply_simple_layout(
-            gummy_tree,
-            transform,
-            floating_window_position,
-            z_index,
-            scale_factor,
-            None,
-        );
-        self.arrow.apply_simple_layout(
-            gummy_tree,
-            transform,
-            self.element_data().layout.computed_box.position,
-            z_index,
-            scale_factor,
-            self.element_data().layout.clip_bounds,
-        );
-
-        let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64;
-        let child_transform = Affine::translate((0.0, -scroll_y));
-
-        for child in &self.element_data.children {
-            child.borrow_mut().apply_layout(
-                gummy_tree,
-                floating_window_position,
-                z_index,
-                transform * child_transform,
-                text_context,
-                self.floating_window.layout.clip_bounds,
-                scale_factor,
-            );
-        }
+        self.floating_window
+            .apply_simple_layout(gummy_tree, z_index, scale_factor);
+        self.arrow.apply_simple_layout(gummy_tree, z_index, scale_factor);
     }
 
     fn draw(
@@ -231,7 +199,7 @@ impl ElementInternals for DropdownInner {
         let arrow_rect = self
             .arrow
             .layout
-            .computed_box_transformed
+            .local_box_in_parent()
             .border_rectangle()
             .scale(scale_factor);
         let thickness = 2.0 * scale_factor;
@@ -258,6 +226,21 @@ impl ElementInternals for DropdownInner {
             // an overlay, so that it is properly sorted in the event target selection phase.
             self.add_hit_testable(renderer, true, scale_factor);
 
+            let dropdown_transform = renderer.get_transform();
+            let floating_offset = Affine::translate((
+                0.0,
+                self.element_data.layout.computed_box.size.height as f64 * scale_factor,
+            ));
+            renderer.set_transform(
+                dropdown_transform * floating_offset * self.floating_window.layout.local_transform(scale_factor),
+            );
+            let render_transform = renderer.get_transform();
+            let logical_transform = Affine::scale(1.0 / scale_factor) * render_transform * Affine::scale(scale_factor);
+            let logical_clip = renderer.get_clip().map(|clip| clip.scale(1.0 / scale_factor));
+            self.floating_window
+                .layout
+                .update_render_state(logical_transform, logical_clip);
+
             let current_style = self.floating_window.style.as_ref();
             self.floating_window
                 .layout
@@ -266,7 +249,7 @@ impl ElementInternals for DropdownInner {
             renderer.push_layer(
                 self.floating_window
                     .layout
-                    .computed_box_transformed
+                    .local_box()
                     .padding_rectangle()
                     .scale(scale_factor),
             );
@@ -281,10 +264,34 @@ impl ElementInternals for DropdownInner {
                 renderer,
                 scale_factor,
             );
+            renderer.set_transform(dropdown_transform);
             renderer.end_overlay();
         }
 
         self.maybe_end_overlay(renderer);
+    }
+
+    fn add_hit_testable(&mut self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
+        if !hit_testable {
+            return;
+        }
+
+        let bounds = if self.is_floating_window_hidden {
+            self.element_data
+                .layout
+                .local_box()
+                .border_rectangle()
+                .scale(scale_factor)
+        } else if let Some(cull) = renderer.render_list().cull {
+            cull.apply_transform(renderer.get_transform().inverse())
+        } else {
+            self.element_data
+                .layout
+                .local_box()
+                .border_rectangle()
+                .scale(scale_factor)
+        };
+        renderer.push_hit_testable(self.element_data.internal_id, bounds);
     }
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
@@ -294,50 +301,54 @@ impl ElementInternals for DropdownInner {
         }
 
         let list_layout = &self.floating_window.layout;
-        let list_box = list_layout.computed_box_transformed.border_rectangle();
-        let list_scroll_box = list_layout.computed_scroll_track;
+        let list_box = list_layout.world_box().border_rectangle();
+        let list_scroll_box = list_layout.world_scroll_track();
 
         if self.update_most_recently_hovered_child(message, list_box, list_scroll_box) {
             self.request_window_redraw();
         }
 
         let pointer_id = message.pointer_id();
-        if let EventKind::PointerButtonUp(pb) = message {
+        let is_scrolling = self.floating_window.layout.scroll_state.scroll_click.is_some();
+        if let EventKind::PointerButtonUp(pb) = message
+            && !is_scrolling
+        {
             let pointer_position = pb.state.logical_point();
             let is_pointer_in_select_box = self
                 .element_data
                 .layout
-                .computed_box_transformed
+                .world_box()
                 .border_rectangle()
                 .contains(&pointer_position);
             let is_pointer_in_window = self
                 .floating_window
                 .layout
-                .computed_box_transformed
+                .world_box()
                 .border_rectangle()
                 .contains(&pointer_position);
             let is_pointer_in_scrollbar = self
                 .floating_window
                 .layout
-                .computed_scroll_track
+                .world_scroll_track()
                 .contains(&pointer_position);
 
-            self.handle_click_outside_menu(is_pointer_in_select_box, is_pointer_in_window);
-            self.handle_click_in_select_box(is_pointer_in_select_box, &pointer_id.unwrap());
-            self.handle_child_click(
-                &pointer_position,
-                is_pointer_in_window,
-                is_pointer_in_scrollbar,
-                &pointer_id.unwrap(),
-            );
+            let pointer_id = pointer_id.unwrap();
+            if is_pointer_in_select_box {
+                self.toggle_menu(&pointer_id);
+            } else if !self.is_floating_window_hidden {
+                if is_pointer_in_window {
+                    self.handle_child_click(&pointer_position, is_pointer_in_scrollbar, &pointer_id);
+                } else {
+                    self.close_menu();
+                }
+            }
         }
 
         // Handle updating the scroll state.
         // TODO: The dropdown scroll logic needs refactoring.
         let floating_window = &mut self.floating_window;
         let result = handle_scroll_logic_advance(&floating_window.style, &mut floating_window.layout, message, event);
-        if result.request_apply_layout {
-            request_apply_layout(self.element_data.layout.gummy_node_id.unwrap());
+        if result.scroll_changed {
             self.request_window_redraw();
         }
         if result.set_pointer_capture {
@@ -345,10 +356,6 @@ impl ElementInternals for DropdownInner {
         } else if result.release_pointer_capture {
             self.release_pointer_capture(result.pointer_id.unwrap());
         }
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        resolve_clip_for_scrollable(self, clip_bounds);
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -378,16 +385,19 @@ impl ElementInternals for DropdownInner {
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
+        let floating_transform = renderer.get_transform();
+        let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64 * scale_factor;
+        renderer.set_transform(floating_transform * Affine::translate((0.0, -scroll_y)));
         for (index, child) in self.children().iter().enumerate() {
-            let floating_window_box = &self.floating_window.layout.computed_box_transformed;
+            let floating_window_box = self.floating_window.layout.computed_box;
             let mut child_rect = child
                 .borrow_mut()
                 .element_data()
                 .layout
-                .computed_box_transformed
+                .local_box_in_parent()
                 .border_rectangle();
 
-            child_rect.x = floating_window_box.position.x as f32;
+            child_rect.x = 0.0;
             child_rect.width = floating_window_box.size.width;
 
             let is_hovered = self.currently_hovered_element == Some(index);
@@ -400,15 +410,14 @@ impl ElementInternals for DropdownInner {
 
             child
                 .borrow_mut()
-                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
+                .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
         }
+        renderer.set_transform(floating_transform);
     }
 
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = &self.element_data;
-        let rect = element_data.layout.computed_box_transformed.border_rectangle();
-        //let floating_window_rect = self.floating_window.layout.computed_box_transformed.border_rectangle();
-
+        let rect = element_data.layout.world_box().border_rectangle();
         if !self.is_floating_window_hidden {
             return true;
         }
@@ -440,54 +449,42 @@ impl Shape {
         });
     }
 
-    pub fn apply_simple_layout(
-        &mut self,
-        gummy_tree: &mut GummyTree,
-        transform: Affine,
-        position: Point,
-        z_index: &mut u32,
-        scale_factor: f64,
-        clip_bounds: Option<Rectangle>,
-    ) {
+    fn apply_borders(&mut self, scale_factor: f64) {
+        let style = &self.style;
+        self.layout.apply_borders(
+            style.has_border(),
+            style.get_border_radius(),
+            scale_factor,
+            style.get_border_color(),
+            style.get_box_shadows().to_vec(),
+        );
+    }
+
+    pub fn apply_simple_layout(&mut self, gummy_tree: &mut GummyTree, z_index: &mut u32, scale_factor: f64) {
         let node = self.layout.gummy_node_id();
         let gummy_layout = gummy_tree.get_layout(node);
         self.layout.has_new_layout = gummy_tree.has_new_layout(node);
 
-        let dirty =
-            self.layout.has_new_layout || transform != self.layout.get_transform() || position != self.layout.position;
+        let has_new_layout = self.layout.has_new_layout;
 
-        if dirty {
-            self.layout
-                .resolve_box(position, transform, gummy_layout, z_index, self.style.get_position());
-
-            // Refactor START
-            let current_style = &self.style;
-            let has_border = current_style.has_border();
-            let border_radius = current_style.get_border_radius();
-            let border_color = &current_style.get_border_color();
-            let box_shadows = current_style.get_box_shadows();
-            self.layout.apply_borders(
-                has_border,
-                border_radius,
-                scale_factor,
-                border_color.clone(),
-                box_shadows.to_vec(),
-            );
-            // Refactor END
+        if has_new_layout {
+            self.layout.resolve_box(gummy_layout, z_index);
+            self.apply_borders(scale_factor);
 
             // For scroll changes from gummy;
             apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
-            self.layout.resolve_clip_for_scrollable(clip_bounds); // self.apply_clip
             self.layout.scroll_state.mark_old();
         }
 
         // For manual scroll updates.
-        if !dirty && self.layout.scroll_state.is_new() {
+        if !has_new_layout && self.layout.scroll_state.is_new() {
             apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
             self.layout.scroll_state.mark_old();
         }
 
-        gummy_tree.mark_seen(node);
+        if has_new_layout {
+            gummy_tree.mark_seen(node);
+        }
     }
 }
 
@@ -606,6 +603,12 @@ impl Dropdown {
             let arrow_child_id = inner.borrow_mut().arrow.layout.gummy_node_id();
             gummy_tree.add_child(parent_id, floating_window_child_id);
             gummy_tree.add_child(parent_id, arrow_child_id);
+
+            let owner: Rc<RefCell<dyn ElementInternals>> = inner.clone();
+            let owner = Rc::downgrade(&owner);
+            let owner_id = inner.borrow().element_data.internal_id;
+            gummy_tree.register_owner(floating_window_child_id, owner_id, owner.clone());
+            gummy_tree.register_owner(arrow_child_id, owner_id, owner);
         });
 
         Self { inner }
@@ -632,8 +635,12 @@ impl DropdownInner {
         scale_factor: f64,
     ) {
         if let Some(selected_element) = &self.selected_element {
+            // This clone is a presentation-only preview. Its subtree must not
+            // intercept pointer events intended for the dropdown itself.
+            let target_count = renderer.render_list().targets.len();
             let mut binding = selected_element.borrow_mut();
-            binding.draw(renderer, resource_manager.clone(), scale_factor, text_context);
+            binding.draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
+            renderer.render_list_mut().targets.truncate(target_count);
         }
     }
 
@@ -695,7 +702,7 @@ impl DropdownInner {
                         .borrow()
                         .element_data()
                         .layout
-                        .computed_box_transformed
+                        .world_box()
                         .border_rectangle()
                         .contains(&pointer_position);
 
@@ -714,42 +721,32 @@ impl DropdownInner {
         previous != self.currently_hovered_element
     }
 
-    fn handle_click_in_select_box(&mut self, is_pointer_in_select_box: bool, pointer_id: &PointerId) {
-        if is_pointer_in_select_box {
-            self.is_floating_window_hidden = !self.is_floating_window_hidden;
-            self.currently_hovered_element = self.selected_element_index;
-            self.queue_dropdown_event(EventKind::DropdownToggled(!self.is_floating_window_hidden));
+    fn toggle_menu(&mut self, pointer_id: &PointerId) {
+        self.is_floating_window_hidden = !self.is_floating_window_hidden;
+        self.currently_hovered_element = self.selected_element_index;
+        self.queue_dropdown_event(EventKind::DropdownToggled(!self.is_floating_window_hidden));
 
-            if self.is_floating_window_hidden {
-                self.release_pointer_capture(*pointer_id);
-            }
-            self.request_window_redraw();
+        if self.is_floating_window_hidden {
+            self.release_pointer_capture(*pointer_id);
         }
+        self.request_window_redraw();
     }
 
-    fn handle_click_outside_menu(&mut self, is_pointer_in_select_box: bool, is_pointer_in_window: bool) {
-        if !self.is_floating_window_hidden && !is_pointer_in_window && !is_pointer_in_select_box {
-            self.is_floating_window_hidden = true;
-            self.queue_dropdown_event(EventKind::DropdownToggled(false));
-            self.request_window_redraw();
-        }
+    fn close_menu(&mut self) {
+        self.is_floating_window_hidden = true;
+        self.queue_dropdown_event(EventKind::DropdownToggled(false));
+        self.request_window_redraw();
     }
 
-    fn handle_child_click(
-        &mut self,
-        pointer_position: &Point,
-        is_pointer_in_window: bool,
-        is_pointer_in_scrollbar: bool,
-        pointer_id: &PointerId,
-    ) {
-        if is_pointer_in_window && !is_pointer_in_scrollbar {
+    fn handle_child_click(&mut self, pointer_position: &Point, is_pointer_in_scrollbar: bool, pointer_id: &PointerId) {
+        if !is_pointer_in_scrollbar {
             let mut should_hide_window = false;
             for (child_index, child) in self.children().iter().cloned().enumerate() {
                 let contains = child
                     .borrow()
                     .element_data()
                     .layout
-                    .computed_box_transformed
+                    .world_box()
                     .border_rectangle()
                     .contains(pointer_position);
 

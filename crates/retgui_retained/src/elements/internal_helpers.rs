@@ -3,8 +3,6 @@ use crate::elements::ElementInternals;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
-use retgui_primitives::geometry::{Affine, Point, Rectangle};
-
 use crate::elements::element_data::ElementData;
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
@@ -53,38 +51,26 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
     parent.request_window_redraw();
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn apply_generic_container_layout(
     element: &mut dyn ElementInternals,
     gummy_tree: &mut GummyTree,
-    position: Point,
     z_index: &mut u32,
-    transform: Affine,
-    text_context: &mut TextContext,
-    clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
     let node = element.element_data_mut().layout.gummy_node_id.unwrap();
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    let dirty = has_new_layout
-        || transform != element.element_data_mut().layout.get_transform()
-        || position != element.element_data_mut().layout.position
-        || clip_bounds != element.element_data().layout.parent_clip;
     element.element_data_mut().layout.has_new_layout = has_new_layout;
-    if dirty {
-        element.resolve_box(position, transform, layout, z_index);
+    if has_new_layout {
+        element.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
         // For scroll changes from gummy;
         element.element_data_mut().apply_scroll(layout);
-        element.apply_clip(clip_bounds);
-        element.element_data_mut().layout.parent_clip = clip_bounds;
-        element.element_data_mut().layout.scroll_state.mark_old();
     }
 
     // For manual scroll updates.
-    if !dirty && element.element_data_mut().layout.scroll_state.is_new() {
+    if !has_new_layout && element.element_data_mut().layout.scroll_state.is_new() {
         element.element_data_mut().apply_scroll(layout);
         element.element_data_mut().layout.scroll_state.mark_old();
     }
@@ -92,57 +78,28 @@ pub fn apply_generic_container_layout(
     if has_new_layout {
         gummy_tree.mark_seen(node);
     }
-
-    element
-        .element_data_mut()
-        .set_accessibility_bounds_from_layout(scale_factor);
-
-    let scroll_y = element.element_data_mut().scroll().scroll_y() as f64;
-    let child_transform = Affine::translate((0.0, -scroll_y));
-
-    element.apply_layout_children(
-        gummy_tree,
-        z_index,
-        transform * child_transform,
-        text_context,
-        scale_factor,
-        element.element_data().layout.clip_bounds,
-    )
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn apply_generic_container_layout_non_dom(
     element: &mut ElementData,
     gummy_tree: &mut GummyTree,
-    position: Point,
     z_index: &mut u32,
-    transform: Affine,
-    clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
     let node = element.layout.gummy_node_id.unwrap();
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    let dirty = has_new_layout
-        || transform != element.layout.get_transform()
-        || position != element.layout.position
-        || clip_bounds != element.layout.parent_clip;
     element.layout.has_new_layout = has_new_layout;
-    if dirty {
-        element
-            .layout
-            .resolve_box(position, transform, layout, z_index, element.style.get_position());
+    if has_new_layout {
+        element.layout.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
         // For scroll changes from gummy;
         element.apply_scroll(layout);
-        element.layout.apply_clip(clip_bounds);
-        element.layout.parent_clip = clip_bounds;
-        element.layout.scroll_state.mark_old();
     }
 
     // For manual scroll updates.
-    if !dirty && element.layout.scroll_state.is_new() {
+    if !has_new_layout && element.layout.scroll_state.is_new() {
         element.apply_scroll(layout);
         element.layout.scroll_state.mark_old();
     }
@@ -152,40 +109,25 @@ pub fn apply_generic_container_layout_non_dom(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn apply_generic_leaf_layout(
     element: &mut dyn ElementInternals,
     gummy_tree: &mut GummyTree,
-    position: Point,
     z_index: &mut u32,
-    transform: Affine,
-    clip_bounds: Option<Rectangle>,
     scale_factor: f64,
 ) {
     let node = element.element_data_mut().layout.gummy_node_id.unwrap();
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    let dirty = has_new_layout
-        || transform != element.element_data_mut().layout.get_transform()
-        || position != element.element_data_mut().layout.position
-        || clip_bounds != element.element_data().layout.parent_clip;
     element.element_data_mut().layout.has_new_layout = has_new_layout;
-    if dirty {
-        element.resolve_box(position, transform, layout, z_index);
+    if has_new_layout {
+        element.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
-        element.apply_clip(clip_bounds);
-        element.element_data_mut().layout.parent_clip = clip_bounds;
-        element.element_data_mut().layout.scroll_state.mark_old();
     }
 
     if has_new_layout {
         gummy_tree.mark_seen(node);
     }
-
-    element
-        .element_data_mut()
-        .set_accessibility_bounds_from_layout(scale_factor);
 }
 
 pub fn draw_generic_container(

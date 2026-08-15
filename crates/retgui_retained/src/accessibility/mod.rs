@@ -125,7 +125,7 @@ mod tests {
     use std::rc::Rc;
 
     use issho::AccessEvent;
-    use retgui_primitives::geometry::{Point, Size};
+    use retgui_primitives::geometry::{Affine, Size};
 
     use crate::app::{dequeue_event, queue_event};
     use crate::elements::{Button, Container, Element as _, ElementData as _, ElementInternals, Text, Window};
@@ -256,8 +256,8 @@ mod tests {
         let (tree, key) = {
             let mut inner = container.inner.borrow_mut();
             let data = inner.element_data_mut();
-            data.layout.computed_box_transformed.position = Point::new(4.0, 6.0);
-            data.layout.computed_box_transformed.size = Size::new(20.0, 30.0);
+            data.layout.computed_box.size = Size::new(20.0, 30.0);
+            data.layout.update_render_state(Affine::translate((4.0, 6.0)), None);
             data.set_accessibility_bounds_from_layout(2.0);
             (data.access_tree.clone(), data.access_key.unwrap())
         };

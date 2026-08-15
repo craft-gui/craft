@@ -7,7 +7,7 @@ use std::sync::Arc;
 use issho::{AccessEvent, IsshoError};
 
 use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::{Affine, ElementBox, Point, Rectangle, TrblRectangle};
+use retgui_primitives::geometry::{Affine, ElementBox, Point, TrblRectangle};
 
 use retgui_renderer::renderer::Renderer;
 
@@ -50,30 +50,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    /// A helper to apply the layout for all children.
-    #[allow(clippy::too_many_arguments)]
-    fn apply_layout_children(
-        &mut self,
-        gummy_tree: &mut GummyTree,
-        z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        scale_factor: f64,
-        clip_bounds: Option<Rectangle>,
-    ) {
-        for child in &self.element_data().children {
-            child.borrow_mut().apply_layout(
-                gummy_tree,
-                self.element_data().layout.computed_box.position,
-                z_index,
-                transform,
-                text_context,
-                clip_bounds,
-                scale_factor,
-            );
-        }
-    }
-
     /// A helper to check if the element is visible.
     fn is_visible(&self) -> bool {
         let style = &self.element_data().style;
@@ -88,11 +64,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
+        let parent_transform = renderer.get_transform();
+        let scroll_y = self.element_data().scroll().scroll_y() as f64 * scale_factor;
+        renderer.set_transform(parent_transform * Affine::translate((0.0, -scroll_y)));
         for child in self.children() {
             child
                 .borrow_mut()
-                .draw(renderer, resource_manager.clone(), scale_factor, text_context);
+                .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
         }
+        renderer.set_transform(parent_transform);
     }
 
     /// A helper to re-apply the style to the layout node when dirty.
@@ -106,49 +86,64 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    /// Applies the layout results from the [`GummyTree`].
-    /// This method retrieves the computed layout for `root_node` and updates the
-    /// element’s internal state accordingly. It resolves the element's position,
-    /// transform, clipping, borders, and stacking order, producing the final
-    /// layout state used for rendering.
+    /// Applies this element's local layout result from the [`GummyTree`].
+    /// Ancestor position, scrolling, and clipping are deliberately excluded;
+    /// those are composed by [`Self::draw_transformed`] during tree traversal.
     ///
     /// # Parameters
     /// - `gummy_tree`: The layout tree containing the computed results.
-    /// - `root_node`: The node whose layout information should be applied.
-    /// - `position`: The absolute position of the element within its parent context.
     /// - `z_index`: A mutable counter used to assign stacking order as elements
     ///   are processed.
-    /// - `transform`: The accumulated transform to apply to this element.
-    /// - `pointer`: The current pointer position, if available, for hit-testing.
     /// - `text_context`: Context used for text layout and measurement.
-    /// - `clip_bounds`: Optional clipping rectangle inherited from ancestors.
+    /// - `scale_factor`: Scale used for local render caches such as border paths.
     ///
     /// # Effects
-    /// This function mutates internal element state to reflect the final resolved
-    /// layout and may trigger updates such as clipping regions, border geometry,
-    /// and z-index assignment.
-    #[allow(clippy::too_many_arguments)]
+    /// This function mutates only element-local geometry and render caches.
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
         text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
         scale_factor: f64,
     );
 
-    /// Draws the element and its visual contents.
-    ///
-    /// Implementations should use the provided [`RenderList`] to issue
-    /// drawing commands.
-    ///
-    /// - `renderer`: the active render list to draw into.
-    /// - `text_context`: text shaping and layout context.
-    /// - `pointer`: optional pointer position for hover effects.
-    /// - `window`: optional window handle.
-    /// - `scale_factor`: scale factor.
+    fn draw_transformed(
+        &mut self,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        scale_factor: f64,
+        text_context: &mut TextContext,
+    ) {
+        let parent_transform = renderer.get_transform();
+        let local_transform = self.element_data().layout.local_transform(scale_factor);
+        let render_transform = parent_transform * local_transform;
+        renderer.set_transform(render_transform);
+
+        let logical_transform = Affine::scale(1.0 / scale_factor) * render_transform * Affine::scale(scale_factor);
+        let physical_clip = if self.style().get_overlay() {
+            renderer.render_list().cull
+        } else {
+            renderer.get_clip()
+        };
+        let logical_clip = physical_clip.map(|clip| clip.scale(1.0 / scale_factor));
+        let scale_changed = self.element_data().access_scale_factor != scale_factor;
+        let update_accessibility = {
+            let layout = &mut self.element_data_mut().layout;
+            let changed = layout.update_render_state(logical_transform, logical_clip);
+            let has_new_layout = layout.has_new_layout;
+            layout.has_new_layout = false;
+            changed || has_new_layout || scale_changed
+        };
+        if update_accessibility {
+            self.element_data_mut()
+                .set_accessibility_bounds_from_layout(scale_factor);
+        }
+
+        self.draw(renderer, resource_manager, scale_factor, text_context);
+        renderer.set_transform(parent_transform);
+    }
+
+    /// Draws this element in its own local coordinate space.
     fn draw(
         &mut self,
         _renderer: &mut dyn Renderer,
@@ -175,22 +170,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn on_event(&mut self, _message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {}
 
     /// Computes this element's box model.
-    fn resolve_box(
-        &mut self,
-        relative_position: Point,
-        scroll_transform: Affine,
-        result: &gummy::Layout,
-        layout_order: &mut u32,
-    ) {
-        let position = self.element_data().style.get_position();
-        self.element_data_mut()
-            .layout
-            .resolve_box(relative_position, scroll_transform, result, layout_order, position);
-    }
-
-    /// Computes this element's clip box.
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        self.element_data_mut().layout.apply_clip(clip_bounds);
+    fn resolve_box(&mut self, result: &gummy::Layout, layout_order: &mut u32) {
+        self.element_data_mut().layout.resolve_box(result, layout_order);
     }
 
     fn apply_borders(&mut self, scale_factor: f64) {
@@ -204,8 +185,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 id,
                 self.element_data()
                     .layout
-                    .computed_box_transformed
-                    .padding_rectangle()
+                    .local_box()
+                    .border_rectangle()
                     .scale(scale_factor),
             );
         }
@@ -233,11 +214,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn maybe_start_layer(&self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let element_data = self.element_data();
-        let padding_rectangle = element_data
-            .layout
-            .computed_box_transformed
-            .padding_rectangle()
-            .scale(scale_factor);
+        let padding_rectangle = element_data.layout.local_box().padding_rectangle().scale(scale_factor);
 
         if self.should_start_new_layer() {
             renderer.push_layer(padding_rectangle);
@@ -606,7 +583,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Returns the element's [`ElementBox`].
     fn get_computed_box_transformed(&self) -> ElementBox {
-        self.element_data().layout.computed_box_transformed.clone()
+        self.element_data().layout.world_box()
     }
 
     /// Returns a shared reference to the element's [`Style`].
@@ -624,7 +601,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// Visual order and visibility shall not be accounted for.
     fn in_bounds(&self, point: Point) -> bool {
         let element_data = self.element_data();
-        let rect = element_data.layout.computed_box_transformed.border_rectangle();
+        let rect = element_data.layout.world_box().border_rectangle();
 
         if let Some(clip) = element_data.layout.clip_bounds {
             match rect.intersection(&clip) {
@@ -1173,11 +1150,4 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {
         Ok(())
     }
-}
-
-pub fn resolve_clip_for_scrollable(element: &mut dyn ElementInternals, clip_bounds: Option<Rectangle>) {
-    element
-        .element_data_mut()
-        .layout
-        .resolve_clip_for_scrollable(clip_bounds);
 }

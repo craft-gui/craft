@@ -12,7 +12,7 @@ use web_time as time;
 
 use retgui_logging::info;
 
-use retgui_primitives::geometry::{Affine, Point, Rectangle, Size};
+use retgui_primitives::geometry::{Point, Rectangle, Size};
 
 use retgui_renderer::RendererType;
 use retgui_renderer::renderer::{Renderer, Screenshot};
@@ -36,14 +36,13 @@ use crate::accessibility::RetGuiAccessTree;
 use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER, queue_window_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
-use crate::elements::{AsElement, Element, ElementInternals, resolve_clip_for_scrollable, scrollable};
+use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
-use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
@@ -145,23 +144,11 @@ impl ElementInternals for WindowInternal {
     fn apply_layout(
         &mut self,
         gummy_tree: &mut GummyTree,
-        position: Point,
         z_index: &mut u32,
-        transform: Affine,
-        text_context: &mut TextContext,
-        clip_bounds: Option<Rectangle>,
+        _text_context: &mut TextContext,
         scale_factor: f64,
     ) {
-        apply_generic_container_layout(
-            self,
-            gummy_tree,
-            position,
-            z_index,
-            transform,
-            text_context,
-            clip_bounds,
-            scale_factor,
-        );
+        apply_generic_container_layout(self, gummy_tree, z_index, scale_factor);
     }
 
     fn draw(
@@ -176,15 +163,6 @@ impl ElementInternals for WindowInternal {
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
-    }
-
-    fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        let overflow = self.style().get_overflow();
-        if overflow[0] == Overflow::Scroll || overflow[1] == Overflow::Scroll {
-            resolve_clip_for_scrollable(self, clip_bounds);
-        } else {
-            self.element_data.layout.apply_clip(clip_bounds);
-        }
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
@@ -637,24 +615,19 @@ impl WindowInternal {
             }
 
             if root_dirty || gummy_tree.is_apply_layout_dirty(&root_node) {
-                // TODO: move into gummy_tree
                 let apply_start = Instant::now();
-                let mut layout_order: u32 = 0;
                 let sf = self.effective_scale_factor();
-                self.apply_layout(
-                    gummy_tree,
-                    Point::new(0.0, 0.0),
-                    &mut layout_order,
-                    Affine::IDENTITY,
-                    text_context,
-                    Some(Rectangle::new(
-                        0.0,
-                        0.0,
-                        self.window_size.width,
-                        self.window_size.height,
-                    )),
-                    sf,
-                );
+                let owners = gummy_tree.take_layout_owners(root_node, root_dirty);
+                for (owner_id, owner, layout_order) in owners {
+                    let mut layout_order = layout_order;
+                    if owner_id == self.element_data.internal_id {
+                        self.apply_layout(gummy_tree, &mut layout_order, text_context, sf);
+                    } else {
+                        owner
+                            .borrow_mut()
+                            .apply_layout(gummy_tree, &mut layout_order, text_context, sf);
+                    }
+                }
                 gummy_tree.apply_layout(root_node);
                 apply = apply_start.elapsed();
             }
@@ -672,7 +645,7 @@ impl WindowInternal {
         self.renderer.borrow_mut().clear();
         let scale_factor = self.effective_scale_factor();
 
-        self.draw(
+        self.draw_transformed(
             &mut *renderer_clone.borrow_mut(),
             resource_manager.clone(),
             scale_factor,

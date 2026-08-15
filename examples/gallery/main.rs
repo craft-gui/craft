@@ -406,6 +406,9 @@ pub fn scrollable() -> Container {
             Button::new()
                 .width(px(120.0))
                 .background_color(Color::from_rgb8(35, 127, 183))
+                .on_click(Rc::new(move |_e| {
+                    scrollable_container.clone().scroll_to_top();
+                }))
                 .push(
                     Text::new("Scroll to the top")
                         .color(Color::WHITE)
@@ -413,9 +416,6 @@ pub fn scrollable() -> Container {
                         .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
                 ),
         )
-        .on_click(Rc::new(move |_e| {
-            scrollable_container.clone().scroll_to_top();
-        }))
 }
 
 pub fn radio_buttons() -> Container {

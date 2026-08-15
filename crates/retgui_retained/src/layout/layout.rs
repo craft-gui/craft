@@ -10,7 +10,7 @@ use retgui_renderer::renderer::Renderer;
 
 use crate::Color;
 use crate::elements::scrollable::ScrollState;
-use crate::style::{BoxShadow, Position, Style};
+use crate::style::{BoxShadow, Style};
 
 #[derive(Clone, Default)]
 pub struct Layout {
@@ -18,9 +18,7 @@ pub struct Layout {
     /// This may be None if this is a non-visual element like Font.
     pub gummy_node_id: Option<NodeId>,
     pub content_size: Size<f32>,
-    // The computed values after transforms are applied.
-    pub computed_box_transformed: ElementBox,
-    // The computed values without any transforms applied to them.
+    /// The element's zero-origin box in its own coordinate space.
     pub computed_box: ElementBox,
     pub computed_scrollbar_size: Size<f32>,
     pub scrollbar_size: Size<f32>,
@@ -30,8 +28,8 @@ pub struct Layout {
     pub(crate) max_scroll_y: f32,
 
     pub layout_order: u32,
+    /// Effective clip captured by the most recent draw traversal.
     pub clip_bounds: Option<Rectangle>,
-    pub parent_clip: Option<Rectangle>,
 
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
@@ -39,8 +37,11 @@ pub struct Layout {
     computed_border: ComputedBorder,
     /// True if the layout is new.
     pub has_new_layout: bool,
-    transform: Affine,
-    pub position: Point,
+    /// The transform captured by the most recent draw traversal. Layout itself
+    /// remains parent-local; this is retained only for world-coordinate APIs.
+    render_transform: Affine,
+    /// The element's border-box position in its parent's coordinate space.
+    local_position: Point,
 
     /// Scrollbar state for elements that may have a scrollbar.
     pub scroll_state: ScrollState,
@@ -148,26 +149,61 @@ impl Layout {
         self.is_scrollable
     }
 
-    pub(crate) fn get_transform(&self) -> Affine {
-        self.transform
+    /// Returns the element's box in its own coordinate space.
+    pub(crate) fn local_box(&self) -> ElementBox {
+        let mut element_box = self.computed_box;
+        element_box.position = Point::new(0.0, 0.0);
+        element_box
     }
 
-    pub fn resolve_box(
-        &mut self,
-        relative_position: Point,
-        scroll_transform: Affine,
-        result: &gummy::Layout,
-        layout_order: &mut u32,
-        position: Position,
-    ) {
+    /// Returns the element's box positioned in its parent's coordinate space.
+    pub(crate) fn local_box_in_parent(&self) -> ElementBox {
+        let mut element_box = self.computed_box;
+        element_box.position = self.local_position;
+        element_box
+    }
+
+    /// Returns the transform from this element's coordinate space to its parent's.
+    pub(crate) fn local_transform(&self, scale_factor: f64) -> Affine {
+        Affine::translate((
+            self.local_position.x * scale_factor,
+            self.local_position.y * scale_factor,
+        ))
+    }
+
+    /// Returns this element's box in window coordinates.
+    pub(crate) fn world_box(&self) -> ElementBox {
+        self.computed_box.transform(self.render_transform)
+    }
+
+    pub(crate) fn world_scroll_track(&self) -> Rectangle {
+        Rectangle::from_kurbo(
+            self.render_transform
+                .transform_rect_bbox(self.computed_scroll_track.to_kurbo()),
+        )
+    }
+
+    pub(crate) fn world_scroll_thumb(&self) -> Rectangle {
+        Rectangle::from_kurbo(
+            self.render_transform
+                .transform_rect_bbox(self.computed_scroll_thumb.to_kurbo()),
+        )
+    }
+
+    /// Records spatial state produced as a side effect of drawing. This must
+    /// never participate in layout dirtiness or geometry cache keys.
+    pub(crate) fn update_render_state(&mut self, render_transform: Affine, clip_bounds: Option<Rectangle>) -> bool {
+        let changed = self.render_transform != render_transform || self.clip_bounds != clip_bounds;
+        self.render_transform = render_transform;
+        self.clip_bounds = clip_bounds;
+        changed
+    }
+
+    pub fn resolve_box(&mut self, result: &gummy::Layout, layout_order: &mut u32) {
         self.layout_order = *layout_order;
         *layout_order += 1;
 
-        let at_position = match position {
-            Position::Relative => relative_position + from_gummy_point(result.location).to_vec2(),
-            // We'll need to create our own enum for this because currently, relative acts more like static and absolute acts like relative.
-            Position::Absolute => relative_position + from_gummy_point(result.location).to_vec2(),
-        };
+        self.local_position = from_gummy_point(result.location);
 
         let size = Size {
             width: result.size.width,
@@ -194,12 +230,9 @@ impl Layout {
                 result.padding.bottom,
                 result.padding.left,
             ),
-            position: at_position,
+            position: Point::new(0.0, 0.0),
             size,
         };
-        self.computed_box_transformed = self.computed_box.transform(scroll_transform);
-        self.transform = scroll_transform;
-        self.position = relative_position;
     }
 
     pub fn apply_borders(
@@ -210,7 +243,7 @@ impl Layout {
         border_color: TrblRectangle<Color>,
         box_shadows: Vec<BoxShadow>,
     ) {
-        let element_rect = self.computed_box_transformed.clone();
+        let element_rect = self.local_box();
         let border_spec = BorderSpec {
             rect: element_rect.border_rectangle(),
             width: element_rect.border.clone(),
@@ -272,13 +305,13 @@ impl Layout {
                     outline: BezPathOrRect::BezPath(outline),
                     inline: BezPathOrRect::BezPath(inline),
                     box_shadows: Vec::with_capacity(box_shadows.len()),
-                    border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
+                    border_box: self.local_box().border_rectangle().scale(scale_factor),
                 };
                 for box_shadow in box_shadows {
                     let offset = Vec2::new(box_shadow.offset_x, box_shadow.offset_y);
 
                     if box_shadow.inset {
-                        let element_rect = self.computed_box_transformed.clone();
+                        let element_rect = self.local_box();
                         let borders = element_rect.border.clone();
                         let inset_css_rect = CssRoundedRect::new(
                             element_rect
@@ -324,14 +357,14 @@ impl Layout {
                 self.cache_box_shadows = Some(cache_box_shadows);
             }
             ComputedBorder::Simple => {
-                let outline = self.computed_box_transformed.border_rectangle();
-                let inline = self.computed_box_transformed.padding_rectangle();
+                let outline = self.local_box().border_rectangle();
+                let inline = self.local_box().padding_rectangle();
 
                 let mut cache_box_shadows = ComputedBoxShadows {
                     outline: BezPathOrRect::Rect(outline.scale(scale_factor)),
                     inline: BezPathOrRect::Rect(inline.scale(scale_factor)),
                     box_shadows: Vec::with_capacity(box_shadows.len()),
-                    border_box: self.computed_box_transformed.border_rectangle().scale(scale_factor),
+                    border_box: self.local_box().border_rectangle().scale(scale_factor),
                 };
                 for box_shadow in box_shadows {
                     let radius_modifier = if box_shadow.inset { -1.0 } else { 1.0 };
@@ -352,10 +385,6 @@ impl Layout {
             }
             ComputedBorder::None => {}
         }
-    }
-
-    pub fn apply_clip(&mut self, clip_bounds: Option<Rectangle>) {
-        self.clip_bounds = clip_bounds;
     }
 
     pub fn draw_borders(&self, renderer: &mut dyn Renderer, current_style: &Style, scale_factor: f64) {
@@ -383,8 +412,8 @@ impl Layout {
         match &self.computed_border {
             ComputedBorder::None => {}
             ComputedBorder::Simple => {
-                let padding_rect = self.computed_box_transformed.padding_rectangle().scale(scale_factor);
-                let border_rect = self.computed_box_transformed.border_rectangle().scale(scale_factor);
+                let padding_rect = self.local_box().padding_rectangle().scale(scale_factor);
+                let border_rect = self.local_box().border_rectangle().scale(scale_factor);
                 // Draw the background.
                 if let Brush::Color(bg_color) = &background_color {
                     if bg_color.components[3] != 0.0 {
@@ -435,19 +464,6 @@ impl Layout {
         }
     }
 
-    pub fn resolve_clip_for_scrollable(&mut self, clip_bounds: Option<Rectangle>) {
-        if clip_bounds.is_none() {
-            self.clip_bounds = None;
-            return;
-        }
-        if self.is_scrollable_layout() {
-            let scroll_clip_bounds = self.computed_box_transformed.padding_rectangle();
-            self.clip_bounds = scroll_clip_bounds.intersection(&clip_bounds.unwrap());
-        } else {
-            self.clip_bounds = clip_bounds;
-        }
-    }
-
     pub fn reset_border_cache(&mut self) {
         self.cache_border_spec = None;
         self.cache_box_shadows = None;
@@ -492,5 +508,41 @@ fn from_gummy_point(p: gummy::Point<f32>) -> Point {
     Point {
         x: p.x as f64,
         y: p.y as f64,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn local_geometry_is_independent_of_world_position() {
+        let mut layout = Layout::default();
+        layout.computed_box.size = Size::new(30.0, 40.0);
+        layout.local_position = Point::new(11.0, 17.0);
+        layout.update_render_state(Affine::translate((111.0, 217.0)), None);
+
+        assert_eq!(
+            layout.local_box().border_rectangle(),
+            Rectangle::new(0.0, 0.0, 30.0, 40.0)
+        );
+        assert_eq!(
+            layout.local_transform(2.0) * Point::new(0.0, 0.0),
+            Point::new(22.0, 34.0),
+        );
+        assert_eq!(
+            layout.world_box().border_rectangle(),
+            Rectangle::new(111.0, 217.0, 30.0, 40.0),
+        );
+
+        layout.update_render_state(Affine::translate((511.0, 617.0)), None);
+        assert_eq!(
+            layout.local_box().border_rectangle(),
+            Rectangle::new(0.0, 0.0, 30.0, 40.0)
+        );
+        assert_eq!(
+            layout.world_box().border_rectangle(),
+            Rectangle::new(511.0, 617.0, 30.0, 40.0),
+        );
     }
 }

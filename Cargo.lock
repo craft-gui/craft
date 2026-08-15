@@ -1161,8 +1161,7 @@ dependencies = [
 [[package]]
 name = "fontique"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e04c4750a17111ebd77c3e0aea00476ce33f59235bc4d9e7f0aded5033ad3fc"
+source = "git+https://github.com/linebender/parley.git?rev=a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e#a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"
 dependencies = [
  "hashbrown 0.17.1",
  "linebender_resource_handle",
@@ -1172,7 +1171,7 @@ dependencies = [
  "objc2-core-text",
  "objc2-foundation 0.3.2",
  "parlance",
- "read-fonts 0.40.2",
+ "read-fonts",
  "roxmltree",
  "smallvec",
  "windows 0.62.2",
@@ -1383,7 +1382,7 @@ dependencies = [
  "log",
  "peniko",
  "png 0.18.1",
- "skrifa 0.44.0",
+ "skrifa",
  "smallvec",
  "vello_common",
 ]
@@ -1484,13 +1483,13 @@ dependencies = [
 
 [[package]]
 name = "harfrust"
-version = "0.10.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0589ddd0d2935dd2845827ac606b4081c266225d613b268ed2910f832889cab"
+checksum = "c03d949a14aa089bbb282f7dd76a498a7f684428e4257202efc119ec010376f9"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
- "read-fonts 0.40.2",
+ "read-fonts",
  "smallvec",
 ]
 
@@ -3501,14 +3500,34 @@ dependencies = [
 [[package]]
 name = "parlance"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b6937eda350acc1a5d05872c3cbf99fe78619c269096e2be3d4a350058639d5"
+source = "git+https://github.com/linebender/parley.git?rev=a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e#a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"
 
 [[package]]
 name = "parley"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0478b47dd9885a5e0a4f1c0782ffc42bf6ee8c41dea0917d7a9bcee3e6585fc"
+source = "git+https://github.com/linebender/parley.git?rev=a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e#a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"
+dependencies = [
+ "fontique",
+ "hashbrown 0.17.1",
+ "linebender_resource_handle",
+ "parlance",
+ "parley_engine",
+ "skrifa",
+ "smallvec",
+]
+
+[[package]]
+name = "parley_data"
+version = "0.11.0"
+source = "git+https://github.com/linebender/parley.git?rev=a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e#a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"
+dependencies = [
+ "icu_properties",
+]
+
+[[package]]
+name = "parley_engine"
+version = "0.11.0"
+source = "git+https://github.com/linebender/parley.git?rev=a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e#a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"
 dependencies = [
  "fontique",
  "harfrust",
@@ -3519,16 +3538,7 @@ dependencies = [
  "linebender_resource_handle",
  "parlance",
  "parley_data",
- "skrifa 0.43.2",
-]
-
-[[package]]
-name = "parley_data"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a649e01a1acc917247ee147b56b8a1fa91824acf7117bd003b4204306d601255"
-dependencies = [
- "icu_properties",
+ "skrifa",
 ]
 
 [[package]]
@@ -3979,17 +3989,6 @@ checksum = "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "read-fonts"
-version = "0.40.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "487889119a5f19ff7c0a20637196bdc76b9f54ebec17e3588b5d75e4999f8773"
-dependencies = [
- "bytemuck",
- "font-types",
- "once_cell",
 ]
 
 [[package]]
@@ -4587,22 +4586,12 @@ checksum = "8ee5873ec9cce0195efcb7a4e9507a04cd49aec9c83d0389df45b1ef7ba2e649"
 
 [[package]]
 name = "skrifa"
-version = "0.43.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cbe997d0f2480442d727488fbe2150779114cbe480ecdbadef58b33e0318ffb"
-dependencies = [
- "bytemuck",
- "read-fonts 0.40.2",
-]
-
-[[package]]
-name = "skrifa"
 version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "819ab7d62b1d3e72d9d9dea5650bac30424f9111364bb94928dbf5ecad1baa68"
 dependencies = [
  "bytemuck",
- "read-fonts 0.41.0",
+ "read-fonts",
 ]
 
 [[package]]
