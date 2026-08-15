@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use retgui_retained::elements::{Container, Element};
-use retgui_retained::events::ui_events::pointer::PointerButton;
+use retgui::elements::{Container, Element};
+use retgui::events::ui_events::pointer::PointerButton;
 
 #[allow(non_snake_case)]
 pub fn Link<F>(on_click: F) -> Container

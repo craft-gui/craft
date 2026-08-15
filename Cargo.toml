@@ -2,14 +2,13 @@
 resolver = "2"
 
 members = [
-    "crates/retgui_retained",
     "crates/retgui",
     "crates/retgui_calendar",
     "crates/retgui_logger",
     "xtask",
     "examples/util",
     "examples/counter",
-    "examples/counter_retained",
+    "examples/counter",
     "examples/multiwindow",
     "examples/pointer_events",
     "examples/text",

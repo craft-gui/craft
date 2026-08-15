@@ -1,6 +1,6 @@
-use retgui_retained::elements::{Container, Element, Text, TinyVg};
-use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
-use retgui_retained::{Color, ResourceId, palette, pct, px, rgb};
+use retgui::elements::{Container, Element, Text, TinyVg};
+use retgui::style::{AlignItems, Display, FlexDirection, FlexWrap, FontWeight, JustifyContent, Overflow, Unit};
+use retgui::{Color, ResourceId, palette, pct, px, rgb};
 
 use crate::link::Link;
 use crate::router::NavigateFn;

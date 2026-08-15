@@ -17,7 +17,7 @@ impl Actions for ActionsImpl {
             .arg("test")
             .arg("--test")
             .arg("counter")
-            .env("RETGUI_RETAINED_TEST", "generate-all")
+            .env("retgui_TEST", "generate-all")
             .status()?;
         Ok(())
     }
@@ -28,7 +28,7 @@ fn main() -> kompari::Result<()> {
         .parent()
         .unwrap()
         .join("crates")
-        .join("retgui_retained")
+        .join("retgui")
         .join("tests");
 
     let snapshots_path = tests_path.join("snapshots");

@@ -1,6 +1,6 @@
 #[allow(dead_code)]
-#[path = "../../examples/counter_retained/main.rs"]
-pub mod counter_retained;
+#[path = "../../examples/counter/main.rs"]
+pub mod counter;
 
 #[allow(dead_code)]
 #[path = "../../examples/text/main.rs"]
@@ -13,14 +13,14 @@ mod pointer_events;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use retgui_retained::elements::{Container, Element, Text};
-use retgui_retained::events::ui_events::pointer::PointerButton;
-use retgui_retained::style::Display::Flex;
-use retgui_retained::style::{FlexDirection, FontWeight, Overflow, Unit};
-use retgui_retained::{palette, pct, px};
+use retgui::elements::{Container, Element, Text};
+use retgui::events::ui_events::pointer::PointerButton;
+use retgui::style::Display::Flex;
+use retgui::style::{FlexDirection, FontWeight, Overflow, Unit};
+use retgui::{palette, pct, px};
 
 use crate::WebsiteGlobalState;
-use crate::examples::counter_retained::counter;
+use crate::examples::counter::counter;
 use crate::examples::pointer_events::pointer_events;
 use crate::examples::text::text;
 use crate::router::NavigateFn;

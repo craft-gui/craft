@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use retgui_retained::elements::{Container, Element, Text, Window};
-use retgui_retained::events::Event;
-use retgui_retained::events::ui_events::pointer::PointerId;
-use retgui_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
-use retgui_retained::{Color, pct};
+use retgui::elements::{Container, Element, Text, Window};
+use retgui::events::Event;
+use retgui::events::ui_events::pointer::PointerId;
+use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
+use retgui::{Color, pct};
 
 fn title(txt: &str) -> Text {
     Text::new(txt)
@@ -164,7 +164,7 @@ fn main() {
         .height(pct(100))
         .push(pointer_events());
 
-    use retgui_retained::RetGuiOptions;
+    use retgui::RetGuiOptions;
     //util::setup_logging();
-    retgui_retained::retgui_main(RetGuiOptions::basic("Pointer Events"));
+    retgui::retgui_main(RetGuiOptions::basic("Pointer Events"));
 }

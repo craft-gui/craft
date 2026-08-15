@@ -7,11 +7,11 @@ use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 
-use retgui_retained::elements::{Button, Container, Element, Text, TextInner, Window};
-use retgui_retained::events::Event;
-use retgui_retained::palette::css::WHITE;
-use retgui_retained::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
-use retgui_retained::{Color, rgb};
+use retgui::elements::{Button, Container, Element, Text, TextInner, Window};
+use retgui::events::Event;
+use retgui::palette::css::WHITE;
+use retgui::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
+use retgui::{Color, rgb};
 
 const ADJECTIVES: &[&str] = &[
     "pretty",
@@ -275,8 +275,8 @@ fn main() {
         .height(Unit::Percentage(100.0))
         .push(body);
 
-    use retgui_retained::RetGuiOptions;
-    retgui_retained::retgui_main(RetGuiOptions::basic("jsframeworkbench"));
+    use retgui::RetGuiOptions;
+    retgui::retgui_main(RetGuiOptions::basic("jsframeworkbench"));
 }
 
 fn build_body(state: Rc<RefCell<State>>) -> Container {

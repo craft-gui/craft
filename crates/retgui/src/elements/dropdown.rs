@@ -31,8 +31,8 @@ use ui_events::pointer::PointerId;
 /// # Example
 ///
 /// ```no_run
-/// use retgui_retained::elements::{Dropdown, Element, Text, Window};
-/// use retgui_retained::{RetGuiOptions, retgui_main, px};
+/// use retgui::elements::{Dropdown, Element, Text, Window};
+/// use retgui::{RetGuiOptions, retgui_main, px};
 ///
 /// fn main() {
 ///     Window::new("Dropdown").push(

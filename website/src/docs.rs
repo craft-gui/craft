@@ -1,6 +1,6 @@
-use retgui_retained::elements::{Container, Element};
-use retgui_retained::pct;
-use retgui_retained::style::{Display, FlexDirection, Overflow, Unit};
+use retgui::elements::{Container, Element};
+use retgui::pct;
+use retgui::style::{Display, FlexDirection, Overflow, Unit};
 
 use crate::router::NavigateFn;
 

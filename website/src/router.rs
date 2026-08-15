@@ -1,6 +1,6 @@
-use retgui_retained::elements::{Container, Element, Window};
-use retgui_retained::pct;
-use retgui_retained::style::{Display, FlexDirection};
+use retgui::elements::{Container, Element, Window};
+use retgui::pct;
+use retgui::style::{Display, FlexDirection};
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -78,7 +78,7 @@ impl Router {
         self.set_content(page);
     }
 
-    /*pub fn window(&self) -> Arc<retgui_retained::WinitWindow> {
+    /*pub fn window(&self) -> Arc<retgui::WinitWindow> {
         self.root.inner.borrow().winit_window().expect("No widow")
     }*/
 }

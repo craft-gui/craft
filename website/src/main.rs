@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use retgui_retained::{RetGuiOptions, retgui_main};
+use retgui::{RetGuiOptions, retgui_main};
 
 use crate::router::Router;
 

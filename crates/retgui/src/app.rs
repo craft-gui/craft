@@ -151,7 +151,7 @@ impl App {
         window.on_resize(new_size);
     }
 
-    /// Updates the reactive tree, layouts the elements, and draws the view.
+    /// Updates the tree, layouts the elements, and draws the view.
     pub fn on_request_redraw(&mut self, window: Window) {
         self.on_request_redraw_internal(window);
     }

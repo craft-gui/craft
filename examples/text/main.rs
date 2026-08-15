@@ -1,6 +1,6 @@
-use retgui_retained::elements::{Container, Element, TextInput, Window};
-use retgui_retained::rgb;
-use retgui_retained::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
+use retgui::elements::{Container, Element, TextInput, Window};
+use retgui::rgb;
+use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
 
 const LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. In dolor tortor, congue eu lacus eget, faucibus aliquet nunc. Suspendisse aliquet ullamcorper fermentum. Pellentesque eu nibh sit amet nisi maximus pulvinar quis eget lectus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur efficitur metus maximus libero maximus pharetra. Sed fringilla ac velit nec hendrerit. Mauris vulputate ante non tempor iaculis. In a diam eros. Mauris vehicula, lacus rhoncus consequat laoreet, lectus ligula venenatis leo, a aliquam odio ex ut lorem. Phasellus quis fermentum erat, ut pellentesque diam. Suspendisse pulvinar eros magna, vel ultricies metus luctus at. Pellentesque consequat a magna ut cursus. Nunc nisl velit, maximus blandit mauris quis, convallis cursus leo. Donec ut ultrices dui, a efficitur sem. Cras ac diam non orci sagittis tincidunt. Etiam auctor ultrices leo vitae vestibulum.
 
@@ -34,7 +34,7 @@ pub fn text() -> Container {
 
 pub fn main() {
     Window::new("Text").push(text());
-    use retgui_retained::RetGuiOptions;
+    use retgui::RetGuiOptions;
     util::setup_logging();
-    retgui_retained::retgui_main(RetGuiOptions::basic("text"));
+    retgui::retgui_main(RetGuiOptions::basic("text"));
 }

@@ -8,18 +8,15 @@ default-run = "counter"
 name = "counter"
 path = "main.rs"
 
+[lib]
+name = "counter_android"
+path = "counter_android.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 util = { path = "../util" }
 
 [dependencies.retgui]
 path = "../../crates/retgui"
 default-features = false
-
-[dependencies.retgui_retained]
-path = "../../crates/retgui_retained"
-default-features = false
-features = ["system_fonts"]
-
-[target.'cfg(not(target_os = "android"))'.dependencies.retgui_renderer]
-path = "../../crates/retgui_renderer"
-features = ["vello_hybrid_renderer"]
+features = ["system_fonts", "vello_hybrid_renderer"]

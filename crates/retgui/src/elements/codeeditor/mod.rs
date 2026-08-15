@@ -5,7 +5,6 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use retgui_primitives::brush::Brush;
-use retgui_primitives::geometry::Rectangle;
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
@@ -16,7 +15,6 @@ use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, TextInput};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
-use crate::style::Overflow;
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]

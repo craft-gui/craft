@@ -6,12 +6,12 @@
 </p>
 
 ## Introduction
-RetGui is a Rust library for creating desktop user interfaces. `retgui_retained` provides platform-independent widgets.
+RetGui is a Rust library for creating desktop user interfaces.
 
 ## Installation
 Add the following to your `Cargo.toml`:
 ```toml
-[dependencies.retgui_retained]
+[dependencies.retgui]
 git = "https://github.com/RetGui/RetGui"
 default-features = false
 features = ["system_fonts", "vello_hybrid_renderer"]
@@ -23,10 +23,10 @@ features = ["system_fonts", "vello_hybrid_renderer"]
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use retgui_retained::elements::{Container, Element, Text, Window};
-use retgui_retained::events::ui_events::pointer::PointerButton;
-use retgui_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui_retained::{Color, RetGuiOptions, pct, px, rgb};
+use retgui::elements::{Container, Element, Text, Window};
+use retgui::events::ui_events::pointer::PointerButton;
+use retgui::style::{AlignItems, FlexDirection, JustifyContent};
+use retgui::{Color, RetGuiOptions, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     Container::new()
@@ -75,7 +75,7 @@ fn main() {
                 ))
         });
 
-    retgui_retained::retgui_main(RetGuiOptions::basic("Counter"));
+    retgui::retgui_main(RetGuiOptions::basic("Counter"));
 }
 ```
 

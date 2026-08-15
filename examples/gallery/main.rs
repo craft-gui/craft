@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 #[cfg(feature = "audio")]
-use retgui_retained::elements::Audio;
-use retgui_retained::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use retgui_retained::geometry::Point;
-use retgui_retained::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
-use retgui_retained::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
+use retgui::elements::Audio;
+use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui::geometry::Point;
+use retgui::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
+use retgui::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
 
 use serde::Deserialize;
 

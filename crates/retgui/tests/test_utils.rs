@@ -10,7 +10,7 @@ pub fn current_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("retgui_retained")
+        .join("retgui")
         .join("tests")
         .join("current")
 }
@@ -20,13 +20,13 @@ pub fn snapshot_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("retgui_retained")
+        .join("retgui")
         .join("tests")
         .join("snapshots")
 }
 
 pub fn is_generate_all_mode() -> bool {
-    std::env::var("RETGUI_RETAINED_TEST")
+    std::env::var("retgui_TEST")
         .map(|x| x.eq_ignore_ascii_case("generate-all"))
         .unwrap_or(false)
 }

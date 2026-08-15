@@ -1,6 +1,6 @@
 #![cfg(target_os = "android")]
 
-use retgui_retained::{AndroidApp, retgui_set_android_app};
+use retgui::{AndroidApp, retgui_set_android_app};
 
 use crate::counter::main;
 

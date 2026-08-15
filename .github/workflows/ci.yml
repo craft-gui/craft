@@ -46,7 +46,7 @@ jobs:
       - name: Build RetGui
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --package counter_retained
+        run: cargo build --package counter
 
   build-macos:
     runs-on:
@@ -61,7 +61,7 @@ jobs:
       - name: Build RetGui
         run: cargo build --verbose
       - name: Build Counter Example
-        run: cargo build --package counter_retained
+        run: cargo build --package counter
 
   build-windows:
     runs-on:
@@ -74,7 +74,7 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Counter Example
-        run: cargo build --bin counter_retained
+        run: cargo build --bin counter
 
   build-android:
     runs-on:
@@ -110,7 +110,7 @@ jobs:
         run: cargo install cargo-apk
 
       - name: Build Counter Example for Android
-        run: cargo apk build --package counter_retained --lib
+        run: cargo apk build --package counter --lib
 
   build-ios:
     runs-on:
@@ -126,7 +126,7 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --bin counter_retained
+        run: cargo build --target aarch64-apple-ios --bin counter
 
   unit-tests:
     runs-on:
@@ -141,15 +141,15 @@ jobs:
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
       - name: Build Unit Tests
-        run: cargo test --package retgui_retained --no-run
+        run: cargo test --package retgui --no-run
       - name: Run Unit Tests
-        run: cargo test --package retgui_retained --no-fail-fast --verbose
+        run: cargo test --package retgui --no-fail-fast --verbose
 
   integration-tests:
     runs-on:
       labels: fastwindows
     env:
-      RETGUI_RETAINED_TEST: generate-all
+      retgui_TEST: generate-all
 
     steps:
       - name: Checkout Repository
@@ -175,5 +175,5 @@ jobs:
           name: kompari-report
           path: |
             report.html
-            crates/retgui_retained/tests/current
-            crates/retgui_retained/tests/snapshots
+            crates/retgui/tests/current
+            crates/retgui/tests/snapshots

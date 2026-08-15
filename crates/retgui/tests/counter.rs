@@ -10,10 +10,10 @@ use libtest_mimic_collect::TestCollection;
 use libtest_mimic_collect::libtest_mimic::Arguments;
 
 use retgui_renderer::RendererType;
-use retgui_retained::elements::{Container, Element, Text, Window};
-use retgui_retained::events::ui_events::pointer::PointerButton;
-use retgui_retained::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui_retained::{Color, RetGuiCallback, RetGuiOptions, pct, px, rgb};
+use retgui::elements::{Container, Element, Text, Window};
+use retgui::events::ui_events::pointer::PointerButton;
+use retgui::style::{AlignItems, FlexDirection, JustifyContent};
+use retgui::{Color, RetGuiCallback, RetGuiOptions, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
@@ -73,11 +73,11 @@ fn counter() {
         let result_image = result_image_clone.clone();
         async move {
             for _ in 0..3 {
-                retgui_retained::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
+                retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
                 add_button.click().await;
             }
 
-            retgui_retained::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
+            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
 
             let screenshot = window.clone().screenshot();
             let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
@@ -91,7 +91,7 @@ fn counter() {
             window.close();
         }
     }));
-    retgui_retained::retgui_main(RetGuiOptions::test("counter_test", cb));
+    retgui::retgui_main(RetGuiOptions::test("counter_test", cb));
     test_utils::check_snapshot(result_image.take().unwrap(), "counter.png");
 }
 

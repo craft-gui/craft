@@ -8,7 +8,7 @@ name = "gallery"
 path = "main.rs"
 
 [features]
-audio = ["retgui_retained/audio"]
+audio = ["retgui/audio"]
 default = ["audio"]
 
 [dependencies]
@@ -20,8 +20,8 @@ workspace = true
 default-features = false
 features = ["json", "rustls"]
 
-[dependencies.retgui_retained]
-path = "../../crates/retgui_retained"
+[dependencies.retgui]
+path = "../../crates/retgui"
 default-features = false
 features = [
     "system_fonts",
