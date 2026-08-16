@@ -304,6 +304,7 @@ fn handle_scroll_logic_internal(
 ) {
     let focus_on_pointer_down = focus_on_pointer_down
         && element.element_data().is_scrollable()
+        && Rc::ptr_eq(&event.target, &event.current_target)
         && matches!(
             message,
             EventKind::PointerButtonDown(pointer_button)

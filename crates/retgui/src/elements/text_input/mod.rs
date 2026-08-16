@@ -12,6 +12,7 @@ use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 
 use parley::BoundingBox;
 
+use ui_events::keyboard::{Key, NamedKey};
 use ui_events::pointer::PointerButton;
 
 use retgui_renderer::renderer::Renderer;
@@ -259,9 +260,21 @@ impl ElementInternals for TextInputInner {
     fn on_event(&mut self, message: &EventKind, text_context: &mut TextContext, event: &mut Event) {
         self.state.is_active = true;
 
-        scrollable::handle_scroll_logic(self, message, event);
+        let editor_owns_scroll_key = matches!(
+            message,
+            EventKind::KeyboardInputEvent(keyboard_event)
+                if matches!(
+                    &keyboard_event.key,
+                    Key::Named(
+                        NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::Home | NamedKey::End
+                    )
+                )
+        );
+        if !editor_owns_scroll_key {
+            scrollable::handle_scroll_logic(self, message, event);
+        }
 
-        if !event.propagate {
+        if event.prevent_defaults {
             return;
         }
 
@@ -302,6 +315,7 @@ impl ElementInternals for TextInputInner {
                 }
                 self.state
                     .key_press(text_context, keyboard_event, &mut self.element_data);
+                event.prevent_propagate();
             }
             EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
