@@ -82,7 +82,7 @@ impl PointerCapture {
                 }
 
                 let mut event = Event::new(target.clone());
-                dispatch_event(&mut event, &event_kind, &mut targets, text_context);
+                dispatch_event(&mut event, &event_kind, &targets, text_context);
             }
 
             did_pointer_capture_change = true;
@@ -105,7 +105,7 @@ impl PointerCapture {
                 }
 
                 let mut event = Event::new(target.clone());
-                dispatch_event(&mut event, &event_kind, &mut targets, text_context);
+                dispatch_event(&mut event, &event_kind, &targets, text_context);
             }
 
             did_pointer_capture_change = true;

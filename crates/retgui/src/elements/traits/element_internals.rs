@@ -19,7 +19,7 @@ use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventKind, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -465,52 +465,74 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// Called after a node is added to the gummy tree.
     fn on_post_add_layout_tree(&mut self, _gummy_tree: &mut GummyTree) {}
 
+    fn add_event_listener(&mut self, callback: EventCallbackKind, options: EventListenerOptions) {
+        self.element_data_mut().event_callbacks.push(EventCallback {
+            callback,
+            capturing: options.capturing,
+        });
+    }
+
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
-        self.element_data_mut().on_pointer_enter.push(on_pointer_enter);
+        self.add_event_listener(
+            EventCallbackKind::PointerEnter(on_pointer_enter),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) {
-        self.element_data_mut()
-            .on_dropdown_item_selected
-            .push(on_dropdown_item_selected);
+        self.add_event_listener(
+            EventCallbackKind::DropdownItemSelected(on_dropdown_item_selected),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_slider_value_changed(&mut self, on_slider_value_changed: SliderValueChangedHandler) {
-        self.element_data_mut()
-            .on_slider_value_changed
-            .push(on_slider_value_changed);
+        self.add_event_listener(
+            EventCallbackKind::SliderValueChanged(on_slider_value_changed),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_pointer_leave(&mut self, on_pointer_leave: PointerLeaveHandler) {
-        self.element_data_mut().on_pointer_leave.push(on_pointer_leave);
+        self.add_event_listener(
+            EventCallbackKind::PointerLeave(on_pointer_leave),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_radio_value_changed(&mut self, on_radio_value_changed: RadioValueChangedHandler) {
-        self.element_data_mut()
-            .on_radio_value_changed
-            .push(on_radio_value_changed);
+        self.add_event_listener(
+            EventCallbackKind::RadioValueChanged(on_radio_value_changed),
+            EventListenerOptions::default(),
+        );
     }
 
-    fn on_checkbox_toggled(&mut self, on_backbox_toggled: CheckboxToggledHandler) {
-        self.element_data_mut().on_checkbox_toggled.push(on_backbox_toggled);
+    fn on_checkbox_toggled(&mut self, on_checkbox_toggled: CheckboxToggledHandler) {
+        self.add_event_listener(
+            EventCallbackKind::CheckboxToggled(on_checkbox_toggled),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_text_input_changed(&mut self, on_text_input_changed: TextInputChangedHandler) {
-        self.element_data_mut()
-            .on_text_input_changed
-            .push(on_text_input_changed);
+        self.add_event_listener(
+            EventCallbackKind::TextInputChanged(on_text_input_changed),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_got_pointer_capture(&mut self, on_got_pointer_capture: PointerCaptureHandler) {
-        self.element_data_mut()
-            .on_got_pointer_capture
-            .push(on_got_pointer_capture);
+        self.add_event_listener(
+            EventCallbackKind::GotPointerCapture(on_got_pointer_capture),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_lost_pointer_capture(&mut self, on_lost_pointer_capture: PointerCaptureHandler) {
-        self.element_data_mut()
-            .on_lost_pointer_capture
-            .push(on_lost_pointer_capture);
+        self.add_event_listener(
+            EventCallbackKind::LostPointerCapture(on_lost_pointer_capture),
+            EventListenerOptions::default(),
+        );
     }
 
     fn get_id(&self) -> Option<smol_str::SmolStr> {
@@ -522,29 +544,39 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
-        self.element_data_mut()
-            .on_pointer_button_down
-            .push(on_pointer_button_down);
+        self.add_event_listener(
+            EventCallbackKind::PointerButtonDown(on_pointer_button_down),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) {
-        self.element_data_mut().on_pointer_button_up.push(on_pointer_button_up);
+        self.add_event_listener(
+            EventCallbackKind::PointerButtonUp(on_pointer_button_up),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_click(&mut self, on_click: ClickHandler) {
-        self.element_data_mut().on_click.push(on_click);
+        self.add_event_listener(EventCallbackKind::Click(on_click), EventListenerOptions::default());
     }
 
     fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
-        self.element_data_mut().on_pointer_moved.push(on_pointer_moved);
+        self.add_event_listener(
+            EventCallbackKind::PointerMoved(on_pointer_moved),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_keyboard_input(&mut self, on_keyboard_input: KeyboardInputHandler) {
-        self.element_data_mut().on_keyboard_input.push(on_keyboard_input);
+        self.add_event_listener(
+            EventCallbackKind::KeyboardInput(on_keyboard_input),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_scroll(&mut self, on_scroll: ScrollHandler) {
-        self.element_data_mut().on_scroll.push(on_scroll);
+        self.add_event_listener(EventCallbackKind::Scroll(on_scroll), EventListenerOptions::default());
     }
 
     fn scroll_to_child_by_id_with_options(&mut self, id: &str, options: ScrollOptions) {

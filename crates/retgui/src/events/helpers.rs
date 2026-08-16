@@ -10,7 +10,7 @@ use retgui_renderer::TargetItem;
 use crate::app::ELEMENTS;
 use crate::elements::ElementInternals;
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{Event, EventKind};
+use crate::events::{Event, EventCallback, EventCallbackKind, EventKind};
 
 pub(super) fn freeze_target_list(
     target: Rc<RefCell<dyn ElementInternals>>,
@@ -93,119 +93,54 @@ pub(super) fn find_target(
     target.unwrap_or(Rc::clone(root))
 }
 
-pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind) {
+pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind, capturing: bool) {
     let current_target = event.current_target.clone();
+    let callbacks = current_target.borrow().element_data().event_callbacks.clone();
 
-    match message {
-        EventKind::PointerEnter() => {
-            let element_data = current_target.borrow().element_data().clone();
+    for EventCallback {
+        callback,
+        capturing: callback_capturing,
+    } in callbacks
+    {
+        if callback_capturing != capturing {
+            continue;
+        }
 
-            for handler in &element_data.on_pointer_enter {
-                (*handler)(event);
+        match (message, callback) {
+            (EventKind::PointerEnter(), EventCallbackKind::PointerEnter(handler))
+            | (EventKind::PointerLeave(), EventCallbackKind::PointerLeave(handler))
+            | (EventKind::Click(), EventCallbackKind::Click(handler))
+            | (EventKind::GotPointerCapture(), EventCallbackKind::GotPointerCapture(handler))
+            | (EventKind::LostPointerCapture(), EventCallbackKind::LostPointerCapture(handler))
+            | (EventKind::Scroll(), EventCallbackKind::Scroll(handler)) => {
+                handler(event);
             }
-        }
-        EventKind::PointerLeave() => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_pointer_leave {
-                (*handler)(event);
+            (EventKind::PointerButtonUp(pointer_event), EventCallbackKind::PointerButtonUp(handler))
+            | (EventKind::PointerButtonDown(pointer_event), EventCallbackKind::PointerButtonDown(handler)) => {
+                handler(event, pointer_event);
             }
-        }
-        EventKind::PointerButtonUp(e) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_pointer_button_up {
-                (*handler)(event, e);
+            (EventKind::KeyboardInputEvent(keyboard_event), EventCallbackKind::KeyboardInput(handler)) => {
+                handler(event, keyboard_event);
             }
-        }
-        EventKind::PointerButtonDown(e) => {
-            let len = current_target.borrow().element_data().on_pointer_button_down.len();
-            for i in 0..len {
-                let handler = current_target.borrow().element_data().on_pointer_button_down[i].clone();
-                (*handler)(event, e);
+            (EventKind::PointerMovedEvent(pointer_update), EventCallbackKind::PointerMoved(handler)) => {
+                handler(event, pointer_update);
             }
-        }
-        EventKind::Click() => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_click {
-                (*handler)(event);
+            (EventKind::DropdownItemSelected(item), EventCallbackKind::DropdownItemSelected(handler)) => {
+                handler(event, *item);
             }
-        }
-        EventKind::KeyboardInputEvent(e) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_keyboard_input {
-                (*handler)(event, e);
+            (EventKind::SliderValueChanged(value), EventCallbackKind::SliderValueChanged(handler)) => {
+                handler(event, *value);
             }
-        }
-        EventKind::PointerMovedEvent(e) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_pointer_moved {
-                (*handler)(event, e);
+            (EventKind::RadioValueChanged(value), EventCallbackKind::RadioValueChanged(handler)) => {
+                handler(event, value.clone());
             }
-        }
-        EventKind::PointerScroll(_) => {}
-        EventKind::ImeEvent(_) => {}
-        EventKind::LinkClicked(_) => {}
-        EventKind::DropdownToggled(_) => {}
-        EventKind::DropdownItemSelected(item) => {
-            let element_data = current_target.borrow().element_data().clone();
-            for handler in &element_data.on_dropdown_item_selected {
-                (*handler)(event, *item);
+            (EventKind::CheckboxToggled(value), EventCallbackKind::CheckboxToggled(handler)) => {
+                handler(event, value.clone());
             }
-        }
-        EventKind::SwitchToggled(_) => {}
-        EventKind::SliderValueChanged(slider_value) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_slider_value_changed {
-                (*handler)(event, *slider_value);
+            (EventKind::TextInputChanged(value), EventCallbackKind::TextInputChanged(handler)) => {
+                handler(event, value);
             }
-        }
-        EventKind::ElementMessage(_) => {}
-        EventKind::GotPointerCapture() => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_got_pointer_capture {
-                (*handler)(event);
-            }
-        }
-        EventKind::LostPointerCapture() => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_lost_pointer_capture {
-                (*handler)(event);
-            }
-        }
-        EventKind::Scroll() => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_scroll {
-                (*handler)(event);
-            }
-        }
-        EventKind::RadioValueChanged(rv) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_radio_value_changed {
-                (*handler)(event, rv.clone());
-            }
-        }
-        EventKind::CheckboxToggled(rv) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_checkbox_toggled {
-                (*handler)(event, rv.clone());
-            }
-        }
-        EventKind::TextInputChanged(rv) => {
-            let element_data = current_target.borrow().element_data().clone();
-
-            for handler in &element_data.on_text_input_changed {
-                (*handler)(event, rv);
-            }
+            _ => {}
         }
     }
 }

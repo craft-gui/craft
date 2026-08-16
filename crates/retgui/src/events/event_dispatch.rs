@@ -20,12 +20,23 @@ pub(super) fn dispatch_event(
     targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     text_context: &mut TextContext,
 ) {
-    // Bubbling
-    for current_target in targets.iter() {
+    // Capture Phase
+    for current_target in targets.iter().rev() {
         event.current_target = current_target.clone();
-        call_user_event_handlers(event, event_kind);
+        call_user_event_handlers(event, event_kind, true);
         if !event.propagate {
             break;
+        }
+    }
+
+    // Bubble phase
+    if event.propagate {
+        for current_target in targets.iter() {
+            event.current_target = current_target.clone();
+            call_user_event_handlers(event, event_kind, false);
+            if !event.propagate {
+                break;
+            }
         }
     }
 
@@ -42,7 +53,10 @@ pub(super) fn dispatch_event(
 }
 
 pub(super) fn dispatch_event_once(event: &mut Event, event_kind: &EventKind, text_context: &mut TextContext) {
-    call_user_event_handlers(event, event_kind);
+    call_user_event_handlers(event, event_kind, true);
+    if event.propagate {
+        call_user_event_handlers(event, event_kind, false);
+    }
 
     if !event.prevent_defaults {
         let target = event.target.clone();
@@ -265,7 +279,7 @@ impl EventDispatcher {
         }
 
         let mut system_event = Event::new(targets[0].clone());
-        dispatch_event(&mut system_event, event_kind, &mut targets, text_context);
+        dispatch_event(&mut system_event, event_kind, &targets, text_context);
 
         let dispatched_pointer_up_down_target = if matches!(
             event_kind,
