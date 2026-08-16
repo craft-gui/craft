@@ -429,7 +429,9 @@ impl TextInputState {
         if x < 0.0 {
             return;
         }
-        crate::elements::scrollable::set_scroll_y(&mut element_data.layout, x);
+        if crate::elements::scrollable::set_scroll_y(&mut element_data.layout, x) {
+            element_data.apply_accessibility_scroll_data();
+        }
     }
 
     /// Insert at cursor, or replace selection.

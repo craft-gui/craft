@@ -235,6 +235,37 @@ impl ElementData {
     /// Computes the scrollbar's tack and thumb layout.
     pub(crate) fn apply_scroll(&mut self, gummy_layout: &gummy::Layout) {
         apply_scroll_layout(&self.style, &mut self.layout, gummy_layout);
+        self.apply_accessibility_scroll_data();
+    }
+
+    pub(crate) fn apply_accessibility_scroll_data(&mut self) {
+        let scroll_data = if self.is_scrollable() {
+            let viewport_height = self.layout.local_box().padding_rectangle().height.max(0.0);
+            let content_height = viewport_height + self.layout.max_scroll_y;
+            let vertical_size = if content_height > 0.0 {
+                f64::from(viewport_height / content_height * 100.0)
+            } else {
+                100.0
+            };
+            let vertical_percentage = (self.layout.max_scroll_y > 0.0)
+                .then(|| f64::from(self.layout.scroll_state.scroll_y() / self.layout.max_scroll_y * 100.0));
+
+            issho::ScrollData::ScrollContainer(issho::ScrollContainerData {
+                vertical_size,
+                horizontal_size: 100.0,
+                horizontal_percentage: None,
+                vertical_percentage,
+            })
+        } else {
+            issho::ScrollData::None
+        };
+
+        if let Some(key) = self.access_key
+            && let Some(mut node) = self.access_tree.get_node_mut(key)
+            && node.scroll_data() != &scroll_data
+        {
+            node.set_scroll_data(scroll_data);
+        }
     }
 
     pub(crate) fn scroll(&self) -> ScrollState {

@@ -2,6 +2,8 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
+use issho::{AccessEvent, ScrollAmount, ScrollEvent};
+
 use retgui_primitives::geometry::{Point, Vec2};
 
 use ui_events::ScrollDelta;
@@ -117,6 +119,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) -> bool {
     }
 
     let changed = set_scroll_y(&mut data.layout, y);
+    data.apply_accessibility_scroll_data();
 
     let new_event = Event::new(data.me.upgrade().unwrap().clone());
     queue_event(new_event, EventKind::Scroll());
@@ -289,10 +292,13 @@ pub struct HandleScrollLogicResult {
 }
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &EventKind, event: &mut Event) {
-    let element_data = element.element_data_mut();
-    let result = handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event);
+    let result = {
+        let element_data = element.element_data_mut();
+        handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event)
+    };
 
     if result.scroll_changed {
+        element.element_data_mut().apply_accessibility_scroll_data();
         element.request_window_redraw();
     }
 
@@ -435,6 +441,93 @@ pub(crate) fn handle_scroll_logic_advance(
     }
 
     result
+}
+
+pub(crate) fn handle_accessibility_scroll_event(element: &mut dyn ElementInternals, event: &AccessEvent) {
+    match event {
+        AccessEvent::Scroll(scroll_event) => {
+            if scroll_from_accessibility(element.element_data_mut(), *scroll_event) {
+                element.request_window_redraw();
+            }
+        }
+        AccessEvent::ScrollIntoView => {
+            scroll_into_view(element);
+        }
+        _ => {}
+    }
+}
+
+fn scroll_from_accessibility(data: &mut ElementData, event: ScrollEvent) -> bool {
+    if !data.is_scrollable() {
+        return false;
+    }
+
+    let current = data.layout.scroll_state.scroll_y();
+    let viewport_height = data.layout.local_box().padding_rectangle().height.max(0.0);
+    let line_height = data.style.get_font_size().max(12.0) * data.style.get_line_height();
+    let target = match event.vertical {
+        ScrollAmount::SmallIncrement => current + line_height,
+        ScrollAmount::LargeIncrement => current + viewport_height,
+        ScrollAmount::SmallDecrement => current - line_height,
+        ScrollAmount::LargeDecrement => current - viewport_height,
+        ScrollAmount::NoChange => return false,
+        ScrollAmount::GoToPercentage(percentage) => {
+            // UIA uses -1 (ScrollPatternNoScroll) when an axis should not change.
+            if !percentage.is_finite() || percentage < 0.0 {
+                return false;
+            }
+            data.layout.max_scroll_y * (percentage.clamp(0.0, 100.0) as f32 / 100.0)
+        }
+    };
+
+    scroll_to(data, target)
+}
+
+fn scroll_into_view(element: &mut dyn ElementInternals) -> bool {
+    let target = element.element_data().layout.world_box().border_rectangle();
+    let mut ancestor = element.element_data().parent.clone();
+
+    while let Some(ancestor_weak) = ancestor {
+        let Some(ancestor_rc) = ancestor_weak.upgrade() else {
+            return false;
+        };
+
+        let (next_ancestor, current, target_scroll) = {
+            let ancestor = ancestor_rc.borrow();
+            let data = ancestor.element_data();
+            let next_ancestor = data.parent.clone();
+
+            if !data.is_scrollable() {
+                (next_ancestor, 0.0, None)
+            } else {
+                let viewport = data.layout.world_box().padding_rectangle();
+                let current = data.layout.scroll_state.scroll_y();
+                let delta = if target.top() < viewport.top() {
+                    target.top() - viewport.top()
+                } else if target.bottom() > viewport.bottom() {
+                    target.bottom() - viewport.bottom()
+                } else {
+                    0.0
+                };
+                (next_ancestor, current, Some(current + delta))
+            }
+        };
+
+        if let Some(target_scroll) = target_scroll {
+            if target_scroll == current {
+                return false;
+            }
+            let changed = scroll_to(ancestor_rc.borrow_mut().element_data_mut(), target_scroll);
+            if changed {
+                ancestor_rc.borrow().request_window_redraw();
+            }
+            return changed;
+        }
+
+        ancestor = next_ancestor;
+    }
+
+    false
 }
 
 fn scroll_delta_y_in_logical_pixels(delta: ScrollDelta, scale_factor: f64, logical_line_height: f32) -> f32 {

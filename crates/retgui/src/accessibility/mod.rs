@@ -53,7 +53,11 @@ thread_local! {
                 };
                 context.upgrade().unwrap()
             };
-            element.borrow_mut().on_access_event(event)?;
+            {
+                let mut element = element.borrow_mut();
+                crate::elements::scrollable::handle_accessibility_scroll_event(&mut *element, &event);
+                element.on_access_event(event)?;
+            }
 
             let mut event_dispatcher = event_dispatcher.borrow_mut();
             let mut text_context = text_context.borrow_mut();
