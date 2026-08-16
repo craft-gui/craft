@@ -10,9 +10,9 @@ where
 {
     let on_click = Rc::new(on_click);
 
-    Container::new().on_pointer_button_up(Rc::new(move |_event, pointer_button_event| {
+    Container::new().on_pointer_button_up(move |_event, pointer_button_event| {
         if pointer_button_event.button == Some(PointerButton::Primary) {
             on_click();
         }
-    }))
+    })
 }

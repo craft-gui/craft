@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Text, Window};
 use retgui::events::Event;
-use retgui::events::ui_events::pointer::PointerId;
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
 use retgui::{Color, pct};
 
@@ -37,12 +36,12 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
         .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
-        .on_click(Rc::new(move |_e| {
+        .on_click(move |_e| {
             let to_remove = event_log_copy.get_children();
             for child in to_remove {
                 event_log_copy.remove_child(child).expect("Failed to remove child!");
             }
-        }));
+        });
 
     let container = Container::new()
         .display(Display::Flex)
@@ -69,12 +68,12 @@ fn pointer_capture_example() -> Container {
         .width(Unit::Px(100.0))
         .color(Color::WHITE)
         .background_color(Color::from_rgba8(40, 40, 255, 100))
-        .on_pointer_button_down(Rc::new(|e, pb_event| {
+        .on_pointer_button_down(|e, pb_event| {
             e.target
                 .borrow_mut()
                 .set_pointer_capture(pb_event.pointer.pointer_id.unwrap());
-        }))
-        .on_pointer_moved(Rc::new(move |e, pointer_moved_event| {
+        })
+        .on_pointer_moved(move |e, pointer_moved_event| {
             let mouse_y = pointer_moved_event.current.logical_position().x as f32;
             let half_size = draggable_text_clone.get_computed_box_transformed().size.width / 2.0;
             if draggable_text_clone.has_pointer_capture(pointer_moved_event.pointer.pointer_id.unwrap()) {
@@ -86,13 +85,13 @@ fn pointer_capture_example() -> Container {
                 );
             }
             e.prevent_defaults();
-        }))
-        .on_lost_pointer_capture(Rc::new(move |_e| {
+        })
+        .on_lost_pointer_capture(move |_e| {
             push_text_clone("Lost Pointer Capture".to_string());
-        }))
-        .on_got_pointer_capture(Rc::new(move |_e| {
+        })
+        .on_got_pointer_capture(move |_e| {
             push_text_clone2("Got Pointer Capture".to_string());
-        }));
+        });
 
     Container::new()
         .display(Display::Flex)
@@ -109,9 +108,9 @@ fn pointer_enter_leave_example() -> Container {
     let pointer_enter_leave_log = move |is_enter: bool, node_name: &'static str| {
         let push_text_clone_2 = push_text.clone();
         let pointer_event_name = if is_enter { "Pointer Enter" } else { "Pointer Leave" };
-        Rc::new(move |_event: &mut Event| {
+        move |_event: &mut Event| {
             push_text_clone_2(format!("{}: {}", pointer_event_name, node_name));
-        })
+        }
     };
 
     let parent = Container::new()
@@ -122,15 +121,15 @@ fn pointer_enter_leave_example() -> Container {
         .width(Unit::Px(250.0))
         .height(Unit::Px(250.0))
         .background_color(Color::from_rgba8(10, 10, 255, 150))
-        .on_pointer_enter(pointer_enter_leave_log(true, "Parent").clone())
-        .on_pointer_leave(pointer_enter_leave_log(false, "Parent").clone());
+        .on_pointer_enter(pointer_enter_leave_log(true, "Parent"))
+        .on_pointer_leave(pointer_enter_leave_log(false, "Parent"));
 
     let child_container = Container::new()
         .width(Unit::Px(125.0))
         .height(Unit::Px(125.0))
         .background_color(Color::from_rgba8(255, 10, 10, 150))
-        .on_pointer_enter(pointer_enter_leave_log(true, "Child").clone())
-        .on_pointer_leave(pointer_enter_leave_log(false, "Child").clone());
+        .on_pointer_enter(pointer_enter_leave_log(true, "Child"))
+        .on_pointer_leave(pointer_enter_leave_log(false, "Child"));
 
     let parent = parent.push(child_container);
 
