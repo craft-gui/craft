@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 use smol_str::SmolStr;
+use smallvec::SmallVec;
 
 use crate::accessibility::RetGuiAccessTree;
 use crate::app::{ELEMENTS, GUMMY_TREE};
@@ -46,7 +47,7 @@ pub struct ElementData {
     pub(crate) access_scale_factor: f64,
     pub(crate) applied_scale_factor: f64,
 
-    pub event_callbacks: Vec<EventCallback>,
+    pub event_callbacks: SmallVec<[EventCallback; 1]>,
 }
 
 impl ElementData {
@@ -87,7 +88,7 @@ impl ElementData {
             access_root,
             access_scale_factor: 1.0,
             applied_scale_factor: 1.0,
-            event_callbacks: Vec::new(),
+            event_callbacks: SmallVec::new(),
         };
 
         if create_accessibility_node {
