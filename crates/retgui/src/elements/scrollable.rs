@@ -7,6 +7,7 @@ use issho::{AccessEvent, ScrollAmount, ScrollEvent};
 use retgui_primitives::geometry::{Point, Vec2};
 
 use ui_events::ScrollDelta;
+use ui_events::keyboard::{Code, KeyState};
 use ui_events::pointer::{PointerId, PointerType};
 
 use crate::app::queue_event;
@@ -292,6 +293,23 @@ pub struct HandleScrollLogicResult {
 }
 
 pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &EventKind, event: &mut Event) {
+    handle_scroll_logic_internal(element, message, event, true);
+}
+
+fn handle_scroll_logic_internal(
+    element: &mut dyn ElementInternals,
+    message: &EventKind,
+    event: &mut Event,
+    focus_on_pointer_down: bool,
+) {
+    let focus_on_pointer_down = focus_on_pointer_down
+        && element.element_data().is_scrollable()
+        && matches!(
+            message,
+            EventKind::PointerButtonDown(pointer_button)
+                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary)
+        );
+
     let result = {
         let element_data = element.element_data_mut();
         handle_scroll_logic_advance(&element_data.style, &mut element_data.layout, message, event)
@@ -300,6 +318,10 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
     if result.scroll_changed {
         element.element_data_mut().apply_accessibility_scroll_data();
         element.request_window_redraw();
+
+        if matches!(message, EventKind::KeyboardInputEvent(_)) {
+            queue_event(Event::new(element.to_rc()), EventKind::Scroll());
+        }
     }
 
     if result.set_pointer_capture {
@@ -308,6 +330,11 @@ pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, message: &
 
     if result.release_pointer_capture {
         element.release_pointer_capture(result.pointer_id.unwrap());
+    }
+
+    if focus_on_pointer_down {
+        element.focus();
+        event.prevent_propagate();
     }
 }
 
@@ -328,6 +355,7 @@ pub(crate) fn handle_scroll_logic_advance(
         let world_box = layout.world_box();
         let world_scroll_thumb = layout.world_scroll_thumb();
         let world_scroll_track = layout.world_scroll_track();
+        let page_height = layout.local_box().padding_rectangle().height.max(0.0);
         let state = &mut layout.scroll_state;
         match message {
             EventKind::PointerScroll(mouse_wheel) => {
@@ -364,6 +392,7 @@ pub(crate) fn handle_scroll_logic_advance(
                             pointer_button.state.logical_point().x,
                             pointer_button.state.logical_point().y,
                         ));
+                        result.set_pointer_capture = true;
                         event.prevent_propagate();
                         event.prevent_defaults();
                     }
@@ -429,6 +458,36 @@ pub(crate) fn handle_scroll_logic_advance(
                     state.scroll_click = Some(Point::new(click.x, pointer_position.y));
                     event.prevent_propagate();
                     event.prevent_defaults();
+                }
+            }
+            EventKind::KeyboardInputEvent(keyboard_event)
+                if keyboard_event.state == KeyState::Down
+                    && !keyboard_event.modifiers.ctrl()
+                    && !keyboard_event.modifiers.alt()
+                    && !keyboard_event.modifiers.meta()
+                    && layout.max_scroll_y > 0.0 =>
+            {
+                let current_scroll_y = state.scroll_y();
+                let line_height = style.get_font_size().max(12.0) * style.get_line_height();
+                let target_scroll_y = match keyboard_event.code {
+                    Code::ArrowUp => Some(current_scroll_y - line_height),
+                    Code::ArrowDown => Some(current_scroll_y + line_height),
+                    Code::PageUp => Some(current_scroll_y - page_height),
+                    Code::PageDown => Some(current_scroll_y + page_height),
+                    Code::Home => Some(0.0),
+                    Code::End => Some(layout.max_scroll_y),
+                    _ => None,
+                };
+
+                if let Some(target_scroll_y) = target_scroll_y {
+                    event.prevent_propagate();
+                    event.prevent_defaults();
+
+                    let new_scroll_y = target_scroll_y.clamp(0.0, layout.max_scroll_y);
+                    if new_scroll_y != current_scroll_y {
+                        state.set_scroll_y(new_scroll_y);
+                        result.scroll_changed = true;
+                    }
                 }
             }
             _ => {}

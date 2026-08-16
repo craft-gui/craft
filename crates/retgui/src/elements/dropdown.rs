@@ -296,8 +296,11 @@ impl ElementInternals for DropdownInner {
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         // Take focus if clicked.
-        if let EventKind::PointerButtonDown(_pb) = message {
+        if let EventKind::PointerButtonDown(pointer_button) = message {
             self.focus();
+            if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
+                event.prevent_propagate();
+            }
         }
 
         let list_layout = &self.floating_window.layout;

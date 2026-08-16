@@ -436,7 +436,7 @@ impl ElementInternals for SliderInner {
         );
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
+    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         match message {
             EventKind::KeyboardInputEvent(key) => {
                 if key.state != KeyState::Down || !self.is_focused() {
@@ -458,6 +458,8 @@ impl ElementInternals for SliderInner {
 
                     let new_event = Event::new(self.element_data.me.upgrade().unwrap());
                     queue_event(new_event, EventKind::SliderValueChanged(self.value));
+                    event.prevent_propagate();
+                    event.prevent_defaults();
                 }
             }
             EventKind::PointerButtonUp(pointer_button_update) => {
