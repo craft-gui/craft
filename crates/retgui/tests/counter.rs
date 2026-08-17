@@ -1,21 +1,11 @@
-#[macro_use]
-extern crate libtest_mimic_collect;
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use image::RgbImage;
-
-use libtest_mimic_collect::TestCollection;
-use libtest_mimic_collect::libtest_mimic::Arguments;
-
-use retgui::elements::{Container, Element, Text, TextInput, Window};
+use retgui::elements::{Container, Element, Text, Window};
 use retgui::events::ui_events::pointer::PointerButton;
+use retgui::geometry::Size;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui::{Color, RetGuiCallback, RetGuiOptions, pct, px, queue_window_event, rgb};
-use retgui_renderer::RendererType;
-use winit::dpi::PhysicalPosition;
-use winit::event::{DeviceId, ElementState, Ime, MouseButton, WindowEvent};
+use retgui::{Color, RendererType, headless, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
@@ -41,247 +31,38 @@ mod test_utils;
 
 #[test]
 fn counter() {
-    let count = Rc::new(RefCell::new(0));
-    let count_text = Text::new(&format!("Count: {}", count.borrow()));
+    headless::run("counter_test", |test| {
+        let count = Rc::new(RefCell::new(0));
+        let count_text = Text::new(&format!("Count: {}", count.borrow()));
+        let add_button = create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone());
 
-    let add_button = create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone());
+        let window = Window::new_with_renderer("Counter", RendererType::VelloCPU)
+            .flex_direction(FlexDirection::Column)
+            .justify_content(Some(JustifyContent::Center))
+            .align_items(Some(AlignItems::Center))
+            .width(pct(100))
+            .height(pct(100))
+            .gap(px(20), px(20))
+            .push(count_text.clone())
+            .push({
+                Container::new()
+                    .gap(px(20), px(20))
+                    .push(create_button(
+                        "-",
+                        rgb(244, 67, 54),
+                        -1,
+                        count.clone(),
+                        count_text.clone(),
+                    ))
+                    .push(add_button.clone())
+            });
 
-    let window = Window::new_with_renderer("Counter", RendererType::VelloCPU)
-        .flex_direction(FlexDirection::Column)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
-        .width(pct(100))
-        .height(pct(100))
-        .gap(px(20), px(20))
-        .push(count_text.clone())
-        .push({
-            Container::new()
-                .gap(px(20), px(20))
-                .push(create_button(
-                    "-",
-                    rgb(244, 67, 54),
-                    -1,
-                    count.clone(),
-                    count_text.clone(),
-                ))
-                .push(add_button.clone())
-        });
-
-    let result_image: Rc<RefCell<Option<RgbImage>>> = Rc::new(RefCell::new(None));
-    let result_image_clone = result_image.clone();
-    let cb = RetGuiCallback(Box::new(move || {
-        let add_button = add_button.clone();
-        let window = window.clone();
-        let result_image = result_image_clone.clone();
-        async move {
-            for _ in 0..3 {
-                retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-                add_button.click().await;
-            }
-
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-
-            let screenshot = window.clone().screenshot();
-            let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-                screenshot.width as u32,
-                screenshot.height as u32,
-                screenshot.pixels,
-            )
-            .unwrap();
-            let dynamic_img = image::DynamicImage::ImageRgba8(img_buffer);
-            *result_image.borrow_mut() = Some(dynamic_img.to_rgb8());
-            window.close();
+        test.open(&window, Size::new(800.0, 600.0));
+        for _ in 0..3 {
+            test.click(&add_button);
         }
-    }));
-    retgui::retgui_main(RetGuiOptions::test("counter_test", cb));
-    test_utils::check_snapshot(result_image.take().unwrap(), "counter.png");
-}
 
-#[test]
-fn text_input_type_hello() {
-    let text_input = TextInput::new("").font_size(32.0).width(px(300));
-    let window = Window::new_with_renderer("Text input", RendererType::VelloCPU)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
-        .width(pct(100))
-        .height(pct(100))
-        .push(text_input.clone());
-
-    let result_image: Rc<RefCell<Option<RgbImage>>> = Rc::new(RefCell::new(None));
-    let result_image_clone = result_image.clone();
-    let cb = RetGuiCallback(Box::new(move || {
-        let text_input = text_input.clone();
-        let window = window.clone();
-        let result_image = result_image_clone.clone();
-        async move {
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-            text_input.click().await;
-            queue_window_event(
-                window.winit_window().unwrap().id(),
-                WindowEvent::Ime(Ime::Commit("Hello".to_owned())),
-            );
-
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-            assert_eq!(text_input.get_text(), "Hello");
-
-            let screenshot = window.clone().screenshot();
-            let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-                screenshot.width as u32,
-                screenshot.height as u32,
-                screenshot.pixels,
-            )
-            .unwrap();
-            let dynamic_img = image::DynamicImage::ImageRgba8(img_buffer);
-            *result_image.borrow_mut() = Some(dynamic_img.to_rgb8());
-            window.close();
-        }
-    }));
-    retgui::retgui_main(RetGuiOptions::test("text_input_hello_test", cb));
-    test_utils::check_snapshot(result_image.take().unwrap(), "text_input_hello.png");
-}
-
-#[test]
-fn text_input_set_cursor_after_ll() {
-    let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
-    let window = Window::new_with_renderer("Text input cursor", RendererType::VelloCPU)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
-        .width(pct(100))
-        .height(pct(100))
-        .push(text_input.clone());
-
-    let result_image: Rc<RefCell<Option<RgbImage>>> = Rc::new(RefCell::new(None));
-    let result_image_clone = result_image.clone();
-    let cb = RetGuiCallback(Box::new(move || {
-        let text_input = text_input.clone();
-        let window = window.clone();
-        let result_image = result_image_clone.clone();
-        async move {
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-
-            let content_box = text_input.get_computed_box_transformed().content_rectangle();
-            let window_id = window.winit_window().unwrap().id();
-            queue_window_event(
-                window_id,
-                WindowEvent::CursorMoved {
-                    device_id: DeviceId::dummy(),
-                    // At 32px, "Hell" ends 58 logical pixels into the content box.
-                    position: PhysicalPosition::new(
-                        (content_box.x + 58.0) as f64,
-                        (content_box.y + content_box.height / 2.0) as f64,
-                    ),
-                },
-            );
-            queue_window_event(
-                window_id,
-                WindowEvent::MouseInput {
-                    device_id: DeviceId::dummy(),
-                    state: ElementState::Pressed,
-                    button: MouseButton::Left,
-                },
-            );
-            queue_window_event(
-                window_id,
-                WindowEvent::MouseInput {
-                    device_id: DeviceId::dummy(),
-                    state: ElementState::Released,
-                    button: MouseButton::Left,
-                },
-            );
-
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-
-            let screenshot = window.clone().screenshot();
-            let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-                screenshot.width as u32,
-                screenshot.height as u32,
-                screenshot.pixels,
-            )
-            .unwrap();
-            let dynamic_img = image::DynamicImage::ImageRgba8(img_buffer);
-            *result_image.borrow_mut() = Some(dynamic_img.to_rgb8());
-            window.close();
-        }
-    }));
-    retgui::retgui_main(RetGuiOptions::test("text_input_set_cursor_after_ll_test", cb));
-    test_utils::check_snapshot(result_image.take().unwrap(), "text_input_cursor_after_ll.png");
-}
-
-#[test]
-fn text_input_select_ll() {
-    let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
-    let window = Window::new_with_renderer("Text input selection", RendererType::VelloCPU)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
-        .width(pct(100))
-        .height(pct(100))
-        .push(text_input.clone());
-
-    let result_image: Rc<RefCell<Option<RgbImage>>> = Rc::new(RefCell::new(None));
-    let result_image_clone = result_image.clone();
-    let cb = RetGuiCallback(Box::new(move || {
-        let text_input = text_input.clone();
-        let window = window.clone();
-        let result_image = result_image_clone.clone();
-        async move {
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-
-            let content_box = text_input.get_computed_box_transformed().content_rectangle();
-            let window_id = window.winit_window().unwrap().id();
-            let text_y = (content_box.y + content_box.height / 2.0) as f64;
-            queue_window_event(
-                window_id,
-                WindowEvent::CursorMoved {
-                    device_id: DeviceId::dummy(),
-                    // At 32px, the first "l" begins 43 logical pixels into the content box.
-                    position: PhysicalPosition::new((content_box.x + 43.0) as f64, text_y),
-                },
-            );
-            queue_window_event(
-                window_id,
-                WindowEvent::MouseInput {
-                    device_id: DeviceId::dummy(),
-                    state: ElementState::Pressed,
-                    button: MouseButton::Left,
-                },
-            );
-            queue_window_event(
-                window_id,
-                WindowEvent::CursorMoved {
-                    device_id: DeviceId::dummy(),
-                    // The second "l" ends 58 logical pixels into the content box.
-                    position: PhysicalPosition::new((content_box.x + 58.0) as f64, text_y),
-                },
-            );
-            queue_window_event(
-                window_id,
-                WindowEvent::MouseInput {
-                    device_id: DeviceId::dummy(),
-                    state: ElementState::Released,
-                    button: MouseButton::Left,
-                },
-            );
-
-            retgui::retgui_runtime::time::sleep(retgui_runtime::time::Duration::from_millis(500)).await;
-
-            let screenshot = window.clone().screenshot();
-            let img_buffer = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-                screenshot.width as u32,
-                screenshot.height as u32,
-                screenshot.pixels,
-            )
-            .unwrap();
-            let dynamic_img = image::DynamicImage::ImageRgba8(img_buffer);
-            *result_image.borrow_mut() = Some(dynamic_img.to_rgb8());
-            window.close();
-        }
-    }));
-    retgui::retgui_main(RetGuiOptions::test("text_input_select_ll_test", cb));
-    test_utils::check_snapshot(result_image.take().unwrap(), "text_input_select_ll.png");
-}
-
-pub fn main() {
-    let mut args = Arguments::from_args();
-    args.test_threads = Some(1);
-    TestCollection::run_with_args(args);
+        assert_eq!(*count.borrow(), 3);
+        test_utils::check_snapshot(test_utils::screenshot_rgb(test, &window), "counter.png");
+    });
 }

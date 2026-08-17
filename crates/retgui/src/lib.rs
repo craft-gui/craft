@@ -16,9 +16,7 @@ pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 pub use winit::platform::android::activity::*;
 pub use winit::window::{Cursor, CursorIcon, Window as WinitWindow, WindowAttributes};
 
-pub use crate::app::queue_window_event;
 pub use crate::options::RetGuiOptions;
-pub use crate::retguicallback::RetGuiCallback;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 
@@ -36,20 +34,20 @@ use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 
 use crate::accessibility::ACCESS_TREE;
 use crate::app::App;
+use crate::driver::{Driver, DriverKind};
 use crate::events::internal::InternalMessage;
-use crate::retgui_winit_state::{RetGuiState, RetGuiWinitState};
+use crate::retgui_winit_app::RetGuiWinitApp;
 use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
-use winit::event_loop::EventLoopBuilder;
-#[cfg(target_os = "android")]
-use winit::platform::android::EventLoopBuilderExtAndroid;
 
 mod accessibility;
+
 pub mod elements;
 pub mod events;
+pub mod headless;
 pub mod layout;
-pub mod retgui_winit_state;
+pub mod retgui_winit_app;
 pub mod style;
 pub mod text;
 #[cfg(target_arch = "wasm32")]
@@ -59,11 +57,9 @@ pub mod winit {
 }
 
 mod app;
+mod driver;
 mod options;
 mod perf_stats;
-mod retguicallback;
-#[cfg(test)]
-mod tests;
 mod utils;
 mod window_manager;
 
@@ -111,24 +107,18 @@ pub fn retgui_set_android_app(app: AndroidApp) {
 fn retgui_main_internal(options: Option<RetGuiOptions>) {
     info!("RetGui started");
 
-    let mut event_loop_builder = EventLoopBuilder::default();
+    let options = options.unwrap_or_default();
+    let driver_kind = options.driver_kind;
+    let app = setup_retgui(options);
 
-    #[cfg(target_os = "android")]
-    {
-        let app = ANDROID_APP.take().expect("retgui_set_android_app must be called.");
-        event_loop_builder.with_android_app(app);
+    match driver_kind {
+        DriverKind::Winit => RetGuiWinitApp::new(app).run(),
+        #[cfg(test)]
+        DriverKind::Test => headless::HeadlessApp::new(app).drive(),
     }
-    let event_loop = event_loop_builder.build().expect("Failed to create winit event loop.");
-    info!("Created winit event loop.");
-
-    let retgui_state = setup_retgui(options);
-    let mut winit_retgui_state = RetGuiWinitState::new(retgui_state);
-    event_loop.run_app(&mut winit_retgui_state).expect("run_app failed");
 }
 
-fn setup_retgui(retgui_options: Option<RetGuiOptions>) -> RetGuiState {
-    let retgui_options = retgui_options.unwrap_or_default();
-
+fn setup_retgui(retgui_options: RetGuiOptions) -> App {
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
     let (runtime_sender, mut runtime_receiver) = channel::<RetGuiRuntimeHandle>(1);
     let (winit_sender, winit_receiver) = channel::<InternalMessage>(100);
@@ -163,9 +153,11 @@ fn setup_retgui(retgui_options: Option<RetGuiOptions>) -> RetGuiState {
     let (event_dispatcher, text_context) =
         ACCESS_TREE.with(|access_tree| (access_tree.event_dispatcher.clone(), access_tree.text_context.clone()));
 
-    let retgui_app = Box::new(App {
+    App {
+        event_reducer: Default::default(),
         event_dispatcher,
         app_sender: app_sender.clone(),
+        event_receiver: winit_receiver,
         text_context,
         resource_manager,
         reload_fonts: false,
@@ -173,31 +165,29 @@ fn setup_retgui(retgui_options: Option<RetGuiOptions>) -> RetGuiState {
         target_scratch: Vec::new(),
         retgui_options: retgui_options.clone(),
         active: false,
+        wait_cancelled: false,
+        close_requested: false,
         #[cfg(feature = "audio")]
         last_audio_ui_update: None,
-    });
-
-    RetGuiState::new(runtime, winit_receiver, app_sender, retgui_options, retgui_app)
+    }
 }
 
 #[allow(unused_variables)]
 async fn async_main(mut app_receiver: Receiver<InternalMessage>, winit_sender: Sender<InternalMessage>) {
     info!("starting main event loop");
-    loop {
-        if let Some(app_message) = app_receiver.recv().await {
-            #[cfg(target_arch = "wasm32")]
-            WASM_QUEUE.with_borrow_mut(|wasm_queue| {
-                wasm_queue.push(app_message);
-            });
+    while let Some(app_message) = app_receiver.recv().await {
+        #[cfg(target_arch = "wasm32")]
+        WASM_QUEUE.with_borrow_mut(|wasm_queue| {
+            wasm_queue.push(app_message);
+        });
 
-            #[cfg(not(target_arch = "wasm32"))]
-            match app_message {
-                InternalMessage::ResourceEvent(resource_event) => {
-                    winit_sender
-                        .send(InternalMessage::ResourceEvent(resource_event))
-                        .await
-                        .expect("Failed to send resource event");
-                }
+        #[cfg(not(target_arch = "wasm32"))]
+        match app_message {
+            InternalMessage::ResourceEvent(resource_event) => {
+                winit_sender
+                    .send(InternalMessage::ResourceEvent(resource_event))
+                    .await
+                    .expect("Failed to send resource event");
             }
         }
     }

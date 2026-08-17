@@ -3,7 +3,6 @@ use retgui_primitives::geometry::ElementBox;
 use smol_str::SmolStr;
 
 use crate::RetGuiError;
-use crate::app::queue_window_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
 use crate::events::{CheckboxToggledHandler, ClickHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
@@ -11,9 +10,6 @@ use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, Fle
 use retgui_primitives::brush::Brush;
 use retgui_primitives::gradient::Gradient;
 use ui_events::pointer::PointerId;
-use winit::dpi::PhysicalPosition;
-use winit::event::WindowEvent::{CursorMoved, MouseInput};
-use winit::event::{DeviceId, ElementState, MouseButton};
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
@@ -527,29 +523,6 @@ pub trait Element: Clone + AsElement {
 
     fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
         self.borrow().has_pointer_capture(pointer_id)
-    }
-
-    #[allow(async_fn_in_trait)]
-    async fn click(&self) {
-        let pos = self.borrow().get_computed_box_transformed().padding_rectangle();
-        let mouse_move = CursorMoved {
-            device_id: DeviceId::dummy(),
-            position: PhysicalPosition::new(pos.x as f64, pos.y as f64),
-        };
-        let mouse_down = MouseInput {
-            device_id: DeviceId::dummy(),
-            state: ElementState::Pressed,
-            button: MouseButton::Left,
-        };
-        let mouse_up = MouseInput {
-            device_id: DeviceId::dummy(),
-            state: ElementState::Released,
-            button: MouseButton::Left,
-        };
-        let window_id = self.borrow().get_winit_window().unwrap().id();
-        queue_window_event(window_id, mouse_move);
-        queue_window_event(window_id, mouse_down);
-        queue_window_event(window_id, mouse_up);
     }
 
     fn as_dyn_element(&self) -> DynElement {

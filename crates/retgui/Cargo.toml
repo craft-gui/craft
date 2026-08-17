@@ -11,6 +11,7 @@ repository = "https://github.com/RetGui/retgui"
 [features]
 audio = ["dep:maudio", "dep:windows"]
 dynamic_linking = []
+integration_tests = ["vello_cpu_renderer", "png"]
 clipboard = ["dep:clipboard-rs"]
 vello_cpu_renderer = ["retgui_renderer/vello_cpu_renderer"]
 vello_hybrid_renderer = ["retgui_renderer/vello_hybrid_renderer"]
@@ -166,12 +167,17 @@ git = "https://github.com/someotherself/maudio.git"
 rev = "7f9838516446e3a6350c14d1472fd2c2e881c5cf"
 optional = true
 
-[dev-dependencies]
-libtest-mimic-collect  = "0.3.3"
-
-
 [[test]]
 name = "counter"
 path = "tests/counter.rs"
-harness = false
-required-features = ["vello_cpu_renderer", "png"]
+required-features = ["integration_tests"]
+
+[[test]]
+name = "text_input"
+path = "tests/text_input.rs"
+required-features = ["integration_tests"]
+
+[[test]]
+name = "radio"
+path = "tests/radio.rs"
+required-features = ["integration_tests"]
