@@ -36,11 +36,11 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(Some(JustifyContent::Center))
         .background_color(base_color)
-        .on_click(Rc::new(move |event| {
+        .on_click(move |event| {
             *state.borrow_mut() += delta;
             count_text.clone().text(&format!("Count: {}", state.borrow()));
             event.prevent_propagate();
-        }))
+        })
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }
 
@@ -93,7 +93,6 @@ fn main() {
 | Feature               | Description                                                                 | Platforms Not Supported |
 |-----------------------|-----------------------------------------------------------------------------|-------------------------|
 | audio                 | Enables playing audio via MiniAudio.                                        | Web, Android, and iOS   |
-| dynamic_linking       | Build RetGui as a C dynamic library.                                        | All platforms (WIP)     |
 | clipboard             | Enables clipboard support in text elements.                                 |                         |
 | vello_cpu_renderer    | Enables the Vello CPU renderer.                                             |                         |
 | vello_hybrid_renderer | Enables the Vello Hybrid renderer.                                          |                         |

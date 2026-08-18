@@ -376,5 +376,5 @@ where
         .color(WHITE)
         .border_radius_all((4.0, 4.0))
         .push(Text::new(label).selectable(false).color(Color::WHITE))
-        .on_click(Rc::new(callback))
+        .on_click(callback)
 }

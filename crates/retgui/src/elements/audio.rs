@@ -182,14 +182,14 @@ impl Audio {
         inner_mut.push(
             play_button
                 .push(play)
-                .on_click(Rc::new(move |_event| {
+                .on_click(move |_event| {
                     inner2.borrow_mut().toggle();
-                }))
+                })
                 .inner,
         );
         inner_mut.push(
             track
-                .on_slider_value_changed(Rc::new(move |_e, value| inner3.borrow_mut().set_cursor(value as f32)))
+                .on_slider_value_changed(move |_e, value| inner3.borrow_mut().set_cursor(value as f32))
                 .inner,
         );
         inner_mut.push(duration.inner);
@@ -202,7 +202,7 @@ impl Audio {
         );
         inner_mut.push(
             volume_track
-                .on_slider_value_changed(Rc::new(move |_e, value| inner4.borrow_mut().set_volume(value as f32)))
+                .on_slider_value_changed(move |_e, value| inner4.borrow_mut().set_volume(value as f32))
                 .inner,
         );
         inner_mut.set_sound(path);

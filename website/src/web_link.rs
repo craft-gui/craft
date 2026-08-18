@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use retgui::elements::{Container, Element};
 use retgui::events::ui_events::pointer::PointerButton;
 
@@ -7,7 +5,7 @@ use retgui::events::ui_events::pointer::PointerButton;
 pub fn WebLink(href: &str) -> Container {
     let href = href.to_string();
 
-    Container::new().on_pointer_button_up(Rc::new(move |_event, pointer_button_event| {
+    Container::new().on_pointer_button_up(move |_event, pointer_button_event| {
         if pointer_button_event.button == Some(PointerButton::Primary) {
             #[cfg(target_arch = "wasm32")]
             {
@@ -22,5 +20,5 @@ pub fn WebLink(href: &str) -> Container {
                 open::that(&href).unwrap();
             }
         }
-    }))
+    })
 }

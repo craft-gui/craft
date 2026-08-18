@@ -41,12 +41,12 @@ fn create_examples_link(
     let example_link_captured = example_link.to_string();
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
-        .on_pointer_button_up(Rc::new(move |_event, pointer_button_event| {
+        .on_pointer_button_up(move |_event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
                 update_active_example(example_link_captured.as_str(), example_container.clone(), &examples);
                 navigate_fn(example_link_captured.as_str());
             }
-        }))
+        })
         .id(example_link)
         .selectable(false);
     if example_to_show == example_link {

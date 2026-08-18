@@ -40,9 +40,34 @@ pub type TextInputChangedHandler = Rc<dyn Fn(&mut Event, &TextInputChanged)>;
 pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
-pub enum EventDispatchType {
-    Bubble,
-    Capture,
+pub enum EventCallbackKind {
+    CheckboxToggled(CheckboxToggledHandler),
+    Click(ClickHandler),
+    DropdownItemSelected(DropdownItemSelectedHandler),
+    GotPointerCapture(PointerCaptureHandler),
+    KeyboardInput(KeyboardInputHandler),
+    LostPointerCapture(PointerCaptureHandler),
+    PointerButtonDown(PointerEventHandler),
+    PointerButtonUp(PointerEventHandler),
+    PointerEnter(PointerEnterHandler),
+    PointerLeave(PointerLeaveHandler),
+    PointerMoved(PointerUpdateHandler),
+    RadioValueChanged(RadioValueChangedHandler),
+    Scroll(ScrollHandler),
+    SliderValueChanged(SliderValueChangedHandler),
+    TextInputChanged(TextInputChangedHandler),
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct EventListenerOptions {
+    pub capturing: bool,
+}
+
+#[derive(Clone)]
+pub struct EventCallback {
+    pub callback: EventCallbackKind,
+    // true = runs during capture phase, false = runs during bubbling phase
+    pub capturing: bool,
 }
 
 #[derive(Clone)]

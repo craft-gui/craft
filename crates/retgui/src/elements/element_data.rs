@@ -3,12 +3,14 @@ use std::rc::{Rc, Weak};
 
 use smol_str::SmolStr;
 
+use smallvec::SmallVec;
+
 use crate::accessibility::RetGuiAccessTree;
 use crate::app::{ELEMENTS, GUMMY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
-use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::EventCallback;
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Overflow, Style};
@@ -46,22 +48,7 @@ pub struct ElementData {
     pub(crate) access_scale_factor: f64,
     pub(crate) applied_scale_factor: f64,
 
-    // Events:
-    pub on_dropdown_item_selected: Vec<DropdownItemSelectedHandler>,
-    pub on_slider_value_changed: Vec<SliderValueChangedHandler>,
-    pub on_pointer_enter: Vec<PointerEnterHandler>,
-    pub on_pointer_leave: Vec<PointerLeaveHandler>,
-    pub on_got_pointer_capture: Vec<PointerCaptureHandler>,
-    pub on_lost_pointer_capture: Vec<PointerCaptureHandler>,
-    pub on_pointer_button_down: Vec<PointerEventHandler>,
-    pub on_pointer_button_up: Vec<PointerEventHandler>,
-    pub on_pointer_moved: Vec<PointerUpdateHandler>,
-    pub on_click: Vec<ClickHandler>,
-    pub on_keyboard_input: Vec<KeyboardInputHandler>,
-    pub on_scroll: Vec<ScrollHandler>,
-    pub on_radio_value_changed: Vec<RadioValueChangedHandler>,
-    pub on_checkbox_toggled: Vec<CheckboxToggledHandler>,
-    pub on_text_input_changed: Vec<TextInputChangedHandler>,
+    pub event_callbacks: SmallVec<[EventCallback; 1]>,
 }
 
 impl ElementData {
@@ -102,21 +89,7 @@ impl ElementData {
             access_root,
             access_scale_factor: 1.0,
             applied_scale_factor: 1.0,
-            on_dropdown_item_selected: Vec::new(),
-            on_slider_value_changed: Vec::new(),
-            on_pointer_enter: Vec::new(),
-            on_pointer_leave: Vec::new(),
-            on_got_pointer_capture: Vec::new(),
-            on_lost_pointer_capture: Vec::new(),
-            on_pointer_button_down: Vec::new(),
-            on_pointer_button_up: Vec::new(),
-            on_pointer_moved: Vec::new(),
-            on_click: Vec::new(),
-            on_keyboard_input: Vec::new(),
-            on_scroll: Vec::new(),
-            on_radio_value_changed: Vec::new(),
-            on_checkbox_toggled: Vec::new(),
-            on_text_input_changed: Vec::new(),
+            event_callbacks: SmallVec::new(),
         };
 
         if create_accessibility_node {

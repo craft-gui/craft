@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Text, Window};
-use retgui::events::ui_events::pointer::PointerButton;
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
 use retgui::{Color, rgb};
 
@@ -42,11 +41,11 @@ fn create_button(
         .justify_content(Some(JustifyContent::Center))
         .align_items(Some(AlignItems::Center))
         .background_color(base_color)
-        .on_click(Rc::new(move |event| {
+        .on_click(move |event| {
             state.borrow_mut().change(delta);
             count_text.clone().text(&format!("Count: {}", state.borrow().count()));
             event.prevent_propagate();
-        }))
+        })
         .push(label)
 }
 
