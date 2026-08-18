@@ -1,14 +1,15 @@
+use retgui::drivers::headless::run;
 use retgui::elements::{Element, TextInput, Window};
 use retgui::geometry::{Point, Size};
 use retgui::style::{AlignItems, JustifyContent};
-use retgui::{RendererType, headless, pct, px};
+use retgui::{RendererType, pct, px};
 
 #[cfg(test)]
 mod test_utils;
 
 #[test]
 fn type_hello() {
-    headless::run("text_input_hello_test", |test| {
+    run("text_input_hello_test", |test| {
         let text_input = TextInput::new("").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input", RendererType::VelloCPU)
             .justify_content(JustifyContent::Center)
@@ -28,7 +29,7 @@ fn type_hello() {
 
 #[test]
 fn set_cursor_after_ll() {
-    headless::run("text_input_set_cursor_after_ll_test", |test| {
+    run("text_input_set_cursor_after_ll_test", |test| {
         let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input cursor", RendererType::VelloCPU)
             .justify_content(JustifyContent::Center)
@@ -58,7 +59,7 @@ fn set_cursor_after_ll() {
 
 #[test]
 fn select_ll() {
-    headless::run("text_input_select_ll_test", |test| {
+    run("text_input_select_ll_test", |test| {
         let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input selection", RendererType::VelloCPU)
             .justify_content(JustifyContent::Center)

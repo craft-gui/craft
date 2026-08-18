@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use image::RgbImage;
 
+use retgui::drivers::headless::HeadlessApp;
 use retgui::elements::Window;
-use retgui::headless::HeadlessApp;
 
 pub fn screenshot_rgb(test: &HeadlessApp, window: &Window) -> RgbImage {
     let screenshot = test.screenshot(window);

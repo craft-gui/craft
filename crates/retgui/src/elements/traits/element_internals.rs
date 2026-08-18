@@ -67,7 +67,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let parent_transform = renderer.get_transform();
         let scroll_y = self.element_data().scroll().scroll_y() as f64 * scale_factor;
         renderer.set_transform(parent_transform * Affine::translate((0.0, -scroll_y)));
-        
+
         for child in self.children() {
             child
                 .borrow_mut()

@@ -7,6 +7,12 @@
 cargo test -p retgui --tests --no-default-features --features integration_tests
 ```
 
+### Linter
+
+```shell
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
 ## File Order
 
 Pub use is first. Std imports should be first. Then alphabetically by create names.  Then crate imports. Then modules. Then pub modules. Then pub type allaises then type alliases. Then pub structs then structs. then trait impls. Then struct impls.

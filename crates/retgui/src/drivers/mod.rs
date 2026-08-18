@@ -1,9 +1,11 @@
+pub mod headless;
+pub mod winit;
+
 #[derive(Clone, Copy, Default)]
-pub(crate) enum DriverKind {
+pub enum DriverKind {
     #[default]
     Winit,
-    #[cfg(test)]
-    Test,
+    Headless,
 }
 
 /// Responsible for passing events to [`App`](crate::app::App) and driving the `App` forward.

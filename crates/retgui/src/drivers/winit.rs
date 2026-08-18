@@ -14,15 +14,15 @@ use winit::platform::android::EventLoopBuilderExtAndroid;
 use winit::window::WindowId;
 
 use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
-use crate::driver::Driver;
+use crate::drivers::Driver;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(10);
 
-pub(crate) struct RetGuiWinitApp {
+pub struct WinitDriver {
     app: App,
 }
 
-impl ApplicationHandler for RetGuiWinitApp {
+impl ApplicationHandler for WinitDriver {
     fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
         self.app.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
     }
@@ -63,7 +63,7 @@ impl ApplicationHandler for RetGuiWinitApp {
     }
 }
 
-impl Driver for RetGuiWinitApp {
+impl Driver for WinitDriver {
     fn run(&mut self) {
         let mut event_loop_builder = EventLoopBuilder::default();
 
@@ -81,7 +81,7 @@ impl Driver for RetGuiWinitApp {
     }
 }
 
-impl RetGuiWinitApp {
+impl WinitDriver {
     pub(crate) fn new(app: App) -> Self {
         Self { app }
     }

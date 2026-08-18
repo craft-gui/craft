@@ -4,24 +4,24 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{DeviceId, ElementState, Ime, MouseButton, WindowEvent};
 
 use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
-use crate::driver::Driver;
+use crate::drivers::Driver;
 use crate::elements::{Element, Window};
 
 const MAX_SETTLE_PASSES: usize = 64;
 
-struct HeadlessEvent {
+pub struct HeadlessEvent {
     window: Window,
     winit_event: WindowEvent,
 }
 
-pub(crate) struct HeadlessDriver {
+pub struct HeadlessDriver {
     event_receiver: std::sync::mpsc::Receiver<HeadlessEvent>,
     event_sender: std::sync::mpsc::Sender<HeadlessEvent>,
     app: App,
 }
 
 impl HeadlessDriver {
-    pub(crate) fn new(app: App) -> Self {
+    pub fn new(app: App) -> Self {
         let (tx, rx) = std::sync::mpsc::channel();
         Self {
             event_receiver: rx,
@@ -30,7 +30,7 @@ impl HeadlessDriver {
         }
     }
 
-    fn send_event(&self, window: Window, winit_event: WindowEvent) {
+    pub(crate) fn send_event(&self, window: Window, winit_event: WindowEvent) {
         self.event_sender
             .send(HeadlessEvent {
                 window,
@@ -50,7 +50,7 @@ impl HeadlessDriver {
         events_processed
     }
 
-    fn dispatch_event(&mut self, event: HeadlessEvent) {
+    pub fn dispatch_event(&mut self, event: HeadlessEvent) {
         match self.app.on_window_event(event.window, event.winit_event) {
             WindowEventResult::Continue => {}
             WindowEventResult::ExitRequested => {
@@ -75,7 +75,7 @@ pub fn run<F>(name: &str, test: F)
 where
     F: FnOnce(&mut HeadlessApp),
 {
-    let app = crate::setup_retgui(crate::RetGuiOptions::basic(name));
+    let app = crate::create_app(crate::RetGuiOptions::basic(name));
     HeadlessApp::run_with_app(app, test);
 }
 

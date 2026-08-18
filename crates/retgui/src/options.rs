@@ -1,4 +1,4 @@
-use crate::driver::DriverKind;
+use crate::drivers::DriverKind;
 
 /// Configuration options for the RetGui application.
 ///
@@ -28,14 +28,6 @@ impl RetGuiOptions {
         Self {
             app_name: app_name.to_string(),
             driver_kind: DriverKind::Winit,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn test(title: &str) -> Self {
-        Self {
-            app_name: title.to_string(),
-            driver_kind: DriverKind::Test,
         }
     }
 }

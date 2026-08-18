@@ -30,7 +30,9 @@ pub(crate) fn upload_image(
     } else {
         let premul_data: Vec<PremulRgba8> = image
             .image
-            .as_chunks::<4>().0.iter()
+            .as_chunks::<4>()
+            .0
+            .iter()
             .map(|rgba| {
                 let alpha = u16::from(rgba[3]);
                 let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;

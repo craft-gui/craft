@@ -34,20 +34,19 @@ use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 
 use crate::accessibility::ACCESS_TREE;
 use crate::app::App;
-use crate::driver::{Driver, DriverKind};
 use crate::events::internal::InternalMessage;
-use crate::retgui_winit_app::RetGuiWinitApp;
 use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
+use drivers::winit::WinitDriver;
+use drivers::{Driver, DriverKind};
 
 mod accessibility;
 
+pub mod drivers;
 pub mod elements;
 pub mod events;
-pub mod headless;
 pub mod layout;
-pub mod retgui_winit_app;
 pub mod style;
 pub mod text;
 #[cfg(target_arch = "wasm32")]
@@ -57,7 +56,6 @@ pub mod winit {
 }
 
 mod app;
-mod driver;
 mod options;
 mod perf_stats;
 mod utils;
@@ -109,16 +107,15 @@ fn retgui_main_internal(options: Option<RetGuiOptions>) {
 
     let options = options.unwrap_or_default();
     let driver_kind = options.driver_kind;
-    let app = setup_retgui(options);
+    let app = create_app(options);
 
     match driver_kind {
-        DriverKind::Winit => RetGuiWinitApp::new(app).run(),
-        #[cfg(test)]
-        DriverKind::Test => headless::HeadlessApp::new(app).drive(),
+        DriverKind::Winit => WinitDriver::new(app).run(),
+        DriverKind::Headless => drivers::headless::HeadlessApp::new(app).drive(),
     }
 }
 
-fn setup_retgui(retgui_options: RetGuiOptions) -> App {
+fn create_app(retgui_options: RetGuiOptions) -> App {
     let (app_sender, app_receiver) = channel::<InternalMessage>(100);
     let (runtime_sender, mut runtime_receiver) = channel::<RetGuiRuntimeHandle>(1);
     let (winit_sender, winit_receiver) = channel::<InternalMessage>(100);

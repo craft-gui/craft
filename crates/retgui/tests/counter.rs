@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use retgui::drivers::headless::run;
 use retgui::elements::{Container, Element, Text, Window};
 use retgui::events::ui_events::pointer::PointerButton;
 use retgui::geometry::Size;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui::{Color, RendererType, headless, pct, px, rgb};
+use retgui::{Color, RendererType, pct, px, rgb};
 
 fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
     let border_color = rgb(0, 0, 0);
@@ -31,7 +32,7 @@ mod test_utils;
 
 #[test]
 fn counter() {
-    headless::run("counter_test", |test| {
+    run("counter_test", |test| {
         let count = Rc::new(RefCell::new(0));
         let count_text = Text::new(&format!("Count: {}", count.borrow()));
         let add_button = create_button("+", rgb(76, 175, 80), 1, count.clone(), count_text.clone());
