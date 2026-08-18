@@ -2685,8 +2685,8 @@ dependencies = [
 
 [[package]]
 name = "maudio"
-version = "0.1.6"
-source = "git+https://github.com/someotherself/maudio.git?rev=7f9838516446e3a6350c14d1472fd2c2e881c5cf#7f9838516446e3a6350c14d1472fd2c2e881c5cf"
+version = "0.1.10"
+source = "git+https://github.com/someotherself/maudio.git?rev=e787d754e96dd1d548e2c79c37a40dfc213995df#e787d754e96dd1d548e2c79c37a40dfc213995df"
 dependencies = [
  "maudio-sys",
 ]
@@ -2694,8 +2694,7 @@ dependencies = [
 [[package]]
 name = "maudio-sys"
 version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5083fb2131d5a4d9cf42703a656ee44b153054fc435bdf3eeed0363931932491"
+source = "git+https://github.com/someotherself/maudio.git?rev=e787d754e96dd1d548e2c79c37a40dfc213995df#e787d754e96dd1d548e2c79c37a40dfc213995df"
 dependencies = [
  "cc",
 ]
