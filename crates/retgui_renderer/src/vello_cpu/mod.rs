@@ -1,7 +1,6 @@
 pub mod image;
 pub mod text;
 
-use std::any::Any;
 use std::collections::HashSet;
 use std::num::{NonZero, NonZeroU32};
 use std::ops::{Deref, DerefMut};
@@ -40,7 +39,7 @@ use crate::sort_commands::SortedCommands;
 pub(crate) struct VelloCpuRenderer {
     scene: RenderContext,
     pixmap: Pixmap,
-    surface: Surface,
+    surface: Option<Surface>,
     clear_color: Color,
     window_width: u16,
     window_height: u16,
@@ -212,7 +211,24 @@ impl VelloCpuRenderer {
         Self {
             scene: render_context,
             pixmap,
-            surface,
+            surface: Some(surface),
+            clear_color: Color::WHITE,
+            window_width: width,
+            window_height: height,
+            resources: Resources::new(),
+            render_list: Default::default(),
+            resource_mapper: ResourceMapper::new(),
+            resources_seen: HashSet::with_capacity(20),
+        }
+    }
+
+    pub fn new_headless(width: u16, height: u16) -> Self {
+        let width = width.max(1);
+        let height = height.max(1);
+        Self {
+            scene: RenderContext::new(width, height),
+            pixmap: Pixmap::new(width, height),
+            surface: None,
             clear_color: Color::WHITE,
             window_width: width,
             window_height: height,
@@ -250,12 +266,14 @@ impl Renderer for VelloCpuRenderer {
         let height = height.max(1.0);
         self.window_width = width as u16;
         self.window_height = height as u16;
-        self.surface
-            .resize(
-                NonZeroU32::new(width as u32).unwrap(),
-                NonZeroU32::new(height as u32).unwrap(),
-            )
-            .expect("TODO: panic message");
+        if let Some(surface) = &mut self.surface {
+            surface
+                .resize(
+                    NonZeroU32::new(width as u32).unwrap(),
+                    NonZeroU32::new(height as u32).unwrap(),
+                )
+                .expect("TODO: panic message");
+        }
         self.pixmap = Pixmap::new(width as u16, height as u16);
         self.scene = RenderContext::new(width as u16, height as u16);
     }
@@ -347,8 +365,10 @@ impl Renderer for VelloCpuRenderer {
     fn submit(&mut self, _resource_manager: Arc<RetGuiResourceManager>) {
         self.scene.flush();
         self.scene.render(&mut self.pixmap, &mut self.resources);
-        let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
-        buffer.present().expect("Failed to present buffer");
+        if self.surface.is_some() {
+            let buffer = self.copy_pixmap_to_softbuffer(self.pixmap.width() as usize, self.pixmap.height() as usize);
+            buffer.present().expect("Failed to present buffer");
+        }
         self.scene.reset();
     }
 
@@ -363,7 +383,7 @@ impl Renderer for VelloCpuRenderer {
 
 impl VelloCpuRenderer {
     fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<'_, Arc<Window>, Arc<Window>> {
-        let mut buffer = self.surface.buffer_mut().unwrap();
+        let mut buffer = self.surface.as_mut().unwrap().buffer_mut().unwrap();
 
         let pixmap = &self.pixmap.data_as_u8_slice();
 

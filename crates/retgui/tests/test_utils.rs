@@ -5,6 +5,20 @@ use std::path::{Path, PathBuf};
 
 use image::RgbImage;
 
+use retgui::elements::Window;
+use retgui::headless::HeadlessApp;
+
+pub fn screenshot_rgb(test: &HeadlessApp, window: &Window) -> RgbImage {
+    let screenshot = test.screenshot(window);
+    let image = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+        screenshot.width as u32,
+        screenshot.height as u32,
+        screenshot.pixels,
+    )
+    .expect("renderer returned an invalid screenshot buffer");
+    image::DynamicImage::ImageRgba8(image).to_rgb8()
+}
+
 /// Directory where current tests creates images
 pub fn current_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

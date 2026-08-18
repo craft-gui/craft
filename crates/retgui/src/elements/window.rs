@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -28,12 +28,11 @@ use ui_events::ScrollDelta::PixelDelta;
 use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerScrollEvent;
 
-use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 use crate::accessibility::RetGuiAccessTree;
-use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER, queue_window_event};
+use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
@@ -67,6 +66,8 @@ pub struct WindowInternal {
 
     // Will be empty when paused.
     pub(crate) winit_window: Option<Arc<WinitWindow>>,
+    pub(crate) headless: bool,
+    redraw_requested: Cell<bool>,
 
     pub(crate) access_tree: RetGuiAccessTree,
     pub(crate) pointer_capture: Rc<RefCell<PointerCapture>>,
@@ -238,6 +239,14 @@ impl Window {
         self.inner.borrow_mut().on_request_redraw(retgui_app)
     }
 
+    pub(crate) fn request_redraw(&self) {
+        self.inner.borrow().request_redraw();
+    }
+
+    pub(crate) fn redraw_requested(&self) -> bool {
+        self.inner.borrow().redraw_requested()
+    }
+
     pub fn zoom_in(&self) {
         self.inner.borrow_mut().zoom_in()
     }
@@ -262,7 +271,7 @@ impl Window {
         self.inner.borrow_mut().on_redraw(text_context, resource_manager)
     }
 
-    pub(crate) fn create(&self, retgui_app: &mut App, event_loop: &ActiveEventLoop) {
+    pub(crate) fn create(&self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
         self.inner.borrow_mut().create(retgui_app, event_loop)
     }
 
@@ -291,6 +300,8 @@ impl WindowInternal {
                 mouse_positon: None,
                 renderer: Rc::new(RefCell::new(BlankRenderer::default())),
                 winit_window: None,
+                headless: false,
+                redraw_requested: Cell::new(false),
                 access_tree: access_tree.clone(),
                 advanced_window_fn: f.map(|f| Box::new(f) as WindowConstructor),
                 title: title.map(|title| title.to_string()),
@@ -323,9 +334,14 @@ impl WindowInternal {
     }
 
     pub fn request_redraw(&self) {
+        self.redraw_requested.set(true);
         if let Some(winit_window) = &self.winit_window {
             winit_window.request_redraw();
         }
+    }
+
+    pub(crate) fn redraw_requested(&self) -> bool {
+        self.redraw_requested.get()
     }
 
     pub(crate) fn on_focused(&self, focused: bool) {
@@ -501,9 +517,7 @@ impl WindowInternal {
     }
 
     pub(crate) fn on_redraw(&mut self, text_context: &mut TextContext, resource_manager: Arc<ResourceManager>) {
-        //if self.renderer.is_none() {
-        //    return;
-        //}
+        self.redraw_requested.set(false);
 
         let frame_start = Instant::now();
         self.renderer.borrow_mut().surface_set_clear_color(Color::WHITE);
@@ -523,7 +537,23 @@ impl WindowInternal {
         self.set_scale_factor(self.effective_scale_factor());
     }
 
-    pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: &ActiveEventLoop) {
+    pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
+        let Some(event_loop) = event_loop else {
+            if self.headless {
+                return;
+            }
+
+            self.headless = true;
+            self.renderer = self
+                .renderer_type
+                .create_headless(self.window_size.width, self.window_size.height);
+            self.resize_renderer_surface();
+            self.on_request_redraw(retgui_app);
+            return;
+        };
+
+        self.headless = false;
+
         let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
             (*window_fn)(event_loop)
         } else {
@@ -658,7 +688,9 @@ impl WindowInternal {
             .draw(&mut *renderer_clone.borrow_mut(), text_context, scale_factor);
         let debug_overlay = debug_overlay_start.elapsed();
 
-        self.winit_window.clone().unwrap().pre_present_notify();
+        if let Some(winit_window) = &self.winit_window {
+            winit_window.pre_present_notify();
+        }
 
         let (sort, prepare, submit) = {
             let renderer = renderer_clone.clone();
@@ -694,8 +726,6 @@ impl WindowInternal {
     }
 
     fn close(&self) {
-        if let Some(winit_window) = &self.winit_window {
-            queue_window_event(winit_window.id(), WindowEvent::CloseRequested);
-        }
+        todo!("programmatic window closing is not implemented")
     }
 }

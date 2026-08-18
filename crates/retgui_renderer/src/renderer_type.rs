@@ -65,4 +65,36 @@ impl RendererType {
 
         renderer
     }
+
+    pub fn create_headless(&self, width: f32, height: f32) -> Rc<RefCell<dyn Renderer>> {
+        #[allow(unused_mut)]
+        let mut blank = || {
+            let mut renderer = BlankRenderer::default();
+            renderer.resize_surface(width, height);
+            Rc::new(RefCell::new(renderer)) as Rc<RefCell<dyn Renderer>>
+        };
+
+        match self {
+            #[cfg(feature = "vello_cpu_renderer")]
+            RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new_headless(
+                width.max(1.0) as u16,
+                height.max(1.0) as u16,
+            ))),
+            #[cfg(feature = "vello_hybrid_renderer")]
+            RendererType::VelloHybrid => {
+                #[cfg(feature = "vello_cpu_renderer")]
+                {
+                    Rc::new(RefCell::new(VelloCpuRenderer::new_headless(
+                        width.max(1.0) as u16,
+                        height.max(1.0) as u16,
+                    )))
+                }
+                #[cfg(not(feature = "vello_cpu_renderer"))]
+                {
+                    blank()
+                }
+            }
+            RendererType::Blank => blank(),
+        }
+    }
 }

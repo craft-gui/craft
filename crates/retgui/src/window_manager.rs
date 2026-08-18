@@ -41,29 +41,27 @@ impl WindowManager {
 
         // Create windows that were created during the program run.
         for window_element in &self.windows {
-            if let Some(winit_window) = window_element.winit_window() {
-                let id = window_element
-                    .inner
-                    .borrow_mut()
-                    .element_data()
-                    .layout
-                    .gummy_node_id
-                    .unwrap();
-                GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                    gummy_tree.mark_node_and_leaves_dirty(id);
-                });
-                winit_window.request_redraw();
-            }
+            let id = window_element
+                .inner
+                .borrow_mut()
+                .element_data()
+                .layout
+                .gummy_node_id
+                .unwrap();
+            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+                gummy_tree.mark_node_and_leaves_dirty(id);
+            });
+            window_element.request_redraw();
         }
     }
 
-    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: &ActiveEventLoop) {
+    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
         for window_element in &self.windows {
             window_element.create(retgui_app, event_loop);
         }
     }
 
-    pub(crate) fn on_about_to_wait(&mut self, retgui_app: &mut App, event_loop: &ActiveEventLoop) {
+    pub(crate) fn on_about_to_wait(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
         if !retgui_app.active {
             return;
         }
@@ -101,5 +99,9 @@ impl WindowManager {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.windows.clear();
     }
 }

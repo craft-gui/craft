@@ -1,4 +1,4 @@
-use crate::retguicallback::RetGuiCallback;
+use crate::driver::DriverKind;
 
 /// Configuration options for the RetGui application.
 ///
@@ -11,14 +11,14 @@ pub struct RetGuiOptions {
     ///
     /// Defaults to `"retgui"`.
     pub app_name: String,
-    pub retgui_callback: Option<RetGuiCallback>,
+    pub(crate) driver_kind: DriverKind,
 }
 
 impl Default for RetGuiOptions {
     fn default() -> Self {
         Self {
             app_name: "retgui".to_string(),
-            retgui_callback: None,
+            driver_kind: DriverKind::Winit,
         }
     }
 }
@@ -27,14 +27,15 @@ impl RetGuiOptions {
     pub fn basic(app_name: &str) -> Self {
         Self {
             app_name: app_name.to_string(),
-            retgui_callback: None,
+            driver_kind: DriverKind::Winit,
         }
     }
 
-    pub fn test(title: &str, callback: RetGuiCallback) -> Self {
+    #[cfg(test)]
+    pub fn test(title: &str) -> Self {
         Self {
             app_name: title.to_string(),
-            retgui_callback: Some(callback),
+            driver_kind: DriverKind::Test,
         }
     }
 }

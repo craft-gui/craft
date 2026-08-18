@@ -811,16 +811,6 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
-dependencies = [
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "ctor"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83cf0d42651b16c6dfe68685716d18480d18a9c39c62d76e8cf3eb6ed5d8bcbf"
@@ -1024,12 +1014,6 @@ name = "error-code"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b5343afd4a8365a643ac588dab4cf234a190c7f6c88c9f6dd6ffe00837661b7"
-
-[[package]]
-name = "escape8259"
-version = "0.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5692dd7b5a1978a5aeb0ce83b7655c58ca8efdcb79d21036ea249da95afec2c6"
 
 [[package]]
 name = "euclid"
@@ -2577,40 +2561,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libtest-mimic"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14e6ba06f0ade6e504aff834d7c34298e5155c6baca353cc6a4aaff2f9fd7f33"
-dependencies = [
- "anstream",
- "anstyle",
- "clap",
- "escape8259",
-]
-
-[[package]]
-name = "libtest-mimic-collect"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a30974da57f2ec4e94399f6036f7d6c02128e96b780760b46efde9cd058e3ec"
-dependencies = [
- "ctor 0.2.9",
- "libtest-mimic",
- "libtest-mimic-collect-macro",
-]
-
-[[package]]
-name = "libtest-mimic-collect-macro"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6eeb2525f5cee3328f83ac5ba57977b458e5ed7b54eeebd52709445f156a3c9"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
 name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4129,7 +4079,6 @@ dependencies = [
  "gummy",
  "image",
  "issho",
- "libtest-mimic-collect",
  "maudio",
  "open",
  "parley",
@@ -5008,7 +4957,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a90a0ca3ee6a69f2ad28fd11621a4c3f03b371f366be500b64df260c4ffbafb4"
 dependencies = [
  "as-raw-xcb-connection",
- "ctor 0.10.1",
+ "ctor",
  "libloading",
  "pkg-config",
  "tracing",
