@@ -32,8 +32,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   build-linux:
-    runs-on:
-      labels: fastlinux
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -49,8 +48,7 @@ jobs:
         run: cargo build --package counter
 
   build-macos:
-    runs-on:
-      labels: fastmac
+    runs-on: macos-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -64,8 +62,7 @@ jobs:
         run: cargo build --package counter
 
   build-windows:
-    runs-on:
-      labels: fastwindows
+    runs-on: windows-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -77,8 +74,7 @@ jobs:
         run: cargo build --bin counter
 
   build-android:
-    runs-on:
-      labels: fastlinux
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -113,8 +109,7 @@ jobs:
         run: cargo apk build --package counter --lib
 
   build-ios:
-    runs-on:
-      labels: fastmac
+    runs-on: macos-latest
     env:
       IPHONEOS_DEPLOYMENT_TARGET: "13.0"
     steps:
@@ -129,8 +124,7 @@ jobs:
         run: cargo build --target aarch64-apple-ios --bin counter
 
   unit-tests:
-    runs-on:
-      labels: fastlinux
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -146,8 +140,7 @@ jobs:
         run: cargo test --package retgui --no-fail-fast --verbose
 
   integration-tests:
-    runs-on:
-      labels: fastwindows
+    runs-on: windows-latest
     env:
       retgui_TEST: generate-all
 
