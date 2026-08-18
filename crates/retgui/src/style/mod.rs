@@ -52,19 +52,58 @@ pub enum Display {
     None,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// Controls how child nodes are aligned in the cross/block axis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AlignItems {
+    #[default]
+    Normal,
     Start,
     End,
     FlexStart,
     FlexEnd,
+    SelfStart,
+    SelfEnd,
     Center,
     Baseline,
     Stretch,
+    SafeStart,
+    SafeEnd,
+    SafeFlexStart,
+    SafeFlexEnd,
+    SafeSelfStart,
+    SafeSelfEnd,
+    SafeCenter,
 }
 
-#[derive(Clone, Copy, Debug)]
+/// Controls how an individual node is aligned in the cross/block axis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AlignSelf {
+    #[default]
+    Auto,
+    Normal,
+    Start,
+    End,
+    FlexStart,
+    FlexEnd,
+    SelfStart,
+    SelfEnd,
+    Center,
+    Baseline,
+    Stretch,
+    SafeStart,
+    SafeEnd,
+    SafeFlexStart,
+    SafeFlexEnd,
+    SafeSelfStart,
+    SafeSelfEnd,
+    SafeCenter,
+}
+
+/// Controls how content is distributed in the cross/block axis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AlignContent {
+    #[default]
+    Normal,
     Start,
     End,
     FlexStart,
@@ -74,10 +113,18 @@ pub enum AlignContent {
     SpaceBetween,
     SpaceEvenly,
     SpaceAround,
+    SafeStart,
+    SafeEnd,
+    SafeFlexStart,
+    SafeFlexEnd,
+    SafeCenter,
 }
 
-#[derive(Clone, Copy, Debug)]
+/// Controls how content is distributed in the main/inline axis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum JustifyContent {
+    #[default]
+    Normal,
     Start,
     End,
     FlexStart,
@@ -87,6 +134,11 @@ pub enum JustifyContent {
     SpaceBetween,
     SpaceEvenly,
     SpaceAround,
+    SafeStart,
+    SafeEnd,
+    SafeFlexStart,
+    SafeFlexEnd,
+    SafeCenter,
 }
 
 #[derive(Clone, Copy, Debug)]

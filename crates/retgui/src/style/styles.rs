@@ -26,12 +26,15 @@ pub struct Style {
 
     display: StyleProperty<Display>,
     wrap: StyleProperty<FlexWrap>,
-    align_items: StyleProperty<Option<AlignItems>>,
-    justify_content: StyleProperty<Option<JustifyContent>>,
+    align_items: StyleProperty<AlignItems>,
+    align_self: StyleProperty<AlignSelf>,
+    align_content: StyleProperty<AlignContent>,
+    justify_content: StyleProperty<JustifyContent>,
     flex_direction: StyleProperty<FlexDirection>,
     flex_grow: StyleProperty<f32>,
     flex_shrink: StyleProperty<f32>,
     flex_basis: StyleProperty<Unit>,
+    order: StyleProperty<i32>,
     font_family: StyleProperty<FontFamily>,
 
     background_brush: StyleProperty<Brush>,
@@ -89,12 +92,15 @@ impl Style {
             max_height: StyleProperty::new(Unit::Auto),
             display: StyleProperty::new(Display::Flex),
             wrap: StyleProperty::new(FlexWrap::default()),
-            align_items: StyleProperty::new(None),
-            justify_content: StyleProperty::new(None),
+            align_items: StyleProperty::new(AlignItems::default()),
+            align_self: StyleProperty::new(AlignSelf::default()),
+            align_content: StyleProperty::new(AlignContent::default()),
+            justify_content: StyleProperty::new(JustifyContent::default()),
             flex_direction: StyleProperty::new(FlexDirection::Row),
             flex_grow: StyleProperty::new(0.0),
             flex_shrink: StyleProperty::new(1.0),
             flex_basis: StyleProperty::new(Unit::Auto),
+            order: StyleProperty::new(0),
             font_family: StyleProperty::new(FontFamily::default()),
             background_brush: StyleProperty::new(Brush::Color(Color::TRANSPARENT)),
             text_brush: StyleProperty::new(Brush::Color(Color::BLACK)),
@@ -255,20 +261,38 @@ impl Style {
         self.wrap.set(val);
     }
 
-    pub fn get_align_items(&self) -> Option<AlignItems> {
+    pub fn get_align_items(&self) -> AlignItems {
         *self.align_items.get()
     }
 
-    pub fn set_align_items(&mut self, val: Option<AlignItems>) {
+    pub fn set_align_items(&mut self, val: AlignItems) {
         self.is_dirty = true;
         self.align_items.set(val);
     }
 
-    pub fn get_justify_content(&self) -> Option<JustifyContent> {
+    pub fn get_align_self(&self) -> AlignSelf {
+        *self.align_self.get()
+    }
+
+    pub fn set_align_self(&mut self, val: AlignSelf) {
+        self.is_dirty = true;
+        self.align_self.set(val);
+    }
+
+    pub fn get_align_content(&self) -> AlignContent {
+        *self.align_content.get()
+    }
+
+    pub fn set_align_content(&mut self, val: AlignContent) {
+        self.is_dirty = true;
+        self.align_content.set(val);
+    }
+
+    pub fn get_justify_content(&self) -> JustifyContent {
         *self.justify_content.get()
     }
 
-    pub fn set_justify_content(&mut self, val: Option<JustifyContent>) {
+    pub fn set_justify_content(&mut self, val: JustifyContent) {
         self.is_dirty = true;
         self.justify_content.set(val);
     }
@@ -307,6 +331,15 @@ impl Style {
     pub fn set_flex_basis(&mut self, val: Unit) {
         self.is_dirty = true;
         self.flex_basis.set(val);
+    }
+
+    pub fn get_order(&self) -> i32 {
+        *self.order.get()
+    }
+
+    pub fn set_order(&mut self, val: i32) {
+        self.is_dirty = true;
+        self.order.set(val);
     }
 
     pub fn get_font_family(&self) -> FontFamily {

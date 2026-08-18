@@ -11,8 +11,8 @@ fn type_hello() {
     headless::run("text_input_hello_test", |test| {
         let text_input = TextInput::new("").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input", RendererType::VelloCPU)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
             .width(pct(100))
             .height(pct(100))
             .push(text_input.clone());
@@ -31,8 +31,8 @@ fn set_cursor_after_ll() {
     headless::run("text_input_set_cursor_after_ll_test", |test| {
         let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input cursor", RendererType::VelloCPU)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
             .width(pct(100))
             .height(pct(100))
             .push(text_input.clone());
@@ -61,8 +61,8 @@ fn select_ll() {
     headless::run("text_input_select_ll_test", |test| {
         let text_input = TextInput::new("Hello").font_size(32.0).width(px(300));
         let window = Window::new_with_renderer("Text input selection", RendererType::VelloCPU)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
             .width(pct(100))
             .height(pct(100))
             .push(text_input.clone());

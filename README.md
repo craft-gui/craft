@@ -34,7 +34,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .border_color_all(rgb(0, 0, 0))
         .border_radius_all((10.0, 10.0))
         .padding(px(15), px(30), px(15), px(30))
-        .justify_content(Some(JustifyContent::Center))
+        .justify_content(JustifyContent::Center)
         .background_color(base_color)
         .on_click(move |event| {
             *state.borrow_mut() += delta;
@@ -50,8 +50,8 @@ fn main() {
 
     Window::new("Counter")
         .flex_direction(FlexDirection::Column)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .width(pct(100))
         .height(pct(100))
         .gap(px(20), px(20))

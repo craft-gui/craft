@@ -164,8 +164,8 @@ impl Calendar {
             inner_mut.day_header.clone().push(
                 Container::new()
                     .display(Display::Flex)
-                    .justify_content(Some(JustifyContent::Center))
-                    .align_items(Some(AlignItems::Center))
+                    .justify_content(JustifyContent::Center)
+                    .align_items(AlignItems::Center)
                     .push(Text::new(day.as_str()).selectable(false))
                     .width(CELL_SIZE)
                     .height(CELL_SIZE),
@@ -179,8 +179,8 @@ impl Calendar {
             for _ in 0..COLUMNS {
                 let day_text = Text::new("").selectable(false);
                 let day = Container::new()
-                    .justify_content(Some(JustifyContent::Center))
-                    .align_items(Some(AlignItems::Center))
+                    .justify_content(JustifyContent::Center)
+                    .align_items(AlignItems::Center)
                     .width(CELL_SIZE)
                     .height(CELL_SIZE)
                     .push(day_text.clone());
@@ -197,8 +197,8 @@ impl Calendar {
         let nav = inner_mut.nav.clone();
         nav.clone()
             .display(Display::Flex)
-            .justify_content(Some(JustifyContent::SpaceAround))
-            .align_items(Some(AlignItems::Center))
+            .justify_content(JustifyContent::SpaceAround)
+            .align_items(AlignItems::Center)
             .flex_direction(FlexDirection::Row)
             .push(inner_mut.year_dropdown.clone())
             .push(inner_mut.month_dropdown.clone());

@@ -391,6 +391,7 @@ impl ElementInternals for DropdownInner {
         let floating_transform = renderer.get_transform();
         let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64 * scale_factor;
         renderer.set_transform(floating_transform * Affine::translate((0.0, -scroll_y)));
+
         for (index, child) in self.children().iter().enumerate() {
             let floating_window_box = self.floating_window.layout.computed_box;
             let mut child_rect = child
@@ -517,7 +518,7 @@ impl Dropdown {
             .borrow_mut()
             .element_data
             .style
-            .set_align_items(Some(AlignItems::Center));
+            .set_align_items(AlignItems::Center);
         inner
             .borrow_mut()
             .element_data

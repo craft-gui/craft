@@ -269,7 +269,7 @@ pub fn box_shadows() -> Container {
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((8.0, 8.0), (8.0, 8.0), (8.0, 8.0), (8.0, 8.0))
         .padding(px(15), px(30), px(15), px(30))
-        .justify_content(Some(JustifyContent::Center))
+        .justify_content(JustifyContent::Center)
         .background_color(Color::from_rgb8(255, 0, 0));
 
     container
@@ -434,7 +434,7 @@ pub fn radio_buttons() -> Container {
             RadioGroup::new("Pick a color")
                 .display(Display::Flex)
                 .flex_direction(FlexDirection::Column)
-                .justify_content(Some(JustifyContent::Center))
+                .justify_content(JustifyContent::Center)
                 .push(Radio::new("red", "red", active_color.clone()).push(Text::new("red")))
                 .push(
                     Radio::new("green", "green", active_color.clone())
@@ -492,8 +492,8 @@ pub fn main() {
 
     let window = Window::new("Gallery")
         .display(Display::Flex)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .overflow(Overflow::Clip, Overflow::Scroll)
         .width(pct(100))
         .height(pct(100));

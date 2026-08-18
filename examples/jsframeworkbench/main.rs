@@ -287,7 +287,7 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
         .flex_direction(FlexDirection::Column)
-        .align_items(Some(AlignItems::Start))
+        .align_items(AlignItems::Start)
         .padding_all(Unit::Px(15.0));
 
     let text = Text::new(r#"RetGui-"keyed""#).font_size(32.0).color(Color::BLACK);
@@ -296,8 +296,8 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .width(Unit::Percentage(50.0))
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .push(text);
 
     let header = Container::new()
@@ -322,8 +322,8 @@ fn build_data_list() -> Container {
 fn build_buttons(state: Rc<RefCell<State>>) -> Container {
     let buttons = Container::new()
         .flex_direction(FlexDirection::Column)
-        .justify_content(Some(JustifyContent::FlexEnd))
-        .align_items(Some(AlignItems::Start))
+        .justify_content(JustifyContent::FlexEnd)
+        .align_items(AlignItems::Start)
         .gap(Unit::Px(12.0), Unit::Px(12.0))
         .wrap(FlexWrap::Wrap)
         .max_height(Unit::Px(150.0));
@@ -367,8 +367,8 @@ where
         .background_color(Color::from_rgb8(211, 211, 211))
         .border_color_all(Color::from_rgb8(111, 111, 111))
         .flex_direction(FlexDirection::Row)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .gap(Unit::Px(12.0), Unit::Px(12.0))
         .width(Unit::Px(250.0))
         .height(Unit::Px(35.0))

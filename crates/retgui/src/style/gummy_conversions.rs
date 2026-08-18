@@ -1,4 +1,97 @@
-use crate::style::{AlignItems, BoxSizing, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Position, Style, Unit};
+use crate::style::{AlignContent, AlignItems, AlignSelf, BoxSizing, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Position, Style, Unit};
+
+impl From<AlignItems> for gummy::AlignItems {
+    fn from(value: AlignItems) -> Self {
+        match value {
+            AlignItems::Normal => Self::Normal,
+            AlignItems::Start => Self::Start,
+            AlignItems::End => Self::End,
+            AlignItems::FlexStart => Self::FlexStart,
+            AlignItems::FlexEnd => Self::FlexEnd,
+            AlignItems::SelfStart => Self::SelfStart,
+            AlignItems::SelfEnd => Self::SelfEnd,
+            AlignItems::Center => Self::Center,
+            AlignItems::Baseline => Self::Baseline,
+            AlignItems::Stretch => Self::Stretch,
+            AlignItems::SafeStart => Self::SafeStart,
+            AlignItems::SafeEnd => Self::SafeEnd,
+            AlignItems::SafeFlexStart => Self::SafeFlexStart,
+            AlignItems::SafeFlexEnd => Self::SafeFlexEnd,
+            AlignItems::SafeSelfStart => Self::SafeSelfStart,
+            AlignItems::SafeSelfEnd => Self::SafeSelfEnd,
+            AlignItems::SafeCenter => Self::SafeCenter,
+        }
+    }
+}
+
+impl From<AlignSelf> for gummy::AlignSelf {
+    fn from(value: AlignSelf) -> Self {
+        match value {
+            AlignSelf::Auto => Self::Auto,
+            AlignSelf::Normal => Self::Normal,
+            AlignSelf::Start => Self::Start,
+            AlignSelf::End => Self::End,
+            AlignSelf::FlexStart => Self::FlexStart,
+            AlignSelf::FlexEnd => Self::FlexEnd,
+            AlignSelf::SelfStart => Self::SelfStart,
+            AlignSelf::SelfEnd => Self::SelfEnd,
+            AlignSelf::Center => Self::Center,
+            AlignSelf::Baseline => Self::Baseline,
+            AlignSelf::Stretch => Self::Stretch,
+            AlignSelf::SafeStart => Self::SafeStart,
+            AlignSelf::SafeEnd => Self::SafeEnd,
+            AlignSelf::SafeFlexStart => Self::SafeFlexStart,
+            AlignSelf::SafeFlexEnd => Self::SafeFlexEnd,
+            AlignSelf::SafeSelfStart => Self::SafeSelfStart,
+            AlignSelf::SafeSelfEnd => Self::SafeSelfEnd,
+            AlignSelf::SafeCenter => Self::SafeCenter,
+        }
+    }
+}
+
+impl From<AlignContent> for gummy::AlignContent {
+    fn from(value: AlignContent) -> Self {
+        match value {
+            AlignContent::Normal => Self::Normal,
+            AlignContent::Start => Self::Start,
+            AlignContent::End => Self::End,
+            AlignContent::FlexStart => Self::FlexStart,
+            AlignContent::FlexEnd => Self::FlexEnd,
+            AlignContent::Center => Self::Center,
+            AlignContent::Stretch => Self::Stretch,
+            AlignContent::SpaceBetween => Self::SpaceBetween,
+            AlignContent::SpaceEvenly => Self::SpaceEvenly,
+            AlignContent::SpaceAround => Self::SpaceAround,
+            AlignContent::SafeStart => Self::SafeStart,
+            AlignContent::SafeEnd => Self::SafeEnd,
+            AlignContent::SafeFlexStart => Self::SafeFlexStart,
+            AlignContent::SafeFlexEnd => Self::SafeFlexEnd,
+            AlignContent::SafeCenter => Self::SafeCenter,
+        }
+    }
+}
+
+impl From<JustifyContent> for gummy::JustifyContent {
+    fn from(value: JustifyContent) -> Self {
+        match value {
+            JustifyContent::Normal => Self::Normal,
+            JustifyContent::Start => Self::Start,
+            JustifyContent::End => Self::End,
+            JustifyContent::FlexStart => Self::FlexStart,
+            JustifyContent::FlexEnd => Self::FlexEnd,
+            JustifyContent::Center => Self::Center,
+            JustifyContent::Stretch => Self::Stretch,
+            JustifyContent::SpaceBetween => Self::SpaceBetween,
+            JustifyContent::SpaceEvenly => Self::SpaceEvenly,
+            JustifyContent::SpaceAround => Self::SpaceAround,
+            JustifyContent::SafeStart => Self::SafeStart,
+            JustifyContent::SafeEnd => Self::SafeEnd,
+            JustifyContent::SafeFlexStart => Self::SafeFlexStart,
+            JustifyContent::SafeFlexEnd => Self::SafeFlexEnd,
+            JustifyContent::SafeCenter => Self::SafeCenter,
+        }
+    }
+}
 
 fn unit_to_gummy_dimension(unit: Unit) -> gummy::Dimension {
     match unit {
@@ -82,29 +175,10 @@ impl Style {
             left: unit_to_gummy_lengthpercentageauto(style.get_inset().left),
         };
 
-        let align_items = match style.get_align_items() {
-            None => None,
-            Some(AlignItems::Start) => Some(gummy::AlignItems::START),
-            Some(AlignItems::End) => Some(gummy::AlignItems::END),
-            Some(AlignItems::FlexStart) => Some(gummy::AlignItems::FLEX_START),
-            Some(AlignItems::FlexEnd) => Some(gummy::AlignItems::FLEX_END),
-            Some(AlignItems::Center) => Some(gummy::AlignItems::CENTER),
-            Some(AlignItems::Baseline) => Some(gummy::AlignItems::BASELINE),
-            Some(AlignItems::Stretch) => Some(gummy::AlignItems::STRETCH),
-        };
-
-        let justify_content = match style.get_justify_content() {
-            None => None,
-            Some(JustifyContent::Start) => Some(gummy::JustifyContent::START),
-            Some(JustifyContent::End) => Some(gummy::JustifyContent::END),
-            Some(JustifyContent::FlexStart) => Some(gummy::JustifyContent::FLEX_START),
-            Some(JustifyContent::FlexEnd) => Some(gummy::JustifyContent::FLEX_END),
-            Some(JustifyContent::Center) => Some(gummy::JustifyContent::CENTER),
-            Some(JustifyContent::Stretch) => Some(gummy::JustifyContent::STRETCH),
-            Some(JustifyContent::SpaceBetween) => Some(gummy::JustifyContent::SPACE_BETWEEN),
-            Some(JustifyContent::SpaceEvenly) => Some(gummy::JustifyContent::SPACE_EVENLY),
-            Some(JustifyContent::SpaceAround) => Some(gummy::JustifyContent::SPACE_AROUND),
-        };
+        let align_items = style.get_align_items().into();
+        let align_self = style.get_align_self().into();
+        let align_content = style.get_align_content().into();
+        let justify_content = style.get_justify_content().into();
 
         let flex_direction = match style.get_flex_direction() {
             FlexDirection::Row => gummy::FlexDirection::Row,
@@ -122,6 +196,7 @@ impl Style {
         let flex_grow = style.get_flex_grow();
         let flex_shrink = style.get_flex_shrink();
         let flex_basis: gummy::Dimension = unit_to_gummy_dimension(style.get_flex_basis());
+        let order = style.get_order();
 
         fn overflow_to_gummy_overflow(overflow: Overflow) -> gummy::Overflow {
             match overflow {
@@ -159,12 +234,15 @@ impl Style {
             margin,
             padding,
             justify_content,
+            align_content,
             align_items,
+            align_self,
             display,
             flex_wrap,
             flex_grow,
             flex_shrink,
             flex_basis,
+            order,
             overflow: gummy::Point {
                 x: overflow_x,
                 y: overflow_y,

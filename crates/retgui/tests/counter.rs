@@ -14,7 +14,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .border_color(border_color, border_color, border_color, border_color)
         .border_radius((10.0, 10.0), (10.0, 10.0), (10.0, 10.0), (10.0, 10.0))
         .padding(px(15), px(30), px(15), px(30))
-        .justify_content(Some(JustifyContent::Center))
+        .justify_content(JustifyContent::Center)
         .background_color(base_color)
         .on_pointer_button_up(move |event, pointer_button_event| {
             if pointer_button_event.button == Some(PointerButton::Primary) {
@@ -38,8 +38,8 @@ fn counter() {
 
         let window = Window::new_with_renderer("Counter", RendererType::VelloCPU)
             .flex_direction(FlexDirection::Column)
-            .justify_content(Some(JustifyContent::Center))
-            .align_items(Some(AlignItems::Center))
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
             .width(pct(100))
             .height(pct(100))
             .gap(px(20), px(20))

@@ -1434,8 +1434,7 @@ dependencies = [
 [[package]]
 name = "gummy"
 version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6de6b17c1f52dc906a2411748239e59534dcf0203396962fd444bcf384f30146"
+source = "git+https://github.com/RetGui/gummy?rev=08e18fdf278df0e8270e12ad60dc4b8519c072e8#08e18fdf278df0e8270e12ad60dc4b8519c072e8"
 dependencies = [
  "arrayvec",
  "grid",

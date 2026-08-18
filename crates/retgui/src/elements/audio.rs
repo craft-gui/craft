@@ -174,7 +174,7 @@ impl Audio {
         let inner4 = inner.clone();
         let mut inner_mut = inner.borrow_mut();
         inner_mut.set_height(Unit::Px(24.0));
-        inner_mut.set_align_items(Some(AlignItems::Center));
+        inner_mut.set_align_items(AlignItems::Center);
         inner_mut.set_background_brush(Brush::Color(rgb(72, 72, 72)));
         inner_mut.set_padding_all(Unit::Px(6.0));
         inner_mut.set_column_gap(Unit::Px(12.0));

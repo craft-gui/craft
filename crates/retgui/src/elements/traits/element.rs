@@ -15,7 +15,7 @@ use crate::RetGuiError;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
 use crate::events::{CheckboxToggled, Event, EventCallbackKind, EventListenerOptions, TextInputChanged};
-use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
+use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
@@ -325,12 +325,22 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn align_items(self, align_items: Option<AlignItems>) -> Self {
+    fn align_items(self, align_items: AlignItems) -> Self {
         self.borrow_mut().set_align_items(align_items);
         self
     }
 
-    fn justify_content(self, justify_content: Option<JustifyContent>) -> Self {
+    fn align_self(self, align_self: AlignSelf) -> Self {
+        self.borrow_mut().set_align_self(align_self);
+        self
+    }
+
+    fn align_content(self, align_content: AlignContent) -> Self {
+        self.borrow_mut().set_align_content(align_content);
+        self
+    }
+
+    fn justify_content(self, justify_content: JustifyContent) -> Self {
         self.borrow_mut().set_justify_content(justify_content);
         self
     }
@@ -352,6 +362,11 @@ pub trait Element: Clone + AsElement {
 
     fn flex_basis(self, flex_basis: Unit) -> Self {
         self.borrow_mut().set_flex_basis(flex_basis);
+        self
+    }
+
+    fn order(self, order: i32) -> Self {
+        self.borrow_mut().set_order(order);
         self
     }
 

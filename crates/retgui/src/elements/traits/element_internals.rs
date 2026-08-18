@@ -21,7 +21,7 @@ use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
 use crate::layout::GummyTree;
-use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
+use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
 
@@ -67,6 +67,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let parent_transform = renderer.get_transform();
         let scroll_y = self.element_data().scroll().scroll_y() as f64 * scale_factor;
         renderer.set_transform(parent_transform * Affine::translate((0.0, -scroll_y)));
+        
         for child in self.children() {
             child
                 .borrow_mut()
@@ -830,12 +831,22 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_gummy_style();
     }
 
-    fn set_align_items(&mut self, align_items: Option<AlignItems>) {
+    fn set_align_items(&mut self, align_items: AlignItems) {
         self.style_mut().set_align_items(align_items);
         self.update_gummy_style();
     }
 
-    fn set_justify_content(&mut self, justify_content: Option<JustifyContent>) {
+    fn set_align_self(&mut self, align_self: AlignSelf) {
+        self.style_mut().set_align_self(align_self);
+        self.update_gummy_style();
+    }
+
+    fn set_align_content(&mut self, align_content: AlignContent) {
+        self.style_mut().set_align_content(align_content);
+        self.update_gummy_style();
+    }
+
+    fn set_justify_content(&mut self, justify_content: JustifyContent) {
         self.style_mut().set_justify_content(justify_content);
         self.update_gummy_style();
     }
@@ -857,6 +868,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_flex_basis(&mut self, flex_basis: Unit) {
         self.style_mut().set_flex_basis(flex_basis);
+        self.update_gummy_style();
+    }
+
+    fn set_order(&mut self, order: i32) {
+        self.style_mut().set_order(order);
         self.update_gummy_style();
     }
 

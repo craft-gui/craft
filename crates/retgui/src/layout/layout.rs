@@ -27,6 +27,7 @@ pub struct Layout {
     pub computed_border_sides: Option<[BezPath; 4]>,
     pub(crate) max_scroll_y: f32,
 
+    /// The resolved paint order relative to its siblings.
     pub layout_order: u32,
     /// Effective clip captured by the most recent draw traversal.
     pub clip_bounds: Option<Rectangle>,

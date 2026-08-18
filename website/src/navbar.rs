@@ -43,14 +43,14 @@ pub fn navbar(navigate_fn: NavigateFn) -> Container {
 
     let wrapper = wrapper()
         .display(Display::Flex)
-        .justify_content(Some(JustifyContent::SpaceBetween))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::SpaceBetween)
+        .align_items(AlignItems::Center)
         // Left
         .push(
             Container::new()
                 .display(Display::Flex)
-                .justify_content(Some(JustifyContent::Center))
-                .align_items(Some(AlignItems::Center))
+                .justify_content(JustifyContent::Center)
+                .align_items(AlignItems::Center)
                 .push(
                     create_link(navigate_fn.clone(), "RetGui", "/")
                         .font_size(32.0)

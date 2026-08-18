@@ -38,8 +38,8 @@ fn create_button(
         .border_radius_all((10.0, 10.0))
         .padding(Unit::Px(15.0), Unit::Px(30.0), Unit::Px(15.0), Unit::Px(30.0))
         .display(Display::Flex)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .background_color(base_color)
         .on_click(move |event| {
             state.borrow_mut().change(delta);
@@ -76,8 +76,8 @@ pub fn counter() -> Window {
     Window::new("MultiWindow")
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .justify_content(Some(JustifyContent::Center))
-        .align_items(Some(AlignItems::Center))
+        .justify_content(JustifyContent::Center)
+        .align_items(AlignItems::Center)
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
         .row_gap(Unit::Px(20.0))
