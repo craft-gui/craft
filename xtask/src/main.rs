@@ -15,8 +15,14 @@ impl Actions for ActionsImpl {
         let cargo = std::env::var("CARGO").unwrap();
         Command::new(&cargo)
             .arg("test")
-            .arg("--test")
-            .arg("counter")
+            .args([
+                "-p",
+                "retgui",
+                "--tests",
+                "--no-default-features",
+                "--features",
+                "integration_tests",
+            ])
             .env("retgui_TEST", "generate-all")
             .status()?;
         Ok(())
@@ -27,7 +33,6 @@ fn main() -> kompari::Result<()> {
     let tests_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("crates")
         .join("retgui")
         .join("tests");
 
