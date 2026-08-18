@@ -17,7 +17,6 @@ use crate::elements::{AsElement, DynElement};
 use crate::events::{CheckboxToggled, Event, EventCallbackKind, EventListenerOptions, TextInputChanged};
 use crate::style::{AlignItems, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
-
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
 /// Getters in this trait return specific data and have a get prefix.
