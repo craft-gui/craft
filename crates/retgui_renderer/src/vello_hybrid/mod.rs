@@ -164,7 +164,7 @@ impl Renderer for VelloHybridRenderer {
             });
 
         let render_list = &self.render_list;
-        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
                 RenderCommand::DrawCircle(cmd) => draw_circle(&mut self.scene, cmd),
                 RenderCommand::DrawCircleOutline(cmd) => draw_circle_outline(&mut self.scene, cmd),
@@ -350,7 +350,7 @@ impl VelloHybridRenderer {
         resource_mapper: &mut ResourceMapper,
     ) {
         resource_mapper.resources.retain(|_key, value| {
-            if resources_seen.contains(&value) {
+            if resources_seen.contains(value) {
                 true
             } else {
                 renderer.destroy_image(resources, encoder, ImageId::new(value.0 as u32));

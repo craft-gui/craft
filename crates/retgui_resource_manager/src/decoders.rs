@@ -8,7 +8,7 @@ use tinyvg_rs::TinyVg;
 
 use crate::image::ImageResource;
 
-pub fn image_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send> {
+pub fn image_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send + Sync> {
     info!("Image downloaded");
 
     let image = image::load_from_memory(bytes.as_bytes()).unwrap();
@@ -17,7 +17,7 @@ pub fn image_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send> {
     Box::new(ImageResource { image })
 }
 
-pub fn tinyvg_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send> {
+pub fn tinyvg_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send + Sync> {
     let tinyvg = TinyVg::from_bytes(bytes.as_bytes()).unwrap();
 
     Box::new(tinyvg)

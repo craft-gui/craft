@@ -240,7 +240,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Returns the element's [`ElementBox`] without any transforms applied.
     fn computed_box(&self) -> ElementBox {
-        self.element_data().layout.computed_box.clone()
+        self.element_data().layout.computed_box
     }
 
     /// Gets
@@ -648,11 +648,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn pointer_capture(&self) -> Option<Rc<RefCell<PointerCapture>>> {
         let element_data = self.element_data();
         let window = element_data.window.clone();
-        if let Some(window) = window {
-            Some(window.upgrade().unwrap().borrow().pointer_capture.clone())
-        } else {
-            None
-        }
+        window.map(|window| window.upgrade().unwrap().borrow().pointer_capture.clone())
     }
 
     fn propagate_window_down(&mut self) {

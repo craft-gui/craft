@@ -35,10 +35,12 @@ pub trait ResourceEventHandler: From<ResourceEvent> + 'static {}
 #[cfg(target_arch = "wasm32")]
 impl<T: From<ResourceEvent> + 'static> ResourceEventHandler for T {}
 
+pub type DecoderFn = fn(Vec<u8>) -> Box<dyn Any + Send + Sync>;
+
 pub struct ResourceManager {
     resources: LockFreeMap<ResourceId, Resource>,
     pub(crate) runtime: RetGuiRuntimeHandle,
-    decoders: HashMap<ResourceType, fn(Vec<u8>) -> Box<dyn Any + Send>>,
+    decoders: HashMap<ResourceType, DecoderFn>,
 }
 
 impl ResourceManager {
@@ -49,11 +51,11 @@ impl ResourceManager {
             decoders: HashMap::from([
                 (
                     ResourceType::Image,
-                    image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>,
+                    image_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + Sync>,
                 ),
                 (
                     ResourceType::TinyVg,
-                    tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + 'static>,
+                    tinyvg_decoder as fn(Vec<u8>) -> Box<dyn Any + Send + Sync>,
                 ),
             ]),
         }

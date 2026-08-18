@@ -101,7 +101,7 @@ fn push_layer(scene: &mut RenderContext, cmd: &PushLayerCmd) {
     match cmd {
         PushLayerCmd::BezPath(path, transform) => {
             scene.set_transform(*transform);
-            scene.push_layer(Some(&path), None, None, None, None);
+            scene.push_layer(Some(path), None, None, None, None);
         }
         PushLayerCmd::Rect(rect, transform) => {
             scene.set_transform(*transform);
@@ -241,7 +241,7 @@ impl VelloCpuRenderer {
 
     pub(crate) fn delete_unseen_resources(&mut self) {
         self.resource_mapper.resources.retain(|_key, value| {
-            if self.resources_seen.contains(&value) {
+            if self.resources_seen.contains(value) {
                 true
             } else {
                 self.resources.destroy_image(ImageId::new(value.0 as u32));
@@ -309,7 +309,7 @@ impl Renderer for VelloCpuRenderer {
         self.scene.set_transform(Affine::IDENTITY);
 
         let render_list = &self.render_list;
-        SortedCommands::draw(&render_list, &render_list.overlay, &mut |command: &RenderCommand| {
+        SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
             match command {
                 RenderCommand::DrawRect(cmd) => {
                     draw_rect(&mut self.scene, cmd);

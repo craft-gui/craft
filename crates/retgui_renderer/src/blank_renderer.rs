@@ -47,7 +47,7 @@ impl Renderer for BlankRenderer {
         &mut self.render_list
     }
 
-    fn prepare<'a>(&mut self, _resource_manager: Arc<ResourceManager>, _window: Rectangle) {}
+    fn prepare(&mut self, _resource_manager: Arc<ResourceManager>, _window: Rectangle) {}
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {}
 }

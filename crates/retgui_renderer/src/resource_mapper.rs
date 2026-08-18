@@ -28,3 +28,9 @@ impl ResourceMapper {
         self.resources.values()
     }
 }
+
+impl Default for ResourceMapper {
+    fn default() -> Self {
+        Self::new()
+    }
+}

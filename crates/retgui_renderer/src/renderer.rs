@@ -30,7 +30,7 @@ pub trait Renderer: Any {
     fn sort_render_list(&mut self) {
         sort_render_list_internal(self.render_list_mut());
     }
-    fn prepare<'a>(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle);
+    fn prepare(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle);
 
     fn submit(&mut self, resource_manager: Arc<ResourceManager>);
 

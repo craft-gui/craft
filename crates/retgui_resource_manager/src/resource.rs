@@ -5,7 +5,7 @@ use std::any::Any;
 #[derive(Debug)]
 pub struct Resource {
     pub resource_type: ResourceType,
-    pub data: Box<dyn Any + Send>,
+    pub data: Box<dyn Any + Send + Sync>,
     pub expiration_time: Option<DateTime<Utc>>,
 }
 

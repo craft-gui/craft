@@ -7,13 +7,12 @@ use vello_cpu::{RenderContext, Resources};
 
 use crate::helpers::{brush_to_paint, text_bounds};
 use crate::render_command::{DrawRectCmd, DrawTextCmd};
-use crate::text_renderer_data::TextScroll;
 use crate::vello_cpu::draw_rect;
 use retgui_primitives::geometry::Rectangle;
 
 pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources: &mut Resources, window: &Rectangle) {
     let text_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));
-    let scroll = cmd.text_scroll.unwrap_or(TextScroll::default()).scroll_y;
+    let scroll = cmd.text_scroll.unwrap_or_default().scroll_y;
     let text_transform = Affine::default()
         .with_translation(kurbo::Vec2::new(cmd.rect.x as f64, cmd.rect.y as f64))
         .then_translate(kurbo::Vec2::new(0.0, -scroll as f64));

@@ -246,7 +246,7 @@ impl Layout {
         let element_rect = self.local_box();
         let border_spec = BorderSpec {
             rect: element_rect.border_rectangle(),
-            width: element_rect.border.clone(),
+            width: element_rect.border,
             radii: border_radius,
             scale_factor,
             has_border,
@@ -273,7 +273,7 @@ impl Layout {
             return;
         }
 
-        let borders = element_rect.border.clone();
+        let borders = element_rect.border;
         let border_spec = CssRoundedRect::new(
             element_rect.border_rectangle().to_kurbo(),
             [
@@ -312,7 +312,7 @@ impl Layout {
 
                     if box_shadow.inset {
                         let element_rect = self.local_box();
-                        let borders = element_rect.border.clone();
+                        let borders = element_rect.border;
                         let inset_css_rect = CssRoundedRect::new(
                             element_rect
                                 .border_rectangle()

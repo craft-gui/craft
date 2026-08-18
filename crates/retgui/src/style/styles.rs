@@ -148,7 +148,7 @@ impl Style {
     }
 
     pub fn get_margin(&self) -> TrblRectangle<Unit> {
-        self.margin.get().clone()
+        *self.margin.get()
     }
 
     pub fn set_margin(&mut self, val: TrblRectangle<Unit>) {
@@ -157,7 +157,7 @@ impl Style {
     }
 
     pub fn get_padding(&self) -> TrblRectangle<Unit> {
-        self.padding.get().clone()
+        *self.padding.get()
     }
 
     pub fn set_padding(&mut self, val: TrblRectangle<Unit>) {
@@ -175,7 +175,7 @@ impl Style {
     }
 
     pub fn get_inset(&self) -> TrblRectangle<Unit> {
-        self.inset.get().clone()
+        *self.inset.get()
     }
 
     pub fn set_inset(&mut self, val: TrblRectangle<Unit>) {
@@ -400,7 +400,7 @@ impl Style {
     }
 
     pub fn get_border_color(&self) -> TrblRectangle<Color> {
-        self.border_color.get().clone()
+        *self.border_color.get()
     }
 
     pub fn set_border_color(&mut self, val: TrblRectangle<Color>) {
@@ -409,7 +409,7 @@ impl Style {
     }
 
     pub fn get_border_width(&self) -> TrblRectangle<Unit> {
-        self.border_width.get().clone()
+        *self.border_width.get()
     }
 
     pub fn set_border_width(&mut self, val: TrblRectangle<Unit>) {
@@ -436,7 +436,7 @@ impl Style {
     }
 
     pub fn get_scrollbar_thumb_margin(&self) -> TrblRectangle<f32> {
-        self.scrollbar_thumb_margin.get().clone()
+        *self.scrollbar_thumb_margin.get()
     }
 
     pub fn set_scrollbar_thumb_margin(&mut self, val: TrblRectangle<f32>) {

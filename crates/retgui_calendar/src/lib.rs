@@ -84,19 +84,18 @@ pub fn current_calendar_start(start_of_week: Weekday, year: i32, month: Month) -
     start
 }
 
-pub fn format_date_day_number(locale: &Locale, date: &Date<Gregorian>) -> String {
-    let day_number = cfg_select! {
-        windows => Some(windows::format_date_day_number(date)),
-        target_vendor = "apple" => Some(apple::format_date_day_number(date)),
-        _ => None,
-    };
+pub fn format_date_day_number(_locale: &Locale, date: &Date<Gregorian>) -> String {
+    cfg_select! {
+        windows => windows::format_date_day_number(date),
+        target_vendor = "apple" => apple::format_date_day_number(date),
+        _ => {
+            let formatter =
+                FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(_locale.into(), fieldsets::D::short())
+                    .expect("Failed to create formatter");
 
-    day_number.unwrap_or_else(|| {
-        let formatter = FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(locale.into(), fieldsets::D::short())
-            .expect("Failed to create formatter");
-
-        formatter.format(date).to_string()
-    })
+            formatter.format(date).to_string()
+        }
+    }
 }
 
 pub fn month_name(locale: &Locale, month: Month, year: i32) -> String {
@@ -116,18 +115,17 @@ pub fn month_name(locale: &Locale, month: Month, year: i32) -> String {
     })
 }
 
-pub fn year_name(locale: &Locale, year: i32) -> String {
-    let year_name = cfg_select! {
-        windows => Some(windows::year_name(year)),
-        target_vendor = "apple" => Some(apple::year_name(year)),
-        _ => None,
-    };
+pub fn year_name(_locale: &Locale, year: i32) -> String {
+    cfg_select! {
+        windows => windows::year_name(year),
+        target_vendor = "apple" => apple::year_name(year),
+        _ => {
+            let date = Date::try_new_gregorian(year, 1, 1).expect("Invalid date components");
+            let formatter =
+                FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(_locale.into(), fieldsets::Y::long())
+                    .expect("Failed to create formatter");
 
-    year_name.unwrap_or_else(|| {
-        let date = Date::try_new_gregorian(year, 1, 1).expect("Invalid date components");
-        let formatter = FixedCalendarDateTimeFormatter::<Gregorian, _>::try_new(locale.into(), fieldsets::Y::long())
-            .expect("Failed to create formatter");
-
-        formatter.format(&date).to_string()
-    })
+            formatter.format(&date).to_string()
+        }
+    }
 }
