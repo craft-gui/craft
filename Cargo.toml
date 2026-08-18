@@ -2,9 +2,9 @@
 resolver = "2"
 
 members = [
-    "crates/retgui",
-    "crates/retgui_calendar",
-    "crates/retgui_logger",
+    "retgui",
+    "calendar",
+    "logger",
     "xtask",
     "examples/util",
     "examples/counter",
@@ -14,12 +14,12 @@ members = [
     "examples/text",
     "examples/jsframeworkbench",
     "examples/gallery",
-    "crates/syntect_dumper",
-    "crates/retgui_renderer",
-    "crates/retgui_primitives",
-    "crates/retgui_resource_manager",
-    "crates/retgui_runtime",
-    "crates/retgui_undo",
+    "syntect_dumper",
+    "renderer",
+    "primitives",
+    "resource_manager",
+    "runtime",
+    "undo",
     "website",
 ]
 

@@ -21,7 +21,7 @@ default-features = false
 features = ["json", "rustls"]
 
 [dependencies.retgui]
-path = "../../crates/retgui"
+path = "../../retgui"
 default-features = false
 features = [
     "system_fonts",

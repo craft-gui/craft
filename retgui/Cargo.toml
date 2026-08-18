@@ -29,9 +29,9 @@ link = ["dep:open"]
 default = ["vello_hybrid_renderer", "clipboard"]
 
 [dependencies]
-retgui_logging = { path = "../retgui_logger", version = "0.1.0" }
-retgui_undo = {path = "../retgui_undo", version = "0.1.1"}
-retgui_calendar = {path = "../retgui_calendar", version = "0.1.0"}
+retgui_logging = { path = "../logger", version = "0.1.0" }
+retgui_undo = {path = "../undo", version = "0.1.1"}
+retgui_calendar = {path = "../calendar", version = "0.1.0"}
 
 smol_str = "0.3.6"
 
@@ -145,22 +145,22 @@ optional = true
 features = []
 
 [dependencies.retgui_primitives]
-path = "../retgui_primitives"
+path = "../primitives"
 default-features = false
 version = "0.1.1"
 
 [dependencies.retgui_renderer]
-path = "../retgui_renderer"
+path = "../renderer"
 default-features = false
 version = "0.1.1"
 
 [dependencies.retgui_runtime]
-path = "../retgui_runtime"
+path = "../runtime"
 default-features = false
 version = "0.1.1"
 
 [dependencies.retgui_resource_manager]
-path = "../retgui_resource_manager"
+path = "../resource_manager"
 default-features = false
 version = "0.1.1"
 

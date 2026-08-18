@@ -41,9 +41,9 @@ thread_local! {
     pub static AUDIO_CONTEXT: OnceCell<Rc<RefCell<AudioContext>>> = const { OnceCell::new() };
 }
 
-const PLAY: &[u8] = include_bytes!("../../../../assets/play.tvg");
-const PAUSE: &[u8] = include_bytes!("../../../../assets/pause.tvg");
-const VOLUME: &[u8] = include_bytes!("../../../../assets/volume.tvg");
+const PLAY: &[u8] = include_bytes!("../../../assets/play.tvg");
+const PAUSE: &[u8] = include_bytes!("../../../assets/pause.tvg");
+const VOLUME: &[u8] = include_bytes!("../../../assets/volume.tvg");
 
 #[derive(Clone)]
 pub struct Audio {

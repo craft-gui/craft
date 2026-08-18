@@ -396,10 +396,10 @@ impl App {
 
             #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
             {
-                let regular = include_bytes!("../../../fonts/Roboto-Regular.ttf");
-                let bold = include_bytes!("../../../fonts/Roboto-Bold.ttf");
-                let semi_bold = include_bytes!("../../../fonts/Roboto-SemiBold.ttf");
-                let medium = include_bytes!("../../../fonts/Roboto-Medium.ttf");
+                let regular = include_bytes!("../../assets/fonts/Roboto-Regular.ttf");
+                let bold = include_bytes!("../../assets/fonts/Roboto-Bold.ttf");
+                let semi_bold = include_bytes!("../../assets/fonts/Roboto-SemiBold.ttf");
+                let medium = include_bytes!("../../assets/fonts/Roboto-Medium.ttf");
 
                 fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
                     let blob = peniko::Blob::new(Arc::new(font_data));

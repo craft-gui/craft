@@ -7,12 +7,12 @@ edition.workspace = true
 http_client = ["dep:reqwest"]
 
 [dependencies.retgui_logging]
-path = "../retgui_logger"
+path = "../logger"
 default-features = false
 version = "0.1.0"
 
 [dependencies.retgui_runtime]
-path = "../retgui_runtime"
+path = "../runtime"
 default-features = false
 version = "0.1.1"
 

@@ -14,6 +14,6 @@ util = { path = "../util" }
 rand = "0.9.2"
 
 [dependencies.retgui]
-path = "../../crates/retgui"
+path = "../../retgui"
 default-features = false
 features = ["system_fonts", "vello_hybrid_renderer"]

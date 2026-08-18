@@ -48,13 +48,13 @@ optional = true
 workspace = true
 
 [dependencies.retgui_primitives]
-path = "../retgui_primitives"
+path = "../primitives"
 default-features = false
 version = "0.1.1"
 
 
 [dependencies.retgui_resource_manager]
-path = "../retgui_resource_manager"
+path = "../resource_manager"
 default-features = false
 version = "0.1.1"
 

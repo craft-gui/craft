@@ -168,5 +168,5 @@ jobs:
           name: kompari-report
           path: |
             report.html
-            crates/retgui/tests/current
-            crates/retgui/tests/snapshots
+            retgui/tests/current
+            retgui/tests/snapshots
