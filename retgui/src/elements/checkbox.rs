@@ -176,7 +176,7 @@ impl ElementInternals for CheckboxInner {
 
     fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
         scrollable::handle_scroll_logic(self, message, event);
-        if let EventKind::PointerButtonUp(_) = message {
+        if let EventKind::Click() = message {
             self.toggle();
             self.focus();
         } else if self.is_focused()
