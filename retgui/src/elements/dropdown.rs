@@ -625,8 +625,8 @@ impl Dropdown {
         self
     }
 
-    pub fn get_selected_item(self) -> usize {
-        self.inner.borrow().selected_element_index.unwrap()
+    pub fn get_selected_item(self) -> Option<usize> {
+        self.inner.borrow().selected_element_index
     }
 }
 
