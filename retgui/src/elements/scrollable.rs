@@ -320,9 +320,7 @@ fn handle_scroll_logic_internal(
         element.element_data_mut().apply_accessibility_scroll_data();
         element.request_window_redraw();
 
-        if matches!(message, EventKind::KeyboardInputEvent(_)) {
-            queue_event(Event::new(element.to_rc()), EventKind::Scroll());
-        }
+        queue_event(Event::new(element.to_rc()), EventKind::Scroll());
     }
 
     if result.set_pointer_capture {
