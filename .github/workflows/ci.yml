@@ -121,7 +121,7 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: aarch64-apple-ios
       - name: Build Counter Example for iOS
-        run: cargo build --target aarch64-apple-ios --bin counter
+        run: cargo build --package counter --target aarch64-apple-ios --bin counter
 
   unit-tests:
     runs-on: ubuntu-latest
