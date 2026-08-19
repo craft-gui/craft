@@ -105,10 +105,6 @@ impl App {
         ) {
             match self.event_reducer.reduce(window.effective_scale_factor(), &event) {
                 Some(WindowEventTranslation::Keyboard(keyboard_event)) => {
-                    if keyboard_event.state.is_down() && matches!(keyboard_event.key, Key::Named(NamedKey::Escape)) {
-                        return WindowEventResult::ExitRequested;
-                    }
-
                     self.on_keyboard_input(window, keyboard_event);
                     return WindowEventResult::Continue;
                 }
