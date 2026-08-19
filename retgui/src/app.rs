@@ -116,7 +116,7 @@ impl App {
                         PointerEvent::Move(event) => self.on_pointer_moved(window, event),
                         PointerEvent::Scroll(event) => self.on_pointer_scroll(window, event),
                         PointerEvent::Cancel(_) | PointerEvent::Enter(_) | PointerEvent::Leave(_) => {}
-                        PointerEvent::Gesture(_) => todo!(),
+                        PointerEvent::Gesture(_) => {},
                     }
                     return WindowEventResult::Continue;
                 }

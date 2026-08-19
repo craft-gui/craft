@@ -299,7 +299,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         if let Some(position) = position
             && let Some(parent) = parent.unwrap().upgrade()
         {
-            if let Some(next_sibling) = parent.borrow().children().get(position - 1) {
+            if position != 0 && let Some(next_sibling) = parent.borrow().children().get(position - 1) {
                 Ok(next_sibling.clone())
             } else {
                 Err(RetGuiError::ElementNotFound)
