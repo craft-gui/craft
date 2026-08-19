@@ -226,8 +226,10 @@ impl SliderInner {
 
     fn update_value_from_event(&mut self, value: f64) {
         let value = value.clamp(self.min, self.max);
-        if self.value != value {
+        if (value - self.value).abs() > f64::EPSILON {
             self.set_value(value);
+            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
+            queue_event(new_event, EventKind::SliderValueChanged(self.value));
         }
     }
 
@@ -455,9 +457,6 @@ impl ElementInternals for SliderInner {
 
                 if let Some(new_value) = new_value {
                     self.update_value_from_event(new_value);
-
-                    let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-                    queue_event(new_event, EventKind::SliderValueChanged(self.value));
                     event.prevent_propagate();
                     event.prevent_defaults();
                 }
@@ -469,9 +468,6 @@ impl ElementInternals for SliderInner {
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.update_value_from_event(value);
-
-                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerButtonDown(pointer_button_update) => {
                 self.dragging = true;
@@ -479,9 +475,6 @@ impl ElementInternals for SliderInner {
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.update_value_from_event(value);
-
-                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             EventKind::PointerMovedEvent(pointer_update) => {
                 if !self.dragging {
@@ -490,9 +483,6 @@ impl ElementInternals for SliderInner {
 
                 let value = self.compute_slider_value(&pointer_update.current.logical_point());
                 self.update_value_from_event(value);
-
-                let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-                queue_event(new_event, EventKind::SliderValueChanged(self.value));
             }
             _ => {}
         }
