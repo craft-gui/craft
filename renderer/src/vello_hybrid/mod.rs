@@ -242,10 +242,12 @@ impl Renderer for VelloHybridRenderer {
             CurrentSurfaceTexture::Outdated | CurrentSurfaceTexture::Suboptimal(_) => {
                 self.context.configure_surface(surface);
                 self.window.request_redraw();
+                self.scene.reset();
                 return;
             }
             CurrentSurfaceTexture::Occluded | CurrentSurfaceTexture::Timeout => {
                 self.window.request_redraw();
+                self.scene.reset();
                 return;
             }
             CurrentSurfaceTexture::Lost => panic!("Surface was lost"),
