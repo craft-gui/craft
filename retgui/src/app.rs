@@ -20,7 +20,7 @@ use gummy::NodeId;
 
 use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
 
-use ui_events::keyboard::{Key, KeyboardEvent, NamedKey};
+use ui_events::keyboard::KeyboardEvent;
 use ui_events::pointer::{PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
 
@@ -90,6 +90,7 @@ pub struct App {
 
 pub(crate) enum WindowEventResult {
     Continue,
+    #[allow(dead_code)]
     ExitRequested,
 }
 
