@@ -320,15 +320,10 @@ impl App {
         let prevent_defaults =
             self.dispatch_event(window.clone(), &EventKind::KeyboardInputEvent(keyboard_input.clone()));
         if !prevent_defaults {
-            let navigated = window.inner.borrow_mut().maybe_navigate_tab(&keyboard_input);
-            if navigated {
-                let focused = FOCUS.with(|focus| focus.borrow().as_ref().and_then(Weak::upgrade));
-                if let Some(focused) = focused {
-                    scrollable::handle_accessibility_scroll_event(
-                        &mut *focused.borrow_mut(),
-                        &AccessEvent::ScrollIntoView,
-                    );
-                }
+            let navigation_target = window.inner.borrow().tab_navigation_target(&keyboard_input);
+            if let Some(target) = navigation_target {
+                target.borrow_mut().focus();
+                scrollable::handle_accessibility_scroll_event(&mut *target.borrow_mut(), &AccessEvent::ScrollIntoView);
                 window.request_redraw();
             }
         }

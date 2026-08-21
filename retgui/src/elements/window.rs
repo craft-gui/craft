@@ -446,20 +446,23 @@ impl WindowInternal {
         false
     }
 
-    pub(crate) fn maybe_navigate_tab(&mut self, keyboard_input: &KeyboardEvent) -> bool {
+    pub(crate) fn tab_navigation_target(
+        &self,
+        keyboard_input: &KeyboardEvent,
+    ) -> Option<Rc<RefCell<dyn ElementInternals>>> {
         if !keyboard_input.state.is_down()
             || keyboard_input.key != Key::Named(NamedKey::Tab)
             || keyboard_input.modifiers.ctrl()
             || keyboard_input.modifiers.alt()
             || keyboard_input.modifiers.meta()
         {
-            return false;
+            return None;
         }
 
         let mut navigation_elements = Vec::new();
         collect_tab_navigation_elements(&self.element_data.children, &mut navigation_elements);
         if navigation_elements.is_empty() {
-            return false;
+            return None;
         }
 
         let current_focus = crate::app::FOCUS.with(|focus| focus.borrow().as_ref().and_then(Weak::upgrade));
@@ -484,12 +487,7 @@ impl WindowInternal {
         } else {
             navigation_elements.iter().position(|(_, focusable)| *focusable)
         };
-        let Some(next_index) = next_index else {
-            return false;
-        };
-
-        navigation_elements[next_index].0.borrow_mut().focus();
-        true
+        next_index.map(|index| navigation_elements[index].0.clone())
     }
 
     pub(crate) fn maybe_toggle_perf_stats(&mut self, keyboard_input: &KeyboardEvent) -> bool {
