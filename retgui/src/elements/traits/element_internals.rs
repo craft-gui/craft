@@ -15,11 +15,11 @@ use retgui_resource_manager::ResourceManager;
 
 use ui_events::pointer::PointerId;
 
-use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE};
+use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusHandler};
 use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -54,6 +54,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn is_visible(&self) -> bool {
         let style = &self.element_data().style;
         style.get_visible() && style.get_display() != Display::None
+    }
+    
+    fn is_keyboard_focusable(&self) -> bool {
+        let data = self.element_data();
+        data.access_key
+            .and_then(|key| data.access_tree.get_node(key))
+            .is_some_and(|node| node.enabled() && node.role().is_keyboard_focusable())
     }
 
     /// A helper to draw all children.
@@ -299,7 +306,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
         if let Some(position) = position
             && let Some(parent) = parent.unwrap().upgrade()
         {
-            if position != 0 && let Some(next_sibling) = parent.borrow().children().get(position - 1) {
+            if position != 0
+                && let Some(next_sibling) = parent.borrow().children().get(position - 1)
+            {
                 Ok(next_sibling.clone())
             } else {
                 Err(RetGuiError::ElementNotFound)
@@ -560,6 +569,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn on_click(&mut self, on_click: ClickHandler) {
         self.add_event_listener(EventCallbackKind::Click(on_click), EventListenerOptions::default());
+    }
+
+    fn on_focus(&mut self, on_focus: FocusHandler) {
+        self.add_event_listener(EventCallbackKind::Focus(on_focus), EventListenerOptions::default());
+    }
+
+    fn on_unfocus(&mut self, on_unfocus: UnfocusHandler) {
+        self.add_event_listener(EventCallbackKind::Unfocus(on_unfocus), EventListenerOptions::default());
     }
 
     fn on_pointer_moved(&mut self, on_pointer_moved: PointerUpdateHandler) {
@@ -987,6 +1004,48 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.set_border_width(border_width.top, value, border_width.bottom, value);
     }
 
+    fn set_outline_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
+        self.style_mut()
+            .set_outline_color(TrblRectangle::new(top, right, bottom, left));
+        self.apply_borders(self.element_data().applied_scale_factor);
+        self.request_window_redraw();
+    }
+
+    fn set_outline_color_all(&mut self, value: Color) {
+        self.set_outline_color(value, value, value, value);
+    }
+
+    fn set_outline_color_vertical(&mut self, value: Color) {
+        let outline_color = self.style().get_outline_color();
+        self.set_outline_color(value, outline_color.right, value, outline_color.left);
+    }
+
+    fn set_outline_color_horizontal(&mut self, value: Color) {
+        let outline_color = self.style().get_outline_color();
+        self.set_outline_color(outline_color.top, value, outline_color.bottom, value);
+    }
+
+    fn set_outline_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        self.style_mut()
+            .set_outline_width(TrblRectangle::new(top, right, bottom, left));
+        self.apply_borders(self.element_data().applied_scale_factor);
+        self.request_window_redraw();
+    }
+
+    fn set_outline_width_all(&mut self, value: Unit) {
+        self.set_outline_width(value, value, value, value);
+    }
+
+    fn set_outline_width_vertical(&mut self, value: Unit) {
+        let outline_width = self.style().get_outline_width();
+        self.set_outline_width(value, outline_width.right, value, outline_width.left);
+    }
+
+    fn set_outline_width_horizontal(&mut self, value: Unit) {
+        let outline_width = self.style().get_outline_width();
+        self.set_outline_width(outline_width.top, value, outline_width.bottom, value);
+    }
+
     fn set_border_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
         self.style_mut().set_border_radius([top, right, bottom, left]);
         self.apply_borders(self.element_data().applied_scale_factor);
@@ -1057,15 +1116,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn focus(&mut self) {
         // Todo: check if the element is focusable. Should we return a result?
         let me = self.element_data().me.clone();
-        let _previous = FOCUS.with_borrow_mut(|focus| {
+        let previous_focus = FOCUS.with_borrow_mut(|focus| {
             let previous = focus.take();
             *focus = Some(me.clone());
             previous
         });
-        let focus_changed = _previous.as_ref().is_none_or(|previous| !Weak::ptr_eq(previous, &me));
+        let focus_changed = previous_focus
+            .as_ref()
+            .is_none_or(|previous| !Weak::ptr_eq(previous, &me));
         {
-            if let Some(previous) = _previous
-                && !Weak::ptr_eq(&previous, &me)
+            if let Some(previous) = previous_focus.as_ref()
+                && !Weak::ptr_eq(previous, &me)
                 && let Some(previous) = previous.upgrade()
             {
                 let previous = previous.borrow();
@@ -1082,6 +1143,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
         }
         if focus_changed {
+            if let Some(previous) = previous_focus.and_then(|previous| previous.upgrade()) {
+                restore_unfocused_outline(previous.borrow_mut().element_data_mut());
+                queue_event(Event::new(previous), EventKind::Unfocus());
+            }
+            apply_focused_outline(self.element_data_mut());
+            if let Some(current) = me.upgrade() {
+                queue_event(Event::new(current), EventKind::Focus());
+            }
             self.request_window_redraw();
         }
     }
@@ -1102,6 +1171,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// Removes focus if the element has focus.
     fn unfocus(&mut self) {
         if self.is_focused() {
+            let me = self.element_data().me.upgrade();
             FOCUS.with(|focus| {
                 *focus.borrow_mut() = None;
             });
@@ -1110,6 +1180,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 if let Some(root) = data.access_root {
                     data.access_tree.set_focus(root, Some(root));
                 }
+            }
+            restore_unfocused_outline(self.element_data_mut());
+            if let Some(me) = me {
+                queue_event(Event::new(me), EventKind::Unfocus());
             }
             self.request_window_redraw();
         }
@@ -1194,4 +1268,25 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {
         Ok(())
     }
+}
+
+fn apply_focused_outline(data: &mut crate::elements::element_data::ElementData) {
+    let outline_color = data.style.get_outline_color();
+    let outline_width = data.style.get_outline_width();
+    data.unfocused_outline_color.get_or_insert(outline_color);
+    data.unfocused_outline_width.get_or_insert(outline_width);
+    data.style
+        .set_outline_color(TrblRectangle::new_all(crate::palette::css::DODGER_BLUE));
+    data.style.set_outline_width(TrblRectangle::new_all(Unit::Px(2.0)));
+    data.apply_borders(data.applied_scale_factor);
+}
+
+fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementData) {
+    if let Some(outline_color) = data.unfocused_outline_color.take() {
+        data.style.set_outline_color(outline_color);
+    }
+    if let Some(outline_width) = data.unfocused_outline_width.take() {
+        data.style.set_outline_width(outline_width);
+    }
+    data.apply_borders(data.applied_scale_factor);
 }

@@ -25,7 +25,7 @@ use gummy::AvailableSpace;
 
 use ui_events::ScrollDelta;
 use ui_events::ScrollDelta::PixelDelta;
-use ui_events::keyboard::{KeyboardEvent, Modifiers, NamedKey};
+use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
 use ui_events::pointer::PointerScrollEvent;
 
 use winit::event_loop::ActiveEventLoop;
@@ -446,6 +446,52 @@ impl WindowInternal {
         false
     }
 
+    pub(crate) fn maybe_navigate_tab(&mut self, keyboard_input: &KeyboardEvent) -> bool {
+        if !keyboard_input.state.is_down()
+            || keyboard_input.key != Key::Named(NamedKey::Tab)
+            || keyboard_input.modifiers.ctrl()
+            || keyboard_input.modifiers.alt()
+            || keyboard_input.modifiers.meta()
+        {
+            return false;
+        }
+
+        let mut navigation_elements = Vec::new();
+        collect_tab_navigation_elements(&self.element_data.children, &mut navigation_elements);
+        if navigation_elements.is_empty() {
+            return false;
+        }
+
+        let current_focus = crate::app::FOCUS.with(|focus| focus.borrow().as_ref().and_then(Weak::upgrade));
+        let current_index = current_focus.as_ref().and_then(|current| {
+            navigation_elements
+                .iter()
+                .position(|(element, _)| Rc::ptr_eq(element, current))
+        });
+        let len = navigation_elements.len();
+        let next_index = if let Some(current_index) = current_index {
+            (1..=len)
+                .map(|offset| {
+                    if keyboard_input.modifiers.shift() {
+                        (current_index + len - offset) % len
+                    } else {
+                        (current_index + offset) % len
+                    }
+                })
+                .find(|index| navigation_elements[*index].1)
+        } else if keyboard_input.modifiers.shift() {
+            navigation_elements.iter().rposition(|(_, focusable)| *focusable)
+        } else {
+            navigation_elements.iter().position(|(_, focusable)| *focusable)
+        };
+        let Some(next_index) = next_index else {
+            return false;
+        };
+
+        navigation_elements[next_index].0.borrow_mut().focus();
+        true
+    }
+
     pub(crate) fn maybe_toggle_perf_stats(&mut self, keyboard_input: &KeyboardEvent) -> bool {
         if keyboard_input.repeat || !keyboard_input.state.is_down() {
             return false;
@@ -727,5 +773,27 @@ impl WindowInternal {
 
     fn close(&self) {
         todo!("programmatic window closing is not implemented")
+    }
+}
+
+fn collect_tab_navigation_elements(
+    children: &[Rc<RefCell<dyn ElementInternals>>],
+    navigation_elements: &mut Vec<(Rc<RefCell<dyn ElementInternals>>, bool)>,
+) {
+    for child in children {
+        let (is_visible, is_keyboard_focusable, grandchildren) = {
+            let child = child.borrow();
+            (
+                child.is_visible(),
+                child.is_keyboard_focusable(),
+                child.children().to_vec(),
+            )
+        };
+
+        if !is_visible {
+            continue;
+        }
+        navigation_elements.push((child.clone(), is_keyboard_focusable));
+        collect_tab_navigation_elements(&grandchildren, navigation_elements);
     }
 }

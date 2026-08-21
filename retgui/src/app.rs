@@ -17,6 +17,7 @@ use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use gummy::NodeId;
+use issho::AccessEvent;
 
 use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
 
@@ -30,7 +31,7 @@ use winit::event_loop::ActiveEventLoop;
 use crate::RetGuiOptions;
 #[cfg(feature = "audio")]
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
-use crate::elements::{ElementIdMap, ElementInternals, Window};
+use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable};
 use crate::events::internal::InternalMessage;
 use crate::events::{Event, EventDispatcher, EventKind};
 use crate::layout::GummyTree;
@@ -116,7 +117,7 @@ impl App {
                         PointerEvent::Move(event) => self.on_pointer_moved(window, event),
                         PointerEvent::Scroll(event) => self.on_pointer_scroll(window, event),
                         PointerEvent::Cancel(_) | PointerEvent::Enter(_) | PointerEvent::Leave(_) => {}
-                        PointerEvent::Gesture(_) => {},
+                        PointerEvent::Gesture(_) => {}
                     }
                     return WindowEventResult::Continue;
                 }
@@ -172,6 +173,9 @@ impl App {
         self.runtime.update_local_set();
         self.process_messages();
         self.process_external_work();
+        if let Some(text_context) = self.text_context.borrow_mut().as_mut() {
+            self.event_dispatcher.borrow_mut().dispatch_queued_events(text_context);
+        }
 
         #[cfg(feature = "audio")]
         self.update_audio_ui();
@@ -313,7 +317,21 @@ impl App {
         if window.inner.borrow_mut().maybe_zoom_keyboard(&keyboard_input) {
             return;
         }
-        self.dispatch_event(window.clone(), &EventKind::KeyboardInputEvent(keyboard_input));
+        let prevent_defaults =
+            self.dispatch_event(window.clone(), &EventKind::KeyboardInputEvent(keyboard_input.clone()));
+        if !prevent_defaults {
+            let navigated = window.inner.borrow_mut().maybe_navigate_tab(&keyboard_input);
+            if navigated {
+                let focused = FOCUS.with(|focus| focus.borrow().as_ref().and_then(Weak::upgrade));
+                if let Some(focused) = focused {
+                    scrollable::handle_accessibility_scroll_event(
+                        &mut *focused.borrow_mut(),
+                        &AccessEvent::ScrollIntoView,
+                    );
+                }
+                window.request_redraw();
+            }
+        }
     }
 
     pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
@@ -348,7 +366,7 @@ impl App {
         );
     }
 
-    fn dispatch_event(&mut self, window: Window, message: &EventKind) {
+    fn dispatch_event(&mut self, window: Window, message: &EventKind) -> bool {
         let mouse_pos = window.mouse_position();
         let binding = window.inner.borrow().renderer.clone();
         let renderer = &mut *binding.borrow_mut();
@@ -359,7 +377,7 @@ impl App {
             self.text_context.borrow_mut().as_mut().unwrap(),
             renderer,
             &mut self.target_scratch,
-        );
+        )
     }
 
     fn update_resources(&mut self) {

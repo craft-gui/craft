@@ -227,7 +227,7 @@ impl EventDispatcher {
         text_context: &mut TextContext,
         renderer: &mut dyn Renderer,
         target_scratch: &mut Vec<Rc<RefCell<dyn ElementInternals>>>,
-    ) {
+    ) -> bool {
         let pointer_capture = root
             .borrow()
             .element_data()
@@ -280,6 +280,7 @@ impl EventDispatcher {
 
         let mut system_event = Event::new(targets[0].clone());
         dispatch_event(&mut system_event, event_kind, &targets, text_context);
+        let prevent_defaults = system_event.prevent_defaults;
 
         let dispatched_pointer_up_down_target = if matches!(
             event_kind,
@@ -331,5 +332,7 @@ impl EventDispatcher {
 
         // Handle Semantic Events (DropdownItemSelected, Click, and etc.)
         self.dispatch_queued_events(text_context);
+
+        prevent_defaults
     }
 }

@@ -110,9 +110,11 @@ pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind, c
             (EventKind::PointerEnter(), EventCallbackKind::PointerEnter(handler))
             | (EventKind::PointerLeave(), EventCallbackKind::PointerLeave(handler))
             | (EventKind::Click(), EventCallbackKind::Click(handler))
+            | (EventKind::Focus(), EventCallbackKind::Focus(handler))
             | (EventKind::GotPointerCapture(), EventCallbackKind::GotPointerCapture(handler))
             | (EventKind::LostPointerCapture(), EventCallbackKind::LostPointerCapture(handler))
-            | (EventKind::Scroll(), EventCallbackKind::Scroll(handler)) => {
+            | (EventKind::Scroll(), EventCallbackKind::Scroll(handler))
+            | (EventKind::Unfocus(), EventCallbackKind::Unfocus(handler)) => {
                 handler(event);
             }
             (EventKind::PointerButtonUp(pointer_event), EventCallbackKind::PointerButtonUp(handler))

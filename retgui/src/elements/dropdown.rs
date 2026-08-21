@@ -460,6 +460,7 @@ impl Shape {
             style.get_border_radius(),
             scale_factor,
             style.get_border_color(),
+            style.get_outline_width_px(),
             style.get_box_shadows().to_vec(),
         );
     }
@@ -512,6 +513,10 @@ impl Dropdown {
         let border_radius = [(5.0, 5.0); 4];
 
         inner.borrow_mut().element_data.create_layout_node(None);
+        inner
+            .borrow_mut()
+            .element_data
+            .set_accessibility_role(issho::Role::ComboBox);
         inner.borrow_mut().element_data.style.set_display(Display::Flex);
 
         inner

@@ -32,11 +32,13 @@ pub type PointerEventHandler = Rc<dyn Fn(&mut Event, &PointerButtonEvent)>;
 pub type PointerLeaveHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerUpdateHandler = Rc<dyn Fn(&mut Event, &PointerUpdate)>;
 pub type ClickHandler = Rc<dyn Fn(&mut Event)>;
+pub type FocusHandler = Rc<dyn Fn(&mut Event)>;
 pub type PointerCaptureHandler = Rc<dyn Fn(&mut Event)>;
 pub type RadioValueChangedHandler = Rc<dyn Fn(&mut Event, Rc<RefCell<String>>)>;
 pub type ScrollHandler = Rc<dyn Fn(&mut Event)>;
 pub type SliderValueChangedHandler = Rc<dyn Fn(&mut Event, f64)>;
 pub type TextInputChangedHandler = Rc<dyn Fn(&mut Event, &TextInputChanged)>;
+pub type UnfocusHandler = Rc<dyn Fn(&mut Event)>;
 pub type UserMessage = dyn CloneableAny;
 
 #[derive(Clone)]
@@ -44,6 +46,7 @@ pub enum EventCallbackKind {
     CheckboxToggled(CheckboxToggledHandler),
     Click(ClickHandler),
     DropdownItemSelected(DropdownItemSelectedHandler),
+    Focus(FocusHandler),
     GotPointerCapture(PointerCaptureHandler),
     KeyboardInput(KeyboardInputHandler),
     LostPointerCapture(PointerCaptureHandler),
@@ -56,6 +59,7 @@ pub enum EventCallbackKind {
     Scroll(ScrollHandler),
     SliderValueChanged(SliderValueChangedHandler),
     TextInputChanged(TextInputChangedHandler),
+    Unfocus(UnfocusHandler),
 }
 
 #[derive(Clone, Copy, Default)]
@@ -79,6 +83,7 @@ pub enum EventKind {
     PointerButtonUp(PointerButtonEvent),
     PointerButtonDown(PointerButtonEvent),
     Click(),
+    Focus(),
     KeyboardInputEvent(KeyboardEvent),
     PointerMovedEvent(PointerUpdate),
     PointerScroll(PointerScrollEvent),
@@ -96,6 +101,7 @@ pub enum EventKind {
     SliderValueChanged(f64),
     ElementMessage(Arc<UserMessage>),
     RadioValueChanged(Rc<RefCell<String>>),
+    Unfocus(),
     CheckboxToggled(CheckboxToggled),
 }
 
