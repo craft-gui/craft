@@ -187,6 +187,7 @@ impl SliderInner {
         });
 
         me.borrow_mut().element_data.create_layout_node(None);
+        me.borrow_mut().element_data.set_accessibility_role(issho::Role::Slider);
 
         me.borrow_mut()
             .set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));

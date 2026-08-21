@@ -52,6 +52,8 @@ pub struct Style {
     border_color: StyleProperty<TrblRectangle<Color>>,
     border_width: StyleProperty<TrblRectangle<Unit>>,
     border_radius: StyleProperty<[(f32, f32); 4]>,
+    outline_color: StyleProperty<TrblRectangle<Color>>,
+    outline_width: StyleProperty<TrblRectangle<Unit>>,
 
     scrollbar_brush: StyleProperty<ScrollbarColor>,
     scrollbar_thumb_margin: StyleProperty<TrblRectangle<f32>>,
@@ -114,6 +116,8 @@ impl Style {
             border_color: StyleProperty::new(TrblRectangle::new_all(Color::BLACK)),
             border_width: StyleProperty::new(TrblRectangle::new_all(Unit::Px(0.0))),
             border_radius: StyleProperty::new([(0.0, 0.0); 4]),
+            outline_color: StyleProperty::new(TrblRectangle::new_all(Color::BLACK)),
+            outline_width: StyleProperty::new(TrblRectangle::new_all(Unit::Px(0.0))),
             scrollbar_brush: StyleProperty::new(ScrollbarColor {
                 thumb_color: Brush::Color(Color::from_rgb8(150, 150, 152)),
                 track_color: Brush::Color(Color::TRANSPARENT),
@@ -459,6 +463,32 @@ impl Style {
         self.border_radius.set(val);
     }
 
+    pub fn get_outline_color(&self) -> TrblRectangle<Color> {
+        *self.outline_color.get()
+    }
+
+    pub fn set_outline_color(&mut self, val: TrblRectangle<Color>) {
+        self.outline_color.set(val);
+    }
+
+    pub fn get_outline_width(&self) -> TrblRectangle<Unit> {
+        *self.outline_width.get()
+    }
+
+    pub(crate) fn get_outline_width_px(&self) -> TrblRectangle<f32> {
+        let width = self.get_outline_width();
+        TrblRectangle::new(
+            outline_unit_to_px(width.top),
+            outline_unit_to_px(width.right),
+            outline_unit_to_px(width.bottom),
+            outline_unit_to_px(width.left),
+        )
+    }
+
+    pub fn set_outline_width(&mut self, val: TrblRectangle<Unit>) {
+        self.outline_width.set(val);
+    }
+
     pub fn get_scrollbar_brush(&self) -> ScrollbarColor {
         self.scrollbar_brush.get().clone()
     }
@@ -537,6 +567,13 @@ impl Style {
 
     pub fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
         self.box_shadows = StyleProperty::new(box_shadows)
+    }
+}
+
+fn outline_unit_to_px(unit: Unit) -> f32 {
+    match unit {
+        Unit::Px(value) => value.max(0.0),
+        Unit::Percentage(_) | Unit::Auto => 0.0,
     }
 }
 

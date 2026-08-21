@@ -5,15 +5,17 @@ use smol_str::SmolStr;
 
 use smallvec::SmallVec;
 
+use crate::Color;
 use crate::accessibility::RetGuiAccessTree;
 use crate::app::{ELEMENTS, GUMMY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
 use crate::elements::{ElementInternals, WindowInternal};
 use crate::events::EventCallback;
+use crate::geometry::TrblRectangle;
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
-use crate::style::{Overflow, Style};
+use crate::style::{Overflow, Style, Unit};
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -49,6 +51,9 @@ pub struct ElementData {
     pub(crate) applied_scale_factor: f64,
 
     pub event_callbacks: SmallVec<[EventCallback; 1]>,
+
+    pub(crate) unfocused_outline_color: Option<TrblRectangle<Color>>,
+    pub(crate) unfocused_outline_width: Option<TrblRectangle<Unit>>,
 }
 
 impl ElementData {
@@ -90,6 +95,8 @@ impl ElementData {
             access_scale_factor: 1.0,
             applied_scale_factor: 1.0,
             event_callbacks: SmallVec::new(),
+            unfocused_outline_color: None,
+            unfocused_outline_width: None,
         };
 
         if create_accessibility_node {
@@ -195,12 +202,14 @@ impl ElementData {
         let has_border = current_style.has_border();
         let border_radius = current_style.get_border_radius();
         let border_color = current_style.get_border_color();
+        let outline_width = current_style.get_outline_width_px();
         let box_shadows = current_style.get_box_shadows();
         self.layout.apply_borders(
             has_border,
             border_radius,
             scale_factor,
             border_color,
+            outline_width,
             box_shadows.to_vec(),
         );
     }

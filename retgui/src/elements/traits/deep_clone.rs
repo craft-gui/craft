@@ -18,6 +18,12 @@ where
         new_data.internal_id = create_unique_element_id();
         new_data.me = Rc::downgrade(&new_element);
         new_data.parent = None;
+        if let Some(unfocused_outline_color) = new_data.unfocused_outline_color.take() {
+            new_data.style.set_outline_color(unfocused_outline_color);
+        }
+        if let Some(unfocused_outline_width) = new_data.unfocused_outline_width.take() {
+            new_data.style.set_outline_width(unfocused_outline_width);
+        }
         let (access_tree, access_key) = {
             let tree = crate::accessibility::access_tree();
             let source_key = new_data.access_key.expect("source accessibility node was not created");

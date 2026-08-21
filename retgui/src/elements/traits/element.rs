@@ -144,6 +144,16 @@ pub trait Element: Clone + AsElement {
         self
     }
 
+    fn on_focus(self, on_focus: impl Fn(&mut Event) + 'static) -> Self {
+        self.borrow_mut().on_focus(Rc::new(on_focus));
+        self
+    }
+
+    fn on_unfocus(self, on_unfocus: impl Fn(&mut Event) + 'static) -> Self {
+        self.borrow_mut().on_unfocus(Rc::new(on_unfocus));
+        self
+    }
+
     fn on_lost_pointer_capture(self, on_lost_pointer_capture: impl Fn(&mut Event) + 'static) -> Self {
         self.borrow_mut()
             .on_lost_pointer_capture(Rc::new(on_lost_pointer_capture));
@@ -492,6 +502,46 @@ pub trait Element: Clone + AsElement {
 
     fn border_width_horizontal(self, value: Unit) -> Self {
         self.borrow_mut().set_border_width_horizontal(value);
+        self
+    }
+
+    fn outline_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
+        self.borrow_mut().set_outline_color(top, right, bottom, left);
+        self
+    }
+
+    fn outline_color_all(self, value: Color) -> Self {
+        self.borrow_mut().set_outline_color_all(value);
+        self
+    }
+
+    fn outline_color_vertical(self, value: Color) -> Self {
+        self.borrow_mut().set_outline_color_vertical(value);
+        self
+    }
+
+    fn outline_color_horizontal(self, value: Color) -> Self {
+        self.borrow_mut().set_outline_color_horizontal(value);
+        self
+    }
+
+    fn outline_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
+        self.borrow_mut().set_outline_width(top, right, bottom, left);
+        self
+    }
+
+    fn outline_width_all(self, value: Unit) -> Self {
+        self.borrow_mut().set_outline_width_all(value);
+        self
+    }
+
+    fn outline_width_vertical(self, value: Unit) -> Self {
+        self.borrow_mut().set_outline_width_vertical(value);
+        self
+    }
+
+    fn outline_width_horizontal(self, value: Unit) -> Self {
+        self.borrow_mut().set_outline_width_horizontal(value);
         self
     }
 

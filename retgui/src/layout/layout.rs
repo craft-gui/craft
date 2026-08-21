@@ -36,6 +36,7 @@ pub struct Layout {
     cache_border_spec: Option<BorderSpec>,
     cache_box_shadows: Option<ComputedBoxShadows>,
     computed_border: ComputedBorder,
+    computed_outline: Option<Box<CssComputedBorder>>,
     /// True if the layout is new.
     pub has_new_layout: bool,
     /// The transform captured by the most recent draw traversal. Layout itself
@@ -90,6 +91,7 @@ struct BorderSpec {
     scale_factor: f64,
     has_border: bool,
     uniform_border_color: bool,
+    outline_width: TrblRectangle<f32>,
     box_shadows: Vec<BoxShadow>,
 }
 
@@ -242,6 +244,7 @@ impl Layout {
         border_radius: [(f32, f32); 4],
         scale_factor: f64,
         border_color: TrblRectangle<Color>,
+        outline_width: TrblRectangle<f32>,
         box_shadows: Vec<BoxShadow>,
     ) {
         let element_rect = self.local_box();
@@ -252,6 +255,7 @@ impl Layout {
             scale_factor,
             has_border,
             uniform_border_color: border_color.are_edges_uniform(),
+            outline_width,
             box_shadows: box_shadows.to_vec(),
         };
 
@@ -259,6 +263,7 @@ impl Layout {
             return;
         }
         self.cache_border_spec = Some(border_spec);
+        self.apply_outline(outline_width, border_radius, scale_factor);
 
         let is_rectangle = border_radius[0] == (0.0, 0.0)
             && border_radius[1] == (0.0, 0.0)
@@ -291,6 +296,47 @@ impl Layout {
         self.computed_border = ComputedBorder::CssComputed(Box::new(computed));
 
         self.apply_box_shadows(scale_factor, border_radius);
+    }
+
+    fn apply_outline(&mut self, outline_width: TrblRectangle<f32>, border_radius: [(f32, f32); 4], scale_factor: f64) {
+        if outline_width == TrblRectangle::new_all(0.0) {
+            self.computed_outline = None;
+            return;
+        }
+
+        let border_rect = self.local_box().border_rectangle();
+        let outline_rect = Rectangle::new(
+            border_rect.x - outline_width.left,
+            border_rect.y - outline_width.top,
+            border_rect.width + outline_width.left + outline_width.right,
+            border_rect.height + outline_width.top + outline_width.bottom,
+        );
+        let outline_radius = [
+            (
+                border_radius[0].0 + outline_width.left,
+                border_radius[0].1 + outline_width.top,
+            ),
+            (
+                border_radius[1].0 + outline_width.right,
+                border_radius[1].1 + outline_width.top,
+            ),
+            (
+                border_radius[2].0 + outline_width.right,
+                border_radius[2].1 + outline_width.bottom,
+            ),
+            (
+                border_radius[3].0 + outline_width.left,
+                border_radius[3].1 + outline_width.bottom,
+            ),
+        ];
+        let outline_spec = CssRoundedRect::new(
+            outline_rect.to_kurbo(),
+            outline_width.to_array().map(f64::from),
+            outline_radius.map(|radii| Vec2::new(radii.0 as f64, radii.1 as f64)),
+        );
+        let mut computed_outline = CssComputedBorder::new(outline_spec);
+        computed_outline.scale(scale_factor);
+        self.computed_outline = Some(Box::new(computed_outline));
     }
 
     fn apply_box_shadows(&mut self, scale_factor: f64, border_radius: [(f32, f32); 4]) {
@@ -405,6 +451,15 @@ impl Layout {
                     border_box: cache_box_shadows.border_box,
                 });
             }
+        }
+
+        if let Some(computed_outline) = &self.computed_outline {
+            draw_borders_generic(
+                renderer,
+                computed_outline,
+                current_style.get_outline_color().to_array(),
+                Brush::Color(Color::TRANSPARENT),
+            );
         }
 
         let background_color = current_style.get_background_brush();

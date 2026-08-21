@@ -152,6 +152,11 @@ impl HeadlessApp {
         self.drive();
     }
 
+    pub fn keyboard_input(&mut self, window: &Window, event: ui_events::keyboard::KeyboardEvent) {
+        self.driver.app.on_keyboard_input(window.clone(), event);
+        self.drive();
+    }
+
     pub fn frame(&mut self, window: &Window) {
         self.driver.send_event(window.clone(), WindowEvent::RedrawRequested);
         self.driver.tick();
