@@ -21,8 +21,8 @@ use issho::AccessEvent;
 
 use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
 
-use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonEvent, PointerEvent, PointerScrollEvent, PointerUpdate};
+use ui_events::keyboard::{KeyState, KeyboardEvent as UiKeyboardEvent};
+use ui_events::pointer::{PointerButtonEvent as UiPointerButtonEvent, PointerEvent, PointerScrollEvent as UiPointerScrollEvent, PointerUpdate};
 use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
 
 use winit::event::{Ime, WindowEvent};
@@ -33,7 +33,7 @@ use crate::RetGuiOptions;
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
 use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable};
 use crate::events::internal::InternalMessage;
-use crate::events::{Event, EventDispatcher, EventKind};
+use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerMovedEvent, PointerScrollEvent};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
@@ -48,7 +48,7 @@ thread_local! {
     pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
     pub(crate) static GUMMY_TREE: RefCell<GummyTree> = RefCell::new(GummyTree::new());
     /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
-    static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<(Event, EventKind)>> = RefCell::new(VecDeque::with_capacity(10));
+    static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<EventKind>> = RefCell::new(VecDeque::with_capacity(10));
 }
 
 /// Update interval for audio elements.
@@ -280,36 +280,40 @@ impl App {
 
     pub fn on_move(&mut self, _window: Window) {}
 
-    pub fn on_pointer_scroll(&mut self, window: Window, pointer_scroll_update: PointerScrollEvent) {
+    pub fn on_pointer_scroll(&mut self, window: Window, pointer_scroll_update: UiPointerScrollEvent) {
         if window.inner.borrow_mut().maybe_zoom(&pointer_scroll_update) {
             return;
         }
-        self.dispatch_event(window, &EventKind::PointerScroll(pointer_scroll_update));
+        let event = PointerScrollEvent::new(window.inner.clone(), pointer_scroll_update);
+        self.dispatch_event(window, EventKind::PointerScroll(event));
     }
 
-    pub fn on_pointer_button(&mut self, window: Window, pointer_event: PointerButtonEvent, is_up: bool) {
+    pub fn on_pointer_button(&mut self, window: Window, pointer_event: UiPointerButtonEvent, is_up: bool) {
         let cursor_position = pointer_event.state.logical_point();
+        let pointer_event = PointerButtonEvent::new(window.inner.clone(), pointer_event);
 
         let event = if is_up {
-            EventKind::PointerButtonUp(pointer_event)
+            EventKind::PointerUp(pointer_event)
         } else {
-            EventKind::PointerButtonDown(pointer_event)
+            EventKind::PointerDown(pointer_event)
         };
         window.set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
-        self.dispatch_event(window.clone(), &event);
+        self.dispatch_event(window.clone(), event);
     }
 
     pub fn on_pointer_moved(&mut self, window: Window, mouse_moved: PointerUpdate) {
         window.set_mouse_position(Some(mouse_moved.current.logical_point()));
-        self.dispatch_event(window.clone(), &EventKind::PointerMovedEvent(mouse_moved));
+        let event = PointerMovedEvent::new(window.inner.clone(), mouse_moved);
+        self.dispatch_event(window.clone(), EventKind::PointerMoved(event));
     }
 
     pub fn on_ime(&mut self, window: Window, ime: Ime) {
-        self.dispatch_event(window.clone(), &EventKind::ImeEvent(ime));
+        let event = ImeEvent::new(window.inner.clone(), ime);
+        self.dispatch_event(window.clone(), EventKind::Ime(event));
     }
 
-    pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyboardEvent) {
+    pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: UiKeyboardEvent) {
         window.inner.borrow_mut().update_modifiers(&keyboard_input);
         if window.inner.borrow_mut().maybe_toggle_perf_stats(&keyboard_input) {
             return;
@@ -317,8 +321,13 @@ impl App {
         if window.inner.borrow_mut().maybe_zoom_keyboard(&keyboard_input) {
             return;
         }
-        let prevent_defaults =
-            self.dispatch_event(window.clone(), &EventKind::KeyboardInputEvent(keyboard_input.clone()));
+        let state = keyboard_input.state;
+        let event = KeyboardEvent::new(window.inner.clone(), keyboard_input.clone());
+        let event = match state {
+            KeyState::Down => EventKind::KeyDown(event),
+            KeyState::Up => EventKind::KeyUp(event),
+        };
+        let prevent_defaults = self.dispatch_event(window.clone(), event);
         if !prevent_defaults {
             let navigation_target = window.inner.borrow().tab_navigation_target(&keyboard_input);
             if let Some(target) = navigation_target {
@@ -361,12 +370,12 @@ impl App {
         );
     }
 
-    fn dispatch_event(&mut self, window: Window, message: &EventKind) -> bool {
+    fn dispatch_event(&mut self, window: Window, mut event: EventKind) -> bool {
         let mouse_pos = window.mouse_position();
         let binding = window.inner.borrow().renderer.clone();
         let renderer = &mut *binding.borrow_mut();
         self.event_dispatcher.borrow_mut().dispatch_event(
-            message,
+            &mut event,
             mouse_pos,
             window.inner.clone(),
             self.text_context.borrow_mut().as_mut().unwrap(),
@@ -455,14 +464,14 @@ mod tests {
 }
 
 /// Enqueues an event at the back of the dispatch queue.
-pub fn queue_event(event: Event, message: EventKind) {
+pub fn queue_event(event: EventKind) {
     EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        event_queue.push_back((event, message));
+        event_queue.push_back(event);
     });
 }
 
 /// Pops from the front of the event dispatch queue and returns the result.
-pub(crate) fn dequeue_event() -> Option<(Event, EventKind)> {
+pub fn dequeue_event() -> Option<EventKind> {
     EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| event_queue.pop_front())
 }
 

@@ -5,8 +5,8 @@ use retgui::events::ui_events::pointer::PointerButton;
 pub fn WebLink(href: &str) -> Container {
     let href = href.to_string();
 
-    Container::new().on_pointer_button_up(move |_event, pointer_button_event| {
-        if pointer_button_event.button == Some(PointerButton::Primary) {
+    Container::new().on_pointer_button_up(move |event| {
+        if event.button == Some(PointerButton::Primary) {
             #[cfg(target_arch = "wasm32")]
             {
                 if let Some(win) = web_sys::window() {

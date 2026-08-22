@@ -20,7 +20,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::{Event, EventKind};
+use crate::events::{EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
@@ -164,9 +164,9 @@ impl ElementInternals for RadioInner {
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
-        scrollable::handle_scroll_logic(self, message, event);
-        if let EventKind::PointerButtonUp(_) = message {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(self, event);
+        if let EventKind::PointerUp(_) = event {
             self.set_value();
         }
     }
@@ -201,8 +201,11 @@ impl RadioInner {
                 }
             }
         }
-        let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-        queue_event(new_event, EventKind::RadioValueChanged(self.active_value.clone()));
+        let target = self.element_data.me.upgrade().unwrap();
+        queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
+            target,
+            self.active_value.clone(),
+        )));
         if selection_changed {
             self.request_window_redraw();
         }

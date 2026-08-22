@@ -19,7 +19,7 @@ use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, DropdownItemSelectedHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
 use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -55,7 +55,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let style = &self.element_data().style;
         style.get_visible() && style.get_display() != Display::None
     }
-    
+
     fn is_keyboard_focusable(&self) -> bool {
         let data = self.element_data();
         data.access_key
@@ -175,7 +175,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// Handles default events.
-    fn on_event(&mut self, _message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {}
+    fn on_event(&mut self, _event: &mut EventKind, _text_context: &mut TextContext) {}
 
     /// Computes this element's box model.
     fn resolve_box(&mut self, result: &gummy::Layout, layout_order: &mut u32) {
@@ -569,6 +569,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn on_click(&mut self, on_click: ClickHandler) {
         self.add_event_listener(EventCallbackKind::Click(on_click), EventListenerOptions::default());
+    }
+
+    fn on_custom_event(&mut self, on_custom_event: CustomHandler) {
+        self.add_event_listener(
+            EventCallbackKind::Custom(on_custom_event),
+            EventListenerOptions::default(),
+        );
     }
 
     fn on_focus(&mut self, on_focus: FocusHandler) {
@@ -1145,11 +1152,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
         if focus_changed {
             if let Some(previous) = previous_focus.and_then(|previous| previous.upgrade()) {
                 restore_unfocused_outline(previous.borrow_mut().element_data_mut());
-                queue_event(Event::new(previous), EventKind::Unfocus());
+                queue_event(EventKind::Unfocus(UnfocusEvent::new(previous)));
             }
             apply_focused_outline(self.element_data_mut());
             if let Some(current) = me.upgrade() {
-                queue_event(Event::new(current), EventKind::Focus());
+                queue_event(EventKind::Focus(FocusEvent::new(current)));
             }
             self.request_window_redraw();
         }
@@ -1183,7 +1190,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
             restore_unfocused_outline(self.element_data_mut());
             if let Some(me) = me {
-                queue_event(Event::new(me), EventKind::Unfocus());
+                queue_event(EventKind::Unfocus(UnfocusEvent::new(me)));
             }
             self.request_window_redraw();
         }

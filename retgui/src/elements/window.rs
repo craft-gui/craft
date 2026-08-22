@@ -36,10 +36,10 @@ use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
+use crate::events::EventKind;
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::text::text_context::TextContext;
@@ -162,8 +162,8 @@ impl ElementInternals for WindowInternal {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
-        scrollable::handle_scroll_logic(self, message, event);
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(self, event);
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {

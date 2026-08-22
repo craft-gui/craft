@@ -12,8 +12,7 @@ use retgui_primitives::geometry::{Point, Rectangle};
 
 use retgui_renderer::text_renderer_data::TextRender;
 
-use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::PointerUpdate;
+use ui_events::keyboard::{Key, Modifiers, NamedKey};
 
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
@@ -24,7 +23,7 @@ use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
 use crate::elements::{ElementInternals, TextInputInner};
-use crate::events::{Event, EventKind, TextInputChanged};
+use crate::events::{EventKind, KeyboardEvent, TextInputChangedEvent};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
 use crate::text::parley_editor::{PlainEditor, PlainEditorDriver, PreparedLayout};
@@ -152,9 +151,9 @@ impl TextInputState {
     /// Sets the pointer position from a pointer-move event.
     ///
     /// The point should be relative to the top left of the window.
-    pub fn move_pointer(&mut self, text_context: &mut TextContext, pointer_moved: &PointerUpdate, scroll_y: f64) {
+    pub fn move_pointer(&mut self, text_context: &mut TextContext, pointer_position: Point, scroll_y: f64) {
         let prev_pos = self.cursor_pos();
-        self.set_pointer_position(pointer_moved.current.logical_point(), scroll_y);
+        self.set_pointer_position(pointer_position, scroll_y);
         // macOS seems to generate a spurious move after selecting word?
         if self.is_pointer_down() && prev_pos != self.cursor_pos() && !self.editor.is_composing() {
             self.reset_blink();
@@ -447,13 +446,11 @@ impl TextInputState {
     }
 
     fn generate_text_changed_event(&self, element_data: &ElementData) {
-        let new_event = Event::new(element_data.me.upgrade().unwrap());
-        queue_event(
-            new_event,
-            EventKind::TextInputChanged(TextInputChanged {
-                value: self.editor.raw_text().to_string(),
-            }),
-        );
+        let target = element_data.me.upgrade().unwrap();
+        queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
+            target,
+            self.editor.raw_text().to_string(),
+        )));
     }
 
     pub fn key_press(

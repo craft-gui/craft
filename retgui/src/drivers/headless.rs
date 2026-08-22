@@ -253,7 +253,7 @@ mod harness_tests {
             let button = Container::new()
                 .width(px(100))
                 .height(px(50))
-                .on_pointer_button_up(move |_, _| clicked_copy.set(true));
+                .on_pointer_button_up(move |_| clicked_copy.set(true));
             let window = Window::new_with_renderer("Headless", RendererType::Blank)
                 .width(px(200))
                 .height(px(100))
@@ -274,7 +274,7 @@ mod harness_tests {
             let first_button = Container::new()
                 .width(px(100))
                 .height(px(50))
-                .on_pointer_button_up(move |_, _| first_clicked_copy.set(true));
+                .on_pointer_button_up(move |_| first_clicked_copy.set(true));
             let first_window = Window::new_with_renderer("First", RendererType::Blank)
                 .width(px(200))
                 .height(px(100))
@@ -285,7 +285,7 @@ mod harness_tests {
             let second_button = Container::new()
                 .width(px(100))
                 .height(px(50))
-                .on_pointer_button_up(move |_, _| second_clicked_copy.set(true));
+                .on_pointer_button_up(move |_| second_clicked_copy.set(true));
             let second_window = Window::new_with_renderer("Second", RendererType::Blank)
                 .width(px(200))
                 .height(px(100))

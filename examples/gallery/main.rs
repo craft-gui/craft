@@ -5,6 +5,7 @@ use std::rc::Rc;
 #[cfg(feature = "audio")]
 use retgui::elements::Audio;
 use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui::events::Event;
 use retgui::geometry::Point;
 use retgui::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
 use retgui::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
@@ -179,7 +180,7 @@ pub fn async_weather() -> Container {
                 }
             });
 
-            event.prevent_propagate();
+            event.stop_propagation();
         });
 
     Container::new()
@@ -293,7 +294,7 @@ pub fn overlay() -> Container {
         .push(Text::new("Overlay").color(Color::WHITE).selectable(false))
         .on_click(move |event| {
             overlay_status.clone().text("The overlay received the click");
-            event.prevent_propagate();
+            event.stop_propagation();
         });
 
     let normal_status = status.clone();
@@ -307,7 +308,7 @@ pub fn overlay() -> Container {
         .push(Text::new("Normal sibling").color(Color::WHITE).selectable(false))
         .on_click(move |event| {
             normal_status.clone().text("The normal sibling received the click");
-            event.prevent_propagate();
+            event.stop_propagation();
         });
 
     Container::new()
@@ -442,8 +443,8 @@ pub fn radio_buttons() -> Container {
                         .hide_radio(),
                 )
                 .push(Radio::new("blue", "blue", active_color.clone()).push(Text::new("blue")))
-                .on_radio_value_changed(move |_event, new_value| {
-                    if new_value.borrow().as_str() == "green" {
+                .on_radio_value_changed(move |event| {
+                    if event.value.borrow().as_str() == "green" {
                         green.clone().border_color_all(rgb(0, 100, 255));
                     } else {
                         green.clone().border_color_all(rgba(0, 0, 0, 0));
@@ -459,11 +460,8 @@ pub fn checkbox() -> Container {
         .push(title("Checkbox"))
         .push(
             CheckboxGroup::new("Select your favorite foods")
-                .on_checkbox_toggled(move |_event, checkbox_toggled| {
-                    println!(
-                        "checkbox toggled: {} - {}",
-                        checkbox_toggled.label, checkbox_toggled.status
-                    );
+                .on_checkbox_toggled(move |event| {
+                    println!("checkbox toggled: {} - {}", event.label, event.status);
                 })
                 .flex_direction(FlexDirection::Column)
                 .gap(px(15.0), px(15.0))

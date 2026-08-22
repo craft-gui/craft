@@ -8,7 +8,7 @@ use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 
 use retgui::elements::{Button, Container, Element, Text, TextInner, Window};
-use retgui::events::Event;
+use retgui::events::ClickEvent;
 use retgui::palette::css::WHITE;
 use retgui::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
 use retgui::{Color, rgb};
@@ -361,7 +361,7 @@ fn build_buttons(state: Rc<RefCell<State>>) -> Container {
 
 fn build_button<F>(label: &str, callback: F) -> Button
 where
-    F: Fn(&mut Event) + 'static,
+    F: Fn(&mut ClickEvent) + 'static,
 {
     Button::new()
         .background_color(Color::from_rgb8(211, 211, 211))

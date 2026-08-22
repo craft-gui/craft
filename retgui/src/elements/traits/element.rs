@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::any::Any;
 use std::rc::Rc;
 
 use retgui_primitives::Color;
@@ -8,13 +8,13 @@ use smol_str::SmolStr;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::gradient::Gradient;
 
-use ui_events::keyboard::KeyboardEvent;
-use ui_events::pointer::{PointerButtonEvent, PointerId, PointerUpdate};
+use ui_events::pointer::PointerId;
 
 use crate::RetGuiError;
+use crate::app::queue_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
-use crate::events::{CheckboxToggled, Event, EventCallbackKind, EventListenerOptions, TextInputChanged};
+use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
 use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
@@ -76,31 +76,28 @@ pub trait Element: Clone + AsElement {
         self
     }
 
-    fn on_pointer_enter(self, on_pointer_enter: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_pointer_enter(self, on_pointer_enter: impl Fn(&mut PointerEnterEvent) + 'static) -> Self {
         self.borrow_mut().on_pointer_enter(Rc::new(on_pointer_enter));
         self
     }
 
-    fn on_pointer_leave(self, on_pointer_leave: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_pointer_leave(self, on_pointer_leave: impl Fn(&mut PointerLeaveEvent) + 'static) -> Self {
         self.borrow_mut().on_pointer_leave(Rc::new(on_pointer_leave));
         self
     }
 
-    fn on_radio_value_changed(
-        self,
-        on_radio_value_changed: impl Fn(&mut Event, Rc<RefCell<String>>) + 'static,
-    ) -> Self {
+    fn on_radio_value_changed(self, on_radio_value_changed: impl Fn(&mut RadioValueChangedEvent) + 'static) -> Self {
         self.borrow_mut()
             .on_radio_value_changed(Rc::new(on_radio_value_changed));
         self
     }
 
-    fn on_checkbox_toggled(self, on_checkbox_toggled: impl Fn(&mut Event, CheckboxToggled) + 'static) -> Self {
+    fn on_checkbox_toggled(self, on_checkbox_toggled: impl Fn(&mut CheckboxToggledEvent) + 'static) -> Self {
         self.borrow_mut().on_checkbox_toggled(Rc::new(on_checkbox_toggled));
         self
     }
 
-    fn on_textinput_changed(self, on_text_input_changed: impl Fn(&mut Event, &TextInputChanged) + 'static) -> Self {
+    fn on_text_input_changed(self, on_text_input_changed: impl Fn(&mut TextInputChangedEvent) + 'static) -> Self {
         self.borrow_mut().on_text_input_changed(Rc::new(on_text_input_changed));
         self
     }
@@ -120,64 +117,70 @@ pub trait Element: Clone + AsElement {
         self.borrow().get_id()
     }
 
-    fn on_pointer_button_down(
-        self,
-        on_pointer_button_down: impl Fn(&mut Event, &PointerButtonEvent) + 'static,
-    ) -> Self {
+    fn on_pointer_button_down(self, on_pointer_button_down: impl Fn(&mut PointerButtonEvent) + 'static) -> Self {
         self.borrow_mut()
             .on_pointer_button_down(Rc::new(on_pointer_button_down));
         self
     }
 
-    fn on_pointer_moved(self, on_pointer_moved: impl Fn(&mut Event, &PointerUpdate) + 'static) -> Self {
+    fn on_pointer_moved(self, on_pointer_moved: impl Fn(&mut PointerMovedEvent) + 'static) -> Self {
         self.borrow_mut().on_pointer_moved(Rc::new(on_pointer_moved));
         self
     }
 
-    fn on_pointer_button_up(self, on_pointer_button_up: impl Fn(&mut Event, &PointerButtonEvent) + 'static) -> Self {
+    fn on_pointer_button_up(self, on_pointer_button_up: impl Fn(&mut PointerButtonEvent) + 'static) -> Self {
         self.borrow_mut().on_pointer_button_up(Rc::new(on_pointer_button_up));
         self
     }
 
-    fn on_click(self, on_click: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_click(self, on_click: impl Fn(&mut ClickEvent) + 'static) -> Self {
         self.borrow_mut().on_click(Rc::new(on_click));
         self
     }
 
-    fn on_focus(self, on_focus: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_custom_event(self, on_custom_event: impl Fn(&mut CustomEvent) + 'static) -> Self {
+        self.borrow_mut().on_custom_event(Rc::new(on_custom_event));
+        self
+    }
+
+    fn emit_custom_event<T: Any + 'static>(&self, detail: T) {
+        queue_event(EventKind::Custom(CustomEvent::new(self.as_element_rc(), detail)));
+    }
+
+    fn on_focus(self, on_focus: impl Fn(&mut FocusEvent) + 'static) -> Self {
         self.borrow_mut().on_focus(Rc::new(on_focus));
         self
     }
 
-    fn on_unfocus(self, on_unfocus: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_unfocus(self, on_unfocus: impl Fn(&mut UnfocusEvent) + 'static) -> Self {
         self.borrow_mut().on_unfocus(Rc::new(on_unfocus));
         self
     }
 
-    fn on_lost_pointer_capture(self, on_lost_pointer_capture: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_lost_pointer_capture(self, on_lost_pointer_capture: impl Fn(&mut PointerCaptureEvent) + 'static) -> Self {
         self.borrow_mut()
             .on_lost_pointer_capture(Rc::new(on_lost_pointer_capture));
         self
     }
 
-    fn on_got_pointer_capture(self, on_got_pointer_capture: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_got_pointer_capture(self, on_got_pointer_capture: impl Fn(&mut PointerCaptureEvent) + 'static) -> Self {
         self.borrow_mut()
             .on_got_pointer_capture(Rc::new(on_got_pointer_capture));
         self
     }
 
-    fn on_keyboard_input(self, on_keyboard_input: impl Fn(&mut Event, &KeyboardEvent) + 'static) -> Self {
+    fn on_keyboard_input(self, on_keyboard_input: impl Fn(&mut KeyboardEvent) + 'static) -> Self {
         self.borrow_mut().on_keyboard_input(Rc::new(on_keyboard_input));
         self
     }
 
-    fn on_slider_value_changed(self, on_slider_value_changed: impl Fn(&mut Event, f64) + 'static) -> Self {
+    fn on_slider_value_changed(self, on_slider_value_changed: impl Fn(&mut SliderValueChangedEvent) + 'static) -> Self {
         self.borrow_mut()
             .on_slider_value_changed(Rc::new(on_slider_value_changed));
         self
     }
 
-    fn on_scroll(self, on_scroll: impl Fn(&mut Event) + 'static) -> Self {
+    fn on_scroll(self, on_scroll: impl Fn(&mut ScrollEvent) + 'static) -> Self {
         self.borrow_mut().on_scroll(Rc::new(on_scroll));
         self
     }

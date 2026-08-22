@@ -8,7 +8,7 @@ members = [
     "xtask",
     "examples/util",
     "examples/counter",
-    "examples/counter",
+    "examples/custom_event",
     "examples/multiwindow",
     "examples/pointer_events",
     "examples/text",
