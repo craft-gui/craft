@@ -2,4 +2,4 @@
 xtask = "run --release --package xtask --"
 
 [build]
-rustflags = ["-Zpolonius=next"]
+rustflags = ["-Zpolonius=next", "-Znext-solver=globally"]
