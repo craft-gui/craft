@@ -23,6 +23,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
     }
     let text_data = text_data.unwrap();
     let text_data = text_data.borrow();
+    let use_glyph_cache = text_data.use_glyph_cache();
     let text_render = text_data.get_text_renderer().expect("Text render not found");
 
     let text_paint_bounds = text_bounds(&text_render.lines).unwrap_or_else(|| Rectangle::new(0.0, 0.0, 0.0, 0.0));
@@ -90,7 +91,7 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
 
             let glyph_run_builder = scene
                 .glyph_run(resources, &item.font)
-                .atlas_cache(true)
+                .atlas_cache(use_glyph_cache)
                 .font_size(item.font_size);
             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                 id: glyph.id,

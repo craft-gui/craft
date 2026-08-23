@@ -15,7 +15,7 @@ use crate::events::EventCallback;
 use crate::geometry::TrblRectangle;
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
-use crate::style::{Overflow, Style, Unit};
+use crate::style::{Animation, Overflow, Style, Unit};
 
 /// Stores common data to most elements.
 #[derive(Clone)]
@@ -54,6 +54,9 @@ pub struct ElementData {
 
     pub(crate) unfocused_outline_color: Option<TrblRectangle<Color>>,
     pub(crate) unfocused_outline_width: Option<TrblRectangle<Unit>>,
+
+    /// Animations for this element.
+    pub(crate) animations: Vec<Animation>,
 }
 
 impl ElementData {
@@ -81,6 +84,7 @@ impl ElementData {
         };
 
         let default = Self {
+            animations: Vec::new(),
             me,
             parent: None,
             window: None,

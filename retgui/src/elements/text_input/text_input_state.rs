@@ -327,7 +327,14 @@ impl TextInputState {
         self.cursor_visible = true;
     }
 
-    #[allow(dead_code)]
+    pub fn cursor_visible(&self) -> bool {
+        self.cursor_visible
+    }
+
+    pub fn is_blinking(&self) -> bool {
+        self.start_time.is_some()
+    }
+
     pub fn disable_blink(&mut self) {
         self.start_time = None;
     }
@@ -344,7 +351,6 @@ impl TextInputState {
         })
     }
 
-    #[allow(dead_code)]
     pub fn cursor_blink(&mut self) {
         self.cursor_visible = self.start_time.is_some_and(|start_time| {
             let elapsed = Instant::now().duration_since(start_time);
@@ -462,7 +468,7 @@ impl TextInputState {
         keyboard_event: &KeyboardEvent,
         element_data: &mut ElementData,
     ) {
-        // TODO: self.reset_blink();
+        self.reset_blink();
 
         self.modifiers = Some(keyboard_event.modifiers);
 

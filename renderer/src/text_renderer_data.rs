@@ -68,4 +68,9 @@ pub struct TextRenderGlyph {
 
 pub trait TextData {
     fn get_text_renderer(&self) -> Option<&TextRender>;
+
+    /// Whether glyphs should be rasterized into and reused from the glyph atlas.
+    fn use_glyph_cache(&self) -> bool {
+        true
+    }
 }

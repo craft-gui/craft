@@ -92,7 +92,7 @@ rev = "08e18fdf278df0e8270e12ad60dc4b8519c072e8"
 default-features = false
 features = ["std", "gummy_tree", "flexbox", "content_size", "block_layout"]
 
-[dependencies.chrono]
+[dependencies.jiff]
 workspace = true
 
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]

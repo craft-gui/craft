@@ -7,6 +7,68 @@ use retgui_primitives::Color;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::TrblRectangle;
 
+/// An enum of all styles.
+#[derive(Clone, Debug)]
+pub enum StyleVariant {
+    BoxSizing(BoxSizing),
+    Position(Position),
+    Margin(TrblRectangle<Unit>),
+    Padding(TrblRectangle<Unit>),
+    Gap([Unit; 2]),
+    Inset(TrblRectangle<Unit>),
+
+    Width(Unit),
+    MinWidth(Unit),
+    MaxWidth(Unit),
+
+    Height(Unit),
+    MinHeight(Unit),
+    MaxHeight(Unit),
+
+    Display(Display),
+    Wrap(FlexWrap),
+    AlignItems(AlignItems),
+    AlignSelf(AlignSelf),
+    AlignContent(AlignContent),
+    JustifyContent(JustifyContent),
+    FlexDirection(FlexDirection),
+    FlexGrow(f32),
+    FlexShrink(f32),
+    FlexBasis(Unit),
+    Order(i32),
+    FontFamily(FontFamily),
+
+    BackgroundBrush(Brush),
+    TextBrush(Brush),
+
+    LineHeight(f32),
+    FontSize(f32),
+    FontWeight(FontWeight),
+    FontStyle(FontStyle),
+    TextAlign(TextAlign),
+    Underline(Option<Underline>),
+
+    Overflow([Overflow; 2]),
+
+    BorderColor(TrblRectangle<Color>),
+    BorderWidth(TrblRectangle<Unit>),
+    BorderRadius([(f32, f32); 4]),
+    OutlineColor(TrblRectangle<Color>),
+    OutlineWidth(TrblRectangle<Unit>),
+
+    ScrollbarBrush(ScrollbarColor),
+    ScrollbarThumbMargin(TrblRectangle<f32>),
+    ScrollbarThumbRadius([(f32, f32); 4]),
+    ScrollbarWidth(f32),
+
+    Overlay(bool),
+    Visible(bool),
+    SelectionBrush(Brush),
+    CursorBrush(Option<Brush>),
+
+    BoxShadows(Vec<BoxShadow>),
+}
+
 #[derive(Clone, Debug)]
 pub struct Style {
     box_sizing: StyleProperty<BoxSizing>,

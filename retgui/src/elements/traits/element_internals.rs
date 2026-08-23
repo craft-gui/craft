@@ -1,10 +1,10 @@
+use issho::{AccessEvent, IsshoError};
 use std::any::Any;
 use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-use issho::{AccessEvent, IsshoError};
+use std::time::Duration;
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, ElementBox, Point, TrblRectangle};
@@ -15,13 +15,13 @@ use retgui_resource_manager::ResourceManager;
 
 use ui_events::pointer::PointerId;
 
-use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, queue_event};
+use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, WINDOW_MANAGER, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, ClickHandler, DropdownItemSelectedHandler, Event, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusHandler};
 use crate::layout::GummyTree;
-use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, TextAlign, Underline, Unit};
+use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, StyleVariant, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
 
@@ -55,7 +55,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let style = &self.element_data().style;
         style.get_visible() && style.get_display() != Display::None
     }
-    
+
     fn is_keyboard_focusable(&self) -> bool {
         let data = self.element_data();
         data.access_key
@@ -734,6 +734,66 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
+    fn set_style_variant(&mut self, style: StyleVariant) {
+        match style {
+            StyleVariant::BoxSizing(value) => self.set_box_sizing(value),
+            StyleVariant::Position(value) => self.set_position(value),
+            StyleVariant::Margin(value) => self.set_margin(value.top, value.right, value.bottom, value.left),
+            StyleVariant::Padding(value) => self.set_padding(value.top, value.right, value.bottom, value.left),
+            StyleVariant::Gap(value) => self.set_gap(value[0], value[1]),
+            StyleVariant::Inset(value) => self.set_inset(value.top, value.right, value.bottom, value.left),
+            StyleVariant::Width(value) => self.set_width(value),
+            StyleVariant::MinWidth(value) => self.set_min_width(value),
+            StyleVariant::MaxWidth(value) => self.set_max_width(value),
+            StyleVariant::Height(value) => self.set_height(value),
+            StyleVariant::MinHeight(value) => self.set_min_height(value),
+            StyleVariant::MaxHeight(value) => self.set_max_height(value),
+            StyleVariant::Display(value) => self.set_display(value),
+            StyleVariant::Wrap(value) => self.set_wrap(value),
+            StyleVariant::AlignItems(value) => self.set_align_items(value),
+            StyleVariant::AlignSelf(value) => self.set_align_self(value),
+            StyleVariant::AlignContent(value) => self.set_align_content(value),
+            StyleVariant::JustifyContent(value) => self.set_justify_content(value),
+            StyleVariant::FlexDirection(value) => self.set_flex_direction(value),
+            StyleVariant::FlexGrow(value) => self.set_flex_grow(value),
+            StyleVariant::FlexShrink(value) => self.set_flex_shrink(value),
+            StyleVariant::FlexBasis(value) => self.set_flex_basis(value),
+            StyleVariant::Order(value) => self.set_order(value),
+            StyleVariant::FontFamily(value) => self.set_font_family(value),
+            StyleVariant::BackgroundBrush(value) => self.set_background_brush(value),
+            StyleVariant::TextBrush(value) => self.set_text_brush(value),
+            StyleVariant::LineHeight(value) => self.set_line_height(value),
+            StyleVariant::FontSize(value) => self.set_font_size(value),
+            StyleVariant::FontWeight(value) => self.set_font_weight(value),
+            StyleVariant::FontStyle(value) => self.set_font_style(value),
+            StyleVariant::TextAlign(value) => self.set_text_align(value),
+            StyleVariant::Underline(value) => self.set_underline(value),
+            StyleVariant::Overflow(value) => self.set_overflow(value[0], value[1]),
+            StyleVariant::BorderColor(value) => self.set_border_color(value.top, value.right, value.bottom, value.left),
+            StyleVariant::BorderWidth(value) => self.set_border_width(value.top, value.right, value.bottom, value.left),
+            StyleVariant::BorderRadius(value) => self.set_border_radius(value[0], value[1], value[2], value[3]),
+            StyleVariant::OutlineColor(value) => {
+                self.set_outline_color(value.top, value.right, value.bottom, value.left)
+            }
+            StyleVariant::OutlineWidth(value) => {
+                self.set_outline_width(value.top, value.right, value.bottom, value.left)
+            }
+            StyleVariant::ScrollbarBrush(value) => self.set_scrollbar_color(value),
+            StyleVariant::ScrollbarThumbMargin(value) => {
+                self.set_scrollbar_thumb_margin(value.top, value.right, value.bottom, value.left)
+            }
+            StyleVariant::ScrollbarThumbRadius(value) => {
+                self.set_scrollbar_thumb_radius(value[0], value[1], value[2], value[3])
+            }
+            StyleVariant::ScrollbarWidth(value) => self.set_scrollbar_width(value),
+            StyleVariant::Overlay(value) => self.set_overlay(value),
+            StyleVariant::Visible(value) => self.set_visible(value),
+            StyleVariant::SelectionBrush(value) => self.set_selection_brush(value),
+            StyleVariant::CursorBrush(value) => self.set_cursor_brush(value),
+            StyleVariant::BoxShadows(value) => self.set_box_shadows(value),
+        }
+    }
+
     fn set_display(&mut self, display: Display) {
         self.style_mut().set_display(display);
         self.update_gummy_style();
@@ -751,6 +811,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn set_overlay(&mut self, overlay: bool) {
         self.style_mut().set_overlay(overlay);
+    }
+
+    fn set_visible(&mut self, visible: bool) {
+        self.style_mut().set_visible(visible);
+        self.request_window_redraw();
     }
 
     fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
@@ -1089,9 +1154,33 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_gummy_style();
     }
 
+    fn set_animations(&mut self, animations: Vec<Animation>) {
+        let element_data = self.element_data_mut();
+        let had_animations = !element_data.animations.is_empty();
+        let has_animations = !animations.is_empty();
+        if !had_animations && has_animations {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.schedule_element_animations(element_data.me.clone());
+            })
+        } else if had_animations && !has_animations {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.cancel_element_animations(&element_data.me);
+            })
+        }
+        element_data.animations = animations;
+        if has_animations {
+            self.request_window_redraw();
+        }
+    }
+
     fn set_selection_brush(&mut self, selection_brush: Brush) {
         self.style_mut().set_selection_brush(selection_brush);
         self.mark_dirty();
+    }
+
+    fn set_cursor_brush(&mut self, cursor_brush: Option<Brush>) {
+        self.style_mut().set_cursor_brush(cursor_brush);
+        self.request_window_redraw();
     }
 
     fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
@@ -1267,6 +1356,16 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {
         Ok(())
+    }
+
+    /// Animates the element.
+    fn animation_tick(&mut self, delta: Duration) {
+        let mut animations = std::mem::take(&mut self.element_data_mut().animations);
+        for animation in &mut animations {
+            animation.tick(delta);
+            animation.apply_styles(&mut |style| self.set_style_variant(style));
+        }
+        self.element_data_mut().animations = animations;
     }
 }
 

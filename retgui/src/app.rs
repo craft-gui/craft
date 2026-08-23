@@ -354,11 +354,18 @@ impl App {
     }
 
     fn on_request_redraw_internal(&mut self, window: Window) {
+        let delta = window.animation_delta();
+        let has_active_animations =
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.animation_tick(&window, delta));
         self.update_resources();
         window.on_redraw(
             self.text_context.borrow_mut().as_mut().unwrap(),
             self.resource_manager.clone(),
         );
+        
+        if has_active_animations && window.winit_window().is_some() {
+            window.request_redraw();
+        }
     }
 
     fn dispatch_event(&mut self, window: Window, message: &EventKind) -> bool {
