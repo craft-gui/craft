@@ -6,7 +6,7 @@ mod apple;
 #[cfg(windows)]
 mod windows;
 
-use chrono::{Datelike, Local};
+use jiff::Zoned;
 
 use icu::calendar::preferences::FirstDay;
 use icu::calendar::week::WeekPreferences;
@@ -60,15 +60,16 @@ fn fallback_day_abbreviation(locale: &Locale, day: Weekday) -> String {
 }
 
 pub fn current_date() -> Date<Gregorian> {
-    let now = Local::now();
+    let now = Zoned::now();
 
-    Date::try_new_gregorian(now.year(), now.month() as u8, now.day() as u8).expect("Invalid date provided by system")
+    Date::try_new_gregorian(now.year().into(), now.month() as u8, now.day() as u8)
+        .expect("Invalid date provided by system")
 }
 
 pub fn current_month() -> Date<Gregorian> {
-    let now = Local::now();
+    let now = Zoned::now();
 
-    Date::try_new_gregorian(now.year(), now.month() as u8, 1).expect("Invalid date provided by system")
+    Date::try_new_gregorian(now.year().into(), now.month() as u8, 1).expect("Invalid date provided by system")
 }
 
 pub fn current_calendar_start(start_of_week: Weekday, year: i32, month: Month) -> Date<Gregorian> {

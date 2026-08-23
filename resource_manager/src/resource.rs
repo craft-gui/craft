@@ -1,12 +1,12 @@
 use crate::resource_type::ResourceType;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use std::any::Any;
 
 #[derive(Debug)]
 pub struct Resource {
     pub resource_type: ResourceType,
     pub data: Box<dyn Any + Send + Sync>,
-    pub expiration_time: Option<DateTime<Utc>>,
+    pub expiration_time: Option<Timestamp>,
 }
 
 impl Resource {
@@ -14,7 +14,7 @@ impl Resource {
         &self.resource_type
     }
 
-    pub fn expiration_time(&self) -> Option<DateTime<Utc>> {
+    pub fn expiration_time(&self) -> Option<Timestamp> {
         self.expiration_time
     }
 }

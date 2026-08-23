@@ -34,5 +34,5 @@ workspace = true
 [dependencies.tinyvg-rs]
 workspace = true
 
-[dependencies.chrono]
+[dependencies.jiff]
 workspace = true

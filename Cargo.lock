@@ -2134,10 +2134,12 @@ dependencies = [
  "jiff-core",
  "jiff-static",
  "jiff-tzdb-platform",
+ "js-sys",
  "log",
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
+ "wasm-bindgen",
  "windows-link 0.2.1",
 ]
 
@@ -3838,8 +3840,8 @@ dependencies = [
 name = "retgui_calendar"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "icu",
+ "jiff",
  "sys-locale",
  "web-sys",
  "windows 0.62.2",
@@ -3882,8 +3884,8 @@ dependencies = [
 name = "retgui_resource_manager"
 version = "0.1.1"
 dependencies = [
- "chrono",
  "image",
+ "jiff",
  "reqwest",
  "retgui_logging",
  "retgui_runtime",
