@@ -17,7 +17,7 @@ use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals};
-use crate::events::{Event, EventKind};
+use crate::events::{Event, EventKind, SliderValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::palette;
 use crate::style::Unit;
@@ -229,8 +229,10 @@ impl SliderInner {
         let value = value.clamp(self.min, self.max);
         if (value - self.value).abs() > f64::EPSILON {
             self.set_value(value);
-            let new_event = Event::new(self.element_data.me.upgrade().unwrap());
-            queue_event(new_event, EventKind::SliderValueChanged(self.value));
+            let target = self.element_data.me.upgrade().unwrap();
+            queue_event(EventKind::SliderValueChanged(SliderValueChangedEvent::new(
+                target, self.value,
+            )));
         }
     }
 
@@ -439,9 +441,9 @@ impl ElementInternals for SliderInner {
         );
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
-        match message {
-            EventKind::KeyboardInputEvent(key) => {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        match event {
+            EventKind::KeyDown(key) | EventKind::KeyUp(key) => {
                 if key.state != KeyState::Down || !self.is_focused() {
                     return;
                 }
@@ -458,26 +460,26 @@ impl ElementInternals for SliderInner {
 
                 if let Some(new_value) = new_value {
                     self.update_value_from_event(new_value);
-                    event.prevent_propagate();
-                    event.prevent_defaults();
+                    key.stop_propagation();
+                    key.prevent_default();
                 }
             }
-            EventKind::PointerButtonUp(pointer_button_update) => {
+            EventKind::PointerUp(pointer_button_update) => {
                 self.focus();
                 self.dragging = false;
-                self.release_pointer_capture(message.pointer_id().unwrap());
+                self.release_pointer_capture(pointer_button_update.pointer.pointer_id.unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.update_value_from_event(value);
             }
-            EventKind::PointerButtonDown(pointer_button_update) => {
+            EventKind::PointerDown(pointer_button_update) => {
                 self.dragging = true;
-                self.set_pointer_capture(message.pointer_id().unwrap());
+                self.set_pointer_capture(pointer_button_update.pointer.pointer_id.unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
                 self.update_value_from_event(value);
             }
-            EventKind::PointerMovedEvent(pointer_update) => {
+            EventKind::PointerMoved(pointer_update) => {
                 if !self.dragging {
                     return;
                 }

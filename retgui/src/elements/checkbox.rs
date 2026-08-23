@@ -23,7 +23,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::{CheckboxToggled, Event, EventKind};
+use crate::events::{CheckboxToggledEvent, EventKind};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
@@ -174,13 +174,13 @@ impl ElementInternals for CheckboxInner {
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
-        scrollable::handle_scroll_logic(self, message, event);
-        if let EventKind::Click() = message {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(self, event);
+        if let EventKind::Click(_) = event {
             self.toggle();
             self.focus();
         } else if self.is_focused()
-            && let EventKind::KeyboardInputEvent(key) = message
+            && let EventKind::KeyDown(key) = event
             && key.code == Code::Space
             && key.state == KeyState::Down
         {
@@ -249,13 +249,11 @@ impl CheckboxInner {
             .me
             .upgrade()
             .expect("checkbox was detached while handling its toggle action");
-        queue_event(
-            Event::new(target),
-            EventKind::CheckboxToggled(CheckboxToggled {
-                label: self.label.clone(),
-                status: self.checked,
-            }),
-        );
+        queue_event(EventKind::CheckboxToggled(CheckboxToggledEvent::new(
+            target,
+            self.label.clone(),
+            self.checked,
+        )));
         self.request_window_redraw();
     }
 }

@@ -93,8 +93,8 @@ pub(super) fn find_target(
     target.unwrap_or(Rc::clone(root))
 }
 
-pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind, capturing: bool) {
-    let current_target = event.current_target.clone();
+pub(super) fn call_user_event_handlers(event: &mut EventKind, capturing: bool) {
+    let current_target = event.current_target();
     let callbacks = current_target.borrow().element_data().event_callbacks.clone();
 
     for EventCallback {
@@ -106,42 +106,30 @@ pub(super) fn call_user_event_handlers(event: &mut Event, message: &EventKind, c
             continue;
         }
 
-        match (message, callback) {
-            (EventKind::PointerEnter(), EventCallbackKind::PointerEnter(handler))
-            | (EventKind::PointerLeave(), EventCallbackKind::PointerLeave(handler))
-            | (EventKind::Click(), EventCallbackKind::Click(handler))
-            | (EventKind::Focus(), EventCallbackKind::Focus(handler))
-            | (EventKind::GotPointerCapture(), EventCallbackKind::GotPointerCapture(handler))
-            | (EventKind::LostPointerCapture(), EventCallbackKind::LostPointerCapture(handler))
-            | (EventKind::Scroll(), EventCallbackKind::Scroll(handler))
-            | (EventKind::Unfocus(), EventCallbackKind::Unfocus(handler)) => {
+        match (&mut *event, callback) {
+            (EventKind::PointerEnter(event), EventCallbackKind::PointerEnter(handler)) => handler(event),
+            (EventKind::PointerLeave(event), EventCallbackKind::PointerLeave(handler)) => handler(event),
+            (EventKind::Click(event), EventCallbackKind::Click(handler)) => handler(event),
+            (EventKind::Custom(event), EventCallbackKind::Custom(handler)) => handler(event),
+            (EventKind::Focus(event), EventCallbackKind::Focus(handler)) => handler(event),
+            (EventKind::GotPointerCapture(event), EventCallbackKind::GotPointerCapture(handler))
+            | (EventKind::LostPointerCapture(event), EventCallbackKind::LostPointerCapture(handler)) => {
                 handler(event);
             }
-            (EventKind::PointerButtonUp(pointer_event), EventCallbackKind::PointerButtonUp(handler))
-            | (EventKind::PointerButtonDown(pointer_event), EventCallbackKind::PointerButtonDown(handler)) => {
-                handler(event, pointer_event);
+            (EventKind::Scroll(event), EventCallbackKind::Scroll(handler)) => handler(event),
+            (EventKind::Unfocus(event), EventCallbackKind::Unfocus(handler)) => handler(event),
+            (EventKind::PointerUp(event), EventCallbackKind::PointerButtonUp(handler))
+            | (EventKind::PointerDown(event), EventCallbackKind::PointerButtonDown(handler)) => handler(event),
+            (EventKind::KeyDown(event), EventCallbackKind::KeyboardInput(handler))
+            | (EventKind::KeyUp(event), EventCallbackKind::KeyboardInput(handler)) => handler(event),
+            (EventKind::PointerMoved(event), EventCallbackKind::PointerMoved(handler)) => handler(event),
+            (EventKind::DropdownItemSelected(event), EventCallbackKind::DropdownItemSelected(handler)) => {
+                handler(event);
             }
-            (EventKind::KeyboardInputEvent(keyboard_event), EventCallbackKind::KeyboardInput(handler)) => {
-                handler(event, keyboard_event);
-            }
-            (EventKind::PointerMovedEvent(pointer_update), EventCallbackKind::PointerMoved(handler)) => {
-                handler(event, pointer_update);
-            }
-            (EventKind::DropdownItemSelected(item), EventCallbackKind::DropdownItemSelected(handler)) => {
-                handler(event, *item);
-            }
-            (EventKind::SliderValueChanged(value), EventCallbackKind::SliderValueChanged(handler)) => {
-                handler(event, *value);
-            }
-            (EventKind::RadioValueChanged(value), EventCallbackKind::RadioValueChanged(handler)) => {
-                handler(event, value.clone());
-            }
-            (EventKind::CheckboxToggled(value), EventCallbackKind::CheckboxToggled(handler)) => {
-                handler(event, value.clone());
-            }
-            (EventKind::TextInputChanged(value), EventCallbackKind::TextInputChanged(handler)) => {
-                handler(event, value);
-            }
+            (EventKind::SliderValueChanged(event), EventCallbackKind::SliderValueChanged(handler)) => handler(event),
+            (EventKind::RadioValueChanged(event), EventCallbackKind::RadioValueChanged(handler)) => handler(event),
+            (EventKind::CheckboxToggled(event), EventCallbackKind::CheckboxToggled(handler)) => handler(event),
+            (EventKind::TextInputChanged(event), EventCallbackKind::TextInputChanged(handler)) => handler(event),
             _ => {}
         }
     }

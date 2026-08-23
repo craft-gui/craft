@@ -3,7 +3,6 @@ mod text_input_state;
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 use retgui_renderer::text_renderer_data::{TextData, TextScroll};
-use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
@@ -257,12 +256,12 @@ impl ElementInternals for TextInputInner {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, message: &EventKind, text_context: &mut TextContext, event: &mut Event) {
+    fn on_event(&mut self, event: &mut EventKind, text_context: &mut TextContext) {
         self.state.is_active = true;
 
         let editor_owns_scroll_key = matches!(
-            message,
-            EventKind::KeyboardInputEvent(keyboard_event)
+            &*event,
+            EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
                 if matches!(
                     &keyboard_event.key,
                     Key::Named(
@@ -271,10 +270,10 @@ impl ElementInternals for TextInputInner {
                 )
         );
         if !editor_owns_scroll_key {
-            scrollable::handle_scroll_logic(self, message, event);
+            scrollable::handle_scroll_logic(self, event);
         }
 
-        if event.prevent_defaults {
+        if event.is_default_prevented() {
             return;
         }
 
@@ -283,8 +282,8 @@ impl ElementInternals for TextInputInner {
 
         let focused = self.is_focused();
 
-        if let EventKind::ElementMessage(msg) = message
-            && let Some(msg) = (msg as &dyn Any).downcast_ref::<TextInputMessage>()
+        if let EventKind::Custom(custom_event) = &*event
+            && let Some(msg) = custom_event.data::<TextInputMessage>()
         {
             match msg {
                 TextInputMessage::Copy => {
@@ -308,42 +307,41 @@ impl ElementInternals for TextInputInner {
             }
         }
 
-        match message {
-            EventKind::Focus() => {
+        match event {
+            EventKind::Focus(_) => {
                 self.start_cursor_blink();
             }
-            EventKind::Unfocus() => {
+            EventKind::Unfocus(_) => {
                 self.stop_cursor_blink();
             }
-            EventKind::KeyboardInputEvent(keyboard_event) if !self.state.editor().is_composing() => {
+            EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
+                if !self.state.editor().is_composing() =>
+            {
                 if self.disabled || !keyboard_event.state.is_down() || !focused {
                     return;
                 }
                 self.state
                     .key_press(text_context, keyboard_event, &mut self.element_data);
-                event.prevent_propagate();
+                keyboard_event.stop_propagation();
             }
-            EventKind::PointerButtonDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+            EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.focus();
-                self.set_pointer_capture(message.pointer_id().unwrap());
-                self.state
-                    .pointer_down(text_context, pointer_button.state.logical_point(), scroll_y);
+                self.set_pointer_capture(pointer_button.pointer.pointer_id.unwrap());
+                self.state.pointer_down(text_context, pointer_button.position, scroll_y);
             }
-            EventKind::PointerButtonUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+            EventKind::PointerUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
                 self.state.pointer_up();
             }
-            EventKind::PointerMovedEvent(pointer_moved) => {
-                self.state.move_pointer(text_context, pointer_moved, scroll_y);
+            EventKind::PointerMoved(pointer_moved) => {
+                self.state
+                    .move_pointer(text_context, pointer_moved.current.logical_point(), scroll_y);
             }
-            EventKind::ImeEvent(Ime::Disabled) => {
-                self.state.disable_ime(text_context);
-            }
-            EventKind::ImeEvent(Ime::Commit(text)) => {
-                self.state.insert_or_replace_selection(text_context, text);
-            }
-            EventKind::ImeEvent(Ime::Preedit(text, cursor)) => {
-                self.state.ime_pre_edit(text_context, text, cursor);
-            }
+            EventKind::Ime(ime_event) => match &ime_event.ime {
+                Ime::Disabled => self.state.disable_ime(text_context),
+                Ime::Commit(text) => self.state.insert_or_replace_selection(text_context, text),
+                Ime::Preedit(text, cursor) => self.state.ime_pre_edit(text_context, text, cursor),
+                Ime::Enabled => {}
+            },
             _ => {}
         }
 

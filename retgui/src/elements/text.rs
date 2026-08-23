@@ -235,7 +235,7 @@ impl ElementInternals for TextInner {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         if !self.selectable {
             return;
         }
@@ -247,8 +247,8 @@ impl ElementInternals for TextInner {
             let text_position = self.get_computed_box_transformed().content_rectangle();
 
             let state: &mut TextState = &mut self.state;
-            match message {
-                EventKind::PointerButtonDown(pb) if pb.button == Some(PointerButton::Primary) => {
+            match event {
+                EventKind::PointerDown(pb) if pb.button == Some(PointerButton::Primary) => {
                     let previous_selection = (state.selection.anchor(), state.selection.focus());
                     state.pointer_down = true;
                     state.cursor_reset();
@@ -275,20 +275,20 @@ impl ElementInternals for TextInner {
                         state.update_text_selection(self.element_data.style.get_selection_brush());
                     }
                     if click_count == 1 {
-                        self.set_pointer_capture(message.pointer_id().unwrap());
+                        self.set_pointer_capture(pb.pointer.pointer_id.unwrap());
                     }
                     if selection_changed {
                         self.request_window_redraw();
                     }
-                    event.prevent_defaults();
+                    pb.prevent_default();
                 }
-                EventKind::PointerButtonUp(pb) if pb.button == Some(PointerButton::Primary) => {
+                EventKind::PointerUp(pb) if pb.button == Some(PointerButton::Primary) => {
                     state.pointer_down = false;
                     state.cursor_reset();
-                    self.release_pointer_capture(message.pointer_id().unwrap());
-                    event.prevent_defaults();
+                    self.release_pointer_capture(pb.pointer.pointer_id.unwrap());
+                    pb.prevent_default();
                 }
-                EventKind::PointerMovedEvent(pointer_moved) => {
+                EventKind::PointerMoved(pointer_moved) => {
                     let prev_pos = state.cursor_pos;
                     // NOTE: Cursor position should be relative to the top left of the text box.
                     state.cursor_pos = pointer_moved.current.logical_point()
@@ -304,7 +304,7 @@ impl ElementInternals for TextInner {
                             self.request_window_redraw();
                         }
                     }
-                    event.prevent_defaults();
+                    pointer_moved.prevent_default();
                 }
                 _ => {}
             }

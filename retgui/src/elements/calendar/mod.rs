@@ -111,15 +111,15 @@ impl ElementInternals for CalendarInner {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         let year_id = self.year_dropdown.borrow().element_data().internal_id;
         let month_id = self.month_dropdown.borrow().element_data().internal_id;
-        if let EventKind::DropdownItemSelected(index) = message {
-            let target_id = event.target.borrow().element_data().internal_id;
+        if let EventKind::DropdownItemSelected(dropdown_event) = event {
+            let target_id = dropdown_event.target().borrow().element_data().internal_id;
             if target_id == year_id {
-                self.select_year(*index);
+                self.select_year(dropdown_event.index);
             } else if target_id == month_id {
-                self.select_month(*index);
+                self.select_month(dropdown_event.index);
             }
         }
     }

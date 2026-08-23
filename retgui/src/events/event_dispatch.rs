@@ -11,56 +11,55 @@ use retgui_renderer::renderer::Renderer;
 use crate::app::{FOCUS, dequeue_event};
 use crate::elements::ElementInternals;
 use crate::events::helpers::{call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
-use crate::events::{Event, EventKind};
+use crate::events::{ClickEvent, ClickTrigger, Event, EventKind, PointerEnterEvent, PointerLeaveEvent};
 use crate::text::text_context::TextContext;
 
 pub(super) fn dispatch_event(
-    event: &mut Event,
-    event_kind: &EventKind,
+    event: &mut EventKind,
     targets: &VecDeque<Rc<RefCell<dyn ElementInternals>>>,
     text_context: &mut TextContext,
 ) {
     // Capture Phase
     for current_target in targets.iter().rev() {
-        event.current_target = current_target.clone();
-        call_user_event_handlers(event, event_kind, true);
-        if !event.propagate {
+        event.base_mut().current_target = current_target.clone();
+        call_user_event_handlers(event, true);
+        if event.is_propagation_stopped() {
             break;
         }
     }
 
     // Bubble phase
-    if event.propagate {
+    if !event.is_propagation_stopped() {
         for current_target in targets.iter() {
-            event.current_target = current_target.clone();
-            call_user_event_handlers(event, event_kind, false);
-            if !event.propagate {
+            event.base_mut().current_target = current_target.clone();
+            call_user_event_handlers(event, false);
+            if event.is_propagation_stopped() {
                 break;
             }
         }
     }
 
-    if !event.prevent_defaults {
+    if !event.is_default_prevented() {
         // Call the default on_event element functions.
         for current_target in targets.iter() {
-            event.current_target = current_target.clone();
-            current_target.borrow_mut().on_event(event_kind, text_context, event);
-            if !event.propagate {
+            event.base_mut().current_target = current_target.clone();
+            current_target.borrow_mut().on_event(event, text_context);
+            if event.is_propagation_stopped() {
                 break;
             }
         }
     }
 }
 
-pub(super) fn dispatch_event_once(event: &mut Event, event_kind: &EventKind, text_context: &mut TextContext) {
-    call_user_event_handlers(event, event_kind, true);
-    if event.propagate {
-        call_user_event_handlers(event, event_kind, false);
+pub(super) fn dispatch_event_once(event: &mut EventKind, text_context: &mut TextContext) {
+    call_user_event_handlers(event, true);
+    if !event.is_propagation_stopped() {
+        call_user_event_handlers(event, false);
     }
 
-    if !event.prevent_defaults {
-        let target = event.target.clone();
-        target.borrow_mut().on_event(event_kind, text_context, event);
+    if !event.is_default_prevented() {
+        let target = event.target();
+        target.borrow_mut().on_event(event, text_context);
     }
 }
 
@@ -83,9 +82,9 @@ impl EventDispatcher {
 
     /// Dispatch all queued events.
     pub(crate) fn dispatch_queued_events(&mut self, text_context: &mut TextContext) {
-        while let Some((mut event, message)) = dequeue_event() {
-            let targets = freeze_target_list(event.target.clone());
-            dispatch_event(&mut event, &message, &targets, text_context);
+        while let Some(mut event) = dequeue_event() {
+            let targets = freeze_target_list(event.target());
+            dispatch_event(&mut event, &targets, text_context);
         }
     }
 
@@ -121,9 +120,8 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                let mut event = Event::new(prev_target.clone());
-                let event_kind = EventKind::PointerLeave();
-                dispatch_event_once(&mut event, &event_kind, text_context);
+                let mut event = EventKind::PointerLeave(PointerLeaveEvent::new(prev_target.clone()));
+                dispatch_event_once(&mut event, text_context);
             }
         }
     }
@@ -136,7 +134,7 @@ impl EventDispatcher {
         text_context: &mut TextContext,
     ) {
         match event_kind {
-            EventKind::PointerButtonDown(pb)
+            EventKind::PointerDown(pb)
                 if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
             {
                 if let Some(pointer_id) = pb.pointer.pointer_id {
@@ -146,7 +144,7 @@ impl EventDispatcher {
                 }
             }
 
-            EventKind::PointerButtonUp(pb)
+            EventKind::PointerUp(pb)
                 if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
             {
                 let pointer_id = pb.pointer.pointer_id.unwrap();
@@ -164,11 +162,14 @@ impl EventDispatcher {
                     };
 
                     if let Some(click_target) = click_target {
-                        let mut click_event = Event::new(click_target.clone());
-                        let click_kind = EventKind::Click();
+                        let trigger = ClickTrigger::Pointer {
+                            button: pb.button,
+                            position: pb.position,
+                        };
+                        let mut click_event = EventKind::Click(ClickEvent::new(click_target.clone(), trigger));
                         let click_targets = freeze_target_list(click_target);
 
-                        dispatch_event(&mut click_event, &click_kind, &click_targets, text_context);
+                        dispatch_event(&mut click_event, &click_targets, text_context);
                     }
                 }
 
@@ -209,9 +210,8 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                let mut event = Event::new(target.clone());
-                let event_kind = EventKind::PointerEnter();
-                dispatch_event_once(&mut event, &event_kind, text_context);
+                let mut event = EventKind::PointerEnter(PointerEnterEvent::new(target.clone()));
+                dispatch_event_once(&mut event, text_context);
             }
         }
     }
@@ -221,7 +221,7 @@ impl EventDispatcher {
     #[allow(clippy::too_many_arguments)]
     pub fn dispatch_event(
         &mut self,
-        event_kind: &EventKind,
+        event_kind: &mut EventKind,
         mouse_position: Option<Point>,
         root: Rc<RefCell<dyn ElementInternals>>,
         text_context: &mut TextContext,
@@ -278,18 +278,16 @@ impl EventDispatcher {
             self.maybe_dispatch_pointer_enter(text_context, &targets);
         }
 
-        let mut system_event = Event::new(targets[0].clone());
-        dispatch_event(&mut system_event, event_kind, &targets, text_context);
-        let prevent_defaults = system_event.prevent_defaults;
+        event_kind.retarget(targets[0].clone());
+        dispatch_event(event_kind, &targets, text_context);
+        let prevent_defaults = event_kind.is_default_prevented();
 
-        let dispatched_pointer_up_down_target = if matches!(
-            event_kind,
-            EventKind::PointerButtonUp(_) | EventKind::PointerButtonDown(_)
-        ) {
-            Some(system_event.target.clone())
-        } else {
-            None
-        };
+        let dispatched_pointer_up_down_target =
+            if matches!(event_kind, EventKind::PointerUp(_) | EventKind::PointerDown(_)) {
+                Some(event_kind.target())
+            } else {
+                None
+            };
 
         // NOTE: May dispatch gotpointercapture and lostpointercapture. Handles capturing and bubbling.
         // The event dispatch flow looks like this:

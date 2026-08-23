@@ -6,7 +6,7 @@ use ui_events::pointer::PointerId;
 
 use crate::elements::ElementInternals;
 use crate::events::event_dispatch::dispatch_event;
-use crate::events::{Event, EventKind};
+use crate::events::{EventKind, PointerCaptureEvent};
 use crate::text::text_context::TextContext;
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
@@ -37,7 +37,7 @@ impl PointerCapture {
         // https://w3c.github.io/pointerevents/#implicit-pointer-capture
         //
         let pointer_capture_element_id: Option<Weak<RefCell<dyn ElementInternals>>> = {
-            if matches!(message, EventKind::GotPointerCapture()) {
+            if matches!(message, EventKind::GotPointerCapture(_)) {
                 // Check pending (step 2):
                 // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
                 self.pending_pointer_captures.get(pointer_id).cloned()
@@ -70,10 +70,7 @@ impl PointerCapture {
         if let Some(pointer_capture_val) = pointer_capture_val.clone()
             && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
         {
-            let event_kind = EventKind::LostPointerCapture();
-            let target = self.find_pointer_capture_target(&event_kind, pointer_id);
-
-            if let Some(target) = target {
+            if let Some(target) = pointer_capture_val.upgrade() {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
                 let mut current_target = Some(Rc::clone(&target));
                 while let Some(node) = current_target {
@@ -81,8 +78,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                let mut event = Event::new(target.clone());
-                dispatch_event(&mut event, &event_kind, &targets, text_context);
+                let mut event = EventKind::LostPointerCapture(PointerCaptureEvent::new(target, *pointer_id));
+                dispatch_event(&mut event, &targets, text_context);
             }
 
             did_pointer_capture_change = true;
@@ -93,10 +90,7 @@ impl PointerCapture {
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
             && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
         {
-            let event_kind = EventKind::GotPointerCapture();
-            let target = self.find_pointer_capture_target(&event_kind, pointer_id);
-
-            if let Some(target) = target {
+            if let Some(target) = pending_pointer_capture_val.upgrade() {
                 let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
                 let mut current_target = Some(Rc::clone(&target));
                 while let Some(node) = current_target {
@@ -104,8 +98,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                let mut event = Event::new(target.clone());
-                dispatch_event(&mut event, &event_kind, &targets, text_context);
+                let mut event = EventKind::GotPointerCapture(PointerCaptureEvent::new(target, *pointer_id));
+                dispatch_event(&mut event, &targets, text_context);
             }
 
             did_pointer_capture_change = true;
@@ -131,7 +125,7 @@ impl PointerCapture {
     ) -> bool {
         // 9.5 Implicit release of pointer capture
         // https://w3c.github.io/pointerevents/#implicit-release-of-pointer-capture
-        let is_pointer_up_event = matches!(message, EventKind::PointerButtonUp(_));
+        let is_pointer_up_event = matches!(message, EventKind::PointerUp(_));
         let mut did_pointer_capture_change = false;
         if is_pointer_up_event
         /* || is_pointer_canceled */

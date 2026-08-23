@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Text, Window};
+use retgui::events::Event;
 use retgui::style::{AlignItems, BoxShadow, FlexDirection, JustifyContent};
 use retgui::{Color, RetGuiOptions, pct, px, retgui_main, rgb, rgba};
 
@@ -24,7 +25,7 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .on_click(move |event| {
             *state.borrow_mut() += delta;
             count_text.clone().text(&format!("Count: {}", state.borrow()));
-            event.prevent_propagate();
+            event.stop_propagation();
         })
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
 }

@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use retgui::drivers::headless::run;
 use retgui::elements::{Container, Element, Text, Window};
+use retgui::events::Event;
 use retgui::events::ui_events::pointer::PointerButton;
 use retgui::geometry::Size;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
@@ -17,11 +18,11 @@ fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
         .background_color(base_color)
-        .on_pointer_button_up(move |event, pointer_button_event| {
-            if pointer_button_event.button == Some(PointerButton::Primary) {
+        .on_pointer_button_up(move |event| {
+            if event.button == Some(PointerButton::Primary) {
                 *state.borrow_mut() += delta;
                 count_text.clone().text(&format!("Count: {}", state.borrow()));
-                event.prevent_propagate();
+                event.stop_propagation();
             }
         })
         .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))

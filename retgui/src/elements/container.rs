@@ -4,7 +4,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::{Event, EventKind};
+use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 use retgui_renderer::renderer::Renderer;
@@ -90,8 +90,8 @@ impl ElementInternals for ContainerInner {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, event: &mut Event) {
-        scrollable::handle_scroll_logic(self, message, event);
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(self, event);
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {

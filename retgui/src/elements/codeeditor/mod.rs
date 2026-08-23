@@ -13,7 +13,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, TextInput};
-use crate::events::{Event, EventKind};
+use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
@@ -99,8 +99,8 @@ impl ElementInternals for CodeEditorInner {
         draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, message: &EventKind, _text_context: &mut TextContext, _event: &mut Event) {
-        if let EventKind::TextInputChanged(_) = message {
+    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+        if let EventKind::TextInputChanged(_) = event {
             self.highlight();
         }
     }
