@@ -1,17 +1,16 @@
-use std::cell::RefCell;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
-
 #[cfg(feature = "audio")]
 use retgui::elements::Audio;
 use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui::events::Event;
 use retgui::geometry::Point;
-use retgui::style::{AlignItems, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, Overflow, Position, TextAlign};
-use retgui::{Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
+use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
+use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
+use std::cell::RefCell;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::time::Duration;
 
 use serde::Deserialize;
-
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -19,6 +18,30 @@ pub fn title(str: &str) -> Text {
         .font_weight(FontWeight::BOLD)
         .font_size(20.0)
         .margin(px(0.0), px(0.0), px(5.0), px(0.0))
+}
+
+pub fn animations() -> Text {
+    let gameboy_gradient = |start, end| {
+        Gradient::new_linear(Point::new(start, 0.0), Point::new(end, 0.0)).color_stops(&[
+            ColorStop::new(0.0, Color::from_rgb8(50, 50, 252)),
+            ColorStop::new(0.2, Color::from_rgb8(133, 227, 103)),
+            ColorStop::new(0.4, Color::from_rgb8(255, 82, 232)),
+            ColorStop::new(0.6, Color::from_rgb8(255, 1, 81)),
+            ColorStop::new(0.8, Color::from_rgb8(249, 229, 46)),
+            ColorStop::new(1.0, Color::from_rgb8(240, 240, 240)),
+        ])
+    };
+    let start = gameboy_gradient(-0.5, 1.0);
+    let end = gameboy_gradient(0.0, 1.5);
+    let animation = Animation::new(Duration::from_secs(3), Repeat::Forever, TimingFunction::EaseInOut)
+        .push(KeyFrame::new(0.0).push(StyleVariant::TextBrush(Brush::Gradient(start.clone()))))
+        .push(KeyFrame::new(50.0).push(StyleVariant::TextBrush(Brush::Gradient(end))))
+        .push(KeyFrame::new(100.0).push(StyleVariant::TextBrush(Brush::Gradient(start))));
+
+    Text::new("Animations")
+        .font_size(64.0)
+        .font_weight(FontWeight::BOLD)
+        .animations(vec![animation])
 }
 
 pub fn text_input() -> Container {
@@ -504,6 +527,7 @@ pub fn main() {
         .width(pct(100))
         .height(pct(100))
         .max_width(px(1200.0))
+        .push(animations())
         .push(audio())
         .push(Calendar::new().start_year(1950))
         .push(text_input())

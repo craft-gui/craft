@@ -15,7 +15,7 @@ use crate::app::queue_event;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{AsElement, DynElement};
 use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
-use crate::style::{AlignContent, AlignItems, AlignSelf, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
+use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
@@ -585,6 +585,11 @@ pub trait Element: Clone + AsElement {
 
     fn scrollbar_width(self, scrollbar_width: f32) -> Self {
         self.borrow_mut().set_scrollbar_width(scrollbar_width);
+        self
+    }
+
+    fn animations(self, animations: Vec<Animation>) -> Self {
+        self.borrow_mut().set_animations(animations);
         self
     }
 

@@ -2,12 +2,12 @@ mod text_input_state;
 
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle};
+use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 use std::cell::{Ref, RefCell, RefMut};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-use retgui_renderer::text_renderer_data::{TextData, TextScroll};
+use std::time::Duration;
 
 use parley::BoundingBox;
 
@@ -20,7 +20,7 @@ use retgui_resource_manager::ResourceManager;
 
 use winit::event::Ime;
 
-use crate::app::{ELEMENTS, request_apply_layout};
+use crate::app::{ELEMENTS, WINDOW_MANAGER, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
@@ -28,7 +28,7 @@ use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
-use crate::style::{Display, Style, Unit};
+use crate::style::{Animation, Display, Repeat, Style, TimingFunction, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
@@ -245,7 +245,7 @@ impl ElementInternals for TextInputInner {
                 self.me.clone(),
                 content_rectangle.scale(_scale_factor),
                 text_scroll,
-                self.is_focused(),
+                self.is_focused() && self.state.cursor_visible(),
             );
         }
 
@@ -308,6 +308,12 @@ impl ElementInternals for TextInputInner {
         }
 
         match event {
+            EventKind::Focus(_) => {
+                self.start_cursor_blink();
+            }
+            EventKind::Unfocus(_) => {
+                self.stop_cursor_blink();
+            }
             EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
                 if !self.state.editor().is_composing() =>
             {
@@ -381,9 +387,72 @@ impl ElementInternals for TextInputInner {
         let style = self.element_data.style.clone();
         self.state.set_style(&style);
     }
+
+    fn animation_tick(&mut self, delta: Duration) {
+        let mut animations = std::mem::take(&mut self.element_data.animations);
+        for animation in &mut animations {
+            animation.tick(delta);
+            if animation.key_frames.len() >= 2 {
+                animation.apply_styles(&mut |style| self.set_style_variant(style));
+            }
+        }
+        self.element_data.animations = animations;
+
+        if self.is_focused() {
+            if !self.state.is_blinking() {
+                self.state.reset_blink();
+            }
+            self.state.cursor_blink();
+        } else {
+            self.state.disable_blink();
+        }
+    }
 }
 
 impl TextInputInner {
+    /// Starts the cursor blink animation.
+    fn start_cursor_blink(&mut self) {
+        self.state.reset_blink();
+
+        if self
+            .element_data
+            .animations
+            .iter()
+            .any(|animation| animation.key_frames.is_empty())
+        {
+            return;
+        }
+
+        let should_schedule = self.element_data.animations.is_empty();
+        self.element_data.animations.push(Animation::new(
+            Duration::from_millis(500),
+            Repeat::Forever,
+            TimingFunction::Linear,
+        ));
+        if should_schedule {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.schedule_element_animations(self.element_data.me.clone());
+            });
+        }
+        self.request_window_redraw();
+    }
+
+    /// Stops the cursor blink animation.
+    fn stop_cursor_blink(&mut self) {
+        self.state.disable_blink();
+
+        let had_animations = !self.element_data.animations.is_empty();
+        self.element_data
+            .animations
+            .retain(|animation| !animation.key_frames.is_empty());
+        if had_animations && self.element_data.animations.is_empty() {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.cancel_element_animations(&self.element_data.me);
+            });
+        }
+        self.request_window_redraw();
+    }
+
     pub fn new(text: &str) -> Rc<RefCell<Self>> {
         let default_style = TextInputInner::get_default_style();
 

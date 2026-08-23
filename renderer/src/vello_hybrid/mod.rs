@@ -157,11 +157,7 @@ impl Renderer for VelloHybridRenderer {
 
         let (renderer, resources) = self.renderers[surface.dev_id].as_mut().unwrap();
         let device_handle = &self.context.devices[surface.dev_id];
-        let mut encoder = device_handle
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Blit Textures onto a Texture Atlas Encoder"),
-            });
+        let mut image_encoder = None;
 
         let render_list = &self.render_list;
         SortedCommands::draw(render_list, &render_list.overlay, &mut |command: &RenderCommand| {
@@ -177,7 +173,7 @@ impl Renderer for VelloHybridRenderer {
                         &mut self.resource_mapper,
                         resources,
                         renderer,
-                        &mut encoder,
+                        &mut image_encoder,
                         device_handle,
                     ) {
                         draw_image(cmd, &mut self.scene, resource_manager.clone(), resource_id);
@@ -209,15 +205,30 @@ impl Renderer for VelloHybridRenderer {
             }
         });
 
-        VelloHybridRenderer::delete_unseen_resources(
-            &mut self.resources_seen,
-            renderer,
-            &mut encoder,
-            resources,
-            &mut self.resource_mapper,
-        );
+        let has_unseen_resources = self
+            .resource_mapper
+            .get_all_renderer_resource_ids()
+            .any(|resource_id| !self.resources_seen.contains(resource_id));
+        if has_unseen_resources {
+            let encoder = image_encoder.get_or_insert_with(|| {
+                device_handle
+                    .device
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Update image atlas encoder"),
+                    })
+            });
+            VelloHybridRenderer::delete_unseen_resources(
+                &mut self.resources_seen,
+                renderer,
+                encoder,
+                resources,
+                &mut self.resource_mapper,
+            );
+        }
 
-        device_handle.queue.submit([encoder.finish()]);
+        if let Some(encoder) = image_encoder {
+            device_handle.queue.submit([encoder.finish()]);
+        }
     }
 
     fn submit(&mut self, _resource_manager: Arc<ResourceManager>) {

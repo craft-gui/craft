@@ -6,9 +6,13 @@ use parley::GenericFamily;
 
 use retgui_primitives::brush::Brush;
 
+pub use animations::animation::{Animation, Repeat};
+pub use animations::keyframe::KeyFrame;
+pub use animations::timing_function::TimingFunction;
 pub use box_shadow::BoxShadow;
 pub use styles::*;
 
+mod animations;
 mod box_shadow;
 mod gummy_conversions;
 mod styles;
@@ -265,7 +269,7 @@ pub enum Position {
 }
 
 #[derive(Clone, Debug)]
-pub struct StyleProperty<T>
+struct StyleProperty<T>
 where
     T: Clone + Debug,
 {
@@ -277,7 +281,7 @@ impl<T> StyleProperty<T>
 where
     T: Clone + Debug,
 {
-    pub fn new(property: T) -> StyleProperty<T> {
+    fn new(property: T) -> StyleProperty<T> {
         Self {
             property,
             is_dirty: false,
@@ -285,18 +289,18 @@ where
     }
 
     #[inline(always)]
-    pub fn set(&mut self, property: T) {
+    fn set(&mut self, property: T) {
         self.property = property;
         self.is_dirty = true;
     }
 
     #[inline(always)]
-    pub fn get(&self) -> &T {
+    fn get(&self) -> &T {
         &self.property
     }
 
     #[inline(always)]
-    pub fn is_dirty(&self) -> bool {
+    fn is_dirty(&self) -> bool {
         self.is_dirty
     }
 }

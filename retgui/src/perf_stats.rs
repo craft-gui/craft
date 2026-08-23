@@ -15,7 +15,7 @@ use retgui_renderer::text_renderer_data::TextData;
 use web_time::{Duration, Instant};
 
 use crate::Color;
-use crate::elements::{ElementInternals, Text};
+use crate::elements::{ElementData as _, ElementInternals, Text};
 use crate::text::text_context::TextContext;
 
 const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
@@ -258,9 +258,10 @@ impl PerfStats {
             },
             text_context,
         );
+        let text_brush = text_inner.element_data().style.get_text_brush();
         text_inner
             .state
-            .try_update_text_render(text_context, Brush::Color(Color::TRANSPARENT));
+            .try_update_text_render(text_context, Brush::Color(Color::TRANSPARENT), text_brush, true);
 
         Size::new(size.width, size.height)
     }

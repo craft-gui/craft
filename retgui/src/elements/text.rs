@@ -73,6 +73,7 @@ pub struct TextState {
     last_requested_measure_key: Option<TextHashKey>,
     current_render_key: Option<TextHashKey>,
     content_widths: Option<ContentWidths>,
+    use_glyph_cache: bool,
     /// The last known cursor position.
     ///
     /// The cursor is assumed to start at (0.0, 0.0). The cursor_pos may return points
@@ -118,6 +119,10 @@ impl TextData for TextInner {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }
+
+    fn use_glyph_cache(&self) -> bool {
+        self.state.use_glyph_cache
+    }
 }
 
 impl Default for TextState {
@@ -134,6 +139,7 @@ impl Default for TextState {
             last_requested_measure_key: None,
             current_render_key: None,
             content_widths: None,
+            use_glyph_cache: true,
             last_click_time: None,
             click_count: 0,
             pointer_down: false,
@@ -182,6 +188,13 @@ impl ElementInternals for TextInner {
             gummy_tree.mark_seen(node);
         }
 
+        // It is slower to cache animating glyphs.
+        let use_glyph_cache = !self
+            .element_data
+            .animations
+            .iter()
+            .any(|animation| !animation.is_finished() && animation.animates_font_size());
+
         let state: &mut TextState = &mut self.state;
         if state.current_layout_key != state.last_requested_measure_key {
             state.layout(
@@ -190,7 +203,12 @@ impl ElementInternals for TextInner {
             );
         }
 
-        state.try_update_text_render(text_context, self.element_data.style.get_selection_brush());
+        state.try_update_text_render(
+            text_context,
+            self.element_data.style.get_selection_brush(),
+            self.element_data.style.get_text_brush(),
+            use_glyph_cache,
+        );
     }
 
     fn draw(
@@ -303,11 +321,11 @@ impl ElementInternals for TextInner {
     }
 
     fn set_text_brush(&mut self, brush: Brush) {
-        // TODO: Fix this. Clearing cache is not needed here.
-        self.state.is_layout_dirty = true;
-        self.state.is_render_dirty = true;
-        self.style_mut().set_text_brush(brush);
-        self.update_gummy_style();
+        self.style_mut().set_text_brush(brush.clone());
+        if let Some(text_render) = &mut self.state.text_render {
+            text_render.override_brush = Some(brush);
+        }
+        self.request_window_redraw();
     }
 
     fn on_text_style_changed(&mut self) {
@@ -520,13 +538,23 @@ impl TextState {
         size
     }
 
-    pub fn try_update_text_render(&mut self, _text_context: &mut TextContext, selection_brush: Brush) {
+    pub fn try_update_text_render(
+        &mut self,
+        _text_context: &mut TextContext,
+        selection_brush: Brush,
+        text_brush: Brush,
+        use_glyph_cache: bool,
+    ) {
+        self.use_glyph_cache = use_glyph_cache;
+
         if self.current_render_key == self.current_layout_key {
             return;
         }
 
         let layout = self.layout.as_ref().unwrap();
-        self.text_render = Some(text_render_data::from_editor(layout));
+        let mut text_render = text_render_data::from_editor(layout);
+        text_render.override_brush = Some(text_brush);
+        self.text_render = Some(text_render);
         self.current_render_key = self.current_layout_key;
 
         self.update_text_selection(selection_brush);

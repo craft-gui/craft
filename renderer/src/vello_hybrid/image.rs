@@ -24,7 +24,7 @@ pub(crate) fn upload_image(
     resource_mapper: &mut ResourceMapper,
     resources: &mut Resources,
     renderer: &mut VelloRenderer,
-    encoder: &mut CommandEncoder,
+    encoder: &mut Option<CommandEncoder>,
     device_handle: &DeviceHandle,
 ) -> Option<RendererResourceId> {
     let resource = resource_manager.get(&cmd.resource_id)?;
@@ -34,6 +34,13 @@ pub(crate) fn upload_image(
     let resource_id = if let Some(resource_id) = resource_mapper.get(&cmd.resource_id) {
         resource_id
     } else {
+        let encoder = encoder.get_or_insert_with(|| {
+            device_handle
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Update image atlas encoder"),
+                })
+        });
         let premul_data: Vec<PremulRgba8> = image
             .image
             .as_chunks::<4>()

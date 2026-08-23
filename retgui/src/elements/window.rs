@@ -87,6 +87,9 @@ pub struct WindowInternal {
     mouse_positon: Option<Point>,
     element_data: ElementData,
     pub(crate) modifiers: Modifiers,
+
+    /// The last time a frame was drawn.
+    last_frame_time: Instant,
 }
 
 impl Clone for WindowInternal {
@@ -247,6 +250,18 @@ impl Window {
         self.inner.borrow().redraw_requested()
     }
 
+    pub(crate) fn animation_delta(&self) -> Duration {
+        let now = Instant::now();
+        let mut inner = self.inner.borrow_mut();
+        let delta = now - inner.last_frame_time;
+        inner.last_frame_time = now;
+        delta
+    }
+
+    pub(crate) fn reset_animation_clock(&self) {
+        self.inner.borrow_mut().last_frame_time = Instant::now();
+    }
+
     pub fn zoom_in(&self) {
         self.inner.borrow_mut().zoom_in()
     }
@@ -308,6 +323,7 @@ impl WindowInternal {
                 renderer_type,
                 pointer_capture: Default::default(),
                 modifiers: Default::default(),
+                last_frame_time: Instant::now(),
             })
         });
 

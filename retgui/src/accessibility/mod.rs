@@ -153,7 +153,7 @@ mod tests {
         let click_count = Rc::new(Cell::new(0));
         button.inner.borrow_mut().on_click({
             let click_count = click_count.clone();
-            Rc::new(move |event| {
+            Rc::new(move |_event| {
                 let next_count = click_count.get() + 1;
                 click_count.set(next_count);
                 if next_count == 1 {

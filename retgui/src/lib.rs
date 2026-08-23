@@ -20,13 +20,12 @@ pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 
+use retgui_logging::info;
 #[cfg(target_os = "android")]
 use std::cell::RefCell;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-
-use retgui_logging::info;
 
 use retgui_resource_manager::ResourceManager;
 
