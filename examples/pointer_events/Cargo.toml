@@ -9,8 +9,6 @@ name = "pointer_events"
 path = "main.rs"
 
 [dependencies]
-util = { path = "../util" }
-
 [dependencies.retgui]
 path = "../../retgui"
 default-features = false
