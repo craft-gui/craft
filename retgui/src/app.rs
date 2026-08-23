@@ -379,12 +379,10 @@ impl App {
             ElementState::Released => EventKind::KeyUp(event),
         };
         let prevent_defaults = self.dispatch_event(window.clone(), event);
-        if !prevent_defaults {
-            if let Some(target) = navigation_target {
-                target.borrow_mut().focus();
-                scrollable::handle_accessibility_scroll_event(&mut *target.borrow_mut(), &AccessEvent::ScrollIntoView);
-                window.request_redraw();
-            }
+        if !prevent_defaults && let Some(target) = navigation_target {
+            target.borrow_mut().focus();
+            scrollable::handle_accessibility_scroll_event(&mut *target.borrow_mut(), &AccessEvent::ScrollIntoView);
+            window.request_redraw();
         }
     }
 
