@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::{Rc, Weak};
 
-use ui_events::pointer::PointerId;
+use crate::events::PointerId;
 
 use crate::elements::ElementInternals;
 use crate::events::event_dispatch::dispatch_event;

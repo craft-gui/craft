@@ -11,10 +11,11 @@ pub use retgui_runtime::{self, RetGuiRuntime};
 
 pub use image;
 
+pub use winit::cursor::{Cursor, CursorIcon};
 pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
 #[cfg(target_os = "android")]
 pub use winit::platform::android::activity::*;
-pub use winit::window::{Cursor, CursorIcon, Window as WinitWindow, WindowAttributes};
+pub use winit::window::{Window as WinitWindow, WindowAttributes};
 
 pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
@@ -150,7 +151,6 @@ fn create_app(retgui_options: RetGuiOptions) -> App {
         ACCESS_TREE.with(|access_tree| (access_tree.event_dispatcher.clone(), access_tree.text_context.clone()));
 
     App {
-        event_reducer: Default::default(),
         event_dispatcher,
         app_sender: app_sender.clone(),
         event_receiver: winit_receiver,

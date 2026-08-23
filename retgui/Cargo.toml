@@ -103,16 +103,6 @@ features = []
 workspace = true
 features = ["android-native-activity"]
 
-[dependencies.ui-events]
-git = "https://github.com/endoli/ui-events"
-rev = "d2dc8ba005a21870c5e4a7221cadf08fbf5f9ae7"
-features = ["kurbo"]
-
-[dependencies.ui-events-winit]
-git = "https://github.com/endoli/ui-events"
-rev = "d2dc8ba005a21870c5e4a7221cadf08fbf5f9ae7"
-features = []
-
 [dependencies.parley]
 git = "https://github.com/linebender/parley.git"
 rev = "a0752c7bdc3ad88dac19fc194d2b8e57e59bea2e"

@@ -16,7 +16,7 @@ use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals};
-use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind};
+use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind, PointerButton, PointerId};
 use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
@@ -24,7 +24,6 @@ use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
-use ui_events::pointer::PointerId;
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
@@ -298,7 +297,7 @@ impl ElementInternals for DropdownInner {
         // Take focus if clicked.
         if let EventKind::PointerDown(pointer_button) = event {
             self.focus();
-            if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) {
+            if pointer_button.button == Some(PointerButton::Left) {
                 pointer_button.stop_propagation();
             }
         }

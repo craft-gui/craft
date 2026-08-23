@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::num::NonZeroUsize;
 use std::ops::Range;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
@@ -12,7 +13,8 @@ use retgui_primitives::geometry::{Point, Rectangle};
 
 use retgui_renderer::text_renderer_data::TextRender;
 
-use ui_events::keyboard::{Key, Modifiers, NamedKey};
+use winit::keyboard::{Key, ModifiersState, NamedKey};
+use winit::window::ImeSurroundingText;
 
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
@@ -35,7 +37,6 @@ pub struct TextInputState {
     origin: Point,
 
     pub is_active: bool,
-    #[allow(dead_code)]
     pub(crate) ime_state: ImeState,
     pub(crate) editor: PlainEditor,
 
@@ -56,7 +57,7 @@ pub struct TextInputState {
     pointer_down: bool,
     cursor_pos: Point,
     cursor_visible: bool,
-    modifiers: Option<Modifiers>,
+    modifiers: Option<ModifiersState>,
     start_time: Option<Instant>,
     blink_period: Duration,
 
@@ -127,7 +128,6 @@ impl Default for TextInputState {
 
 #[derive(Clone, Default, Debug, Copy)]
 pub(crate) struct ImeState {
-    #[allow(dead_code)]
     pub is_ime_active: bool,
 }
 
@@ -451,7 +451,7 @@ impl TextInputState {
         self.pointer_down
     }
 
-    fn generate_text_changed_event(&self, element_data: &ElementData) {
+    pub(super) fn generate_text_changed_event(&self, element_data: &ElementData) {
         let target = element_data.me.upgrade().unwrap();
         queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
             target,
@@ -476,10 +476,10 @@ impl TextInputState {
             .map(|mods| {
                 if IS_MAC {
                     // mac: cmd for actions, alt for words
-                    (mods.shift(), mods.meta(), mods.alt())
+                    (mods.shift_key(), mods.meta_key(), mods.alt_key())
                 } else {
                     // windows/linux: Ctrl for both
-                    (mods.shift(), mods.ctrl(), mods.ctrl())
+                    (mods.shift_key(), mods.control_key(), mods.control_key())
                 }
             })
             .unwrap_or_default();
@@ -707,6 +707,118 @@ impl TextInputState {
             self.driver(text_context).set_compose(text, *cursor);
         }
         self.clear_cache();
+    }
+
+    pub fn ime_delete_surrounding(
+        &mut self,
+        text_context: &mut TextContext,
+        before_bytes: usize,
+        after_bytes: usize,
+    ) -> bool {
+        let compose = self.editor.raw_compose().as_ref().and_then(|range| {
+            let text = self.editor.raw_text().get(range.clone())?.to_owned();
+            let selection = self.editor.raw_selection();
+            let anchor = selection.anchor().index().checked_sub(range.start)?;
+            let focus = selection.focus().index().checked_sub(range.start)?;
+            (anchor <= text.len() && focus <= text.len()).then_some((text, (anchor, focus)))
+        });
+
+        let selection_range = if let Some(compose) = self.editor.raw_compose() {
+            compose.start..compose.start
+        } else {
+            self.editor.raw_selection().text_range()
+        };
+        let committed_len = self.editor.raw_text().len() - self.editor.raw_compose().as_ref().map_or(0, Range::len);
+        let delete_start = selection_range.start.saturating_sub(before_bytes);
+        let delete_end = selection_range.end.saturating_add(after_bytes).min(committed_len);
+        let committed_text_is_boundary = |index: usize| {
+            if let Some(compose) = self.editor.raw_compose() {
+                let raw_index = if index < compose.start {
+                    index
+                } else {
+                    index.saturating_add(compose.len())
+                };
+                self.editor.raw_text().is_char_boundary(raw_index)
+            } else {
+                self.editor.raw_text().is_char_boundary(index)
+            }
+        };
+        if !committed_text_is_boundary(delete_start) || !committed_text_is_boundary(delete_end) {
+            return false;
+        }
+        if delete_start == selection_range.start && delete_end == selection_range.end {
+            return false;
+        }
+
+        let mut driver = self.driver(text_context);
+        if compose.is_some() {
+            driver.clear_compose();
+        }
+        if let Some(after_bytes) = NonZeroUsize::new(after_bytes) {
+            driver.delete_bytes_after_selection(after_bytes);
+        }
+        if let Some(before_bytes) = NonZeroUsize::new(before_bytes) {
+            driver.delete_bytes_before_selection(before_bytes);
+        }
+        if let Some((text, cursor)) = compose {
+            driver.set_compose(&text, Some(cursor));
+        }
+        self.clear_cache();
+        true
+    }
+
+    pub(super) fn ime_surrounding_text(&self) -> Option<ImeSurroundingText> {
+        let mut text = self.editor.raw_text().to_owned();
+        let selection = self.editor.raw_selection();
+        let (cursor, mut anchor) = if let Some(compose) = self.editor.raw_compose() {
+            let insertion = compose.start;
+            text.replace_range(compose.clone(), "");
+            (insertion, insertion)
+        } else {
+            (selection.focus().index(), selection.anchor().index())
+        };
+
+        // Keep the caret centered within winit's surrounding-text byte limit.
+        // A selection larger than the limit cannot be represented, so expose it
+        // as a collapsed selection at the caret.
+        let max_bytes = ImeSurroundingText::MAX_TEXT_BYTES.saturating_sub(1);
+        let selection_start = cursor.min(anchor);
+        let selection_end = cursor.max(anchor);
+        if selection_end - selection_start > max_bytes {
+            anchor = cursor;
+        }
+
+        let represented_start = cursor.min(anchor);
+        let represented_end = cursor.max(anchor);
+        let spare = max_bytes.saturating_sub(represented_end - represented_start);
+        let mut start = represented_start.saturating_sub(spare / 2);
+        while start < represented_start && !text.is_char_boundary(start) {
+            start += 1;
+        }
+        let mut end = text.len().min(start.saturating_add(max_bytes));
+        while end > represented_end && !text.is_char_boundary(end) {
+            end -= 1;
+        }
+
+        if anchor < start || anchor > end {
+            anchor = cursor;
+        }
+        ImeSurroundingText::new(text.get(start..end)?.to_owned(), cursor - start, anchor - start).ok()
+    }
+
+    pub(super) fn ime_cursor_area(&self, fallback: Rectangle, scroll_y: f32) -> Rectangle {
+        let Some(layout) = self.editor.try_layout() else {
+            return fallback;
+        };
+        let cursor = parley_box_to_rect(self.editor.raw_selection().focus().geometry(layout, 1.0));
+        let scale_factor = self.scale_factor as f32;
+
+        Rectangle::new(
+            self.origin.x as f32 + cursor.x / scale_factor,
+            self.origin.y as f32 + cursor.y / scale_factor - scroll_y,
+            (cursor.width / scale_factor).max(f32::EPSILON),
+            (cursor.height / scale_factor).max(f32::EPSILON),
+        )
     }
 
     pub fn disable_ime(&mut self, text_context: &mut TextContext) {

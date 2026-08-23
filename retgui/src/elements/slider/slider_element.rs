@@ -11,7 +11,8 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use ui_events::keyboard::{Code, KeyState};
+use winit::event::ElementState;
+use winit::keyboard::KeyCode;
 
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
@@ -444,17 +445,17 @@ impl ElementInternals for SliderInner {
     fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         match event {
             EventKind::KeyDown(key) | EventKind::KeyUp(key) => {
-                if key.state != KeyState::Down || !self.is_focused() {
+                if key.state != ElementState::Pressed || !self.is_focused() {
                     return;
                 }
 
                 let new_value = match key.code {
-                    Code::ArrowUp | Code::ArrowRight => Some(self.compute_step(1, self.value)),
-                    Code::ArrowDown | Code::ArrowLeft => Some(self.compute_step(-1, self.value)),
-                    Code::Home => Some(self.min),
-                    Code::End => Some(self.max),
-                    Code::PageUp => Some(self.compute_step(10, self.value)),
-                    Code::PageDown => Some(self.compute_step(-10, self.value)),
+                    KeyCode::ArrowUp | KeyCode::ArrowRight => Some(self.compute_step(1, self.value)),
+                    KeyCode::ArrowDown | KeyCode::ArrowLeft => Some(self.compute_step(-1, self.value)),
+                    KeyCode::Home => Some(self.min),
+                    KeyCode::End => Some(self.max),
+                    KeyCode::PageUp => Some(self.compute_step(10, self.value)),
+                    KeyCode::PageDown => Some(self.compute_step(-10, self.value)),
                     _ => None,
                 };
 

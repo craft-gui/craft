@@ -21,11 +21,8 @@ use issho::AccessEvent;
 
 use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
 
-use ui_events::keyboard::{KeyState, KeyboardEvent as UiKeyboardEvent};
-use ui_events::pointer::{PointerButtonEvent as UiPointerButtonEvent, PointerEvent, PointerScrollEvent as UiPointerScrollEvent, PointerUpdate};
-use ui_events_winit::{WindowEventReducer, WindowEventTranslation};
-
-use winit::event::{Ime, WindowEvent};
+use winit::dpi::PhysicalPosition;
+use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 
 use crate::RetGuiOptions;
@@ -33,7 +30,7 @@ use crate::RetGuiOptions;
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
 use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable};
 use crate::events::internal::InternalMessage;
-use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerMovedEvent, PointerScrollEvent};
+use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 #[cfg(target_arch = "wasm32")]
@@ -61,7 +58,6 @@ fn audio_ui_update_due(last_update: Option<Instant>, now: Instant) -> bool {
 }
 
 pub struct App {
-    pub(crate) event_reducer: WindowEventReducer,
     pub(crate) event_dispatcher: Rc<RefCell<EventDispatcher>>,
     /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
     pub(crate) text_context: Rc<RefCell<Option<TextContext>>>,
@@ -98,34 +94,60 @@ pub(crate) enum WindowEventResult {
 impl App {
     /// Handle window events.
     pub(crate) fn on_window_event(&mut self, window: Window, event: WindowEvent) -> WindowEventResult {
-        if !matches!(
-            event,
+        if matches!(
+            &event,
             WindowEvent::KeyboardInput {
                 is_synthetic: true,
                 ..
             }
         ) {
-            match self.event_reducer.reduce(window.effective_scale_factor(), &event) {
-                Some(WindowEventTranslation::Keyboard(keyboard_event)) => {
-                    self.on_keyboard_input(window, keyboard_event);
-                    return WindowEventResult::Continue;
-                }
-                Some(WindowEventTranslation::Pointer(pointer_event)) => {
-                    match pointer_event {
-                        PointerEvent::Down(event) => self.on_pointer_button(window, event, false),
-                        PointerEvent::Up(event) => self.on_pointer_button(window, event, true),
-                        PointerEvent::Move(event) => self.on_pointer_moved(window, event),
-                        PointerEvent::Scroll(event) => self.on_pointer_scroll(window, event),
-                        PointerEvent::Cancel(_) | PointerEvent::Enter(_) | PointerEvent::Leave(_) => {}
-                        PointerEvent::Gesture(_) => {}
-                    }
-                    return WindowEventResult::Continue;
-                }
-                _ => {}
-            }
+            return WindowEventResult::Continue;
         }
 
         match event {
+            WindowEvent::KeyboardInput { event, .. } => self.on_keyboard_input(window, event),
+            WindowEvent::ModifiersChanged(modifiers) => {
+                window.inner.borrow_mut().update_modifiers(modifiers.state());
+            }
+            WindowEvent::PointerMoved {
+                position,
+                primary,
+                source,
+                ..
+            } => {
+                let scale_factor = window.effective_scale_factor();
+                let pointer = PointerInfo::from_source(&source, primary);
+                self.on_pointer_moved(window, pointer, PointerState::new(position, scale_factor));
+            }
+            WindowEvent::PointerButton {
+                state,
+                position,
+                primary,
+                button,
+                ..
+            } => {
+                let scale_factor = window.effective_scale_factor();
+                let pointer = PointerInfo::from_button(&button, primary);
+                self.on_pointer_button(
+                    window,
+                    button.clone().mouse_button(),
+                    pointer,
+                    PointerState::new(position, scale_factor),
+                    state == ElementState::Released,
+                );
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                let scale_factor = window.effective_scale_factor();
+                let logical_position = window.mouse_position().unwrap_or_default();
+                let physical_position =
+                    PhysicalPosition::new(logical_position.x * scale_factor, logical_position.y * scale_factor);
+                self.on_pointer_scroll(
+                    window,
+                    PointerInfo::new(PointerKind::Mouse, true),
+                    delta,
+                    PointerState::new(physical_position, scale_factor),
+                );
+            }
             WindowEvent::CloseRequested => {
                 return WINDOW_MANAGER.with_borrow_mut(|window_manager| {
                     window_manager.close_window(&window);
@@ -139,13 +161,18 @@ impl App {
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 self.on_scale_factor_changed(window, scale_factor);
             }
-            WindowEvent::Resized(new_size) => {
+            WindowEvent::SurfaceResized(new_size) => {
                 self.on_resize(window, Size::new(new_size.width as f32, new_size.height as f32));
             }
             WindowEvent::Ime(ime) => self.on_ime(window, ime),
             WindowEvent::RedrawRequested => self.on_request_redraw(window),
             WindowEvent::Moved(_) => self.on_move(window),
-            WindowEvent::Focused(focused) => window.on_focused(focused),
+            WindowEvent::Focused(focused) => {
+                if !focused {
+                    window.inner.borrow_mut().ime_composing = false;
+                }
+                window.on_focused(focused);
+            }
             _ => {}
         }
 
@@ -160,7 +187,7 @@ impl App {
         window.on_scale_factor_changed(scale_factor);
     }
 
-    pub fn on_resume(&mut self, event_loop: Option<&ActiveEventLoop>) {
+    pub fn on_resume(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
         self.active = true;
         self.setup_text_context();
 
@@ -169,7 +196,7 @@ impl App {
         });
     }
 
-    pub fn on_about_to_wait(&mut self, event_loop: Option<&ActiveEventLoop>) {
+    pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
         self.runtime.update_local_set();
         self.process_messages();
         self.process_external_work();
@@ -209,8 +236,8 @@ impl App {
                     WINDOW_MANAGER.with_borrow_mut(|window_manager| {
                         let window = window_manager.get_window_by_id(winit_window.id()).unwrap();
                         let size = Size::new(
-                            winit_window.inner_size().width as f32,
-                            winit_window.inner_size().height as f32,
+                            winit_window.surface_size().width as f32,
+                            winit_window.surface_size().height as f32,
                         );
                         window.inner.borrow_mut().on_renderer_created(renderer, size);
                     });
@@ -264,7 +291,7 @@ impl App {
         });
     }
 
-    pub fn on_suspended(&mut self, _event_loop: &ActiveEventLoop) {
+    pub fn on_suspended(&mut self, _event_loop: &dyn ActiveEventLoop) {
         self.active = false;
     }
 
@@ -280,17 +307,30 @@ impl App {
 
     pub fn on_move(&mut self, _window: Window) {}
 
-    pub fn on_pointer_scroll(&mut self, window: Window, pointer_scroll_update: UiPointerScrollEvent) {
+    pub fn on_pointer_scroll(
+        &mut self,
+        window: Window,
+        pointer: PointerInfo,
+        delta: winit::event::MouseScrollDelta,
+        state: PointerState,
+    ) {
+        let pointer_scroll_update = PointerScrollEvent::new(window.inner.clone(), pointer, delta, state);
         if window.inner.borrow_mut().maybe_zoom(&pointer_scroll_update) {
             return;
         }
-        let event = PointerScrollEvent::new(window.inner.clone(), pointer_scroll_update);
-        self.dispatch_event(window, EventKind::PointerScroll(event));
+        self.dispatch_event(window, EventKind::PointerScroll(pointer_scroll_update));
     }
 
-    pub fn on_pointer_button(&mut self, window: Window, pointer_event: UiPointerButtonEvent, is_up: bool) {
-        let cursor_position = pointer_event.state.logical_point();
-        let pointer_event = PointerButtonEvent::new(window.inner.clone(), pointer_event);
+    pub fn on_pointer_button(
+        &mut self,
+        window: Window,
+        button: Option<winit::event::MouseButton>,
+        pointer: PointerInfo,
+        state: PointerState,
+        is_up: bool,
+    ) {
+        let cursor_position = state.logical_point();
+        let pointer_event = PointerButtonEvent::new(window.inner.clone(), button, pointer, state);
 
         let event = if is_up {
             EventKind::PointerUp(pointer_event)
@@ -302,34 +342,44 @@ impl App {
         self.dispatch_event(window.clone(), event);
     }
 
-    pub fn on_pointer_moved(&mut self, window: Window, mouse_moved: PointerUpdate) {
-        window.set_mouse_position(Some(mouse_moved.current.logical_point()));
-        let event = PointerMovedEvent::new(window.inner.clone(), mouse_moved);
+    pub fn on_pointer_moved(&mut self, window: Window, pointer: PointerInfo, state: PointerState) {
+        window.set_mouse_position(Some(state.logical_point()));
+        let event = PointerMovedEvent::new(window.inner.clone(), pointer, state);
         self.dispatch_event(window.clone(), EventKind::PointerMoved(event));
     }
 
     pub fn on_ime(&mut self, window: Window, ime: Ime) {
+        if let Some(is_composing) = match &ime {
+            Ime::Preedit(text, _) => Some(!text.is_empty()),
+            Ime::Enabled | Ime::Commit(_) | Ime::Disabled => Some(false),
+            _ => None,
+        } {
+            window.inner.borrow_mut().ime_composing = is_composing;
+        }
         let event = ImeEvent::new(window.inner.clone(), ime);
         self.dispatch_event(window.clone(), EventKind::Ime(event));
     }
 
-    pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: UiKeyboardEvent) {
-        window.inner.borrow_mut().update_modifiers(&keyboard_input);
-        if window.inner.borrow_mut().maybe_toggle_perf_stats(&keyboard_input) {
-            return;
-        }
-        if window.inner.borrow_mut().maybe_zoom_keyboard(&keyboard_input) {
-            return;
-        }
+    pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyEvent) {
+        let (modifiers, is_composing) = {
+            let window = window.inner.borrow();
+            (window.modifiers, window.ime_composing)
+        };
         let state = keyboard_input.state;
-        let event = KeyboardEvent::new(window.inner.clone(), keyboard_input.clone());
+        let event = KeyboardEvent::new(window.inner.clone(), keyboard_input, modifiers, is_composing);
+        if window.inner.borrow_mut().maybe_toggle_perf_stats(&event) {
+            return;
+        }
+        if window.inner.borrow_mut().maybe_zoom_keyboard(&event) {
+            return;
+        }
+        let navigation_target = window.inner.borrow().tab_navigation_target(&event);
         let event = match state {
-            KeyState::Down => EventKind::KeyDown(event),
-            KeyState::Up => EventKind::KeyUp(event),
+            ElementState::Pressed => EventKind::KeyDown(event),
+            ElementState::Released => EventKind::KeyUp(event),
         };
         let prevent_defaults = self.dispatch_event(window.clone(), event);
         if !prevent_defaults {
-            let navigation_target = window.inner.borrow().tab_navigation_target(&keyboard_input);
             if let Some(target) = navigation_target {
                 target.borrow_mut().focus();
                 scrollable::handle_accessibility_scroll_event(&mut *target.borrow_mut(), &AccessEvent::ScrollIntoView);
@@ -371,7 +421,7 @@ impl App {
             self.text_context.borrow_mut().as_mut().unwrap(),
             self.resource_manager.clone(),
         );
-        
+
         if has_active_animations && window.winit_window().is_some() {
             window.request_redraw();
         }

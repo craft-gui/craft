@@ -23,12 +23,9 @@ use peniko::Color;
 
 use gummy::AvailableSpace;
 
-use ui_events::ScrollDelta;
-use ui_events::ScrollDelta::PixelDelta;
-use ui_events::keyboard::{Key, KeyboardEvent, Modifiers, NamedKey};
-use ui_events::pointer::PointerScrollEvent;
-
+use winit::event::MouseScrollDelta;
 use winit::event_loop::ActiveEventLoop;
+use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 use crate::accessibility::RetGuiAccessTree;
@@ -36,10 +33,10 @@ use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::EventKind;
 #[cfg(target_arch = "wasm32")]
 use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
+use crate::events::{EventKind, KeyboardEvent, PointerScrollEvent, PointerType};
 use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::text::text_context::TextContext;
@@ -47,9 +44,9 @@ use crate::text::text_context::TextContext;
 use crate::wasm_queue::WASM_QUEUE;
 use retgui_renderer::blank_renderer::BlankRenderer;
 #[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesExtWebSys};
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesWeb};
 
-pub type WindowConstructor = Box<dyn FnMut(&ActiveEventLoop) -> WinitWindow>;
+pub type WindowConstructor = Box<dyn FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>;
 
 #[derive(Clone)]
 pub struct Window {
@@ -65,7 +62,7 @@ pub struct WindowInternal {
     pub(crate) renderer: Rc<RefCell<dyn Renderer>>,
 
     // Will be empty when paused.
-    pub(crate) winit_window: Option<Arc<WinitWindow>>,
+    pub(crate) winit_window: Option<Arc<dyn WinitWindow>>,
     pub(crate) headless: bool,
     redraw_requested: Cell<bool>,
 
@@ -86,7 +83,8 @@ pub struct WindowInternal {
     perf_stats: PerfStats,
     mouse_positon: Option<Point>,
     element_data: ElementData,
-    pub(crate) modifiers: Modifiers,
+    pub(crate) modifiers: ModifiersState,
+    pub(crate) ime_composing: bool,
 
     /// The last time a frame was drawn.
     last_frame_time: Instant,
@@ -181,7 +179,7 @@ impl ElementInternals for WindowInternal {
 impl Window {
     pub fn new_advanced<F>(window_fn: F, renderer_type: RendererType) -> Self
     where
-        F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
+        F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
         let inner = WindowInternal::new(Some(window_fn), None, renderer_type);
 
@@ -190,7 +188,7 @@ impl Window {
 
     pub fn new(title: &str) -> Self {
         let inner = WindowInternal::new(
-            None::<fn(&ActiveEventLoop) -> WinitWindow>,
+            None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
             RendererType::default(),
         );
@@ -199,7 +197,11 @@ impl Window {
     }
 
     pub fn new_with_renderer(title: &str, renderer_type: RendererType) -> Self {
-        let inner = WindowInternal::new(None::<fn(&ActiveEventLoop) -> WinitWindow>, Some(title), renderer_type);
+        let inner = WindowInternal::new(
+            None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
+            Some(title),
+            renderer_type,
+        );
 
         Window { inner }
     }
@@ -212,11 +214,11 @@ impl Window {
         self.inner.borrow().close();
     }
 
-    pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
+    pub fn winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
         self.inner.borrow().winit_window()
     }
 
-    pub fn set_winit_window(&self, window: Option<Arc<WinitWindow>>) {
+    pub fn set_winit_window(&self, window: Option<Arc<dyn WinitWindow>>) {
         self.inner.borrow_mut().set_winit_window(window)
     }
 
@@ -286,7 +288,7 @@ impl Window {
         self.inner.borrow_mut().on_redraw(text_context, resource_manager)
     }
 
-    pub(crate) fn create(&self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
+    pub(crate) fn create(&self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
         self.inner.borrow_mut().create(retgui_app, event_loop)
     }
 
@@ -302,7 +304,7 @@ impl Window {
 impl WindowInternal {
     pub fn new<F>(f: Option<F>, title: Option<&str>, renderer_type: RendererType) -> Rc<RefCell<Self>>
     where
-        F: FnMut(&ActiveEventLoop) -> WinitWindow + 'static,
+        F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
         let access_tree = crate::accessibility::access_tree();
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
@@ -323,6 +325,7 @@ impl WindowInternal {
                 renderer_type,
                 pointer_capture: Default::default(),
                 modifiers: Default::default(),
+                ime_composing: false,
                 last_frame_time: Instant::now(),
             })
         });
@@ -383,11 +386,11 @@ impl WindowInternal {
         }
     }
 
-    pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
+    pub fn winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
         self.winit_window.clone()
     }
 
-    pub fn set_winit_window(&mut self, window: Option<Arc<WinitWindow>>) {
+    pub fn set_winit_window(&mut self, window: Option<Arc<dyn WinitWindow>>) {
         self.winit_window = window;
     }
 
@@ -431,12 +434,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn maybe_zoom(&mut self, pointer_scroll_update: &PointerScrollEvent) -> bool {
-        if self.modifiers.ctrl() && pointer_scroll_update.pointer.pointer_type == ui_events::pointer::PointerType::Mouse
-        {
+        if self.modifiers.control_key() && pointer_scroll_update.pointer.pointer_type == PointerType::Mouse {
             let y: f32 = match pointer_scroll_update.delta {
-                ScrollDelta::PageDelta(_, y) => y,
-                ScrollDelta::LineDelta(_, y) => y,
-                PixelDelta(physical) => physical.y as f32,
+                MouseScrollDelta::LineDelta(_, y) => y,
+                MouseScrollDelta::PixelDelta(physical) => physical.y as f32,
+                _ => 0.0,
             };
             if y < 0.0 {
                 self.zoom_out();
@@ -450,11 +452,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn maybe_zoom_keyboard(&mut self, keyboard_input: &KeyboardEvent) -> bool {
-        if keyboard_input.modifiers.ctrl() {
-            if keyboard_input.key == ui_events::keyboard::Key::Character("=".to_string()) {
+        if keyboard_input.modifiers.control_key() {
+            if keyboard_input.key == "=" {
                 self.zoom_in();
                 return true;
-            } else if keyboard_input.key == ui_events::keyboard::Key::Character("-".to_string()) {
+            } else if keyboard_input.key == "-" {
                 self.zoom_out();
                 return true;
             }
@@ -466,11 +468,11 @@ impl WindowInternal {
         &self,
         keyboard_input: &KeyboardEvent,
     ) -> Option<Rc<RefCell<dyn ElementInternals>>> {
-        if !keyboard_input.state.is_down()
+        if !keyboard_input.state.is_pressed()
             || keyboard_input.key != Key::Named(NamedKey::Tab)
-            || keyboard_input.modifiers.ctrl()
-            || keyboard_input.modifiers.alt()
-            || keyboard_input.modifiers.meta()
+            || keyboard_input.modifiers.control_key()
+            || keyboard_input.modifiers.alt_key()
+            || keyboard_input.modifiers.meta_key()
         {
             return None;
         }
@@ -491,14 +493,14 @@ impl WindowInternal {
         let next_index = if let Some(current_index) = current_index {
             (1..=len)
                 .map(|offset| {
-                    if keyboard_input.modifiers.shift() {
+                    if keyboard_input.modifiers.shift_key() {
                         (current_index + len - offset) % len
                     } else {
                         (current_index + offset) % len
                     }
                 })
                 .find(|index| navigation_elements[*index].1)
-        } else if keyboard_input.modifiers.shift() {
+        } else if keyboard_input.modifiers.shift_key() {
             navigation_elements.iter().rposition(|(_, focusable)| *focusable)
         } else {
             navigation_elements.iter().position(|(_, focusable)| *focusable)
@@ -507,11 +509,11 @@ impl WindowInternal {
     }
 
     pub(crate) fn maybe_toggle_perf_stats(&mut self, keyboard_input: &KeyboardEvent) -> bool {
-        if keyboard_input.repeat || !keyboard_input.state.is_down() {
+        if keyboard_input.repeat || !keyboard_input.state.is_pressed() {
             return false;
         }
 
-        if keyboard_input.key != ui_events::keyboard::Key::Named(NamedKey::F3) {
+        if keyboard_input.key != Key::Named(NamedKey::F3) {
             return false;
         }
 
@@ -524,11 +526,8 @@ impl WindowInternal {
         self.perf_stats.is_enabled()
     }
 
-    pub(crate) fn update_modifiers(&mut self, keyboard_input: &KeyboardEvent) {
-        self.modifiers = keyboard_input.modifiers;
-        if keyboard_input.key == ui_events::keyboard::Key::Named(NamedKey::Control) && keyboard_input.state.is_up() {
-            self.modifiers.set(Modifiers::CONTROL, false);
-        }
+    pub(crate) fn update_modifiers(&mut self, modifiers: ModifiersState) {
+        self.modifiers = modifiers;
     }
 
     pub(crate) fn zoom_scale_factor(&self) -> f64 {
@@ -597,7 +596,7 @@ impl WindowInternal {
         self.set_scale_factor(self.effective_scale_factor());
     }
 
-    pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
+    pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
         let Some(event_loop) = event_loop else {
             if self.headless {
                 return;
@@ -614,7 +613,7 @@ impl WindowInternal {
 
         self.headless = false;
 
-        let winit_window: Arc<WinitWindow> = Arc::new(if let Some(window_fn) = &mut self.advanced_window_fn {
+        let winit_window: Arc<dyn WinitWindow> = Arc::from(if let Some(window_fn) = &mut self.advanced_window_fn {
             (*window_fn)(event_loop)
         } else {
             let window_attributes = WindowAttributes::default()
@@ -631,7 +630,8 @@ impl WindowInternal {
                     .dyn_into::<web_sys::HtmlCanvasElement>()
                     .unwrap();
 
-                window_attributes.with_canvas(Some(canvas))
+                window_attributes
+                    .with_platform_attributes(Box::new(WindowAttributesWeb::default().with_canvas(Some(canvas))))
             };
 
             event_loop

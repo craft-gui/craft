@@ -23,15 +23,15 @@ pub struct WinitDriver {
 }
 
 impl ApplicationHandler for WinitDriver {
-    fn new_events(&mut self, _event_loop: &ActiveEventLoop, cause: StartCause) {
+    fn new_events(&mut self, _event_loop: &dyn ActiveEventLoop, cause: StartCause) {
         self.app.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
     }
 
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.app.on_resume(Some(event_loop));
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &dyn ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
         let window: Option<crate::elements::Window> =
             WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
 
@@ -43,7 +43,7 @@ impl ApplicationHandler for WinitDriver {
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
         if event_loop.exiting() {
             return;
         }
@@ -58,13 +58,13 @@ impl ApplicationHandler for WinitDriver {
         }
     }
 
-    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+    fn suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.app.on_suspended(event_loop);
     }
 }
 
 impl Driver for WinitDriver {
-    fn run(&mut self) {
+    fn run(self) {
         let mut event_loop_builder = EventLoopBuilder::default();
 
         #[cfg(target_os = "android")]
@@ -86,7 +86,7 @@ impl WinitDriver {
         Self { app }
     }
 
-    fn maybe_exit(&mut self, event_loop: &ActiveEventLoop) {
+    fn maybe_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
         if self.app.close_requested {
             info!("Exiting winit event loop");
 

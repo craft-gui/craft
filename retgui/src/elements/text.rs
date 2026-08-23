@@ -16,7 +16,7 @@ use time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time as time;
 
-use ui_events::pointer::PointerButton;
+use crate::events::PointerButton;
 
 use winit::dpi;
 
@@ -248,7 +248,7 @@ impl ElementInternals for TextInner {
 
             let state: &mut TextState = &mut self.state;
             match event {
-                EventKind::PointerDown(pb) if pb.button == Some(PointerButton::Primary) => {
+                EventKind::PointerDown(pb) if pb.button == Some(PointerButton::Left) => {
                     let previous_selection = (state.selection.anchor(), state.selection.focus());
                     state.pointer_down = true;
                     state.cursor_reset();
@@ -282,7 +282,7 @@ impl ElementInternals for TextInner {
                     }
                     pb.prevent_default();
                 }
-                EventKind::PointerUp(pb) if pb.button == Some(PointerButton::Primary) => {
+                EventKind::PointerUp(pb) if pb.button == Some(PointerButton::Left) => {
                     state.pointer_down = false;
                     state.cursor_reset();
                     self.release_pointer_capture(pb.pointer.pointer_id.unwrap());

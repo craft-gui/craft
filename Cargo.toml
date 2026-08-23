@@ -94,6 +94,7 @@ default-features = false
 features = ["default"]
 
 [workspace.dependencies.winit]
-version = "0.30.13"
+git = "https://github.com/rust-windowing/winit"
+rev = "874a1e31f194d11313c1ac133b28037b99db3e19"
 default-features = false
 features = []

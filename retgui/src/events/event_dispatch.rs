@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 use std::rc::{Rc, Weak};
 
-use ui_events::pointer::{PointerButton, PointerId};
+use crate::events::{PointerButton, PointerId};
 
 use retgui_primitives::geometry::Point;
 
@@ -134,9 +134,7 @@ impl EventDispatcher {
         text_context: &mut TextContext,
     ) {
         match event_kind {
-            EventKind::PointerDown(pb)
-                if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
-            {
+            EventKind::PointerDown(pb) if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Left) => {
                 if let Some(pointer_id) = pb.pointer.pointer_id {
                     let down_target = dispatched_pointer_up_down_target.unwrap();
                     self.active_pointer_targets
@@ -144,9 +142,7 @@ impl EventDispatcher {
                 }
             }
 
-            EventKind::PointerUp(pb)
-                if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Primary) =>
-            {
+            EventKind::PointerUp(pb) if pb.pointer.is_primary_pointer() && pb.button == Some(PointerButton::Left) => {
                 let pointer_id = pb.pointer.pointer_id.unwrap();
                 if let Some(down_target) = self
                     .active_pointer_targets

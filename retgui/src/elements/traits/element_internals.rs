@@ -13,7 +13,7 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use ui_events::pointer::PointerId;
+use crate::events::PointerId;
 
 use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, WINDOW_MANAGER, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
@@ -1307,7 +1307,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// Gets the winit window of this element.
     ///
     /// This will panic if the element does not have a window as its root.
-    fn get_winit_window(&self) -> Option<Arc<winit::window::Window>> {
+    fn get_winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
         let root = self.get_root_element().upgrade().unwrap();
         (root.borrow().deref() as &dyn Any)
             .downcast_ref::<WindowInternal>()

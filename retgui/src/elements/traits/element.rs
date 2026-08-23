@@ -8,7 +8,7 @@ use smol_str::SmolStr;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::gradient::Gradient;
 
-use ui_events::pointer::PointerId;
+use crate::events::PointerId;
 
 use crate::RetGuiError;
 use crate::app::queue_event;

@@ -6,14 +6,13 @@ use issho::{AccessEvent, ScrollAmount, ScrollEvent};
 
 use retgui_primitives::geometry::{Point, Vec2};
 
-use ui_events::ScrollDelta;
-use ui_events::keyboard::{Code, KeyState};
-use ui_events::pointer::{PointerId, PointerType};
+use winit::event::ElementState;
+use winit::keyboard::KeyCode;
 
 use crate::app::queue_event;
 use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
-use crate::events::{Event, EventKind, ScrollEvent as RetGuiScrollEvent};
+use crate::events::{Event, EventKind, PointerButton, PointerId, PointerType, ScrollDelta, ScrollEvent as RetGuiScrollEvent};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
 use retgui_primitives::geometry::borders::CssRoundedRect;
@@ -307,7 +306,7 @@ fn handle_scroll_logic_internal(
         && matches!(
             event,
             EventKind::PointerDown(pointer_button)
-                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary)
+                if pointer_button.button == Some(PointerButton::Left)
         );
 
     let result = {
@@ -377,9 +376,7 @@ pub(crate) fn handle_scroll_logic_advance(
                 mouse_wheel.stop_propagation();
                 mouse_wheel.prevent_default();
             }
-            EventKind::PointerDown(pointer_button)
-                if pointer_button.button == Some(ui_events::pointer::PointerButton::Primary) =>
-            {
+            EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
                 // DEVICE(TOUCH): Handle scrolling within the content area on touch based input devices.
                 if pointer_button.pointer.pointer_type == PointerType::Touch {
                     let container_rectangle = world_box.padding_rectangle();
@@ -460,21 +457,21 @@ pub(crate) fn handle_scroll_logic_advance(
                 }
             }
             EventKind::KeyDown(keyboard_event)
-                if keyboard_event.state == KeyState::Down
-                    && !keyboard_event.modifiers.ctrl()
-                    && !keyboard_event.modifiers.alt()
-                    && !keyboard_event.modifiers.meta()
+                if keyboard_event.state == ElementState::Pressed
+                    && !keyboard_event.modifiers.control_key()
+                    && !keyboard_event.modifiers.alt_key()
+                    && !keyboard_event.modifiers.meta_key()
                     && layout.max_scroll_y > 0.0 =>
             {
                 let current_scroll_y = state.scroll_y();
                 let line_height = style.get_font_size().max(12.0) * style.get_line_height();
                 let target_scroll_y = match keyboard_event.code {
-                    Code::ArrowUp => Some(current_scroll_y - line_height),
-                    Code::ArrowDown => Some(current_scroll_y + line_height),
-                    Code::PageUp => Some(current_scroll_y - page_height),
-                    Code::PageDown => Some(current_scroll_y + page_height),
-                    Code::Home => Some(0.0),
-                    Code::End => Some(layout.max_scroll_y),
+                    KeyCode::ArrowUp => Some(current_scroll_y - line_height),
+                    KeyCode::ArrowDown => Some(current_scroll_y + line_height),
+                    KeyCode::PageUp => Some(current_scroll_y - page_height),
+                    KeyCode::PageDown => Some(current_scroll_y + page_height),
+                    KeyCode::Home => Some(0.0),
+                    KeyCode::End => Some(layout.max_scroll_y),
                     _ => None,
                 };
 
@@ -592,7 +589,7 @@ fn scroll_delta_y_in_logical_pixels(delta: ScrollDelta, scale_factor: f64, logic
     match delta {
         ScrollDelta::LineDelta(_x, y) => y * logical_line_height,
         ScrollDelta::PixelDelta(physical) => (physical.y / scale_factor) as f32,
-        ScrollDelta::PageDelta(_x, y) => y,
+        _ => 0.0,
     }
 }
 

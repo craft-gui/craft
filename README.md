@@ -24,7 +24,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Text, Window};
-use retgui::events::ui_events::pointer::PointerButton;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
 use retgui::{Color, RetGuiOptions, pct, px, rgb};
 

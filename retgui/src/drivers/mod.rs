@@ -11,5 +11,5 @@ pub enum DriverKind {
 /// Responsible for passing events to [`App`](crate::app::App) and driving the `App` forward.
 pub trait Driver {
     /// Runs the app until completion. Usually this is when all windows are closed.
-    fn run(&mut self);
+    fn run(self);
 }

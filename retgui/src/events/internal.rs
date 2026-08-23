@@ -10,7 +10,7 @@ use {retgui_renderer::renderer::Renderer, std::sync::Arc, winit::window::Window}
 pub enum InternalMessage {
     ResourceEvent(ResourceEvent),
     #[cfg(target_arch = "wasm32")]
-    RendererCreated(Arc<Window>, Rc<RefCell<dyn Renderer>>),
+    RendererCreated(Arc<dyn Window>, Rc<RefCell<dyn Renderer>>),
 }
 
 impl From<ResourceEvent> for InternalMessage {

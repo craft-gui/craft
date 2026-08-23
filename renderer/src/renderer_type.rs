@@ -50,7 +50,7 @@ impl Display for RendererType {
 }
 
 impl RendererType {
-    pub async fn create(&self, window: Arc<Window>) -> Rc<RefCell<dyn Renderer>> {
+    pub async fn create(&self, window: Arc<dyn Window>) -> Rc<RefCell<dyn Renderer>> {
         let renderer: Rc<RefCell<dyn Renderer>> = match self {
             #[cfg(feature = "vello_cpu_renderer")]
             RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new(window))),

@@ -13,7 +13,7 @@ use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct RetGuiAccessTree {
-    tree: issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>,
+    tree: issho::AccessTree<Arc<dyn Window>, Weak<RefCell<dyn ElementInternals>>>,
     pub(crate) event_dispatcher: Rc<RefCell<EventDispatcher>>,
     pub(crate) text_context: Rc<RefCell<Option<TextContext>>>,
 }
@@ -29,7 +29,7 @@ impl RetGuiAccessTree {
 }
 
 impl Deref for RetGuiAccessTree {
-    type Target = issho::AccessTree<Arc<Window>, Weak<RefCell<dyn ElementInternals>>>;
+    type Target = issho::AccessTree<Arc<dyn Window>, Weak<RefCell<dyn ElementInternals>>>;
 
     fn deref(&self) -> &Self::Target {
         &self.tree

@@ -50,12 +50,12 @@ pub(crate) struct VelloCpuRenderer {
 }
 
 pub struct Surface {
-    inner_surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
+    inner_surface: softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>,
 }
 
 impl Surface {
     // Constructor for the SurfaceWrapper
-    pub fn new(window: Arc<Window>) -> Self {
+    pub fn new(window: Arc<dyn Window>) -> Self {
         let context = softbuffer::Context::new(window.clone()).expect("Failed to create softbuffer context");
         Self {
             inner_surface: softbuffer::Surface::new(&context, window.clone()).expect("Failed to create surface"),
@@ -68,7 +68,7 @@ unsafe impl Send for Surface {}
 
 // Implement Deref to expose all methods from the inner Surface
 impl Deref for Surface {
-    type Target = softbuffer::Surface<Arc<Window>, Arc<Window>>;
+    type Target = softbuffer::Surface<Arc<dyn Window>, Arc<dyn Window>>;
 
     fn deref(&self) -> &Self::Target {
         &self.inner_surface
@@ -192,9 +192,9 @@ fn draw_box_shadow(scene: &mut RenderContext, cmd: &BoxShadowCmd) {
 }
 
 impl VelloCpuRenderer {
-    pub fn new(window: Arc<Window>) -> Self {
-        let width = window.inner_size().width as u16;
-        let height = window.inner_size().height as u16;
+    pub fn new(window: Arc<dyn Window>) -> Self {
+        let width = window.surface_size().width as u16;
+        let height = window.surface_size().height as u16;
 
         let render_context = RenderContext::new(width, height);
 
@@ -382,7 +382,11 @@ impl Renderer for VelloCpuRenderer {
 }
 
 impl VelloCpuRenderer {
-    fn copy_pixmap_to_softbuffer(&mut self, width: usize, height: usize) -> Buffer<'_, Arc<Window>, Arc<Window>> {
+    fn copy_pixmap_to_softbuffer(
+        &mut self,
+        width: usize,
+        height: usize,
+    ) -> Buffer<'_, Arc<dyn Window>, Arc<dyn Window>> {
         let mut buffer = self.surface.as_mut().unwrap().buffer_mut().unwrap();
 
         let pixmap = &self.pixmap.data_as_u8_slice();

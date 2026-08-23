@@ -11,14 +11,15 @@ use std::time::Duration;
 
 use parley::BoundingBox;
 
-use ui_events::keyboard::{Key, NamedKey};
-use ui_events::pointer::PointerButton;
+use winit::keyboard::{Key, NamedKey};
 
 use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use winit::event::Ime;
+use winit::dpi::{LogicalPosition, LogicalSize};
+use winit::event::{Ime, MouseButton as PointerButton};
+use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData};
 
 use crate::app::{ELEMENTS, WINDOW_MANAGER, request_apply_layout};
 use crate::elements::element_data::ElementData;
@@ -258,17 +259,25 @@ impl ElementInternals for TextInputInner {
 
     fn on_event(&mut self, event: &mut EventKind, text_context: &mut TextContext) {
         self.state.is_active = true;
+        let focused = self.is_focused();
+        let ime_owns_keyboard_event = focused
+            && matches!(
+                &*event,
+                EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
+                    if keyboard_event.is_composing || self.state.editor().is_composing()
+            );
 
-        let editor_owns_scroll_key = matches!(
-            &*event,
-            EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
-                if matches!(
-                    &keyboard_event.key,
-                    Key::Named(
-                        NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::Home | NamedKey::End
+        let editor_owns_scroll_key = ime_owns_keyboard_event
+            || matches!(
+                &*event,
+                EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
+                    if matches!(
+                        &keyboard_event.key,
+                        Key::Named(
+                            NamedKey::ArrowUp | NamedKey::ArrowDown | NamedKey::Home | NamedKey::End
+                        )
                     )
-                )
-        );
+            );
         if !editor_owns_scroll_key {
             scrollable::handle_scroll_logic(self, event);
         }
@@ -279,8 +288,6 @@ impl ElementInternals for TextInputInner {
 
         let editor_generation = self.state.editor().generation();
         let scroll_y = self.element_data.scroll().scroll_y() as f64;
-
-        let focused = self.is_focused();
 
         if let EventKind::Custom(custom_event) = &*event
             && let Some(msg) = custom_event.data::<TextInputMessage>()
@@ -310,26 +317,36 @@ impl ElementInternals for TextInputInner {
         match event {
             EventKind::Focus(_) => {
                 self.start_cursor_blink();
+                if !self.disabled {
+                    self.set_ime_enabled(true);
+                }
             }
             EventKind::Unfocus(_) => {
                 self.stop_cursor_blink();
+                self.state.disable_ime(text_context);
+                self.set_ime_enabled(false);
+            }
+            EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event) if ime_owns_keyboard_event => {
+                // Candidate-list navigation belongs to the IME. Keep those keys
+                // from reaching scrollable ancestors while composition is active.
+                keyboard_event.stop_propagation();
             }
             EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event)
                 if !self.state.editor().is_composing() =>
             {
-                if self.disabled || !keyboard_event.state.is_down() || !focused {
+                if self.disabled || !keyboard_event.state.is_pressed() || !focused {
                     return;
                 }
                 self.state
                     .key_press(text_context, keyboard_event, &mut self.element_data);
                 keyboard_event.stop_propagation();
             }
-            EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+            EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
                 self.focus();
                 self.set_pointer_capture(pointer_button.pointer.pointer_id.unwrap());
                 self.state.pointer_down(text_context, pointer_button.position, scroll_y);
             }
-            EventKind::PointerUp(pointer_button) if pointer_button.button == Some(PointerButton::Primary) => {
+            EventKind::PointerUp(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
                 self.state.pointer_up();
             }
             EventKind::PointerMoved(pointer_moved) => {
@@ -337,10 +354,28 @@ impl ElementInternals for TextInputInner {
                     .move_pointer(text_context, pointer_moved.current.logical_point(), scroll_y);
             }
             EventKind::Ime(ime_event) => match &ime_event.ime {
-                Ime::Disabled => self.state.disable_ime(text_context),
-                Ime::Commit(text) => self.state.insert_or_replace_selection(text_context, text),
+                Ime::Disabled => {
+                    self.state.ime_state.is_ime_active = false;
+                    self.state.disable_ime(text_context);
+                }
+                Ime::Commit(text) => {
+                    self.state.insert_or_replace_selection(text_context, text);
+                    self.state.generate_text_changed_event(&self.element_data);
+                }
                 Ime::Preedit(text, cursor) => self.state.ime_pre_edit(text_context, text, cursor),
-                Ime::Enabled => {}
+                Ime::DeleteSurrounding {
+                    before_bytes,
+                    after_bytes,
+                } => {
+                    if self
+                        .state
+                        .ime_delete_surrounding(text_context, *before_bytes, *after_bytes)
+                    {
+                        self.state.generate_text_changed_event(&self.element_data);
+                    }
+                }
+                Ime::Enabled => self.state.ime_state.is_ime_active = true,
+                _ => {}
             },
             _ => {}
         }
@@ -354,6 +389,9 @@ impl ElementInternals for TextInputInner {
         {
             let value = self.state.editor().raw_text().to_owned();
             self.element_data.set_accessibility_value(value);
+        }
+        if self.state.ime_state.is_ime_active {
+            self.update_ime();
         }
     }
 
@@ -410,6 +448,71 @@ impl ElementInternals for TextInputInner {
 }
 
 impl TextInputInner {
+    fn set_ime_enabled(&mut self, enabled: bool) {
+        self.state.ime_state.is_ime_active = enabled;
+
+        let Some(window) = self
+            .element_data
+            .window
+            .as_ref()
+            .and_then(Weak::upgrade)
+            .and_then(|window| window.borrow().winit_window())
+        else {
+            return;
+        };
+
+        let request = if enabled {
+            let capabilities = ImeCapabilities::new()
+                .with_hint_and_purpose()
+                .with_cursor_area()
+                .with_surrounding_text();
+            let cursor_area = self.ime_cursor_area();
+            let request_data = self.ime_request_data(cursor_area);
+            let enable_request = ImeEnableRequest::new(capabilities, request_data)
+                .expect("IME capabilities and initial state must match");
+            ImeRequest::Enable(enable_request)
+        } else {
+            ImeRequest::Disable
+        };
+
+        let _ = window.request_ime_update(request);
+    }
+
+    fn update_ime(&mut self) {
+        let Some(window) = self
+            .element_data
+            .window
+            .as_ref()
+            .and_then(Weak::upgrade)
+            .and_then(|window| window.borrow().winit_window())
+        else {
+            return;
+        };
+        let cursor_area = self.ime_cursor_area();
+        let request_data = self.ime_request_data(cursor_area);
+        let _ = window.request_ime_update(ImeRequest::Update(request_data));
+    }
+
+    fn ime_cursor_area(&self) -> Rectangle {
+        let fallback = self.get_computed_box_transformed().content_rectangle();
+        self.state
+            .ime_cursor_area(fallback, self.element_data.scroll().scroll_y())
+    }
+
+    fn ime_request_data(&self, cursor_area: Rectangle) -> ImeRequestData {
+        ImeRequestData::default()
+            .with_hint_and_purpose(ImeHint::NONE, ImePurpose::Normal)
+            .with_cursor_area(
+                LogicalPosition::new(cursor_area.x, cursor_area.y).into(),
+                LogicalSize::new(cursor_area.width, cursor_area.height).into(),
+            )
+            .with_surrounding_text(
+                self.state
+                    .ime_surrounding_text()
+                    .expect("text input must produce valid IME surrounding text"),
+            )
+    }
+
     /// Starts the cursor blink animation.
     fn start_cursor_blink(&mut self) {
         self.state.reset_blink();

@@ -5,10 +5,8 @@
 
 pub use crate::events::mouse_wheel::MouseWheel;
 pub(crate) use event_dispatch::EventDispatcher;
-pub use ui_events;
-pub use ui_events::keyboard::KeyboardEvent as UiKeyboardEvent;
-pub use ui_events::pointer::{PointerButtonEvent as UiPointerButtonEvent, PointerScrollEvent as UiPointerScrollEvent};
-pub use winit::event::{ElementState, Ime, Modifiers, MouseButton};
+pub use winit::event::{ElementState, Ime, Modifiers, MouseButton, MouseButton as PointerButton, MouseScrollDelta as ScrollDelta, PointerKind as PointerId};
+pub use winit::keyboard::{Key, KeyCode as Code, KeyLocation as Location, ModifiersState as KeyboardModifiers, NamedKey};
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -16,9 +14,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use retgui_primitives::geometry::Point;
-use ui_events::ScrollDelta;
-use ui_events::keyboard::{Code, Key, KeyState, Location, Modifiers as KeyboardModifiers};
-use ui_events::pointer::{PointerButton, PointerId, PointerInfo, PointerState, PointerUpdate};
+use winit::dpi::{LogicalPosition, PhysicalPosition};
+use winit::event::{ButtonSource, KeyEvent, PointerKind, PointerSource};
 
 use crate::elements::ElementInternals;
 
@@ -31,6 +28,92 @@ mod helpers;
 mod mouse_wheel;
 
 pub type EventTarget = Rc<RefCell<dyn ElementInternals>>;
+
+/// The broad class of device that generated a pointer event.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PointerType {
+    Mouse,
+    Pen,
+    Touch,
+    #[default]
+    Unknown,
+}
+
+/// Stable identifying information for a pointer interaction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PointerInfo {
+    pub pointer_id: Option<PointerId>,
+    pub pointer_type: PointerType,
+    primary: bool,
+}
+
+impl PointerInfo {
+    pub(crate) fn new(pointer_id: PointerId, primary: bool) -> Self {
+        let pointer_type = match pointer_id {
+            PointerKind::Mouse => PointerType::Mouse,
+            PointerKind::Touch(_) => PointerType::Touch,
+            PointerKind::TabletTool(_) => PointerType::Pen,
+            PointerKind::Unknown => PointerType::Unknown,
+            _ => PointerType::Unknown,
+        };
+        Self {
+            pointer_id: Some(pointer_id),
+            pointer_type,
+            primary,
+        }
+    }
+
+    pub fn is_primary_pointer(&self) -> bool {
+        self.primary
+    }
+
+    pub(crate) fn from_source(source: &PointerSource, primary: bool) -> Self {
+        let pointer_id = match source {
+            PointerSource::Mouse => PointerKind::Mouse,
+            PointerSource::Touch { finger_id, .. } => PointerKind::Touch(*finger_id),
+            PointerSource::TabletTool { kind, .. } => PointerKind::TabletTool(*kind),
+            PointerSource::Unknown => PointerKind::Unknown,
+            _ => PointerKind::Unknown,
+        };
+        Self::new(pointer_id, primary)
+    }
+
+    pub(crate) fn from_button(source: &ButtonSource, primary: bool) -> Self {
+        let pointer_id = match source {
+            ButtonSource::Mouse(_) => PointerKind::Mouse,
+            ButtonSource::Touch { finger_id, .. } => PointerKind::Touch(*finger_id),
+            ButtonSource::TabletTool { kind, .. } => PointerKind::TabletTool(*kind),
+            ButtonSource::Unknown(_) => PointerKind::Unknown,
+            _ => PointerKind::Unknown,
+        };
+        Self::new(pointer_id, primary)
+    }
+}
+
+/// Position and scale information attached to a pointer event.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PointerState {
+    pub position: PhysicalPosition<f64>,
+    pub scale_factor: f64,
+}
+
+impl PointerState {
+    pub(crate) fn new(position: PhysicalPosition<f64>, scale_factor: f64) -> Self {
+        Self {
+            position,
+            scale_factor,
+        }
+    }
+
+    pub fn logical_point(&self) -> Point {
+        let position = self.logical_position();
+        Point::new(position.x, position.y)
+    }
+
+    pub fn logical_position(&self) -> LogicalPosition<f64> {
+        self.position.to_logical(self.scale_factor)
+    }
+}
 
 /// State shared by every RetGui event.
 #[derive(Clone)]
@@ -137,12 +220,7 @@ pub struct PointerButtonEvent {
 }
 
 impl PointerButtonEvent {
-    pub fn new(target: EventTarget, event: UiPointerButtonEvent) -> Self {
-        let UiPointerButtonEvent {
-            button,
-            pointer,
-            state,
-        } = event;
+    pub fn new(target: EventTarget, button: Option<PointerButton>, pointer: PointerInfo, state: PointerState) -> Self {
         let position = state.logical_point();
 
         Self {
@@ -158,7 +236,7 @@ impl PointerButtonEvent {
 #[derive(Clone)]
 pub struct KeyboardEvent {
     base: BaseEvent,
-    pub state: KeyState,
+    pub state: ElementState,
     pub key: Key,
     pub code: Code,
     pub location: Location,
@@ -168,25 +246,15 @@ pub struct KeyboardEvent {
 }
 
 impl KeyboardEvent {
-    pub fn new(target: EventTarget, event: UiKeyboardEvent) -> Self {
-        let UiKeyboardEvent {
-            state,
-            key,
-            code,
-            location,
-            modifiers,
-            repeat,
-            is_composing,
-        } = event;
-
+    pub fn new(target: EventTarget, event: KeyEvent, modifiers: KeyboardModifiers, is_composing: bool) -> Self {
         Self {
             base: BaseEvent::new(target),
-            state,
-            key,
-            code,
-            location,
+            state: event.state,
+            key: event.logical_key,
+            code: event.physical_key.into(),
+            location: event.location,
             modifiers,
-            repeat,
+            repeat: event.repeat,
             is_composing,
         }
     }
@@ -287,20 +355,13 @@ pub struct PointerMovedEvent {
 }
 
 impl PointerMovedEvent {
-    pub fn new(target: EventTarget, event: PointerUpdate) -> Self {
-        let PointerUpdate {
-            pointer,
-            current,
-            coalesced,
-            predicted,
-        } = event;
-
+    pub fn new(target: EventTarget, pointer: PointerInfo, current: PointerState) -> Self {
         Self {
             base: BaseEvent::new(target),
             pointer,
             current,
-            coalesced,
-            predicted,
+            coalesced: Vec::new(),
+            predicted: Vec::new(),
         }
     }
 }
@@ -314,13 +375,7 @@ pub struct PointerScrollEvent {
 }
 
 impl PointerScrollEvent {
-    pub fn new(target: EventTarget, event: UiPointerScrollEvent) -> Self {
-        let UiPointerScrollEvent {
-            pointer,
-            delta,
-            state,
-        } = event;
-
+    pub fn new(target: EventTarget, pointer: PointerInfo, delta: ScrollDelta, state: PointerState) -> Self {
         Self {
             base: BaseEvent::new(target),
             pointer,

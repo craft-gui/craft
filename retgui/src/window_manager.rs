@@ -71,7 +71,7 @@ impl WindowManager {
         }
     }
 
-    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
+    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
         for window_element in &self.windows {
             window_element.create(retgui_app, event_loop);
             window_element.reset_animation_clock();
@@ -84,7 +84,7 @@ impl WindowManager {
         }
     }
 
-    pub(crate) fn on_about_to_wait(&mut self, retgui_app: &mut App, event_loop: Option<&ActiveEventLoop>) {
+    pub(crate) fn on_about_to_wait(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
         if !retgui_app.active {
             return;
         }

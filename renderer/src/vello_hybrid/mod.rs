@@ -71,7 +71,7 @@ pub struct VelloHybridRenderer {
     resource_mapper: ResourceMapper,
     resources_seen: HashSet<RendererResourceId>,
 
-    window: Arc<Window>,
+    window: Arc<dyn Window>,
 
     texture_bindings: TextureBindings,
 
@@ -305,9 +305,9 @@ impl Renderer for VelloHybridRenderer {
 }
 
 impl VelloHybridRenderer {
-    pub(crate) async fn new(window: Arc<Window>) -> VelloHybridRenderer {
+    pub(crate) async fn new(window: Arc<dyn Window>) -> VelloHybridRenderer {
         // Create a vello Surface
-        let surface_size = window.inner_size();
+        let surface_size = window.surface_size();
 
         let width = surface_size.width.max(1);
         let height = surface_size.height.max(1);

@@ -14,7 +14,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Text};
-use retgui::events::ui_events::pointer::PointerButton;
+use retgui::events::PointerButton;
 use retgui::style::Display::Flex;
 use retgui::style::{FlexDirection, FontWeight, Overflow, Unit};
 use retgui::{palette, pct, px};
@@ -42,7 +42,7 @@ fn create_examples_link(
     let mut text = Text::new(label)
         .color(DEFAULT_LINK_COLOR)
         .on_pointer_button_up(move |event| {
-            if event.button == Some(PointerButton::Primary) {
+            if event.button == Some(PointerButton::Left) {
                 update_active_example(example_link_captured.as_str(), example_container.clone(), &examples);
                 navigate_fn(example_link_captured.as_str());
             }

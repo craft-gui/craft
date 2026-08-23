@@ -1,9 +1,9 @@
+use crate::events::PointerId;
 use retgui_primitives::geometry::Point;
 use retgui_renderer::renderer::Renderer;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use ui_events::pointer::PointerId;
 
 use retgui_renderer::TargetItem;
 

@@ -1,7 +1,7 @@
 use retgui_primitives::geometry::{Point, Size};
 
 use winit::dpi::{PhysicalPosition, PhysicalSize};
-use winit::event::{DeviceId, ElementState, Ime, MouseButton, WindowEvent};
+use winit::event::{ButtonSource, ElementState, Ime, KeyEvent, MouseButton, PointerSource, WindowEvent};
 
 use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
 use crate::drivers::Driver;
@@ -61,7 +61,7 @@ impl HeadlessDriver {
 }
 
 impl Driver for HeadlessDriver {
-    fn run(&mut self) {
+    fn run(mut self) {
         self.tick();
     }
 }
@@ -112,8 +112,10 @@ impl HeadlessApp {
     }
 
     pub fn resize(&mut self, window: &Window, width: u32, height: u32) {
-        self.driver
-            .send_event(window.clone(), WindowEvent::Resized(PhysicalSize::new(width, height)));
+        self.driver.send_event(
+            window.clone(),
+            WindowEvent::SurfaceResized(PhysicalSize::new(width, height)),
+        );
         self.drive();
     }
 
@@ -126,6 +128,7 @@ impl HeadlessApp {
         let window = Self::element_window(element);
 
         self.enqueue_pointer_move(&window, point);
+        self.drive();
         self.enqueue_pointer_button(&window, ElementState::Pressed);
         self.enqueue_pointer_button(&window, ElementState::Released);
         self.drive();
@@ -152,7 +155,12 @@ impl HeadlessApp {
         self.drive();
     }
 
-    pub fn keyboard_input(&mut self, window: &Window, event: ui_events::keyboard::KeyboardEvent) {
+    pub fn ime(&mut self, window: &Window, event: Ime) {
+        self.driver.send_event(window.clone(), WindowEvent::Ime(event));
+        self.drive();
+    }
+
+    pub fn keyboard_input(&mut self, window: &Window, event: KeyEvent) {
         self.driver.app.on_keyboard_input(window.clone(), event);
         self.drive();
     }
@@ -198,9 +206,11 @@ impl HeadlessApp {
         let scale_factor = window.effective_scale_factor();
         self.driver.send_event(
             window.clone(),
-            WindowEvent::CursorMoved {
-                device_id: DeviceId::dummy(),
+            WindowEvent::PointerMoved {
+                device_id: None,
                 position: PhysicalPosition::new(point.x * scale_factor, point.y * scale_factor),
+                primary: true,
+                source: PointerSource::Mouse,
             },
         );
     }
@@ -208,10 +218,16 @@ impl HeadlessApp {
     fn enqueue_pointer_button(&self, window: &Window, state: ElementState) {
         self.driver.send_event(
             window.clone(),
-            WindowEvent::MouseInput {
-                device_id: DeviceId::dummy(),
+            WindowEvent::PointerButton {
+                device_id: None,
                 state,
-                button: MouseButton::Left,
+                position: PhysicalPosition::new(
+                    window.mouse_position().unwrap_or_default().x * window.effective_scale_factor(),
+                    window.mouse_position().unwrap_or_default().y * window.effective_scale_factor(),
+                ),
+                primary: true,
+                button: ButtonSource::Mouse(MouseButton::Left),
+                is_macos_activation_click: false,
             },
         );
     }

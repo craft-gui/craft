@@ -15,7 +15,8 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use ui_events::keyboard::{Code, KeyState};
+use winit::event::ElementState;
+use winit::keyboard::KeyCode;
 
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
@@ -181,8 +182,8 @@ impl ElementInternals for CheckboxInner {
             self.focus();
         } else if self.is_focused()
             && let EventKind::KeyDown(key) = event
-            && key.code == Code::Space
-            && key.state == KeyState::Down
+            && key.code == KeyCode::Space
+            && key.state == ElementState::Pressed
         {
             self.toggle();
         }
