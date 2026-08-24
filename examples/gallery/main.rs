@@ -592,7 +592,10 @@ fn navigation_background(selected: bool) -> Color {
 }
 
 fn style_navigation_button(button: impl Element, selected: bool) {
-    button.background_color(navigation_background(selected));
+    button
+        .background_color(navigation_background(selected))
+        .outline_color_all(retgui::palette::css::DODGER_BLUE)
+        .outline_width_all(px(if selected { 2.0 } else { 0.0 }));
 }
 
 fn navigation_button(label: &str, selected: bool) -> Button {
@@ -605,6 +608,8 @@ fn navigation_button(label: &str, selected: bool) -> Button {
         .border_width_all(px(0.0))
         .border_radius_all((5.0, 5.0))
         .background_color(navigation_background(selected))
+        .outline_color_all(retgui::palette::css::DODGER_BLUE)
+        .outline_width_all(px(if selected { 2.0 } else { 0.0 }))
         .push(Text::new(label).font_size(15.0).selectable(false))
 }
 
@@ -660,7 +665,7 @@ fn gallery() -> Container {
             selection.select(button.as_element_rc());
         }
 
-        button.clone().on_click(move |event| {
+        button.clone().on_focus(move |event| {
             select_example(&examples, index);
             selection.select(event.current_target());
             event.stop_propagation();
