@@ -1,16 +1,19 @@
-#[cfg(feature = "audio")]
-use retgui::elements::Audio;
-use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use retgui::events::Event;
-use retgui::geometry::Point;
-use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FlexWrap, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
-use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
 use std::cell::RefCell;
+#[cfg(feature = "audio")]
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::time::Duration;
 
+#[cfg(feature = "audio")]
+use retgui::elements::Audio;
+use retgui::elements::{AsElement, Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, ElementInternals, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui::events::{Event, EventTarget};
+use retgui::geometry::Point;
+use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
+use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
+
 use serde::Deserialize;
+
 use util::setup_logging;
 
 pub fn title(str: &str) -> Text {
@@ -508,44 +511,182 @@ pub fn audio() -> Container {
     Container::new()
 }
 
+struct GalleryExample {
+    label: &'static str,
+    section: Container,
+}
+
+type WeakElement = Weak<RefCell<dyn ElementInternals>>;
+
+impl GalleryExample {
+    fn new(label: &'static str, child: impl AsElement) -> Self {
+        let section = Container::new()
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Column)
+            .flex_grow(1.0)
+            .width(pct(100))
+            .height(pct(100))
+            .padding_all(px(32.0))
+            .overflow(Overflow::Clip, Overflow::Scroll)
+            .push(child);
+
+        Self { label, section }
+    }
+
+    fn titled(label: &'static str, child: impl AsElement) -> Self {
+        let content = Container::new()
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Column)
+            .row_gap(px(12.0))
+            .push(title(label))
+            .push(child);
+
+        Self::new(label, content)
+    }
+}
+
+#[derive(Clone, Default)]
+struct NavigationSelection {
+    active: Rc<RefCell<Option<WeakElement>>>,
+}
+
+impl NavigationSelection {
+    fn select(&self, target: EventTarget) {
+        if let Some(previous) = self.active.borrow().as_ref().and_then(Weak::upgrade) {
+            style_navigation_button(DynElement::new(previous), false);
+        }
+
+        style_navigation_button(DynElement::new(target.clone()), true);
+        self.active.replace(Some(Rc::downgrade(&target)));
+    }
+}
+
+fn gallery_examples() -> Vec<GalleryExample> {
+    vec![
+        GalleryExample::new("Animations", animations()),
+        GalleryExample::titled("Audio", audio()),
+        GalleryExample::titled("Calendar", Calendar::new().start_year(1950)),
+        GalleryExample::new("Text Input", text_input()),
+        GalleryExample::new("Dropdown", dropdown()),
+        GalleryExample::new("Text", text()),
+        GalleryExample::new("TinyVG", tinyvg()),
+        GalleryExample::new("Image", images()),
+        GalleryExample::new("Gradients", gradient()),
+        GalleryExample::new("Box Shadows", box_shadows()),
+        GalleryExample::new("Async", async_weather()),
+        GalleryExample::new("Overlay", overlay()),
+        GalleryExample::new("Sliders", sliders()),
+        GalleryExample::new("Radio Buttons", radio_buttons()),
+        GalleryExample::new("Checkboxes", checkbox()),
+        GalleryExample::new("Scrollable", scrollable()),
+        GalleryExample::new("Multiple Windows", multiple_windows()),
+    ]
+}
+
+fn navigation_background(selected: bool) -> Color {
+    if selected {
+        Color::from_rgb8(214, 232, 250)
+    } else {
+        Color::from_rgb8(247, 248, 250)
+    }
+}
+
+fn style_navigation_button(button: impl Element, selected: bool) {
+    button.background_color(navigation_background(selected));
+}
+
+fn navigation_button(label: &str, selected: bool) -> Button {
+    Button::new()
+        .display(Display::Flex)
+        .align_items(AlignItems::Center)
+        .width(pct(100))
+        .min_height(px(38.0))
+        .padding_horizontal(px(14.0))
+        .border_width_all(px(0.0))
+        .border_radius_all((5.0, 5.0))
+        .background_color(navigation_background(selected))
+        .push(Text::new(label).font_size(15.0).selectable(false))
+}
+
+fn sidebar() -> Container {
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .flex_shrink(0.0)
+        .width(px(220.0))
+        .height(pct(100))
+        .padding(px(12.0), px(8.0), px(12.0), px(8.0))
+        .row_gap(px(3.0))
+        .border_width(px(0.0), px(1.0), px(0.0), px(0.0))
+        .border_color_all(Color::from_rgb8(210, 214, 220))
+        .background_color(navigation_background(false))
+        .overflow(Overflow::Clip, Overflow::Scroll)
+}
+
+fn content_pane() -> Container {
+    Container::new()
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .flex_grow(1.0)
+        .width(pct(100))
+        .height(pct(100))
+        .overflow(Overflow::Clip, Overflow::Clip)
+}
+
+fn select_example(examples: &[GalleryExample], selected_index: usize) {
+    for (index, example) in examples.iter().enumerate() {
+        example.section.clone().display(if index == selected_index {
+            Display::Flex
+        } else {
+            Display::None
+        });
+    }
+}
+
+fn gallery() -> Container {
+    let examples = Rc::new(gallery_examples());
+    let sidebar = sidebar();
+    let content = content_pane();
+    let selection = NavigationSelection::default();
+
+    select_example(&examples, 0);
+
+    for (index, example) in examples.iter().enumerate() {
+        let button = navigation_button(example.label, index == 0);
+        let examples = examples.clone();
+        let selection = selection.clone();
+
+        if index == 0 {
+            selection.select(button.as_element_rc());
+        }
+
+        button.clone().on_click(move |event| {
+            select_example(&examples, index);
+            selection.select(event.current_target());
+            event.stop_propagation();
+        });
+
+        sidebar.clone().push(button);
+        content.clone().push(example.section.clone());
+    }
+
+    Container::new()
+        .display(Display::Flex)
+        .width(pct(100))
+        .height(pct(100))
+        .push(sidebar)
+        .push(content)
+}
+
 pub fn main() {
     setup_logging();
 
-    let window = Window::new("Gallery")
+    Window::new("Gallery")
         .display(Display::Flex)
-        .justify_content(JustifyContent::Center)
-        .align_items(AlignItems::Center)
-        .overflow(Overflow::Clip, Overflow::Scroll)
-        .width(pct(100))
-        .height(pct(100));
-
-    let wrapper = Container::new()
-        .display(Display::Flex)
-        .wrap(FlexWrap::Wrap)
-        .padding_all(px(10.0))
-        .gap(px(40.0), px(50.0))
+        .overflow(Overflow::Clip, Overflow::Clip)
         .width(pct(100))
         .height(pct(100))
-        .max_width(px(1200.0))
-        .push(animations())
-        .push(audio())
-        .push(Calendar::new().start_year(1950))
-        .push(text_input())
-        .push(dropdown())
-        .push(text())
-        .push(tinyvg())
-        .push(images())
-        .push(gradient())
-        .push(box_shadows())
-        .push(async_weather())
-        .push(overlay())
-        .push(sliders())
-        .push(radio_buttons())
-        .push(checkbox())
-        .push(scrollable())
-        .push(multiple_windows());
-
-    window.push(wrapper);
+        .push(gallery());
 
     retgui_main(RetGuiOptions::basic("Gallery"));
 }
