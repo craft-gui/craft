@@ -200,6 +200,7 @@ impl Calendar {
             .justify_content(JustifyContent::SpaceAround)
             .align_items(AlignItems::Center)
             .flex_direction(FlexDirection::Row)
+            .width(px(CELL_SIZE.raw_value() * 7.0))
             .push(inner_mut.year_dropdown.clone())
             .push(inner_mut.month_dropdown.clone());
         inner_mut.push(nav.inner);
@@ -273,7 +274,7 @@ impl CalendarInner {
         for year in (self.start_year..(self.end_year + 1)).rev() {
             dropdown
                 .clone()
-                .push(Text::new(&year_name(&self.locale, year)))
+                .push(Text::new(&year_name(&self.locale, year)).selectable(false))
                 .font_size(20.0);
             if year == self.focus_year {
                 dropdown.clone().selected_item((self.end_year - year) as usize);
@@ -291,7 +292,7 @@ impl CalendarInner {
                     &self.locale,
                     Month::new(month + 1),
                     self.focus_year,
-                )))
+                )).selectable(false))
                 .font_size(20.0);
             if month + 1 == self.focus_month {
                 dropdown.clone().selected_item(month as usize);
