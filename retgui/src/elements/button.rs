@@ -5,6 +5,7 @@ use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use issho::{AccessEvent, IsshoError, Role};
+use winit::keyboard::KeyCode;
 
 use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
@@ -104,6 +105,20 @@ impl ElementInternals for ButtonInner {
     fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         if let EventKind::Click(_) = event {
             self.focus();
+        } else if self.is_focused()
+            && let EventKind::KeyDown(keyboard_event) = event
+            && !keyboard_event.repeat
+            && matches!(keyboard_event.code, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space)
+        {
+            let Some(target) = self.element_data.me.upgrade() else {
+                return;
+            };
+            queue_event(EventKind::Click(ClickEvent::new(
+                target,
+                ClickTrigger::Keyboard {
+                    key: keyboard_event.key.clone(),
+                },
+            )));
         }
     }
 
