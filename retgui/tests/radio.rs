@@ -7,24 +7,8 @@ use retgui::geometry::Size;
 use retgui::style::FlexDirection;
 use retgui::{RendererType, px};
 
-use winit::event::{ElementState, KeyEvent};
-use winit::keyboard::{Key, KeyCode, KeyLocation, NamedKey, PhysicalKey};
-
 #[cfg(test)]
 mod test_utils;
-
-fn key_event(code: KeyCode, logical_key: Key) -> KeyEvent {
-    KeyEvent {
-        physical_key: PhysicalKey::Code(code),
-        logical_key: logical_key.clone(),
-        text: None,
-        location: KeyLocation::Standard,
-        state: ElementState::Pressed,
-        repeat: false,
-        text_with_all_modifiers: None,
-        key_without_modifiers: logical_key,
-    }
-}
 
 #[test]
 fn switches_from_red_to_green() {
