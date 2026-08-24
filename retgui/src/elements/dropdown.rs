@@ -11,9 +11,11 @@ use retgui_primitives::geometry::{Affine, Point, Vec2};
 
 use peniko::Color;
 
+use winit::keyboard::KeyCode;
+
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData as ElementDataStruct;
-use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance};
+use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance, set_scroll_y};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementData, ElementInternals};
 use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind, PointerButton, PointerId};
@@ -300,6 +302,10 @@ impl ElementInternals for DropdownInner {
             if pointer_button.button == Some(PointerButton::Left) {
                 pointer_button.stop_propagation();
             }
+        }
+
+        if self.handle_keyboard_input(event) {
+            return;
         }
 
         let list_layout = &self.floating_window.layout;
@@ -635,6 +641,116 @@ impl Dropdown {
 }
 
 impl DropdownInner {
+    fn handle_keyboard_input(&mut self, event: &mut EventKind) -> bool {
+        if !self.is_focused() {
+            return false;
+        }
+
+        let EventKind::KeyDown(keyboard_event) = event else {
+            return false;
+        };
+
+        let item_count = self.element_data.children.len();
+        let handled = match keyboard_event.code {
+            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space if !keyboard_event.repeat => {
+                if self.is_floating_window_hidden {
+                    self.open_menu();
+                } else {
+                    if let Some(index) = self.currently_hovered_element.filter(|index| *index < item_count) {
+                        self.set_selected_element(index);
+                        self.queue_dropdown_item_selected(index);
+                    }
+                    self.close_menu();
+                }
+                true
+            }
+            KeyCode::Escape if !self.is_floating_window_hidden => {
+                self.close_menu();
+                true
+            }
+            KeyCode::ArrowDown if item_count > 0 => {
+                self.move_keyboard_selection(1, item_count);
+                true
+            }
+            KeyCode::ArrowUp if item_count > 0 => {
+                self.move_keyboard_selection(-1, item_count);
+                true
+            }
+            KeyCode::Home if item_count > 0 => {
+                self.set_keyboard_selection(0);
+                true
+            }
+            KeyCode::End if item_count > 0 => {
+                self.set_keyboard_selection(item_count - 1);
+                true
+            }
+            _ => false,
+        };
+
+        if handled {
+            keyboard_event.stop_propagation();
+            keyboard_event.prevent_default();
+        }
+        handled
+    }
+
+    fn move_keyboard_selection(&mut self, direction: isize, item_count: usize) {
+        let current = if self.is_floating_window_hidden {
+            self.selected_element_index
+        } else {
+            self.currently_hovered_element.or(self.selected_element_index)
+        };
+        let next = match current {
+            Some(index) => index.saturating_add_signed(direction).min(item_count - 1),
+            None if direction < 0 => item_count - 1,
+            None => 0,
+        };
+        self.set_keyboard_selection(next);
+    }
+
+    fn set_keyboard_selection(&mut self, index: usize) {
+        if self.is_floating_window_hidden {
+            if self.selected_element_index != Some(index) {
+                self.set_selected_element(index);
+                self.queue_dropdown_item_selected(index);
+            }
+        } else {
+            let highlight_changed = self.currently_hovered_element != Some(index);
+            self.currently_hovered_element = Some(index);
+            let scroll_changed = self.scroll_item_into_view(index);
+            if highlight_changed || scroll_changed {
+                self.request_window_redraw();
+            }
+        }
+    }
+
+    fn scroll_item_into_view(&mut self, index: usize) -> bool {
+        let Some(item) = self.element_data.children.get(index) else {
+            return false;
+        };
+        let item_box = item
+            .borrow()
+            .element_data()
+            .layout
+            .local_box_in_parent()
+            .border_rectangle();
+
+        let layout = &mut self.floating_window.layout;
+        let viewport = layout.local_box().padding_rectangle();
+        let current_scroll_y = layout.scroll_state.scroll_y();
+        let visible_top = viewport.top() + current_scroll_y;
+        let visible_bottom = viewport.bottom() + current_scroll_y;
+        let target_scroll_y = if item_box.top() < visible_top {
+            item_box.top() - viewport.top()
+        } else if item_box.bottom() > visible_bottom {
+            item_box.bottom() - viewport.bottom()
+        } else {
+            return false;
+        };
+
+        set_scroll_y(layout, target_scroll_y)
+    }
+
     fn draw_selected_element(
         &mut self,
         renderer: &mut dyn Renderer,
@@ -730,13 +846,20 @@ impl DropdownInner {
     }
 
     fn toggle_menu(&mut self, pointer_id: &PointerId) {
-        self.is_floating_window_hidden = !self.is_floating_window_hidden;
-        self.currently_hovered_element = self.selected_element_index;
-        self.queue_dropdown_toggled(!self.is_floating_window_hidden);
-
         if self.is_floating_window_hidden {
+            self.open_menu();
+        } else {
+            self.close_menu();
             self.release_pointer_capture(*pointer_id);
         }
+    }
+
+    fn open_menu(&mut self) {
+        self.is_floating_window_hidden = false;
+        self.currently_hovered_element = self
+            .selected_element_index
+            .or_else(|| (!self.element_data.children.is_empty()).then_some(0));
+        self.queue_dropdown_toggled(true);
         self.request_window_redraw();
     }
 
