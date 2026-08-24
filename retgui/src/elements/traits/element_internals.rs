@@ -1077,9 +1077,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn set_outline_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
-        self.style_mut()
-            .set_outline_color(TrblRectangle::new(top, right, bottom, left));
-        self.apply_borders(self.element_data().applied_scale_factor);
+        let outline_color = TrblRectangle::new(top, right, bottom, left);
+        let data = self.element_data_mut();
+        if data.unfocused_outline_color.is_some() {
+            data.unfocused_outline_color = Some(outline_color);
+        } else {
+            data.style.set_outline_color(outline_color);
+            data.apply_borders(data.applied_scale_factor);
+        }
         self.request_window_redraw();
     }
 
@@ -1088,19 +1093,30 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn set_outline_color_vertical(&mut self, value: Color) {
-        let outline_color = self.style().get_outline_color();
+        let outline_color = self
+            .element_data()
+            .unfocused_outline_color
+            .unwrap_or_else(|| self.style().get_outline_color());
         self.set_outline_color(value, outline_color.right, value, outline_color.left);
     }
 
     fn set_outline_color_horizontal(&mut self, value: Color) {
-        let outline_color = self.style().get_outline_color();
+        let outline_color = self
+            .element_data()
+            .unfocused_outline_color
+            .unwrap_or_else(|| self.style().get_outline_color());
         self.set_outline_color(outline_color.top, value, outline_color.bottom, value);
     }
 
     fn set_outline_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        self.style_mut()
-            .set_outline_width(TrblRectangle::new(top, right, bottom, left));
-        self.apply_borders(self.element_data().applied_scale_factor);
+        let outline_width = TrblRectangle::new(top, right, bottom, left);
+        let data = self.element_data_mut();
+        if data.unfocused_outline_width.is_some() {
+            data.unfocused_outline_width = Some(outline_width);
+        } else {
+            data.style.set_outline_width(outline_width);
+            data.apply_borders(data.applied_scale_factor);
+        }
         self.request_window_redraw();
     }
 
@@ -1109,12 +1125,18 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn set_outline_width_vertical(&mut self, value: Unit) {
-        let outline_width = self.style().get_outline_width();
+        let outline_width = self
+            .element_data()
+            .unfocused_outline_width
+            .unwrap_or_else(|| self.style().get_outline_width());
         self.set_outline_width(value, outline_width.right, value, outline_width.left);
     }
 
     fn set_outline_width_horizontal(&mut self, value: Unit) {
-        let outline_width = self.style().get_outline_width();
+        let outline_width = self
+            .element_data()
+            .unfocused_outline_width
+            .unwrap_or_else(|| self.style().get_outline_width());
         self.set_outline_width(outline_width.top, value, outline_width.bottom, value);
     }
 
@@ -1395,4 +1417,45 @@ fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementDa
         data.style.set_outline_width(outline_width);
     }
     data.apply_borders(data.applied_scale_factor);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::elements::{AsElement, Button, Element};
+
+    #[test]
+    fn outline_changes_while_focused_are_restored_on_unfocus() {
+        let original_color = Color::from_rgb8(10, 20, 30);
+        let updated_color = Color::from_rgb8(40, 50, 60);
+        let button = Button::new()
+            .outline_color_all(original_color)
+            .outline_width_all(Unit::Px(1.0));
+
+        button.clone().focus();
+        button
+            .clone()
+            .outline_color_all(updated_color)
+            .outline_width_all(Unit::Px(3.0));
+
+        assert_eq!(
+            button.borrow().style().get_outline_color(),
+            TrblRectangle::new_all(crate::palette::css::DODGER_BLUE)
+        );
+        assert_eq!(
+            button.borrow().style().get_outline_width(),
+            TrblRectangle::new_all(Unit::Px(2.0))
+        );
+
+        button.clone().unfocus();
+
+        assert_eq!(
+            button.borrow().style().get_outline_color(),
+            TrblRectangle::new_all(updated_color)
+        );
+        assert_eq!(
+            button.borrow().style().get_outline_width(),
+            TrblRectangle::new_all(Unit::Px(3.0))
+        );
+    }
 }
