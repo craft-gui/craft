@@ -25,6 +25,10 @@ use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, Bo
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
 
+thread_local! {
+    static FOCUS_OUTLINE_VISIBLE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+}
+
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 ///
 /// Drop is required to clean up any gummy nodes allocated by the element.
@@ -1265,7 +1269,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 restore_unfocused_outline(previous.borrow_mut().element_data_mut());
                 queue_event(EventKind::Unfocus(UnfocusEvent::new(previous)));
             }
-            apply_focused_outline(self.element_data_mut());
+            if focus_outline_visible() {
+                apply_focused_outline(self.element_data_mut());
+            }
             if let Some(current) = me.upgrade() {
                 queue_event(EventKind::Focus(FocusEvent::new(current)));
             }
@@ -1407,6 +1413,30 @@ fn apply_focused_outline(data: &mut crate::elements::element_data::ElementData) 
         .set_outline_color(TrblRectangle::new_all(crate::palette::css::DODGER_BLUE));
     data.style.set_outline_width(TrblRectangle::new_all(Unit::Px(2.0)));
     data.apply_borders(data.applied_scale_factor);
+}
+
+fn focus_outline_visible() -> bool {
+    FOCUS_OUTLINE_VISIBLE.get()
+}
+
+pub(crate) fn set_focus_outline_visible(visible: bool) {
+    let changed = FOCUS_OUTLINE_VISIBLE.replace(visible) != visible;
+    if !changed {
+        return;
+    }
+
+    let focused = FOCUS.with_borrow(|focus| focus.as_ref().and_then(Weak::upgrade));
+    let Some(focused) = focused else {
+        return;
+    };
+
+    let mut focused = focused.borrow_mut();
+    if visible {
+        apply_focused_outline(focused.element_data_mut());
+    } else {
+        restore_unfocused_outline(focused.element_data_mut());
+    }
+    focused.request_window_redraw();
 }
 
 fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementData) {

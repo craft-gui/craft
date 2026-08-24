@@ -28,7 +28,7 @@ use winit::event_loop::ActiveEventLoop;
 use crate::RetGuiOptions;
 #[cfg(feature = "audio")]
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
-use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable};
+use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable, set_focus_outline_visible};
 use crate::events::internal::InternalMessage;
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::layout::GummyTree;
@@ -329,6 +329,10 @@ impl App {
         state: PointerState,
         is_up: bool,
     ) {
+        if !is_up {
+            set_focus_outline_visible(false);
+        }
+
         let cursor_position = state.logical_point();
         let pointer_event = PointerButtonEvent::new(window.inner.clone(), button, pointer, state);
 
@@ -366,6 +370,9 @@ impl App {
             (window.modifiers, window.ime_composing)
         };
         let state = keyboard_input.state;
+        if state == ElementState::Pressed && !modifiers.control_key() && !modifiers.alt_key() && !modifiers.meta_key() {
+            set_focus_outline_visible(true);
+        }
         let event = KeyboardEvent::new(window.inner.clone(), keyboard_input, modifiers, is_composing);
         if window.inner.borrow_mut().maybe_toggle_perf_stats(&event) {
             return;

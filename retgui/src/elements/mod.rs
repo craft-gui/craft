@@ -20,6 +20,7 @@ pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
 pub use crate::elements::text::{Text, TextInner};
 pub use crate::elements::text_input::{TextInput, TextInputInner};
 pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
+pub(crate) use crate::elements::traits::set_focus_outline_visible;
 pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals};
 pub use crate::elements::window::{Window, WindowInternal};
 
