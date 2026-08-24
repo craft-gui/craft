@@ -108,7 +108,10 @@ impl ElementInternals for ButtonInner {
         } else if self.is_focused()
             && let EventKind::KeyDown(keyboard_event) = event
             && !keyboard_event.repeat
-            && matches!(keyboard_event.code, KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space)
+            && matches!(
+                keyboard_event.code,
+                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space
+            )
         {
             let Some(target) = self.element_data.me.upgrade() else {
                 return;

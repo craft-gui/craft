@@ -288,11 +288,7 @@ impl CalendarInner {
         for month in 0..12 {
             dropdown
                 .clone()
-                .push(Text::new(&month_name(
-                    &self.locale,
-                    Month::new(month + 1),
-                    self.focus_year,
-                )).selectable(false))
+                .push(Text::new(&month_name(&self.locale, Month::new(month + 1), self.focus_year)).selectable(false))
                 .font_size(20.0);
             if month + 1 == self.focus_month {
                 dropdown.clone().selected_item(month as usize);

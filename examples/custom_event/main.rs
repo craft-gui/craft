@@ -1,6 +1,6 @@
 use retgui::elements::{Container, Element, Text, Window};
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui::{pct, px, retgui_main, rgb, Color, RetGuiOptions};
+use retgui::{Color, RetGuiOptions, pct, px, retgui_main, rgb};
 
 use util::setup_logging;
 
