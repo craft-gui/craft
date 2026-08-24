@@ -246,7 +246,7 @@ impl ElementInternals for TextInputInner {
                 self.me.clone(),
                 content_rectangle.scale(_scale_factor),
                 text_scroll,
-                self.is_focused() && self.state.cursor_visible(),
+                self.is_focused() && self.state.editor().raw_selection().is_collapsed() && self.state.cursor_visible(),
             );
         }
 
@@ -436,7 +436,7 @@ impl ElementInternals for TextInputInner {
         }
         self.element_data.animations = animations;
 
-        if self.is_focused() {
+        if self.is_focused() && self.state.editor().raw_selection().is_collapsed() {
             if !self.state.is_blinking() {
                 self.state.reset_blink();
             }
