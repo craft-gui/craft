@@ -665,7 +665,7 @@ fn gallery() -> Container {
             selection.select(button.as_element_rc());
         }
 
-        button.clone().on_focus(move |event| {
+        button.clone().on_click(move |event| {
             select_example(&examples, index);
             selection.select(event.current_target());
             event.stop_propagation();
