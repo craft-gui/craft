@@ -1,18 +1,26 @@
 //! Stores one or more elements.
 
+use std::any::Any;
+use std::cell::{Ref, RefCell, RefMut};
+use std::ops::{Deref, DerefMut};
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
+
+use issho::{SelectionData, SelectionGroup};
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
+use winit::keyboard::KeyCode;
+
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::EventKind;
+use crate::elements::{AsElement, Element, ElementInternals, RadioInner, scrollable};
+use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-use issho::{SelectionData, SelectionGroup};
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct RadioGroup {
@@ -92,10 +100,60 @@ impl ElementInternals for RadioGroupInner {
 
     fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         scrollable::handle_scroll_logic(self, event);
+
+        if let EventKind::KeyDown(keyboard_event) = event {
+            let direction = match keyboard_event.code {
+                KeyCode::ArrowDown | KeyCode::ArrowRight => Some(1),
+                KeyCode::ArrowUp | KeyCode::ArrowLeft => Some(-1),
+                _ => None,
+            };
+
+            if direction.is_some_and(|direction| self.move_selection(direction)) {
+                keyboard_event.stop_propagation();
+                keyboard_event.prevent_default();
+            }
+        }
     }
 
     fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
         push_child_to_element(self, child);
+    }
+}
+
+impl RadioGroupInner {
+    fn move_selection(&mut self, direction: isize) -> bool {
+        let radios = self
+            .element_data
+            .children
+            .iter()
+            .filter(|child| (child.borrow().deref() as &dyn Any).is::<RadioInner>())
+            .cloned()
+            .collect::<Vec<_>>();
+        let Some(current_index) = radios.iter().position(|radio| radio.borrow().is_focused()) else {
+            return false;
+        };
+
+        let next_index = if direction < 0 {
+            (current_index + radios.len() - 1) % radios.len()
+        } else {
+            (current_index + 1) % radios.len()
+        };
+        {
+            let mut next = radios[next_index].borrow_mut();
+            let next = (next.deref_mut() as &mut dyn Any)
+                .downcast_mut::<RadioInner>()
+                .expect("radio group child changed type during keyboard navigation");
+            next.focus();
+            next.set_value_from_group();
+        }
+        for radio in radios {
+            let mut radio = radio.borrow_mut();
+            let radio = (radio.deref_mut() as &mut dyn Any)
+                .downcast_mut::<RadioInner>()
+                .expect("radio group child changed type during keyboard navigation");
+            radio.set_accessibility_selection();
+        }
+        true
     }
 }
 

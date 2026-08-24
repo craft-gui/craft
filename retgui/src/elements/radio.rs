@@ -12,7 +12,10 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, Circle, TrblRectangle};
 
 use retgui_renderer::renderer::Renderer;
+
 use retgui_resource_manager::ResourceManager;
+
+use winit::keyboard::KeyCode;
 
 use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
@@ -20,7 +23,7 @@ use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::clone_element;
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-use crate::events::{EventKind, RadioValueChangedEvent};
+use crate::events::{Event, EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
@@ -167,7 +170,16 @@ impl ElementInternals for RadioInner {
     fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
         scrollable::handle_scroll_logic(self, event);
         if let EventKind::PointerUp(_) = event {
+            self.focus();
             self.set_value();
+        } else if self.is_focused()
+            && let EventKind::KeyDown(keyboard_event) = event
+            && keyboard_event.code == KeyCode::Space
+            && !keyboard_event.repeat
+        {
+            self.set_value();
+            keyboard_event.stop_propagation();
+            keyboard_event.prevent_default();
         }
     }
 
@@ -185,9 +197,7 @@ impl ElementInternals for RadioInner {
 
 impl RadioInner {
     fn set_value(&mut self) {
-        let selection_changed = !self.is_selected();
-        self.active_value.replace(self.value.clone());
-        self.set_accessibility_selection();
+        self.set_value_from_group();
 
         let me = self.element_data.me.upgrade();
         let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
@@ -201,6 +211,12 @@ impl RadioInner {
                 }
             }
         }
+    }
+
+    pub(super) fn set_value_from_group(&mut self) {
+        let selection_changed = !self.is_selected();
+        self.active_value.replace(self.value.clone());
+        self.set_accessibility_selection();
         let target = self.element_data.me.upgrade().unwrap();
         queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
             target,
@@ -215,7 +231,7 @@ impl RadioInner {
         self.active_value.borrow().as_str() == self.value
     }
 
-    fn set_accessibility_selection(&mut self) {
+    pub(super) fn set_accessibility_selection(&mut self) {
         let is_selected = self.is_selected();
         self.element_data
             .set_accessibility_selection_data(Some(SelectionData::SelectionGroupItem(SelectionGroupItem {
