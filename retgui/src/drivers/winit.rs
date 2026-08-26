@@ -18,6 +18,7 @@ use crate::drivers::Driver;
 
 const WAIT_TIME: time::Duration = time::Duration::from_millis(10);
 
+/// A winit driver.
 pub struct WinitDriver {
     app: App,
 }
@@ -32,11 +33,9 @@ impl ApplicationHandler for WinitDriver {
     }
 
     fn window_event(&mut self, event_loop: &dyn ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
-        let window: Option<crate::elements::Window> =
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.get_window_by_id(window_id));
-
-        let window = if let Some(window) = window { window } else { return };
-
+        let Some(window) = self.app.window_by_id(window_id) else {
+            return;
+        };
         match self.app.on_window_event(window, event) {
             WindowEventResult::Continue => {}
             WindowEventResult::ExitRequested => event_loop.exit(),
@@ -58,12 +57,16 @@ impl ApplicationHandler for WinitDriver {
         }
     }
 
-    fn suspended(&mut self, event_loop: &dyn ActiveEventLoop) {
-        self.app.on_suspended(event_loop);
+    fn suspended(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        self.app.on_suspended();
     }
 }
 
 impl Driver for WinitDriver {
+    fn new(app: App) -> Self {
+        Self { app }
+    }
+
     fn run(self) {
         let mut event_loop_builder = EventLoopBuilder::default();
 
@@ -82,12 +85,8 @@ impl Driver for WinitDriver {
 }
 
 impl WinitDriver {
-    pub(crate) fn new(app: App) -> Self {
-        Self { app }
-    }
-
     fn maybe_exit(&mut self, event_loop: &dyn ActiveEventLoop) {
-        if self.app.close_requested {
+        if self.app.close_requested() {
             info!("Exiting winit event loop");
 
             event_loop.exit();

@@ -85,15 +85,17 @@ pub struct App {
     pub(crate) last_audio_ui_update: Option<Instant>,
 }
 
-pub(crate) enum WindowEventResult {
+/// The action requested after dispatching a window event to [`App`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[must_use]
+pub enum WindowEventResult {
     Continue,
-    #[allow(dead_code)]
     ExitRequested,
 }
 
 impl App {
     /// Handle window events.
-    pub(crate) fn on_window_event(&mut self, window: Window, event: WindowEvent) -> WindowEventResult {
+    pub fn on_window_event(&mut self, window: Window, event: WindowEvent) -> WindowEventResult {
         if matches!(
             &event,
             WindowEvent::KeyboardInput {
@@ -291,8 +293,19 @@ impl App {
         });
     }
 
-    pub fn on_suspended(&mut self, _event_loop: &dyn ActiveEventLoop) {
+    /// Suspends rendering until the application is resumed again.
+    pub fn on_suspended(&mut self) {
         self.active = false;
+    }
+
+    /// Returns the window associated with a winit window ID.
+    pub fn window_by_id(&self, window_id: winit::window::WindowId) -> Option<Window> {
+        WINDOW_MANAGER.with_borrow(|window_manager| window_manager.get_window_by_id(window_id))
+    }
+
+    /// Returns whether the driver should exit its event loop.
+    pub fn close_requested(&self) -> bool {
+        self.close_requested
     }
 
     /// Handles the window resize event.

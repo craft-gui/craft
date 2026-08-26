@@ -13,6 +13,7 @@ pub use retgui_runtime::{self, RetGuiRuntime};
 
 pub use winit;
 
+pub use crate::app::{App, WindowEventResult};
 pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
@@ -31,9 +32,8 @@ use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 use winit::platform::android::activity::AndroidApp;
 
 use crate::accessibility::ACCESS_TREE;
-use crate::app::App;
+use crate::drivers::Driver;
 use crate::drivers::winit::WinitDriver;
-use crate::drivers::{Driver, DriverKind};
 use crate::events::internal::InternalMessage;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
@@ -76,7 +76,49 @@ thread_local! {
 /// }
 /// ```
 pub fn retgui_main(options: RetGuiOptions) {
-    retgui_main_internal(Some(options));
+    retgui_main_with_driver::<WinitDriver>(options);
+}
+
+/// Starts the RetGui application using a custom [`Driver`].
+///
+/// RetGui initializes the [`App`], constructs `D` through [`Driver::new`], and
+/// transfers ownership of the app to the driver. This is the advanced
+/// counterpart to [`retgui_main`]; most applications should use the default
+/// winit driver.
+///
+/// # Example
+///
+/// ```no_run
+/// use retgui::drivers::Driver;
+/// use retgui::{App, RetGuiOptions, retgui_main_with_driver};
+///
+/// struct PlatformDriver {
+///     app: App,
+/// }
+///
+/// impl Driver for PlatformDriver {
+///     fn new(app: App) -> Self {
+///         Self { app }
+///     }
+///
+///     fn run(mut self) {
+///         self.app.on_resume(None);
+///         while !self.app.close_requested() {
+///             self.app.on_about_to_wait(None);
+///             // Wait for and forward native events here.
+///             break;
+///         }
+///     }
+/// }
+///
+/// retgui_main_with_driver::<PlatformDriver>(RetGuiOptions::default());
+/// ```
+pub fn retgui_main_with_driver<D>(options: RetGuiOptions)
+where
+    D: Driver,
+{
+    info!("RetGui started");
+    D::new(create_app(options)).run();
 }
 
 /// Sets the [`AndroidApp`] for retgui to use.
@@ -85,19 +127,6 @@ pub fn retgui_set_android_app(app: AndroidApp) {
     ANDROID_APP.with_borrow_mut(|android_app| {
         *android_app = Some(app);
     })
-}
-
-fn retgui_main_internal(options: Option<RetGuiOptions>) {
-    info!("RetGui started");
-
-    let options = options.unwrap_or_default();
-    let driver_kind = options.driver_kind;
-    let app = create_app(options);
-
-    match driver_kind {
-        DriverKind::Winit => WinitDriver::new(app).run(),
-        DriverKind::Headless => drivers::headless::HeadlessApp::new(app).drive(),
-    }
 }
 
 fn create_app(retgui_options: RetGuiOptions) -> App {

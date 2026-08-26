@@ -14,6 +14,7 @@ pub struct HeadlessEvent {
     winit_event: WindowEvent,
 }
 
+/// A driver without an OS backed window.
 pub struct HeadlessDriver {
     event_receiver: std::sync::mpsc::Receiver<HeadlessEvent>,
     event_sender: std::sync::mpsc::Sender<HeadlessEvent>,
@@ -61,7 +62,12 @@ impl HeadlessDriver {
 }
 
 impl Driver for HeadlessDriver {
+    fn new(app: App) -> Self {
+        Self::new(app)
+    }
+
     fn run(mut self) {
+        self.app.on_resume(None);
         self.tick();
     }
 }
