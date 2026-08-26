@@ -1,5 +1,7 @@
 //! A retained GUI.
 
+pub use image;
+
 pub use retgui_primitives::brush::Brush;
 pub use retgui_primitives::{Color, ColorStop, Extend, Gradient, GradientKind, HueDirection, LinearGradientData, RadialGradientData, SweepGradientData, geometry, palette};
 
@@ -9,39 +11,32 @@ pub use retgui_resource_manager::ResourceId;
 
 pub use retgui_runtime::{self, RetGuiRuntime};
 
-pub use image;
-
-pub use winit::cursor::{Cursor, CursorIcon};
-pub use winit::dpi::{PhysicalSize as WinitPhysicalSize, Size as WinitSize};
-#[cfg(target_os = "android")]
-pub use winit::platform::android::activity::*;
-pub use winit::window::{Window as WinitWindow, WindowAttributes};
+pub use winit;
 
 pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 
-use retgui_logging::info;
 #[cfg(target_os = "android")]
 use std::cell::RefCell;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::Arc;
+
+use retgui_logging::info;
 
 use retgui_resource_manager::ResourceManager;
 
 use retgui_runtime::{Receiver, RetGuiRuntimeHandle, Sender, channel};
 
+#[cfg(target_os = "android")]
+use winit::platform::android::activity::AndroidApp;
+
 use crate::accessibility::ACCESS_TREE;
 use crate::app::App;
+use crate::drivers::winit::WinitDriver;
+use crate::drivers::{Driver, DriverKind};
 use crate::events::internal::InternalMessage;
-use crate::utils::cloneable_any::CloneableAny;
 #[cfg(target_arch = "wasm32")]
 use crate::wasm_queue::WASM_QUEUE;
-use drivers::winit::WinitDriver;
-use drivers::{Driver, DriverKind};
-
-mod accessibility;
 
 pub mod drivers;
 pub mod elements;
@@ -51,23 +46,13 @@ pub mod style;
 pub mod text;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_queue;
-pub mod winit {
-    pub use winit::*;
-}
 
+mod accessibility;
 mod app;
 mod options;
 mod perf_stats;
 mod utils;
 mod window_manager;
-
-#[cfg(target_arch = "wasm32")]
-pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny>> + 'static;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub type FutureAny = dyn Future<Output = Box<dyn CloneableAny + Send + Sync>> + 'static + Send;
-
-pub type PinnedFutureAny = Pin<Box<FutureAny>>;
 
 #[cfg(target_os = "android")]
 thread_local! {
