@@ -30,8 +30,8 @@ default = ["vello_hybrid_renderer", "clipboard"]
 
 [dependencies]
 retgui_logging = { path = "../logger", version = "0.1.0" }
-retgui_undo = {path = "../undo", version = "0.1.1"}
-retgui_calendar = {path = "../calendar", version = "0.1.0"}
+retgui_undo = { path = "../undo", version = "0.1.1" }
+retgui_calendar = { path = "../calendar", version = "0.1.0" }
 
 smol_str = "0.3.6"
 
@@ -90,7 +90,7 @@ workspace = true
 
 [target.'cfg(not(target_os = "android"))'.dependencies.winit]
 workspace = true
-features = []
+features = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"]
 
 [target.'cfg(target_os = "android")'.dependencies.winit]
 workspace = true
