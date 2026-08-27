@@ -4,8 +4,6 @@ use retgui_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
 use winit::application::ApplicationHandler;
 use winit::event::{StartCause, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoopBuilder};
@@ -16,6 +14,7 @@ use winit::window::WindowId;
 use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
 use crate::drivers::Driver;
 
+#[cfg(not(target_arch = "wasm32"))]
 const WAIT_TIME: time::Duration = time::Duration::from_millis(10);
 
 /// A winit driver.
@@ -50,10 +49,22 @@ impl ApplicationHandler for WinitDriver {
         self.maybe_exit(event_loop);
 
         let perf_stats_enabled = WINDOW_MANAGER.with_borrow(|window_manager| window_manager.any_perf_stats_enabled());
-        if perf_stats_enabled {
-            event_loop.set_control_flow(ControlFlow::Poll);
-        } else {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if perf_stats_enabled {
+                // Web redraws are paced by `requestAnimationFrame`. Do not schedule a
+                // competing timer while an animation frame is already pending.
+                //#[cfg(target_arch = "wasm32")]
+                //event_loop.set_control_flow(ControlFlow::Wait);
+                event_loop.set_control_flow(ControlFlow::Poll);
+            } else {
+                event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = perf_stats_enabled;
+            event_loop.set_control_flow(ControlFlow::Wait);
         }
     }
 
