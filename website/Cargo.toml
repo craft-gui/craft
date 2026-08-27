@@ -7,7 +7,7 @@ edition = "2024"
 
 util = { path = "../examples/util" }
 
-web-sys = { version = "0.3.77", features = ["Window", "Location", "History"] }
+web-sys = { version = "0.3.77", features = ["Window", "Location", "History", "Event"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies.retgui]
 path = "../retgui"

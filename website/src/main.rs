@@ -5,6 +5,19 @@ use retgui::{RetGuiOptions, retgui_main};
 
 use crate::router::Router;
 
+thread_local! {
+    // `winit` returns from `run_app` immediately on the web. Keep the router
+    // alive after `main` returns so its weak navigation callbacks still work.
+    static ROUTER: RefCell<Option<Rc<RefCell<Router>>>> = const { RefCell::new(None) };
+}
+
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    // `Closure` removes its JavaScript callback when dropped.
+    static POPSTATE_HANDLER: RefCell<Option<web_sys::wasm_bindgen::closure::Closure<dyn FnMut(web_sys::Event)>>> =
+        const { RefCell::new(None) };
+}
+
 mod docs;
 mod examples;
 mod index;
@@ -66,7 +79,10 @@ impl WebsiteGlobalState {
             self.set_route(route.as_str());
         }
         #[cfg(target_arch = "wasm32")]
-        self.set_route(&self.get_route());
+        {
+            // Reading the initial URL must not add a duplicate history entry.
+            self.route = self.get_route();
+        }
     }
 }
 
@@ -83,7 +99,34 @@ fn main() {
 
     let global_state = Rc::new(RefCell::new(WebsiteGlobalState::default()));
     global_state.borrow_mut().load_route();
-    let page_wrapper = Router::new(global_state);
+    let page_wrapper = Router::new(global_state.clone());
     page_wrapper.borrow().navigate();
+
+    #[cfg(target_arch = "wasm32")]
+    install_popstate_handler(global_state, Rc::downgrade(&page_wrapper));
+
+    ROUTER.with_borrow_mut(|router| *router = Some(page_wrapper));
     retgui_main(RetGuiOptions::default());
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_popstate_handler(global_state: Rc<RefCell<WebsiteGlobalState>>, router: std::rc::Weak<RefCell<Router>>) {
+    use web_sys::wasm_bindgen::JsCast;
+    use web_sys::wasm_bindgen::closure::Closure;
+
+    let handler = Closure::new(move |_event: web_sys::Event| {
+        let route = global_state.borrow().get_route();
+        global_state.borrow_mut().route = route;
+
+        if let Some(router) = router.upgrade() {
+            router.borrow().navigate();
+        }
+    });
+
+    web_sys::window()
+        .expect("No window available.")
+        .add_event_listener_with_callback("popstate", handler.as_ref().unchecked_ref())
+        .expect("Failed to install popstate handler");
+
+    POPSTATE_HANDLER.with_borrow_mut(|slot| *slot = Some(handler));
 }

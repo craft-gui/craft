@@ -40,6 +40,13 @@ debug = true
 #strip = true
 #debug = false
 
+[profile.web-release]
+inherits = "release"
+debug = false
+strip = "debuginfo"
+lto = true
+codegen-units = 1
+
 [workspace.dependencies]
 reqwest = { version = "0.13.4", default-features = false }
 tracing = { version = "0.1.44" }
