@@ -1,5 +1,13 @@
 //! Stores one or more elements.
 
+use std::cell::{Ref, RefCell, RefMut};
+use std::rc::{Rc, Weak};
+use std::sync::Arc;
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
@@ -7,12 +15,6 @@ use crate::elements::{AsElement, Element, ElementInternals, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::{Rc, Weak};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct Container {
@@ -101,12 +103,20 @@ impl ElementInternals for ContainerInner {
 
 impl Container {
     pub fn new() -> Self {
+        Self {
+            inner: ContainerInner::new(),
+        }
+    }
+}
+
+impl ContainerInner {
+    fn new() -> Rc<RefCell<Self>> {
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<ContainerInner>>| {
             RefCell::new(ContainerInner {
                 element_data: ElementData::new(me.clone(), true),
             })
         });
         inner.borrow_mut().element_data.create_layout_node(None);
-        Self { inner }
+        inner
     }
 }
