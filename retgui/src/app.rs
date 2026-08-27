@@ -5,8 +5,10 @@ use std::sync::Arc;
 use std::time::Instant as JobInstant;
 #[cfg(all(feature = "audio", not(target_arch = "wasm32")))]
 use std::time::{Duration, Instant};
-#[cfg(all(feature = "audio", target_arch = "wasm32"))]
-use web_time::{Duration, Instant};
+
+use gummy::NodeId;
+
+use issho::AccessEvent;
 
 use retgui_logging::info;
 
@@ -16,10 +18,10 @@ use retgui_resource_manager::resource_event::ResourceEvent;
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use gummy::NodeId;
-use issho::AccessEvent;
-
 use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
+
+#[cfg(all(feature = "audio", target_arch = "wasm32"))]
+use web_time::{Duration, Instant};
 
 use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
