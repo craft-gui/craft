@@ -81,7 +81,7 @@ pub fn run<F>(name: &str, test: F)
 where
     F: FnOnce(&mut HeadlessApp),
 {
-    let app = crate::create_app(crate::RetGuiOptions::basic(name));
+    let app = App::new(crate::RetGuiOptions::basic(name));
     HeadlessApp::run_with_app(app, test);
 }
 

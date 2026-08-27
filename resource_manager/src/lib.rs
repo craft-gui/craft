@@ -1,11 +1,4 @@
-mod identifier;
-pub mod image;
-mod lock_free_map;
-pub mod resource;
-
-pub mod decoders;
-pub mod resource_event;
-pub mod resource_type;
+pub use crate::identifier::ResourceId;
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -13,28 +6,23 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use retgui_runtime::RetGuiRuntimeHandle;
+
 use crate::decoders::{image_decoder, tinyvg_decoder};
-pub use crate::identifier::ResourceId;
 use crate::lock_free_map::LockFreeMap;
 use crate::resource::Resource;
-use crate::resource_event::ResourceEvent;
 use crate::resource_type::ResourceType;
-use retgui_runtime::{RetGuiRuntimeHandle, Sender};
+
+pub mod decoders;
+pub mod image;
+pub mod resource;
+pub mod resource_event;
+pub mod resource_type;
+
+mod identifier;
+mod lock_free_map;
 
 pub type ResourceFuture = Pin<Box<dyn Future<Output = Box<dyn Any + Send + Sync>> + Send + Sync>>;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub trait ResourceEventHandler: From<ResourceEvent> + Send + 'static {}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl<T: From<ResourceEvent> + Send + 'static> ResourceEventHandler for T {}
-
-#[cfg(target_arch = "wasm32")]
-pub trait ResourceEventHandler: From<ResourceEvent> + 'static {}
-
-#[cfg(target_arch = "wasm32")]
-impl<T: From<ResourceEvent> + 'static> ResourceEventHandler for T {}
-
 pub type DecoderFn = fn(Vec<u8>) -> Box<dyn Any + Send + Sync>;
 
 pub struct ResourceManager {
@@ -61,31 +49,20 @@ impl ResourceManager {
         }
     }
 
-    pub fn async_download_resource_and_send_message_on_finish<Message: ResourceEventHandler>(
-        &self,
-        app_sender: Sender<Message>,
-        resource_id: ResourceId,
-        resource_type: &ResourceType,
-    ) {
-        let resource_id_copy = resource_id.clone();
-
-        let resource_id = resource_id.clone();
+    pub fn async_download_resource(self: &Arc<Self>, resource_id: ResourceId, resource_type: &ResourceType) {
+        let resource_manager = self.clone();
         let resource_type = resource_type.clone();
         let decoder_fn = *self.decoders.get(&resource_type).unwrap();
-        let app_sender_copy = app_sender.clone();
         let f = async move {
             let bytes = resource_id.fetch_data_from_resource_id().await;
 
             let resource = Resource {
-                resource_type: resource_type.clone(),
+                resource_type,
                 data: decoder_fn(bytes.unwrap()),
                 expiration_time: None,
             };
 
-            app_sender_copy
-                .send(ResourceEvent::Loaded(resource_id_copy, resource_type, resource).into())
-                .await
-                .expect("Failed to send added resource event");
+            resource_manager.insert(resource_id, Arc::new(resource));
         };
 
         self.runtime.spawn(f);

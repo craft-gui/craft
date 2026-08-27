@@ -98,7 +98,6 @@ impl RetGuiRuntime {
         spawn(future);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn runtime_spawn<F>(&self, future: F)
     where
         F: Future<Output = ()> + 'static,

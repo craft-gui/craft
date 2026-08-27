@@ -19,8 +19,6 @@ use winit::event::{ButtonSource, KeyEvent, PointerKind, PointerSource};
 
 use crate::elements::ElementInternals;
 
-pub mod internal;
-
 pub(crate) mod pointer_capture;
 
 mod event_dispatch;

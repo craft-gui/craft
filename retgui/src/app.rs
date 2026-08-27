@@ -14,11 +14,10 @@ use retgui_logging::info;
 
 use retgui_primitives::geometry::{Point, Size};
 
-use retgui_resource_manager::resource_event::ResourceEvent;
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use retgui_runtime::{Job, Receiver, RetGuiRuntimeHandle, Sender, pop_gui_thread_work, push_gui_thread_work};
+use retgui_runtime::{Job, RetGuiRuntime, pop_gui_thread_work, push_gui_thread_work};
 
 #[cfg(all(feature = "audio", target_arch = "wasm32"))]
 use web_time::{Duration, Instant};
@@ -28,15 +27,13 @@ use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 
 use crate::RetGuiOptions;
+use crate::accessibility::ACCESS_TREE;
 #[cfg(feature = "audio")]
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
 use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable, set_focus_outline_visible};
-use crate::events::internal::InternalMessage;
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-#[cfg(target_arch = "wasm32")]
-use crate::wasm_queue::{WASM_QUEUE, WasmQueue};
 use crate::window_manager::WindowManager;
 
 thread_local! {
@@ -69,10 +66,7 @@ pub struct App {
     /// The resource manager is responsible for loading, caching, and providing access to resources.
     pub(crate) resource_manager: Arc<ResourceManager>,
 
-    pub(crate) app_sender: Sender<InternalMessage>,
-    #[allow(dead_code)]
-    pub(crate) event_receiver: Receiver<InternalMessage>,
-    pub(crate) runtime: RetGuiRuntimeHandle,
+    pub(crate) runtime: RetGuiRuntime,
 
     pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementInternals>>>,
     #[allow(dead_code)]
@@ -96,6 +90,32 @@ pub enum WindowEventResult {
 }
 
 impl App {
+    pub(crate) fn new(retgui_options: RetGuiOptions) -> Self {
+        let runtime = RetGuiRuntime::new();
+        info!("Created async runtime");
+
+        #[allow(clippy::arc_with_non_send_sync)]
+        let resource_manager = Arc::new(ResourceManager::new(runtime.handle()));
+
+        let (event_dispatcher, text_context) =
+            ACCESS_TREE.with(|access_tree| (access_tree.event_dispatcher.clone(), access_tree.text_context.clone()));
+
+        Self {
+            event_dispatcher,
+            text_context,
+            resource_manager,
+            reload_fonts: false,
+            runtime,
+            target_scratch: Vec::new(),
+            retgui_options,
+            active: false,
+            wait_cancelled: false,
+            close_requested: false,
+            #[cfg(feature = "audio")]
+            last_audio_ui_update: None,
+        }
+    }
+
     /// Handle window events.
     pub fn on_window_event(&mut self, window: Window, event: WindowEvent) -> WindowEventResult {
         if matches!(
@@ -201,8 +221,12 @@ impl App {
     }
 
     pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
-        self.runtime.update_local_set();
-        self.process_messages();
+        #[cfg(not(target_arch = "wasm32"))]
+        self.runtime.maybe_block_on(async {
+            retgui_runtime::task::yield_now().await;
+        });
+        self.runtime.handle().update_local_set();
+        self.process_resources();
         self.process_external_work();
         if let Some(text_context) = self.text_context.borrow_mut().as_mut() {
             self.event_dispatcher.borrow_mut().dispatch_queued_events(text_context);
@@ -216,38 +240,27 @@ impl App {
         });
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    fn process_messages(&mut self) {
-        while let Ok(message) = self.event_receiver.try_recv() {
-            match message {
-                InternalMessage::ResourceEvent(resource_event) => {
-                    self.on_resource_event(resource_event);
+    fn process_resources(&mut self) {
+        let mut resource_loaded = false;
+        IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
+            in_progress.retain(|(resource_id, resource_type)| {
+                if !self.resource_manager.contains(resource_id) {
+                    return true;
                 }
-                #[cfg(target_arch = "wasm32")]
-                InternalMessage::RendererCreated(_, _) => unreachable!(),
-            }
-        }
-    }
 
-    #[cfg(target_arch = "wasm32")]
-    fn process_messages(&mut self) {
-        WASM_QUEUE.with_borrow_mut(|wasm_queue: &mut WasmQueue| {
-            wasm_queue.drain(|message| match message {
-                InternalMessage::ResourceEvent(resource_event) => {
-                    self.on_resource_event(resource_event);
+                resource_loaded = true;
+                if *resource_type == ResourceType::Font {
+                    self.reload_fonts = true;
                 }
-                InternalMessage::RendererCreated(winit_window, renderer) => {
-                    WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                        let window = window_manager.get_window_by_id(winit_window.id()).unwrap();
-                        let size = Size::new(
-                            winit_window.surface_size().width as f32,
-                            winit_window.surface_size().height as f32,
-                        );
-                        window.inner.borrow_mut().on_renderer_created(renderer, size);
-                    });
-                }
+                false
             });
         });
+
+        if resource_loaded {
+            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+                window_manager.dirty_and_redraw_all_windows(self);
+            });
+        }
     }
 
     fn process_external_work(&mut self) {
@@ -408,30 +421,6 @@ impl App {
         }
     }
 
-    pub fn on_resource_event(&mut self, resource_event: ResourceEvent) {
-        match resource_event {
-            ResourceEvent::Loaded(resource_id, resource_type, resource) => {
-                IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
-                    in_progress.retain_mut(|(resource, _resource_type)| *resource != resource_id);
-                });
-                if let Some(_text_context) = self.text_context.borrow_mut().as_mut()
-                    && resource_type == ResourceType::Font
-                {
-                    // Todo: Load the font into the text context.
-                    self.resource_manager.insert(resource_id.clone(), Arc::new(resource));
-                    self.reload_fonts = true;
-                } else {
-                    self.resource_manager.insert(resource_id, Arc::new(resource));
-                }
-                // TODO: Only mark dirty affected nodes.
-                WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                    window_manager.dirty_and_redraw_all_windows(self);
-                });
-            }
-            ResourceEvent::UnLoaded(_) => {}
-        }
-    }
-
     fn on_request_redraw_internal(&mut self, window: Window) {
         let delta = window.animation_delta();
         let has_active_animations =
@@ -471,11 +460,7 @@ impl App {
                         continue;
                     }
                     self.resource_manager
-                        .async_download_resource_and_send_message_on_finish(
-                            self.app_sender.clone(),
-                            resource.clone(),
-                            &resource_type,
-                        );
+                        .async_download_resource(resource.clone(), &resource_type);
                     in_progress.push_back((resource, resource_type));
                 }
             });

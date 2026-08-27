@@ -3,48 +3,43 @@
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
 #[cfg(not(target_arch = "wasm32"))]
-use std::time;
-use time::{Duration, Instant};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
+use std::time::{Duration, Instant};
+
+use gummy::AvailableSpace;
 
 use retgui_logging::info;
 
 use retgui_primitives::geometry::{Point, Rectangle, Size};
 
 use retgui_renderer::RendererType;
+use retgui_renderer::blank_renderer::BlankRenderer;
 use retgui_renderer::renderer::{Renderer, Screenshot};
 
 use retgui_resource_manager::ResourceManager;
 
-use peniko::Color;
+#[cfg(target_arch = "wasm32")]
+use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesWeb};
 
-use gummy::AvailableSpace;
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
 
 use winit::event::MouseScrollDelta;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
+use crate::Color;
 use crate::accessibility::RetGuiAccessTree;
 use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::{AsElement, Element, ElementInternals, scrollable};
-#[cfg(target_arch = "wasm32")]
-use crate::events::internal::InternalMessage;
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{EventKind, KeyboardEvent, PointerScrollEvent, PointerType};
 use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::text::text_context::TextContext;
-#[cfg(target_arch = "wasm32")]
-use crate::wasm_queue::WASM_QUEUE;
-use retgui_renderer::blank_renderer::BlankRenderer;
-#[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesWeb};
 
 pub type WindowConstructor = Box<dyn FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>;
 
@@ -289,7 +284,9 @@ impl Window {
     }
 
     pub(crate) fn create(&self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
-        self.inner.borrow_mut().create(retgui_app, event_loop)
+        self.inner
+            .borrow_mut()
+            .create(retgui_app, event_loop, Rc::downgrade(&self.inner));
     }
 
     pub(crate) fn on_scale_factor_changed(&self, scale_factor: f64) {
@@ -596,7 +593,12 @@ impl WindowInternal {
         self.set_scale_factor(self.effective_scale_factor());
     }
 
-    pub(crate) fn create(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
+    pub(crate) fn create(
+        &mut self,
+        retgui_app: &mut App,
+        event_loop: Option<&dyn ActiveEventLoop>,
+        window: Weak<RefCell<Self>>,
+    ) {
         let Some(event_loop) = event_loop else {
             if self.headless {
                 return;
@@ -642,9 +644,9 @@ impl WindowInternal {
         self.on_scale_factor_changed(winit_window.scale_factor());
 
         let renderer_type = self.renderer_type;
-
         cfg_select! {
             not(target_arch = "wasm32") => {
+                let _ = window;
                 let renderer = retgui_app.runtime.borrow_tokio_runtime().block_on(async {
                     let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(winit_window.clone()).await;
                     renderer
@@ -654,11 +656,15 @@ impl WindowInternal {
             }
             _ => {
                 let window_copy_2 = winit_window.clone();
-                retgui_app.runtime.spawn(async move {
+                retgui_app.runtime.runtime_spawn(async move {
                     let renderer: Rc<RefCell<dyn Renderer>> = renderer_type.create(window_copy_2.clone()).await;
-                    WASM_QUEUE.with_borrow_mut(|wasm_queue| {
-                        wasm_queue.push(InternalMessage::RendererCreated(window_copy_2.clone(), renderer));
-                    });
+                    if let Some(window) = window.upgrade() {
+                        let size = Size::new(
+                            window_copy_2.surface_size().width as f32,
+                            window_copy_2.surface_size().height as f32,
+                        );
+                        window.borrow_mut().on_renderer_created(renderer, size);
+                    }
                     info!("Created renderer")
                 });
             }
