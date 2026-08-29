@@ -34,7 +34,7 @@ thread_local! {
 /// Drop is required to clean up any gummy nodes allocated by the element.
 #[allow(drop_bounds)]
 pub trait ElementInternals: ElementData + Any + Drop {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>>;
+    fn deep_clone(&self) -> DynElement;
 
     fn position_in_parent(&self) -> Option<usize> {
         let parent = self.parent();
@@ -295,15 +295,23 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.mark_dirty();
     }
 
-    fn get_first_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
-        self.children().first().cloned().ok_or(RetGuiError::ElementNotFound)
+    fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
+        self.children()
+            .first()
+            .cloned()
+            .map(DynElement::new)
+            .ok_or(RetGuiError::ElementNotFound)
     }
 
-    fn get_last_child(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
-        self.children().last().cloned().ok_or(RetGuiError::ElementNotFound)
+    fn get_last_child(&self) -> Result<DynElement, RetGuiError> {
+        self.children()
+            .last()
+            .cloned()
+            .map(DynElement::new)
+            .ok_or(RetGuiError::ElementNotFound)
     }
 
-    fn get_previous_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
+    fn get_previous_sibling(&self) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
         let position = self.position_in_parent();
 
@@ -313,7 +321,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             if position != 0
                 && let Some(next_sibling) = parent.borrow().children().get(position - 1)
             {
-                Ok(next_sibling.clone())
+                Ok(DynElement::new(next_sibling.clone()))
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -322,7 +330,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn get_next_sibling(&self) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
+    fn get_next_sibling(&self) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
         let position = self.position_in_parent();
 
@@ -330,7 +338,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             && let Some(parent) = parent.unwrap().upgrade()
         {
             if let Some(next_sibling) = parent.borrow().children().get(position + 1) {
-                Ok(next_sibling.clone())
+                Ok(DynElement::new(next_sibling.clone()))
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -339,20 +347,16 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn swap_child(
-        &mut self,
-        child_1: Rc<RefCell<dyn ElementInternals>>,
-        child_2: Rc<RefCell<dyn ElementInternals>>,
-    ) -> Result<(), RetGuiError> {
+    fn swap_child(&mut self, child_1: DynElement, child_2: DynElement) -> Result<(), RetGuiError> {
         let children = &mut self.element_data_mut().children;
         let position_1 = children
             .iter()
-            .position(|x| Rc::ptr_eq(x, &child_1))
+            .position(|x| Rc::ptr_eq(x, &child_1.inner))
             .ok_or(RetGuiError::ElementNotFound)?;
 
         let position_2 = children
             .iter()
-            .position(|x| Rc::ptr_eq(x, &child_2))
+            .position(|x| Rc::ptr_eq(x, &child_2.inner))
             .ok_or(RetGuiError::ElementNotFound)?;
 
         if position_1 == position_2 {
@@ -365,8 +369,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
         // Swap the children's gummy nodes.
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let parent_id = self.element_data().layout.gummy_node_id;
-            let child_1_id = child_1.borrow().element_data().layout.gummy_node_id;
-            let child_2_id = child_2.borrow().element_data().layout.gummy_node_id;
+            let child_1_id = child_1.inner.borrow().element_data().layout.gummy_node_id;
+            let child_2_id = child_2.inner.borrow().element_data().layout.gummy_node_id;
 
             if let Some(parent_id) = parent_id
                 && let Some(child_1_id) = child_1_id
@@ -409,10 +413,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ///
     /// # Panics
     /// Panics if the corresponding Gummy layout nodes fail to be removed.
-    fn remove_child(
-        &mut self,
-        child: Rc<RefCell<dyn ElementInternals>>,
-    ) -> Result<Rc<RefCell<dyn ElementInternals>>, RetGuiError> {
+    fn remove_child(&mut self, child: DynElement) -> Result<DynElement, RetGuiError> {
+        let child = child.inner;
         // Find the node.
         let children = &mut self.element_data_mut().children;
         let position = children
@@ -440,16 +442,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
             gummy_tree.mark_dirty(parent_id.unwrap());
         });
 
-        // TODO: Move to document
-        fn remove_element_from_document(node: Rc<RefCell<dyn ElementInternals>>, pointer_capture: &mut PointerCapture) {
-            pointer_capture.remove_element(&node);
-            for child in node.borrow().children() {
-                remove_element_from_document(child.clone(), pointer_capture);
+        fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
+            pointer_capture.remove_element(&node.inner);
+            for child in node.inner.borrow().children() {
+                remove_element_from_document(DynElement::new(child.clone()), pointer_capture);
             }
         }
 
         if let Some(pointer_capture) = self.pointer_capture() {
-            remove_element_from_document(child.clone(), &mut pointer_capture.borrow_mut());
+            remove_element_from_document(DynElement::new(child.clone()), &mut pointer_capture.borrow_mut());
         }
 
         child.borrow_mut().unfocus();
@@ -462,17 +463,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
         self.request_window_redraw();
 
-        Ok(child)
+        Ok(DynElement::new(child))
     }
 
     fn remove_all_children(&mut self) {
         // @OPTIMIZE: We are copying the vec here.
         for child in self.element_data().children.clone().iter().rev() {
-            self.remove_child(child.clone()).unwrap();
+            self.remove_child(DynElement::new(child.clone())).unwrap();
         }
     }
 
-    fn push(&mut self, _child: Rc<RefCell<dyn ElementInternals>>) {
+    fn push(&mut self, _child: DynElement) {
         panic!("Pushing children is not supported.")
     }
 
@@ -1312,19 +1313,21 @@ pub trait ElementInternals: ElementData + Any + Drop {
             self.request_window_redraw();
         }
     }
-
-    /// Re-
-    fn to_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.element_data().me.upgrade().unwrap()
+    fn to_dyn_element(&self) -> DynElement {
+        DynElement::new(self.element_data().me.upgrade().unwrap())
     }
 
     /// Returns the root element.
-    fn get_root_element(&self) -> Weak<RefCell<dyn ElementInternals>> {
-        let mut root_ancestor: Weak<RefCell<dyn ElementInternals>> = self.element_data().me.clone();
+    fn get_root_element(&self) -> DynElement {
+        let mut root_ancestor = self.to_dyn_element();
         loop {
-            let me = root_ancestor.upgrade().unwrap();
-            if let Some(parent) = me.borrow().parent() {
-                root_ancestor = parent;
+            let parent = root_ancestor
+                .inner
+                .borrow()
+                .parent()
+                .and_then(|parent| parent.upgrade());
+            if let Some(parent) = parent {
+                root_ancestor = DynElement::new(parent);
             } else {
                 break;
             }
@@ -1336,8 +1339,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ///
     /// This will panic if the element does not have a window as its root.
     fn get_winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
-        let root = self.get_root_element().upgrade().unwrap();
-        (root.borrow().deref() as &dyn Any)
+        let root = self.get_root_element();
+        (root.inner.borrow().deref() as &dyn Any)
             .downcast_ref::<WindowInternal>()
             .unwrap()
             .winit_window

@@ -23,10 +23,6 @@ impl Element for DynElement {}
 impl AsElement for DynElement {
     type Inner = dyn ElementInternals;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }

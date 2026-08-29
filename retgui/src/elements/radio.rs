@@ -65,10 +65,6 @@ impl Drop for RadioInner {
 impl AsElement for Radio {
     type Inner = RadioInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -97,8 +93,8 @@ impl crate::elements::ElementData for RadioInner {
 }
 
 impl ElementInternals for RadioInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |element, gummy_tree| {
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
             let mut element = element.borrow_mut();
             let owner_id = element.element_data.internal_id;
             let owner = element.element_data.me.clone();
@@ -110,7 +106,7 @@ impl ElementInternals for RadioInner {
             gummy_tree.add_child(parent, circle_node);
             gummy_tree.register_owner(circle_node, owner_id, owner);
             Some(parent)
-        })
+        }))
     }
 
     fn apply_layout(
@@ -193,8 +189,8 @@ impl ElementInternals for RadioInner {
         }
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 
     fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Container, Dropdown, Element, ElementInternals, Text};
+use crate::elements::{AsElement, Container, Dropdown, DynElement, Element, ElementInternals, Text};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
@@ -65,10 +65,6 @@ impl Drop for CalendarInner {
 impl AsElement for Calendar {
     type Inner = CalendarInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -97,8 +93,8 @@ impl crate::elements::ElementData for CalendarInner {
 }
 
 impl ElementInternals for CalendarInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(
@@ -134,8 +130,8 @@ impl ElementInternals for CalendarInner {
         }
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 }
 
@@ -213,13 +209,13 @@ impl Calendar {
             .width(px(CELL_SIZE.raw_value() * 7.0))
             .push(inner_mut.year_dropdown.clone())
             .push(inner_mut.month_dropdown.clone());
-        inner_mut.push(nav.inner);
+        inner_mut.push(DynElement::new(nav.inner));
 
         let day_header = inner_mut.day_header.clone();
-        inner_mut.push(day_header.inner);
+        inner_mut.push(DynElement::new(day_header.inner));
 
         let week_grid = inner_mut.week_grid.clone();
-        inner_mut.push(week_grid.inner);
+        inner_mut.push(DynElement::new(week_grid.inner));
 
         drop(inner_mut);
         Self { inner }

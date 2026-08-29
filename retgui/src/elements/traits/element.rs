@@ -26,11 +26,11 @@ pub trait Element: Clone + AsElement {
     }
 
     fn get_previous_sibling(&self) -> Result<DynElement, RetGuiError> {
-        self.borrow().get_previous_sibling().map(DynElement::new)
+        self.borrow().get_previous_sibling()
     }
 
     fn get_next_sibling(&self) -> Result<DynElement, RetGuiError> {
-        self.borrow().get_next_sibling().map(DynElement::new)
+        self.borrow().get_next_sibling()
     }
 
     fn get_parent(&self) -> Result<DynElement, RetGuiError> {
@@ -46,15 +46,15 @@ pub trait Element: Clone + AsElement {
     }
 
     fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
-        self.borrow().get_first_child().map(DynElement::new)
+        self.borrow().get_first_child()
     }
 
     fn get_last_child(&self) -> Result<DynElement, RetGuiError> {
-        self.borrow().get_last_child().map(DynElement::new)
+        self.borrow().get_last_child()
     }
 
     fn remove_child(&self, child: DynElement) -> Result<DynElement, RetGuiError> {
-        self.borrow_mut().remove_child(child.inner).map(DynElement::new)
+        self.borrow_mut().remove_child(child)
     }
 
     fn remove_all_children(&self) {
@@ -62,12 +62,12 @@ pub trait Element: Clone + AsElement {
     }
 
     fn swap_child(&self, child_1: DynElement, child_2: DynElement) -> Result<(), RetGuiError> {
-        self.borrow_mut().swap_child(child_1.inner, child_2.inner)
+        self.borrow_mut().swap_child(child_1, child_2)
     }
 
     fn push(self, child: impl AsElement) -> Self {
-        let child_rc = child.as_element_rc();
-        self.as_element_rc().borrow_mut().push(child_rc);
+        let child = child.borrow().to_dyn_element();
+        self.borrow_mut().push(child);
         self
     }
 
@@ -144,10 +144,7 @@ pub trait Element: Clone + AsElement {
     }
 
     fn emit_custom_event<T: Any + 'static>(&self, detail: T) {
-        queue_event(EventKind::Custom(CustomEvent::new(
-            DynElement::new(self.as_element_rc()),
-            detail,
-        )));
+        queue_event(EventKind::Custom(CustomEvent::new(self.as_dyn_element(), detail)));
     }
 
     fn on_focus(self, on_focus: impl Fn(&mut FocusEvent) + 'static) -> Self {
@@ -624,8 +621,6 @@ pub trait Element: Clone + AsElement {
     }
 
     fn as_dyn_element(&self) -> DynElement {
-        DynElement {
-            inner: self.as_element_rc(),
-        }
+        self.borrow().to_dyn_element()
     }
 }

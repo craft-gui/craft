@@ -3,7 +3,7 @@
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals, scrollable};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -44,10 +44,6 @@ impl Drop for CheckboxGroupInner {
 impl AsElement for CheckboxGroup {
     type Inner = CheckboxGroupInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -76,8 +72,8 @@ impl crate::elements::ElementData for CheckboxGroupInner {
 }
 
 impl ElementInternals for CheckboxGroupInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(
@@ -104,8 +100,8 @@ impl ElementInternals for CheckboxGroupInner {
         scrollable::handle_scroll_logic(self, event);
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 }
 

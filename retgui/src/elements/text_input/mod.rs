@@ -25,7 +25,7 @@ use crate::app::{ELEMENTS, WINDOW_MANAGER, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals, scrollable};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
@@ -127,10 +127,6 @@ impl Drop for TextInputInner {
 impl AsElement for TextInput {
     type Inner = TextInputInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -161,8 +157,8 @@ impl crate::elements::ElementData for TextInputInner {
 }
 
 impl ElementInternals for TextInputInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |element, gummy_tree| {
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
             let me = Rc::downgrade(element);
             let mut element = element.borrow_mut();
             element.me = me;
@@ -174,7 +170,7 @@ impl ElementInternals for TextInputInner {
             });
             gummy_tree.set_node_context(gummy_id, Some(context));
             Some(gummy_id)
-        })
+        }))
     }
 
     fn apply_layout(

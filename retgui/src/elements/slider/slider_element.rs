@@ -352,10 +352,6 @@ impl Drop for SliderInner {
 impl AsElement for Slider {
     type Inner = SliderInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -384,8 +380,8 @@ impl crate::elements::ElementData for SliderInner {
 }
 
 impl ElementInternals for SliderInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(

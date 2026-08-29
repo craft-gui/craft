@@ -319,9 +319,7 @@ fn handle_scroll_logic_internal(
         element.request_window_redraw();
 
         if matches!(event, EventKind::KeyDown(_) | EventKind::KeyUp(_)) {
-            queue_event(EventKind::Scroll(RetGuiScrollEvent::new(DynElement::new(
-                element.to_rc(),
-            ))));
+            queue_event(EventKind::Scroll(RetGuiScrollEvent::new(element.to_dyn_element())));
         }
     }
 

@@ -19,7 +19,7 @@ use maudio::sound::notifier::EndNotifier;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Button, Element, ElementInternals, Slider, Text, TinyVg, scrollable};
+use crate::elements::{AsElement, Button, DynElement, Element, ElementInternals, Slider, Text, TinyVg, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Unit};
@@ -79,10 +79,6 @@ impl Drop for AudioInner {
 impl AsElement for Audio {
     type Inner = AudioInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -111,8 +107,8 @@ impl crate::elements::ElementData for AudioInner {
 }
 
 impl ElementInternals for AudioInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(
@@ -139,8 +135,8 @@ impl ElementInternals for AudioInner {
         scrollable::handle_scroll_logic(self, event);
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 }
 
@@ -195,25 +191,25 @@ impl Audio {
                 .on_click(move |_event| {
                     inner2.borrow_mut().toggle();
                 })
-                .inner,
+                .as_dyn_element(),
         );
         inner_mut.push(
             track
                 .on_slider_value_changed(move |event| inner3.borrow_mut().set_cursor(event.value as f32))
-                .inner,
+                .as_dyn_element(),
         );
-        inner_mut.push(duration.inner);
+        inner_mut.push(DynElement::new(duration.inner));
         inner_mut.push(
             TinyVg::new(volume_icon)
                 .color(Color::WHITE)
                 .width(Unit::Px(16.0))
                 .height(Unit::Px(16.0))
-                .inner,
+                .as_dyn_element(),
         );
         inner_mut.push(
             volume_track
                 .on_slider_value_changed(move |event| inner4.borrow_mut().set_volume(event.value as f32))
-                .inner,
+                .as_dyn_element(),
         );
         inner_mut.set_sound(path);
         drop(inner_mut);

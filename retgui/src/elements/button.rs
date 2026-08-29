@@ -56,10 +56,6 @@ impl Drop for ButtonInner {
 impl AsElement for Button {
     type Inner = ButtonInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -88,8 +84,8 @@ impl crate::elements::ElementData for ButtonInner {
 }
 
 impl ElementInternals for ButtonInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(
@@ -135,8 +131,8 @@ impl ElementInternals for ButtonInner {
         }
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 
     fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {

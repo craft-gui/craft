@@ -1,5 +1,4 @@
-use std::cell::{Ref, RefCell, RefMut};
-use std::rc::Rc;
+use std::cell::{Ref, RefMut};
 
 use crate::elements::ElementInternals;
 
@@ -7,7 +6,6 @@ use crate::elements::ElementInternals;
 pub trait AsElement {
     type Inner: ElementInternals + ?Sized;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>>;
     fn borrow(&self) -> Ref<'_, dyn ElementInternals>;
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals>;
 

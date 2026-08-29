@@ -14,7 +14,7 @@ use crate::app::{GUMMY_TREE, PENDING_RESOURCES};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
@@ -53,10 +53,6 @@ impl Drop for ImageInner {
 impl AsElement for Image {
     type Inner = ImageInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -75,8 +71,8 @@ impl AsElement for Image {
 }
 
 impl ElementInternals for ImageInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(

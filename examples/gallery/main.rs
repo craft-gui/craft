@@ -1,12 +1,12 @@
 use std::cell::RefCell;
 #[cfg(feature = "audio")]
 use std::path::{Path, PathBuf};
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 use std::time::Duration;
 
 #[cfg(feature = "audio")]
 use retgui::elements::Audio;
-use retgui::elements::{AsElement, Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, ElementInternals, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui::elements::{AsElement, Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
 use retgui::events::Event;
 use retgui::geometry::Point;
 use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
@@ -516,8 +516,6 @@ struct GalleryExample {
     section: Container,
 }
 
-type WeakElement = Weak<RefCell<dyn ElementInternals>>;
-
 impl GalleryExample {
     fn new(label: &'static str, child: impl AsElement) -> Self {
         let section = Container::new()
@@ -545,19 +543,22 @@ impl GalleryExample {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct NavigationSelection {
-    active: Rc<RefCell<Option<WeakElement>>>,
+    active: Rc<RefCell<DynElement>>,
 }
 
 impl NavigationSelection {
-    fn select(&self, target: DynElement) {
-        if let Some(previous) = self.active.borrow().as_ref().and_then(Weak::upgrade) {
-            style_navigation_button(DynElement::new(previous), false);
+    fn new(active: DynElement) -> Self {
+        Self {
+            active: Rc::new(RefCell::new(active)),
         }
+    }
 
-        style_navigation_button(target.clone(), true);
-        self.active.replace(Some(Rc::downgrade(&target.inner)));
+    fn select(&self, target: DynElement) {
+        let previous = self.active.replace(target.clone());
+        style_navigation_button(previous, false);
+        style_navigation_button(target, true);
     }
 }
 
@@ -652,18 +653,23 @@ fn gallery() -> Container {
     let examples = Rc::new(gallery_examples());
     let sidebar = sidebar();
     let content = content_pane();
-    let selection = NavigationSelection::default();
+    let buttons = examples
+        .iter()
+        .enumerate()
+        .map(|(index, example)| navigation_button(example.label, index == 0))
+        .collect::<Vec<_>>();
+    let selection = NavigationSelection::new(
+        buttons
+            .first()
+            .expect("the gallery must contain at least one example")
+            .as_dyn_element(),
+    );
 
     select_example(&examples, 0);
 
-    for (index, example) in examples.iter().enumerate() {
-        let button = navigation_button(example.label, index == 0);
+    for (index, (example, button)) in examples.iter().zip(buttons).enumerate() {
         let examples = examples.clone();
         let selection = selection.clone();
-
-        if index == 0 {
-            selection.select(button.as_dyn_element());
-        }
 
         button.clone().on_click(move |event| {
             select_example(&examples, index);

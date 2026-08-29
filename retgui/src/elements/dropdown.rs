@@ -90,10 +90,6 @@ impl Drop for DropdownInner {
 impl AsElement for Dropdown {
     type Inner = DropdownInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -122,7 +118,7 @@ impl ElementData for DropdownInner {
 }
 
 impl ElementInternals for DropdownInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+    fn deep_clone(&self) -> DynElement {
         let element = clone_element::<Self, _>(self, |element, gummy_tree| {
             let mut element = element.borrow_mut();
             let owner_id = element.element_data.internal_id;
@@ -145,7 +141,7 @@ impl ElementInternals for DropdownInner {
         if let Some(index) = selected_element_index {
             element.borrow_mut().set_selected_element(index);
         }
-        element
+        DynElement::new(element)
     }
 
     fn set_scale_factor(&mut self, scale_factor: f64) {
@@ -376,7 +372,8 @@ impl ElementInternals for DropdownInner {
         }
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
+    fn push(&mut self, child: DynElement) {
+        let child = child.inner;
         let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
         let me_window = self.element_data.window.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
@@ -791,7 +788,7 @@ impl DropdownInner {
             .children
             .get(child_index)
             .expect("There is no child at this index.");
-        self.selected_element = Some(child.clone().borrow().deep_clone());
+        self.selected_element = Some(child.clone().borrow().deep_clone().inner);
         self.selected_element
             .as_ref()
             .unwrap()

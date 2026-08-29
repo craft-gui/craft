@@ -34,7 +34,7 @@ use crate::accessibility::RetGuiAccessTree;
 use crate::app::{App, GUMMY_TREE, WINDOW_MANAGER};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
-use crate::elements::{AsElement, Element, ElementInternals, scrollable};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{EventKind, KeyboardEvent, PointerScrollEvent, PointerType};
 use crate::layout::GummyTree;
@@ -108,10 +108,6 @@ impl Drop for WindowInternal {
 impl AsElement for Window {
     type Inner = WindowInternal;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -172,11 +168,11 @@ impl ElementInternals for WindowInternal {
         scrollable::handle_scroll_logic(self, event);
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
+    fn deep_clone(&self) -> DynElement {
         todo!()
     }
 }

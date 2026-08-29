@@ -74,20 +74,20 @@ where
     let mut new_children = Vec::with_capacity(source_children.len());
     for child in source_children {
         let new_child = child.borrow().deep_clone();
-        new_child.borrow_mut().element_data_mut().parent = Some(Rc::downgrade(&new_element));
+        new_child.inner.borrow_mut().element_data_mut().parent = Some(Rc::downgrade(&new_element));
         crate::accessibility::reparent_subtree(
-            &mut *new_child.borrow_mut(),
+            &mut *new_child.inner.borrow_mut(),
             &access_tree,
             access_key,
             access_key,
             access_scale_factor,
         );
-        new_children.push(new_child.clone());
+        new_children.push(new_child.inner.clone());
 
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             gummy_tree.add_child(
                 child_layout_parent,
-                new_child.borrow().element_data().layout.gummy_node_id.unwrap(),
+                new_child.inner.borrow().element_data().layout.gummy_node_id.unwrap(),
             );
         });
     }

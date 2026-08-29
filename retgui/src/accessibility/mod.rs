@@ -198,7 +198,7 @@ mod tests {
         assert_eq!(detached_tree.get_node(detached_key).unwrap().name(), "before");
 
         let window = Window::new("Accessibility test");
-        window.inner.borrow_mut().push(text.inner.clone());
+        window.inner.borrow_mut().push(DynElement::new(text.inner.clone()));
 
         let node = text.inner.borrow().element_data().access_key.unwrap();
         assert_eq!(node, detached_key);
@@ -215,14 +215,14 @@ mod tests {
         let window = Window::new("Accessibility test");
         let text = Text::new("child");
         let child = text.inner.clone();
-        window.inner.borrow_mut().push(child.clone());
+        window.inner.borrow_mut().push(DynElement::new(child.clone()));
 
         let node = child.borrow().element_data().access_key.unwrap();
         let tree = window.inner.borrow().access_tree.clone();
         assert!(tree.contains_node(node));
 
-        let child = window.inner.borrow_mut().remove_child(child).unwrap();
-        assert_eq!(child.borrow().element_data().access_key, Some(node));
+        let child = window.inner.borrow_mut().remove_child(DynElement::new(child)).unwrap();
+        assert_eq!(child.inner.borrow().element_data().access_key, Some(node));
         assert!(tree.contains_node(node));
 
         window.inner.borrow_mut().push(child);
@@ -233,7 +233,7 @@ mod tests {
     fn child_node_survives_its_detached_parent() {
         let parent = Container::new();
         let text = Text::new("child");
-        parent.inner.borrow_mut().push(text.inner.clone());
+        parent.inner.borrow_mut().push(DynElement::new(text.inner.clone()));
         let key = text.inner.borrow().element_data().access_key.unwrap();
         let tree = text.inner.borrow().element_data().access_tree.clone();
 
@@ -241,7 +241,7 @@ mod tests {
 
         assert!(tree.contains_node(key));
         let new_parent = Container::new();
-        new_parent.inner.borrow_mut().push(text.inner.clone());
+        new_parent.inner.borrow_mut().push(DynElement::new(text.inner.clone()));
         assert_eq!(text.inner.borrow().element_data().access_key, Some(key));
     }
 
@@ -250,7 +250,7 @@ mod tests {
         let text = Text::new("clone me");
         let original_key = text.inner.borrow().element_data().access_key.unwrap();
         let clone = text.inner.borrow().deep_clone();
-        let clone_key = clone.borrow().element_data().access_key.unwrap();
+        let clone_key = clone.inner.borrow().element_data().access_key.unwrap();
         let tree = text.inner.borrow().element_data().access_tree.clone();
 
         assert_ne!(clone_key, original_key);

@@ -12,7 +12,7 @@ use crate::elements::codeeditor::highlighter::compute_code_editor_style;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals, TextInput};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals, TextInput};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -53,10 +53,6 @@ impl Drop for CodeEditorInner {
 impl AsElement for CodeEditor {
     type Inner = CodeEditorInner;
 
-    fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        self.inner.clone()
-    }
-
     fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
         self.inner.borrow()
     }
@@ -85,8 +81,8 @@ impl crate::elements::ElementData for CodeEditorInner {
 }
 
 impl ElementInternals for CodeEditorInner {
-    fn deep_clone(&self) -> Rc<RefCell<dyn ElementInternals>> {
-        clone_element::<Self, _>(self, |_, _| None)
+    fn deep_clone(&self) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
     }
 
     fn apply_layout(
@@ -115,8 +111,8 @@ impl ElementInternals for CodeEditorInner {
         }
     }
 
-    fn push(&mut self, child: Rc<RefCell<dyn ElementInternals>>) {
-        push_child_to_element(self, child);
+    fn push(&mut self, child: DynElement) {
+        push_child_to_element(self, child.inner);
     }
 }
 
@@ -134,7 +130,7 @@ impl CodeEditor {
         });
         let mut inner_mut = inner.borrow_mut();
         inner_mut.element_data.create_layout_node(None);
-        inner_mut.push(text_input.inner);
+        inner_mut.push(DynElement::new(text_input.inner));
         inner_mut.highlight();
         drop(inner_mut);
         Self { inner }
