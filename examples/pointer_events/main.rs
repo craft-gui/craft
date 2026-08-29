@@ -69,10 +69,9 @@ fn pointer_capture_example() -> Container {
         .color(Color::WHITE)
         .background_color(Color::from_rgba8(40, 40, 255, 100))
         .on_pointer_button_down(|event| {
-            event
-                .target()
-                .borrow_mut()
-                .set_pointer_capture(event.pointer.pointer_id.unwrap());
+            event.target().with_mut(|element| {
+                element.set_pointer_capture(event.pointer.pointer_id.unwrap());
+            });
         })
         .on_pointer_moved(move |event| {
             let mouse_y = event.current.logical_position().x as f32;

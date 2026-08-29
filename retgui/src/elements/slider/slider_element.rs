@@ -1,6 +1,6 @@
 use peniko::Color;
 use retgui_primitives::geometry::{Point, Rectangle};
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -33,11 +33,11 @@ pub enum SliderDirection {
 
 #[derive(Clone)]
 pub struct Slider {
-    pub inner: Rc<RefCell<SliderInner>>,
+    pub(crate) inner: Rc<RefCell<SliderInner>>,
 }
 
 #[derive(Clone)]
-pub struct SliderInner {
+pub(crate) struct SliderInner {
     element_data: ElementData,
 
     step: f64,
@@ -350,22 +350,12 @@ impl Drop for SliderInner {
 }
 
 impl AsElement for Slider {
-    type Inner = SliderInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

@@ -181,13 +181,13 @@ impl GummyTree {
     /// Creates and adds a new unattached leaf node to the tree, and returns the [`NodeId`] of the new node
     ///
     /// Creates and adds a new leaf node with a supplied context
-    pub fn new_leaf_with_context(&mut self, style: Style, context: LayoutContext) -> NodeId {
+    pub(crate) fn new_leaf_with_context(&mut self, style: Style, context: LayoutContext) -> NodeId {
         self.inner.new_leaf_with_context(style, context).unwrap()
     }
 
     /// Sets the context data associated with the node
     #[inline]
-    pub fn set_node_context(&mut self, node: NodeId, measure: Option<LayoutContext>) {
+    pub(crate) fn set_node_context(&mut self, node: NodeId, measure: Option<LayoutContext>) {
         self.inner.set_node_context(node, measure).unwrap();
         self.request_layout();
         self.request_apply_layout(node);

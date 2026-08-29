@@ -7,7 +7,7 @@ use retgui_resource_manager::ResourceId;
 
 use retgui_primitives::brush::Brush;
 
-use crate::elements::{AsElement, CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
+use crate::elements::{CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
 use crate::{Color, pct, px, rgb};
@@ -191,7 +191,7 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                 }
                 Tag::Item => {
                     if let Some(id) = renderer.list_id() {
-                        let offset = renderer.current_element().borrow().children().len() as u64;
+                        let offset = renderer.current_element().borrow().element_data().children.len() as u64;
                         renderer.push_text(&format!("{}. ", id + offset));
                     } else {
                         renderer.push_text("• ");

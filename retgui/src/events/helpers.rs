@@ -21,7 +21,7 @@ pub(super) fn freeze_target_list(
     let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
     while let Some(node) = current_target {
         targets.push_back(Rc::clone(&node));
-        current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+        current_target = node.borrow().parent().map(|parent| parent.inner);
     }
 
     targets

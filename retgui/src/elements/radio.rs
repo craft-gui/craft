@@ -1,7 +1,7 @@
 //! A selectable circle.
 
 use std::any::Any;
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -31,14 +31,14 @@ use crate::{auto, px, rgb};
 
 #[derive(Clone)]
 pub struct Radio {
-    pub inner: Rc<RefCell<RadioInner>>,
+    pub(crate) inner: Rc<RefCell<RadioInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct RadioInner {
+pub(crate) struct RadioInner {
     element_data: ElementData,
     circle_layout: ElementData,
     circle: Circle,
@@ -63,22 +63,12 @@ impl Drop for RadioInner {
 }
 
 impl AsElement for Radio {
-    type Inner = RadioInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -208,7 +198,7 @@ impl RadioInner {
         let me = self.element_data.me.upgrade();
         let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
         if let Some(parent) = parent {
-            for sibling in parent.borrow().children().to_vec() {
+            for sibling in parent.borrow().element_data().children.clone() {
                 if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
                     continue;
                 }

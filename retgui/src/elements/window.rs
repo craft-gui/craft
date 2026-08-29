@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
@@ -45,13 +45,13 @@ pub type WindowConstructor = Box<dyn FnMut(&dyn ActiveEventLoop) -> Box<dyn Wini
 
 #[derive(Clone)]
 pub struct Window {
-    pub inner: Rc<RefCell<WindowInternal>>,
+    pub(crate) inner: Rc<RefCell<WindowInternal>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
-pub struct WindowInternal {
+pub(crate) struct WindowInternal {
     /// The physical window size from winit.
     pub(crate) window_size: Size<f32>,
     pub(crate) renderer: Rc<RefCell<dyn Renderer>>,
@@ -106,22 +106,12 @@ impl Drop for WindowInternal {
 }
 
 impl AsElement for Window {
-    type Inner = WindowInternal;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -812,7 +802,7 @@ fn collect_tab_navigation_elements(
             (
                 child.is_visible(),
                 child.is_keyboard_focusable(),
-                child.children().to_vec(),
+                child.element_data().children.clone(),
             )
         };
 

@@ -3,7 +3,7 @@ mod text_input_state;
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 use retgui_renderer::text_renderer_data::{TextData, TextScroll};
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -125,24 +125,12 @@ impl Drop for TextInputInner {
 }
 
 impl AsElement for TextInput {
-    type Inner = TextInputInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    /// Execute a closure with a reference to the inner element type.
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    /// Execute a closure with a mutable reference to the inner element type.
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -626,10 +614,6 @@ impl TextInputInner {
         self
     }
 
-    pub fn get_disabled(&mut self) -> bool {
-        self.disabled
-    }
-
     pub fn get_text(&self) -> &str {
         self.state.editor().raw_text()
     }
@@ -649,10 +633,6 @@ impl TextInputInner {
         self.state.set_ranged_styles(ranged_styles);
         self.mark_dirty();
         self
-    }
-
-    pub fn get_ranged_styles(&self) -> &Option<RangedStyles> {
-        &self.ranged_styles
     }
 }
 

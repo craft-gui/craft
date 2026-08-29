@@ -1,6 +1,6 @@
 //! Displays an image.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -22,11 +22,11 @@ use crate::text::text_context::TextContext;
 /// Displays an image.
 #[derive(Clone)]
 pub struct Image {
-    pub inner: Rc<RefCell<ImageInner>>,
+    pub(crate) inner: Rc<RefCell<ImageInner>>,
 }
 
 #[derive(Clone)]
-pub struct ImageInner {
+pub(crate) struct ImageInner {
     is_image_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
@@ -51,22 +51,12 @@ impl Drop for ImageInner {
 }
 
 impl AsElement for Image {
-    type Inner = ImageInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

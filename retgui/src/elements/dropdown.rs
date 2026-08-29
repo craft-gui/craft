@@ -1,7 +1,7 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
 use retgui_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -49,7 +49,7 @@ use retgui_resource_manager::ResourceManager;
 /// ```
 #[derive(Clone)]
 pub struct Dropdown {
-    pub inner: Rc<RefCell<DropdownInner>>,
+    pub(crate) inner: Rc<RefCell<DropdownInner>>,
 }
 
 #[derive(Clone)]
@@ -62,7 +62,7 @@ pub struct Shape {
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct DropdownInner {
+pub(crate) struct DropdownInner {
     element_data: ElementDataStruct,
     floating_window: Shape,
     arrow: Shape,
@@ -88,22 +88,12 @@ impl Drop for DropdownInner {
 }
 
 impl AsElement for Dropdown {
-    type Inner = DropdownInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -404,7 +394,7 @@ impl ElementInternals for DropdownInner {
         let scroll_y = self.floating_window.layout.scroll_state.scroll_y() as f64 * scale_factor;
         renderer.set_transform(floating_transform * Affine::translate((0.0, -scroll_y)));
 
-        for (index, child) in self.children().iter().enumerate() {
+        for (index, child) in self.element_data.children.iter().enumerate() {
             let floating_window_box = self.floating_window.layout.computed_box;
             let mut child_rect = child
                 .borrow_mut()
@@ -828,21 +818,26 @@ impl DropdownInner {
             let is_pointer_in_scrollbar = list_scroll_box.contains(&pointer_position);
 
             if is_pointer_in_list && !is_pointer_in_scrollbar {
-                let hovered_child = self.children().iter().enumerate().find_map(|(index, child)| {
-                    let contains = child
-                        .borrow()
-                        .element_data()
-                        .layout
-                        .world_box()
-                        .border_rectangle()
-                        .contains(&pointer_position);
+                let hovered_child = self
+                    .element_data
+                    .children
+                    .iter()
+                    .enumerate()
+                    .find_map(|(index, child)| {
+                        let contains = child
+                            .borrow()
+                            .element_data()
+                            .layout
+                            .world_box()
+                            .border_rectangle()
+                            .contains(&pointer_position);
 
-                    if contains {
-                        return Some(index);
-                    }
+                        if contains {
+                            return Some(index);
+                        }
 
-                    None
-                });
+                        None
+                    });
 
                 self.currently_hovered_element = hovered_child;
             } else {
@@ -879,7 +874,7 @@ impl DropdownInner {
     fn handle_child_click(&mut self, pointer_position: &Point, is_pointer_in_scrollbar: bool, pointer_id: &PointerId) {
         if !is_pointer_in_scrollbar {
             let mut should_hide_window = false;
-            for (child_index, child) in self.children().iter().cloned().enumerate() {
+            for (child_index, child) in self.element_data.children.iter().cloned().enumerate() {
                 let contains = child
                     .borrow()
                     .element_data()

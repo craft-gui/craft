@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::cell::{OnceCell, Ref, RefCell, RefMut};
+use std::cell::{OnceCell, RefCell};
 use std::collections::HashSet;
 use std::path::Path;
 use std::rc::{Rc, Weak};
@@ -47,14 +47,14 @@ const VOLUME: &[u8] = include_bytes!("../../../assets/volume.tvg");
 
 #[derive(Clone)]
 pub struct Audio {
-    pub inner: Rc<RefCell<AudioInner>>,
+    pub(crate) inner: Rc<RefCell<AudioInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct AudioInner {
+pub(crate) struct AudioInner {
     element_data: ElementData,
     play_button: Button,
     play_button_icon: TinyVg,
@@ -77,22 +77,12 @@ impl Drop for AudioInner {
 }
 
 impl AsElement for Audio {
-    type Inner = AudioInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

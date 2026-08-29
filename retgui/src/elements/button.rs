@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -20,14 +20,14 @@ use retgui_resource_manager::ResourceManager;
 
 #[derive(Clone)]
 pub struct Button {
-    pub inner: Rc<RefCell<ButtonInner>>,
+    pub(crate) inner: Rc<RefCell<ButtonInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct ButtonInner {
+pub(crate) struct ButtonInner {
     element_data: ElementData,
 }
 
@@ -54,22 +54,12 @@ impl Drop for ButtonInner {
 }
 
 impl AsElement for Button {
-    type Inner = ButtonInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

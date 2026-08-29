@@ -1,6 +1,6 @@
 //! Stores one or more elements.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -18,14 +18,14 @@ use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct Container {
-    pub inner: Rc<RefCell<ContainerInner>>,
+    pub(crate) inner: Rc<RefCell<ContainerInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct ContainerInner {
+pub(crate) struct ContainerInner {
     element_data: ElementData,
 }
 
@@ -44,22 +44,12 @@ impl Drop for ContainerInner {
 }
 
 impl AsElement for Container {
-    type Inner = ContainerInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

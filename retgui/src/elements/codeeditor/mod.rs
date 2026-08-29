@@ -1,6 +1,6 @@
 //! A basic code editor.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct CodeEditor {
-    pub inner: Rc<RefCell<CodeEditorInner>>,
+    pub(crate) inner: Rc<RefCell<CodeEditorInner>>,
 }
 
 pub mod highlighter;
@@ -28,7 +28,7 @@ pub mod highlighter;
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct CodeEditorInner {
+pub(crate) struct CodeEditorInner {
     element_data: ElementData,
     extension: String,
     theme: String,
@@ -51,22 +51,12 @@ impl Drop for CodeEditorInner {
 }
 
 impl AsElement for CodeEditor {
-    type Inner = CodeEditorInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

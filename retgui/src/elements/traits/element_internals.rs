@@ -40,11 +40,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let parent = self.parent();
 
         // @OPTIMIZE: We are copying the vec here.
-        if let Some(parent) = parent
-            && let Some(parent) = parent.upgrade()
-        {
+        if let Some(parent) = parent {
             let me_ptr = self.element_data().me.clone().upgrade().unwrap();
-            let children = parent.borrow_mut().element_data().children.clone();
+            let children = parent.inner.borrow().element_data().children.clone();
 
             let self_position = children.iter().position(|x| Rc::ptr_eq(x, &me_ptr)).unwrap();
 
@@ -79,7 +77,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let scroll_y = self.element_data().scroll().scroll_y() as f64 * scale_factor;
         renderer.set_transform(parent_transform * Affine::translate((0.0, -scroll_y)));
 
-        for child in self.children() {
+        for child in &self.element_data().children {
             child
                 .borrow_mut()
                 .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
@@ -296,7 +294,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
-        self.children()
+        self.element_data()
+            .children
             .first()
             .cloned()
             .map(DynElement::new)
@@ -304,7 +303,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn get_last_child(&self) -> Result<DynElement, RetGuiError> {
-        self.children()
+        self.element_data()
+            .children
             .last()
             .cloned()
             .map(DynElement::new)
@@ -316,12 +316,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let position = self.position_in_parent();
 
         if let Some(position) = position
-            && let Some(parent) = parent.unwrap().upgrade()
+            && let Some(parent) = parent
         {
-            if position != 0
-                && let Some(next_sibling) = parent.borrow().children().get(position - 1)
-            {
-                Ok(DynElement::new(next_sibling.clone()))
+            let previous_sibling = (position != 0)
+                .then(|| parent.inner.borrow().element_data().children.get(position - 1).cloned())
+                .flatten();
+            if let Some(previous_sibling) = previous_sibling {
+                Ok(DynElement::new(previous_sibling))
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -335,10 +336,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let position = self.position_in_parent();
 
         if let Some(position) = position
-            && let Some(parent) = parent.unwrap().upgrade()
+            && let Some(parent) = parent
         {
-            if let Some(next_sibling) = parent.borrow().children().get(position + 1) {
-                Ok(DynElement::new(next_sibling.clone()))
+            let next_sibling = parent.inner.borrow().element_data().children.get(position + 1).cloned();
+            if let Some(next_sibling) = next_sibling {
+                Ok(DynElement::new(next_sibling))
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -444,8 +446,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
         fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
             pointer_capture.remove_element(&node.inner);
-            for child in node.inner.borrow().children() {
-                remove_element_from_document(DynElement::new(child.clone()), pointer_capture);
+            for child in node.inner.borrow().element_data().children.clone() {
+                remove_element_from_document(DynElement::new(child), pointer_capture);
             }
         }
 
@@ -1321,13 +1323,9 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn get_root_element(&self) -> DynElement {
         let mut root_ancestor = self.to_dyn_element();
         loop {
-            let parent = root_ancestor
-                .inner
-                .borrow()
-                .parent()
-                .and_then(|parent| parent.upgrade());
+            let parent = root_ancestor.inner.borrow().parent();
             if let Some(parent) = parent {
-                root_ancestor = DynElement::new(parent);
+                root_ancestor = parent;
             } else {
                 break;
             }
@@ -1357,7 +1355,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
         println!("{}└─ {}: {}", indent, id_label, self.element_data().window.is_some());
 
-        for child in self.children() {
+        for child in &self.element_data().children {
             child.borrow().print_tree_ids(depth + 1);
         }
     }
@@ -1472,22 +1470,22 @@ mod tests {
             .outline_width_all(Unit::Px(3.0));
 
         assert_eq!(
-            button.borrow().style().get_outline_color(),
+            button.with(|element| element.style().get_outline_color()),
             TrblRectangle::new_all(crate::palette::css::DODGER_BLUE)
         );
         assert_eq!(
-            button.borrow().style().get_outline_width(),
+            button.with(|element| element.style().get_outline_width()),
             TrblRectangle::new_all(Unit::Px(2.0))
         );
 
         button.clone().unfocus();
 
         assert_eq!(
-            button.borrow().style().get_outline_color(),
+            button.with(|element| element.style().get_outline_color()),
             TrblRectangle::new_all(updated_color)
         );
         assert_eq!(
-            button.borrow().style().get_outline_width(),
+            button.with(|element| element.style().get_outline_width()),
             TrblRectangle::new_all(Unit::Px(3.0))
         );
     }

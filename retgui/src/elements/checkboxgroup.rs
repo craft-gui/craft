@@ -10,20 +10,20 @@ use crate::text::text_context::TextContext;
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct CheckboxGroup {
-    pub inner: Rc<RefCell<CheckboxGroupInner>>,
+    pub(crate) inner: Rc<RefCell<CheckboxGroupInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct CheckboxGroupInner {
+pub(crate) struct CheckboxGroupInner {
     element_data: ElementData,
 }
 
@@ -42,22 +42,12 @@ impl Drop for CheckboxGroupInner {
 }
 
 impl AsElement for CheckboxGroup {
-    type Inner = CheckboxGroupInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

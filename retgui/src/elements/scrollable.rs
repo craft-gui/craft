@@ -164,7 +164,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
             break;
         }
 
-        for descendant in child.children() {
+        for descendant in &child.element_data().children {
             let local_position = descendant.borrow().element_data().layout.local_box_in_parent().position;
             queue.push_back((
                 descendant.clone(),

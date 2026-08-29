@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
@@ -43,12 +43,12 @@ const MAX_CACHE_SIZE: usize = 16;
 
 #[derive(Clone)]
 pub struct Text {
-    pub inner: Rc<RefCell<TextInner>>,
+    pub(crate) inner: Rc<RefCell<TextInner>>,
 }
 
 // A stateful element that shows text.
 #[derive(Clone)]
-pub struct TextInner {
+pub(crate) struct TextInner {
     element_data: ElementData,
     selectable: bool,
     pub(crate) state: TextState,
@@ -92,22 +92,12 @@ impl Drop for TextInner {
 }
 
 impl AsElement for Text {
-    type Inner = TextInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -397,10 +387,6 @@ impl Text {
 }
 
 impl TextInner {
-    pub fn get_selectable(&self) -> bool {
-        self.selectable
-    }
-
     pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
         self.element_data.set_selectable(self.selectable);

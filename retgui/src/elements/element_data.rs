@@ -36,7 +36,7 @@ pub struct ElementData {
     pub layout: Layout,
 
     /// The children of the element.
-    pub children: Vec<Rc<RefCell<dyn ElementInternals>>>,
+    pub(crate) children: Vec<Rc<RefCell<dyn ElementInternals>>>,
 
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,
@@ -113,7 +113,7 @@ impl ElementData {
     }
 
     /// Creates a new gummy node for this element with optional layout context.
-    pub fn create_layout_node(&mut self, layout_context: Option<LayoutContext>) {
+    pub(crate) fn create_layout_node(&mut self, layout_context: Option<LayoutContext>) {
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             let style = self.style.to_gummy_style();
             let node_id = if let Some(layout_context) = layout_context {

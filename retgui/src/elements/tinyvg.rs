@@ -1,6 +1,6 @@
 //! Displays an TinyVg.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -35,11 +35,11 @@ use crate::text::text_context::TextContext;
 /// Displays an TinyVg.
 #[derive(Clone)]
 pub struct TinyVg {
-    pub inner: Rc<RefCell<TinyVgInner>>,
+    pub(crate) inner: Rc<RefCell<TinyVgInner>>,
 }
 
 #[derive(Clone)]
-pub struct TinyVgInner {
+pub(crate) struct TinyVgInner {
     is_tiny_vg_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
@@ -64,22 +64,12 @@ impl Drop for TinyVgInner {
 }
 
 impl AsElement for TinyVg {
-    type Inner = TinyVgInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

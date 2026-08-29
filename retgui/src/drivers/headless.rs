@@ -126,7 +126,7 @@ impl HeadlessApp {
     }
 
     pub fn click<E: Element>(&mut self, element: &E) {
-        let bounds = element.borrow().get_computed_box_transformed().padding_rectangle();
+        let bounds = element.with(|element| element.get_computed_box_transformed().padding_rectangle());
         let point = Point::new(
             (bounds.x + bounds.width / 2.0) as f64,
             (bounds.y + bounds.height / 2.0) as f64,
@@ -239,13 +239,14 @@ impl HeadlessApp {
     }
 
     fn element_window<E: Element>(element: &E) -> Window {
-        let window = element
-            .borrow()
-            .element_data()
-            .window
-            .as_ref()
-            .and_then(std::rc::Weak::upgrade)
-            .expect("element must be attached to a window before interaction");
+        let window = element.with(|element| {
+            element
+                .element_data()
+                .window
+                .as_ref()
+                .and_then(std::rc::Weak::upgrade)
+                .expect("element must be attached to a window before interaction")
+        });
         Window { inner: window }
     }
 }

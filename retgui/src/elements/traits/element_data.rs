@@ -1,7 +1,4 @@
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
-
-use crate::elements::ElementInternals;
+use crate::elements::DynElement;
 
 /// Used as a super trait and forces implementations to
 /// support the retrieval and mutation of `ElementData`(struct).
@@ -18,12 +15,21 @@ pub trait ElementData {
     }
 
     /// Returns the element's parent element.
-    fn parent(&self) -> Option<Weak<RefCell<dyn ElementInternals>>> {
-        self.element_data().parent.clone()
+    fn parent(&self) -> Option<DynElement> {
+        self.element_data()
+            .parent
+            .as_ref()
+            .and_then(std::rc::Weak::upgrade)
+            .map(DynElement::new)
     }
 
     /// Returns the element's children.
-    fn children(&self) -> &[Rc<RefCell<dyn ElementInternals>>] {
-        self.element_data().children.as_slice()
+    fn children(&self) -> Vec<DynElement> {
+        self.element_data()
+            .children
+            .iter()
+            .cloned()
+            .map(DynElement::new)
+            .collect()
     }
 }

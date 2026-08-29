@@ -1,28 +1,34 @@
 #[cfg(feature = "audio")]
-pub use crate::elements::audio::{Audio, AudioInner};
-pub use crate::elements::button::{Button, ButtonInner};
-pub use crate::elements::calendar::{Calendar, CalendarInner};
-pub use crate::elements::checkbox::{Checkbox, CheckboxInner};
-pub use crate::elements::checkboxgroup::{CheckboxGroup, CheckboxGroupInner};
+pub use crate::elements::audio::Audio;
+#[cfg(feature = "audio")]
+pub(crate) use crate::elements::audio::AudioInner;
+pub use crate::elements::button::Button;
+pub use crate::elements::calendar::Calendar;
+pub use crate::elements::checkbox::Checkbox;
+pub use crate::elements::checkboxgroup::CheckboxGroup;
 #[cfg(feature = "code_highlighting")]
 pub use crate::elements::codeeditor::CodeEditor;
-pub use crate::elements::container::{Container, ContainerInner};
-pub use crate::elements::dropdown::{Dropdown, DropdownInner};
+pub use crate::elements::container::Container;
+pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::dyn_element::DynElement;
-pub use crate::elements::element_id_map::ElementIdMap;
-pub use crate::elements::image::{Image, ImageInner};
+pub(crate) use crate::elements::element_id_map::ElementIdMap;
+pub use crate::elements::image::Image;
 #[cfg(feature = "markdown")]
 pub use crate::elements::markdown::render_markdown;
-pub use crate::elements::radio::{Radio, RadioInner};
-pub use crate::elements::radiogroup::{RadioGroup, RadioGroupInner};
+pub use crate::elements::radio::Radio;
+pub(crate) use crate::elements::radio::RadioInner;
+pub use crate::elements::radiogroup::RadioGroup;
 pub use crate::elements::scrollable::{ScrollOptions, ScrollState, ScrollToBox};
-pub use crate::elements::slider::{Slider, SliderDirection, SliderInner};
-pub use crate::elements::text::{Text, TextInner};
+pub(crate) use crate::elements::slider::SliderInner;
+pub use crate::elements::slider::{Slider, SliderDirection};
+pub use crate::elements::text::Text;
+pub(crate) use crate::elements::text::TextInner;
 pub use crate::elements::text_input::{TextInput, TextInputInner};
-pub use crate::elements::tinyvg::{TinyVg, TinyVgInner};
+pub use crate::elements::tinyvg::TinyVg;
 pub(crate) use crate::elements::traits::set_focus_outline_visible;
 pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals};
-pub use crate::elements::window::{Window, WindowInternal};
+pub use crate::elements::window::Window;
+pub(crate) use crate::elements::window::WindowInternal;
 
 #[cfg(feature = "audio")]
 pub(crate) use crate::elements::audio::AUDIO_CONTEXT;

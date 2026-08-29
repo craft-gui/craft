@@ -13,13 +13,13 @@ use crate::elements::{TextInner, TextInputInner};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
-pub struct GummyTextContext {
-    pub element: Weak<RefCell<TextInner>>,
+pub(crate) struct GummyTextContext {
+    pub(crate) element: Weak<RefCell<TextInner>>,
 }
 
 #[derive(Clone)]
-pub struct GummyTextInputContext {
-    pub element: Weak<RefCell<TextInputInner>>,
+pub(crate) struct GummyTextInputContext {
+    pub(crate) element: Weak<RefCell<TextInputInner>>,
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -43,7 +43,7 @@ pub enum AvailableSpaceKey {
 impl GummyTextContext {}
 
 #[derive(Clone)]
-pub struct ImageContext {
+pub(crate) struct ImageContext {
     pub(crate) resource_id: ResourceId,
 }
 
@@ -52,7 +52,7 @@ impl ImageContext {
         Self { resource_id }
     }
 
-    pub fn measure(
+    pub(crate) fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
         _available_space: Size<AvailableSpace>,
@@ -86,19 +86,12 @@ impl ImageContext {
     }
 }
 
-pub type LayoutFn = fn(
-    known_dimensions: Size<Option<f32>>,
-    available_space: Size<AvailableSpace>,
-    text_context: &mut TextContext,
-) -> Size<f32>;
-
 #[derive(Clone)]
-pub enum LayoutContext {
+pub(crate) enum LayoutContext {
     Text(GummyTextContext),
     TextInput(GummyTextInputContext),
     Image(ImageContext),
     TinyVg(TinyVgContext),
-    Other(LayoutFn),
 }
 //////////////////////////////////////////////////////////////////////////////
 impl TextHashKey {
@@ -146,11 +139,11 @@ impl TextHashKey {
 }
 
 #[derive(Clone)]
-pub struct TinyVgContext {
+pub(crate) struct TinyVgContext {
     pub(crate) resource_id: ResourceId,
 }
 
-pub fn measure_content(
+pub(crate) fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<gummy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
@@ -192,16 +185,15 @@ pub fn measure_content(
         Some(LayoutContext::TinyVg(tinyvg_context)) => {
             tinyvg_context.measure(known_dimensions, available_space, resource_manager, style)
         }
-        Some(LayoutContext::Other(_measure_fn)) => Size::ZERO,
     }
 }
 
 impl TinyVgContext {
-    pub fn new(resource_id: ResourceId) -> Self {
+    pub(crate) fn new(resource_id: ResourceId) -> Self {
         Self { resource_id }
     }
 
-    pub fn measure(
+    pub(crate) fn measure(
         &mut self,
         known_dimensions: Size<Option<f32>>,
         _available_space: Size<gummy::AvailableSpace>,

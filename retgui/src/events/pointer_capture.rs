@@ -75,7 +75,7 @@ impl PointerCapture {
                 let mut current_target = Some(Rc::clone(&target));
                 while let Some(node) = current_target {
                     targets.push_back(Rc::clone(&node));
-                    current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+                    current_target = node.borrow().parent().map(|parent| parent.inner);
                 }
 
                 let mut event =
@@ -96,7 +96,7 @@ impl PointerCapture {
                 let mut current_target = Some(Rc::clone(&target));
                 while let Some(node) = current_target {
                     targets.push_back(Rc::clone(&node));
-                    current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
+                    current_target = node.borrow().parent().map(|parent| parent.inner);
                 }
 
                 let mut event =

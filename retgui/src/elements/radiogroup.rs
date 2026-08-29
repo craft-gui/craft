@@ -1,7 +1,7 @@
 //! Stores one or more elements.
 
 use std::any::Any;
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
@@ -24,14 +24,14 @@ use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub struct RadioGroup {
-    pub inner: Rc<RefCell<RadioGroupInner>>,
+    pub(crate) inner: Rc<RefCell<RadioGroupInner>>,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub struct RadioGroupInner {
+pub(crate) struct RadioGroupInner {
     element_data: ElementData,
 }
 
@@ -50,22 +50,12 @@ impl Drop for RadioGroupInner {
 }
 
 impl AsElement for RadioGroup {
-    type Inner = RadioGroupInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 

@@ -1,13 +1,11 @@
-use std::any::Any;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 
-use retgui::elements::{Button, Container, Element, Text, TextInner, Window};
+use retgui::elements::{Button, Container, Element, Text, Window};
 use retgui::events::ClickEvent;
 use retgui::palette::css::WHITE;
 use retgui::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
@@ -64,9 +62,15 @@ impl Data {
 
 pub struct State {
     store: Store,
-    rows: Vec<Container>,
+    rows: Vec<Row>,
     selected_row: Option<usize>,
     element: Container,
+}
+
+#[derive(Clone)]
+struct Row {
+    element: Container,
+    label: Text,
 }
 
 impl State {
@@ -115,7 +119,7 @@ impl State {
 
     pub fn append_rows(&mut self) {
         // Collect all new rows that need to be appended
-        let new_rows: Vec<Container> = self
+        let new_rows: Vec<Row> = self
             .store
             .data
             .iter()
@@ -126,7 +130,7 @@ impl State {
         self.rows.extend(new_rows.iter().cloned());
 
         for row in new_rows {
-            self.element.clone().push(row);
+            self.element.clone().push(row.element);
         }
     }
 
@@ -134,8 +138,9 @@ impl State {
         self.selected_row = row;
     }
 
-    pub fn create_row(data: &Data) -> Container {
-        Container::new()
+    fn create_row(data: &Data) -> Row {
+        let label = Text::new(&data.label);
+        let element = Container::new()
             .display(Display::Flex)
             .flex_direction(FlexDirection::Row)
             .width(Unit::Auto)
@@ -147,7 +152,8 @@ impl State {
                 Unit::Px(0.0),
                 Unit::Px(0.0),
             ))
-            .push(Text::new(&data.label))
+            .push(label.clone());
+        Row { element, label }
     }
 
     pub fn add(&mut self) {
@@ -165,11 +171,7 @@ impl State {
     pub fn update(&mut self) {
         self.store.update();
         for (index, data) in self.store.data.iter().enumerate().step_by(10) {
-            let container = self.rows[index].clone();
-            let text = container.get_children()[1].clone();
-            if let Some(text) = (text.inner.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<TextInner>() {
-                text.set_text(&data.label);
-            }
+            self.rows[index].label.clone().text(&data.label);
         }
     }
 }

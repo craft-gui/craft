@@ -3,7 +3,7 @@
 use retgui_calendar::sys_locale::get_locale_or_default;
 use retgui_calendar::{DateAddOptions, DateDuration, Locale, Month, Weekday, current_calendar_start, current_month, day_abbreviation, first_day_of_week, format_date_day_number, month_name, year_name};
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -21,12 +21,12 @@ use retgui_resource_manager::ResourceManager;
 
 #[derive(Clone)]
 pub struct Calendar {
-    pub inner: Rc<RefCell<CalendarInner>>,
+    pub(crate) inner: Rc<RefCell<CalendarInner>>,
 }
 
 /// A calendar.
 #[derive(Clone)]
-pub struct CalendarInner {
+pub(crate) struct CalendarInner {
     element_data: ElementData,
     pub first_day: Weekday,
     pub nav: Container,
@@ -63,22 +63,12 @@ impl Drop for CalendarInner {
 }
 
 impl AsElement for Calendar {
-    type Inner = CalendarInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
@@ -118,8 +108,8 @@ impl ElementInternals for CalendarInner {
     }
 
     fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
-        let year_id = self.year_dropdown.borrow().element_data().internal_id;
-        let month_id = self.month_dropdown.borrow().element_data().internal_id;
+        let year_id = self.year_dropdown.with(|element| element.element_data().internal_id);
+        let month_id = self.month_dropdown.with(|element| element.element_data().internal_id);
         if let EventKind::DropdownItemSelected(dropdown_event) = event {
             let target_id = dropdown_event.target().borrow().element_data().internal_id;
             if target_id == year_id {

@@ -1,6 +1,6 @@
 //! A toggleable checkbox.
 
-use std::cell::{Ref, RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
@@ -32,11 +32,11 @@ use crate::{auto, px, rgb};
 
 #[derive(Clone)]
 pub struct Checkbox {
-    pub inner: Rc<RefCell<CheckboxInner>>,
+    pub(crate) inner: Rc<RefCell<CheckboxInner>>,
 }
 
 #[derive(Clone)]
-pub struct CheckboxInner {
+pub(crate) struct CheckboxInner {
     element_data: ElementData,
     box_layout: ElementData,
     box_rect: Rectangle,
@@ -59,22 +59,12 @@ impl Drop for CheckboxInner {
 }
 
 impl AsElement for Checkbox {
-    type Inner = CheckboxInner;
-
-    fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
+        callback(&*self.inner.borrow())
     }
 
-    fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
-        self.inner.borrow_mut()
-    }
-
-    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
-        callback(&self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
-        callback(&mut self.inner.borrow_mut())
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
+        callback(&mut *self.inner.borrow_mut())
     }
 }
 
