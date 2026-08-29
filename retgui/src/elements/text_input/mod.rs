@@ -34,21 +34,18 @@ use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 
+/// Editable text area.
 #[derive(Clone)]
 pub struct TextInput {
-    pub inner: Rc<RefCell<TextInputInner>>,
+    pub(crate) inner: Rc<RefCell<TextInputInner>>,
 }
 
 // A stateful element that shows text.
 #[derive(Clone)]
 pub struct TextInputInner {
     pub(crate) element_data: ElementData,
-    /// Whether the text input will update the editor every update with the user provided text.
-    /// NOTE: The editor will always use the user provided text on initialization.
-    pub(crate) use_text_value_on_update: bool,
-    pub text: Option<String>,
-    pub ranged_styles: Option<RangedStyles>,
-    pub disabled: bool,
+    pub(crate) ranged_styles: Option<RangedStyles>,
+    pub(crate) disabled: bool,
     pub(crate) state: TextInputState,
     pub(crate) me: Weak<RefCell<Self>>,
 }
@@ -63,44 +60,59 @@ pub enum TextInputMessage {
 }
 
 impl TextInput {
+    /// Creates a single line editable text input.
     pub fn new(text: &str) -> Self {
         Self {
             inner: TextInputInner::new(text),
         }
     }
 
-    /// Whether the text input will update the editor every update with the user provided text.
-    /// NOTE: The editor will always use the user provided text on initialization.
-    pub fn use_text_value_on_update(self, use_initial_text_value: bool) -> Self {
-        self.inner.borrow_mut().use_text_value_on_update(use_initial_text_value);
+    /// Disables the text input.
+    pub fn disabled(self, disabled: bool) -> Self {
+        self.inner.borrow_mut().disabled(disabled);
         self
     }
 
-    pub fn disable(self) -> Self {
-        self.inner.borrow_mut().disable();
-        self
-    }
-
+    /// Returns whether the element is disabled.
     pub fn get_disabled(&self) -> bool {
         self.inner.borrow().disabled
     }
 
+    /// Returns whether the text input is multiline.
+    pub fn get_multiline(&self) -> bool {
+        self.inner.borrow().state.multiline
+    }
+
+    pub fn multiline(self, multiline: bool) -> Self {
+        self.inner.borrow_mut().multiline(multiline);
+        self
+    }
+
+    /// Returns the text in the text input.
+    ///
+    /// This does not include the ime preedit text.
     pub fn get_text(&self) -> String {
-        self.inner.borrow().state.editor().raw_text().to_owned()
+        self.inner.borrow().state.editor().text().chars().collect()
     }
 
     /// Set the text.
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(self, text: &str) -> Self {
+    pub fn text(self, text: &str) -> Self {
         self.inner.borrow_mut().set_text(text);
         self
     }
 
+    /// Styles the text along ranges.
     pub fn ranged_styles(self, ranged_styles: RangedStyles) -> Self {
         self.inner.borrow_mut().set_ranged_styles(ranged_styles);
         self
+    }
+
+    /// Returns the ranged styles.
+    pub fn get_ranged_styles(&self) -> Option<RangedStyles> {
+        self.inner.borrow().ranged_styles.clone()
     }
 }
 
@@ -563,9 +575,7 @@ impl TextInputInner {
 
         let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInputInner>>| {
             RefCell::new(TextInputInner {
-                text: Some(text.to_string()),
                 element_data: ElementData::new(me.clone(), true),
-                use_text_value_on_update: true,
                 ranged_styles: Some(RangedStyles::new(vec![])),
                 disabled: false,
                 state: text_input_state,
@@ -597,15 +607,14 @@ impl TextInputInner {
         inner
     }
 
-    /// Whether the text input will update the editor every update with the user provided text.
-    /// NOTE: The editor will always use the user provided text on initialization.
-    pub fn use_text_value_on_update(&mut self, use_initial_text_value: bool) {
-        self.use_text_value_on_update = use_initial_text_value;
+    pub fn disabled(&mut self, disabled: bool) -> &mut Self {
+        self.disabled = disabled;
+        self.element_data.set_accessibility_enabled(!disabled);
+        self
     }
 
-    pub fn disable(&mut self) -> &mut Self {
-        self.disabled = true;
-        self.element_data.set_accessibility_enabled(false);
+    pub fn multiline(&mut self, multiline: bool) -> &mut Self {
+        self.state.multiline = multiline;
         self
     }
 
@@ -632,6 +641,10 @@ impl TextInputInner {
         self.state.set_ranged_styles(ranged_styles);
         self.mark_dirty();
         self
+    }
+
+    pub fn get_ranged_styles(&self) -> &Option<RangedStyles> {
+        &self.ranged_styles
     }
 }
 

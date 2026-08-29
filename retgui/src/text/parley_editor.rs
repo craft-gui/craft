@@ -43,11 +43,10 @@ impl Generation {
 /// This is returned by [`PlainEditor::text`], as the IME preedit
 /// area needs to be efficiently excluded from its return value.
 #[derive(Debug, Clone, Copy)]
-pub struct SplitString<'source>(pub [&'source str; 2]);
+pub struct SplitString<'source>([&'source str; 2]);
 
 impl<'source> SplitString<'source> {
     /// Get the characters of this string.
-    #[allow(dead_code)]
     pub fn chars(self) -> impl Iterator<Item = char> + 'source {
         self.into_iter().flat_map(str::chars)
     }
@@ -57,15 +56,10 @@ impl PartialEq<&'_ str> for SplitString<'_> {
     fn eq(&self, other: &&'_ str) -> bool {
         let [a, b] = self.0;
         let mid = a.len();
-        // When our MSRV is 1.80 or above, use split_at_checked instead.
-        // is_char_boundary checks bounds
-        let (a_1, b_1) = if other.is_char_boundary(mid) {
-            other.split_at(mid)
-        } else {
-            return false;
-        };
-
-        a_1 == a && b_1 == b
+        match other.split_at_checked(mid) {
+            Some((a_1, b_1)) => a_1 == a && b_1 == b,
+            None => false,
+        }
     }
 }
 // We intentionally choose not to:
@@ -81,9 +75,8 @@ impl Display for SplitString<'_> {
 
 /// Iterate through the source strings.
 impl<'source> IntoIterator for SplitString<'source> {
-    type IntoIter = <[&'source str; 2] as IntoIterator>::IntoIter;
     type Item = &'source str;
-
+    type IntoIter = <[&'source str; 2] as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }

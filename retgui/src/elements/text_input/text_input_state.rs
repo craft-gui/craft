@@ -33,6 +33,7 @@ use crate::text::text_context::TextContext;
 use crate::text::{RangedStyles, text_render_data};
 
 pub struct TextInputState {
+    pub(crate) multiline: bool,
     pub(crate) gummy_id: Option<NodeId>,
     origin: Point,
 
@@ -68,6 +69,7 @@ pub struct TextInputState {
 impl Clone for TextInputState {
     fn clone(&self) -> Self {
         Self {
+            multiline: false,
             gummy_id: self.gummy_id,
             origin: self.origin,
             is_active: self.is_active,
@@ -101,6 +103,7 @@ impl Default for TextInputState {
         let style_set = editor.edit_styles();
         default_style.add_styles_to_style_set(style_set);
         Self {
+            multiline: false,
             gummy_id: None,
             origin: Default::default(),
             ime_state: ImeState::default(),

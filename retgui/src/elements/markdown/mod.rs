@@ -96,12 +96,12 @@ impl<'a> MarkdownRenderer<'a> {
         }
 
         let mut text = if let Some(text_input) = text_input {
-            text_input.set_text(self.styled_text.text.as_str())
+            text_input.text(self.styled_text.text.as_str())
         } else {
             TextInput::new(&self.styled_text.text)
                 .display(Display::Block)
                 .border_width_all(px(0))
-                .disable()
+                .disabled(true)
         };
 
         text = text.ranged_styles(self.styled_text.style.clone());
@@ -258,7 +258,7 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                         let text_input = TextInput::new("")
                             .margin(px(margin), px(0), px(margin), px(0))
                             .border_width_all(px(0))
-                            .disable();
+                            .disabled(true);
                         renderer.push_rich_text(Some(text_input));
                         renderer.font_size = None;
                     }
