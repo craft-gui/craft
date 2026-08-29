@@ -10,7 +10,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_STABLE_VER: "1.91" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
+  MDBOOK_VERSION: "0.5.4"
+  RUST_STABLE_VER: "1.91"
 
 jobs:
   clippy:
@@ -170,3 +171,51 @@ jobs:
             report.html
             retgui/tests/current
             retgui/tests/snapshots
+
+  build-book:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Stable Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+
+      - name: Install mdBook
+        run: cargo install mdbook --version ${{ env.MDBOOK_VERSION }} --locked
+
+      - name: Build mdBook
+        run: mdbook build book
+
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: book/book
+
+  deploy-book:
+    if: github.event_name == 'push'
+    needs: build-book
+    runs-on: ubuntu-latest
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
