@@ -4,7 +4,7 @@ use std::rc::{Rc, Weak};
 
 use crate::events::PointerId;
 
-use crate::elements::ElementInternals;
+use crate::elements::{DynElement, ElementInternals};
 use crate::events::event_dispatch::dispatch_event;
 use crate::events::{EventKind, PointerCaptureEvent};
 use crate::text::text_context::TextContext;
@@ -78,7 +78,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                let mut event = EventKind::LostPointerCapture(PointerCaptureEvent::new(target, *pointer_id));
+                let mut event =
+                    EventKind::LostPointerCapture(PointerCaptureEvent::new(DynElement::new(target), *pointer_id));
                 dispatch_event(&mut event, &targets, text_context);
             }
 
@@ -98,7 +99,8 @@ impl PointerCapture {
                     current_target = node.borrow().parent().as_ref().and_then(|p| p.upgrade());
                 }
 
-                let mut event = EventKind::GotPointerCapture(PointerCaptureEvent::new(target, *pointer_id));
+                let mut event =
+                    EventKind::GotPointerCapture(PointerCaptureEvent::new(DynElement::new(target), *pointer_id));
                 dispatch_event(&mut event, &targets, text_context);
             }
 

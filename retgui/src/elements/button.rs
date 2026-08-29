@@ -11,7 +11,7 @@ use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals};
 use crate::events::{ClickEvent, ClickTrigger, EventKind};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -54,6 +54,8 @@ impl Drop for ButtonInner {
 }
 
 impl AsElement for Button {
+    type Inner = ButtonInner;
+
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -64,6 +66,14 @@ impl AsElement for Button {
 
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
         self.inner.borrow_mut()
+    }
+
+    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
+        callback(&self.inner.borrow())
+    }
+
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
+        callback(&mut self.inner.borrow_mut())
     }
 }
 
@@ -117,7 +127,7 @@ impl ElementInternals for ButtonInner {
                 return;
             };
             queue_event(EventKind::Click(ClickEvent::new(
-                target,
+                DynElement::new(target),
                 ClickTrigger::Keyboard {
                     key: keyboard_event.key.clone(),
                 },
@@ -136,7 +146,10 @@ impl ElementInternals for ButtonInner {
                 .me
                 .upgrade()
                 .expect("button was detached while handling its invoke action");
-            queue_event(EventKind::Click(ClickEvent::new(target, ClickTrigger::Accessibility)));
+            queue_event(EventKind::Click(ClickEvent::new(
+                DynElement::new(target),
+                ClickTrigger::Accessibility,
+            )));
         }
         Ok(())
     }

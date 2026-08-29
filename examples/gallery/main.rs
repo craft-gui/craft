@@ -7,7 +7,7 @@ use std::time::Duration;
 #[cfg(feature = "audio")]
 use retgui::elements::Audio;
 use retgui::elements::{AsElement, Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, ElementInternals, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
-use retgui::events::{Event, EventTarget};
+use retgui::events::Event;
 use retgui::geometry::Point;
 use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
 use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
@@ -551,13 +551,13 @@ struct NavigationSelection {
 }
 
 impl NavigationSelection {
-    fn select(&self, target: EventTarget) {
+    fn select(&self, target: DynElement) {
         if let Some(previous) = self.active.borrow().as_ref().and_then(Weak::upgrade) {
             style_navigation_button(DynElement::new(previous), false);
         }
 
-        style_navigation_button(DynElement::new(target.clone()), true);
-        self.active.replace(Some(Rc::downgrade(&target)));
+        style_navigation_button(target.clone(), true);
+        self.active.replace(Some(Rc::downgrade(&target.inner)));
     }
 }
 
@@ -662,7 +662,7 @@ fn gallery() -> Container {
         let selection = selection.clone();
 
         if index == 0 {
-            selection.select(button.as_element_rc());
+            selection.select(button.as_dyn_element());
         }
 
         button.clone().on_click(move |event| {

@@ -132,7 +132,7 @@ mod tests {
     use retgui_primitives::geometry::{Affine, Size};
 
     use crate::app::{dequeue_event, queue_event};
-    use crate::elements::{Button, Container, Element as _, ElementData as _, ElementInternals, Text, Window};
+    use crate::elements::{Button, Container, DynElement, Element as _, ElementData as _, ElementInternals, Text, Window};
     use crate::events::{ClickEvent, ClickTrigger, EventKind};
     use crate::text::text_context::TextContext;
 
@@ -158,7 +158,10 @@ mod tests {
                 click_count.set(next_count);
                 if next_count == 1 {
                     let target = target.upgrade().expect("button should still be alive");
-                    queue_event(EventKind::Click(ClickEvent::new(target, ClickTrigger::Programmatic)));
+                    queue_event(EventKind::Click(ClickEvent::new(
+                        DynElement::new(target),
+                        ClickTrigger::Programmatic,
+                    )));
                 }
             })
         });

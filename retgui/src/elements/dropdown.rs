@@ -17,7 +17,7 @@ use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance, set_scroll_y};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementData, ElementInternals};
+use crate::elements::{AsElement, DynElement, Element, ElementData, ElementInternals};
 use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind, PointerButton, PointerId};
 use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
@@ -88,6 +88,8 @@ impl Drop for DropdownInner {
 }
 
 impl AsElement for Dropdown {
+    type Inner = DropdownInner;
+
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -98,6 +100,14 @@ impl AsElement for Dropdown {
 
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
         self.inner.borrow_mut()
+    }
+
+    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
+        callback(&self.inner.borrow())
+    }
+
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
+        callback(&mut self.inner.borrow_mut())
     }
 }
 
@@ -902,13 +912,17 @@ impl DropdownInner {
 
     fn queue_dropdown_toggled(&self, is_open: bool) {
         let target = self.element_data.me.upgrade().unwrap();
-        queue_event(EventKind::DropdownToggled(DropdownToggledEvent::new(target, is_open)));
+        queue_event(EventKind::DropdownToggled(DropdownToggledEvent::new(
+            DynElement::new(target),
+            is_open,
+        )));
     }
 
     fn queue_dropdown_item_selected(&self, index: usize) {
         let target = self.element_data.me.upgrade().unwrap();
         queue_event(EventKind::DropdownItemSelected(DropdownItemSelectedEvent::new(
-            target, index,
+            DynElement::new(target),
+            index,
         )));
     }
 }

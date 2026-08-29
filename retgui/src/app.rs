@@ -30,7 +30,7 @@ use crate::RetGuiOptions;
 use crate::accessibility::ACCESS_TREE;
 #[cfg(feature = "audio")]
 use crate::elements::{AUDIO_CONTEXT, AudioInner};
-use crate::elements::{ElementIdMap, ElementInternals, Window, scrollable, set_focus_outline_visible};
+use crate::elements::{DynElement, ElementIdMap, ElementInternals, Window, scrollable, set_focus_outline_visible};
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -342,7 +342,8 @@ impl App {
         delta: winit::event::MouseScrollDelta,
         state: PointerState,
     ) {
-        let pointer_scroll_update = PointerScrollEvent::new(window.inner.clone(), pointer, delta, state);
+        let pointer_scroll_update =
+            PointerScrollEvent::new(DynElement::new(window.inner.clone()), pointer, delta, state);
         if window.inner.borrow_mut().maybe_zoom(&pointer_scroll_update) {
             return;
         }
@@ -362,7 +363,7 @@ impl App {
         }
 
         let cursor_position = state.logical_point();
-        let pointer_event = PointerButtonEvent::new(window.inner.clone(), button, pointer, state);
+        let pointer_event = PointerButtonEvent::new(DynElement::new(window.inner.clone()), button, pointer, state);
 
         let event = if is_up {
             EventKind::PointerUp(pointer_event)
@@ -376,7 +377,7 @@ impl App {
 
     pub fn on_pointer_moved(&mut self, window: Window, pointer: PointerInfo, state: PointerState) {
         window.set_mouse_position(Some(state.logical_point()));
-        let event = PointerMovedEvent::new(window.inner.clone(), pointer, state);
+        let event = PointerMovedEvent::new(DynElement::new(window.inner.clone()), pointer, state);
         self.dispatch_event(window.clone(), EventKind::PointerMoved(event));
     }
 
@@ -388,7 +389,7 @@ impl App {
         } {
             window.inner.borrow_mut().ime_composing = is_composing;
         }
-        let event = ImeEvent::new(window.inner.clone(), ime);
+        let event = ImeEvent::new(DynElement::new(window.inner.clone()), ime);
         self.dispatch_event(window.clone(), EventKind::Ime(event));
     }
 
@@ -401,7 +402,12 @@ impl App {
         if state == ElementState::Pressed && !modifiers.control_key() && !modifiers.alt_key() && !modifiers.meta_key() {
             set_focus_outline_visible(true);
         }
-        let event = KeyboardEvent::new(window.inner.clone(), keyboard_input, modifiers, is_composing);
+        let event = KeyboardEvent::new(
+            DynElement::new(window.inner.clone()),
+            keyboard_input,
+            modifiers,
+            is_composing,
+        );
         if window.inner.borrow_mut().maybe_toggle_perf_stats(&event) {
             return;
         }

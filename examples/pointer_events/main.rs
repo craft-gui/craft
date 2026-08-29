@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use retgui::elements::{Container, Element, Text, Window};
+use retgui::elements::{AsElement, Container, Element, Text, Window};
 use retgui::events::{Event, PointerEnterEvent, PointerLeaveEvent};
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
 use retgui::{Color, pct};

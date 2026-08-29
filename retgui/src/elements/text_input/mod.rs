@@ -125,6 +125,8 @@ impl Drop for TextInputInner {
 }
 
 impl AsElement for TextInput {
+    type Inner = TextInputInner;
+
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -135,6 +137,16 @@ impl AsElement for TextInput {
 
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
         self.inner.borrow_mut()
+    }
+
+    /// Execute a closure with a reference to the inner element type.
+    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
+        callback(&self.inner.borrow())
+    }
+
+    /// Execute a closure with a mutable reference to the inner element type.
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
+        callback(&mut self.inner.borrow_mut())
     }
 }
 

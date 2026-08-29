@@ -10,8 +10,8 @@ use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
 use crate::app::queue_event;
-use crate::elements::ElementInternals;
 use crate::elements::element_data::ElementData;
+use crate::elements::{DynElement, ElementInternals};
 use crate::events::{Event, EventKind, PointerButton, PointerId, PointerType, ScrollDelta, ScrollEvent as RetGuiScrollEvent};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
@@ -121,7 +121,7 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) -> bool {
     let changed = set_scroll_y(&mut data.layout, y);
     data.apply_accessibility_scroll_data();
 
-    let target = data.me.upgrade().unwrap().clone();
+    let target = DynElement::new(data.me.upgrade().unwrap().clone());
     queue_event(EventKind::Scroll(RetGuiScrollEvent::new(target)));
     changed
 }
@@ -302,7 +302,7 @@ fn handle_scroll_logic_internal(
 ) {
     let focus_on_pointer_down = focus_on_pointer_down
         && element.element_data().is_scrollable()
-        && Rc::ptr_eq(&event.target(), &event.current_target())
+        && event.target() == event.current_target()
         && matches!(
             event,
             EventKind::PointerDown(pointer_button)
@@ -319,7 +319,9 @@ fn handle_scroll_logic_internal(
         element.request_window_redraw();
 
         if matches!(event, EventKind::KeyDown(_) | EventKind::KeyUp(_)) {
-            queue_event(EventKind::Scroll(RetGuiScrollEvent::new(element.to_rc())));
+            queue_event(EventKind::Scroll(RetGuiScrollEvent::new(DynElement::new(
+                element.to_rc(),
+            ))));
         }
     }
 

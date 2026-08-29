@@ -17,7 +17,7 @@ use crate::events::PointerId;
 
 use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, WINDOW_MANAGER, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
-use crate::elements::{ElementData, ScrollOptions, WindowInternal};
+use crate::elements::{DynElement, ElementData, ScrollOptions, WindowInternal};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, DropdownItemSelectedHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
 use crate::layout::GummyTree;
@@ -1267,13 +1267,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
         if focus_changed {
             if let Some(previous) = previous_focus.and_then(|previous| previous.upgrade()) {
                 restore_unfocused_outline(previous.borrow_mut().element_data_mut());
-                queue_event(EventKind::Unfocus(UnfocusEvent::new(previous)));
+                queue_event(EventKind::Unfocus(UnfocusEvent::new(DynElement::new(previous))));
             }
             if focus_outline_visible() {
                 apply_focused_outline(self.element_data_mut());
             }
             if let Some(current) = me.upgrade() {
-                queue_event(EventKind::Focus(FocusEvent::new(current)));
+                queue_event(EventKind::Focus(FocusEvent::new(DynElement::new(current))));
             }
             self.request_window_redraw();
         }
@@ -1307,7 +1307,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
             restore_unfocused_outline(self.element_data_mut());
             if let Some(me) = me {
-                queue_event(EventKind::Unfocus(UnfocusEvent::new(me)));
+                queue_event(EventKind::Unfocus(UnfocusEvent::new(DynElement::new(me))));
             }
             self.request_window_redraw();
         }

@@ -17,15 +17,13 @@ use retgui_primitives::geometry::Point;
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::{ButtonSource, KeyEvent, PointerKind, PointerSource};
 
-use crate::elements::ElementInternals;
+use crate::elements::DynElement;
 
 pub(crate) mod pointer_capture;
 
 mod event_dispatch;
 mod helpers;
 mod mouse_wheel;
-
-pub type EventTarget = Rc<RefCell<dyn ElementInternals>>;
 
 /// The broad class of device that generated a pointer event.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -116,14 +114,14 @@ impl PointerState {
 /// State shared by every RetGui event.
 #[derive(Clone)]
 pub struct BaseEvent {
-    target: EventTarget,
-    current_target: EventTarget,
+    target: DynElement,
+    current_target: DynElement,
     propagation_stopped: bool,
     default_prevented: bool,
 }
 
 impl BaseEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             target: target.clone(),
             current_target: target,
@@ -132,7 +130,7 @@ impl BaseEvent {
         }
     }
 
-    fn retarget(&mut self, target: EventTarget) {
+    fn retarget(&mut self, target: DynElement) {
         self.target = target.clone();
         self.current_target = target;
     }
@@ -149,12 +147,12 @@ pub trait Event {
     fn base_mut(&mut self) -> &mut BaseEvent;
 
     /// Returns the element at which the event was originally dispatched.
-    fn target(&self) -> EventTarget {
+    fn target(&self) -> DynElement {
         self.base().target.clone()
     }
 
     /// Returns the element whose handlers are currently being invoked.
-    fn current_target(&self) -> EventTarget {
+    fn current_target(&self) -> DynElement {
         self.base().current_target.clone()
     }
 
@@ -200,7 +198,7 @@ pub struct ClickEvent {
 }
 
 impl ClickEvent {
-    pub fn new(target: EventTarget, trigger: ClickTrigger) -> Self {
+    pub fn new(target: DynElement, trigger: ClickTrigger) -> Self {
         Self {
             base: BaseEvent::new(target),
             trigger,
@@ -218,7 +216,7 @@ pub struct PointerButtonEvent {
 }
 
 impl PointerButtonEvent {
-    pub fn new(target: EventTarget, button: Option<PointerButton>, pointer: PointerInfo, state: PointerState) -> Self {
+    pub fn new(target: DynElement, button: Option<PointerButton>, pointer: PointerInfo, state: PointerState) -> Self {
         let position = state.logical_point();
 
         Self {
@@ -244,7 +242,7 @@ pub struct KeyboardEvent {
 }
 
 impl KeyboardEvent {
-    pub fn new(target: EventTarget, event: KeyEvent, modifiers: KeyboardModifiers, is_composing: bool) -> Self {
+    pub fn new(target: DynElement, event: KeyEvent, modifiers: KeyboardModifiers, is_composing: bool) -> Self {
         Self {
             base: BaseEvent::new(target),
             state: event.state,
@@ -265,7 +263,7 @@ pub struct ScrollEvent {
 }
 
 impl ScrollEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             base: BaseEvent::new(target),
         }
@@ -279,7 +277,7 @@ pub struct FocusEvent {
 }
 
 impl FocusEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             base: BaseEvent::new(target),
         }
@@ -293,7 +291,7 @@ pub struct UnfocusEvent {
 }
 
 impl UnfocusEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             base: BaseEvent::new(target),
         }
@@ -307,7 +305,7 @@ pub struct PointerEnterEvent {
 }
 
 impl PointerEnterEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             base: BaseEvent::new(target),
         }
@@ -321,7 +319,7 @@ pub struct PointerLeaveEvent {
 }
 
 impl PointerLeaveEvent {
-    pub fn new(target: EventTarget) -> Self {
+    pub fn new(target: DynElement) -> Self {
         Self {
             base: BaseEvent::new(target),
         }
@@ -335,7 +333,7 @@ pub struct PointerCaptureEvent {
 }
 
 impl PointerCaptureEvent {
-    pub fn new(target: EventTarget, pointer_id: PointerId) -> Self {
+    pub fn new(target: DynElement, pointer_id: PointerId) -> Self {
         Self {
             base: BaseEvent::new(target),
             pointer_id,
@@ -353,7 +351,7 @@ pub struct PointerMovedEvent {
 }
 
 impl PointerMovedEvent {
-    pub fn new(target: EventTarget, pointer: PointerInfo, current: PointerState) -> Self {
+    pub fn new(target: DynElement, pointer: PointerInfo, current: PointerState) -> Self {
         Self {
             base: BaseEvent::new(target),
             pointer,
@@ -373,7 +371,7 @@ pub struct PointerScrollEvent {
 }
 
 impl PointerScrollEvent {
-    pub fn new(target: EventTarget, pointer: PointerInfo, delta: ScrollDelta, state: PointerState) -> Self {
+    pub fn new(target: DynElement, pointer: PointerInfo, delta: ScrollDelta, state: PointerState) -> Self {
         Self {
             base: BaseEvent::new(target),
             pointer,
@@ -390,7 +388,7 @@ pub struct ImeEvent {
 }
 
 impl ImeEvent {
-    pub fn new(target: EventTarget, ime: Ime) -> Self {
+    pub fn new(target: DynElement, ime: Ime) -> Self {
         Self {
             base: BaseEvent::new(target),
             ime,
@@ -405,7 +403,7 @@ pub struct TextInputChangedEvent {
 }
 
 impl TextInputChangedEvent {
-    pub fn new(target: EventTarget, value: String) -> Self {
+    pub fn new(target: DynElement, value: String) -> Self {
         Self {
             base: BaseEvent::new(target),
             value,
@@ -420,7 +418,7 @@ pub struct LinkClickedEvent {
 }
 
 impl LinkClickedEvent {
-    pub fn new(target: EventTarget, url: String) -> Self {
+    pub fn new(target: DynElement, url: String) -> Self {
         Self {
             base: BaseEvent::new(target),
             url,
@@ -435,7 +433,7 @@ pub struct DropdownToggledEvent {
 }
 
 impl DropdownToggledEvent {
-    pub fn new(target: EventTarget, is_open: bool) -> Self {
+    pub fn new(target: DynElement, is_open: bool) -> Self {
         Self {
             base: BaseEvent::new(target),
             is_open,
@@ -450,7 +448,7 @@ pub struct DropdownItemSelectedEvent {
 }
 
 impl DropdownItemSelectedEvent {
-    pub fn new(target: EventTarget, index: usize) -> Self {
+    pub fn new(target: DynElement, index: usize) -> Self {
         Self {
             base: BaseEvent::new(target),
             index,
@@ -465,7 +463,7 @@ pub struct SwitchToggledEvent {
 }
 
 impl SwitchToggledEvent {
-    pub fn new(target: EventTarget, toggled: bool) -> Self {
+    pub fn new(target: DynElement, toggled: bool) -> Self {
         Self {
             base: BaseEvent::new(target),
             toggled,
@@ -480,7 +478,7 @@ pub struct SliderValueChangedEvent {
 }
 
 impl SliderValueChangedEvent {
-    pub fn new(target: EventTarget, value: f64) -> Self {
+    pub fn new(target: DynElement, value: f64) -> Self {
         Self {
             base: BaseEvent::new(target),
             value,
@@ -495,7 +493,7 @@ pub struct RadioValueChangedEvent {
 }
 
 impl RadioValueChangedEvent {
-    pub fn new(target: EventTarget, value: Rc<RefCell<String>>) -> Self {
+    pub fn new(target: DynElement, value: Rc<RefCell<String>>) -> Self {
         Self {
             base: BaseEvent::new(target),
             value,
@@ -511,7 +509,7 @@ pub struct CheckboxToggledEvent {
 }
 
 impl CheckboxToggledEvent {
-    pub fn new(target: EventTarget, label: String, status: bool) -> Self {
+    pub fn new(target: DynElement, label: String, status: bool) -> Self {
         Self {
             base: BaseEvent::new(target),
             label,
@@ -528,7 +526,7 @@ pub struct CustomEvent {
 }
 
 impl CustomEvent {
-    pub fn new<T>(target: EventTarget, detail: T) -> Self
+    pub fn new<T>(target: DynElement, detail: T) -> Self
     where
         T: Any + 'static,
     {
@@ -538,7 +536,7 @@ impl CustomEvent {
         }
     }
 
-    pub fn from_arc(target: EventTarget, detail: Arc<UserEventData>) -> Self {
+    pub fn from_arc(target: DynElement, detail: Arc<UserEventData>) -> Self {
         Self {
             base: BaseEvent::new(target),
             data: detail,
@@ -866,7 +864,7 @@ impl EventKind {
         matches!(self, Self::KeyDown(_) | Self::KeyUp(_) | Self::Ime(_))
     }
 
-    pub(crate) fn retarget(&mut self, target: EventTarget) {
+    pub(crate) fn retarget(&mut self, target: DynElement) {
         self.base_mut().retarget(target);
     }
 }
@@ -933,14 +931,12 @@ impl Event for EventKind {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use crate::elements::Container;
 
-    use super::{Event, EventKind, EventTarget, FocusEvent};
+    use super::{DynElement, Event, EventKind, FocusEvent};
 
-    fn event_target() -> EventTarget {
-        Container::new().inner
+    fn event_target() -> DynElement {
+        DynElement::new(Container::new().inner)
     }
 
     #[test]
@@ -948,8 +944,8 @@ mod tests {
         let target = event_target();
         let mut event = FocusEvent::new(target.clone());
 
-        assert!(Rc::ptr_eq(&event.target(), &target));
-        assert!(Rc::ptr_eq(&event.current_target(), &target));
+        assert!(event.target() == target);
+        assert!(event.current_target() == target);
         assert!(!event.is_propagation_stopped());
         assert!(!event.is_default_prevented());
 
@@ -964,11 +960,12 @@ mod tests {
     fn retarget_updates_both_targets() {
         let original = event_target();
         let replacement = event_target();
+        assert!(original != replacement);
         let mut event = EventKind::Focus(FocusEvent::new(original));
 
         event.retarget(replacement.clone());
 
-        assert!(Rc::ptr_eq(&event.target(), &replacement));
-        assert!(Rc::ptr_eq(&event.current_target(), &replacement));
+        assert!(event.target() == replacement);
+        assert!(event.current_target() == replacement);
     }
 }

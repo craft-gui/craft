@@ -95,7 +95,7 @@ pub(super) fn find_target(
 
 pub(super) fn call_user_event_handlers(event: &mut EventKind, capturing: bool) {
     let current_target = event.current_target();
-    let callbacks = current_target.borrow().element_data().event_callbacks.clone();
+    let callbacks = current_target.inner.borrow().element_data().event_callbacks.clone();
 
     for EventCallback {
         callback,

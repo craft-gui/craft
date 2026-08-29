@@ -24,7 +24,7 @@ use winit::dpi;
 use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::{ElementInternals, TextInputInner};
+use crate::elements::{DynElement, ElementInternals, TextInputInner};
 use crate::events::{EventKind, KeyboardEvent, TextInputChangedEvent};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
@@ -457,7 +457,7 @@ impl TextInputState {
     pub(super) fn generate_text_changed_event(&self, element_data: &ElementData) {
         let target = element_data.me.upgrade().unwrap();
         queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
-            target,
+            DynElement::new(target),
             self.editor.raw_text().to_string(),
         )));
     }

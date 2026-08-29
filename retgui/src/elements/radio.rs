@@ -22,7 +22,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Element, ElementInternals, scrollable};
+use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
 use crate::events::{Event, EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
@@ -63,6 +63,8 @@ impl Drop for RadioInner {
 }
 
 impl AsElement for Radio {
+    type Inner = RadioInner;
+
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -73,6 +75,14 @@ impl AsElement for Radio {
 
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
         self.inner.borrow_mut()
+    }
+
+    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
+        callback(&self.inner.borrow())
+    }
+
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
+        callback(&mut self.inner.borrow_mut())
     }
 }
 
@@ -219,7 +229,7 @@ impl RadioInner {
         self.set_accessibility_selection();
         let target = self.element_data.me.upgrade().unwrap();
         queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
-            target,
+            DynElement::new(target),
             self.active_value.clone(),
         )));
         if selection_changed {

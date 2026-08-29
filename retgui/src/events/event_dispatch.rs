@@ -9,7 +9,7 @@ use retgui_primitives::geometry::Point;
 use retgui_renderer::renderer::Renderer;
 
 use crate::app::{FOCUS, dequeue_event};
-use crate::elements::ElementInternals;
+use crate::elements::{DynElement, ElementInternals};
 use crate::events::helpers::{call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
 use crate::events::{ClickEvent, ClickTrigger, Event, EventKind, PointerEnterEvent, PointerLeaveEvent};
 use crate::text::text_context::TextContext;
@@ -21,7 +21,7 @@ pub(super) fn dispatch_event(
 ) {
     // Capture Phase
     for current_target in targets.iter().rev() {
-        event.base_mut().current_target = current_target.clone();
+        event.base_mut().current_target = DynElement::new(current_target.clone());
         call_user_event_handlers(event, true);
         if event.is_propagation_stopped() {
             break;
@@ -31,7 +31,7 @@ pub(super) fn dispatch_event(
     // Bubble phase
     if !event.is_propagation_stopped() {
         for current_target in targets.iter() {
-            event.base_mut().current_target = current_target.clone();
+            event.base_mut().current_target = DynElement::new(current_target.clone());
             call_user_event_handlers(event, false);
             if event.is_propagation_stopped() {
                 break;
@@ -42,7 +42,7 @@ pub(super) fn dispatch_event(
     if !event.is_default_prevented() {
         // Call the default on_event element functions.
         for current_target in targets.iter() {
-            event.base_mut().current_target = current_target.clone();
+            event.base_mut().current_target = DynElement::new(current_target.clone());
             current_target.borrow_mut().on_event(event, text_context);
             if event.is_propagation_stopped() {
                 break;
@@ -59,7 +59,7 @@ pub(super) fn dispatch_event_once(event: &mut EventKind, text_context: &mut Text
 
     if !event.is_default_prevented() {
         let target = event.target();
-        target.borrow_mut().on_event(event, text_context);
+        target.inner.borrow_mut().on_event(event, text_context);
     }
 }
 
@@ -83,7 +83,7 @@ impl EventDispatcher {
     /// Dispatch all queued events.
     pub(crate) fn dispatch_queued_events(&mut self, text_context: &mut TextContext) {
         while let Some(mut event) = dequeue_event() {
-            let targets = freeze_target_list(event.target());
+            let targets = freeze_target_list(event.target().inner);
             dispatch_event(&mut event, &targets, text_context);
         }
     }
@@ -120,7 +120,7 @@ impl EventDispatcher {
 
             // We had a prev target, but we don't in the new list. (PointerLeave)
             if !found {
-                let mut event = EventKind::PointerLeave(PointerLeaveEvent::new(prev_target.clone()));
+                let mut event = EventKind::PointerLeave(PointerLeaveEvent::new(DynElement::new(prev_target.clone())));
                 dispatch_event_once(&mut event, text_context);
             }
         }
@@ -162,7 +162,8 @@ impl EventDispatcher {
                             button: pb.button,
                             position: pb.position,
                         };
-                        let mut click_event = EventKind::Click(ClickEvent::new(click_target.clone(), trigger));
+                        let mut click_event =
+                            EventKind::Click(ClickEvent::new(DynElement::new(click_target.clone()), trigger));
                         let click_targets = freeze_target_list(click_target);
 
                         dispatch_event(&mut click_event, &click_targets, text_context);
@@ -206,7 +207,7 @@ impl EventDispatcher {
 
             // We weren't in the prev target list, but we are in the new list. (PointerEnter)
             if !found {
-                let mut event = EventKind::PointerEnter(PointerEnterEvent::new(target.clone()));
+                let mut event = EventKind::PointerEnter(PointerEnterEvent::new(DynElement::new(target.clone())));
                 dispatch_event_once(&mut event, text_context);
             }
         }
@@ -274,13 +275,13 @@ impl EventDispatcher {
             self.maybe_dispatch_pointer_enter(text_context, &targets);
         }
 
-        event_kind.retarget(targets[0].clone());
+        event_kind.retarget(DynElement::new(targets[0].clone()));
         dispatch_event(event_kind, &targets, text_context);
         let prevent_defaults = event_kind.is_default_prevented();
 
         let dispatched_pointer_up_down_target =
             if matches!(event_kind, EventKind::PointerUp(_) | EventKind::PointerDown(_)) {
-                Some(event_kind.target())
+                Some(event_kind.target().inner)
             } else {
                 None
             };

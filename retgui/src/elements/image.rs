@@ -51,6 +51,8 @@ impl Drop for ImageInner {
 }
 
 impl AsElement for Image {
+    type Inner = ImageInner;
+
     fn as_element_rc(&self) -> Rc<RefCell<dyn ElementInternals>> {
         self.inner.clone()
     }
@@ -61,6 +63,14 @@ impl AsElement for Image {
 
     fn borrow_mut(&self) -> RefMut<'_, dyn ElementInternals> {
         self.inner.borrow_mut()
+    }
+
+    fn with<R>(&self, callback: impl FnOnce(&Self::Inner) -> R) -> R {
+        callback(&self.inner.borrow())
+    }
+
+    fn with_mut<R>(&self, callback: impl FnOnce(&mut Self::Inner) -> R) -> R {
+        callback(&mut self.inner.borrow_mut())
     }
 }
 

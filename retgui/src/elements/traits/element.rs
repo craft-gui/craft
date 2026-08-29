@@ -144,7 +144,10 @@ pub trait Element: Clone + AsElement {
     }
 
     fn emit_custom_event<T: Any + 'static>(&self, detail: T) {
-        queue_event(EventKind::Custom(CustomEvent::new(self.as_element_rc(), detail)));
+        queue_event(EventKind::Custom(CustomEvent::new(
+            DynElement::new(self.as_element_rc()),
+            detail,
+        )));
     }
 
     fn on_focus(self, on_focus: impl Fn(&mut FocusEvent) + 'static) -> Self {
