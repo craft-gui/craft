@@ -550,14 +550,17 @@ pub trait ElementInternals: ElementData + Any + Drop {
         );
     }
 
+    /// Returns the element's user based id. This id is not used by RetGUI.
     fn get_id(&self) -> Option<smol_str::SmolStr> {
         self.element_data().id.clone()
     }
 
+    /// Sets the element's user based id.
     fn set_id(&mut self, id: &str) {
         self.element_data_mut().id = Some(id.into());
     }
 
+    ///
     fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
         self.add_event_listener(
             EventCallbackKind::PointerButtonDown(on_pointer_button_down),
@@ -1188,6 +1191,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.update_gummy_style();
     }
 
+    /// Sets the list of animations.
     fn set_animations(&mut self, animations: Vec<Animation>) {
         let element_data = self.element_data_mut();
         let had_animations = !element_data.animations.is_empty();
@@ -1207,16 +1211,19 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
+    /// Sets the selection color.
     fn set_selection_brush(&mut self, selection_brush: Brush) {
         self.style_mut().set_selection_brush(selection_brush);
         self.mark_dirty();
     }
 
+    /// Sets the text cursor color.
     fn set_cursor_brush(&mut self, cursor_brush: Option<Brush>) {
         self.style_mut().set_cursor_brush(cursor_brush);
         self.request_window_redraw();
     }
 
+    /// Sets the box shadows on this element.
     fn set_box_shadows(&mut self, box_shadows: Vec<BoxShadow>) {
         self.style_mut().set_box_shadows(box_shadows);
         self.apply_borders(self.element_data().applied_scale_factor);
