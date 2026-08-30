@@ -1,5 +1,5 @@
 use crate::app::GUMMY_TREE;
-use crate::elements::ElementInternals;
+use crate::elements::{DynElement, ElementInternals};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
@@ -24,7 +24,7 @@ pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCel
     child.borrow_mut().element_data_mut().window = me_window;
     child.borrow_mut().propagate_window_down();
     child.borrow_mut().set_scale_factor(scale_factor);
-    parent.element_data_mut().children.push(child.clone());
+    parent.element_data_mut().children.push(DynElement::new(child.clone()));
 
     // Add the children's gummy node.
     GUMMY_TREE.with_borrow_mut(|gummy_tree| {

@@ -22,7 +22,7 @@ use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, Bo
 /// Getters in this trait return specific data and have a get prefix.
 pub trait Element: Clone + AsElement {
     fn get_children(&self) -> Vec<DynElement> {
-        self.with(|element| element.children())
+        self.with(|element| element.get_children().to_vec())
     }
 
     fn get_previous_sibling(&self) -> Result<DynElement, RetGuiError> {

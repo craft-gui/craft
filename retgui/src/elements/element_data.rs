@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::Weak;
 
 use smol_str::SmolStr;
 
@@ -10,7 +10,7 @@ use crate::accessibility::RetGuiAccessTree;
 use crate::app::{ELEMENTS, GUMMY_TREE};
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
-use crate::elements::{ElementInternals, WindowInternal};
+use crate::elements::{DynElement, ElementInternals, WindowInternal};
 use crate::events::EventCallback;
 use crate::geometry::TrblRectangle;
 use crate::layout::layout::Layout;
@@ -36,7 +36,7 @@ pub struct ElementData {
     pub layout: Layout,
 
     /// The children of the element.
-    pub(crate) children: Vec<Rc<RefCell<dyn ElementInternals>>>,
+    pub(crate) children: Vec<DynElement>,
 
     /// A user-defined id for the element.
     pub id: Option<SmolStr>,

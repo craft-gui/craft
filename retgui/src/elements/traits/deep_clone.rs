@@ -82,14 +82,13 @@ where
             access_key,
             access_scale_factor,
         );
-        new_children.push(new_child.inner.clone());
-
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
             gummy_tree.add_child(
                 child_layout_parent,
                 new_child.inner.borrow().element_data().layout.gummy_node_id.unwrap(),
             );
         });
+        new_children.push(new_child);
     }
     new_element.borrow_mut().element_data_mut().children = new_children;
 

@@ -141,7 +141,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
     let mut queue: VecDeque<(Rc<RefCell<dyn ElementInternals>>, Point)> = VecDeque::new();
     for child in data.children.as_slice() {
         let position = child.borrow().element_data().layout.local_box_in_parent().position;
-        queue.push_back((child.clone(), position));
+        queue.push_back((child.clone().inner, position));
     }
 
     let top_py = data.layout.local_box().padding_rectangle().top();
@@ -167,7 +167,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
         for descendant in &child.element_data().children {
             let local_position = descendant.borrow().element_data().layout.local_box_in_parent().position;
             queue.push_back((
-                descendant.clone(),
+                descendant.clone().inner,
                 Point::new(offset.x + local_position.x, offset.y + local_position.y),
             ));
         }

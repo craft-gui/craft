@@ -135,7 +135,7 @@ impl RadioGroupInner {
             (current_index + 1) % radios.len()
         };
         {
-            let mut next = radios[next_index].borrow_mut();
+            let mut next = radios[next_index].inner.borrow_mut();
             let next = (next.deref_mut() as &mut dyn Any)
                 .downcast_mut::<RadioInner>()
                 .expect("radio group child changed type during keyboard navigation");
@@ -143,7 +143,7 @@ impl RadioGroupInner {
             next.set_value_from_group();
         }
         for radio in radios {
-            let mut radio = radio.borrow_mut();
+            let mut radio = radio.inner.borrow_mut();
             let radio = (radio.deref_mut() as &mut dyn Any)
                 .downcast_mut::<RadioInner>()
                 .expect("radio group child changed type during keyboard navigation");

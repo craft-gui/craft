@@ -88,7 +88,7 @@ pub(crate) fn set_subtree_context(
     }
 
     for child in element.element_data().children.clone() {
-        set_subtree_context(&mut *child.borrow_mut(), tree, root, scale_factor);
+        set_subtree_context(&mut *child.inner.borrow_mut(), tree, root, scale_factor);
     }
 }
 

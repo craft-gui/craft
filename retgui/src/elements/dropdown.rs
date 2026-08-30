@@ -140,7 +140,7 @@ impl ElementInternals for DropdownInner {
         self.floating_window.apply_borders(scale_factor);
         self.arrow.apply_borders(scale_factor);
         for child in &self.element_data.children {
-            child.borrow_mut().set_scale_factor(scale_factor);
+            child.inner.borrow_mut().set_scale_factor(scale_factor);
         }
         if let Some(selected_element) = &self.selected_element {
             selected_element.borrow_mut().set_scale_factor(scale_factor);
@@ -367,7 +367,7 @@ impl ElementInternals for DropdownInner {
         let me: Weak<RefCell<dyn ElementInternals>> = self.element_data.me.clone();
         let me_window = self.element_data.window.clone();
         child.borrow_mut().element_data_mut().parent = Some(me);
-        self.element_data.children.push(child.clone());
+        self.element_data.children.push(DynElement::new(child.clone()));
         child.borrow_mut().element_data_mut().window = me_window;
         child.borrow_mut().propagate_window_down();
         child
@@ -397,6 +397,7 @@ impl ElementInternals for DropdownInner {
         for (index, child) in self.element_data.children.iter().enumerate() {
             let floating_window_box = self.floating_window.layout.computed_box;
             let mut child_rect = child
+                .inner
                 .borrow_mut()
                 .element_data()
                 .layout
@@ -415,6 +416,7 @@ impl ElementInternals for DropdownInner {
             }
 
             child
+                .inner
                 .borrow_mut()
                 .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
         }

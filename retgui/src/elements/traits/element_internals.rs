@@ -44,7 +44,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
             let me_ptr = self.element_data().me.clone().upgrade().unwrap();
             let children = parent.inner.borrow().element_data().children.clone();
 
-            let self_position = children.iter().position(|x| Rc::ptr_eq(x, &me_ptr)).unwrap();
+            let self_position = children.iter().position(|x| Rc::ptr_eq(&x.inner, &me_ptr)).unwrap();
 
             Some(self_position)
         } else {
@@ -79,6 +79,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
         for child in &self.element_data().children {
             child
+                .inner
                 .borrow_mut()
                 .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
         }
@@ -288,7 +289,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         for child in &self.element_data().children {
-            child.borrow_mut().set_scale_factor(scale_factor);
+            child.inner.borrow_mut().set_scale_factor(scale_factor);
         }
         self.mark_dirty();
     }
@@ -298,7 +299,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .children
             .first()
             .cloned()
-            .map(DynElement::new)
             .ok_or(RetGuiError::ElementNotFound)
     }
 
@@ -307,7 +307,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .children
             .last()
             .cloned()
-            .map(DynElement::new)
             .ok_or(RetGuiError::ElementNotFound)
     }
 
@@ -322,7 +321,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 .then(|| parent.inner.borrow().element_data().children.get(position - 1).cloned())
                 .flatten();
             if let Some(previous_sibling) = previous_sibling {
-                Ok(DynElement::new(previous_sibling))
+                Ok(previous_sibling)
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -340,7 +339,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         {
             let next_sibling = parent.inner.borrow().element_data().children.get(position + 1).cloned();
             if let Some(next_sibling) = next_sibling {
-                Ok(DynElement::new(next_sibling))
+                Ok(next_sibling)
             } else {
                 Err(RetGuiError::ElementNotFound)
             }
@@ -353,12 +352,12 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let children = &mut self.element_data_mut().children;
         let position_1 = children
             .iter()
-            .position(|x| Rc::ptr_eq(x, &child_1.inner))
+            .position(|x| Rc::ptr_eq(&x.inner, &child_1.inner))
             .ok_or(RetGuiError::ElementNotFound)?;
 
         let position_2 = children
             .iter()
-            .position(|x| Rc::ptr_eq(x, &child_2.inner))
+            .position(|x| Rc::ptr_eq(&x.inner, &child_2.inner))
             .ok_or(RetGuiError::ElementNotFound)?;
 
         if position_1 == position_2 {
@@ -416,12 +415,11 @@ pub trait ElementInternals: ElementData + Any + Drop {
     /// # Panics
     /// Panics if the corresponding Gummy layout nodes fail to be removed.
     fn remove_child(&mut self, child: DynElement) -> Result<DynElement, RetGuiError> {
-        let child = child.inner;
         // Find the node.
         let children = &mut self.element_data_mut().children;
         let position = children
             .iter()
-            .position(|x| Rc::ptr_eq(x, &child))
+            .position(|x| Rc::ptr_eq(&x.inner, &child.inner))
             .ok_or(RetGuiError::ElementNotFound)?;
 
         let child = children[position].clone();
@@ -431,10 +429,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
         children.remove(position);
 
         // Remove the parent reference.
-        child.borrow_mut().element_data_mut().parent = None;
+        child.inner.borrow_mut().element_data_mut().parent = None;
 
         GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            let child_id = child.borrow().element_data().layout.gummy_node_id;
+            let child_id = child.inner.borrow().element_data().layout.gummy_node_id;
 
             if let Some(child_id) = child_id {
                 gummy_tree.unparent_node(child_id);
@@ -447,31 +445,31 @@ pub trait ElementInternals: ElementData + Any + Drop {
         fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
             pointer_capture.remove_element(&node.inner);
             for child in node.inner.borrow().element_data().children.clone() {
-                remove_element_from_document(DynElement::new(child), pointer_capture);
+                remove_element_from_document(child, pointer_capture);
             }
         }
 
         if let Some(pointer_capture) = self.pointer_capture() {
-            remove_element_from_document(DynElement::new(child.clone()), &mut pointer_capture.borrow_mut());
+            remove_element_from_document(child.clone(), &mut pointer_capture.borrow_mut());
         }
 
-        child.borrow_mut().unfocus();
+        child.inner.borrow_mut().unfocus();
 
-        crate::accessibility::detach_subtree(&mut *child.borrow_mut());
+        crate::accessibility::detach_subtree(&mut *child.inner.borrow_mut());
         {
-            let mut child = child.borrow_mut();
+            let mut child = child.inner.borrow_mut();
             child.element_data_mut().window = None;
             child.propagate_window_down();
         }
         self.request_window_redraw();
 
-        Ok(DynElement::new(child))
+        Ok(child)
     }
 
     fn remove_all_children(&mut self) {
         // @OPTIMIZE: We are copying the vec here.
         for child in self.element_data().children.clone().iter().rev() {
-            self.remove_child(DynElement::new(child.clone())).unwrap();
+            self.remove_child(child.clone()).unwrap();
         }
     }
 
@@ -686,7 +684,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn propagate_window_down(&mut self) {
         let window = self.element_data().window.clone();
         for child in &self.element_data().children {
-            let mut child_borrow = child.borrow_mut();
+            let mut child_borrow = child.inner.borrow_mut();
             child_borrow.element_data_mut().window = window.clone();
             child_borrow.propagate_window_down();
         }
@@ -1362,7 +1360,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     fn drop(&mut self) {
         for child in self.element_data().children.clone() {
-            crate::accessibility::detach_subtree(&mut *child.borrow_mut());
+            crate::accessibility::detach_subtree(&mut *child.inner.borrow_mut());
         }
         if let Some(key) = self.element_data().access_key {
             self.element_data().access_tree.remove_node(key);

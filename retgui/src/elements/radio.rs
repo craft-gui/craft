@@ -199,10 +199,12 @@ impl RadioInner {
         let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
         if let Some(parent) = parent {
             for sibling in parent.borrow().element_data().children.clone() {
-                if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling)) {
+                if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling.inner)) {
                     continue;
                 }
-                if let Some(radio) = (sibling.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>() {
+                if let Some(radio) =
+                    (sibling.inner.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>()
+                {
                     radio.set_accessibility_selection();
                 }
             }

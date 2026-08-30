@@ -24,12 +24,7 @@ pub trait ElementData {
     }
 
     /// Returns the element's children.
-    fn children(&self) -> Vec<DynElement> {
-        self.element_data()
-            .children
-            .iter()
-            .cloned()
-            .map(DynElement::new)
-            .collect()
+    fn get_children(&self) -> &[DynElement] {
+        self.element_data().children.as_slice()
     }
 }

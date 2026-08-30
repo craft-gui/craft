@@ -793,7 +793,7 @@ impl WindowInternal {
 }
 
 fn collect_tab_navigation_elements(
-    children: &[Rc<RefCell<dyn ElementInternals>>],
+    children: &[DynElement],
     navigation_elements: &mut Vec<(Rc<RefCell<dyn ElementInternals>>, bool)>,
 ) {
     for child in children {
@@ -809,7 +809,7 @@ fn collect_tab_navigation_elements(
         if !is_visible {
             continue;
         }
-        navigation_elements.push((child.clone(), is_keyboard_focusable));
+        navigation_elements.push((child.inner.clone(), is_keyboard_focusable));
         collect_tab_navigation_elements(&grandchildren, navigation_elements);
     }
 }
