@@ -1,7 +1,5 @@
 //! A toggleable checkbox.
 
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use issho::{AccessEvent, IsshoError};
@@ -18,25 +16,24 @@ use retgui_resource_manager::ResourceManager;
 use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
-use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
+use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
+use crate::elements::{DynElement, Element, ElementNode, Elements, scrollable};
 use crate::events::{CheckboxToggledEvent, EventKind};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Checkbox {
-    pub(crate) inner: Rc<RefCell<CheckboxInner>>,
+    pub(crate) inner: DynElement,
 }
 
 #[derive(Clone)]
-pub(crate) struct CheckboxInner {
+pub(crate) struct CheckboxNode {
     element_data: ElementData,
     box_layout: ElementData,
     box_rect: Rectangle,
@@ -44,31 +41,13 @@ pub(crate) struct CheckboxInner {
     checked: bool,
 }
 
-impl Default for Checkbox {
-    fn default() -> Self {
-        Self::new("checkbox item", false)
+impl Element for Checkbox {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl Element for Checkbox {}
-
-impl Drop for CheckboxInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
-    }
-}
-
-impl AsElement for Checkbox {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for CheckboxInner {
+impl crate::elements::ElementNodeData for CheckboxNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -78,17 +57,16 @@ impl crate::elements::ElementData for CheckboxInner {
     }
 }
 
-impl ElementInternals for CheckboxInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
-            let mut element = element.borrow_mut();
+impl ElementNode for CheckboxNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let owner_id = element.element_data.internal_id;
-            let owner = element.element_data.me.clone();
+            let owner = element.element_data.me;
             let parent = element.element_data.layout.gummy_node_id();
             let box_node = gummy_tree.clone_node(element.box_layout.layout.gummy_node_id());
             element.box_layout.layout.gummy_node_id = Some(box_node);
             element.box_layout.internal_id = create_unique_element_id();
-            element.box_layout.me = owner.clone();
+            element.box_layout.me = owner;
             gummy_tree.add_child(parent, box_node);
             gummy_tree.register_owner(box_node, owner_id, owner);
             Some(parent)
@@ -108,7 +86,8 @@ impl ElementInternals for CheckboxInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -164,90 +143,86 @@ impl ElementInternals for CheckboxInner {
 
         renderer.set_transform(container_transform);
 
-        self.draw_children(renderer, resource_manager.clone(), _scale_factor, _text_context);
+        self.draw_children(
+            elements,
+            renderer,
+            resource_manager.clone(),
+            _scale_factor,
+            _text_context,
+        );
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
 
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(self, event);
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(elements, self, event);
         if let EventKind::Click(_) = event {
-            self.toggle();
-            self.focus();
+            self.toggle(elements);
+            self.focus(elements);
         } else if self.is_focused()
             && let EventKind::KeyDown(key) = event
             && key.code == KeyCode::Space
             && key.state == ElementState::Pressed
         {
-            self.toggle();
+            self.toggle(elements);
         }
     }
 
-    fn push(&mut self, child: DynElement) {
-        push_child_to_element(self, child.inner);
-    }
-
-    fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
+    fn on_access_event(&mut self, elements: &mut Elements, event: AccessEvent) -> Result<(), IsshoError> {
         if let AccessEvent::Toggle = event {
-            self.toggle();
+            self.toggle(elements);
         }
         Ok(())
     }
 }
 
 impl Checkbox {
-    pub fn new(label: &str, checked: bool) -> Self {
+    pub fn new(elements: &mut Elements, label: &str, checked: bool) -> Self {
         let size = 16.0;
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<CheckboxInner>>| {
-            RefCell::new(CheckboxInner {
-                element_data: ElementData::new(me.clone(), true),
-                box_layout: ElementData::new_pseudo(me.clone(), false),
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(CheckboxNode {
+                element_data: ElementData::new(me, true, access_tree.clone()),
+                box_layout: ElementData::new_pseudo(me, false, access_tree),
                 box_rect: Rectangle::new(0.0, 0.0, size, size),
                 label: label.to_string(),
                 checked,
             })
         });
 
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.element_data.create_layout_node(None);
-        inner_mut.box_layout.style.set_min_width(Unit::Px(size));
-        inner_mut.box_layout.style.set_min_height(Unit::Px(size));
-        inner_mut
-            .box_layout
-            .style
-            .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
-        inner_mut.box_layout.create_layout_node(None);
-
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            let box_node = inner_mut.box_layout.layout.gummy_node_id();
-            gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), box_node);
-            let owner: Rc<RefCell<dyn ElementInternals>> = inner.clone();
-            gummy_tree.register_owner(box_node, inner_mut.element_data.internal_id, Rc::downgrade(&owner));
-        });
         {
+            let inner_mut = elements.get_as_mut::<CheckboxNode>(inner);
+            inner_mut.box_layout.style.set_min_width(Unit::Px(size));
+            inner_mut.box_layout.style.set_min_height(Unit::Px(size));
+            inner_mut
+                .box_layout
+                .style
+                .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
             inner_mut.element_data.set_accessibility_role(issho::Role::CheckBox);
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.element_data.set_accessibility_checked(checked);
         }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            let inner_mut = elements.get_as_mut::<CheckboxNode>(inner);
+            inner_mut.element_data.create_layout_node(gummy_tree, None);
+            inner_mut.box_layout.create_layout_node(gummy_tree, None);
+            let box_node = inner_mut.box_layout.layout.gummy_node_id();
+            gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), box_node);
+            gummy_tree.register_owner(box_node, inner_mut.element_data.internal_id, inner);
+        });
 
-        drop(inner_mut);
         Self { inner }
     }
 }
 
-impl CheckboxInner {
-    fn toggle(&mut self) {
+impl CheckboxNode {
+    fn toggle(&mut self, elements: &mut Elements) {
         self.checked = !self.checked;
         self.element_data.set_accessibility_checked(self.checked);
-        let target = self
-            .element_data
-            .me
-            .upgrade()
-            .expect("checkbox was detached while handling its toggle action");
-        queue_event(EventKind::CheckboxToggled(CheckboxToggledEvent::new(
-            DynElement::new(target),
+        let target = self.element_data.me;
+        elements.queue_event(EventKind::CheckboxToggled(CheckboxToggledEvent::new(
+            target,
             self.label.clone(),
             self.checked,
         )));

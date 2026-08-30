@@ -1,196 +1,134 @@
 #[allow(dead_code)]
 #[path = "../../examples/counter/main.rs"]
 pub mod counter;
-
+#[allow(dead_code)]
+#[path = "../../examples/pointer_events/main.rs"]
+mod pointer_events;
 #[allow(dead_code)]
 #[path = "../../examples/text/main.rs"]
 mod text;
 
-#[allow(dead_code)]
-#[path = "../../examples/pointer_events/main.rs"]
-mod pointer_events;
-
-use std::cell::RefCell;
 use std::rc::Rc;
 
-use retgui::elements::{Container, Element, Text};
+use retgui::elements::{Container, Element, Elements, State, Text};
 use retgui::events::PointerButton;
-use retgui::style::Display::Flex;
-use retgui::style::{FlexDirection, FontWeight, Overflow, Unit};
+use retgui::style::{Display, FlexDirection, FontWeight, Overflow};
 use retgui::{palette, pct, px};
 
 use crate::WebsiteGlobalState;
-use crate::examples::counter::counter;
-use crate::examples::pointer_events::pointer_events;
-use crate::examples::text::text;
 use crate::router::NavigateFn;
-use crate::theme::{ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
+use crate::theme::{ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, wrapper};
 
-const COUNTER_EXAMPLE_LINK: &str = "/examples/counter";
-const POINTER_EVENTS_EXAMPLE_LINK: &str = "/examples/pointer-events";
-const TEXT_EXAMPLE_LINK: &str = "/examples/text";
+const COUNTER: &str = "/examples/counter";
+const POINTER_EVENTS: &str = "/examples/pointer-events";
+const TEXT: &str = "/examples/text";
 
-fn create_examples_link(
+fn show_example(elements: &mut Elements, examples: &[Container], selected: usize) {
+    for (index, example) in examples.iter().enumerate() {
+        example.display(
+            elements,
+            if index == selected {
+                Display::Flex
+            } else {
+                Display::None
+            },
+        );
+    }
+}
+
+fn example_link(
+    elements: &mut Elements,
     label: &str,
-    example_link: &str,
-    example_to_show: &str,
-    navigate_fn: NavigateFn,
-    example_container: Container,
-    examples: Vec<Container>,
+    route: &'static str,
+    index: usize,
+    selected: State<usize>,
+    examples: Rc<Vec<Container>>,
+    navigate: NavigateFn,
 ) -> Text {
-    let example_link_captured = example_link.to_string();
-    let mut text = Text::new(label)
-        .color(DEFAULT_LINK_COLOR)
-        .on_pointer_button_up(move |event| {
+    let color = if *selected.read(elements) == index {
+        ACTIVE_LINK_COLOR
+    } else {
+        DEFAULT_LINK_COLOR
+    };
+    Text::new(elements, label)
+        .edit(elements)
+        .color(color)
+        .selectable(false)
+        .on_pointer_button_up(move |event, elements| {
             if event.button == Some(PointerButton::Left) {
-                update_active_example(example_link_captured.as_str(), example_container.clone(), &examples);
-                navigate_fn(example_link_captured.as_str());
+                *selected.write(elements) = index;
+                show_example(elements, &examples, index);
+                navigate(route, elements);
             }
         })
-        .id(example_link)
-        .selectable(false);
-    if example_to_show == example_link {
-        text = text.color(ACTIVE_LINK_COLOR);
-    }
-    text
+        .finish()
 }
 
-fn examples_sidebar(
-    example_to_show: &str,
-    navigate_fn: NavigateFn,
-    example_container: Container,
-    examples: Vec<Container>,
-) -> Container {
-    let mut links = vec![
-        create_examples_link(
-            "Counter",
-            COUNTER_EXAMPLE_LINK,
-            example_to_show,
-            navigate_fn.clone(),
-            example_container.clone(),
-            examples.clone(),
-        ),
-        create_examples_link(
-            "Pointer Events",
-            POINTER_EVENTS_EXAMPLE_LINK,
-            example_to_show,
-            navigate_fn.clone(),
-            example_container.clone(),
-            examples.clone(),
-        ),
-        create_examples_link(
-            "Text",
-            TEXT_EXAMPLE_LINK,
-            example_to_show,
-            navigate_fn.clone(),
-            example_container.clone(),
-            examples.clone(),
-        ),
-    ];
-
-    if true
-    /*window.window_width() <= MOBILE_MEDIA_QUERY_WIDTH*/
-    {
-        let container = Container::new()
-            .display(Flex)
-            .flex_direction(FlexDirection::Column)
-            .gap(px(12), px(12))
-            .push(
-                Text::new("Examples")
-                    .selectable(false)
-                    .font_weight(FontWeight::MEDIUM)
-                    .font_size(18.0),
-            );
-
-        let mut dropdown = Container::new()
-            .display(Flex)
-            .flex_direction(FlexDirection::Column)
-            .min_width(px(200))
-            .width(px(200))
-            .max_width(px(300));
-
-        for link in links.drain(..) {
-            let is_selected = link.get_id().map(|id| id == example_to_show).unwrap_or(false);
-            if is_selected {
-                //dropdown = dropdown.selected_item(index);
-            }
-            dropdown = dropdown.push(link);
-        }
-
-        container.push(dropdown)
-    } else {
-        let mut container = Container::new()
-            .display(Flex)
-            .flex_direction(FlexDirection::Column)
-            .gap(px(15), px(15))
-            .min_width(px(200))
-            .padding(px(0), px(20), px(20), px(0))
-            .height(pct(100))
-            .push(Text::new("Examples").font_weight(FontWeight::MEDIUM).font_size(24.0));
-
-        for link in links.drain(..) {
-            container = container.push(link);
-        }
-
-        container
-    }
-}
-
-pub fn examples(context: Rc<RefCell<WebsiteGlobalState>>, navigate_fn: NavigateFn) -> Container {
-    let route = context.borrow().get_route();
-
-    let examples = vec![
-        counter().id(COUNTER_EXAMPLE_LINK),
-        pointer_events().id(POINTER_EVENTS_EXAMPLE_LINK),
-        text().id(TEXT_EXAMPLE_LINK),
-    ];
-
-    let container_height = 600.0; //(context.window().window_height() - NAVBAR_HEIGHT - vertical_padding * 2.0).max(0.0);
-
-    let current_index = examples
+pub fn examples(elements: &mut Elements, global_state: State<WebsiteGlobalState>, navigate: NavigateFn) -> Container {
+    let route = global_state.read(elements).get_route();
+    let counter = counter::counter(elements).edit(elements).id(COUNTER).finish();
+    let pointer = pointer_events::pointer_events(elements)
+        .edit(elements)
+        .id(POINTER_EVENTS)
+        .finish();
+    let text = text::text(elements).edit(elements).id(TEXT).finish();
+    let examples = Rc::new(vec![counter, pointer, text]);
+    let selected_index = [COUNTER, POINTER_EVENTS, TEXT]
         .iter()
-        .position(|ex| ex.get_id().as_deref() == Some(route.as_str()))
+        .position(|candidate| *candidate == route)
         .unwrap_or(0);
+    let selected = elements.insert_state(selected_index);
+    show_example(elements, &examples, selected_index);
 
-    let example_container = Container::new()
-        .width(pct(100))
-        .height(px(container_height))
-        .background_color(palette::css::WHITE)
-        .push(examples[current_index].clone());
-
-    let vertical_padding = 50.0;
-    let wrapper = wrapper()
-        .padding(
-            Unit::Px(vertical_padding),
-            WRAPPER_PADDING_RIGHT,
-            Unit::Px(vertical_padding),
-            WRAPPER_PADDING_LEFT,
-        )
-        .push(examples_sidebar(
-            &route,
-            navigate_fn.clone(),
-            example_container.clone(),
+    let heading = Text::new(elements, "Examples")
+        .edit(elements)
+        .selectable(false)
+        .font_weight(FontWeight::MEDIUM)
+        .font_size(20.0)
+        .finish();
+    let sidebar = Container::new(elements)
+        .edit(elements)
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .gap(px(12), px(12))
+        .min_width(px(210))
+        .push(heading)
+        .finish();
+    for (index, (label, route)) in [("Counter", COUNTER), ("Pointer events", POINTER_EVENTS), ("Text", TEXT)]
+        .into_iter()
+        .enumerate()
+    {
+        let link = example_link(
+            elements,
+            label,
+            route,
+            index,
+            selected,
             examples.clone(),
-        ));
-
-    /*if context.window().window_width() <= MOBILE_MEDIA_QUERY_WIDTH {
-        wrapper = wrapper.flex_direction(FlexDirection::Column);
-        wrapper = wrapper.gap(px(20), px(20));
-    }*/
-
-    let wrapper = wrapper.push(example_container.clone());
-
-    Container::new()
-        .overflow(Overflow::Visible, Overflow::Scroll)
-        .push(wrapper)
-}
-
-fn update_active_example(active: &str, example_container: Container, examples: &[Container]) {
-    for example in examples {
-        if example.get_id().unwrap() == active {
-            example_container.remove_all_children();
-            example_container.push(example.clone());
-            return;
-        }
+            navigate.clone(),
+        );
+        sidebar.push(elements, link);
     }
+
+    let content = Container::new(elements)
+        .edit(elements)
+        .width(pct(100))
+        .height(px(600))
+        .background_color(palette::css::WHITE)
+        .finish();
+    for example in examples.iter() {
+        content.push(elements, *example);
+    }
+    let page = wrapper(elements)
+        .edit(elements)
+        .padding_all(px(40))
+        .gap(px(24), px(24))
+        .push(sidebar)
+        .push(content)
+        .finish();
+    Container::new(elements)
+        .edit(elements)
+        .overflow(Overflow::Visible, Overflow::Scroll)
+        .push(page)
+        .finish()
 }

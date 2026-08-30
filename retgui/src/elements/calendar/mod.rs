@@ -3,14 +3,12 @@
 use retgui_calendar::sys_locale::get_locale_or_default;
 use retgui_calendar::{DateAddOptions, DateDuration, Locale, Month, Weekday, current_calendar_start, current_month, day_abbreviation, first_day_of_week, format_date_day_number, month_name, year_name};
 
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use crate::elements::element_data::ElementData;
-use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
+use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Container, Dropdown, DynElement, Element, ElementInternals, Text};
+use crate::elements::{Container, Dropdown, DynElement, Element, ElementNode, Elements, Text};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
@@ -19,14 +17,14 @@ use crate::{px, rgb};
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Calendar {
-    pub(crate) inner: Rc<RefCell<CalendarInner>>,
+    pub(crate) inner: DynElement,
 }
 
 /// A calendar.
 #[derive(Clone)]
-pub(crate) struct CalendarInner {
+pub(crate) struct CalendarNode {
     element_data: ElementData,
     pub first_day: Weekday,
     pub nav: Container,
@@ -48,31 +46,13 @@ const CELL_SIZE: Unit = Unit::Px(36.0);
 const MIN_YEAR: i32 = 1900;
 const MAX_YEAR: i32 = 3000;
 
-impl Default for Calendar {
-    fn default() -> Self {
-        Self::new()
+impl Element for Calendar {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl Element for Calendar {}
-
-impl Drop for CalendarInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
-    }
-}
-
-impl AsElement for Calendar {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for CalendarInner {
+impl crate::elements::ElementNodeData for CalendarNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -82,9 +62,9 @@ impl crate::elements::ElementData for CalendarInner {
     }
 }
 
-impl ElementInternals for CalendarInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
+impl ElementNode for CalendarNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
 
     fn apply_layout(
@@ -98,213 +78,220 @@ impl ElementInternals for CalendarInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
-        let year_id = self.year_dropdown.with(|element| element.element_data().internal_id);
-        let month_id = self.month_dropdown.with(|element| element.element_data().internal_id);
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+        let year_id = elements.get(self.year_dropdown.inner).element_data().internal_id;
+        let month_id = elements.get(self.month_dropdown.inner).element_data().internal_id;
         if let EventKind::DropdownItemSelected(dropdown_event) = event {
-            let target_id = dropdown_event.target().borrow().element_data().internal_id;
+            let target_id = elements.get(dropdown_event.target()).element_data().internal_id;
             if target_id == year_id {
-                self.select_year(dropdown_event.index);
+                self.select_year(elements, dropdown_event.index);
             } else if target_id == month_id {
-                self.select_month(dropdown_event.index);
+                self.select_month(elements, dropdown_event.index);
             }
         }
-    }
-
-    fn push(&mut self, child: DynElement) {
-        push_child_to_element(self, child.inner);
     }
 }
 
 impl Calendar {
-    pub fn new() -> Self {
+    pub fn new(elements: &mut Elements) -> Self {
         let locale = get_locale_or_default();
         let first_day = first_day_of_week(&locale);
         let start_of_month = current_month();
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<CalendarInner>>| {
-            RefCell::new(CalendarInner {
-                element_data: ElementData::new(me.clone(), true),
-                week_grid: Container::new()
-                    .display(Display::Flex)
-                    .flex_direction(FlexDirection::Column),
+        let week_grid = Container::new(elements)
+            .display(elements, Display::Flex)
+            .flex_direction(elements, FlexDirection::Column);
+        let day_header = Container::new(elements);
+        let nav = Container::new(elements);
+        let year_dropdown = Dropdown::new(elements).width(elements, px(100));
+        let month_dropdown = Dropdown::new(elements).width(elements, px(100));
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(CalendarNode {
+                element_data: ElementData::new(me, true, access_tree),
+                week_grid,
                 days: Vec::new(),
                 focus_year: start_of_month.year().extended_year(),
-                day_header: Container::new(),
+                day_header,
                 first_day,
-                nav: Container::new(),
+                nav,
                 focus_month: start_of_month.month().ordinal,
-                year_dropdown: Dropdown::new().width(px(100)),
-                month_dropdown: Dropdown::new().width(px(100)),
+                year_dropdown,
+                month_dropdown,
                 start_year: MIN_YEAR,
                 end_year: start_of_month.year().extended_year() + 2,
                 locale,
             })
         });
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.setup_years();
-        inner_mut.setup_months();
-        inner_mut.element_data.create_layout_node(None);
-
-        let mut current_header_day = inner_mut.first_day;
-        for _ in 0..COLUMNS {
-            let day = day_abbreviation(&inner_mut.locale, current_header_day);
-            inner_mut.day_header.clone().push(
-                Container::new()
-                    .display(Display::Flex)
-                    .justify_content(JustifyContent::Center)
-                    .align_items(AlignItems::Center)
-                    .push(Text::new(day.as_str()).selectable(false))
-                    .width(CELL_SIZE)
-                    .height(CELL_SIZE),
-            );
-            current_header_day = Weekday::from_days_since_sunday(current_header_day as isize + 1)
-        }
-        for _ in 0..ROWS {
-            let mut week = Container::new()
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Row);
+        elements.create_layout_node(inner, None);
+        elements.dispatch_mut(inner, |inner_value, elements| {
+            let inner = (inner_value as &mut dyn std::any::Any)
+                .downcast_mut::<CalendarNode>()
+                .unwrap();
+            inner.setup_years(elements);
+            inner.setup_months(elements);
+            let mut current_header_day = inner.first_day;
             for _ in 0..COLUMNS {
-                let day_text = Text::new("").selectable(false);
-                let day = Container::new()
-                    .justify_content(JustifyContent::Center)
-                    .align_items(AlignItems::Center)
-                    .width(CELL_SIZE)
-                    .height(CELL_SIZE)
-                    .push(day_text.clone());
-                week = week.push(day.clone());
-                inner_mut.days.push(day_text);
+                let label = day_abbreviation(&inner.locale, current_header_day);
+                let text = Text::new(elements, label.as_str()).selectable(elements, false);
+                let day = Container::new(elements)
+                    .display(elements, Display::Flex)
+                    .justify_content(elements, JustifyContent::Center)
+                    .align_items(elements, AlignItems::Center)
+                    .push(elements, text)
+                    .width(elements, CELL_SIZE)
+                    .height(elements, CELL_SIZE);
+                inner.day_header.push(elements, day);
+                current_header_day = Weekday::from_days_since_sunday(current_header_day as isize + 1);
             }
-            inner_mut.week_grid.clone().push(week);
-        }
-        inner_mut.update_calendar();
-
-        inner_mut.set_display(Display::Flex);
-        inner_mut.set_flex_direction(FlexDirection::Column);
-
-        let nav = inner_mut.nav.clone();
-        nav.clone()
-            .display(Display::Flex)
-            .justify_content(JustifyContent::SpaceAround)
-            .align_items(AlignItems::Center)
-            .flex_direction(FlexDirection::Row)
-            .width(px(CELL_SIZE.raw_value() * 7.0))
-            .push(inner_mut.year_dropdown.clone())
-            .push(inner_mut.month_dropdown.clone());
-        inner_mut.push(DynElement::new(nav.inner));
-
-        let day_header = inner_mut.day_header.clone();
-        inner_mut.push(DynElement::new(day_header.inner));
-
-        let week_grid = inner_mut.week_grid.clone();
-        inner_mut.push(DynElement::new(week_grid.inner));
-
-        drop(inner_mut);
+            for _ in 0..ROWS {
+                let week = Container::new(elements)
+                    .display(elements, Display::Flex)
+                    .flex_direction(elements, FlexDirection::Row);
+                for _ in 0..COLUMNS {
+                    let text = Text::new(elements, "").selectable(elements, false);
+                    let day = Container::new(elements)
+                        .justify_content(elements, JustifyContent::Center)
+                        .align_items(elements, AlignItems::Center)
+                        .width(elements, CELL_SIZE)
+                        .height(elements, CELL_SIZE)
+                        .push(elements, text);
+                    week.push(elements, day);
+                    inner.days.push(text);
+                }
+                inner.week_grid.push(elements, week);
+            }
+            inner.update_calendar(elements);
+            inner.set_display(Display::Flex);
+            inner.set_flex_direction(FlexDirection::Column);
+            inner
+                .nav
+                .display(elements, Display::Flex)
+                .justify_content(elements, JustifyContent::SpaceAround)
+                .align_items(elements, AlignItems::Center)
+                .flex_direction(elements, FlexDirection::Row)
+                .width(elements, px(CELL_SIZE.raw_value() * 7.0))
+                .push(elements, inner.year_dropdown)
+                .push(elements, inner.month_dropdown);
+        });
+        crate::elements::internal_helpers::push_child_to_element(elements, inner, nav.inner);
+        crate::elements::internal_helpers::push_child_to_element(elements, inner, day_header.inner);
+        crate::elements::internal_helpers::push_child_to_element(elements, inner, week_grid.inner);
         Self { inner }
     }
 
-    pub fn start_year(self, year: i32) -> Self {
+    pub fn start_year(self, elements: &mut Elements, year: i32) -> Self {
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
         }
         if year > MAX_YEAR {
             panic!("Dates above {MAX_YEAR} are not supported.");
         }
-        self.inner.borrow_mut().set_start_year(year);
+        elements.dispatch_mut(self.inner, |inner, elements| {
+            (inner as &mut dyn std::any::Any)
+                .downcast_mut::<CalendarNode>()
+                .unwrap()
+                .set_start_year(elements, year)
+        });
         self
     }
 
-    pub fn end_year(self, year: i32) -> Self {
+    pub fn end_year(self, elements: &mut Elements, year: i32) -> Self {
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
         }
         if year > MAX_YEAR {
             panic!("Dates above {MAX_YEAR} are not supported.");
         }
-        self.inner.borrow_mut().set_end_year(year);
+        elements.dispatch_mut(self.inner, |inner, elements| {
+            (inner as &mut dyn std::any::Any)
+                .downcast_mut::<CalendarNode>()
+                .unwrap()
+                .set_end_year(elements, year)
+        });
         self
     }
 }
 
-impl CalendarInner {
-    fn update_calendar(&mut self) {
+impl CalendarNode {
+    fn update_calendar(&mut self, elements: &mut Elements) {
         let mut start_date = current_calendar_start(self.first_day, self.focus_year, Month::new(self.focus_month));
         for day_element in &self.days {
             let is_in_current_month = start_date.month().ordinal == self.focus_month;
             let date_str = format_date_day_number(&self.locale, &start_date);
-            day_element
-                .clone()
-                .text(date_str.as_str())
-                .color(if is_in_current_month {
+            day_element.text(elements, date_str.as_str()).color(
+                elements,
+                if is_in_current_month {
                     rgb(0, 0, 0)
                 } else {
                     rgb(120, 120, 120)
-                });
+                },
+            );
             start_date
                 .try_add_with_options(DateDuration::for_days(1), DateAddOptions::default())
                 .unwrap()
         }
     }
 
-    fn select_year(&mut self, year: usize) {
+    fn select_year(&mut self, elements: &mut Elements, year: usize) {
         self.focus_year = self.end_year - (year as i32);
-        self.update_calendar();
+        self.update_calendar(elements);
     }
 
-    fn select_month(&mut self, month: usize) {
+    fn select_month(&mut self, elements: &mut Elements, month: usize) {
         self.focus_month = 1 + month as u8;
-        self.update_calendar();
+        self.update_calendar(elements);
     }
 
-    fn setup_years(&mut self) {
-        let dropdown = self.year_dropdown.clone();
-        dropdown.remove_all_children();
+    fn setup_years(&mut self, elements: &mut Elements) {
+        let dropdown = self.year_dropdown;
+        dropdown.remove_all_children(elements);
         for year in (self.start_year..(self.end_year + 1)).rev() {
-            dropdown
-                .clone()
-                .push(Text::new(&year_name(&self.locale, year)).selectable(false))
-                .font_size(20.0);
+            let text = Text::new(elements, &year_name(&self.locale, year)).selectable(elements, false);
+            dropdown.push(elements, text).font_size(elements, 20.0);
             if year == self.focus_year {
-                dropdown.clone().selected_item((self.end_year - year) as usize);
+                dropdown.selected_item(elements, (self.end_year - year) as usize);
             }
         }
     }
 
-    fn setup_months(&mut self) {
-        let dropdown = self.month_dropdown.clone();
-        dropdown.remove_all_children();
+    fn setup_months(&mut self, elements: &mut Elements) {
+        let dropdown = self.month_dropdown;
+        dropdown.remove_all_children(elements);
         for month in 0..12 {
-            dropdown
-                .clone()
-                .push(Text::new(&month_name(&self.locale, Month::new(month + 1), self.focus_year)).selectable(false))
-                .font_size(20.0);
+            let text = Text::new(
+                elements,
+                &month_name(&self.locale, Month::new(month + 1), self.focus_year),
+            )
+            .selectable(elements, false);
+            dropdown.push(elements, text).font_size(elements, 20.0);
             if month + 1 == self.focus_month {
-                dropdown.clone().selected_item(month as usize);
+                dropdown.selected_item(elements, month as usize);
             }
         }
     }
 
-    pub fn set_start_year(&mut self, year: i32) {
+    pub fn set_start_year(&mut self, elements: &mut Elements, year: i32) {
         if year > self.end_year {
             panic!("Invalid start year");
         }
         self.start_year = year;
-        self.setup_years();
+        self.setup_years(elements);
     }
 
-    pub fn set_end_year(&mut self, year: i32) {
+    pub fn set_end_year(&mut self, elements: &mut Elements, year: i32) {
         if year < self.start_year {
             panic!("Invalid end year");
         }
         self.end_year = year;
-        self.setup_years();
+        self.setup_years(elements);
     }
 }

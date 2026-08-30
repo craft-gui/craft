@@ -20,61 +20,79 @@ features = ["system_fonts", "vello_hybrid_renderer"]
 ## Example
 
 ```rust
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use retgui::elements::{Container, Element, Text, Window};
+use retgui::elements::{Container, Element, Elements, State, Text, Window};
+use retgui::events::Event;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
 use retgui::{Color, RetGuiOptions, pct, px, rgb};
 
-fn create_button(label: &str, base_color: Color, delta: i64, state: Rc<RefCell<i64>>, count_text: Text) -> Container {
-    Container::new()
+fn create_button(
+    elements: &mut Elements,
+    label: &str,
+    base_color: Color,
+    delta: i64,
+    count: State<i64>,
+    count_text: Text,
+) -> Container {
+    let label = Text::new(elements, label)
+        .edit(elements)
+        .font_size(24.0)
+        .color(Color::WHITE)
+        .selectable(false)
+        .finish();
+
+    Container::new(elements)
+        .edit(elements)
         .border_width(px(1), px(2), px(3), px(4))
         .border_color_all(rgb(0, 0, 0))
         .border_radius_all((10.0, 10.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
         .background_color(base_color)
-        .on_click(move |event| {
-            *state.borrow_mut() += delta;
-            count_text.clone().text(&format!("Count: {}", state.borrow()));
+        .on_click(move |event, elements| {
+            let count = count.update(elements, |count| {
+                *count += delta;
+                *count
+            });
+            count_text
+                .edit(elements)
+                .text(&format!("Count: {count}"))
+                .finish();
             event.stop_propagation();
         })
-        .push(Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false))
+        .push(label)
+        .finish()
 }
 
 fn main() {
-    let count = Rc::new(RefCell::new(0));
-    let count_text = Text::new(&format!("Count: {}", count.borrow()));
+    let mut elements = Elements::new();
+    let count = elements.insert_state(0_i64);
+    let count_text = Text::new(&mut elements, "Count: 0");
+    let subtract = create_button(
+        &mut elements, "-", rgb(244, 67, 54), -1, count, count_text,
+    );
+    let add = create_button(
+        &mut elements, "+", rgb(76, 175, 80), 1, count, count_text,
+    );
+    let buttons = Container::new(&mut elements)
+        .edit(&mut elements)
+        .gap(px(20), px(20))
+        .push(subtract)
+        .push(add)
+        .finish();
 
-    Window::new("Counter")
+    Window::new(&mut elements, "Counter")
+        .edit(&mut elements)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
         .width(pct(100))
         .height(pct(100))
         .gap(px(20), px(20))
-        .push(count_text.clone())
-        .push({
-            Container::new()
-                .gap(px(20), px(20))
-                .push(create_button(
-                    "-",
-                    rgb(244, 67, 54),
-                    -1,
-                    count.clone(),
-                    count_text.clone(),
-                ))
-                .push(create_button(
-                    "+",
-                    rgb(76, 175, 80),
-                    1,
-                    count.clone(),
-                    count_text.clone(),
-                ))
-        });
+        .push(count_text)
+        .push(buttons)
+        .finish();
 
-    retgui::retgui_main(RetGuiOptions::basic("Counter"));
+    retgui::retgui_main(elements, RetGuiOptions::basic("Counter"));
 }
 ```
 
@@ -112,9 +130,8 @@ fn main() {
 ### 1. Are Android, iOS, and the Web Supported? 
 RetGui can run on those platforms, but they are not officially supported. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
 
-### 2. Why do I have to clone an `Element` into a separate variable before using it in a callback?
-`Element` is `Clone`, but not `Copy`, so it requires a clone. Luckily, there is a Rust project goal for improving the ergonomics, so that an explicit clone is not required:
-https://github.com/rust-lang/rust-project-goals/issues/107
+### 2. Why do mutations need `Elements`?
+Element values are copyable slot-map handles. The `Elements` arena owns their data, so every read or mutation is tied to a normal Rust borrow. For fluent mutation, call `.edit(&mut elements)` once, chain operations, and call `.finish()` to recover the handle.
 
 ## License
 Distributed under the Unlicense License. See the [LICENSE](./LICENSE) for more information.

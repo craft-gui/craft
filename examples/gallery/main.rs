@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 #[cfg(feature = "audio")]
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -6,24 +5,24 @@ use std::time::Duration;
 
 #[cfg(feature = "audio")]
 use retgui::elements::Audio;
-use retgui::elements::{AsElement, Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, Image, Radio, RadioGroup, Slider, SliderDirection, Text, TextInput, TinyVg, Window};
+use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, Elements, Image, Radio, RadioGroup, Slider, SliderDirection, State, Text, TextInput, TinyVg, Window};
 use retgui::events::Event;
 use retgui::geometry::Point;
 use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
-use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, RetGuiRuntime, auto, pct, px, retgui_main, rgb, rgba};
-
+use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, auto, pct, px, retgui_main, rgb, rgba};
 use serde::Deserialize;
-
 use util::setup_logging;
 
-pub fn title(str: &str) -> Text {
-    Text::new(str)
+pub fn title(elements: &mut Elements, value: &str) -> Text {
+    Text::new(elements, value)
+        .edit(elements)
         .font_weight(FontWeight::BOLD)
         .font_size(20.0)
         .margin(px(0.0), px(0.0), px(5.0), px(0.0))
+        .finish()
 }
 
-pub fn animations() -> Text {
+pub fn animations(elements: &mut Elements) -> Text {
     let gameboy_gradient = |start, end| {
         Gradient::new_linear(Point::new(start, 0.0), Point::new(end, 0.0)).color_stops(&[
             ColorStop::new(0.0, Color::from_rgb8(50, 50, 252)),
@@ -40,89 +39,127 @@ pub fn animations() -> Text {
         .push(KeyFrame::new(0.0).push(StyleVariant::TextBrush(Brush::Gradient(start.clone()))))
         .push(KeyFrame::new(50.0).push(StyleVariant::TextBrush(Brush::Gradient(end))))
         .push(KeyFrame::new(100.0).push(StyleVariant::TextBrush(Brush::Gradient(start))));
-
-    Text::new("Animations")
+    Text::new(elements, "Animations")
+        .edit(elements)
         .font_size(64.0)
         .font_weight(FontWeight::BOLD)
         .animations(vec![animation])
+        .finish()
 }
 
-pub fn text_input() -> Container {
-    let container = Container::new();
-
-    let text_input = TextInput::new("An element for text input")
+pub fn text_input(elements: &mut Elements) -> Container {
+    let input = TextInput::new(elements, "An element for text input")
+        .edit(elements)
         .width(px(200.0))
-        .height(px(200.0));
-
-    container
+        .height(px(200.0))
+        .finish();
+    let heading = title(elements, "Text Input");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .push(title("Text Input"))
-        .push(text_input)
+        .push(heading)
+        .push(input)
+        .finish()
 }
 
-pub fn dropdown() -> Container {
-    let container = Container::new();
-
-    let dropdown = Dropdown::new()
+pub fn dropdown(elements: &mut Elements) -> Container {
+    let cat = Text::new(elements, "Cat");
+    let dog = Text::new(elements, "Dog");
+    let dropdown = Dropdown::new(elements)
+        .edit(elements)
         .width(px(100.0))
-        .push(Text::new("Cat"))
-        .push(Text::new("Dog"))
-        .selected_item(0);
-
-    container
+        .push(cat)
+        .push(dog)
+        .selected_item(0)
+        .finish();
+    let heading = title(elements, "Dropdown");
+    Container::new(elements)
+        .edit(elements)
         .min_width(px(200.0))
         .display(Display::Block)
-        .push(title("Dropdown"))
+        .push(heading)
         .push(dropdown)
+        .finish()
 }
 
-pub fn text() -> Container {
-    let container = Container::new();
-
-    let normal_text = Text::new("Normal Text with a Color").color(Color::from_rgb8(0, 0, 255));
-    let bold_text = Text::new("Bold Text").font_weight(FontWeight::BOLD);
-    let italic_text = Text::new("Italic Text").font_style(FontStyle::Italic);
-    let bold_and_italic_text = Text::new("Bold & Italic Text")
+pub fn text(elements: &mut Elements) -> Container {
+    let normal = Text::new(elements, "Normal Text with a Color")
+        .edit(elements)
+        .color(Color::from_rgb8(0, 0, 255))
+        .finish();
+    let bold = Text::new(elements, "Bold Text")
+        .edit(elements)
         .font_weight(FontWeight::BOLD)
-        .font_style(FontStyle::Italic);
-
-    let underlined_text = Text::new("Underlined Text").underline(Some(2.0), Color::from_rgb8(0, 255, 0), None);
-
-    let left_aligned_text = Text::new("Left").text_align(TextAlign::Left);
-    let centered_text = Text::new("Center").text_align(TextAlign::Center);
-    let right_aligned_text = Text::new("Right").text_align(TextAlign::Right);
-
-    container
+        .finish();
+    let italic = Text::new(elements, "Italic Text")
+        .edit(elements)
+        .font_style(FontStyle::Italic)
+        .finish();
+    let bold_italic = Text::new(elements, "Bold & Italic Text")
+        .edit(elements)
+        .font_weight(FontWeight::BOLD)
+        .font_style(FontStyle::Italic)
+        .finish();
+    let underlined = Text::new(elements, "Underlined Text")
+        .edit(elements)
+        .underline(Some(2.0), Color::from_rgb8(0, 255, 0), None)
+        .finish();
+    let left = Text::new(elements, "Left")
+        .edit(elements)
+        .text_align(TextAlign::Left)
+        .finish();
+    let center = Text::new(elements, "Center")
+        .edit(elements)
+        .text_align(TextAlign::Center)
+        .finish();
+    let right = Text::new(elements, "Right")
+        .edit(elements)
+        .text_align(TextAlign::Right)
+        .finish();
+    let heading = title(elements, "Text");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .push(title("Text"))
-        .push(normal_text)
-        .push(bold_text)
-        .push(italic_text)
-        .push(bold_and_italic_text)
-        .push(underlined_text)
-        .push(left_aligned_text)
-        .push(centered_text)
-        .push(right_aligned_text)
+        .push(heading)
+        .push(normal)
+        .push(bold)
+        .push(italic)
+        .push(bold_italic)
+        .push(underlined)
+        .push(left)
+        .push(center)
+        .push(right)
+        .finish()
 }
 
-pub fn tinyvg() -> Container {
-    let container = Container::new();
-
-    let tinyvg = TinyVg::new(ResourceId::StaticBytes(include_bytes!("tiger.tvg")))
+pub fn tinyvg(elements: &mut Elements) -> Container {
+    let image = TinyVg::new(elements, ResourceId::StaticBytes(include_bytes!("tiger.tvg")))
+        .edit(elements)
         .width(px(250.0))
-        .height(px(250.0));
-
-    container.display(Display::Block).push(title("TinyVG")).push(tinyvg)
+        .height(px(250.0))
+        .finish();
+    let heading = title(elements, "TinyVG");
+    Container::new(elements)
+        .edit(elements)
+        .display(Display::Block)
+        .push(heading)
+        .push(image)
+        .finish()
 }
 
-pub fn images() -> Container {
-    let container = Container::new();
-
-    let image = Image::new(ResourceId::Url("https://picsum.photos/300/200".to_string()))
+pub fn images(elements: &mut Elements) -> Container {
+    let image = Image::new(elements, ResourceId::Url("https://picsum.photos/300/200".to_string()))
+        .edit(elements)
         .width(px(300.0))
-        .height(px(200.0));
-
-    container.display(Display::Block).push(title("Image")).push(image)
+        .height(px(200.0))
+        .finish();
+    let heading = title(elements, "Image");
+    Container::new(elements)
+        .edit(elements)
+        .display(Display::Block)
+        .push(heading)
+        .push(image)
+        .finish()
 }
 
 #[derive(Deserialize)]
@@ -148,12 +185,10 @@ async fn fetch_amsterdam_weather() -> Result<CurrentWeather, String> {
     .map_err(|error| error.to_string())?
     .error_for_status()
     .map_err(|error| error.to_string())?;
-
     let weather = response
         .json::<WeatherResponse>()
         .await
         .map_err(|error| error.to_string())?;
-
     Ok(weather.current)
 }
 
@@ -172,121 +207,132 @@ fn weather_description(code: u8) -> &'static str {
     }
 }
 
-pub fn async_weather() -> Container {
-    let status = Text::new("Click the button for the current conditions.")
+pub fn async_weather(elements: &mut Elements) -> Container {
+    let status = Text::new(elements, "Click the button for the current conditions.")
+        .edit(elements)
         .width(px(280.0))
-        .font_size(14.0);
-
-    let status_for_handler = status.clone();
-    let button = Button::new()
+        .font_size(14.0)
+        .finish();
+    let label = Text::new(elements, "Refresh Weather")
+        .edit(elements)
+        .color(Color::WHITE)
+        .selectable(false)
+        .finish();
+    let button = Button::new(elements)
+        .edit(elements)
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
         .border_radius_all((4.0, 4.0))
         .background_color(Color::from_rgb8(35, 127, 183))
-        .push(Text::new("Refresh Weather").color(Color::WHITE).selectable(false))
-        .on_click(move |event| {
-            status_for_handler.clone().text("Loading...");
-
-            let status = status_for_handler.clone();
-            RetGuiRuntime::spawn_local(async move {
-                match fetch_amsterdam_weather().await {
-                    Ok(weather) => {
-                        status.text(&format!(
-                            "{}\n{:.1} °C (feels like {:.1} °C)\nHumidity: {}%\nWind: {:.1} km/h\nUpdated: {}",
-                            weather_description(weather.weather_code),
-                            weather.temperature_2m,
-                            weather.apparent_temperature,
-                            weather.relative_humidity_2m,
-                            weather.wind_speed_10m,
-                            weather.time,
-                        ));
-                    }
-                    Err(error) => {
-                        status.text(&format!("Request failed: {error}"));
-                    }
-                }
+        .push(label)
+        .on_click(move |event, elements| {
+            status.edit(elements).text("Loading...").finish();
+            elements.spawn_local(fetch_amsterdam_weather(), move |weather, elements| {
+                let message = match weather {
+                    Ok(weather) => format!(
+                        "{}\n{:.1} °C (feels like {:.1} °C)\nHumidity: {}%\nWind: {:.1} km/h\nUpdated: {}",
+                        weather_description(weather.weather_code),
+                        weather.temperature_2m,
+                        weather.apparent_temperature,
+                        weather.relative_humidity_2m,
+                        weather.wind_speed_10m,
+                        weather.time,
+                    ),
+                    Err(error) => format!("Request failed: {error}"),
+                };
+                status.edit(elements).text(&message).finish();
             });
-
             event.stop_propagation();
-        });
-
-    Container::new()
+        })
+        .finish();
+    let heading = title(elements, "Amsterdam Weather");
+    let attribution = Text::new(elements, "Weather data by Open-Meteo")
+        .edit(elements)
+        .font_size(12.0)
+        .finish();
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .row_gap(px(8.0))
-        .push(title("Amsterdam Weather"))
+        .push(heading)
         .push(button)
         .push(status)
-        .push(Text::new("Weather data by Open-Meteo").font_size(12.0))
+        .push(attribution)
+        .finish()
 }
 
-pub fn gradient() -> Container {
-    let container = Container::new();
-
+pub fn gradient(elements: &mut Elements) -> Container {
     let linear = Gradient::new_linear(Point::new(0.0, 0.0), Point::new(1.0, 0.0)).color_stops(&[
         ColorStop::new(0.0, Color::from_rgb8(120, 0, 200)),
         ColorStop::new(0.45, Color::from_rgb8(35, 127, 183)),
         ColorStop::new(1.0, Color::from_rgb8(255, 0, 0)),
     ]);
-
     let radial = Gradient::new_radial(Point::new(0.5, 0.5), 0.0, Point::new(0.5, 0.5), 0.75).color_stops(&[
         ColorStop::new(0.0, Color::from_rgb8(255, 245, 157)),
         ColorStop::new(0.55, Color::from_rgb8(255, 112, 67)),
         ColorStop::new(1.0, Color::from_rgb8(74, 20, 140)),
     ]);
-
     let sweep = Gradient::new_sweep(Point::new(0.5, 0.5), 0.0, std::f32::consts::TAU).color_stops(&[
         ColorStop::new(0.0, Color::from_rgb8(244, 67, 54)),
         ColorStop::new(0.33, Color::from_rgb8(76, 175, 80)),
         ColorStop::new(0.66, Color::from_rgb8(33, 150, 243)),
         ColorStop::new(1.0, Color::from_rgb8(244, 67, 54)),
     ]);
-
-    let linear_box = Container::new()
+    let linear_box = Container::new(elements)
+        .edit(elements)
         .width(px(140.0))
         .height(px(90.0))
         .border_radius_all((8.0, 8.0))
-        .background_gradient(linear.clone());
-
-    let radial_box = Container::new()
+        .background_gradient(linear.clone())
+        .finish();
+    let radial_box = Container::new(elements)
+        .edit(elements)
         .width(px(140.0))
         .height(px(90.0))
         .border_radius_all((8.0, 8.0))
-        .background_gradient(radial);
-
-    let sweep_box = Container::new()
+        .background_gradient(radial)
+        .finish();
+    let sweep_box = Container::new(elements)
+        .edit(elements)
         .width(px(140.0))
         .height(px(90.0))
         .border_radius_all((8.0, 8.0))
-        .background_gradient(sweep);
-
-    let gradient_text = Text::new("Gradient Text")
+        .background_gradient(sweep)
+        .finish();
+    let gradient_text = Text::new(elements, "Gradient Text")
+        .edit(elements)
         .font_weight(FontWeight::BOLD)
-        .text_gradient(linear.clone());
-
-    let underline_text = Text::new("Gradient Underline").underline_gradient(Some(3.0), linear, None);
-
-    container
+        .text_gradient(linear.clone())
+        .finish();
+    let underline = Text::new(elements, "Gradient Underline")
+        .edit(elements)
+        .underline_gradient(Some(3.0), linear, None)
+        .finish();
+    let boxes = Container::new(elements)
+        .edit(elements)
+        .display(Display::Flex)
+        .gap(px(10.0), px(10.0))
+        .push(linear_box)
+        .push(radial_box)
+        .push(sweep_box)
+        .finish();
+    let heading = title(elements, "Gradients");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .row_gap(px(10.0))
-        .push(title("Gradients"))
+        .push(heading)
         .push(gradient_text)
-        .push(underline_text)
-        .push(
-            Container::new()
-                .display(Display::Flex)
-                .gap(px(10.0), px(10.0))
-                .push(linear_box)
-                .push(radial_box)
-                .push(sweep_box),
-        )
+        .push(underline)
+        .push(boxes)
+        .finish()
 }
 
-pub fn box_shadows() -> Container {
-    let container = Container::new();
+pub fn box_shadows(elements: &mut Elements) -> Container {
     let border_color = rgb(0, 0, 0);
-
-    let dropshadow_box = Container::new()
+    let shadow = Container::new(elements)
+        .edit(elements)
         .box_shadows(vec![
             BoxShadow::new(false, 0.0, 5.0, 5.0, 0.0, rgba(0, 0, 0, 200)),
             BoxShadow::new(false, 0.0, 25.0, 35.0, 0.0, rgba(0, 0, 0, 150)),
@@ -297,19 +343,26 @@ pub fn box_shadows() -> Container {
         .border_radius((8.0, 8.0), (8.0, 8.0), (8.0, 8.0), (8.0, 8.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
-        .background_color(Color::from_rgb8(255, 0, 0));
-
-    container
+        .background_color(Color::from_rgb8(255, 0, 0))
+        .finish();
+    let heading = title(elements, "Box Shadows");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .push(title("Box Shadows"))
-        .push(dropshadow_box)
+        .push(heading)
+        .push(shadow)
+        .finish()
 }
 
-pub fn overlay() -> Container {
-    let status = Text::new("Click where the cards overlap");
-
-    let overlay_status = status.clone();
-    let floating_card = Container::new()
+pub fn overlay(elements: &mut Elements) -> Container {
+    let status = Text::new(elements, "Click where the cards overlap");
+    let overlay_label = Text::new(elements, "Overlay")
+        .edit(elements)
+        .color(Color::WHITE)
+        .selectable(false)
+        .finish();
+    let floating = Container::new(elements)
+        .edit(elements)
         .overlay(true)
         .position(Position::Absolute)
         .inset(px(20.0), auto(), auto(), px(20.0))
@@ -317,198 +370,288 @@ pub fn overlay() -> Container {
         .height(px(100.0))
         .padding_all(px(10.0))
         .background_color(Color::from_rgb8(76, 175, 80))
-        .push(Text::new("Overlay").color(Color::WHITE).selectable(false))
-        .on_click(move |event| {
-            overlay_status.clone().text("The overlay received the click");
+        .push(overlay_label)
+        .on_click(move |event, elements| {
+            status.edit(elements).text("The overlay received the click").finish();
             event.stop_propagation();
-        });
-
-    let normal_status = status.clone();
-    let normal_card = Container::new()
+        })
+        .finish();
+    let normal_label = Text::new(elements, "Normal sibling")
+        .edit(elements)
+        .color(Color::WHITE)
+        .selectable(false)
+        .finish();
+    let normal = Container::new(elements)
+        .edit(elements)
         .position(Position::Absolute)
         .inset(px(65.0), auto(), auto(), px(90.0))
         .width(px(120.0))
         .height(px(70.0))
         .padding_all(px(10.0))
         .background_color(Color::from_rgb8(33, 150, 243))
-        .push(Text::new("Normal sibling").color(Color::WHITE).selectable(false))
-        .on_click(move |event| {
-            normal_status.clone().text("The normal sibling received the click");
+        .push(normal_label)
+        .on_click(move |event, elements| {
+            status
+                .edit(elements)
+                .text("The normal sibling received the click")
+                .finish();
             event.stop_propagation();
-        });
-
-    Container::new()
+        })
+        .finish();
+    let cards = Container::new(elements)
+        .edit(elements)
+        .position(Position::Relative)
+        .width(px(230.0))
+        .height(px(155.0))
+        .background_color(Color::from_rgb8(238, 238, 238))
+        .push(floating)
+        .push(normal)
+        .finish();
+    let heading = title(elements, "Overlay");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .row_gap(px(8.0))
         .width(px(280.0))
         .min_width(auto())
-        .push(title("Overlay"))
+        .push(heading)
         .margin_horizontal(auto())
-        .push(
-            Container::new()
-                .position(Position::Relative)
-                .width(px(230.0))
-                .height(px(155.0))
-                .background_color(Color::from_rgb8(238, 238, 238))
-                .push(floating_card)
-                .push(normal_card),
-        )
+        .push(cards)
         .push(status)
+        .finish()
 }
 
-pub fn multiple_windows() -> Container {
-    let container = Container::new();
-    let border_radius = (1.0, 1.0);
-    let border_color = Color::BLACK;
-    let border_width = px(1.0);
-
-    let open_new_window_btn = Button::new()
-        .push(Text::new("Open a new window"))
+pub fn multiple_windows(elements: &mut Elements) -> Container {
+    let radius = (1.0, 1.0);
+    let border = Color::BLACK;
+    let width = px(1.0);
+    let label = Text::new(elements, "Open a new window");
+    let button = Button::new(elements)
+        .edit(elements)
+        .push(label)
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
-        .border_radius(border_radius, border_radius, border_radius, border_radius)
-        .border_color(border_color, border_color, border_color, border_color)
-        .border_width(border_width, border_width, border_width, border_width);
-
-    open_new_window_btn.clone().on_click(|_e| {
-        Window::new("A new window!").push(Text::new("Hi!").font_size(32.0).font_weight(FontWeight::BOLD));
-    });
-    container
+        .border_radius(radius, radius, radius, radius)
+        .border_color(border, border, border, border)
+        .border_width(width, width, width, width)
+        .on_click(|_event, elements| {
+            let greeting = Text::new(elements, "Hi!")
+                .edit(elements)
+                .font_size(32.0)
+                .font_weight(FontWeight::BOLD)
+                .finish();
+            Window::new(elements, "A new window!")
+                .edit(elements)
+                .push(greeting)
+                .finish();
+        })
+        .finish();
+    let heading = title(elements, "Multiple Windows");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .push(title("Multiple Windows"))
-        .push(open_new_window_btn)
+        .push(heading)
+        .push(button)
+        .finish()
 }
 
-pub fn sliders() -> Container {
-    let container = Container::new();
-
-    let slider_1 = Slider::new(20.0).value(70.0).width(px(100.0)).height(px(10.0));
-
+pub fn sliders(elements: &mut Elements) -> Container {
+    let first = Slider::new(elements, 20.0)
+        .edit(elements)
+        .value(70.0)
+        .width(px(100.0))
+        .height(px(10.0))
+        .finish();
     let br = (0.0, 0.0);
-    let slider_2 = Slider::new(14.0)
+    let second = Slider::new(elements, 14.0)
+        .edit(elements)
         .value(20.0)
         .width(px(100.0))
         .height(px(10.0))
         .track_color(Color::from_rgb8(120, 150, 0))
         .border_radius(br, br, br, br)
-        .thumb_border_radius(br, br, br, br);
-
-    let slider_3 = Slider::new(20.0)
+        .thumb_border_radius(br, br, br, br)
+        .finish();
+    let third = Slider::new(elements, 20.0)
+        .edit(elements)
         .value(70.0)
         .width(px(10.0))
         .height(px(100.0))
-        .direction(SliderDirection::Vertical);
-
-    container
+        .direction(SliderDirection::Vertical)
+        .finish();
+    let heading = title(elements, "Sliders");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .row_gap(px(15.0))
-        .push(title("Sliders"))
-        .push(slider_1)
-        .push(slider_2)
-        .push(slider_3)
+        .push(heading)
+        .push(first)
+        .push(second)
+        .push(third)
+        .finish()
 }
 
-pub fn scrollable() -> Container {
-    let container = Container::new();
-
-    let scrollable_container = Container::new()
+pub fn scrollable(elements: &mut Elements) -> Container {
+    let start = Text::new(elements, "The Start");
+    let middle = Text::new(elements, "The Middle")
+        .edit(elements)
+        .margin(px(50.0), px(0.0), px(250.0), px(0.0))
+        .finish();
+    let end = Text::new(elements, "The End")
+        .edit(elements)
+        .padding(px(0.0), px(0.0), px(10.0), px(0.0))
+        .finish();
+    let scrollable = Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .overflow_y(Overflow::Scroll) // Enable vertical scrolling.
+        .overflow_y(Overflow::Scroll)
         .width(px(200.0))
         .max_height(px(150.0))
         .padding(px(5.0), px(15.0), px(5.0), px(15.0))
         .border_radius_all((1.0, 1.0))
         .border_color_all(Color::BLACK)
         .border_width_all(px(1.0))
-        .push(Text::new("The Start"))
-        .push(Text::new("The Middle").margin(px(50.0), px(0.0), px(250.0), px(0.0)))
-        .push(Text::new("The End").padding(px(0.0), px(0.0), px(10.0), px(0.0)));
-
-    container
+        .push(start)
+        .push(middle)
+        .push(end)
+        .finish();
+    let label = Text::new(elements, "Scroll to the top")
+        .edit(elements)
+        .color(Color::WHITE)
+        .font_size(14.0)
+        .padding(px(3.0), px(5.0), px(3.0), px(5.0))
+        .finish();
+    let button = Button::new(elements)
+        .edit(elements)
+        .width(px(120.0))
+        .background_color(Color::from_rgb8(35, 127, 183))
+        .on_click(move |_event, elements| {
+            scrollable.scroll_to_top(elements);
+        })
+        .push(label)
+        .finish();
+    let heading = title(elements, "Scrollable");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Block)
-        .push(title("Scrollable"))
-        .push(scrollable_container.clone())
-        .push(
-            Button::new()
-                .width(px(120.0))
-                .background_color(Color::from_rgb8(35, 127, 183))
-                .on_click(move |_e| {
-                    scrollable_container.clone().scroll_to_top();
-                })
-                .push(
-                    Text::new("Scroll to the top")
-                        .color(Color::WHITE)
-                        .font_size(14.0)
-                        .padding(px(3.0), px(5.0), px(3.0), px(5.0)),
-                ),
-        )
+        .push(heading)
+        .push(scrollable)
+        .push(button)
+        .finish()
 }
 
-pub fn radio_buttons() -> Container {
-    let active_color = Rc::new(RefCell::new("red".to_string()));
-
-    let green = Image::new(ResourceId::Url(
-        "https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string(),
-    ))
+pub fn radio_buttons(elements: &mut Elements) -> Container {
+    let active = elements.insert_state("red".to_string());
+    let green = Image::new(
+        elements,
+        ResourceId::Url("https://www.iconsdb.com/icons/preview/green/square-xxl.png".to_string()),
+    )
+    .edit(elements)
     .border_width_all(px(1))
-    .border_color_all(rgba(0, 0, 0, 0));
-    Container::new()
+    .border_color_all(rgba(0, 0, 0, 0))
+    .finish();
+    let red_label = Text::new(elements, "red");
+    let red = Radio::new(elements, "red", "red", active)
+        .edit(elements)
+        .push(red_label)
+        .finish();
+    let green_radio = Radio::new(elements, "green", "green", active)
+        .edit(elements)
+        .push(green)
+        .hide_radio()
+        .finish();
+    let blue_label = Text::new(elements, "blue");
+    let blue = Radio::new(elements, "blue", "blue", active)
+        .edit(elements)
+        .push(blue_label)
+        .finish();
+    let group = RadioGroup::new(elements, "Pick a color")
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .push(title("Radio Button"))
-        .push(
-            RadioGroup::new("Pick a color")
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Column)
-                .justify_content(JustifyContent::Center)
-                .push(Radio::new("red", "red", active_color.clone()).push(Text::new("red")))
-                .push(
-                    Radio::new("green", "green", active_color.clone())
-                        .push(green.clone())
-                        .hide_radio(),
-                )
-                .push(Radio::new("blue", "blue", active_color.clone()).push(Text::new("blue")))
-                .on_radio_value_changed(move |event| {
-                    if event.value.borrow().as_str() == "green" {
-                        green.clone().border_color_all(rgb(0, 100, 255));
-                    } else {
-                        green.clone().border_color_all(rgba(0, 0, 0, 0));
-                    }
-                }),
-        )
+        .justify_content(JustifyContent::Center)
+        .push(red)
+        .push(green_radio)
+        .push(blue)
+        .on_radio_value_changed(move |event, elements| {
+            green
+                .edit(elements)
+                .border_color_all(if event.value.as_str() == "green" {
+                    rgb(0, 100, 255)
+                } else {
+                    rgba(0, 0, 0, 0)
+                })
+                .finish();
+        })
+        .finish();
+    let heading = title(elements, "Radio Button");
+    Container::new(elements)
+        .edit(elements)
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .push(heading)
+        .push(group)
+        .finish()
 }
 
-pub fn checkbox() -> Container {
-    Container::new()
+pub fn checkbox(elements: &mut Elements) -> Container {
+    let coffee_label = Text::new(elements, "Coffee").edit(elements).selectable(false).finish();
+    let coffee = Checkbox::new(elements, "coffee", true)
+        .edit(elements)
+        .push(coffee_label)
+        .finish();
+    let tea_label = Text::new(elements, "Tea").edit(elements).selectable(false).finish();
+    let tea = Checkbox::new(elements, "tea", false)
+        .edit(elements)
+        .push(tea_label)
+        .finish();
+    let pork_label = Text::new(elements, "红烧肉").edit(elements).selectable(false).finish();
+    let pork = Checkbox::new(elements, "红烧肉", false)
+        .edit(elements)
+        .push(pork_label)
+        .finish();
+    let curry_label = Text::new(elements, "カツカレー")
+        .edit(elements)
+        .selectable(false)
+        .finish();
+    let curry = Checkbox::new(elements, "カツカレー", false)
+        .edit(elements)
+        .push(curry_label)
+        .finish();
+    let group = CheckboxGroup::new(elements, "Select your favorite foods")
+        .edit(elements)
+        .on_checkbox_toggled(move |event, _elements| {
+            println!("checkbox toggled: {} - {}", event.label, event.status);
+        })
+        .flex_direction(FlexDirection::Column)
+        .gap(px(15.0), px(15.0))
+        .push(coffee)
+        .push(tea)
+        .push(pork)
+        .push(curry)
+        .finish();
+    let heading = title(elements, "Checkbox");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
-        .push(title("Checkbox"))
-        .push(
-            CheckboxGroup::new("Select your favorite foods")
-                .on_checkbox_toggled(move |event| {
-                    println!("checkbox toggled: {} - {}", event.label, event.status);
-                })
-                .flex_direction(FlexDirection::Column)
-                .gap(px(15.0), px(15.0))
-                .push(Checkbox::new("coffee", true).push(Text::new("Coffee").selectable(false)))
-                .push(Checkbox::new("tea", false).push(Text::new("Tea").selectable(false)))
-                .push(Checkbox::new("红烧肉", false).push(Text::new("红烧肉").selectable(false)))
-                .push(Checkbox::new("カツカレー", false).push(Text::new("カツカレー").selectable(false))),
-        )
+        .push(heading)
+        .push(group)
+        .finish()
 }
 
 #[cfg(feature = "audio")]
-pub fn audio() -> Audio {
+pub fn audio(elements: &mut Elements) -> Audio {
     let mut asset_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     asset_path.push("assets");
     asset_path.push("1-11. Mice on Venus.mp3");
-    Audio::new(Path::new(asset_path.as_path()))
+    Audio::new(elements, Path::new(asset_path.as_path()))
 }
 
 #[cfg(not(feature = "audio"))]
-pub fn audio() -> Container {
-    Container::new()
+pub fn audio(elements: &mut Elements) -> Container {
+    Container::new(elements)
 }
 
 struct GalleryExample {
@@ -517,8 +660,9 @@ struct GalleryExample {
 }
 
 impl GalleryExample {
-    fn new(label: &'static str, child: impl AsElement) -> Self {
-        let section = Container::new()
+    fn new(elements: &mut Elements, label: &'static str, child: impl Element) -> Self {
+        let section = Container::new(elements)
+            .edit(elements)
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
             .flex_grow(1.0)
@@ -526,61 +670,81 @@ impl GalleryExample {
             .height(pct(100))
             .padding_all(px(32.0))
             .overflow(Overflow::Clip, Overflow::Scroll)
-            .push(child);
-
+            .push(child)
+            .finish();
         Self { label, section }
     }
 
-    fn titled(label: &'static str, child: impl AsElement) -> Self {
-        let content = Container::new()
+    fn titled(elements: &mut Elements, label: &'static str, child: impl Element) -> Self {
+        let heading = title(elements, label);
+        let content = Container::new(elements)
+            .edit(elements)
             .display(Display::Flex)
             .flex_direction(FlexDirection::Column)
             .row_gap(px(12.0))
-            .push(title(label))
-            .push(child);
-
-        Self::new(label, content)
+            .push(heading)
+            .push(child)
+            .finish();
+        Self::new(elements, label, content)
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct NavigationSelection {
-    active: Rc<RefCell<DynElement>>,
+    active: State<DynElement>,
 }
 
 impl NavigationSelection {
-    fn new(active: DynElement) -> Self {
+    fn new(elements: &mut Elements, active: DynElement) -> Self {
         Self {
-            active: Rc::new(RefCell::new(active)),
+            active: elements.insert_state(active),
         }
     }
 
-    fn select(&self, target: DynElement) {
-        let previous = self.active.replace(target.clone());
-        style_navigation_button(previous, false);
-        style_navigation_button(target, true);
+    fn select(&self, elements: &mut Elements, target: DynElement) {
+        let previous = self.active.update(elements, |active| std::mem::replace(active, target));
+        style_navigation_button(elements, previous, false);
+        style_navigation_button(elements, target, true);
     }
 }
 
-fn gallery_examples() -> Vec<GalleryExample> {
+fn gallery_examples(elements: &mut Elements) -> Vec<GalleryExample> {
+    let animations = animations(elements);
+    let audio = audio(elements);
+    let calendar = Calendar::new(elements).edit(elements).start_year(1950).finish();
+    let text_input = text_input(elements);
+    let dropdown = dropdown(elements);
+    let text = text(elements);
+    let tinyvg = tinyvg(elements);
+    let images = images(elements);
+    let gradient = gradient(elements);
+    let shadows = box_shadows(elements);
+    let weather = async_weather(elements);
+    let overlay = overlay(elements);
+    let sliders = sliders(elements);
+    let radios = radio_buttons(elements);
+    let checkboxes = checkbox(elements);
+    let scrollable = scrollable(elements);
+    let windows = multiple_windows(elements);
+
     vec![
-        GalleryExample::new("Animations", animations()),
-        GalleryExample::titled("Audio", audio()),
-        GalleryExample::titled("Calendar", Calendar::new().start_year(1950)),
-        GalleryExample::new("Text Input", text_input()),
-        GalleryExample::new("Dropdown", dropdown()),
-        GalleryExample::new("Text", text()),
-        GalleryExample::new("TinyVG", tinyvg()),
-        GalleryExample::new("Image", images()),
-        GalleryExample::new("Gradients", gradient()),
-        GalleryExample::new("Box Shadows", box_shadows()),
-        GalleryExample::new("Async", async_weather()),
-        GalleryExample::new("Overlay", overlay()),
-        GalleryExample::new("Sliders", sliders()),
-        GalleryExample::new("Radio Buttons", radio_buttons()),
-        GalleryExample::new("Checkboxes", checkbox()),
-        GalleryExample::new("Scrollable", scrollable()),
-        GalleryExample::new("Multiple Windows", multiple_windows()),
+        GalleryExample::new(elements, "Animations", animations),
+        GalleryExample::titled(elements, "Audio", audio),
+        GalleryExample::titled(elements, "Calendar", calendar),
+        GalleryExample::new(elements, "Text Input", text_input),
+        GalleryExample::new(elements, "Dropdown", dropdown),
+        GalleryExample::new(elements, "Text", text),
+        GalleryExample::new(elements, "TinyVG", tinyvg),
+        GalleryExample::new(elements, "Image", images),
+        GalleryExample::new(elements, "Gradients", gradient),
+        GalleryExample::new(elements, "Box Shadows", shadows),
+        GalleryExample::new(elements, "Async", weather),
+        GalleryExample::new(elements, "Overlay", overlay),
+        GalleryExample::new(elements, "Sliders", sliders),
+        GalleryExample::new(elements, "Radio Buttons", radios),
+        GalleryExample::new(elements, "Checkboxes", checkboxes),
+        GalleryExample::new(elements, "Scrollable", scrollable),
+        GalleryExample::new(elements, "Multiple Windows", windows),
     ]
 }
 
@@ -592,15 +756,23 @@ fn navigation_background(selected: bool) -> Color {
     }
 }
 
-fn style_navigation_button(button: impl Element, selected: bool) {
+fn style_navigation_button(elements: &mut Elements, button: impl Element, selected: bool) {
     button
+        .edit(elements)
         .background_color(navigation_background(selected))
         .outline_color_all(retgui::palette::css::DODGER_BLUE)
-        .outline_width_all(px(if selected { 2.0 } else { 0.0 }));
+        .outline_width_all(px(if selected { 2.0 } else { 0.0 }))
+        .finish();
 }
 
-fn navigation_button(label: &str, selected: bool) -> Button {
-    Button::new()
+fn navigation_button(elements: &mut Elements, label: &str, selected: bool) -> Button {
+    let label = Text::new(elements, label)
+        .edit(elements)
+        .font_size(15.0)
+        .selectable(false)
+        .finish();
+    Button::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .align_items(AlignItems::Center)
         .width(pct(100))
@@ -611,11 +783,13 @@ fn navigation_button(label: &str, selected: bool) -> Button {
         .background_color(navigation_background(selected))
         .outline_color_all(retgui::palette::css::DODGER_BLUE)
         .outline_width_all(px(if selected { 2.0 } else { 0.0 }))
-        .push(Text::new(label).font_size(15.0).selectable(false))
+        .push(label)
+        .finish()
 }
 
-fn sidebar() -> Container {
-    Container::new()
+fn sidebar(elements: &mut Elements) -> Container {
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .flex_shrink(0.0)
@@ -627,77 +801,87 @@ fn sidebar() -> Container {
         .border_color_all(Color::from_rgb8(210, 214, 220))
         .background_color(navigation_background(false))
         .overflow(Overflow::Clip, Overflow::Scroll)
+        .finish()
 }
 
-fn content_pane() -> Container {
-    Container::new()
+fn content_pane(elements: &mut Elements) -> Container {
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .flex_grow(1.0)
         .width(pct(100))
         .height(pct(100))
         .overflow(Overflow::Clip, Overflow::Clip)
+        .finish()
 }
 
-fn select_example(examples: &[GalleryExample], selected_index: usize) {
+fn select_example(elements: &mut Elements, examples: &[GalleryExample], selected: usize) {
     for (index, example) in examples.iter().enumerate() {
-        example.section.clone().display(if index == selected_index {
-            Display::Flex
-        } else {
-            Display::None
-        });
+        example.section.display(
+            elements,
+            if index == selected {
+                Display::Flex
+            } else {
+                Display::None
+            },
+        );
     }
 }
 
-fn gallery() -> Container {
-    let examples = Rc::new(gallery_examples());
-    let sidebar = sidebar();
-    let content = content_pane();
+fn gallery(elements: &mut Elements) -> Container {
+    let examples = Rc::new(gallery_examples(elements));
+    let sidebar = sidebar(elements);
+    let content = content_pane(elements);
     let buttons = examples
         .iter()
         .enumerate()
-        .map(|(index, example)| navigation_button(example.label, index == 0))
+        .map(|(index, example)| navigation_button(elements, example.label, index == 0))
         .collect::<Vec<_>>();
     let selection = NavigationSelection::new(
+        elements,
         buttons
             .first()
             .expect("the gallery must contain at least one example")
             .as_dyn_element(),
     );
-
-    select_example(&examples, 0);
+    select_example(elements, &examples, 0);
 
     for (index, (example, button)) in examples.iter().zip(buttons).enumerate() {
         let examples = examples.clone();
-        let selection = selection.clone();
-
-        button.clone().on_click(move |event| {
-            select_example(&examples, index);
-            selection.select(event.current_target());
-            event.stop_propagation();
-        });
-
-        sidebar.clone().push(button);
-        content.clone().push(example.section.clone());
+        let button = button
+            .edit(elements)
+            .on_click(move |event, elements| {
+                select_example(elements, &examples, index);
+                selection.select(elements, event.current_target());
+                event.stop_propagation();
+            })
+            .finish();
+        sidebar.push(elements, button);
+        content.push(elements, example.section);
     }
 
-    Container::new()
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .width(pct(100))
         .height(pct(100))
         .push(sidebar)
         .push(content)
+        .finish()
 }
 
 pub fn main() {
     setup_logging();
-
-    Window::new("Gallery")
+    let mut elements = Elements::new();
+    let gallery = gallery(&mut elements);
+    Window::new(&mut elements, "Gallery")
+        .edit(&mut elements)
         .display(Display::Flex)
         .overflow(Overflow::Clip, Overflow::Clip)
         .width(pct(100))
         .height(pct(100))
-        .push(gallery());
-
-    retgui_main(RetGuiOptions::basic("Gallery"));
+        .push(gallery)
+        .finish();
+    retgui_main(elements, RetGuiOptions::basic("Gallery"));
 }

@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
-use std::rc::Rc;
 use std::sync::Arc;
 
 use winit::window::Window;
@@ -50,44 +48,44 @@ impl Display for RendererType {
 }
 
 impl RendererType {
-    pub async fn create(&self, window: Arc<dyn Window>) -> Rc<RefCell<dyn Renderer>> {
-        let renderer: Rc<RefCell<dyn Renderer>> = match self {
+    pub async fn create(&self, window: Arc<dyn Window>) -> Box<dyn Renderer> {
+        let renderer: Box<dyn Renderer> = match self {
             #[cfg(feature = "vello_cpu_renderer")]
-            RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new(window))),
+            RendererType::VelloCPU => Box::new(VelloCpuRenderer::new(window)),
             #[cfg(feature = "vello_hybrid_renderer")]
-            RendererType::VelloHybrid => Rc::new(RefCell::new(VelloHybridRenderer::new(window).await)),
+            RendererType::VelloHybrid => Box::new(VelloHybridRenderer::new(window).await),
             RendererType::Blank => {
                 // So the linter does not complain about window being unused.
                 let _ = window;
-                Rc::new(RefCell::new(BlankRenderer::default()))
+                Box::new(BlankRenderer::default())
             }
         };
 
         renderer
     }
 
-    pub fn create_headless(&self, width: f32, height: f32) -> Rc<RefCell<dyn Renderer>> {
+    pub fn create_headless(&self, width: f32, height: f32) -> Box<dyn Renderer> {
         #[allow(unused_mut)]
         let mut blank = || {
             let mut renderer = BlankRenderer::default();
             renderer.resize_surface(width, height);
-            Rc::new(RefCell::new(renderer)) as Rc<RefCell<dyn Renderer>>
+            Box::new(renderer) as Box<dyn Renderer>
         };
 
         match self {
             #[cfg(feature = "vello_cpu_renderer")]
-            RendererType::VelloCPU => Rc::new(RefCell::new(VelloCpuRenderer::new_headless(
+            RendererType::VelloCPU => Box::new(VelloCpuRenderer::new_headless(
                 width.max(1.0) as u16,
                 height.max(1.0) as u16,
-            ))),
+            )),
             #[cfg(feature = "vello_hybrid_renderer")]
             RendererType::VelloHybrid => {
                 #[cfg(feature = "vello_cpu_renderer")]
                 {
-                    Rc::new(RefCell::new(VelloCpuRenderer::new_headless(
+                    Box::new(VelloCpuRenderer::new_headless(
                         width.max(1.0) as u16,
                         height.max(1.0) as u16,
-                    )))
+                    ))
                 }
                 #[cfg(not(feature = "vello_cpu_renderer"))]
                 {

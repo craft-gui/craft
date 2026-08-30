@@ -1,18 +1,18 @@
-use std::cell::RefCell;
-use std::rc::Weak;
-
 use smol_str::SmolStr;
+use std::cell::Cell;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use smallvec::SmallVec;
 
 use crate::Color;
 use crate::accessibility::RetGuiAccessTree;
-use crate::app::{ELEMENTS, GUMMY_TREE};
+use crate::elements::DynElement;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::scrollable::{ScrollState, apply_scroll_layout};
-use crate::elements::{DynElement, ElementInternals, WindowInternal};
 use crate::events::EventCallback;
 use crate::geometry::TrblRectangle;
+use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
 use crate::layout::layout_context::LayoutContext;
 use crate::style::{Animation, Overflow, Style, Unit};
@@ -21,13 +21,14 @@ use crate::style::{Animation, Overflow, Style, Unit};
 #[derive(Clone)]
 pub struct ElementData {
     /// A cyclic weak pointer to the element.
-    pub(crate) me: Weak<RefCell<dyn ElementInternals>>,
+    pub(crate) me: DynElement,
 
     /// The Element's parent.
-    pub(crate) parent: Option<Weak<RefCell<dyn ElementInternals>>>,
+    pub(crate) parent: Option<DynElement>,
 
     /// A pointer to the owning window.
-    pub(crate) window: Option<Weak<RefCell<WindowInternal>>>,
+    pub(crate) window: Option<DynElement>,
+    pub(crate) redraw_signal: Option<Arc<AtomicBool>>,
 
     /// The style of the element.
     pub style: Style,
@@ -47,8 +48,12 @@ pub struct ElementData {
     pub(crate) access_tree: RetGuiAccessTree,
     pub(crate) access_key: Option<issho::AccessKey>,
     pub(crate) access_root: Option<issho::AccessKey>,
-    pub(crate) access_scale_factor: f64,
+    pub(crate) access_scale_factor: Cell<f64>,
     pub(crate) applied_scale_factor: f64,
+    pub(crate) layout_dirty: bool,
+    pub(crate) layout_style_dirty: bool,
+    pub(crate) apply_layout_dirty: bool,
+    pub(crate) focused: bool,
 
     pub event_callbacks: SmallVec<[EventCallback; 1]>,
 
@@ -60,20 +65,28 @@ pub struct ElementData {
 }
 
 impl ElementData {
-    pub fn new(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
-        Self::new_internal(me, is_scrollable, true)
+    pub(crate) fn new(
+        me: DynElement,
+        is_scrollable: bool,
+        access_tree: crate::accessibility::RetGuiAccessTree,
+    ) -> Self {
+        Self::new_internal(me, is_scrollable, true, access_tree)
     }
 
-    pub(crate) fn new_pseudo(me: Weak<RefCell<dyn ElementInternals>>, is_scrollable: bool) -> Self {
-        Self::new_internal(me, is_scrollable, false)
+    pub(crate) fn new_pseudo(
+        me: DynElement,
+        is_scrollable: bool,
+        access_tree: crate::accessibility::RetGuiAccessTree,
+    ) -> Self {
+        Self::new_internal(me, is_scrollable, false, access_tree)
     }
 
     fn new_internal(
-        me: Weak<RefCell<dyn ElementInternals>>,
+        me: DynElement,
         is_scrollable: bool,
         create_accessibility_node: bool,
+        access_tree: crate::accessibility::RetGuiAccessTree,
     ) -> Self {
-        let access_tree = crate::accessibility::access_tree();
         let (access_key, access_root) = if create_accessibility_node {
             let mut node = issho::AccessNode::new();
             node.set_context(me.clone());
@@ -88,6 +101,7 @@ impl ElementData {
             me,
             parent: None,
             window: None,
+            redraw_signal: None,
             style: Style::new(),
             layout: Layout::new(is_scrollable),
             children: Default::default(),
@@ -96,34 +110,30 @@ impl ElementData {
             access_tree,
             access_key,
             access_root,
-            access_scale_factor: 1.0,
+            access_scale_factor: Cell::new(1.0),
             applied_scale_factor: 1.0,
+            layout_dirty: false,
+            layout_style_dirty: false,
+            apply_layout_dirty: false,
+            focused: false,
             event_callbacks: SmallVec::new(),
             unfocused_outline_color: None,
             unfocused_outline_width: None,
         };
 
-        if create_accessibility_node {
-            ELEMENTS.with_borrow_mut(|elements| {
-                elements.insert_id(default.internal_id, default.me.clone());
-            });
-        }
-
         default
     }
 
     /// Creates a new gummy node for this element with optional layout context.
-    pub(crate) fn create_layout_node(&mut self, layout_context: Option<LayoutContext>) {
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            let style = self.style.to_gummy_style();
-            let node_id = if let Some(layout_context) = layout_context {
-                gummy_tree.new_leaf_with_context(style, layout_context)
-            } else {
-                gummy_tree.new_leaf(style)
-            };
-            self.layout.gummy_node_id = Some(node_id);
-            gummy_tree.register_owner(node_id, self.internal_id, self.me.clone());
-        });
+    pub(crate) fn create_layout_node(&mut self, gummy_tree: &mut GummyTree, layout_context: Option<LayoutContext>) {
+        let style = self.style.to_gummy_style();
+        let node_id = if let Some(layout_context) = layout_context {
+            gummy_tree.new_leaf_with_context(style, layout_context)
+        } else {
+            gummy_tree.new_leaf(style)
+        };
+        self.layout.gummy_node_id = Some(node_id);
+        gummy_tree.register_owner(node_id, self.internal_id, self.me);
     }
 
     pub(crate) fn set_accessibility_role(&mut self, role: issho::Role) {
@@ -182,8 +192,8 @@ impl ElementData {
     }
 
     /// Applies the element's resolved padding box to its retained accessibility node.
-    pub(crate) fn set_accessibility_bounds_from_layout(&mut self, scale_factor: f64) {
-        self.access_scale_factor = scale_factor;
+    pub(crate) fn set_accessibility_bounds_from_layout(&self, scale_factor: f64) {
+        self.access_scale_factor.set(scale_factor);
         let padding_box = self.layout.world_box().padding_rectangle().scale(scale_factor);
 
         if let Some(key) = self.access_key
@@ -264,9 +274,5 @@ impl ElementData {
 
     pub fn style(&self) -> &Style {
         &self.style
-    }
-
-    pub fn style_mut(&mut self) -> &mut Style {
-        &mut self.style
     }
 }

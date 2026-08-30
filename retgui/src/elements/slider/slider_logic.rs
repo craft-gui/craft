@@ -1,9 +1,9 @@
 use retgui_primitives::geometry::Point;
 
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementData, SliderInner};
+use crate::elements::{ElementNodeData, SliderNode};
 
-impl SliderInner {
+impl SliderNode {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {
         let delta = by.abs() as f64 * self.get_step();
 
@@ -103,19 +103,14 @@ impl SliderInner {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-    use std::rc::Rc;
-
     use super::*;
-
-    fn make_test_slider() -> Rc<RefCell<SliderInner>> {
-        SliderInner::new(16.0)
-    }
+    use crate::elements::{Elements, Slider};
 
     #[test]
     fn steps_one() {
-        let slider_ref = make_test_slider();
-        let mut slider = slider_ref.borrow_mut();
+        let mut elements = Elements::new();
+        let slider = Slider::new(&mut elements, 16.0);
+        let slider = elements.get_as_mut::<SliderNode>(slider.inner);
 
         slider.set_value(50.0);
         let next_step = slider.compute_step(1, slider.get_value());
@@ -125,8 +120,9 @@ mod tests {
 
     #[test]
     fn steps_down_one() {
-        let slider_ref = make_test_slider();
-        let mut slider = slider_ref.borrow_mut();
+        let mut elements = Elements::new();
+        let slider = Slider::new(&mut elements, 16.0);
+        let slider = elements.get_as_mut::<SliderNode>(slider.inner);
 
         slider.set_value(50.0);
         let next_step = slider.compute_step(-1, slider.get_value());

@@ -9,6 +9,7 @@ members = [
     "examples/util",
     "examples/counter",
     "examples/custom_event",
+    "examples/custom_element",
     "examples/multiwindow",
     "examples/pointer_events",
     "examples/text",
@@ -48,6 +49,7 @@ lto = true
 codegen-units = 1
 
 [workspace.dependencies]
+slotmap = "1.0.7"
 reqwest = { version = "0.13.4", default-features = false }
 tracing = { version = "0.1.44" }
 tracing-subscriber = {version = "0.3.23"}

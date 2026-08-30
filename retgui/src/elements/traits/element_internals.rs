@@ -1,8 +1,5 @@
 use issho::{AccessEvent, IsshoError};
 use std::any::Any;
-use std::cell::RefCell;
-use std::ops::Deref;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -15,36 +12,31 @@ use retgui_resource_manager::ResourceManager;
 
 use crate::events::PointerId;
 
-use crate::app::{ELEMENTS, FOCUS, GUMMY_TREE, WINDOW_MANAGER, queue_event};
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
-use crate::elements::{DynElement, ElementData, ScrollOptions, WindowInternal};
+use crate::elements::{DynElement, ElementNodeData, Elements, ScrollOptions, WindowNode};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, DropdownItemSelectedHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
 use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, StyleVariant, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
 
-thread_local! {
-    static FOCUS_OUTLINE_VISIBLE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
-}
+/// The retained behavior implemented by every element node.
+pub trait ElementNode: ElementNodeData + Any {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement;
 
-/// Internal element methods that should typically be ignored by users. Public for custom elements.
-///
-/// Drop is required to clean up any gummy nodes allocated by the element.
-#[allow(drop_bounds)]
-pub trait ElementInternals: ElementData + Any + Drop {
-    fn deep_clone(&self) -> DynElement;
+    fn window_pointer_capture(&mut self) -> Option<&mut PointerCapture> {
+        None
+    }
 
-    fn position_in_parent(&self) -> Option<usize> {
+    fn position_in_parent(&self, elements: &Elements) -> Option<usize> {
         let parent = self.parent();
 
         // @OPTIMIZE: We are copying the vec here.
         if let Some(parent) = parent {
-            let me_ptr = self.element_data().me.clone().upgrade().unwrap();
-            let children = parent.inner.borrow().element_data().children.clone();
-
-            let self_position = children.iter().position(|x| Rc::ptr_eq(&x.inner, &me_ptr)).unwrap();
+            let me = self.element_data().me;
+            let children = &elements.get(parent).element_data().children;
+            let self_position = children.iter().position(|child| *child == me).unwrap();
 
             Some(self_position)
         } else {
@@ -67,7 +59,8 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// A helper to draw all children.
     fn draw_children(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -78,23 +71,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
         renderer.set_transform(parent_transform * Affine::translate((0.0, -scroll_y)));
 
         for child in &self.element_data().children {
-            child
-                .inner
-                .borrow_mut()
-                .draw_transformed(renderer, resource_manager.clone(), scale_factor, text_context);
+            elements.get_for_draw(*child).draw_transformed(
+                elements,
+                renderer,
+                resource_manager.clone(),
+                scale_factor,
+                text_context,
+            );
         }
         renderer.set_transform(parent_transform);
-    }
-
-    /// A helper to re-apply the style to the layout node when dirty.
-    fn apply_style_to_layout_node_if_dirty(&mut self, gummy_tree: &mut GummyTree) {
-        let element_data = self.element_data_mut();
-        if element_data.style.is_dirty {
-            let node_id = element_data.layout.gummy_node_id.unwrap();
-            let style: gummy::Style = element_data.style.to_gummy_style();
-            gummy_tree.set_style(node_id, style);
-            element_data.style.is_dirty = false;
-        }
     }
 
     /// Applies this element's local layout result from the [`GummyTree`].
@@ -114,12 +99,28 @@ pub trait ElementInternals: ElementData + Any + Drop {
         &mut self,
         gummy_tree: &mut GummyTree,
         z_index: &mut u32,
-        text_context: &mut TextContext,
+        _text_context: &mut TextContext,
         scale_factor: f64,
-    );
+    ) {
+        let node = self.element_data().layout.gummy_node_id.unwrap();
+        let layout = gummy_tree.get_layout(node);
+        let has_new_layout = gummy_tree.has_new_layout(node);
+
+        self.element_data_mut().layout.has_new_layout.set(has_new_layout);
+        if has_new_layout {
+            self.resolve_box(layout, z_index);
+            self.apply_borders(scale_factor);
+            self.element_data_mut().apply_scroll(layout);
+            gummy_tree.mark_seen(node);
+        } else if self.element_data().layout.scroll_state.is_new() {
+            self.element_data_mut().apply_scroll(layout);
+            self.element_data_mut().layout.scroll_state.mark_old();
+        }
+    }
 
     fn draw_transformed(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -137,26 +138,25 @@ pub trait ElementInternals: ElementData + Any + Drop {
             renderer.get_clip()
         };
         let logical_clip = physical_clip.map(|clip| clip.scale(1.0 / scale_factor));
-        let scale_changed = self.element_data().access_scale_factor != scale_factor;
+        let scale_changed = self.element_data().access_scale_factor.get() != scale_factor;
         let update_accessibility = {
-            let layout = &mut self.element_data_mut().layout;
+            let layout = &self.element_data().layout;
             let changed = layout.update_render_state(logical_transform, logical_clip);
-            let has_new_layout = layout.has_new_layout;
-            layout.has_new_layout = false;
+            let has_new_layout = layout.has_new_layout.replace(false);
             changed || has_new_layout || scale_changed
         };
         if update_accessibility {
-            self.element_data_mut()
-                .set_accessibility_bounds_from_layout(scale_factor);
+            self.element_data().set_accessibility_bounds_from_layout(scale_factor);
         }
 
-        self.draw(renderer, resource_manager, scale_factor, text_context);
+        self.draw(elements, renderer, resource_manager, scale_factor, text_context);
         renderer.set_transform(parent_transform);
     }
 
     /// Draws this element in its own local coordinate space.
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -164,7 +164,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ) {
     }
 
-    fn sync_accessibility_children(&mut self) {
+    fn sync_accessibility_children(&mut self, elements: &Elements) {
         let data = self.element_data();
         let Some(node) = data.access_key else {
             return;
@@ -172,13 +172,13 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let children = data
             .children
             .iter()
-            .filter_map(|child| child.borrow().element_data().access_key)
+            .filter_map(|child| elements.get(*child).element_data().access_key)
             .collect::<Vec<_>>();
         data.access_tree.set_children(node, &children);
     }
 
     /// Handles default events.
-    fn on_event(&mut self, _event: &mut EventKind, _text_context: &mut TextContext) {}
+    fn on_event(&mut self, _elements: &mut Elements, _event: &mut EventKind, _text_context: &mut TextContext) {}
 
     /// Computes this element's box model.
     fn resolve_box(&mut self, result: &gummy::Layout, layout_order: &mut u32) {
@@ -189,7 +189,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().apply_borders(scale_factor);
     }
 
-    fn add_hit_testable(&mut self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
+    fn add_hit_testable(&self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
         if hit_testable {
             let id = self.element_data().internal_id;
             renderer.push_hit_testable(
@@ -238,7 +238,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn draw_scrollbar(&mut self, renderer: &mut dyn Renderer, scale_factor: f64) {
+    fn draw_scrollbar(&self, renderer: &mut dyn Renderer, scale_factor: f64) {
         let element_data = self.element_data();
         draw_scrollbar(&element_data.style, &element_data.layout, renderer, scale_factor);
     }
@@ -264,32 +264,24 @@ pub trait ElementInternals: ElementData + Any + Drop {
 
     /// Mark layout node dirty.
     fn mark_dirty(&mut self) {
-        let id = self.element_data().layout.gummy_node_id;
-        if let Some(id) = id {
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                gummy_tree.mark_dirty(id);
-            });
-        }
+        self.element_data_mut().layout_dirty = true;
         self.request_window_redraw();
     }
 
     /// Updates gummy's style to reflect retgui's style struct.
     fn update_gummy_style(&mut self) {
-        let id = self.element_data().layout.gummy_node_id;
-        if let Some(id) = id {
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                gummy_tree.set_style(id, self.element_data().style.to_gummy_style());
-            });
-        }
+        let data = self.element_data_mut();
+        data.layout_dirty = true;
+        data.layout_style_dirty = true;
         self.request_window_redraw();
     }
 
     /// Set's this element's scale factor. This should not be used to scale individual elements.
-    fn set_scale_factor(&mut self, scale_factor: f64) {
+    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
         self.element_data_mut().applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
-        for child in &self.element_data().children {
-            child.inner.borrow_mut().set_scale_factor(scale_factor);
+        for child in self.element_data().children.clone() {
+            elements.dispatch_mut(child, |child, elements| child.set_scale_factor(elements, scale_factor));
         }
         self.mark_dirty();
     }
@@ -310,15 +302,15 @@ pub trait ElementInternals: ElementData + Any + Drop {
             .ok_or(RetGuiError::ElementNotFound)
     }
 
-    fn get_previous_sibling(&self) -> Result<DynElement, RetGuiError> {
+    fn get_previous_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
-        let position = self.position_in_parent();
+        let position = self.position_in_parent(elements);
 
         if let Some(position) = position
             && let Some(parent) = parent
         {
             let previous_sibling = (position != 0)
-                .then(|| parent.inner.borrow().element_data().children.get(position - 1).cloned())
+                .then(|| elements.get(parent).element_data().children.get(position - 1).copied())
                 .flatten();
             if let Some(previous_sibling) = previous_sibling {
                 Ok(previous_sibling)
@@ -330,14 +322,14 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn get_next_sibling(&self) -> Result<DynElement, RetGuiError> {
+    fn get_next_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
-        let position = self.position_in_parent();
+        let position = self.position_in_parent(elements);
 
         if let Some(position) = position
             && let Some(parent) = parent
         {
-            let next_sibling = parent.inner.borrow().element_data().children.get(position + 1).cloned();
+            let next_sibling = elements.get(parent).element_data().children.get(position + 1).copied();
             if let Some(next_sibling) = next_sibling {
                 Ok(next_sibling)
             } else {
@@ -348,16 +340,21 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn swap_child(&mut self, child_1: DynElement, child_2: DynElement) -> Result<(), RetGuiError> {
+    fn swap_child(
+        &mut self,
+        elements: &mut Elements,
+        child_1: DynElement,
+        child_2: DynElement,
+    ) -> Result<(), RetGuiError> {
         let children = &mut self.element_data_mut().children;
         let position_1 = children
             .iter()
-            .position(|x| Rc::ptr_eq(&x.inner, &child_1.inner))
+            .position(|x| *x == child_1)
             .ok_or(RetGuiError::ElementNotFound)?;
 
         let position_2 = children
             .iter()
-            .position(|x| Rc::ptr_eq(&x.inner, &child_2.inner))
+            .position(|x| *x == child_2)
             .ok_or(RetGuiError::ElementNotFound)?;
 
         if position_1 == position_2 {
@@ -368,10 +365,10 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().children.swap(position_1, position_2);
 
         // Swap the children's gummy nodes.
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+        elements.with_gummy_tree(|gummy_tree, elements| {
             let parent_id = self.element_data().layout.gummy_node_id;
-            let child_1_id = child_1.inner.borrow().element_data().layout.gummy_node_id;
-            let child_2_id = child_2.inner.borrow().element_data().layout.gummy_node_id;
+            let child_1_id = elements.get(child_1).element_data().layout.gummy_node_id;
+            let child_2_id = elements.get(child_2).element_data().layout.gummy_node_id;
 
             if let Some(parent_id) = parent_id
                 && let Some(child_1_id) = child_1_id
@@ -400,7 +397,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         });
 
         // TODO: Fix. This is likely doing more work than required.
-        self.sync_accessibility_children();
+        self.sync_accessibility_children(elements);
         self.request_window_redraw();
 
         Ok(())
@@ -414,25 +411,25 @@ pub trait ElementInternals: ElementData + Any + Drop {
     ///
     /// # Panics
     /// Panics if the corresponding Gummy layout nodes fail to be removed.
-    fn remove_child(&mut self, child: DynElement) -> Result<DynElement, RetGuiError> {
+    fn remove_child(&mut self, elements: &mut Elements, child: DynElement) -> Result<DynElement, RetGuiError> {
         // Find the node.
         let children = &mut self.element_data_mut().children;
         let position = children
             .iter()
-            .position(|x| Rc::ptr_eq(&x.inner, &child.inner))
+            .position(|x| *x == child)
             .ok_or(RetGuiError::ElementNotFound)?;
 
-        let child = children[position].clone();
+        let child = children[position];
 
         // Remove the node from the element.
 
         children.remove(position);
 
         // Remove the parent reference.
-        child.inner.borrow_mut().element_data_mut().parent = None;
+        elements.get_mut(child).element_data_mut().parent = None;
 
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            let child_id = child.inner.borrow().element_data().layout.gummy_node_id;
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            let child_id = elements.get(child).element_data().layout.gummy_node_id;
 
             if let Some(child_id) = child_id {
                 gummy_tree.unparent_node(child_id);
@@ -443,38 +440,40 @@ pub trait ElementInternals: ElementData + Any + Drop {
         });
 
         fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
-            pointer_capture.remove_element(&node.inner);
-            for child in node.inner.borrow().element_data().children.clone() {
-                remove_element_from_document(child, pointer_capture);
-            }
+            pointer_capture.remove_element(node);
         }
 
-        if let Some(pointer_capture) = self.pointer_capture() {
-            remove_element_from_document(child.clone(), &mut pointer_capture.borrow_mut());
+        if let Some(window) = self.element_data().window {
+            let pointer_capture = if window == self.element_data().me {
+                self.window_pointer_capture()
+                    .expect("a window root must provide pointer capture state")
+            } else {
+                &mut elements.get_as_mut::<WindowNode>(window).pointer_capture
+            };
+            remove_element_from_document(child, pointer_capture);
         }
 
-        child.inner.borrow_mut().unfocus();
-
-        crate::accessibility::detach_subtree(&mut *child.inner.borrow_mut());
-        {
-            let mut child = child.inner.borrow_mut();
+        elements.dispatch_mut(child, |child, elements| {
+            child.unfocus(elements);
+            crate::accessibility::detach_subtree(elements, child);
             child.element_data_mut().window = None;
-            child.propagate_window_down();
-        }
+            child.element_data_mut().redraw_signal = None;
+            child.propagate_window_down(elements);
+        });
         self.request_window_redraw();
 
         Ok(child)
     }
 
-    fn remove_all_children(&mut self) {
+    fn remove_all_children(&mut self, elements: &mut Elements) {
         // @OPTIMIZE: We are copying the vec here.
         for child in self.element_data().children.clone().iter().rev() {
-            self.remove_child(child.clone()).unwrap();
+            self.remove_child(elements, *child).unwrap();
         }
     }
 
-    fn push(&mut self, _child: DynElement) {
-        panic!("Pushing children is not supported.")
+    fn child_layout_parent(&self) -> Option<gummy::NodeId> {
+        self.element_data().layout.gummy_node_id
     }
 
     /// Called after a node is added to the gummy tree.
@@ -490,13 +489,6 @@ pub trait ElementInternals: ElementData + Any + Drop {
     fn on_pointer_enter(&mut self, on_pointer_enter: PointerEnterHandler) {
         self.add_event_listener(
             EventCallbackKind::PointerEnter(on_pointer_enter),
-            EventListenerOptions::default(),
-        );
-    }
-
-    fn on_dropdown_item_selected(&mut self, on_dropdown_item_selected: DropdownItemSelectedHandler) {
-        self.add_event_listener(
-            EventCallbackKind::DropdownItemSelected(on_dropdown_item_selected),
             EventListenerOptions::default(),
         );
     }
@@ -613,32 +605,37 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.add_event_listener(EventCallbackKind::Scroll(on_scroll), EventListenerOptions::default());
     }
 
-    fn scroll_to_child_by_id_with_options(&mut self, id: &str, options: ScrollOptions) {
-        if crate::elements::scrollable::scroll_to_child_by_id_with_options(self.element_data_mut(), id, options) {
+    fn scroll_to_child_by_id_with_options(&mut self, elements: &mut Elements, id: &str, options: ScrollOptions) {
+        if crate::elements::scrollable::scroll_to_child_by_id_with_options(
+            elements,
+            self.element_data_mut(),
+            id,
+            options,
+        ) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_to(&mut self, y: f32) {
-        if crate::elements::scrollable::scroll_to(self.element_data_mut(), y) {
+    fn scroll_to(&mut self, elements: &mut Elements, y: f32) {
+        if crate::elements::scrollable::scroll_to(elements, self.element_data_mut(), y) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_to_top(&mut self) {
-        if crate::elements::scrollable::scroll_to_top(self.element_data_mut()) {
+    fn scroll_to_top(&mut self, elements: &mut Elements) {
+        if crate::elements::scrollable::scroll_to_top(elements, self.element_data_mut()) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_to_bottom(&mut self) {
-        if crate::elements::scrollable::scroll_to_bottom(self.element_data_mut()) {
+    fn scroll_to_bottom(&mut self, elements: &mut Elements) {
+        if crate::elements::scrollable::scroll_to_bottom(elements, self.element_data_mut()) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_by(&mut self, y: f32) {
-        if crate::elements::scrollable::scroll_by(self.element_data_mut(), y) {
+    fn scroll_by(&mut self, elements: &mut Elements, y: f32) {
+        if crate::elements::scrollable::scroll_by(elements, self.element_data_mut(), y) {
             self.request_window_redraw();
         }
     }
@@ -669,7 +666,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         let element_data = self.element_data();
         let rect = element_data.layout.world_box().border_rectangle();
 
-        if let Some(clip) = element_data.layout.clip_bounds {
+        if let Some(clip) = element_data.layout.clip_bounds.get() {
             match rect.intersection(&clip) {
                 Some(bounds) => bounds.contains(&point),
                 None => false,
@@ -679,22 +676,19 @@ pub trait ElementInternals: ElementData + Any + Drop {
         }
     }
 
-    fn pointer_capture(&self) -> Option<Rc<RefCell<PointerCapture>>> {
-        let element_data = self.element_data();
-        let window = element_data.window.clone();
-        window.map(|window| window.upgrade().unwrap().borrow().pointer_capture.clone())
-    }
-
-    fn propagate_window_down(&mut self) {
-        let window = self.element_data().window.clone();
-        for child in &self.element_data().children {
-            let mut child_borrow = child.inner.borrow_mut();
-            child_borrow.element_data_mut().window = window.clone();
-            child_borrow.propagate_window_down();
+    fn propagate_window_down(&mut self, elements: &mut Elements) {
+        let window = self.element_data().window;
+        let redraw_signal = self.element_data().redraw_signal.clone();
+        for child in self.element_data().children.clone() {
+            elements.dispatch_mut(child, |child, elements| {
+                child.element_data_mut().window = window;
+                child.element_data_mut().redraw_signal = redraw_signal.clone();
+                child.propagate_window_down(elements);
+            });
         }
     }
 
-    fn set_pointer_capture(&self, pointer_id: PointerId) {
+    fn set_pointer_capture(&self, elements: &mut Elements, pointer_id: PointerId) {
         // 9.2 Setting pointer capture
         // https://w3c.github.io/pointerevents/#setting-pointer-capture
 
@@ -708,18 +702,19 @@ pub trait ElementInternals: ElementData + Any + Drop {
         // 5. If the pointer is not in the active buttons state or the element's node document is not the active document of the pointer, then terminate these steps.
         // TODO (POINTER CAPTURE)
         // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
-        if let Some(pointer_capture) = self.pointer_capture() {
-            pointer_capture
-                .borrow_mut()
+        if let Some(window) = self.element_data().window {
+            elements
+                .get_as_mut::<WindowNode>(window)
+                .pointer_capture
                 .pending_pointer_captures
-                .insert(pointer_id, self.element_data().me.clone());
+                .insert(pointer_id, self.element_data().me);
         }
     }
 
-    fn release_pointer_capture(&self, pointer_id: PointerId) {
+    fn release_pointer_capture(&self, elements: &mut Elements, pointer_id: PointerId) {
         // 9.3 Releasing pointer capture
         // https://w3c.github.io/pointerevents/#releasing-pointer-capture
-        let has_pointer_capture = self.has_pointer_capture(pointer_id);
+        let has_pointer_capture = self.has_pointer_capture(elements, pointer_id);
         // 1. If the pointerId provided as the method's argument does not match any of the active pointers and these steps are not being invoked as a result of the implicit release of pointer capture, then throw a "NotFoundError" DOMException.
         // TODO (POINTER CAPTURE)
         // 2. If hasPointerCapture is false for the Element with the specified pointerId, then terminate these steps.
@@ -727,24 +722,25 @@ pub trait ElementInternals: ElementData + Any + Drop {
             return;
         }
         // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
-        if let Some(pointer_capture) = self.pointer_capture() {
-            pointer_capture
-                .borrow_mut()
+        if let Some(window) = self.element_data().window {
+            elements
+                .get_as_mut::<WindowNode>(window)
+                .pointer_capture
                 .pending_pointer_captures
                 .remove(&pointer_id);
         }
     }
 
-    fn has_pointer_capture(&self, pointer_id: PointerId) -> bool {
+    fn has_pointer_capture(&self, elements: &Elements, pointer_id: PointerId) -> bool {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
-        if let Some(pointer_capture) = self.pointer_capture() {
-            pointer_capture
-                .borrow()
+        if let Some(window) = self.element_data().window {
+            elements
+                .get_as::<WindowNode>(window)
+                .pointer_capture
                 .pending_pointer_captures
                 .get(&pointer_id)
-                .cloned()
-                .map(|w| w.as_ptr())
-                == Some(self.element_data().me.clone().as_ptr())
+                .copied()
+                == Some(self.element_data().me)
         } else {
             false
         }
@@ -1193,16 +1189,16 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     /// Sets the list of animations.
-    fn set_animations(&mut self, animations: Vec<Animation>) {
+    fn set_animations(&mut self, elements: &mut Elements, animations: Vec<Animation>) {
         let element_data = self.element_data_mut();
         let had_animations = !element_data.animations.is_empty();
         let has_animations = !animations.is_empty();
         if !had_animations && has_animations {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            elements.with_window_manager(|window_manager, _| {
                 window_manager.schedule_element_animations(element_data.me.clone());
             })
         } else if had_animations && !has_animations {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            elements.with_window_manager(|window_manager, _| {
                 window_manager.cancel_element_animations(&element_data.me);
             })
         }
@@ -1232,35 +1228,20 @@ pub trait ElementInternals: ElementData + Any + Drop {
     }
 
     fn refresh_scroll_layout(&mut self) {
-        let Some(node) = self.element_data().layout.gummy_node_id else {
-            return;
-        };
-        GUMMY_TREE.with_borrow(|gummy_tree| {
-            let layout = gummy_tree.get_layout(node);
-            self.element_data_mut().apply_scroll(layout);
-        });
+        self.mark_dirty();
     }
 
     /// Sets focus on the specified element, if it can be focused.
     ///
     /// The focused element is the element that will receive keyboard and similar events by default.
-    fn focus(&mut self) {
+    fn focus(&mut self, elements: &mut Elements) {
         // Todo: check if the element is focusable. Should we return a result?
-        let me = self.element_data().me.clone();
-        let previous_focus = FOCUS.with_borrow_mut(|focus| {
-            let previous = focus.take();
-            *focus = Some(me.clone());
-            previous
-        });
-        let focus_changed = previous_focus
-            .as_ref()
-            .is_none_or(|previous| !Weak::ptr_eq(previous, &me));
+        let me = self.element_data().me;
+        let previous_focus = elements.focus.replace(me);
+        let focus_changed = previous_focus != Some(me);
         {
-            if let Some(previous) = previous_focus.as_ref()
-                && !Weak::ptr_eq(previous, &me)
-                && let Some(previous) = previous.upgrade()
-            {
-                let previous = previous.borrow();
+            if let Some(previous) = previous_focus.filter(|previous| *previous != me) {
+                let previous = elements.get(previous);
                 let data = previous.element_data();
                 if let Some(root) = data.access_root {
                     data.access_tree.set_focus(root, Some(root));
@@ -1274,40 +1255,30 @@ pub trait ElementInternals: ElementData + Any + Drop {
             }
         }
         if focus_changed {
-            if let Some(previous) = previous_focus.and_then(|previous| previous.upgrade()) {
-                restore_unfocused_outline(previous.borrow_mut().element_data_mut());
-                queue_event(EventKind::Unfocus(UnfocusEvent::new(DynElement::new(previous))));
+            if let Some(previous) = previous_focus.filter(|previous| elements.contains(*previous)) {
+                restore_unfocused_outline(elements.get_mut(previous).element_data_mut());
+                elements.get_mut(previous).element_data_mut().focused = false;
+                elements.queue_event(EventKind::Unfocus(UnfocusEvent::new(previous)));
             }
-            if focus_outline_visible() {
+            if focus_outline_visible(elements) {
                 apply_focused_outline(self.element_data_mut());
             }
-            if let Some(current) = me.upgrade() {
-                queue_event(EventKind::Focus(FocusEvent::new(DynElement::new(current))));
-            }
+            self.element_data_mut().focused = true;
+            elements.queue_event(EventKind::Focus(FocusEvent::new(me)));
             self.request_window_redraw();
         }
     }
 
     /// Returns true if the element has focus.
     fn is_focused(&self) -> bool {
-        let focus_element = FOCUS.with(|focus| focus.borrow().clone());
-
-        if focus_element.is_none() {
-            return false;
-        }
-
-        let focus_element = focus_element.unwrap();
-
-        Weak::ptr_eq(&focus_element, &self.element_data().me)
+        self.element_data().focused
     }
 
     /// Removes focus if the element has focus.
-    fn unfocus(&mut self) {
+    fn unfocus(&mut self, elements: &mut Elements) {
         if self.is_focused() {
-            let me = self.element_data().me.upgrade();
-            FOCUS.with(|focus| {
-                *focus.borrow_mut() = None;
-            });
+            let me = self.element_data().me;
+            elements.focus = None;
             {
                 let data = self.element_data();
                 if let Some(root) = data.access_root {
@@ -1315,88 +1286,23 @@ pub trait ElementInternals: ElementData + Any + Drop {
                 }
             }
             restore_unfocused_outline(self.element_data_mut());
-            if let Some(me) = me {
-                queue_event(EventKind::Unfocus(UnfocusEvent::new(DynElement::new(me))));
-            }
+            self.element_data_mut().focused = false;
+            elements.queue_event(EventKind::Unfocus(UnfocusEvent::new(me)));
             self.request_window_redraw();
         }
     }
     fn to_dyn_element(&self) -> DynElement {
-        DynElement::new(self.element_data().me.upgrade().unwrap())
-    }
-
-    /// Returns the root element.
-    fn get_root_element(&self) -> DynElement {
-        let mut root_ancestor = self.to_dyn_element();
-        loop {
-            let parent = root_ancestor.inner.borrow().parent();
-            if let Some(parent) = parent {
-                root_ancestor = parent;
-            } else {
-                break;
-            }
-        }
-        root_ancestor
-    }
-
-    /// Gets the winit window of this element.
-    ///
-    /// This will panic if the element does not have a window as its root.
-    fn get_winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
-        let root = self.get_root_element();
-        (root.inner.borrow().deref() as &dyn Any)
-            .downcast_ref::<WindowInternal>()
-            .unwrap()
-            .winit_window
-            .clone()
-    }
-
-    /// Recursively prints the IDs of this element and all of its descendants.
-    fn print_tree_ids(&self, depth: usize) {
-        let indent = "  ".repeat(depth);
-
-        // Access the ID from element_data.
-        // If it's None, we can print "Unnamed Element" or the internal_id.
-        let id_label = self.element_data().internal_id.to_string();
-
-        println!("{}└─ {}: {}", indent, id_label, self.element_data().window.is_some());
-
-        for child in &self.element_data().children {
-            child.borrow().print_tree_ids(depth + 1);
-        }
-    }
-
-    fn drop(&mut self) {
-        for child in self.element_data().children.clone() {
-            crate::accessibility::detach_subtree(&mut *child.inner.borrow_mut());
-        }
-        if let Some(key) = self.element_data().access_key {
-            self.element_data().access_tree.remove_node(key);
-        }
-        if let Some(gummy_node) = self.element_data().layout.gummy_node_id {
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                gummy_tree.remove_node(gummy_node);
-            });
-        }
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.remove_id(self.element_data().internal_id);
-        });
+        self.element_data().me
     }
 
     /// Use the element's window to request a redraw.
     fn request_window_redraw(&self) {
-        let Some(window_weak) = &self.element_data().window else {
-            return;
-        };
-        let Some(window) = window_weak.upgrade() else {
-            return;
-        };
-        if let Ok(window) = window.try_borrow() {
-            window.request_redraw();
+        if let Some(signal) = &self.element_data().redraw_signal {
+            signal.store(true, std::sync::atomic::Ordering::Relaxed);
         }
     }
 
-    fn on_access_event(&mut self, _event: AccessEvent) -> Result<(), IsshoError> {
+    fn on_access_event(&mut self, _elements: &mut Elements, _event: AccessEvent) -> Result<(), IsshoError> {
         Ok(())
     }
 
@@ -1422,22 +1328,22 @@ fn apply_focused_outline(data: &mut crate::elements::element_data::ElementData) 
     data.apply_borders(data.applied_scale_factor);
 }
 
-fn focus_outline_visible() -> bool {
-    FOCUS_OUTLINE_VISIBLE.get()
+fn focus_outline_visible(elements: &Elements) -> bool {
+    elements.focus_outline_visible
 }
 
-pub(crate) fn set_focus_outline_visible(visible: bool) {
-    let changed = FOCUS_OUTLINE_VISIBLE.replace(visible) != visible;
+pub(crate) fn set_focus_outline_visible(elements: &mut Elements, visible: bool) {
+    let changed = std::mem::replace(&mut elements.focus_outline_visible, visible) != visible;
     if !changed {
         return;
     }
 
-    let focused = FOCUS.with_borrow(|focus| focus.as_ref().and_then(Weak::upgrade));
+    let focused = elements.focus.filter(|focused| elements.contains(*focused));
     let Some(focused) = focused else {
         return;
     };
 
-    let mut focused = focused.borrow_mut();
+    let focused = elements.get_mut(focused);
     if visible {
         apply_focused_outline(focused.element_data_mut());
     } else {
@@ -1459,39 +1365,39 @@ fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementDa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elements::{AsElement, Button, Element};
+    use crate::elements::{Button, Element, Elements};
 
     #[test]
     fn outline_changes_while_focused_are_restored_on_unfocus() {
         let original_color = Color::from_rgb8(10, 20, 30);
         let updated_color = Color::from_rgb8(40, 50, 60);
-        let button = Button::new()
-            .outline_color_all(original_color)
-            .outline_width_all(Unit::Px(1.0));
+        let mut elements = Elements::new();
+        let button = Button::new(&mut elements)
+            .outline_color_all(&mut elements, original_color)
+            .outline_width_all(&mut elements, Unit::Px(1.0));
 
-        button.clone().focus();
+        button.focus(&mut elements);
         button
-            .clone()
-            .outline_color_all(updated_color)
-            .outline_width_all(Unit::Px(3.0));
+            .outline_color_all(&mut elements, updated_color)
+            .outline_width_all(&mut elements, Unit::Px(3.0));
 
         assert_eq!(
-            button.with(|element| element.style().get_outline_color()),
+            elements.get(button.as_dyn_element()).style().get_outline_color(),
             TrblRectangle::new_all(crate::palette::css::DODGER_BLUE)
         );
         assert_eq!(
-            button.with(|element| element.style().get_outline_width()),
+            elements.get(button.as_dyn_element()).style().get_outline_width(),
             TrblRectangle::new_all(Unit::Px(2.0))
         );
 
-        button.clone().unfocus();
+        button.unfocus(&mut elements);
 
         assert_eq!(
-            button.with(|element| element.style().get_outline_color()),
+            elements.get(button.as_dyn_element()).style().get_outline_color(),
             TrblRectangle::new_all(updated_color)
         );
         assert_eq!(
-            button.with(|element| element.style().get_outline_width()),
+            elements.get(button.as_dyn_element()).style().get_outline_width(),
             TrblRectangle::new_all(Unit::Px(3.0))
         );
     }

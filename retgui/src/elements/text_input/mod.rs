@@ -3,9 +3,6 @@ mod text_input_state;
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 use retgui_renderer::text_renderer_data::{TextData, TextScroll};
-use std::cell::RefCell;
-use std::ops::Deref;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -21,11 +18,10 @@ use winit::dpi::{LogicalPosition, LogicalSize};
 use winit::event::{Ime, MouseButton as PointerButton};
 use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData};
 
-use crate::app::{ELEMENTS, WINDOW_MANAGER, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
+use crate::elements::{DynElement, Element, ElementNode, Elements, WindowNode, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
@@ -35,19 +31,18 @@ use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
 
 /// Editable text area.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct TextInput {
-    pub(crate) inner: Rc<RefCell<TextInputInner>>,
+    pub(crate) inner: DynElement,
 }
 
 // A stateful element that shows text.
 #[derive(Clone)]
-pub struct TextInputInner {
+pub(crate) struct TextInputNode {
     pub(crate) element_data: ElementData,
     pub(crate) ranged_styles: Option<RangedStyles>,
     pub(crate) disabled: bool,
     pub(crate) state: TextInputState,
-    pub(crate) me: Weak<RefCell<Self>>,
 }
 
 #[allow(dead_code)]
@@ -61,80 +56,76 @@ pub enum TextInputMessage {
 
 impl TextInput {
     /// Creates a single line editable text input.
-    pub fn new(text: &str) -> Self {
+    pub fn new(elements: &mut Elements, text: &str) -> Self {
         Self {
-            inner: TextInputInner::new(text),
+            inner: TextInputNode::new(elements, text),
         }
     }
 
     /// Disables the text input.
-    pub fn disabled(self, disabled: bool) -> Self {
-        self.inner.borrow_mut().disabled(disabled);
+    pub fn disabled(self, elements: &mut Elements, disabled: bool) -> Self {
+        elements.get_as_mut::<TextInputNode>(self.inner).disabled(disabled);
         self
     }
 
     /// Returns whether the element is disabled.
-    pub fn get_disabled(&self) -> bool {
-        self.inner.borrow().disabled
+    pub fn get_disabled(&self, elements: &Elements) -> bool {
+        elements.get_as::<TextInputNode>(self.inner).disabled
     }
 
     /// Returns whether the text input is multiline.
-    pub fn get_multiline(&self) -> bool {
-        self.inner.borrow().state.multiline
+    pub fn get_multiline(&self, elements: &Elements) -> bool {
+        elements.get_as::<TextInputNode>(self.inner).state.multiline
     }
 
-    pub fn multiline(self, multiline: bool) -> Self {
-        self.inner.borrow_mut().multiline(multiline);
+    pub fn multiline(self, elements: &mut Elements, multiline: bool) -> Self {
+        elements.get_as_mut::<TextInputNode>(self.inner).multiline(multiline);
         self
     }
 
     /// Returns the text in the text input.
     ///
     /// This does not include the ime preedit text.
-    pub fn get_text(&self) -> String {
-        self.inner.borrow().state.editor().text().chars().collect()
+    pub fn get_text(&self, elements: &Elements) -> String {
+        elements
+            .get_as::<TextInputNode>(self.inner)
+            .state
+            .editor()
+            .text()
+            .chars()
+            .collect()
     }
 
     /// Set the text.
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn text(self, text: &str) -> Self {
-        self.inner.borrow_mut().set_text(text);
+    pub fn text(self, elements: &mut Elements, text: &str) -> Self {
+        elements.get_as_mut::<TextInputNode>(self.inner).set_text(text);
         self
     }
 
     /// Styles the text along ranges.
-    pub fn ranged_styles(self, ranged_styles: RangedStyles) -> Self {
-        self.inner.borrow_mut().set_ranged_styles(ranged_styles);
+    pub fn ranged_styles(self, elements: &mut Elements, ranged_styles: RangedStyles) -> Self {
+        elements
+            .get_as_mut::<TextInputNode>(self.inner)
+            .set_ranged_styles(ranged_styles);
         self
     }
 
     /// Returns the ranged styles.
-    pub fn get_ranged_styles(&self) -> Option<RangedStyles> {
-        self.inner.borrow().ranged_styles.clone()
+    pub fn get_ranged_styles(&self, elements: &Elements) -> Option<RangedStyles> {
+        elements.get_as::<TextInputNode>(self.inner).ranged_styles.clone()
     }
 }
 
-impl Element for TextInput {}
-
-impl Drop for TextInputInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for TextInput {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for TextInput {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for TextInputInner {
+impl crate::elements::ElementNodeData for TextInputNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -144,17 +135,14 @@ impl crate::elements::ElementData for TextInputInner {
     }
 }
 
-impl ElementInternals for TextInputInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
-            let me = Rc::downgrade(element);
-            let mut element = element.borrow_mut();
-            element.me = me;
+impl ElementNode for TextInputNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let gummy_id = element.element_data.layout.gummy_node_id();
             element.state.gummy_id = Some(gummy_id);
             element.state.editor.gummy_id = Some(gummy_id);
             let context = LayoutContext::TextInput(GummyTextInputContext {
-                element: element.me.clone(),
+                element: element.element_data.me,
             });
             gummy_tree.set_node_context(gummy_id, Some(context));
             Some(gummy_id)
@@ -171,7 +159,7 @@ impl ElementInternals for TextInputInner {
         let node = self.element_data.layout.gummy_node_id.unwrap();
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        self.element_data.layout.has_new_layout = has_new_layout;
+        self.element_data.layout.has_new_layout.set(has_new_layout);
 
         let result = gummy_tree.get_layout(node);
         let render_available_space = gummy::Size {
@@ -212,7 +200,8 @@ impl ElementInternals for TextInputInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -250,8 +239,9 @@ impl ElementInternals for TextInputInner {
         };
 
         if self.state.text_render.as_ref().is_some() {
-            _renderer.draw_text(
-                self.me.clone(),
+            let snapshot = self.state.text_snapshot.as_ref().expect("text snapshot not found");
+            _renderer.draw_text_ref(
+                snapshot,
                 content_rectangle.scale(_scale_factor),
                 text_scroll,
                 self.is_focused() && self.state.editor().raw_selection().is_collapsed() && self.state.cursor_visible(),
@@ -265,7 +255,7 @@ impl ElementInternals for TextInputInner {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, text_context: &mut TextContext) {
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, text_context: &mut TextContext) {
         self.state.is_active = true;
         let focused = self.is_focused();
         let ime_owns_keyboard_event = focused
@@ -287,7 +277,7 @@ impl ElementInternals for TextInputInner {
                     )
             );
         if !editor_owns_scroll_key {
-            scrollable::handle_scroll_logic(self, event);
+            scrollable::handle_scroll_logic(elements, self, event);
         }
 
         if event.is_default_prevented() {
@@ -324,15 +314,15 @@ impl ElementInternals for TextInputInner {
 
         match event {
             EventKind::Focus(_) => {
-                self.start_cursor_blink();
+                self.start_cursor_blink(elements);
                 if !self.disabled {
-                    self.set_ime_enabled(true);
+                    self.set_ime_enabled(elements, true);
                 }
             }
             EventKind::Unfocus(_) => {
-                self.stop_cursor_blink();
+                self.stop_cursor_blink(elements);
                 self.state.disable_ime(text_context);
-                self.set_ime_enabled(false);
+                self.set_ime_enabled(elements, false);
             }
             EventKind::KeyDown(keyboard_event) | EventKind::KeyUp(keyboard_event) if ime_owns_keyboard_event => {
                 // Candidate-list navigation belongs to the IME. Keep those keys
@@ -346,12 +336,12 @@ impl ElementInternals for TextInputInner {
                     return;
                 }
                 self.state
-                    .key_press(text_context, keyboard_event, &mut self.element_data);
+                    .key_press(elements, text_context, keyboard_event, &mut self.element_data);
                 keyboard_event.stop_propagation();
             }
             EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
-                self.focus();
-                self.set_pointer_capture(pointer_button.pointer.pointer_id.unwrap());
+                self.focus(elements);
+                self.set_pointer_capture(elements, pointer_button.pointer.pointer_id.unwrap());
                 self.state.pointer_down(text_context, pointer_button.position, scroll_y);
             }
             EventKind::PointerUp(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
@@ -368,7 +358,7 @@ impl ElementInternals for TextInputInner {
                 }
                 Ime::Commit(text) => {
                     self.state.insert_or_replace_selection(text_context, text);
-                    self.state.generate_text_changed_event(&self.element_data);
+                    self.state.generate_text_changed_event(elements, &self.element_data);
                 }
                 Ime::Preedit(text, cursor) => self.state.ime_pre_edit(text_context, text, cursor),
                 Ime::DeleteSurrounding {
@@ -379,7 +369,7 @@ impl ElementInternals for TextInputInner {
                         .state
                         .ime_delete_surrounding(text_context, *before_bytes, *after_bytes)
                     {
-                        self.state.generate_text_changed_event(&self.element_data);
+                        self.state.generate_text_changed_event(elements, &self.element_data);
                     }
                 }
                 Ime::Enabled => self.state.ime_state.is_ime_active = true,
@@ -391,7 +381,7 @@ impl ElementInternals for TextInputInner {
         if self.state.is_layout_dirty {
             self.mark_dirty();
         } else if self.state.editor().generation() != editor_generation {
-            request_apply_layout(self.element_data.layout.gummy_node_id());
+            self.element_data.apply_layout_dirty = true;
             self.request_window_redraw();
         }
         {
@@ -399,7 +389,7 @@ impl ElementInternals for TextInputInner {
             self.element_data.set_accessibility_value(value);
         }
         if self.state.ime_state.is_ime_active {
-            self.update_ime();
+            self.update_ime(elements);
         }
     }
 
@@ -422,7 +412,7 @@ impl ElementInternals for TextInputInner {
         style
     }
 
-    fn set_scale_factor(&mut self, scale_factor: f64) {
+    fn set_scale_factor(&mut self, _elements: &mut Elements, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
@@ -455,16 +445,14 @@ impl ElementInternals for TextInputInner {
     }
 }
 
-impl TextInputInner {
-    fn set_ime_enabled(&mut self, enabled: bool) {
+impl TextInputNode {
+    fn set_ime_enabled(&mut self, elements: &Elements, enabled: bool) {
         self.state.ime_state.is_ime_active = enabled;
 
         let Some(window) = self
             .element_data
             .window
-            .as_ref()
-            .and_then(Weak::upgrade)
-            .and_then(|window| window.borrow().winit_window())
+            .and_then(|window| elements.get_as::<WindowNode>(window).winit_window())
         else {
             return;
         };
@@ -486,13 +474,11 @@ impl TextInputInner {
         let _ = window.request_ime_update(request);
     }
 
-    fn update_ime(&mut self) {
+    fn update_ime(&mut self, elements: &Elements) {
         let Some(window) = self
             .element_data
             .window
-            .as_ref()
-            .and_then(Weak::upgrade)
-            .and_then(|window| window.borrow().winit_window())
+            .and_then(|window| elements.get_as::<WindowNode>(window).winit_window())
         else {
             return;
         };
@@ -522,7 +508,7 @@ impl TextInputInner {
     }
 
     /// Starts the cursor blink animation.
-    fn start_cursor_blink(&mut self) {
+    fn start_cursor_blink(&mut self, elements: &mut Elements) {
         self.state.reset_blink();
 
         if self
@@ -541,7 +527,7 @@ impl TextInputInner {
             TimingFunction::Linear,
         ));
         if should_schedule {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            elements.with_window_manager(|window_manager, _| {
                 window_manager.schedule_element_animations(self.element_data.me.clone());
             });
         }
@@ -549,7 +535,7 @@ impl TextInputInner {
     }
 
     /// Stops the cursor blink animation.
-    fn stop_cursor_blink(&mut self) {
+    fn stop_cursor_blink(&mut self, elements: &mut Elements) {
         self.state.disable_blink();
 
         let had_animations = !self.element_data.animations.is_empty();
@@ -557,28 +543,27 @@ impl TextInputInner {
             .animations
             .retain(|animation| !animation.key_frames.is_empty());
         if had_animations && self.element_data.animations.is_empty() {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
+            elements.with_window_manager(|window_manager, _| {
                 window_manager.cancel_element_animations(&self.element_data.me);
             });
         }
         self.request_window_redraw();
     }
 
-    pub fn new(text: &str) -> Rc<RefCell<Self>> {
-        let default_style = TextInputInner::get_default_style();
+    pub fn new(elements: &mut Elements, text: &str) -> DynElement {
+        let default_style = TextInputNode::get_default_style();
 
         let text_input_state = TextInputState::default();
 
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInputInner>>| {
-            RefCell::new(TextInputInner {
-                element_data: ElementData::new(me.clone(), true),
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(TextInputNode {
+                element_data: ElementData::new(me, true, access_tree),
                 ranged_styles: Some(RangedStyles::new(vec![])),
                 disabled: false,
                 state: text_input_state,
-                me: me.clone(),
             })
         });
-        let mut inner_mut = inner.borrow_mut();
+        let inner_mut = elements.get_as_mut::<TextInputNode>(inner);
         inner_mut.element_data.style = default_style;
 
         {
@@ -588,18 +573,16 @@ impl TextInputInner {
         inner_mut.set_text(text);
 
         let context = Some(LayoutContext::TextInput(GummyTextInputContext {
-            element: inner_mut.me.clone(),
+            element: inner_mut.element_data.me,
         }));
-        inner_mut.element_data.create_layout_node(context);
+        let _ = inner_mut;
+        elements.create_layout_node(inner, context);
 
+        let inner_mut = elements.get_as_mut::<TextInputNode>(inner);
         let gummy_id = inner_mut.element_data.layout.gummy_node_id;
         inner_mut.state.gummy_id = gummy_id;
         inner_mut.state.editor.gummy_id = gummy_id;
 
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(inner_mut.deref());
-        });
-        drop(inner_mut);
         inner
     }
 
@@ -612,10 +595,6 @@ impl TextInputInner {
     pub fn multiline(&mut self, multiline: bool) -> &mut Self {
         self.state.multiline = multiline;
         self
-    }
-
-    pub fn get_text(&self) -> &str {
-        self.state.editor().raw_text()
     }
 
     /// Set the text.
@@ -636,7 +615,7 @@ impl TextInputInner {
     }
 }
 
-impl TextData for TextInputInner {
+impl TextData for TextInputNode {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }

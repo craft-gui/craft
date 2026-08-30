@@ -9,7 +9,6 @@ pub use winit::event::{ElementState, Ime, Modifiers, MouseButton, MouseButton as
 pub use winit::keyboard::{Key, KeyCode as Code, KeyLocation as Location, ModifiersState as KeyboardModifiers, NamedKey};
 
 use std::any::Any;
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -17,9 +16,9 @@ use retgui_primitives::geometry::Point;
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::{ButtonSource, KeyEvent, PointerKind, PointerSource};
 
-use crate::elements::DynElement;
+use crate::elements::{DynElement, Elements};
 
-pub(crate) mod pointer_capture;
+pub mod pointer_capture;
 
 mod event_dispatch;
 mod helpers;
@@ -489,11 +488,11 @@ impl SliderValueChangedEvent {
 #[derive(Clone)]
 pub struct RadioValueChangedEvent {
     base: BaseEvent,
-    pub value: Rc<RefCell<String>>,
+    pub value: String,
 }
 
 impl RadioValueChangedEvent {
-    pub fn new(target: DynElement, value: Rc<RefCell<String>>) -> Self {
+    pub fn new(target: DynElement, value: String) -> Self {
         Self {
             base: BaseEvent::new(target),
             value,
@@ -758,23 +757,23 @@ impl Event for CustomEvent {
     }
 }
 
-pub type CheckboxToggledHandler = Rc<dyn Fn(&mut CheckboxToggledEvent)>;
-pub type ClickHandler = Rc<dyn Fn(&mut ClickEvent)>;
-pub type CustomHandler = Rc<dyn Fn(&mut CustomEvent)>;
-pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut DropdownItemSelectedEvent)>;
-pub type FocusHandler = Rc<dyn Fn(&mut FocusEvent)>;
-pub type KeyboardInputHandler = Rc<dyn Fn(&mut KeyboardEvent)>;
-pub type PointerCaptureHandler = Rc<dyn Fn(&mut PointerCaptureEvent)>;
-pub type PointerEnterHandler = Rc<dyn Fn(&mut PointerEnterEvent)>;
-pub type PointerEventHandler = Rc<dyn Fn(&mut PointerButtonEvent)>;
-pub type PointerLeaveHandler = Rc<dyn Fn(&mut PointerLeaveEvent)>;
-pub type PointerMovedHandler = Rc<dyn Fn(&mut PointerMovedEvent)>;
+pub type CheckboxToggledHandler = Rc<dyn Fn(&mut CheckboxToggledEvent, &mut Elements)>;
+pub type ClickHandler = Rc<dyn Fn(&mut ClickEvent, &mut Elements)>;
+pub type CustomHandler = Rc<dyn Fn(&mut CustomEvent, &mut Elements)>;
+pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut DropdownItemSelectedEvent, &mut Elements)>;
+pub type FocusHandler = Rc<dyn Fn(&mut FocusEvent, &mut Elements)>;
+pub type KeyboardInputHandler = Rc<dyn Fn(&mut KeyboardEvent, &mut Elements)>;
+pub type PointerCaptureHandler = Rc<dyn Fn(&mut PointerCaptureEvent, &mut Elements)>;
+pub type PointerEnterHandler = Rc<dyn Fn(&mut PointerEnterEvent, &mut Elements)>;
+pub type PointerEventHandler = Rc<dyn Fn(&mut PointerButtonEvent, &mut Elements)>;
+pub type PointerLeaveHandler = Rc<dyn Fn(&mut PointerLeaveEvent, &mut Elements)>;
+pub type PointerMovedHandler = Rc<dyn Fn(&mut PointerMovedEvent, &mut Elements)>;
 pub type PointerUpdateHandler = PointerMovedHandler;
-pub type RadioValueChangedHandler = Rc<dyn Fn(&mut RadioValueChangedEvent)>;
-pub type ScrollHandler = Rc<dyn Fn(&mut ScrollEvent)>;
-pub type SliderValueChangedHandler = Rc<dyn Fn(&mut SliderValueChangedEvent)>;
-pub type TextInputChangedHandler = Rc<dyn Fn(&mut TextInputChangedEvent)>;
-pub type UnfocusHandler = Rc<dyn Fn(&mut UnfocusEvent)>;
+pub type RadioValueChangedHandler = Rc<dyn Fn(&mut RadioValueChangedEvent, &mut Elements)>;
+pub type ScrollHandler = Rc<dyn Fn(&mut ScrollEvent, &mut Elements)>;
+pub type SliderValueChangedHandler = Rc<dyn Fn(&mut SliderValueChangedEvent, &mut Elements)>;
+pub type TextInputChangedHandler = Rc<dyn Fn(&mut TextInputChangedEvent, &mut Elements)>;
+pub type UnfocusHandler = Rc<dyn Fn(&mut UnfocusEvent, &mut Elements)>;
 pub type UserEventData = dyn Any;
 
 #[derive(Clone)]
@@ -931,17 +930,18 @@ impl Event for EventKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::elements::Container;
+    use crate::elements::{Container, Elements};
 
     use super::{DynElement, Event, EventKind, FocusEvent};
 
-    fn event_target() -> DynElement {
-        DynElement::new(Container::new().inner)
+    fn event_target(elements: &mut Elements) -> DynElement {
+        DynElement::new(Container::new(elements).inner)
     }
 
     #[test]
     fn event_controls_track_dispatch_state() {
-        let target = event_target();
+        let mut elements = Elements::new();
+        let target = event_target(&mut elements);
         let mut event = FocusEvent::new(target.clone());
 
         assert!(event.target() == target);
@@ -958,8 +958,9 @@ mod tests {
 
     #[test]
     fn retarget_updates_both_targets() {
-        let original = event_target();
-        let replacement = event_target();
+        let mut elements = Elements::new();
+        let original = event_target(&mut elements);
+        let replacement = event_target(&mut elements);
         assert!(original != replacement);
         let mut event = EventKind::Focus(FocusEvent::new(original));
 

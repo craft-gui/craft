@@ -1,8 +1,5 @@
-mod run_later;
-
 use std::future::Future;
 
-pub use run_later::{Job, pop_gui_thread_work, push_gui_thread_work, run_later};
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
 pub use tokio::*;
 
@@ -109,7 +106,7 @@ impl RetGuiRuntime {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn borrow_tokio_runtime(&mut self) -> &mut runtime::LocalRuntime {
+    pub fn tokio_runtime_mut(&mut self) -> &mut runtime::LocalRuntime {
         &mut self.tokio_runtime
     }
 
@@ -177,7 +174,7 @@ impl RetGuiRuntimeHandle {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn borrow_tokio_runtime(&mut self) -> &mut runtime::Handle {
+    pub fn tokio_runtime_mut(&mut self) -> &mut runtime::Handle {
         &mut self.tokio_runtime
     }
 

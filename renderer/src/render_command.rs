@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Weak;
+use std::rc::Rc;
 
 use retgui_primitives::Color;
 use retgui_primitives::brush::Brush;
@@ -66,7 +65,7 @@ pub struct DrawImageCmd {
 #[derive(Clone)]
 pub struct DrawTextCmd {
     pub rect: Rectangle,
-    pub data: Weak<RefCell<dyn TextData>>,
+    pub data: Rc<dyn TextData>,
     pub text_scroll: Option<TextScroll>,
     pub show_cursor: bool,
     pub transform: Affine,

@@ -1,60 +1,64 @@
-//! Stores one or more elements.
+//! An audio player element with optional controls.
 
-use std::cell::{OnceCell, RefCell};
 use std::collections::HashSet;
 use std::path::Path;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
-
-use retgui_primitives::brush::Brush;
-
-use retgui_renderer::renderer::Renderer;
-
-use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use maudio::engine::Engine;
 use maudio::sound::Sound;
 use maudio::sound::notifier::EndNotifier;
+use retgui_primitives::brush::Brush;
+use retgui_renderer::renderer::Renderer;
+use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, Button, DynElement, Element, ElementInternals, Slider, Text, TinyVg, scrollable};
+use crate::elements::{Button, DynElement, Element, ElementNode, Elements, Slider, State, Text, TinyVg, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, rgb};
 
-#[derive(Clone)]
-pub struct SoundData {
-    sound: Rc<RefCell<Sound>>,
+pub(crate) struct SoundData {
+    sound: Sound,
     end_notifier: EndNotifier,
 }
 
-pub struct AudioContext {
-    pub engine: Engine,
-    pub sounds: HashSet<u64>,
+pub(crate) struct AudioContext {
+    engine: Engine,
+    pub(crate) sounds: HashSet<DynElement>,
 }
 
-thread_local! {
-    pub static AUDIO_CONTEXT: OnceCell<Rc<RefCell<AudioContext>>> = const { OnceCell::new() };
+impl AudioContext {
+    pub(crate) fn new() -> Self {
+        #[cfg(target_os = "windows")]
+        {
+            use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+            unsafe {
+                CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
+            }
+        }
+
+        Self {
+            engine: Engine::new().expect("failed to create audio engine"),
+            sounds: HashSet::new(),
+        }
+    }
 }
 
 const PLAY: &[u8] = include_bytes!("../../../assets/play.tvg");
 const PAUSE: &[u8] = include_bytes!("../../../assets/pause.tvg");
 const VOLUME: &[u8] = include_bytes!("../../../assets/volume.tvg");
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Audio {
-    pub(crate) inner: Rc<RefCell<AudioInner>>,
+    pub(crate) inner: DynElement,
 }
 
-/// Stores one or more elements.
-///
-/// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct AudioInner {
+pub(crate) struct AudioNode {
     element_data: ElementData,
     play_button: Button,
     play_button_icon: TinyVg,
@@ -65,28 +69,16 @@ pub(crate) struct AudioInner {
     _volume_icon: ResourceId,
     volume_track: Slider,
     duration: Text,
-    sound_data: Option<SoundData>,
+    sound_data: Option<State<SoundData>>,
 }
 
-impl Element for Audio {}
-
-impl Drop for AudioInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for Audio {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for Audio {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for AudioInner {
+impl crate::elements::ElementNodeData for AudioNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -96,9 +88,9 @@ impl crate::elements::ElementData for AudioInner {
     }
 }
 
-impl ElementInternals for AudioInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
+impl ElementNode for AudioNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
 
     fn apply_layout(
@@ -112,249 +104,264 @@ impl ElementInternals for AudioInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(self, event);
-    }
-
-    fn push(&mut self, child: DynElement) {
-        push_child_to_element(self, child.inner);
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(elements, self, event);
     }
 }
 
 impl Audio {
-    pub fn new(path: &Path) -> Self {
+    pub fn new(elements: &mut Elements, path: &Path) -> Self {
         let play_icon = ResourceId::StaticBytes(PLAY);
         let pause_icon = ResourceId::StaticBytes(PAUSE);
         let volume_icon = ResourceId::StaticBytes(VOLUME);
-        let play_button = Button::new().accessibility_name("play");
-        let play = TinyVg::new(play_icon.clone())
-            .color(Color::WHITE)
-            .width(Unit::Px(16.0))
-            .height(Unit::Px(16.0));
-        let track = Slider::new(16.0)
-            .width(Unit::Px(200.0))
-            .thumb_color(Brush::Color(Color::WHITE));
-        let volume_track = Slider::new(16.0)
-            .thumb_color(Brush::Color(Color::WHITE))
-            .min(0.0)
-            .max(100.0)
-            .value(100.0)
-            .step(1.0);
-        let duration = Text::new("").selectable(false).line_height(0.5).color(Color::WHITE);
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<AudioInner>>| {
-            RefCell::new(AudioInner {
-                element_data: ElementData::new(me.clone(), true),
-                play_button: play_button.clone(),
-                play_button_icon: play.clone(),
-                track: track.clone(),
+
+        let play_button = Button::new(elements).accessibility_name(elements, "play");
+        let play_button_icon = TinyVg::new(elements, play_icon.clone())
+            .color(elements, Color::WHITE)
+            .width(elements, Unit::Px(16.0))
+            .height(elements, Unit::Px(16.0));
+        let track = Slider::new(elements, 16.0)
+            .width(elements, Unit::Px(200.0))
+            .thumb_color(elements, Brush::Color(Color::WHITE));
+        let volume_track = Slider::new(elements, 16.0)
+            .thumb_color(elements, Brush::Color(Color::WHITE))
+            .min(elements, 0.0)
+            .max(elements, 100.0)
+            .value(elements, 100.0)
+            .step(elements, 1.0);
+        let duration = Text::new(elements, "")
+            .selectable(elements, false)
+            .line_height(elements, 0.5)
+            .color(elements, Color::WHITE);
+
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(AudioNode {
+                element_data: ElementData::new(me, true, access_tree),
+                play_button,
+                play_button_icon,
+                track,
                 controls: true,
                 play_icon,
                 pause_icon,
                 _volume_icon: volume_icon.clone(),
-                duration: duration.clone(),
-                volume_track: volume_track.clone(),
+                volume_track,
+                duration,
                 sound_data: None,
             })
         });
-        let inner2 = inner.clone();
-        let inner3 = inner.clone();
-        let inner4 = inner.clone();
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.set_height(Unit::Px(24.0));
-        inner_mut.set_align_items(AlignItems::Center);
-        inner_mut.set_background_brush(Brush::Color(rgb(72, 72, 72)));
-        inner_mut.set_padding_all(Unit::Px(6.0));
-        inner_mut.set_column_gap(Unit::Px(12.0));
-        inner_mut.element_data.create_layout_node(None);
-        inner_mut.push(
-            play_button
-                .push(play)
-                .on_click(move |_event| {
-                    inner2.borrow_mut().toggle();
-                })
-                .as_dyn_element(),
-        );
-        inner_mut.push(
-            track
-                .on_slider_value_changed(move |event| inner3.borrow_mut().set_cursor(event.value as f32))
-                .as_dyn_element(),
-        );
-        inner_mut.push(DynElement::new(duration.inner));
-        inner_mut.push(
-            TinyVg::new(volume_icon)
-                .color(Color::WHITE)
-                .width(Unit::Px(16.0))
-                .height(Unit::Px(16.0))
-                .as_dyn_element(),
-        );
-        inner_mut.push(
-            volume_track
-                .on_slider_value_changed(move |event| inner4.borrow_mut().set_volume(event.value as f32))
-                .as_dyn_element(),
-        );
-        inner_mut.set_sound(path);
-        drop(inner_mut);
+
+        {
+            let audio = elements.get_as_mut::<AudioNode>(inner);
+            audio.set_height(Unit::Px(24.0));
+            audio.set_align_items(AlignItems::Center);
+            audio.set_background_brush(Brush::Color(rgb(72, 72, 72)));
+            audio.set_padding_all(Unit::Px(6.0));
+            audio.set_column_gap(Unit::Px(12.0));
+        }
+        elements.create_layout_node(inner, None);
+
+        let play_control = play_button
+            .push(elements, play_button_icon)
+            .on_click(elements, move |_event, elements| {
+                elements.dispatch_mut(inner, |audio, elements| {
+                    (audio as &mut dyn std::any::Any)
+                        .downcast_mut::<AudioNode>()
+                        .expect("audio handle changed type")
+                        .toggle(elements);
+                });
+            });
+        let track_control = track.on_slider_value_changed(elements, move |event, elements| {
+            elements.dispatch_mut(inner, |audio, elements| {
+                (audio as &mut dyn std::any::Any)
+                    .downcast_mut::<AudioNode>()
+                    .expect("audio handle changed type")
+                    .set_cursor(elements, event.value as f32);
+            });
+        });
+        let volume_control = volume_track.on_slider_value_changed(elements, move |event, elements| {
+            elements.dispatch_mut(inner, |audio, elements| {
+                (audio as &mut dyn std::any::Any)
+                    .downcast_mut::<AudioNode>()
+                    .expect("audio handle changed type")
+                    .set_volume(elements, event.value as f32);
+            });
+        });
+        let volume_icon_element = TinyVg::new(elements, volume_icon)
+            .color(elements, Color::WHITE)
+            .width(elements, Unit::Px(16.0))
+            .height(elements, Unit::Px(16.0));
+
+        for child in [
+            play_control.as_dyn_element(),
+            track_control.as_dyn_element(),
+            duration.as_dyn_element(),
+            volume_icon_element.as_dyn_element(),
+            volume_control.as_dyn_element(),
+        ] {
+            push_child_to_element(elements, inner, child);
+        }
+
+        elements.dispatch_mut(inner, |audio, elements| {
+            (audio as &mut dyn std::any::Any)
+                .downcast_mut::<AudioNode>()
+                .expect("audio handle changed type")
+                .set_sound(elements, path);
+        });
+
         Self { inner }
     }
 
-    pub fn controls(self, controls: bool) -> Self {
-        self.inner.borrow_mut().set_controls(controls);
+    pub fn controls(self, elements: &mut Elements, controls: bool) -> Self {
+        elements.get_as_mut::<AudioNode>(self.inner).set_controls(controls);
         self
     }
 
-    pub fn play(self) -> Self {
-        self.inner.borrow_mut().play();
-        self
-    }
-
-    pub fn pause(self) -> Self {
-        self.inner.borrow_mut().pause();
-        self
-    }
-
-    pub fn toggle(self) -> Self {
-        self.inner.borrow_mut().toggle();
-        self
-    }
-
-    pub fn is_playing(&self) -> bool {
-        self.inner.borrow_mut().is_playing()
-    }
-}
-
-/// Fetches or initializes the reference-counted AudioContext from thread-local storage.
-fn get_context() -> Rc<RefCell<AudioContext>> {
-    AUDIO_CONTEXT.with(|cell| {
-        cell.get_or_init(|| {
-            #[cfg(target_os = "windows")]
-            {
-                // Winit wants single threaded and miniaudio defaults to multithreaded.
-                // If we use single threaded before miniaudio starts, it should safely fallback
-                // to single threaded.
-                use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
-                unsafe {
-                    CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
-                }
-            }
-            Rc::new(RefCell::new(AudioContext {
-                engine: Engine::new().expect("Failed to create engine"),
-                sounds: HashSet::new(),
-            }))
-        })
-        .clone()
-    })
-}
-
-impl AudioInner {
-    fn toggle(&mut self) {
-        let is_playing = self.is_playing();
-        if is_playing {
-            self.pause();
-        } else {
-            self.play();
-        }
-    }
-
-    fn is_playing(&self) -> bool {
-        if let Some(sound_data) = &self.sound_data {
-            sound_data.sound.borrow().is_playing()
-        } else {
-            false
-        }
-    }
-
-    fn set_sound(&mut self, path: &Path) {
-        let ctx = get_context();
-        let mut ctx = ctx.borrow_mut();
-        let mut sound: Sound = ctx.engine.new_sound_from_file(path).unwrap();
-        let end_notifier = sound.set_end_callback().unwrap();
-        let duration = sound.length_seconds().unwrap_or_default() as f64;
-        self.track.clone().max(duration);
-
-        let current_time = sound.cursor_seconds().unwrap() as u32;
-        let time = format_time(current_time, duration as u32);
-        self.duration.clone().text(&time);
-        ctx.sounds.insert(self.element_data.internal_id);
-        // Todo: Clean up old sound data
-        self.sound_data = Some(SoundData {
-            sound: Rc::new(RefCell::new(sound)),
-            end_notifier,
+    pub fn play(self, elements: &mut Elements) -> Self {
+        elements.dispatch_mut(self.inner, |audio, elements| {
+            (audio as &mut dyn std::any::Any)
+                .downcast_mut::<AudioNode>()
+                .expect("audio handle changed type")
+                .play(elements);
         });
-        drop(ctx);
-        self.set_volume(self.volume_track.get_value() as f32)
+        self
     }
 
-    fn play(&self) {
-        if let Some(sound_data) = &self.sound_data {
-            self.play_button.clone().accessibility_name("pause");
-            self.play_button_icon.clone().resource_id(self.pause_icon.clone());
-            sound_data
+    pub fn pause(self, elements: &mut Elements) -> Self {
+        elements.dispatch_mut(self.inner, |audio, elements| {
+            (audio as &mut dyn std::any::Any)
+                .downcast_mut::<AudioNode>()
+                .expect("audio handle changed type")
+                .pause(elements);
+        });
+        self
+    }
+
+    pub fn toggle(self, elements: &mut Elements) -> Self {
+        elements.dispatch_mut(self.inner, |audio, elements| {
+            (audio as &mut dyn std::any::Any)
+                .downcast_mut::<AudioNode>()
+                .expect("audio handle changed type")
+                .toggle(elements);
+        });
+        self
+    }
+
+    pub fn is_playing(&self, elements: &Elements) -> bool {
+        elements.get_as::<AudioNode>(self.inner).is_playing(elements)
+    }
+}
+
+impl AudioNode {
+    fn toggle(&mut self, elements: &mut Elements) {
+        if self.is_playing(elements) {
+            self.pause(elements);
+        } else {
+            self.play(elements);
+        }
+    }
+
+    fn is_playing(&self, elements: &Elements) -> bool {
+        self.sound_data
+            .map(|sound| elements.state(sound).sound.is_playing())
+            .unwrap_or(false)
+    }
+
+    fn set_sound(&mut self, elements: &mut Elements, path: &Path) {
+        let (sound, end_notifier, duration, current_time) = elements.with_audio_context(|context, _| {
+            let mut sound = context.engine.new_sound_from_file(path).unwrap();
+            let end_notifier = sound.set_end_callback().unwrap();
+            let duration = sound.length_seconds().unwrap_or_default() as f64;
+            let current_time = sound.cursor_seconds().unwrap_or_default() as u32;
+            (sound, end_notifier, duration, current_time)
+        });
+
+        self.track.max(elements, duration);
+        self.duration
+            .text(elements, &format_time(current_time, duration as u32));
+        self.sound_data = Some(elements.insert_state(SoundData {
+            sound,
+            end_notifier,
+        }));
+        let me = self.element_data.me;
+        elements.with_audio_context(|context, _| {
+            context.sounds.insert(me);
+        });
+        let volume = self.volume_track.get_value(elements) as f32;
+        self.set_volume(elements, volume);
+    }
+
+    fn play(&self, elements: &mut Elements) {
+        self.play_button.accessibility_name(elements, "pause");
+        self.play_button_icon.resource_id(elements, self.pause_icon.clone());
+        if let Some(sound_data) = self.sound_data {
+            elements
+                .state_mut(sound_data)
                 .sound
-                .borrow_mut()
                 .play_sound()
-                .expect("Failed to play sound");
+                .expect("failed to play sound");
         }
     }
 
-    fn pause(&self) {
-        self.play_button.clone().accessibility_name("play");
-        self.play_button_icon.clone().resource_id(self.play_icon.clone());
-        if let Some(sound_data) = &self.sound_data {
-            sound_data
+    fn pause(&self, elements: &mut Elements) {
+        self.play_button.accessibility_name(elements, "play");
+        self.play_button_icon.resource_id(elements, self.play_icon.clone());
+        if let Some(sound_data) = self.sound_data {
+            elements
+                .state_mut(sound_data)
                 .sound
-                .borrow_mut()
                 .stop_sound()
-                .expect("Failed to pause sound");
+                .expect("failed to pause sound");
         }
     }
 
-    fn set_cursor(&self, value: f32) {
-        if let Some(sound_data) = &self.sound_data {
-            sound_data.sound.borrow_mut().seek_to_second(value).unwrap();
+    fn set_cursor(&self, elements: &mut Elements, value: f32) {
+        if let Some(sound_data) = self.sound_data {
+            elements.state_mut(sound_data).sound.seek_to_second(value).unwrap();
         }
     }
 
-    fn set_volume(&self, value: f32) {
-        let value = value / 100.0;
-        if let Some(sound_data) = &self.sound_data {
-            sound_data.sound.borrow_mut().set_volume(value);
+    fn set_volume(&self, elements: &mut Elements, value: f32) {
+        if let Some(sound_data) = self.sound_data {
+            elements.state_mut(sound_data).sound.set_volume(value / 100.0);
         }
     }
 
-    pub(crate) fn update(&self) {
-        if let Some(sound_data) = &self.sound_data {
-            let sound = sound_data.sound.borrow_mut();
-            let current_time = sound.cursor_seconds().unwrap() as f64;
-            let track = self.track.clone();
+    pub(crate) fn update(&self, elements: &mut Elements) {
+        let Some(sound_data) = self.sound_data else {
+            return;
+        };
+        let mut ended = false;
+        let (current_time, total_time) = {
+            let sound_data = elements.state_mut(sound_data);
+            let current_time = sound_data.sound.cursor_seconds().unwrap_or_default() as f64;
+            let total_time = sound_data.sound.length_seconds().unwrap_or_default() as u32;
+            sound_data.end_notifier.take_with(|| ended = true);
+            (current_time, total_time)
+        };
 
-            if track.get_value() != current_time {
-                track.value(current_time);
-                let total_time = sound.length_seconds().unwrap() as u32;
-                let time = format_time(current_time as u32, total_time);
-                self.duration.clone().text(&time);
-            }
-            sound_data.end_notifier.take_with(|| {
-                self.play_button_icon.clone().resource_id(self.play_icon.clone());
-            });
+        if self.track.get_value(elements) != current_time {
+            self.track.value(elements, current_time);
+            self.duration
+                .text(elements, &format_time(current_time as u32, total_time));
+        }
+        if ended {
+            self.play_button_icon.resource_id(elements, self.play_icon.clone());
         }
     }
 
     pub fn set_controls(&mut self, controls: bool) {
         self.controls = controls;
-        if self.controls {
-            self.set_display(Display::Flex);
-        } else {
-            self.set_display(Display::None);
-        }
+        self.set_display(if controls { Display::Flex } else { Display::None });
     }
 }
 
@@ -362,7 +369,6 @@ fn format_time(current_time: u32, total_time: u32) -> String {
     let current_hours = current_time / 3600;
     let current_minutes = (current_time % 3600) / 60;
     let current_seconds = current_time % 60;
-
     let total_hours = total_time / 3600;
     let total_minutes = (total_time % 3600) / 60;
     let total_seconds = total_time % 60;
