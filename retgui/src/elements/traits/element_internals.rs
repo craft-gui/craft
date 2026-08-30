@@ -560,7 +560,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         self.element_data_mut().id = Some(id.into());
     }
 
-    ///
+    /// Adds a pointer button down listener.
     fn on_pointer_button_down(&mut self, on_pointer_button_down: PointerEventHandler) {
         self.add_event_listener(
             EventCallbackKind::PointerButtonDown(on_pointer_button_down),
@@ -568,6 +568,7 @@ pub trait ElementInternals: ElementData + Any + Drop {
         );
     }
 
+    /// Adds a pointer button up listener.
     fn on_pointer_button_up(&mut self, on_pointer_button_up: PointerEventHandler) {
         self.add_event_listener(
             EventCallbackKind::PointerButtonUp(on_pointer_button_up),
