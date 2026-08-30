@@ -119,7 +119,7 @@ impl Image {
     }
 
     pub fn resource_id(self, elements: &mut Elements, resource_id: ResourceId) -> Self {
-        elements.dispatch_mut(self.inner, |image, elements| {
+        elements.try_dispatch_mut(self.inner, |image, elements| {
             (image as &mut dyn std::any::Any)
                 .downcast_mut::<ImageNode>()
                 .unwrap()
@@ -129,7 +129,9 @@ impl Image {
     }
 
     pub fn get_resource_id(&self, elements: &Elements) -> ResourceId {
-        elements.get_as::<ImageNode>(self.inner).get_resource_id().clone()
+        elements
+            .try_get_as::<ImageNode>(self.inner)
+            .map_or(ResourceId::DUMMY, |image| image.get_resource_id().clone())
     }
 }
 

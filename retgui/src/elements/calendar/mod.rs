@@ -189,13 +189,16 @@ impl Calendar {
     }
 
     pub fn start_year(self, elements: &mut Elements, year: i32) -> Self {
+        if !elements.contains(self.inner) {
+            return self;
+        }
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
         }
         if year > MAX_YEAR {
             panic!("Dates above {MAX_YEAR} are not supported.");
         }
-        elements.dispatch_mut(self.inner, |inner, elements| {
+        elements.try_dispatch_mut(self.inner, |inner, elements| {
             (inner as &mut dyn std::any::Any)
                 .downcast_mut::<CalendarNode>()
                 .unwrap()
@@ -205,13 +208,16 @@ impl Calendar {
     }
 
     pub fn end_year(self, elements: &mut Elements, year: i32) -> Self {
+        if !elements.contains(self.inner) {
+            return self;
+        }
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
         }
         if year > MAX_YEAR {
             panic!("Dates above {MAX_YEAR} are not supported.");
         }
-        elements.dispatch_mut(self.inner, |inner, elements| {
+        elements.try_dispatch_mut(self.inner, |inner, elements| {
             (inner as &mut dyn std::any::Any)
                 .downcast_mut::<CalendarNode>()
                 .unwrap()

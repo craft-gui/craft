@@ -137,6 +137,15 @@ impl Elements {
             .expect("element handle no longer belongs to this store")
     }
 
+    /// Returns a retained element, or `None` when the handle is stale or belongs
+    /// to another store.
+    pub(crate) fn try_get(&self, element: DynElement) -> Option<&dyn ElementNode> {
+        if element.store_id() != self.id {
+            return None;
+        }
+        self.elements.get(element.key()).and_then(Option::as_deref)
+    }
+
     /// Fast retained-tree lookup for handles already validated when they were
     /// attached to this store.
     pub(crate) fn get_for_draw(&self, element: DynElement) -> &dyn ElementNode {
@@ -158,6 +167,15 @@ impl Elements {
             .expect("element handle no longer belongs to this store")
     }
 
+    /// Returns a retained element mutably, or `None` when the handle is stale
+    /// or belongs to another store.
+    pub(crate) fn try_get_mut(&mut self, element: DynElement) -> Option<&mut dyn ElementNode> {
+        if element.store_id() != self.id {
+            return None;
+        }
+        self.elements.get_mut(element.key()).and_then(Option::as_deref_mut)
+    }
+
     /// Borrows a retained element as its concrete node type.
     ///
     /// Typed element handles should keep their [`DynElement`] field private so
@@ -168,6 +186,16 @@ impl Elements {
             .expect("typed element handle changed type")
     }
 
+    /// Borrows a retained element as its concrete node type, returning `None`
+    /// for a stale handle.
+    pub(crate) fn try_get_as<T: ElementNode>(&self, element: DynElement) -> Option<&T> {
+        Some(
+            (self.try_get(element)? as &dyn Any)
+                .downcast_ref()
+                .expect("typed element handle changed type"),
+        )
+    }
+
     /// Mutably borrows a retained element as its concrete node type.
     ///
     /// The borrow is tied to this store borrow, just like the framework's own
@@ -176,6 +204,16 @@ impl Elements {
         (self.get_mut(element) as &mut dyn Any)
             .downcast_mut()
             .expect("typed element handle changed type")
+    }
+
+    /// Mutably borrows a retained element as its concrete node type, returning
+    /// `None` for a stale handle.
+    pub(crate) fn try_get_as_mut<T: ElementNode>(&mut self, element: DynElement) -> Option<&mut T> {
+        Some(
+            (self.try_get_mut(element)? as &mut dyn Any)
+                .downcast_mut()
+                .expect("typed element handle changed type"),
+        )
     }
 
     pub(crate) fn contains(&self, element: DynElement) -> bool {
@@ -368,6 +406,24 @@ impl Elements {
         result
     }
 
+    /// Mutates a retained element and returns `None` when its handle is stale or
+    /// belongs to another store.
+    pub(crate) fn try_dispatch_mut<R>(
+        &mut self,
+        handle: DynElement,
+        callback: impl FnOnce(&mut dyn ElementNode, &mut Elements) -> R,
+    ) -> Option<R> {
+        if handle.store_id() != self.id {
+            return None;
+        }
+        let mut element = self.elements.get_mut(handle.key())?.take()?;
+        let result = callback(element.as_mut(), self);
+        if let Some(slot) = self.elements.get_mut(handle.key()) {
+            *slot = Some(element);
+        }
+        Some(result)
+    }
+
     /// Stores application state and returns a typed handle to it.
     pub fn insert_state<T: 'static>(&mut self, value: T) -> State<T> {
         State {
@@ -467,7 +523,7 @@ mod async_tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::elements::{Elements, Text};
+    use crate::elements::{Container, Element, Elements, Text};
 
     #[test]
     fn local_completion_updates_the_store_and_wakes_the_driver() {
@@ -492,6 +548,24 @@ mod async_tests {
         assert_eq!(text.get_text(&elements), "ready");
         elements.run_gui_actions();
         assert_eq!(text.get_text(&elements), "ready");
+    }
+
+    #[test]
+    fn local_completion_ignores_a_deleted_target() {
+        let runtime = retgui_runtime::RetGuiRuntime::new();
+        let mut elements = Elements::new();
+        let text = Text::new(&mut elements, "waiting");
+        let parent = Container::new(&mut elements).push(&mut elements, text);
+
+        elements.spawn_local(async { "too late" }, move |value, elements| {
+            text.text(elements, value);
+        });
+        parent.delete_all_children(&mut elements);
+
+        runtime.handle().update_local_set();
+        elements.run_gui_actions();
+
+        assert!(!elements.contains(text.inner));
     }
 }
 
@@ -532,5 +606,50 @@ mod deletion_tests {
             parent.delete_all_children(&mut elements);
             assert_eq!(elements.elements.len(), 1);
         }
+    }
+
+    #[test]
+    fn operations_on_deleted_handles_are_inert() {
+        let mut elements = Elements::new();
+        let text = Text::new(&mut elements, "before");
+        let child = Container::new(&mut elements).push(&mut elements, text);
+        let parent = Container::new(&mut elements).push(&mut elements, child);
+
+        parent.delete_all_children(&mut elements);
+
+        text.edit(&mut elements)
+            .text("after")
+            .selectable(false)
+            .font_size(24.0)
+            .finish();
+        text.text(&mut elements, "after").selectable(&mut elements, false);
+        text.request_redraw(&elements);
+
+        assert_eq!(text.get_text(&elements), "");
+        assert!(!text.get_selectable(&elements));
+        assert!(text.get_children(&elements).is_empty());
+        assert!(matches!(
+            text.get_parent(&elements),
+            Err(crate::RetGuiError::ElementNotFound)
+        ));
+        assert_eq!(elements.elements.len(), 1);
+    }
+
+    #[test]
+    fn stale_editor_does_not_run_operations_or_build_children() {
+        let mut elements = Elements::new();
+        let child = Container::new(&mut elements);
+        let parent = Container::new(&mut elements).push(&mut elements, child);
+        parent.delete_all_children(&mut elements);
+
+        let mut operation_ran = false;
+        child
+            .edit(&mut elements)
+            .apply(|_, _| operation_ran = true)
+            .push_with(|elements| Text::new(elements, "orphan"))
+            .finish();
+
+        assert!(!operation_ran);
+        assert_eq!(elements.elements.len(), 1);
     }
 }

@@ -62,68 +62,94 @@ impl Slider {
     }
 
     pub fn value(self, elements: &mut Elements, value: f64) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_value(value);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_value(value);
+        }
         self
     }
 
     pub fn get_value(&self, elements: &Elements) -> f64 {
-        elements.get_as::<SliderNode>(self.inner).get_value()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_value)
     }
 
     pub fn step(self, elements: &mut Elements, value: f64) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_step(value);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_step(value);
+        }
         self
     }
 
     pub fn get_step(&self, elements: &Elements) -> f64 {
-        elements.get_as::<SliderNode>(self.inner).get_step()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_step)
     }
 
     pub fn min(self, elements: &mut Elements, min: f64) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_min(min);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_min(min);
+        }
         self
     }
 
     pub fn get_min(&self, elements: &Elements) -> f64 {
-        elements.get_as::<SliderNode>(self.inner).get_min()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_min)
     }
 
     pub fn max(self, elements: &mut Elements, max: f64) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_max(max);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_max(max);
+        }
         self
     }
 
     pub fn get_max(&self, elements: &Elements) -> f64 {
-        elements.get_as::<SliderNode>(self.inner).get_max()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_max)
     }
 
     pub fn direction(self, elements: &mut Elements, direction: SliderDirection) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_direction(direction);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_direction(direction);
+        }
         self
     }
 
     pub fn get_direction(&self, elements: &Elements) -> SliderDirection {
-        elements.get_as::<SliderNode>(self.inner).get_direction()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or_else(SliderDirection::default, SliderNode::get_direction)
     }
 
     pub fn thumb_size(self, elements: &mut Elements, thumb_size: f64) -> Self {
-        elements.get_as_mut::<SliderNode>(self.inner).set_thumb_size(thumb_size);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_size(thumb_size);
+        }
         self
     }
 
     pub fn get_thumb_size(&self, elements: &Elements) -> f64 {
-        elements.get_as::<SliderNode>(self.inner).get_thumb_size()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_thumb_size)
     }
 
     pub fn thumb_color(self, elements: &mut Elements, thumb_background_color: Brush) -> Self {
-        elements
-            .get_as_mut::<SliderNode>(self.inner)
-            .set_thumb_color(thumb_background_color);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_color(thumb_background_color);
+        }
         self
     }
 
     pub fn get_thumb_brush(&self, elements: &Elements) -> Brush {
-        elements.get_as::<SliderNode>(self.inner).get_thumb_brush()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or_else(Brush::default, SliderNode::get_thumb_brush)
     }
 
     pub fn thumb_border_radius(
@@ -134,32 +160,36 @@ impl Slider {
         bottom: (f32, f32),
         left: (f32, f32),
     ) -> Self {
-        elements
-            .get_as_mut::<SliderNode>(self.inner)
-            .set_thumb_border_radius(top, right, bottom, left);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_border_radius(top, right, bottom, left);
+        }
         self
     }
 
     pub fn get_thumb_border_radius(&self, elements: &Elements) -> Option<[(f32, f32); 4]> {
-        elements.get_as::<SliderNode>(self.inner).get_thumb_border_radius()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_thumb_border_radius)
     }
 
     pub fn track_color(self, elements: &mut Elements, track_background_color: Color) -> Self {
-        elements
-            .get_as_mut::<SliderNode>(self.inner)
-            .set_track_brush(Brush::Color(track_background_color));
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_brush(Brush::Color(track_background_color));
+        }
         self
     }
 
     pub fn track_gradient(self, elements: &mut Elements, track_background_gradient: Gradient) -> Self {
-        elements
-            .get_as_mut::<SliderNode>(self.inner)
-            .set_track_brush(Brush::Gradient(track_background_gradient));
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_brush(Brush::Gradient(track_background_gradient));
+        }
         self
     }
 
     pub fn get_track_brush(&self, elements: &Elements) -> Option<Brush> {
-        elements.get_as::<SliderNode>(self.inner).get_track_brush()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_track_brush)
     }
 
     pub fn track_border_radius(
@@ -170,14 +200,16 @@ impl Slider {
         bottom: (f32, f32),
         left: (f32, f32),
     ) -> Self {
-        elements
-            .get_as_mut::<SliderNode>(self.inner)
-            .set_track_border_radius(top, right, bottom, left);
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_border_radius(top, right, bottom, left);
+        }
         self
     }
 
     pub fn get_track_border_radius(&self, elements: &Elements) -> Option<[(f32, f32); 4]> {
-        elements.get_as::<SliderNode>(self.inner).get_track_border_radius()
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_track_border_radius)
     }
 }
 

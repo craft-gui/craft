@@ -9,6 +9,9 @@ use std::sync::Arc;
 
 /// A helper to push children.
 pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement, child: DynElement) {
+    if !elements.contains(parent_handle) || !elements.contains(child) {
+        return;
+    }
     let (me, me_window, redraw_signal, scale_factor, parent_id, access) = {
         let parent = elements.get(parent_handle);
         let data = parent.element_data();

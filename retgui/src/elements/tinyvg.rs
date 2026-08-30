@@ -156,7 +156,7 @@ impl TinyVg {
     }
 
     pub fn resource_id(self, elements: &mut Elements, resource_id: ResourceId) -> Self {
-        elements.dispatch_mut(self.inner, |tiny, elements| {
+        elements.try_dispatch_mut(self.inner, |tiny, elements| {
             (tiny as &mut dyn std::any::Any)
                 .downcast_mut::<TinyVgNode>()
                 .unwrap()
@@ -166,7 +166,9 @@ impl TinyVg {
     }
 
     pub fn get_resource_id(&self, elements: &Elements) -> ResourceId {
-        elements.get_as::<TinyVgNode>(self.inner).get_resource_id().clone()
+        elements
+            .try_get_as::<TinyVgNode>(self.inner)
+            .map_or(ResourceId::DUMMY, |tiny| tiny.get_resource_id().clone())
     }
 }
 

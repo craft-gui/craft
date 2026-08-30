@@ -60,11 +60,10 @@ pub(super) fn find_target(
 }
 
 pub(super) fn call_user_event_handlers(event: &mut EventKind, capturing: bool, elements: &mut Elements) {
-    let callbacks = elements
-        .get(event.current_target())
-        .element_data()
-        .event_callbacks
-        .clone();
+    let Some(current_target) = elements.try_get(event.current_target()) else {
+        return;
+    };
+    let callbacks = current_target.element_data().event_callbacks.clone();
 
     for EventCallback {
         callback,

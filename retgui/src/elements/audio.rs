@@ -222,12 +222,14 @@ impl Audio {
     }
 
     pub fn controls(self, elements: &mut Elements, controls: bool) -> Self {
-        elements.get_as_mut::<AudioNode>(self.inner).set_controls(controls);
+        if let Some(audio) = elements.try_get_as_mut::<AudioNode>(self.inner) {
+            audio.set_controls(controls);
+        }
         self
     }
 
     pub fn play(self, elements: &mut Elements) -> Self {
-        elements.dispatch_mut(self.inner, |audio, elements| {
+        elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
@@ -237,7 +239,7 @@ impl Audio {
     }
 
     pub fn pause(self, elements: &mut Elements) -> Self {
-        elements.dispatch_mut(self.inner, |audio, elements| {
+        elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
@@ -247,7 +249,7 @@ impl Audio {
     }
 
     pub fn toggle(self, elements: &mut Elements) -> Self {
-        elements.dispatch_mut(self.inner, |audio, elements| {
+        elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
@@ -257,7 +259,9 @@ impl Audio {
     }
 
     pub fn is_playing(&self, elements: &Elements) -> bool {
-        elements.get_as::<AudioNode>(self.inner).is_playing(elements)
+        elements
+            .try_get_as::<AudioNode>(self.inner)
+            .is_some_and(|audio| audio.is_playing(elements))
     }
 }
 

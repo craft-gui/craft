@@ -930,9 +930,12 @@ impl Event for EventKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::elements::{Container, Elements};
+    use crate::elements::{Container, Element, Elements};
+    use crate::text::text_context::TextContext;
 
-    use super::{DynElement, Event, EventKind, FocusEvent};
+    use super::event_dispatch::dispatch_event;
+    use super::helpers::freeze_target_list;
+    use super::{ClickEvent, ClickTrigger, DynElement, Event, EventKind, FocusEvent};
 
     fn event_target(elements: &mut Elements) -> DynElement {
         DynElement::new(Container::new(elements).inner)
@@ -968,5 +971,21 @@ mod tests {
 
         assert!(event.target() == replacement);
         assert!(event.current_target() == replacement);
+    }
+
+    #[test]
+    fn deleting_an_event_target_during_dispatch_is_safe() {
+        let mut elements = Elements::new();
+        let parent = Container::new(&mut elements);
+        let child = Container::new(&mut elements).on_click(&mut elements, move |_event, elements| {
+            parent.delete_all_children(elements);
+        });
+        parent.push(&mut elements, child);
+        let targets = freeze_target_list(child.inner, &elements);
+        let mut event = EventKind::Click(ClickEvent::new(child.inner, ClickTrigger::Programmatic));
+
+        dispatch_event(&mut event, &targets, &mut TextContext::new(), &mut elements);
+
+        assert!(!elements.contains(child.inner));
     }
 }

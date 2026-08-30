@@ -18,6 +18,7 @@ use crate::text::RangedStyles;
 /// The element itself remains type erased in [`Elements`]. `E` only preserves
 /// the lightweight typed handle so [`finish`](Self::finish) can return it.
 /// Neither the lifetime nor the editor type normally appears in user code.
+/// Operations on an element that has since been deleted are ignored.
 ///
 /// ```
 /// use retgui::Color;
@@ -69,9 +70,12 @@ impl<'a, E: Element> ElementEditor<'a, E> {
     /// Runs a custom element operation while the store is bound.
     ///
     /// This is the extension point for widget-specific methods that are not
-    /// directly exposed by `ElementEditor`.
+    /// directly exposed by `ElementEditor`. The operation is not called when
+    /// the element has been deleted.
     pub fn apply(self, operation: impl FnOnce(E, &mut Elements)) -> Self {
-        operation(self.element, self.elements);
+        if self.elements.contains(self.element.as_dyn_element()) {
+            operation(self.element, self.elements);
+        }
         self
     }
 
@@ -84,8 +88,10 @@ impl<'a, E: Element> ElementEditor<'a, E> {
 
     /// Creates and adds a child without requiring another store variable.
     pub fn push_with<C: Element>(self, build: impl FnOnce(&mut Elements) -> C) -> Self {
-        let child = build(self.elements);
-        self.element.push(self.elements, child);
+        if self.elements.contains(self.element.as_dyn_element()) {
+            let child = build(self.elements);
+            self.element.push(self.elements, child);
+        }
         self
     }
 

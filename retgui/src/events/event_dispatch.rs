@@ -35,7 +35,7 @@ pub(super) fn dispatch_event(
     if !event.is_default_prevented() {
         for target in targets {
             event.base_mut().current_target = *target;
-            elements.dispatch_mut(*target, |target, elements| {
+            elements.try_dispatch_mut(*target, |target, elements| {
                 target.on_event(elements, event, text_context)
             });
             if event.is_propagation_stopped() {
@@ -52,7 +52,7 @@ pub(super) fn dispatch_event_once(event: &mut EventKind, text_context: &mut Text
     }
     if !event.is_default_prevented() {
         let target = event.target();
-        elements.dispatch_mut(target, |target, elements| {
+        elements.try_dispatch_mut(target, |target, elements| {
             target.on_event(elements, event, text_context)
         });
     }

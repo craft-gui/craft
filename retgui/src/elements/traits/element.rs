@@ -17,21 +17,29 @@ use crate::elements::{DynElement, ElementEditor, ElementNode, Elements};
 use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
-fn with_element<E: Element, R>(element: E, elements: &Elements, callback: impl FnOnce(&dyn ElementNode) -> R) -> R {
-    callback(elements.get(element.as_dyn_element()))
+fn with_element<E: Element, R>(
+    element: E,
+    elements: &Elements,
+    callback: impl FnOnce(&dyn ElementNode) -> R,
+) -> Option<R> {
+    elements.try_get(element.as_dyn_element()).map(callback)
 }
 
 fn with_element_mut<E: Element, R>(
     element: E,
     elements: &mut Elements,
     callback: impl FnOnce(&mut dyn ElementNode, &mut Elements) -> R,
-) -> R {
-    elements.dispatch_mut(element.as_dyn_element(), callback)
+) -> Option<R> {
+    elements.try_dispatch_mut(element.as_dyn_element(), callback)
 }
 
 /// Exposes a fluent/builder-pattern like API for elements.
 /// Setters in this trait return Self and have no prefix.
 /// Getters in this trait return specific data and have a get prefix.
+///
+/// A handle remains copyable after its element is deleted. Mutations through a
+/// stale handle are ignored, getters return neutral values, and relationship
+/// queries return [`RetGuiError::ElementNotFound`].
 pub trait Element: Copy {
     /// Erases the widget type while preserving its slot-map identity.
     fn as_dyn_element(&self) -> DynElement;
@@ -50,43 +58,51 @@ pub trait Element: Copy {
 
     /// Requests a redraw of this element's owning window.
     fn request_redraw(&self, elements: &Elements) {
-        elements.get(self.as_dyn_element()).request_window_redraw();
+        if let Some(element) = elements.try_get(self.as_dyn_element()) {
+            element.request_window_redraw();
+        }
     }
 
     /// Returns the element's children.
     fn get_children(&self, elements: &Elements) -> Vec<DynElement> {
-        with_element(*self, elements, |element| element.get_children().to_vec())
+        with_element(*self, elements, |element| element.get_children().to_vec()).unwrap_or_default()
     }
 
     /// Returns the element's previous sibling or a not found error.
     fn get_previous_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_previous_sibling(elements))
+            .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's next sibling or a not found error.
     fn get_next_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_next_sibling(elements))
+            .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's parent or a not found error.
     fn get_parent(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
-        with_element(*self, elements, |element| element.parent()).ok_or(RetGuiError::ElementNotFound)
+        with_element(*self, elements, |element| element.parent())
+            .flatten()
+            .ok_or(RetGuiError::ElementNotFound)
     }
 
     /// Returns the element's first child or a not found error.
     fn get_first_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
-        with_element(*self, elements, |element| element.get_first_child())
+        with_element(*self, elements, |element| element.get_first_child()).unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's last child or a not found error.
     fn get_last_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
-        with_element(*self, elements, |element| element.get_last_child())
+        with_element(*self, elements, |element| element.get_last_child()).unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Removes the element's child or a not found error.
     fn remove_child(&self, elements: &mut Elements, child: DynElement) -> Result<DynElement, RetGuiError> {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| element.remove_child(elements, child))
+        elements
+            .try_dispatch_mut(handle, |element, elements| element.remove_child(elements, child))
+            .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Detaches the element's children while keeping their handles valid.
@@ -95,7 +111,7 @@ pub trait Element: Copy {
     /// subtrees should be destroyed and their arena storage reclaimed.
     fn remove_all_children(&self, elements: &mut Elements) {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| element.remove_all_children(elements))
+        elements.try_dispatch_mut(handle, |element, elements| element.remove_all_children(elements));
     }
 
     /// Deletes all direct children and their retained subtrees from the store.
@@ -104,15 +120,20 @@ pub trait Element: Copy {
     /// invalidates every copy of each removed handle and reclaims its arena,
     /// layout, and accessibility storage.
     fn delete_all_children(&self, elements: &mut Elements) {
-        elements.delete_all_children(self.as_dyn_element());
+        let handle = self.as_dyn_element();
+        if elements.contains(handle) {
+            elements.delete_all_children(handle);
+        }
     }
 
     /// Swaps the element's children or returns a not found error if either child is missing.
     fn swap_child(&self, elements: &mut Elements, child_1: DynElement, child_2: DynElement) -> Result<(), RetGuiError> {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| {
-            element.swap_child(elements, child_1, child_2)
-        })
+        elements
+            .try_dispatch_mut(handle, |element, elements| {
+                element.swap_child(elements, child_1, child_2)
+            })
+            .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Pushes a child.
@@ -211,7 +232,7 @@ pub trait Element: Copy {
 
     /// Returns the element's user based id. This id is not used by RetGUI.
     fn get_id(&self, elements: &Elements) -> Option<SmolStr> {
-        with_element(*self, elements, |element| element.get_id())
+        with_element(*self, elements, |element| element.get_id()).flatten()
     }
 
     /// Adds a pointer button down listener.
@@ -270,7 +291,10 @@ pub trait Element: Copy {
 
     /// Emits a custom event using the element as the target element.
     fn emit_custom_event<T: Any + 'static>(&self, elements: &mut Elements, detail: T) {
-        elements.queue_event(EventKind::Custom(CustomEvent::new(self.as_dyn_element(), detail)));
+        let handle = self.as_dyn_element();
+        if elements.contains(handle) {
+            elements.queue_event(EventKind::Custom(CustomEvent::new(handle, detail)));
+        }
     }
 
     /// Adds a focus event listener.
@@ -350,7 +374,7 @@ pub trait Element: Copy {
     /// Scrolls to a child based on the child's user id.
     fn scroll_to_child_by_id(self, elements: &mut Elements, id: &str) -> Self {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| {
+        elements.try_dispatch_mut(handle, |element, elements| {
             element.scroll_to_child_by_id_with_options(elements, id, ScrollOptions::default())
         });
         self
@@ -359,7 +383,7 @@ pub trait Element: Copy {
     /// Scrolls to a child based on the child's user id according to the scroll options.
     fn scroll_to_child_by_id_with_options(self, elements: &mut Elements, id: &str, options: ScrollOptions) -> Self {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| {
+        elements.try_dispatch_mut(handle, |element, elements| {
             element.scroll_to_child_by_id_with_options(elements, id, options)
         });
         self
@@ -391,7 +415,7 @@ pub trait Element: Copy {
 
     /// Returns the elements current scroll state.
     fn get_scroll_state(&self, elements: &Elements) -> ScrollState {
-        with_element(*self, elements, |element| element.get_scroll_state())
+        with_element(*self, elements, |element| element.get_scroll_state()).unwrap_or_default()
     }
 
     /// Sets the layout algorith e.g. block, flex, etc.
@@ -422,7 +446,7 @@ pub trait Element: Copy {
 
     /// Returns if the element is put on top of other elements.
     fn get_overlay(&self, elements: &Elements) -> bool {
-        with_element(*self, elements, |element| element.style().get_overlay())
+        with_element(*self, elements, |element| element.style().get_overlay()).unwrap_or(false)
     }
 
     /// Sets the non interactable/visual space surrounding the element.
@@ -916,25 +940,25 @@ pub trait Element: Copy {
     /// Focus the element.
     fn focus(self, elements: &mut Elements) -> Self {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| element.focus(elements));
+        elements.try_dispatch_mut(handle, |element, elements| element.focus(elements));
         self
     }
 
     /// Returns whether the element current has focus.
     fn is_focused(&self, elements: &mut Elements) -> bool {
-        with_element(*self, elements, |element| element.is_focused())
+        with_element(*self, elements, |element| element.is_focused()).unwrap_or(false)
     }
 
     /// Unfocuses the element.
     fn unfocus(self, elements: &mut Elements) -> Self {
         let handle = self.as_dyn_element();
-        elements.dispatch_mut(handle, |element, elements| element.unfocus(elements));
+        elements.try_dispatch_mut(handle, |element, elements| element.unfocus(elements));
         self
     }
 
     /// Get the elements box in logical pixels.
     fn get_computed_box_transformed(&self, elements: &Elements) -> ElementBox {
-        with_element(*self, elements, |element| element.get_computed_box_transformed())
+        with_element(*self, elements, |element| element.get_computed_box_transformed()).unwrap_or_default()
     }
 
     /// Returns whether the element has pointer capture.
@@ -942,6 +966,7 @@ pub trait Element: Copy {
         with_element(*self, elements, |element| {
             element.has_pointer_capture(elements, pointer_id)
         })
+        .unwrap_or(false)
     }
 
     /// Captures subsequent events for this pointer on the element.
