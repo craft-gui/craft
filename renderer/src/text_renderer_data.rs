@@ -83,8 +83,6 @@ pub trait TextData {
     }
 }
 
-/// An immutable, per-frame text payload. Render commands own this snapshot,
-/// so rendering never reaches back into mutable UI state.
 #[derive(Clone, Debug)]
 pub struct TextSnapshot {
     render: Rc<TextRender>,
@@ -102,7 +100,6 @@ impl TextSnapshot {
         }
     }
 
-    /// Creates a per-frame snapshot without cloning retained glyph data.
     pub fn from_shared(render: Rc<TextRender>, override_brush: Option<Brush>, use_glyph_cache: bool) -> Self {
         Self {
             render,

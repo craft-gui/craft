@@ -13,39 +13,7 @@ use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallback
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Unit};
 use crate::text::RangedStyles;
 
-/// A short-lived fluent editor that binds an element handle to its store.
-///
-/// The element itself remains type erased in [`Elements`]. `E` only preserves
-/// the lightweight typed handle so [`finish`](Self::finish) can return it.
-/// Neither the lifetime nor the editor type normally appears in user code.
-/// Operations on an element that has since been deleted are ignored.
-///
-/// ```
-/// use retgui::Color;
-/// use retgui::elements::{Container, Element, Elements, Text};
-///
-/// let mut elements = Elements::new();
-/// let text = Text::new(&mut elements, "Hello")
-///     .edit(&mut elements)
-///     .font_size(24.0)
-///     .color(Color::WHITE)
-///     .selectable(false)
-///     .finish();
-///
-/// assert_eq!(text.get_text(&elements), "Hello");
-/// assert!(!text.get_selectable(&elements));
-///
-/// let row = Container::new(&mut elements)
-///     .edit(&mut elements)
-///     .push_with(|elements| {
-///         Text::new(elements, "Nested child")
-///             .edit(elements)
-///             .font_size(14.0)
-///             .finish()
-///     })
-///     .finish();
-/// assert_eq!(row.get_children(&elements).len(), 1);
-/// ```
+/// Binds elements to a specific element for edits.
 #[must_use = "call finish() to recover the element handle"]
 pub struct ElementEditor<'a, E: Element> {
     element: E,

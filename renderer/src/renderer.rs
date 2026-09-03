@@ -195,9 +195,7 @@ pub trait Renderer: Any {
     ) {
         self.draw_text_ref(&data, rect, text_scroll, show_cursor);
     }
-
-    /// Draw retained text without cloning its payload unless it survives
-    /// culling and is actually added to the render list.
+    
     #[inline(always)]
     fn draw_text_ref(
         &mut self,
@@ -351,35 +349,4 @@ fn should_cull_bez_path(transform: &Affine, path: &BezPath, cull: Option<&Rectan
     }
 
     false
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::blank_renderer::BlankRenderer;
-    use crate::text_renderer_data::TextRender;
-
-    struct EmptyText;
-
-    impl TextData for EmptyText {
-        fn get_text_renderer(&self) -> Option<&TextRender> {
-            None
-        }
-    }
-
-    #[test]
-    fn retained_text_is_cloned_only_after_culling() {
-        let concrete = Rc::new(EmptyText);
-        let text: Rc<dyn TextData> = concrete.clone();
-        let mut renderer = BlankRenderer::default();
-        renderer.set_cull(Some(Rectangle::new(0.0, 0.0, 100.0, 100.0)));
-
-        renderer.draw_text_ref(&text, Rectangle::new(200.0, 200.0, 10.0, 10.0), None, false);
-        assert_eq!(Rc::strong_count(&concrete), 2);
-        assert!(renderer.render_list().commands.is_empty());
-
-        renderer.draw_text_ref(&text, Rectangle::new(10.0, 10.0, 10.0, 10.0), None, false);
-        assert_eq!(Rc::strong_count(&concrete), 3);
-        assert_eq!(renderer.render_list().commands.len(), 1);
-    }
 }

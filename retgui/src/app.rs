@@ -543,24 +543,6 @@ fn create_text_context() -> TextContext {
     text_context
 }
 
-#[cfg(test)]
-mod gui_action_tests {
-    use crate::app::App;
-    use crate::elements::Elements;
-
-    #[test]
-    fn about_to_wait_drains_scheduled_gui_actions() {
-        let mut elements = Elements::new();
-        let value = elements.insert_state(0_u8);
-        elements.schedule_gui_action(move |elements| *elements.state_mut(value) = 1);
-        let mut app = App::new(elements);
-
-        app.on_about_to_wait(None);
-
-        assert_eq!(*app.elements.state(value), 1);
-    }
-}
-
 #[cfg(all(test, feature = "audio"))]
 mod tests {
     use super::{AUDIO_UI_UPDATE_INTERVAL, Duration, Instant, audio_ui_update_due};

@@ -103,10 +103,6 @@ impl WindowManager {
                 window_element.create(retgui_app, elements, event_loop);
             }
 
-            // Descendant mutations only have the shared redraw signal; they
-            // cannot borrow the window from the element store. Turn that
-            // retained invalidation into an actual native redraw request
-            // before the event loop goes back to sleep.
             if window_element.redraw_requested(elements) {
                 window_element.request_redraw(elements);
             }
@@ -124,9 +120,6 @@ impl WindowManager {
             let is_target = w.inner == window.inner;
 
             if is_target {
-                // The renderer and accessibility tree both retain native
-                // window resources. Release all three owners; clearing only
-                // WindowNode::winit_window leaves secondary windows alive.
                 elements.get_as_mut::<WindowNode>(w.inner).renderer = Box::new(BlankRenderer::default());
                 release_window_accessibility(elements, w.inner);
                 w.set_winit_window(elements, None);

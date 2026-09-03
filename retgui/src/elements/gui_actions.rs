@@ -43,14 +43,6 @@ impl GuiActionQueue {
         });
     }
 
-    #[cfg(test)]
-    pub(crate) fn schedule(&self, action: impl FnOnce(&mut Elements) + 'static) {
-        self.sender.send(Box::new(action)).unwrap();
-        if let Some(waker) = self.waker.get() {
-            waker();
-        }
-    }
-
     pub(crate) fn drain(&self) -> Vec<GuiAction> {
         self.receiver.try_iter().collect()
     }

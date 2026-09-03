@@ -21,7 +21,7 @@ use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, Bo
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
 
-/// The retained behavior implemented by every element node.
+/// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementNode: ElementNodeData + Any {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement;
 

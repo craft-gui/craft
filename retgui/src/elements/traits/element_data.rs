@@ -1,6 +1,7 @@
 use crate::elements::DynElement;
 
-/// Gives an arena-owned node access to its shared element data.
+/// Used as a super trait and forces implementations to
+/// support the retrieval and mutation of `ElementData`(struct).
 pub trait ElementNodeData {
     fn element_data(&self) -> &crate::elements::element_data::ElementData;
 

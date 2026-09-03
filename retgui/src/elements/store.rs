@@ -23,9 +23,6 @@ use std::collections::VecDeque;
 static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Owns every retained element and application state value.
-///
-/// Handles only contain slot-map keys. Access to their values always requires
-/// borrowing this store, so aliasing violations are rejected by the compiler.
 pub struct Elements {
     id: u64,
     elements: SlotMap<DefaultKey, Option<Box<dyn ElementNode>>>,
@@ -101,11 +98,6 @@ impl Elements {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn schedule_gui_action(&self, action: impl FnOnce(&mut Elements) + 'static) {
-        self.gui_actions.schedule(action);
-    }
-
     pub(crate) fn set_gui_waker(&self, waker: impl Fn() + Send + Sync + 'static) {
         self.gui_actions.set_waker(waker);
     }
@@ -176,10 +168,7 @@ impl Elements {
         self.elements.get_mut(element.key()).and_then(Option::as_deref_mut)
     }
 
-    /// Borrows a retained element as its concrete node type.
-    ///
-    /// Typed element handles should keep their [`DynElement`] field private so
-    /// the type relationship is established once, in their constructor.
+    /// Borrows a retained element as its concrete node type. .
     pub fn get_as<T: ElementNode>(&self, element: DynElement) -> &T {
         (self.get(element) as &dyn Any)
             .downcast_ref()
@@ -218,15 +207,6 @@ impl Elements {
 
     pub(crate) fn contains(&self, element: DynElement) -> bool {
         element.store_id() == self.id && self.elements.get(element.key()).is_some_and(Option::is_some)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn remove(&mut self, element: DynElement) -> Option<Box<dyn ElementNode>> {
-        let removed = self.elements.remove(element.key()).flatten();
-        if let Some(element) = removed.as_deref() {
-            self.by_internal_id.remove(&element.element_data().internal_id);
-        }
-        removed
     }
 
     pub(crate) fn delete_all_children(&mut self, parent: DynElement) {

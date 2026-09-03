@@ -33,23 +33,13 @@ fn with_element_mut<E: Element, R>(
     elements.try_dispatch_mut(element.as_dyn_element(), callback)
 }
 
-/// Exposes a fluent/builder-pattern like API for elements.
-/// Setters in this trait return Self and have no prefix.
-/// Getters in this trait return specific data and have a get prefix.
-///
-/// A handle remains copyable after its element is deleted. Mutations through a
-/// stale handle are ignored, getters return neutral values, and relationship
-/// queries return [`RetGuiError::ElementNotFound`].
+/// A builder pattern for elements.
 pub trait Element: Copy {
-    /// Erases the widget type while preserving its slot-map identity.
+    /// Returns an element as a DynElement.
     fn as_dyn_element(&self) -> DynElement;
 
-    /// Binds this handle to an exclusive store borrow for a fluent sequence of
-    /// mutations.
-    ///
-    /// The editor is intentionally short lived. Call [`ElementEditor::finish`]
-    /// to recover the copyable, lifetime-free handle.
-    fn edit<'a>(self, elements: &'a mut Elements) -> ElementEditor<'a, Self>
+    /// Bind elements while building.
+    fn edit(self, elements: &mut Elements) -> ElementEditor<'_, Self>
     where
         Self: Sized,
     {
